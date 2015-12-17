@@ -1,0 +1,9 @@
+// Config file with specific settings for production environment
+{
+  // Parameters pertaining to logging mechanism
+  "logging": {
+    "email": {
+      "toAddresses": "andre@blockchainofthings.com, jason@blockchainofthings.com, claudio@hiades.com.br"
+    }
+  }
+}

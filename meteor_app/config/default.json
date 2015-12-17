@@ -1,0 +1,33 @@
+// Default configuration file
+{
+  // Parameters pertaining to the Catenis application
+  "application": {
+    "appName": "Catenis",
+    "seedFilename": "seed.dat"
+  },
+  // Parameters pertaining to logging mechanism
+  "logging": {
+    "console": {
+      "active": true,
+      "logLevel": "INFO" // Valid options: ALL, TRACE, DEBUG, INFO, WARN, ACTION, ERROR, FATAL
+    },
+    "file": {
+      "active": true,
+      "logLevel": "DEBUG", // Valid options: ALL, TRACE, DEBUG, INFO, WARN, ACTION, ERROR, FATAL
+      "logDir": "log",
+      "logFilename": "catenis.log"
+    },
+    "email": {
+      "active": true,
+      "logLevel": "WARN", // Valid options: ALL, TRACE, DEBUG, INFO, WARN, ACTION, ERROR, FATAL
+      "smtpHost": "localhost",
+      //"secureProto": "tls",  // To be set only if a secure protocol should be used. Valid options: ssl or tls
+      //"smtpPort": 587,  // To be set only if different than default (depending on secureProto): none (25), ssl (465), tls (587)
+      //"username": "username", // To be set only if required by SMTP host
+      //"password": "password",   // To be set only if required by SMTP host
+      "toAddresses": "andre@blockchainofthings.com", // Can be set to a comma separated list of e-mail addresses
+      "fromAddress": "Catenis <noreply@catenis.com>",
+      "subject": "{{level}} - {{msg}}"
+    }
+  }
+}
