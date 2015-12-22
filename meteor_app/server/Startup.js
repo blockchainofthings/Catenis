@@ -20,5 +20,5 @@ if (process.env.NODE_CONFIG_DIR === undefined) {
 // Initialization code (on the server)
 Meteor.startup(function () {
     console.log('Initializaton code');
-    applicationInitialize();
+    Catenis.module.Application.initialize();
 });

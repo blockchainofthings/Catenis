@@ -25,10 +25,7 @@ var crypto = Npm.require('crypto');
 var appConfig = config.get('application'),
     appSeedFilenameConfig = appConfig.get('seedFilename');
 
-applicationInitialize = function () {
-    App = new Application();
-};
-
+// Definition of Application function class
 function Application() {
     // Get application seed
     var appSeedPath = path.join(process.env.PWD, appSeedFilenameConfig),
@@ -48,3 +45,17 @@ function Application() {
         return Buffer.concat([decBuf1, decBuf2]);
     }
 }
+
+Application.initialize = function () {
+    // Instantiate App object
+    Catenis.App = new Application();
+};
+
+// Save module function class reference
+if (typeof Catenis === 'undefined')
+    Catenis = {};
+
+if (typeof Catenis.module === 'undefined')
+    Catenis.module = {};
+
+Catenis.module.Application = Application;

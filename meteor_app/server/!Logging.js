@@ -115,31 +115,29 @@ var consoleTranspParams = {
         prettyPrint: true
     };
 
-(function () {
-    // Complement logging transport parameters
-    if (emailSecureProto != undefined) {
-        if (emailSecureProto === 'ssl') {
-            emailTranspParams.ssl = true;
-        }
-        else if (emailTranspParams === 'tls') {
-            emailTranspParams.tls = true;
-        }
+// Complement logging transport parameters
+if (emailSecureProto != undefined) {
+    if (emailSecureProto === 'ssl') {
+        emailTranspParams.ssl = true;
     }
-
-    if (smtpPort != undefined && typeof smtpPort === 'number') {
-        emailTranspParams.port = smtpPort;
+    else if (emailTranspParams === 'tls') {
+        emailTranspParams.tls = true;
     }
+}
 
-    if (emailUsername != undefined) {
-        emailTranspParams.username = emailUsername;
-    }
+if (smtpPort != undefined && typeof smtpPort === 'number') {
+    emailTranspParams.port = smtpPort;
+}
 
-    if (emailPassword != undefined) {
-        emailTranspParams.password = emailPassword;
-    }
-})();
+if (emailUsername != undefined) {
+    emailTranspParams.username = emailUsername;
+}
 
-// Instantiation of logger object
+if (emailPassword != undefined) {
+    emailTranspParams.password = emailPassword;
+}
+
+// Instantiate Logger object
 //
 // NOTE: to add information about source file, line number and
 //  function name to the logged message, one should include
@@ -147,9 +145,12 @@ var consoleTranspParams = {
 //  - and add a meta (last parameter) object containing the
 //  key stackTrace with a value equal to stackTrace.get().
 //  Example:
-//  Logger.ERROR('Test error message.', {stackTrace: stackTrace.get()});
+//  Catenis.Logger.ERROR('Test error message.', {stackTrace: stackTrace.get()});
 //
-Logger = new (winston.Logger)({
+if (typeof Catenis === 'undefined')
+    Catenis = {};
+
+Catenis.Logger = new (winston.Logger)({
     levels: log4jLevels,
     colors: log4jColors,
     padLevels: true,
@@ -161,7 +162,7 @@ Logger = new (winston.Logger)({
 });
 
 // Filter to append prefix with source code information
-Logger.filters.push(function (level, msg, meta, inst) {
+Catenis.Logger.filters.push(function (level, msg, meta, inst) {
     // Check whether a stack trace is passed in the meta
     if (typeof meta.stackTrace !== 'undefined') {
         // Prepare prefix with filename, linenumber and function name
