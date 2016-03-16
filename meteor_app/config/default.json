@@ -3,7 +3,8 @@
   // Parameters pertaining to the Catenis application
   "application": {
     "appName": "Catenis",
-    "seedFilename": "seed.dat"
+    "seedFilename": "seed.dat",
+    "cryptoNetwork": "testnet"
   },
   // Parameters pertaining to logging mechanism
   "logging": {

@@ -20,6 +20,8 @@ if (process.env.NODE_CONFIG_DIR === undefined) {
     process.env.NODE_CONFIG_DIR = Npm.require('path').join(process.env.PWD, 'config');
 }
 
+// References to external moudules
+Npm.require('babel-polyfill');  // Add ECMAScript-2015 (ES6) features to objects globally
 var config = Npm.require('config');
 var path = Npm.require('path');
 var winston = Npm.require('winston');
@@ -27,10 +29,15 @@ var winstonTransportsDailyRotateFile = Npm.require('winston-daily-rotate-file');
 var winstonTransportMail = Npm.require('winston-mail').Mail;
 var util = Npm.require('util');
 
+// Config variables
 var loggingConfig = config.get('logging'),
     logConsoleConfig = loggingConfig.get('console'),
     logFileConfig = loggingConfig.get('file'),
     logEmailConfig = loggingConfig.get('email');
+
+
+// Module code
+//
 
 // Definition of logging levels based on Log4J
 var log4jLevels = {
@@ -145,12 +152,12 @@ if (emailPassword != undefined) {
 //  - and add a meta (last parameter) object containing the
 //  key stackTrace with a value equal to stackTrace.get().
 //  Example:
-//  Catenis.Logger.ERROR('Test error message.', {stackTrace: stackTrace.get()});
+//  Catenis.logger.ERROR('Test error message.', {stackTrace: stackTrace.get()});
 //
 if (typeof Catenis === 'undefined')
     Catenis = {};
 
-Catenis.Logger = new (winston.Logger)({
+Catenis.logger = new (winston.Logger)({
     levels: log4jLevels,
     colors: log4jColors,
     padLevels: true,
@@ -162,7 +169,7 @@ Catenis.Logger = new (winston.Logger)({
 });
 
 // Filter to append prefix with source code information
-Catenis.Logger.filters.push(function (level, msg, meta, inst) {
+Catenis.logger.filters.push(function (level, msg, meta, inst) {
     // Check whether a stack trace is passed in the meta
     if (typeof meta.stackTrace !== 'undefined') {
         // Prepare prefix with filename, linenumber and function name

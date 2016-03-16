@@ -19,6 +19,9 @@ if (process.env.NODE_CONFIG_DIR === undefined) {
 
 // Initialization code (on the server)
 Meteor.startup(function () {
-    console.log('Initializaton code');
+    console.log('Starting initializaton...');
+    Catenis.module.DB.inititalize();
     Catenis.module.Application.initialize();
+    Catenis.module.KeyStore.initialize();
+    console.log('Initialization ended.');
 });
