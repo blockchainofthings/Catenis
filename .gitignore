@@ -6,3 +6,5 @@ node_modules
 *.tar.gz
 READ THIS - WebStorm bug.txt
 seed.dat
+local.json
+Debug.js

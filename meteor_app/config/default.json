@@ -4,6 +4,7 @@
   "application": {
     "appName": "Catenis",
     "seedFilename": "seed.dat",
+    "walletPswLength": 16,
     "cryptoNetwork": "testnet"
   },
   // Parameters pertaining to logging mechanism
@@ -30,5 +31,22 @@
       "fromAddress": "Catenis <noreply@catenis.com>",
       "subject": "{{level}} - {{msg}}"
     }
+  },
+  // Parameters pertaining to BitcoinCore module
+  "bitcoinCore": {
+    "serverHost": "catenis1", // Bitcoin Core server host name/IP address
+    "mainRpcPort": 8332, // Port used to connect with Bitcoin Core server via its RPC interface to interact with bitcoin's main blockchain
+    "testnetRpcPort": 18332, // Port used to connect with Bitcoin Core server via its RPC interface to interact with bitcoin's testnet blockchain
+    "rpcUser": "??????", // Username used to connect with Bitcoin Core server via its RPC interface
+    "rpcPassword": "??????", // Password used to connect with Bitcoin Core server via its RPC interface
+    "rpcConnectionTimeout": 15000,  // Timeout, in miliseconds, for RPC connection with the Bitcoin Core server
+    "rescanTimeout": 7200000 // Timeout, in miniseconds, for waiting on Bitcoin Core to finish rescanning the blockchain after importing private key
+  },
+  // Parameters pertaining to CatenisHubAddress module
+  "catenisHubAddress": {
+    "fundingPaymentAddressValidity":  14400, // Time, in seconds, before which a newly issued Funding Payment address expires
+    "fundingChangeAddressValidity": 900, // Time, in seconds, before which a newly issued Funding Change address expires
+    "payTxExpenseAddressValidity": 900, // Time, in seconds, before which a newly issued Pay Tx Expense address expires
+    "updateIssuedAddressesInterval": 1800000 // Time interval, in miliseconds, for executing method to update issued addresses
   }
 }

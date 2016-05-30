@@ -4,70 +4,91 @@
 
 //console.log('[KeyStore.js]: This code just ran.');
 
-// Fix default config file folder.
-//  Note: this is necessary because process.cwd()
-//  (which is used by the config module to define the
-//  default config folder) does not point to the
-//  Meteor application folder. Instead, the application
-//  folder is gotten from process.env.PWD and set
-//  to the environment variable NODE_CONFIG_DIR,
-//  which is used by the config module to set the
-//  default config folder if it is defined.
-if (process.env.NODE_CONFIG_DIR === undefined) {
-    process.env.NODE_CONFIG_DIR = Npm.require('path').join(process.env.PWD, 'config');
-}
-
-// References to external modules
-var util = Npm.require('util');
-var loki = Npm.require('lokijs');
-var bitcoin = Npm.require('bitcoinjs-lib');
-
 //  NOTE: all crypto keys/addresses used by the application are synthesized by
 //      means of an HD (hierarchical deterministic) wallet mechanism according
 //      to the following rules:
 //
 //      m -> master HD extended key
 //
-//      m/0 -> Catenis (system) root HD extended key
+//      m/0 -> System root HD extended key
 //
-//      m/0/0 -> Catenis (system) device root HD extended key
+//      m/0/k (k>=0) -> Catenis node root HD extended key
+//                        where: k = 0 -> Catenis Hub node
+//                               k >= 1 -> Catenis Gateway #k node
 //
-//      m/0/1 -> Catenis (system) general external addresses root HD extended key
+//      m/0/k/0 (k>=0) -> Catenis node device root HD extended key
 //
-//      m/0/2 -> Catenis (system) general internal addresses root HD extended key
+//      m/0/k/1 (k>=0) -> Catenis node funding root HD extended key
 //
-//      m/0/0/0 -> Catenis (system) device main address HD extended key
-//      m/0/0/1 -> Catenis (system) device reserved addressed #1 HD extended key
-//      m/0/0/2 -> Catenis (system) device reserved addressed #2 HD extended key
-//      m/0/0/3 -> Catenis (system) device reserved addressed #3 HD extended key
-//      m/0/0/4 -> Catenis (system) device reserved addressed #4 HD extended key
-//      m/0/0/5 -> Catenis (system) device reserved addressed #5 HD extended key
-//      m/0/0/6 -> Catenis (system) device reserved addressed #6 HD extended key
-//      m/0/0/7 -> Catenis (system) device reserved addressed #7 HD extended key
-//      m/0/0/8 -> Catenis (system) device reserved addressed #8 HD extended key
-//      m/0/0/9 -> Catenis (system) device reserved addressed #9 HD extended key
+//      m/0/k/2 (k>=0) -> Catenis node pay tx expense root HD extended key
 //
-//      m/0/1/* -> Catenis (system) funding (external) addresses HD extended keys (used to add funds to system to then
-// be distributed to other addresses (system internal/client service credit/device) as needed)
+//      m/0/k/0/0 (k>=0) -> Catenis node device main address HD extended key
+//      m/0/k/0/1 (k>=0) -> Catenis node device address #2 (reserved) HD extended key
+//      m/0/k/0/2 (k>=0) -> Catenis node device address #3 (reserved) HD extended key
+//      m/0/k/0/3 (k>=0) -> Catenis node device address #4 (reserved) HD extended key
+//      m/0/k/0/4 (k>=0) -> Catenis node device address #5 (reserved) HD extended key
+//      m/0/k/0/5 (k>=0) -> Catenis node device address #6 (reserved) HD extended key
+//      m/0/k/0/6 (k>=0) -> Catenis node device address #7 (reserved) HD extended key
+//      m/0/k/0/7 (k>=0) -> Catenis node device address #8 (reserved) HD extended key
+//      m/0/k/0/8 (k>=0) -> Catenis node device address #9 (reserved) HD extended key
+//      m/0/k/0/9 (k>=0) -> Catenis node device address #10 (reserved) HD extended key
 //
-//      m/0/2/* -> Catenis (system) pay fee (internal) addresses HD extended keys (used to pay for transaction fees)
+//      m/0/k/1/0 (k>=0) -> Catenis node funding payment root HD extended key
+//
+//      m/0/k/1/1 (k>=0) -> Catenis node funding change root HD extended key
+//
+//      m/0/k/1/0/* (k>=0) -> Catenis node funding payment addresses HD extended keys (used to add funds to Catenis node)
+//
+//      m/0/k/1/1/* (k>=0) -> Catenis node funding change addresses HD extended keys (used to hold change from funds)
+//
+//      m/0/k/2/* (k>=0) -> Catenis node pay tx expense addresses HD extended keys (used to pay for transaction fees)
 //
 //      m/i (i>=1) -> client #i root HD extended key
 //
-//      m/i/0 (i>=1) -> client #i service credit address HD extended key (used to pay for services: dust amount = 1 credit)
+//      m/i/0 (i>=1) -> client #i internal address hierarchy root HD extended key
 //
-//      m/i/j (i,j>=1) -> device #j of client #i root HD extended key
+//      m/i/1 (i>=1) -> client #i public address hierarchy root HD extended key
 //
-//      m/i/j/0 (i,j>=1) -> device #j of client #i main address HD extended key
-//      m/i/j/1 (i,j>=1) -> device #j of client #i read (confirmation) address HD extended key
-//      m/i/j/2 (i,j>=1) -> device #j of client #i reserved address #1 HD extended key
-//      m/i/j/3 (i,j>=1) -> device #j of client #i reserved address #2 HD extended key
-//      m/i/j/4 (i,j>=1) -> device #j of client #i reserved address #3 HD extended key
-//      m/i/j/5 (i,j>=1) -> device #j of client #i reserved address #4 HD extended key
-//      m/i/j/6 (i,j>=1) -> device #j of client #i reserved address #5 HD extended key
-//      m/i/j/7 (i,j>=1) -> device #j of client #i reserved address #6 HD extended key
-//      m/i/j/8 (i,j>=1) -> device #j of client #i reserved address #7 HD extended key
-//      m/i/j/9 (i,j>=1) -> device #j of client #i reserved address #8 HD extended key
+//      m/i/0/0 (i>=1) -> client #i internal addresses root HD extended key
+//
+//      m/i/0/0/0 (i>=1) -> client #i service credit root HD extended key
+//
+//      m/i/0/0/0/0 (i>=1) -> client #i message credit address HD extended key
+//      m/i/0/0/0/1 (i>=1) -> client #i asset credit address HD extended key
+//      m/i/0/0/0/2 (i>=1) -> client #i service credit address #3 (reserved) HD extended key
+//      m/i/0/0/0/3 (i>=1) -> client #i service credit address #4 (reserved) HD extended key
+//      m/i/0/0/0/4 (i>=1) -> client #i service credit address #5 (reserved) HD extended key
+//      m/i/0/0/0/5 (i>=1) -> client #i service credit address #6 (reserved) HD extended key
+//      m/i/0/0/0/6 (i>=1) -> client #i service credit address #7 (reserved) HD extended key
+//      m/i/0/0/0/7 (i>=1) -> client #i service credit address #8 (reserved) HD extended key
+//      m/i/0/0/0/8 (i>=1) -> client #i service credit address #9 (reserved) HD extended key
+//      m/i/0/0/0/9 (i>=1) -> client #i service credit address #10 (reserved) HD extended key
+//
+//      m/i/0/j (i,j>=1) -> device #j of client #i internal addresses root HD extended key
+//
+//      m/i/0/j/0 (i,j>=1) -> device #j of client #i read confirmation address HD extended key
+//      m/i/0/j/1 (i,j>=1) -> device #j of client #i internal address #2 (reserved) HD extended key
+//      m/i/0/j/2 (i,j>=1) -> device #j of client #i internal address #3 (reserved) HD extended key
+//      m/i/0/j/3 (i,j>=1) -> device #j of client #i internal address #4 (reserved) HD extended key
+//      m/i/0/j/4 (i,j>=1) -> device #j of client #i internal address #5 (reserved) HD extended key
+//      m/i/0/j/5 (i,j>=1) -> device #j of client #i internal address #6 (reserved) HD extended key
+//      m/i/0/j/6 (i,j>=1) -> device #j of client #i internal address #7 (reserved) HD extended key
+//      m/i/0/j/7 (i,j>=1) -> device #j of client #i internal address #8 (reserved) HD extended key
+//      m/i/0/j/8 (i,j>=1) -> device #j of client #i internal address #9 (reserved) HD extended key
+//      m/i/0/j/9 (i,j>=1) -> device #j of client #i internal address #10 (reserved) HD extended key
+//
+//      m/i/1/j (i,j>=1) -> device #j of client #i public addresses root HD extended key
+//
+//      m/i/1/j/0 (i,j>=1) -> device #j of client #i main address HD extended key
+//      m/i/1/j/1 (i,j>=1) -> device #j of client #i asset address HD extended key
+//      m/i/1/j/2 (i,j>=1) -> device #j of client #i public address #3 (reserved) HD extended key
+//      m/i/1/j/3 (i,j>=1) -> device #j of client #i public address #4 (reserved) HD extended key
+//      m/i/1/j/4 (i,j>=1) -> device #j of client #i public address #5 (reserved) HD extended key
+//      m/i/1/j/5 (i,j>=1) -> device #j of client #i public address #6 (reserved) HD extended key
+//      m/i/1/j/6 (i,j>=1) -> device #j of client #i public address #7 (reserved) HD extended key
+//      m/i/1/j/7 (i,j>=1) -> device #j of client #i public address #8 (reserved) HD extended key
+//      m/i/1/j/8 (i,j>=1) -> device #j of client #i public address #9 (reserved) HD extended key
+//      m/i/1/j/9 (i,j>=1) -> device #j of client #i public address #10 (reserved) HD extended key
 //
 //  Please refer to BIP-32 (https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki) for more information.
 //
@@ -75,124 +96,880 @@ var bitcoin = Npm.require('bitcoinjs-lib');
 //      a given index. In that case, the algorithm uses the next index instead.
 
 // Module variables
-var numDeviceAddresses = 10;
+//
+
+// References to external modules
+var util = Npm.require('util');
+var loki = Npm.require('lokijs');
+var bitcoin = Npm.require('bitcoinjs-lib');
+
+var numServiceCreditAddresses = 10,
+    numDeviceAddresses = 10,
+    numUsedCtnNodeDeviceAddresses = 1,
+    numUsedServiceCreditAddresses = 2,
+    numUsedDeviceIntAddresses = 1,
+    numUsedDevicePubAddresses = 2;
+
 
 // Definition of function classes
 //
 
 // KeyStore function class
-function KeyStore() {
+function KeyStore(ctnHubNodeIndex, seed, cryptoNetwork) {
+    this.ctnHubNodeIndex = ctnHubNodeIndex;
+    this.cryptoNetwork = cryptoNetwork;
+
     // Initialize in-memory database
     this.db = new loki();
-    this.collExtKey = this.db.addCollection('ExtendedKey', {indices: ['path', 'parentPath', 'depth', 'index']});
+    this.collExtKey = this.db.addCollection('ExtendedKey', {indices: ['type', 'path', 'parentPath', 'index', 'address']});
+
+    this.collExtKey.ensureUniqueIndex('path');
+    this.collExtKey.ensureUniqueIndex('address');
 
     // Create master HD extended key and store it
-    this.masterHDNode = bitcoin.HDNode.fromSeedBuffer(Catenis.application.seed, Catenis.application.cryptoNetwork);
-    storeHDNode.call(this, 'm', this.masterHDNode);
+    this.masterHDNode = bitcoin.HDNode.fromSeedBuffer(seed, cryptoNetwork);
+    storeHDNode.call(this, 'mstr', 'm', this.masterHDNode);
 
-    // Create Catenis (system) root HD extended key and store it
-    this.catenisRootHDNode = this.masterHDNode.derive(0);
+    // Create system root HD extended key and store it
+    this.sysRootHDNode = this.masterHDNode.derive(0);
 
-    if (this.catenisRootHDNode.index !== 0) {
-        Catenis.logger.ERROR('Catenis (system) root HD extended key (m/0) derived with an unexpected index', {expectedIndex: 0, returnedIndex: this.catenisRootHDNode.index});
-        throw new Error('Catenis (system) root HD extended key (m/0) could not be derived for index 0');
+    if (this.sysRootHDNode.index !== 0) {
+        Catenis.logger.ERROR('System root HD extended key (m/0) derived with an unexpected index', {expectedIndex: 0, returnedIndex: this.sysRootHDNode.index});
+        throw new Error('System root HD extended key (m/0) could not be derived');
     }
 
-    storeHDNode.call(this, 'm/0', this.catenisRootHDNode);
+    storeHDNode.call(this, 'sys_root', 'm/0', this.sysRootHDNode);
 
-    // Create Catenis (system) device root HD extended key and store it
-    this.catenisDeviceRootHDNode = this.catenisRootHDNode.derive(0);
-
-    if (this.catenisDeviceRootHDNode.index !== 0) {
-        Catenis.logger.ERROR('Catenis (system) device root HD extended key (m/0/0) derived with an unexpected index', {expectedIndex: 0, returnedIndex: this.catenisDeviceRootHDNode.index});
-        throw new Error('Catenis (system) device root HD extended key (m/0/0) could not be derived for index 0');
+    //  Try to initialize Catenis Hub HD extended keys
+    if (! this.initCatenisNodeHDNodes(ctnHubNodeIndex)) {
+        Catenis.logger.ERROR(util.format('HD extended keys for Catenis Hub (node index %d) could not be initialized', ctnHubNodeIndex));
+        throw new Error(util.format('HD extended keys for Catenis Hub (node index %d) could not be initialized', ctnHubNodeIndex));
     }
-
-    storeHDNode.call(this, 'm/0/0', this.catenisDeviceRootHDNode);
-
-    // Create Catenis (system) general external root HD extended key and store it
-    this.catenisGenExternRootHDNode = this.catenisRootHDNode.derive(1);
-
-    if (this.catenisGenExternRootHDNode.index !== 1) {
-        Catenis.logger.ERROR('Catenis (system) general external addresses root HD extended key (m/0/1) derived with an unexpected index', {expectedIndex: 1, returnedIndex: this.catenisGenExternRootHDNode.index});
-        throw new Error('Catenis (system) general external addresses root HD extended key (m/0/1) could not be derived for index 0');
-    }
-
-    storeHDNode.call(this, 'm/0/1', this.catenisGenExternRootHDNode);
-
-    // Create Catenis (system) general internal root HD extended key and store it
-    this.catenisGenInternRootHDNode = this.catenisRootHDNode.derive(2);
-
-    if (this.catenisGenInternRootHDNode.index !== 2) {
-        Catenis.logger.ERROR('Catenis (system) general internal addresses root HD extended key (m/0/2) derived with an unexpected index', {expectedIndex: 2, returnedIndex: this.catenisGenInternRootHDNode.index});
-        throw new Error('Catenis (system) general internal addresses root HD extended key (m/0/2) could not be derived for index 0');
-    }
-
-    storeHDNode.call(this, 'm/0/2', this.catenisGenInternRootHDNode);
-
-    // Create Catenis (system) device addresses HD extended keys
-    this.catenisDeviceAddrHDNodes = [];
-
-    for (let idx = 0; idx < numDeviceAddresses; idx++) {
-        var path = util.format('m/0/0/%d', idx),
-            catenisDeviceAddrHDNode = this.catenisDeviceRootHDNode.derive(idx);
-
-        this.catenisDeviceAddrHDNodes.push(catenisDeviceAddrHDNode);
-
-        if (catenisDeviceAddrHDNode.index !== idx) {
-            Catenis.logger.ERROR(util.format('Catenis (system) device address #%d HD extended key (%s) derived with an unexpected index', idx + 1, path), {expectedIndex: idx, returnedIndex: catenisDeviceAddrHDNode.index});
-            throw new Error(util.format('Catenis (system) device address #%d HD extended key (%s) could not be derived for index %d', idx + 1, path, idx));
-        }
-
-        storeHDNode.call(this, path, catenisDeviceAddrHDNode);
-    }
-
-    this.catenisDeviceMainAddrHDNode = this.catenisDeviceAddrHDNodes[0];
 }
 
 
 // Public KeyStore object methods
 //
 
-KeyStore.prototype.getClientServiceCreditAddressKeys = function (clientIndex) {
-    // Validate client index
-    if (!isValidClientIndex(clientIndex)) {
-        Catenis.logger.ERROR('KeyStore.getClientServiceCreditKeys method called with invalid argument', {clientIndex: clientIndex});
-        throw Error('Invalid client index argument');
+KeyStore.prototype.getCryptoKeysByPath = function (path) {
+    var docExtKey = this.collExtKey.by('path', path);
+
+    return docExtKey != null ? new Catenis.module.CryptoKeys(bitcoin.HDNode.fromBase58(docExtKey.strHDNode, this.cryptoNetwork).keyPair) : null;
+};
+
+KeyStore.prototype.getCryptoKeysByAddress = function (addr) {
+    var docExtKey = this.collExtKey.by('address', addr);
+
+    return docExtKey != null ? new Catenis.module.CryptoKeys(bitcoin.HDNode.fromBase58(docExtKey.strHDNode, this.cryptoNetwork).keyPair) : null;
+};
+
+KeyStore.prototype.getTypeAndPathByAddress = function (addr) {
+    var docExtKey = this.collExtKey.by('address', addr);
+
+    return docExtKey != null ? {type: docExtKey.type, path: docExtKey.path} : null;
+};
+
+KeyStore.prototype.getAddressInfo = function (addr) {
+    var docExtKey = this.collExtKey.by('address', addr),
+        addrInfo = null;
+
+    if (docExtKey != null) {
+        addrInfo = {
+            cryptoKeys: new Catenis.module.CryptoKeys(bitcoin.HDNode.fromBase58(docExtKey.strHDNode, this.cryptoNetwork).keyPair),
+            type: docExtKey.type,
+            path: docExtKey.path
+        };
+
+        var pathParts = getPathParts(docExtKey);
+
+        if (pathParts != null) {
+            addrInfo.pathParts = pathParts;
+        }
     }
 
-    // Get root HD extended key for client with given index
-    var clientRootHDNode = getClientRootHDNode.call(this, clientIndex),
-        clientServCreditAddrKeys = null;
+    return addrInfo;
+};
 
-    if (clientRootHDNode != null) {
-        // Try to retrieve service credit address HD extended key for client with given index
-        var path = util.format('m/%d/0', clientIndex),
-            clientServCreditAddrHDNode = retrieveHDNode.call(this, path);
+KeyStore.prototype.listAddressesInfo = function (addrs) {
+    var self = this;
+    
+    return addrs.reduce(function (result, addr) {
+        var hdNodeInfo = self.getAddressInfo(addr);
 
-        if (clientServCreditAddrHDNode == null) {
-            // Client service credit address HD extended key does not exist yet. Create it
-            clientServCreditAddrHDNode = clientRootHDNode.derive(0);
+        if (hdNodeInfo != null) {
+            result[addr] = hdNodeInfo;
+        }
 
-            if (clientServCreditAddrHDNode.index !== 0) {
-                Catenis.logger.WARN(util.format('Client service credit address HD extended key (%s) derived with an unexpected index', path), {expectedIndex: 0, returnedIndex: clientServCreditAddrHDNode.index});
-                clientServCreditAddrHDNode = null;
+        return result;
+    }, {});
+};
+
+KeyStore.prototype.setAddressAsObsolete = function (addr) {
+    var docExtKey = this.collExtKey.by('address', addr);
+
+    if (docExtKey != null && (docExtKey.type === 'ctnd_fund_pay_addr' || docExtKey.type === 'ctnd_fund_chg_addr' || docExtKey.type == 'ctnd_pay_tx_exp_addr')
+            && !docExtKey.isObsolete) {
+        docExtKey.isObsolete = true;
+        this.collExtKey.update(docExtKey);
+    }
+};
+
+KeyStore.prototype.setAddressListAsObsolete = function (addrs) {
+    this.collExtKey.chain().find({$and: [{address: {$in: addrs}}, {type: {$in: ['ctnd_fund_pay_addr', 'ctnd_fund_chg_addr', 'ctnd_pay_tx_exp_addr']}}, {isObsolete: false}]})
+        .update(function (docExtKey) {
+        docExtKey.isObsolete = true;
+    });
+};
+
+KeyStore.prototype.isObsoleteAddress = function (addr) {
+    var docExtKey = this.collExtKey.by('address', addr);
+
+    return docExtKey != null && docExtKey.isObsolete;
+};
+
+KeyStore.prototype.listAddressesInUse = function () {
+    return this.collExtKey.find({$and: [{isLeaf: true}, {isReserved: false}, {isObsolete: false}]}).map(function (docExtKey) {
+        return docExtKey.address;
+    }, this);
+};
+
+KeyStore.prototype.initCatenisNodeHDNodes = function (ctnNodeIndex) {
+    // Validate Catenis node index
+    if (!isValidCatenisNodeIndex(ctnNodeIndex)) {
+        Catenis.logger.ERROR('KeyStore.initCatenisNodeHDNodes method called with invalid argument', {ctnNodeIndex: ctnNodeIndex});
+        throw Error('Invalid clientIndex argument');
+    }
+
+    var success = false,
+        hdNodesToStore = [];
+
+    // Try to retrieve root HD extended key for Catenis node with given index
+    var ctnNodeRootPath = util.format('m/0/%d', ctnNodeIndex),
+        ctnNodeRootHDNode = retrieveHDNode.call(this, ctnNodeRootPath);
+
+    if (ctnNodeRootHDNode == null) {
+        // Catenis node root HD extended key does not exist yet. Create it
+        ctnNodeRootHDNode = this.sysRootHDNode.derive(ctnNodeIndex);
+
+        if (ctnNodeRootHDNode.index !== ctnNodeIndex) {
+            Catenis.logger.WARN(util.format('Catenis node root HD extended key (%s) derived with an unexpected index', ctnNodeRootPath), {expectedIndex: ctnNodeIndex, returnedIndex: ctnNodeRootHDNode.index});
+        }
+        else {
+            // Save newly created HD extended key to store it later
+            hdNodesToStore.push({type: 'ctnd_root', path: ctnNodeRootPath, hdNode: ctnNodeRootHDNode, isLeaf: false, isReserved: false});
+
+            // Create Catenis node device root HD extended key
+            var path = ctnNodeRootPath + '/0',
+                ctnNodeDeviceRootHDNode = ctnNodeRootHDNode.derive(0);
+
+            if (ctnNodeDeviceRootHDNode.index !== 0) {
+                Catenis.logger.WARN(util.format('Catenis node device root HD extended key (%s) derived with an unexpected index', path), {expectedIndex: 0, returnedIndex: ctnNodeDeviceRootHDNode.index});
+            }
+            else {
+                // Save newly created HD extended key to store it later
+                hdNodesToStore.push({type: 'ctnd_dev_root', path: path, hdNode: ctnNodeDeviceRootHDNode, isLeaf: false, isReserved: false});
+
+                // Create Catenis node funding root HD extended key
+                path = ctnNodeRootPath + '/1';
+                var ctnNodeFundingRootHDNode = ctnNodeRootHDNode.derive(1);
+
+                if (ctnNodeFundingRootHDNode.index !== 1) {
+                    Catenis.logger.WARN(util.format('Catenis node funding root HD extended key (%s) derived with an unexpected index', path), {expectedIndex: 1, returnedIndex: ctnNodeFundingRootHDNode.index});
+                }
+                else {
+                    // Save newly created HD extended key to store it later
+                    hdNodesToStore.push({type: 'ctnd_fund_root', path: path, hdNode: ctnNodeFundingRootHDNode, isLeaf: false, isReserved: false});
+
+                    // Create Catenis node pay tx expense root HD extended key
+                    path = ctnNodeRootPath + '/2';
+                    var ctnNodePayTxExpenseRootHDNode = ctnNodeRootHDNode.derive(2);
+
+                    if (ctnNodePayTxExpenseRootHDNode.index !== 2) {
+                        Catenis.logger.WARN(util.format('Catenis node pay tx expense root HD extended key (%s) derived with an unexpected index', path), {expectedIndex: 2, returnedIndex: ctnNodePayTxExpenseRootHDNode.index});
+                    }
+                    else {
+                        // Save newly created HD extended key to store it later
+                        hdNodesToStore.push({type: 'ctnd_pay_tx_exp_root', path: path, hdNode: ctnNodePayTxExpenseRootHDNode, isLeaf: false, isReserved: false});
+
+                        // Create all predefined and reserved Catenis node device address HD extended keys
+                        for (let idx = 0; idx < numDeviceAddresses; idx++) {
+                            path = util.format('%s/0/%d', ctnNodeRootPath, idx);
+                            var ctnNodeDeviceAddrHDNode = ctnNodeDeviceRootHDNode.derive(idx);
+
+                            if (ctnNodeDeviceAddrHDNode.index !== idx) {
+                                Catenis.logger.WARN(util.format('Catenis node device address #%d HD extended key (%s) derived with an unexpected index', idx + 1, path), {expectedIndex: idx, returnedIndex: ctnNodeDeviceAddrHDNode.index});
+                                ctnNodeDeviceRootHDNode = null;
+                                break;
+                            }
+                            else {
+                                // Save newly created HD extended key to store it later
+                                hdNodesToStore.push({type: idx == 0 ? 'ctnd_dev_main_addr' : 'ctnd_dev_rsrv_addr', path: path, hdNode: ctnNodeDeviceAddrHDNode, isLeaf: true, isReserved: idx >= numUsedCtnNodeDeviceAddresses});
+                            }
+                        }
+
+                        if (ctnNodeDeviceRootHDNode != null) {
+                            // Create Catenis node funding payment root HD extended key
+                            path = ctnNodeRootPath + '/1/0';
+                            var ctnNodeFundingPaymentRootHDNode = ctnNodeFundingRootHDNode.derive(0);
+
+                            if (ctnNodeFundingPaymentRootHDNode.index !== 0) {
+                                Catenis.logger.WARN(util.format('Catenis node funding payment root HD extended key (%s) derived with an unexpected index', path), {expectedIndex: 0, returnedIndex: ctnNodeFundingPaymentRootHDNode.index});
+                            }
+                            else {
+                                // Save newly created HD extended key to store it later
+                                hdNodesToStore.push({type: 'ctnd_fund_pay_root', path: path, hdNode: ctnNodeFundingPaymentRootHDNode, isLeaf: false, isReserved: false});
+
+                                // Create Catenis node funding change root HD extended key
+                                path = ctnNodeRootPath + '/1/1';
+                                var ctnNodeFundingChangeRootHDNode = ctnNodeFundingRootHDNode.derive(1);
+
+                                if (ctnNodeFundingChangeRootHDNode.index !== 1) {
+                                    Catenis.logger.WARN(util.format('Catenis node funding change root HD extended key (%s) derived with an unexpected index', path), {expectedIndex: 1, returnedIndex: ctnNodeFundingChangeRootHDNode.index});
+                                }
+                                else {
+                                    // Save newly created HD extended key to store it later
+                                    hdNodesToStore.push({type: 'ctnd_fund_chg_root', path: path, hdNode: ctnNodeFundingChangeRootHDNode, isLeaf: false, isReserved: false});
+
+                                    // Store all newly created HD extended keys, and indicate success
+                                    var self = this;
+
+                                    hdNodesToStore.forEach(function (hdNodeToStore) {
+                                        storeHDNode.call(self, hdNodeToStore.type, hdNodeToStore.path, hdNodeToStore.hdNode, hdNodeToStore.isLeaf, hdNodeToStore.isReserved);
+                                    });
+
+                                    success = true;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    else {
+        // Catenis node HD nodes already initialized. Nothing to do,
+        //  just indicate success
+        success = true;
+    }
+
+    return success;
+};
+
+KeyStore.prototype.getCatenisNodeFundingPaymentAddressKeys = function (ctnNodeIndex, addrIndex) {
+    // Validate arguments
+    var errArg = {};
+
+    if (!isValidCatenisNodeIndex(ctnNodeIndex)) {
+        errArg.ctnNodeIndex = ctnNodeIndex;
+    }
+
+    if (!isValidAddressIndex(addrIndex)) {
+        errArg.addrIndex = addrIndex;
+    }
+
+    if (Object.keys(errArg).length > 0) {
+        var errArgs = Object.keys(errArg);
+
+        Catenis.logger.ERROR(util.format('KeyStore.getCatenisNodeFundingPaymentAddressKeys method called with invalid argument%s', errArgs.length > 1 ? 's' : ''), errArg);
+        throw Error(util.format('Invalid %s argument%s', errArgs.join(', '), errArgs.length > 1 ? 's' : ''));
+    }
+    
+    // Try to retrieve funding payment address HD extended key for given Catenis node with the given index
+    var ctnNodeFundingPaymentAddrPath = util.format('m/0/%d/1/0/%d', ctnNodeIndex, addrIndex),
+        ctnNodeFundingPaymentAddrHDNode = retrieveHDNode.call(this, ctnNodeFundingPaymentAddrPath),
+        ctnNodeFundingPaymentAddrKeys = null;
+    
+    if (ctnNodeFundingPaymentAddrHDNode == null) {
+        // Catenis node funding payment address HD extended key does not exist yet.
+        //  Retrieve parent root HD extended key to create it
+        var path = util.format('m/0/%d/1/0', ctnNodeIndex),
+            ctnNodeFundingPaymentRootHDNode = retrieveHDNode.call(this, path);
+
+        if (ctnNodeFundingPaymentRootHDNode == null) {
+            // Catenis node funding payment root HD extended key does not exist yet.
+            //  Try to initialize Catenis node HD extended keys
+            if (! this.initCatenisNodeHDNodes(ctnNodeIndex)) {
+                Catenis.logger.ERROR(util.format('HD extended keys for Catenis node with index %d could not be initialized', ctnNodeIndex));
+            }
+            else {
+                // Catenis node HD extended keys successfully initialized.
+                //  Retrieve specified Catenis node funding payment root HD extend key again
+                ctnNodeFundingPaymentRootHDNode = retrieveHDNode.call(this, path);
+            }
+        }
+
+        if (ctnNodeFundingPaymentRootHDNode == null) {
+            Catenis.logger.ERROR(util.format('Funding payment root HD extended key for Catenis node with index %d not found', ctnNodeIndex));
+        }
+        else {
+            // Try to create Catenis node funding payment address HD extended key now
+            ctnNodeFundingPaymentAddrHDNode = ctnNodeFundingPaymentRootHDNode.derive(addrIndex);
+
+            if (ctnNodeFundingPaymentAddrHDNode.index !== addrIndex) {
+                Catenis.logger.WARN(util.format('Catenis node funding payment address HD extended key (%s) derived with an unexpected index', path), {expectedIndex: addrIndex, returnedIndex: ctnNodeFundingPaymentAddrHDNode.index});
+                ctnNodeFundingPaymentAddrHDNode = null;
             }
             else {
                 // Store created HD extended key
-                storeHDNode.call(this, path, clientServCreditAddrHDNode);
+                storeHDNode.call(this, 'ctnd_fund_pay_addr', ctnNodeFundingPaymentAddrPath, ctnNodeFundingPaymentAddrHDNode, true);
+            }
+        }
+    }
+    
+    if (ctnNodeFundingPaymentAddrHDNode != null) {
+        ctnNodeFundingPaymentAddrKeys = new Catenis.module.CryptoKeys(ctnNodeFundingPaymentAddrHDNode.keyPair);
+    }
+
+    return ctnNodeFundingPaymentAddrKeys;
+};
+
+KeyStore.prototype.listCatenisNodeFundingPaymentAddresses = function (ctnNodeIndex, fromAddrIndex, toAddrIndex, onlyInUse) {
+    // Validate arguments
+    var errArg = {},
+        queryTerms = [{parentPath: util.format('m/0/%d/1/0', ctnNodeIndex)}];
+
+    if (fromAddrIndex != undefined) {
+        if (!isValidAddressIndex(fromAddrIndex)) {
+            errArg.fromAddrIndex = fromAddrIndex;
+        }
+        else {
+            queryTerms.push({index: {$gte: fromAddrIndex}});
+        }
+    }
+
+    if (toAddrIndex != undefined) {
+        if (!isValidAddressIndex(toAddrIndex) || (fromAddrIndex != undefined && toAddrIndex < fromAddrIndex)) {
+            errArg.toAddrIndex = toAddrIndex;
+        }
+        else {
+            queryTerms.push({index: {$lte: toAddrIndex}});
+        }
+    }
+
+    if (Object.keys(errArg).length > 0) {
+        var errArgs = Object.keys(errArg);
+
+        Catenis.logger.ERROR(util.format('KeyStore.listCatenisNodeFundingPaymentAddresses method called with invalid argument%s', errArgs.length > 1 ? 's' : ''), errArg);
+        throw Error(util.format('Invalid %s argument%s', errArgs.join(', '), errArgs.length > 1 ? 's' : ''));
+    }
+
+    if (onlyInUse) {
+        queryTerms.push({isObsolete: false});
+    }
+
+    // Return existing Catenis node funding payment addresses within the specified range
+    if (queryTerms.length > 1) {
+        var query = {$and: queryTerms};
+    }
+    else {
+        query = queryTerms[0];
+    }
+
+    return this.collExtKey.chain().find(query).simplesort('index').data().map(function (docExtKey) {
+        return docExtKey.address;
+    }, this);
+};
+
+KeyStore.prototype.listCatenisNodeFundingPaymentAddressesInUse = function (ctnNodeIndex, fromAddrIndex, toAddrIndex) {
+    return this.listCatenisNodeFundingPaymentAddresses(ctnNodeIndex, fromAddrIndex, toAddrIndex, true);
+};
+
+KeyStore.prototype.getCatenisNodeFundingChangeAddressKeys = function (ctnNodeIndex, addrIndex) {
+    // Validate arguments
+    var errArg = {};
+
+    if (!isValidCatenisNodeIndex(ctnNodeIndex)) {
+        errArg.ctnNodeIndex = ctnNodeIndex;
+    }
+
+    if (!isValidAddressIndex(addrIndex)) {
+        errArg.addrIndex = addrIndex;
+    }
+
+    if (Object.keys(errArg).length > 0) {
+        var errArgs = Object.keys(errArg);
+
+        Catenis.logger.ERROR(util.format('KeyStore.getCatenisNodeFundingChangeAddressKeys method called with invalid argument%s', errArgs.length > 1 ? 's' : ''), errArg);
+        throw Error(util.format('Invalid %s argument%s', errArgs.join(', '), errArgs.length > 1 ? 's' : ''));
+    }
+
+    // Try to retrieve funding change address HD extended key for given Catenis node with the given index
+    var ctnNodeFundingChangeAddrPath = util.format('m/0/%d/1/1/%d', ctnNodeIndex, addrIndex),
+        ctnNodeFundingChangeAddrHDNode = retrieveHDNode.call(this, ctnNodeFundingChangeAddrPath),
+        ctnNodeFundingChangeAddrKeys = null;
+
+    if (ctnNodeFundingChangeAddrHDNode == null) {
+        // Catenis node funding change address HD extended key does not exist yet.
+        //  Retrieve parent root HD extended key to create it
+        var path = util.format('m/0/%d/1/1', ctnNodeIndex),
+            ctnNodeFundingChangeRootHDNode = retrieveHDNode.call(this, path);
+
+        if (ctnNodeFundingChangeRootHDNode == null) {
+            // Catenis node funding change root HD extended key does not exist yet.
+            //  Try to initialize Catenis node HD extended keys
+            if (! this.initCatenisNodeHDNodes(ctnNodeIndex)) {
+                Catenis.logger.ERROR(util.format('HD extended keys for Catenis node with index %d could not be initialized', ctnNodeIndex));
+            }
+            else {
+                // Catenis node HD extended keys successfully initialized.
+                //  Retrieve specified Catenis node funding change root HD extend key again
+                ctnNodeFundingChangeRootHDNode = retrieveHDNode.call(this, path);
+            }
+        }
+
+        if (ctnNodeFundingChangeRootHDNode == null) {
+            Catenis.logger.ERROR(util.format('Funding change root HD extended key for Catenis node with index %d not found', ctnNodeIndex));
+        }
+        else {
+            // Try to create Catenis node funding change address HD extended key now
+            ctnNodeFundingChangeAddrHDNode = ctnNodeFundingChangeRootHDNode.derive(addrIndex);
+
+            if (ctnNodeFundingChangeAddrHDNode.index !== addrIndex) {
+                Catenis.logger.WARN(util.format('Catenis node funding change address HD extended key (%s) derived with an unexpected index', path), {expectedIndex: addrIndex, returnedIndex: ctnNodeFundingChangeAddrHDNode.index});
+                ctnNodeFundingChangeAddrHDNode = null;
+            }
+            else {
+                // Store created HD extended key
+                storeHDNode.call(this, 'ctnd_fund_chg_addr', ctnNodeFundingChangeAddrPath, ctnNodeFundingChangeAddrHDNode, true);
             }
         }
     }
 
-    if (clientServCreditAddrHDNode != null) {
-        clientServCreditAddrKeys = new Catenis.module.CryptoKeys(clientServCreditAddrHDNode.keyPair);
+    if (ctnNodeFundingChangeAddrHDNode != null) {
+        ctnNodeFundingChangeAddrKeys = new Catenis.module.CryptoKeys(ctnNodeFundingChangeAddrHDNode.keyPair);
     }
 
-    return clientServCreditAddrKeys;
-}
+    return ctnNodeFundingChangeAddrKeys;
+};
 
-KeyStore.prototype.getDeviceAddressKeys = function (clientIndex, deviceIndex, addressIndex) {
+KeyStore.prototype.listCatenisNodeFundingChangeAddresses = function (ctnNodeIndex, fromAddrIndex, toAddrIndex, onlyInUse) {
+    // Validate arguments
+    var errArg = {},
+        queryTerms = [{parentPath: util.format('m/0/%d/1/1', ctnNodeIndex)}];
+
+    if (fromAddrIndex != undefined) {
+        if (!isValidAddressIndex(fromAddrIndex)) {
+            errArg.fromAddrIndex = fromAddrIndex;
+        }
+        else {
+            queryTerms.push({index: {$gte: fromAddrIndex}});
+        }
+    }
+
+    if (toAddrIndex != undefined) {
+        if (!isValidAddressIndex(toAddrIndex) || (fromAddrIndex != undefined && toAddrIndex < fromAddrIndex)) {
+            errArg.toAddrIndex = toAddrIndex;
+        }
+        else {
+            queryTerms.push({index: {$lte: toAddrIndex}});
+        }
+    }
+
+    if (Object.keys(errArg).length > 0) {
+        var errArgs = Object.keys(errArg);
+
+        Catenis.logger.ERROR(util.format('KeyStore.listCatenisNodeFundingChangeAddresses method called with invalid argument%s', errArgs.length > 1 ? 's' : ''), errArg);
+        throw Error(util.format('Invalid %s argument%s', errArgs.join(', '), errArgs.length > 1 ? 's' : ''));
+    }
+
+    if (onlyInUse) {
+        queryTerms.push({isObsolete: false});
+    }
+
+    // Return existing Catenis node funding change addresses within the specified range
+    if (queryTerms.length > 1) {
+        var query = {$and: queryTerms};
+    }
+    else {
+        query = queryTerms[0];
+    }
+
+    return this.collExtKey.chain().find(query).simplesort('index').data().map(function (docExtKey) {
+        return docExtKey.address;
+    }, this);
+};
+
+KeyStore.prototype.listCatenisNodeFundingChangeAddressesInUse = function (ctnNodeIndex, fromAddrIndex, toAddrIndex) {
+    return this.listCatenisNodeFundingChangeAddresses(ctnNodeIndex, fromAddrIndex, toAddrIndex, true);
+};
+
+KeyStore.prototype.getCatenisNodePayTxExpenseAddressKeys = function (ctnNodeIndex, addrIndex) {
+    // Validate arguments
+    var errArg = {};
+
+    if (!isValidCatenisNodeIndex(ctnNodeIndex)) {
+        errArg.ctnNodeIndex = ctnNodeIndex;
+    }
+
+    if (!isValidAddressIndex(addrIndex)) {
+        errArg.addrIndex = addrIndex;
+    }
+
+    if (Object.keys(errArg).length > 0) {
+        var errArgs = Object.keys(errArg);
+
+        Catenis.logger.ERROR(util.format('KeyStore.getCatenisNodePayTxExpenseAddressKeys method called with invalid argument%s', errArgs.length > 1 ? 's' : ''), errArg);
+        throw Error(util.format('Invalid %s argument%s', errArgs.join(', '), errArgs.length > 1 ? 's' : ''));
+    }
+
+    // Try to retrieve pay tx expense address HD extended key for given Catenis node with the given index
+    var ctnNodePayTxExpenseAddrPath = util.format('m/0/%d/2/%d', ctnNodeIndex, addrIndex),
+        ctnNodePayTxExpenseAddrHDNode = retrieveHDNode.call(this, ctnNodePayTxExpenseAddrPath),
+        ctnNodePayTxExpenseAddrKeys = null;
+
+    if (ctnNodePayTxExpenseAddrHDNode == null) {
+        // Catenis node pay tx expense address HD extended key does not exist yet.
+        //  Retrieve parent root HD extended key to create it
+        var path = util.format('m/0/%d/2', ctnNodeIndex),
+            ctnNodePayTxExpenseRootHDNode = retrieveHDNode.call(this, path);
+
+        if (ctnNodePayTxExpenseRootHDNode == null) {
+            // Catenis node pay tx expense root HD extended key does not exist yet.
+            //  Try to initialize Catenis node HD extended keys
+            if (! this.initCatenisNodeHDNodes(ctnNodeIndex)) {
+                Catenis.logger.ERROR(util.format('HD extended keys for Catenis node with index %d could not be initialized', ctnNodeIndex));
+            }
+            else {
+                // Catenis node HD extended keys successfully initialized.
+                //  Retrieve specified Catenis node pay tx expense root HD extend key again
+                ctnNodePayTxExpenseRootHDNode = retrieveHDNode.call(this, path);
+            }
+        }
+
+        if (ctnNodePayTxExpenseRootHDNode == null) {
+            Catenis.logger.ERROR(util.format('Pay tx expense root HD extended key for Catenis node with index %d not found', ctnNodeIndex));
+        }
+        else {
+            // Try to create Catenis node pay tx expense address HD extended key now
+            ctnNodePayTxExpenseAddrHDNode = ctnNodePayTxExpenseRootHDNode.derive(addrIndex);
+
+            if (ctnNodePayTxExpenseAddrHDNode.index !== addrIndex) {
+                Catenis.logger.WARN(util.format('Catenis node pay tx expense address HD extended key (%s) derived with an unexpected index', path), {expectedIndex: addrIndex, returnedIndex: ctnNodePayTxExpenseAddrHDNode.index});
+                ctnNodePayTxExpenseAddrHDNode = null;
+            }
+            else {
+                // Store created HD extended key
+                storeHDNode.call(this, 'ctnd_pay_tx_exp_addr', ctnNodePayTxExpenseAddrPath, ctnNodePayTxExpenseAddrHDNode, true);
+            }
+        }
+    }
+
+    if (ctnNodePayTxExpenseAddrHDNode != null) {
+        ctnNodePayTxExpenseAddrKeys = new Catenis.module.CryptoKeys(ctnNodePayTxExpenseAddrHDNode.keyPair);
+    }
+
+    return ctnNodePayTxExpenseAddrKeys;
+};
+
+KeyStore.prototype.listCatenisNodePayTxExpenseAddresses = function (ctnNodeIndex, fromAddrIndex, toAddrIndex, onlyInUse) {
+    // Validate arguments
+    var errArg = {},
+        queryTerms = [{parentPath: util.format('m/0/%d/2', ctnNodeIndex)}];
+
+    if (fromAddrIndex != undefined) {
+        if (!isValidAddressIndex(fromAddrIndex)) {
+            errArg.fromAddrIndex = fromAddrIndex;
+        }
+        else {
+            queryTerms.push({index: {$gte: fromAddrIndex}});
+        }
+    }
+
+    if (toAddrIndex != undefined) {
+        if (!isValidAddressIndex(toAddrIndex) || (fromAddrIndex != undefined && toAddrIndex < fromAddrIndex)) {
+            errArg.toAddrIndex = toAddrIndex;
+        }
+        else {
+            queryTerms.push({index: {$lte: toAddrIndex}});
+        }
+    }
+
+    if (Object.keys(errArg).length > 0) {
+        var errArgs = Object.keys(errArg);
+
+        Catenis.logger.ERROR(util.format('KeyStore.listCatenisNodePayTxExpenseAddresses method called with invalid argument%s', errArgs.length > 1 ? 's' : ''), errArg);
+        throw Error(util.format('Invalid %s argument%s', errArgs.join(', '), errArgs.length > 1 ? 's' : ''));
+    }
+
+    if (onlyInUse) {
+        queryTerms.push({isObsolete: false});
+    }
+
+    // Return existing Catenis node pay tx expense addresses within the specified range
+    if (queryTerms.length > 1) {
+        var query = {$and: queryTerms};
+    }
+    else {
+        query = queryTerms[0];
+    }
+
+    return this.collExtKey.chain().find(query).simplesort('index').data().map(function (docExtKey) {
+        return docExtKey.address;
+    }, this);
+};
+
+KeyStore.prototype.listCatenisNodePayTxExpenseAddressesInUse = function (ctnNodeIndex, fromAddrIndex, toAddrIndex) {
+    return this.listCatenisNodePayTxExpenseAddresses(ctnNodeIndex, fromAddrIndex, toAddrIndex);
+};
+
+KeyStore.prototype.getCatenisNodeDeviceAddressKeys = function (ctnNodeIndex, addrIndex) {
+    // Validate arguments
+    var errArg = {};
+
+    if (!isValidCatenisNodeIndex(ctnNodeIndex)) {
+        errArg.ctnNodeIndex = ctnNodeIndex;
+    }
+
+    if (!isValidAddressIndex(addrIndex)) {
+        errArg.addrIndex = addrIndex;
+    }
+
+    if (Object.keys(errArg).length > 0) {
+        var errArgs = Object.keys(errArg);
+
+        Catenis.logger.ERROR(util.format('KeyStore.getCatenisNodeDeviceAddressKeys method called with invalid argument%s', errArgs.length > 1 ? 's' : ''), errArg);
+        throw Error(util.format('Invalid %s argument%s', errArgs.join(', '), errArgs.length > 1 ? 's' : ''));
+    }
+
+    // Try to retrieve device address HD extended key for given Catenis node with the given index
+    var path = util.format('m/0/%d/0/%d', ctnNodeIndex, addrIndex),
+        ctnNodeDeviceAddrHDNode = retrieveHDNode.call(this, path),
+        ctnNodeDeviceAddrKeys = null;
+
+    if (ctnNodeDeviceAddrHDNode == null) {
+        // Catenis node device address HD extended key does not exist yet.
+        //  Try to initialize Catenis node HD extended keys
+        if (! this.initCatenisNodeHDNodes(ctnNodeIndex)) {
+            Catenis.logger.ERROR(util.format('HD extended keys for Catenis node with index %d could not be initialized', ctnNodeIndex));
+        }
+        else {
+            // Catenis node HD extended keys successfully initialized.
+            //  Retrieve specified Catenis node device address HD extend key again
+            ctnNodeDeviceAddrHDNode = retrieveHDNode.call(this, path);
+        }
+    }
+
+    if (ctnNodeDeviceAddrHDNode == null) {
+        Catenis.logger.ERROR(util.format('Device address #%d HD extended key for Catenis node with index %d not found', addrIndex, ctnNodeIndex));
+    }
+    else {
+        ctnNodeDeviceAddrKeys = new Catenis.module.CryptoKeys(ctnNodeDeviceAddrHDNode.keyPair);
+    }
+
+    return ctnNodeDeviceAddrKeys;
+};
+
+KeyStore.prototype.getCatenisNodeDeviceMainAddressKeys = function (ctnNodeIndex) {
+    return this.getCatenisNodeDeviceAddressKeys(ctnNodeIndex, 0);
+};
+
+KeyStore.prototype.getCatenisHubFundingPaymentAddressKeys = function (addrIndex) {
+    return this.getCatenisNodeFundingPaymentAddressKeys(this.ctnHubNodeIndex, addrIndex);
+};
+
+KeyStore.prototype.listCatenisHubFundingPaymentAddresses = function (fromAddrIndex, toAddrIndex, onlyInUse) {
+    return this.listCatenisNodeFundingPaymentAddresses(this.ctnHubNodeIndex, fromAddrIndex, toAddrIndex, onlyInUse)
+};
+
+KeyStore.prototype.listCatenisHubFundingPaymentAddressesInUse = function (fromAddrIndex, toAddrIndex) {
+    return this.listCatenisHubFundingPaymentAddresses(fromAddrIndex, toAddrIndex, true);
+};
+
+KeyStore.prototype.getCatenisHubFundingChangeAddressKeys = function (addrIndex) {
+    return this.getCatenisNodeFundingChangeAddressKeys(this.ctnHubNodeIndex, addrIndex);
+};
+
+KeyStore.prototype.listCatenisHubFundingChangeAddresses = function (fromAddrIndex, toAddrIndex, onlyInUse) {
+    return this.listCatenisNodeFundingChangeAddresses(this.ctnHubNodeIndex, fromAddrIndex, toAddrIndex, onlyInUse);
+};
+
+KeyStore.prototype.listCatenisHubFundingChangeAddressesInUse = function (fromAddrIndex, toAddrIndex) {
+    return this.listCatenisHubFundingChangeAddresses(fromAddrIndex, toAddrIndex, true);
+};
+
+KeyStore.prototype.getCatenisHubPayTxExpenseAddressKeys = function (addrIndex) {
+    return this.getCatenisNodePayTxExpenseAddressKeys(this.ctnHubNodeIndex, addrIndex);
+};
+
+KeyStore.prototype.listCatenisHubPayTxExpenseAddresses = function (fromAddrIndex, toAddrIndex, onlyInUse) {
+    return this.listCatenisNodePayTxExpenseAddresses(this.ctnHubNodeIndex, fromAddrIndex, toAddrIndex, onlyInUse);
+};
+
+KeyStore.prototype.listCatenisHubPayTxExpenseAddressesInUse = function (fromAddrIndex, toAddrIndex) {
+    return this.listCatenisHubPayTxExpenseAddresses(fromAddrIndex, toAddrIndex, true);
+};
+
+KeyStore.prototype.getCatenisHubDeviceAddressKeys = function (addrIndex) {
+    return this.getCatenisNodeDeviceAddressKeys(this.ctnHubNodeIndex, addrIndex);
+};
+
+KeyStore.prototype.getCatenisHubDeviceMainAddressKeys = function () {
+    return this.getCatenisHubDeviceAddressKeys(0);
+};
+
+KeyStore.prototype.initClientHDNodes = function (clientIndex) {
+    // Validate client index
+    if (!isValidClientIndex(clientIndex)) {
+        Catenis.logger.ERROR('KeyStore.initClientHDNodes method called with invalid argument', {clientIndex: clientIndex});
+        throw Error('Invalid clientIndex argument');
+    }
+
+    var success = false,
+        hdNodesToStore = [];
+
+    // Try to retrieve root HD extended key for client with given index
+    var clientRootPath = util.format('m/%d', clientIndex),
+        clientRootHDNode = retrieveHDNode.call(this, clientRootPath);
+
+    if (clientRootHDNode == null) {
+        // Client root HD extended key does not exist yet. Create it
+        clientRootHDNode = this.masterHDNode.derive(clientIndex);
+
+        if (clientRootHDNode.index !== clientIndex) {
+            Catenis.logger.WARN(util.format('Client root HD extended key (%s) derived with an unexpected index', clientRootPath), {expectedIndex: clientIndex, returnedIndex: clientRootHDNode.index});
+        }
+        else {
+            // Save newly created HD extended key to store it later
+            hdNodesToStore.push({type: 'cln_root', path: clientRootPath, hdNode: clientRootHDNode, isLeaf: false, isReserved: false});
+
+            // Create client internal address hierarchy root HD extended key
+            var path = clientRootPath + '/0',
+                clientIntAddrHierarchyRootHDNode = clientRootHDNode.derive(0);
+
+            if (clientIntAddrHierarchyRootHDNode.index !== 0) {
+                Catenis.logger.WARN(util.format('Client internal address hierarchy root HD extended key (%s) derived with an unexpected index', path), {expectedIndex: 0, returnedIndex: clientIntAddrHierarchyRootHDNode.index});
+            }
+            else {
+                // Save newly created HD extended key to store it later
+                hdNodesToStore.push({type: 'cln_int_addr_hrch_root', path: path, hdNode: clientIntAddrHierarchyRootHDNode, isLeaf: false, isReserved: false});
+
+                // Create client public address hierarchy root HD extended key
+                path = clientRootPath + '/1';
+                var clientPubAddrHierarchyRootHDNode = clientRootHDNode.derive(1);
+
+                if (clientPubAddrHierarchyRootHDNode.index !== 1) {
+                    Catenis.logger.WARN(util.format('Client public address hierarchy root HD extended key (%s) derived with an unexpected index', path), {expectedIndex: 1, returnedIndex: clientPubAddrHierarchyRootHDNode.index});
+                }
+                else {
+                    // Save newly created HD extended key to store it later
+                    hdNodesToStore.push({type: 'cln_pub_addr_hrch_root', path: path, hdNode: clientPubAddrHierarchyRootHDNode, isLeaf: false, isReserved: false});
+
+                    // Create client internal addresses root HD extended key
+                    path = clientRootPath + '/0/0';
+                    var clientIntAddrRootHDNode = clientIntAddrHierarchyRootHDNode.derive(0);
+
+                    if (clientIntAddrRootHDNode.index !== 0) {
+                        Catenis.logger.WARN(util.format('Client internal addresses root HD extended key (%s) derived with an unexpected index', path), {expectedIndex: 0, returnedIndex: clientIntAddrRootHDNode.index});
+                    }
+                    else {
+                        // Save newly created HD extended key to store it later
+                        hdNodesToStore.push({type: 'cln_int_addr_root', path: path, hdNode: clientIntAddrRootHDNode, isLeaf: false, isReserved: false});
+
+                        // Create client service credit root HD extended key
+                        var clientSrvCreditRootPath = clientRootPath + '/0/0/0',
+                            clientSrvCreditRootHDNode = clientIntAddrRootHDNode.derive(0);
+
+                        if (clientSrvCreditRootHDNode.index !== 0) {
+                            Catenis.logger.WARN(util.format('Client service credit root HD extended key (%s) derived with an unexpected index', clientSrvCreditRootPath), {expectedIndex: 0, returnedIndex: clientSrvCreditRootHDNode.index});
+                        }
+                        else {
+                            // Save newly created HD extended key to store it later
+                            hdNodesToStore.push({type: 'cln_srv_crd_root', path: clientSrvCreditRootPath, hdNode: clientIntAddrRootHDNode, isLeaf: false, isReserved: false});
+
+                            // Create all predefined and reserved client service credit address HD extended keys
+                            for (let idx = 0; idx < numServiceCreditAddresses; idx++) {
+                                let clientSrvCreditPath = util.format('%s/%d', clientSrvCreditRootPath, idx),
+                                    clientSrvCreditHDNode = clientSrvCreditRootHDNode.derive(idx);
+
+                                if (clientSrvCreditHDNode.index !== idx) {
+                                    Catenis.logger.WARN(util.format('Client service credit address #%d HD extended key (%s) derived with an unexpected index', idx + 1, clientSrvCreditPath), {expectedIndex: idx, returnedIndex: clientSrvCreditHDNode.index});
+                                    clientSrvCreditRootHDNode = null;
+                                    break;
+                                }
+                                else {
+                                    // Save newly created HD extended key to store it later
+                                    hdNodesToStore.push({type: idx == 0 ? 'cln_msg_crd_addr' : (idx == 1 ? 'cln_asst_crd_addr' : 'cln_srv_crd_rsrv_addr'), path: clientSrvCreditPath, hdNode: clientSrvCreditHDNode, isLeaf: true, isReserved: idx >= numUsedServiceCreditAddresses});
+                                }
+                            }
+
+                            if (clientSrvCreditRootHDNode != null) {
+                                // Store all newly created HD extended keys, and indicate success
+                                var self = this;
+                                
+                                hdNodesToStore.forEach(function (hdNodeToStore) {
+                                    storeHDNode.call(self, hdNodeToStore.type, hdNodeToStore.path, hdNodeToStore.hdNode, hdNodeToStore.isLeaf, hdNodeToStore.isReserved);
+                                });
+
+                                success = true;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    else {
+        // Client HD nodes already initialized. Nothing to do,
+        //  just indicate success
+        success = true;
+    }
+
+    return success;
+};
+
+KeyStore.prototype.getClientServiceCreditAddressKeys = function (clientIndex, srvCreditIndex) {
+    // Validate arguments
+    var errArg = {};
+
+    if (!isValidClientIndex(clientIndex)) {
+        errArg.clientIndex = clientIndex;
+    }
+
+    if (!isValidServiceCreditIndex(srvCreditIndex)) {
+        errArg.srvCreditIndex = srvCreditIndex;
+    }
+
+    if (Object.keys(errArg).length > 0) {
+        var errArgs = Object.keys(errArg);
+
+        Catenis.logger.ERROR(util.format('KeyStore.getClientServiceCreditAddressKeys method called with invalid argument%s', errArgs.length > 1 ? 's' : ''), errArg);
+        throw Error(util.format('Invalid %s argument%s', errArgs.join(', '), errArgs.length > 1 ? 's' : ''));
+    }
+
+    // Try to retrieve specified service credit address HD extended key for client with given index
+    var path = util.format('m/%d/0/0/0/%d', clientIndex, srvCreditIndex),
+        clientSrvCreditAddrHDNode = retrieveHDNode.call(this, path),
+        clientSrvCreditAddrKeys = null;
+
+    if (clientSrvCreditAddrHDNode == null) {
+        // Client service credit address HD extended key does not exist yet.
+        //  Try to initialize client HD extended keys
+        if (! this.initClientHDNodes(clientIndex)) {
+            Catenis.logger.ERROR(util.format('HD extended keys for client with index %d could not be initialized', clientIndex));
+        }
+        else {
+            // Client HD extended keys successfully initialized.
+            //  Retrieve specified service credit address HD extend key again
+            clientSrvCreditAddrHDNode = retrieveHDNode.call(this, path);
+        }
+    }
+
+    if (clientSrvCreditAddrHDNode != null) {
+        clientSrvCreditAddrKeys = new Catenis.module.CryptoKeys(clientSrvCreditAddrHDNode.keyPair);
+    }
+
+    return clientSrvCreditAddrKeys;
+};
+
+KeyStore.prototype.getClientMessageCreditAddressKeys = function (clientIndex) {
+    return this.getClientServiceCreditAddressKeys(clientIndex, 0);
+};
+
+KeyStore.prototype.getClientAssetCreditAddressKeys = function (clientIndex) {
+    return this.getClientServiceCreditAddressKeys(clientIndex, 1);
+};
+
+KeyStore.prototype.initDeviceHDNodes = function (clientIndex, deviceIndex) {
     // Validate arguments
     var errArg = {};
 
@@ -204,138 +981,236 @@ KeyStore.prototype.getDeviceAddressKeys = function (clientIndex, deviceIndex, ad
         errArg.deviceIndex = deviceIndex;
     }
 
-    if (!isValidDeviceAddressIndex(addressIndex)) {
-        errArg.addressIndex = addressIndex;
+    if (Object.keys(errArg).length > 0) {
+        var errArgs = Object.keys(errArg);
+
+        Catenis.logger.ERROR(util.format('KeyStore.initDeviceHDNodes method called with invalid argument%s', errArgs.length > 1 ? 's' : ''), errArg);
+        throw Error(util.format('Invalid %s argument%s', errArgs.join(', '), errArgs.length > 1 ? 's' : ''));
+    }
+
+    var success = false,
+        hdNodesToStore = [];
+
+    // Try to retrieve internal address hierarchy root HD extended key for client with given index
+    var clientIntAddrHierarchyRootPath = util.format('m/%d/0', clientIndex),
+        clientIntAddrHierarchyRootHDNode = retrieveHDNode.call(this, clientIntAddrHierarchyRootPath);
+
+    if (clientIntAddrHierarchyRootHDNode == null) {
+        // Client internal address hierarchy root HD extended key does not exist yet.
+        //  Try to initialize client HD extended keys
+        if (! this.initClientHDNodes(clientIndex)) {
+            Catenis.logger.ERROR(util.format('HD extended keys for client with index %d could not be initialized', clientIndex));
+        }
+        else {
+            // Client HD extended keys successfully initialized.
+            //  Retrieve client internal hierarchy root HD extend key again
+            clientIntAddrHierarchyRootHDNode = retrieveHDNode.call(this, clientIntAddrHierarchyRootPath);
+        }
+    }
+
+    if (clientIntAddrHierarchyRootHDNode == null) {
+        Catenis.logger.ERROR(util.format('Internal address hierarchy root HD extended key for client with index %d not found', clientIndex));
+    }
+    else {
+        // Try to retrieve public address hierarchy root HD extended key for client with given index
+        var clientPubAddrHierarchyRootPath = util.format('m/%d/1', clientIndex),
+            clientPubAddrHierarchyRootHDNode = retrieveHDNode.call(this, clientPubAddrHierarchyRootPath);
+
+        if (clientPubAddrHierarchyRootHDNode == null) {
+            Catenis.logger.ERROR(util.format('Public address hierarchy root HD extended key for client with index %d not found', clientIndex));
+        }
+        else {
+            // Create client internal addresses root HD extended key for device with given index
+            var deviceIntAddrRootPath = util.format('%s/%d', clientIntAddrHierarchyRootPath, deviceIndex),
+                deviceIntAddrRootHDNode = clientIntAddrHierarchyRootHDNode.derive(deviceIndex);
+
+            if (deviceIntAddrRootHDNode.index !== deviceIndex) {
+                Catenis.logger.WARN(util.format('Device internal addresses root HD extended key (%s) derived with an unexpected index', path), {
+                    expectedIndex: deviceIndex,
+                    returnedIndex: deviceIntAddrRootHDNode.index
+                });
+            }
+            else {
+                // Save newly created HD extended key to store it later
+                hdNodesToStore.push({type: 'dev_int_addr_root', path: deviceIntAddrRootPath, hdNode: deviceIntAddrRootHDNode, isLeaf: false, isReserved: false});
+
+                // Create all predefined and reserved device internal address HD extended keys
+                for (let idx = 0; idx < numDeviceAddresses; idx++) {
+                    let deviceIntAddrPath = util.format('%s/%d', deviceIntAddrRootPath, idx),
+                        deviceIntAddrHDNode = deviceIntAddrRootHDNode.derive(idx);
+
+                    if (deviceIntAddrHDNode.index !== idx) {
+                        Catenis.logger.WARN(util.format('Device internal address #%d HD extended key (%s) derived with an unexpected index', idx + 1, deviceIntAddrPath), {
+                            expectedIndex: idx,
+                            returnedIndex: deviceIntAddrHDNode.index
+                        });
+                        deviceIntAddrRootHDNode = null;
+                    }
+                    else {
+                        // Save newly created HD extended key to store it later
+                        hdNodesToStore.push({type: idx == 0 ? 'dev_read_conf_addr' : 'dev_int_rsrv_addr', path: deviceIntAddrPath, hdNode: deviceIntAddrHDNode, isLeaf: true, isReserved: idx >= numUsedDeviceIntAddresses});
+                    }
+                }
+
+                if (deviceIntAddrRootHDNode != null) {
+                    // Create client public addresses root HD extended key for device with given index
+                    var devicePubAddrRootPath = util.format('%s/%d', clientPubAddrHierarchyRootPath, deviceIndex),
+                        devicePubAddrRootHDNode = clientPubAddrHierarchyRootHDNode.derive(deviceIndex);
+
+                    if (devicePubAddrRootHDNode.index !== deviceIndex) {
+                        Catenis.logger.WARN(util.format('Device public addresses root HD extended key (%s) derived with an unexpected index', path), {
+                            expectedIndex: deviceIndex,
+                            returnedIndex: devicePubAddrRootHDNode.index
+                        });
+                    }
+                    else {
+                        // Save newly created HD extended key to store it later
+                        hdNodesToStore.push({type: 'dev_pub_addr_root', path: devicePubAddrRootPath, hdNode: devicePubAddrRootHDNode, isLeaf: false, isReserved: false});
+
+                        // Create all predefined and reserved device public address HD extended keys
+                        for (let idx = 0; idx < numDeviceAddresses; idx++) {
+                            let devicePubAddrPath = util.format('%s/%d', devicePubAddrRootPath, idx),
+                                devicePubAddrHDNode = devicePubAddrRootHDNode.derive(idx);
+
+                            if (devicePubAddrHDNode.index !== idx) {
+                                Catenis.logger.WARN(util.format('Device public address #%d HD extended key (%s) derived with an unexpected index', idx + 1, devicePubAddrPath), {
+                                    expectedIndex: idx,
+                                    returnedIndex: devicePubAddrHDNode.index
+                                });
+                                devicePubAddrRootHDNode = null;
+                            }
+                            else {
+                                // Save newly created HD extended key to store it later
+                                hdNodesToStore.push({type: idx == 0 ? 'dev_main_addr' : (idx == 1 ? 'dev_asst_addr' : 'dev_pub_rsrv_addr'), path: devicePubAddrPath, hdNode: devicePubAddrHDNode, isLeaf: true, isReserved: idx >= numUsedDevicePubAddresses});
+                            }
+                        }
+
+                        if (devicePubAddrRootHDNode != null) {
+                            // Store all newly created HD extended keys, and indicate success
+                            var self = this;
+                            
+                            hdNodesToStore.forEach(function (hdNodeToStore) {
+                                storeHDNode.call(self, hdNodeToStore.type, hdNodeToStore.path, hdNodeToStore.hdNode, hdNodeToStore.isLeaf, hdNodeToStore.isReserved);
+                            });
+
+                            success = true;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    return success;
+};
+
+KeyStore.prototype.getDeviceInternalAddressKeys = function (clientIndex, deviceIndex, addrIndex) {
+    // Validate arguments
+    var errArg = {};
+
+    if (!isValidClientIndex(clientIndex)) {
+        errArg.clientIndex = clientIndex;
+    }
+
+    if (!isValidDeviceIndex(deviceIndex)) {
+        errArg.deviceIndex = deviceIndex;
+    }
+
+    if (!isValidDeviceAddressIndex(addrIndex)) {
+        errArg.addrIndex = addrIndex;
     }
 
     if (Object.keys(errArg).length > 0) {
         var errArgs = Object.keys(errArg);
 
-        Catenis.logger.ERROR(util.format('KeyStore.getDeviceAddressKeys method called with invalid argument%s', errArgs.length > 1 ? 's' : ''), errArg);
-        throw Error(util.format('Invalid %s index argument%s', errArgs.join(', '), errArgs.length > 1 ? 's' : ''));
+        Catenis.logger.ERROR(util.format('KeyStore.getDeviceInternalAddressKeys method called with invalid argument%s', errArgs.length > 1 ? 's' : ''), errArg);
+        throw Error(util.format('Invalid %s argument%s', errArgs.join(', '), errArgs.length > 1 ? 's' : ''));
     }
 
-    // Get root HD extended key for device of given client with given index
-    var deviceRootHDNode = getDeviceRootHDNode.call(this, clientIndex, deviceIndex),
-        deviceAddrKeys = null;
+    // Try to retrieve specified internal address HD extended key for device of given client with given index
+    var path = util.format('m/%d/0/%d/%d', clientIndex, deviceIndex, addrIndex),
+        deviceIntAddrHDNode = retrieveHDNode.call(this, path),
+        deviceIntAddrKeys = null;
 
-    if (deviceRootHDNode != null) {
-        // Try to retrieve device address HD extended key for device of given client with given index
-        var path = util.format('m/%d/%d/%d', clientIndex, deviceIndex, addressIndex),
-            deviceAddrHDNode = retrieveHDNode.call(this, path);
-
-        if (deviceAddrHDNode == null) {
-            // Device address HD extended key does not exist yet. Create it
-            //  NOTE: this should never happen since device addresses are pre-created
-            //      when the device root HD extended key is crated.
-            Catenis.logger.WARN(util.format('Device address HD extended key (%s) not yet created even though device root HD extended key is already created', path));
-            deviceAddrHDNode = deviceRootHDNode.derive(addressIndex);
-
-            if (deviceAddrHDNode.index !== 0) {
-                Catenis.logger.WARN(util.format('Device address HD extended key (%s) derived with an unexpected index', path), {expectedIndex: addressIndex, returnedIndex: deviceAddrHDNode.index});
-                deviceAddrHDNode = null;
-            }
-            else {
-                // Store created HD extended key
-                storeHDNode.call(this, path, deviceAddrHDNode);
-            }
+    if (deviceIntAddrHDNode == null) {
+        // Device internal address HD extended key does not exist yet.
+        //  Try to initialize device HD extended keys
+        if (! this.initDeviceHDNodes(clientIndex, deviceIndex)) {
+            Catenis.logger.ERROR(util.format('HD extended keys for device with index %d of client with index %d could not be initialized', deviceIndex, clientIndex));
+        }
+        else {
+            // Device HD extended keys successfully initialized.
+            //  Retrieve specified internal address HD extend key again
+            deviceIntAddrHDNode = retrieveHDNode.call(this, path);
         }
     }
 
-    if (deviceAddrHDNode != null) {
-        deviceAddrKeys = new Catenis.module.CryptoKeys(deviceAddrHDNode.keyPair);
+    if (deviceIntAddrHDNode != null) {
+        deviceIntAddrKeys = new Catenis.module.CryptoKeys(deviceIntAddrHDNode.keyPair);
     }
 
-    return deviceAddrKeys;
-}
+    return deviceIntAddrKeys;
+};
+
+KeyStore.prototype.getDevicePublicAddressKeys = function (clientIndex, deviceIndex, addrIndex) {
+    // Validate arguments
+    var errArg = {};
+
+    if (!isValidClientIndex(clientIndex)) {
+        errArg.clientIndex = clientIndex;
+    }
+
+    if (!isValidDeviceIndex(deviceIndex)) {
+        errArg.deviceIndex = deviceIndex;
+    }
+
+    if (!isValidDeviceAddressIndex(addrIndex)) {
+        errArg.addrIndex = addrIndex;
+    }
+
+    if (Object.keys(errArg).length > 0) {
+        var errArgs = Object.keys(errArg);
+
+        Catenis.logger.ERROR(util.format('KeyStore.getDevicePublicAddressKeys method called with invalid argument%s', errArgs.length > 1 ? 's' : ''), errArg);
+        throw Error(util.format('Invalid %s argument%s', errArgs.join(', '), errArgs.length > 1 ? 's' : ''));
+    }
+
+    // Try to retrieve specified public address HD extended key for device of given client with given index
+    var path = util.format('m/%d/0/%d/%d', clientIndex, deviceIndex, addrIndex),
+        devicePubAddrHDNode = retrieveHDNode.call(this, path),
+        devicePubAddrKeys = null;
+
+    if (devicePubAddrHDNode == null) {
+        // Device public address HD extended key does not exist yet.
+        //  Try to initialize device HD extended keys
+        if (! this.initDeviceHDNodes(clientIndex, deviceIndex)) {
+            Catenis.logger.ERROR(util.format('HD extended keys for device with index %d of client with index %d could not be initialized', deviceIndex, clientIndex));
+        }
+        else {
+            // Device HD extended keys successfully initialized.
+            //  Retrieve specified public address HD extend key again
+            devicePubAddrHDNode = retrieveHDNode.call(this, path);
+        }
+    }
+
+    if (devicePubAddrHDNode != null) {
+        devicePubAddrKeys = new Catenis.module.CryptoKeys(devicePubAddrHDNode.keyPair);
+    }
+
+    return devicePubAddrKeys;
+};
 
 KeyStore.prototype.getDeviceMainAddressKeys = function (clientIndex, deviceIndex) {
-    return this.getDeviceAddressKeys(clientIndex, deviceIndex, 0);
-}
+    return this.getDevicePublicAddressKeys(clientIndex, deviceIndex, 0);
+};
 
-KeyStore.prototype.getDeviceReadAddressKeys = function (clientIndex, deviceIndex) {
-    return this.getDeviceAddressKeys(clientIndex, deviceIndex, 1);
-}
+KeyStore.prototype.getDeviceAssetAddressKeys = function (clientIndex, deviceIndex) {
+    return this.getDevicePublicAddressKeys(clientIndex, deviceIndex, 1);
+};
 
-KeyStore.prototype.getCatenisFundingAddressKeys = function (addressIndex) {
-    // Validate address index
-    if (!isValidAddressIndex(addressIndex)) {
-        Catenis.logger.ERROR('KeyStore.getCatenisFundingAddressKeys method called with invalid argument', {addressIndex: addressIndex});
-        throw Error('Invalid address index argument');
-    }
-
-    // Try to retrieve Catenis (system) funding address HD extended key with the given index
-    var path = util.format('m/0/1/%d', addressIndex),
-        catenisFundingAddrKeys = null,
-        catenisFundingAddrHDNode = retrieveHDNode.call(this, path);
-
-    if (catenisFundingAddrHDNode == null) {
-        // Catenis (system) funding address HD extended key does not exist yet. Create it
-        catenisFundingAddrHDNode = this.catenisGenExternRootHDNode.derive(addressIndex);
-
-        if (catenisFundingAddrHDNode.index !== addressIndex) {
-            Catenis.logger.WARN(util.format('Catenis (system) funding address HD extended key (%s) derived with an unexpected index', path), {expectedIndex: addressIndex, returnedIndex: catenisFundingAddrHDNode.index});
-            catenisFundingAddrHDNode = null;
-        }
-        else {
-            // Store created HD extended key
-            storeHDNode.call(this, path, catenisFundingAddrHDNode);
-        }
-    }
-
-    if (catenisFundingAddrHDNode != null) {
-        catenisFundingAddrKeys = new Catenis.module.CryptoKeys(catenisFundingAddrHDNode.keyPair);
-    }
-
-    return catenisFundingAddrKeys;
-}
-
-KeyStore.prototype.getCatenisPayFeeAddressKeys = function (addressIndex) {
-    // Validate address index
-    if (!isValidAddressIndex(addressIndex)) {
-        Catenis.logger.ERROR('KeyStore.getCatenisPayFeeAddressKeys method called with invalid argument', {addressIndex: addressIndex});
-        throw Error('Invalid address index argument');
-    }
-
-    // Try to retrieve Catenis (system) pay fee address HD extended key with the given index
-    var path = util.format('m/0/2/%d', addressIndex),
-        catenisPayFeeAddrKeys = null,
-        catenisPayFeeAddrHDNode = retrieveHDNode.call(this, path);
-
-    if (catenisPayFeeAddrHDNode == null) {
-        // Catenis (system) pay fee address HD extended key does not exist yet. Create it
-        catenisPayFeeAddrHDNode = this.catenisGenInternRootHDNode.derive(addressIndex);
-
-        if (catenisPayFeeAddrHDNode.index !== addressIndex) {
-            Catenis.logger.WARN(util.format('Catenis (system) pay fee address HD extended key (%s) derived with an unexpected index', path), {expectedIndex: addressIndex, returnedIndex: catenisPayFeeAddrHDNode.index});
-            catenisPayFeeAddrHDNode = null;
-        }
-        else {
-            // Store created HD extended key
-            storeHDNode.call(this, path, catenisPayFeeAddrHDNode);
-        }
-    }
-
-    if (catenisPayFeeAddrHDNode != null) {
-        catenisPayFeeAddrKeys = new Catenis.module.CryptoKeys(catenisPayFeeAddrHDNode.keyPair);
-    }
-
-    return catenisPayFeeAddrKeys;
-}
-
-KeyStore.prototype.getCatenisDeviceAddressKeys = function (addressIndex) {
-    // Validate address index
-    if (!isValidDeviceAddressIndex(addressIndex)) {
-        Catenis.logger.ERROR('KeyStore.getCatenisDeviceAddressKeys method called with invalid argument', {addressIndex: addressIndex});
-        throw Error('Invalid address index argument');
-    }
-
-    return new Catenis.module.CryptoKeys(this.catenisDeviceAddrHDNodes[addressIndex]);
-}
-
-KeyStore.prototype.getCatenisDeviceMainAddressKeys = function () {
-    return new Catenis.module.CryptoKeys(this.catenisDeviceMainAddrHDNode);
-}
+KeyStore.prototype.getDeviceReadConfirmAddressKeys = function (clientIndex, deviceIndex) {
+    return this.getDeviceInternalAddressKeys(clientIndex, deviceIndex, 0);
+};
 
 
 // Module functions used to simulate private KeyStore object methods
@@ -344,122 +1219,277 @@ KeyStore.prototype.getCatenisDeviceMainAddressKeys = function () {
 //      or .bind().
 //
 
-function storeHDNode(path, hdNode) {
-    var doc = {path: path, parentPath: parentPath(path), depth: hdNode.depth, index: hdNode.index, strHDNode: hdNode.toBase58()};
-    this.collExtKey.insert(doc);
+function storeHDNode(type, path, hdNode, isLeaf, isReserved, isObsolete) {
+    if (isLeaf == undefined) {
+        isLeaf = false;
+    }
+
+    if (!isLeaf || isReserved == undefined) {
+        isReserved = false;
+    }
+
+    if (!isLeaf || isReserved || isObsolete == undefined) {
+        isObsolete = false;
+    }
+
+    var docExtKey = {type: type, path: path, parentPath: parentPath(path), depth: hdNode.depth, index: hdNode.index, strHDNode: hdNode.toBase58(), address: (new Catenis.module.CryptoKeys(hdNode.keyPair)).getAddress(), isLeaf: isLeaf, isReserved: isReserved, isObsolete: isObsolete};
+
+    this.collExtKey.insert(docExtKey);
 }
 
 function retrieveHDNode(path) {
-    var doc = this.collExtKey.findOne({path: path});
-    return doc != null ? bitcoin.HDNode.fromBase58(doc.strHDNode, Catenis.application.cryptoNetwork) : null;
+    var docExtKey = this.collExtKey.by('path', path);
+
+    return docExtKey != null ? bitcoin.HDNode.fromBase58(docExtKey.strHDNode, this.cryptoNetwork) : null;
 }
 
-function getClientRootHDNode(clientIndex) {
-    // Try to retrieve root HD extended key for client with given index
-    var path = util.format('m/%d', clientIndex),
-        clientRootHDNode = retrieveHDNode.call(this, path);
-
-    if (clientRootHDNode == null) {
-        // Client root HD extended key does not exist yet. Create it
-        clientRootHDNode = this.masterHDNode.derive(clientIndex);
-
-        if (clientRootHDNode.index !== clientIndex) {
-            Catenis.logger.WARN(util.format('Client root HD extended key (%s) derived with an unexpected index', path), {expectedIndex: clientIndex, returnedIndex: clientRootHDNode.index});
-            clientRootHDNode = null;
-        }
-        else {
-            // Store created HD extended key
-            storeHDNode.call(this, path, clientRootHDNode);
-        }
-    }
-
-    return clientRootHDNode;
-}
-
-function getDeviceRootHDNode(clientIndex, deviceIndex) {
-    // Get root HD extended key for client with given index
-    var clientRootHDNode = getClientRootHDNode.call(this, clientIndex),
-        path = util.format('m/%d/%d', clientIndex, deviceIndex),
-        deviceRootHDNode = null,
-        hdNodesToStore = [];
-
-    if (clientRootHDNode != null) {
-        // Try to retrieve root HD extended key for client device with given index
-        deviceRootHDNode = retrieveHDNode.call(this, path);
-
-        if (deviceRootHDNode == null) {
-            // Device root HD extended key does not exist yet. Create it
-            deviceRootHDNode = clientRootHDNode.derive(deviceIndex);
-
-            if (deviceRootHDNode.index !== deviceIndex) {
-                Catenis.logger.WARN(util.format('Device root HD extended key (%s) derived with an unexpected index', path), {expectedIndex: deviceIndex, returnedIndex: deviceRootHDNode.index});
-                deviceRootHDNode = null;
-            }
-            else {
-                // Save newly created HD extended key to store it later
-                hdNodesToStore.push({path: path, hdNode: deviceRootHDNode});
-            }
-        }
-    }
-
-    if (deviceRootHDNode != null && hdNodesToStore.length > 0) {
-        // Make sure that all defined/reserved device addresses can be
-        //  derived with their proper index before storing device root HD extended key
-        for (var idx = 0; idx < numDeviceAddresses; idx++) {
-            var hdNodeInfo = getDeviceAddressHDNodeInfo.call(this, deviceRootHDNode, path, idx);
-
-            if (hdNodeInfo.hdNode == null) {
-                // Device address could not be derived with its proper index.
-                //  Invalidate device root HD extended key
-                deviceRootHDNode = null;
-                break;
-            }
-            else if (hdNodeInfo.storeHDNode) {
-                hdNodesToStore.push({path: hdNodeInfo.path, hdNode: hdNodeInfo.hdNode});
-            }
-        }
-
-        if (deviceRootHDNode != null) {
-            // Store all newly created HD extended keys
-            hdNodesToStore.forEach((function (hdNodeToStore) {
-                storeHDNode.call(this, hdNodeToStore.path, hdNodeToStore.hdNode);
-            }).bind(this));
-        }
-    }
-
-    return deviceRootHDNode;
-}
-
-function getDeviceAddressHDNodeInfo(deviceRootHDNode, parentPath, addressIndex) {
-    // Try to retrieve device address HD extended key for given parent and address index
-    var path = util.format('%s/%d', parentPath, addressIndex),
-        deviceAddrHDNode = retrieveHDNode.call(this, path),
-        storeHDNode = false;
-
-    if (deviceAddrHDNode == null) {
-        // Device address HD extended key does not exist yet. Create it
-        deviceAddrHDNode = deviceRootHDNode.derive(addressIndex);
-
-        if (deviceAddrHDNode.index !== addressIndex) {
-            Catenis.logger.WARN(util.format('Device address HD extended key (%s) derived with an unexpected index', path), {expectedIndex: addressIndex, returnedIndex: deviceAddrHDNode.index});
-            deviceAddrHDNode = null;
-        }
-        else {
-            // Indicate the newly created HD extended key should be stored
-            storeHDNode = true;
-        }
-    }
-
-    return {path: path, hdNode: deviceAddrHDNode, storeHDNode: storeHDNode};
-}
 
 // KeyStore function class (public) methods
 //
 
 KeyStore.initialize = function () {
     // Instantiate KeyStore object
-    Catenis.keyStore = new KeyStore();
+    Catenis.keyStore = new KeyStore(Catenis.application.ctnHubNodeIndex, Catenis.application.seed, Catenis.application.cryptoNetwork);
 };
+
+
+// KeyStore function class (public) properties
+//
+
+KeyStore.extKeyType = Object.freeze({
+    mstr: Object.freeze({
+        name: 'mstr',
+        description: 'master root',
+        pathRegEx: /^m$/
+    }),
+    sys_root: Object.freeze({
+        name: 'sys_root',
+        description: 'system root',
+        pathRegEx: /^m\/0$/
+    }),
+    ctnd_root: Object.freeze({
+        name: 'ctnd_root',
+        description: 'Catenis node root',
+        pathRegEx: /^m\/0\/(\d+)$/,
+        pathParts: {
+            1: 'ctnNodeIndex'
+        }
+    }),
+    ctnd_dev_root: Object.freeze({
+        name: 'ctnd_dev_root',
+        description: 'Catenis node device root',
+        pathRegEx: /^m\/0\/(\d+)\/0$/,
+        pathParts: {
+            1: 'ctnNodeIndex'
+        }
+    }),
+    ctnd_fund_root: Object.freeze({
+        name: 'ctnd_fund_root',
+        description: 'Catenis node funding root',
+        pathRegEx: /^m\/0\/(\d+)\/1$/,
+        pathParts: {
+            1: 'ctnNodeIndex'
+        }
+    }),
+    ctnd_pay_tx_exp_root: Object.freeze({
+        name: 'ctnd_pay_tx_exp_root',
+        description: 'Catenis node pay tx expense root',
+        pathRegEx: /^m\/0\/(\d+)\/2$/,
+        pathParts: {
+            1: 'ctnNodeIndex'
+        }
+    }),
+    ctnd_dev_main_addr: Object.freeze({
+        name: 'ctnd_dev_main_addr',
+        description: 'Catenis node device main address',
+        pathRegEx: /^m\/0\/(\d+)\/0\/0$/,
+        pathParts: {
+            1: 'ctnNodeIndex'
+        }
+    }),
+    ctnd_dev_rsrv_addr: Object.freeze({
+        name: 'ctnd_dev_rsrv_addr',
+        description: 'Catenis node device reserved address',
+        pathRegEx: /^m\/0\/(\d+)\/0\/(\d+)$/,
+        pathParts: {
+            1: 'ctnNodeIndex',
+            2: 'addrIndex'
+        }
+    }),
+    ctnd_fund_pay_root: Object.freeze({
+        name: 'ctnd_fund_pay_root',
+        description: 'Catenis node funding payment root',
+        pathRegEx: /^m\/0\/(\d+)\/1\/0$/,
+        pathParts: {
+            1: 'ctnNodeIndex'
+        }
+    }),
+    ctnd_fund_chg_root: Object.freeze({
+        name: 'ctnd_fund_chg_root',
+        description: 'Catenis node funding change root',
+        pathRegEx: /^m\/0\/(\d+)\/1\/1$/,
+        pathParts: {
+            1: 'ctnNodeIndex'
+        }
+    }),
+    ctnd_fund_pay_addr: Object.freeze({
+        name: 'ctnd_fund_pay_addr',
+        description: 'Catenis node funding payment address',
+        pathRegEx: /^m\/0\/(\d+)\/1\/0\/(\d+)$/,
+        pathParts: {
+            1: 'ctnNodeIndex',
+            2: 'addrIndex'
+        }
+    }),
+    ctnd_fund_chg_addr: Object.freeze({
+        name: 'ctnd_fund_chg_addr',
+        description: 'Catenis node funding change address',
+        pathRegEx: /^m\/0\/(\d+)\/1\/1\/(\d+)$/,
+        pathParts: {
+            1: 'ctnNodeIndex',
+            2: 'addrIndex'
+        }
+    }),
+    ctnd_pay_tx_exp_addr: Object.freeze({
+        name: 'ctnd_pay_tx_exp_addr',
+        description: 'Catenis node pay tx expense address',
+        pathRegEx: /^m\/0\/(\d+)\/2\/(\d+)$/,
+        pathParts: {
+            1: 'ctnNodeIndex',
+            2: 'addrIndex'
+        }
+    }),
+    cln_root: Object.freeze({
+        name: 'cln_root',
+        description: 'client root',
+        pathRegEx: /^m\/(\d+)$/,
+        pathParts: {
+            1: 'clientIndex'
+        }
+    }),
+    cln_int_addr_hrch_root: Object.freeze({
+        name: 'cln_int_addr_hrch_root',
+        description: 'client internal address hierarchy root',
+        pathRegEx: /^m\/(\d+)\/0$/,
+        pathParts: {
+            1: 'clientIndex'
+        }
+    }),
+    cln_pub_addr_hrch_root: Object.freeze({
+        name: 'cln_pub_addr_hrch_root',
+        description: 'client public address hierarchy root',
+        pathRegEx: /^m\/(\d+)\/1$/,
+        pathParts: {
+            1: 'clientIndex'
+        }
+    }),
+    cln_int_addr_root: Object.freeze({
+        name: 'cln_int_addr_root',
+        description: 'client internal addresses root',
+        pathRegEx: /^m\/(\d+)\/0\/0$/,
+        pathParts: {
+            1: 'clientIndex'
+        }
+    }),
+    cln_srv_crd_root: Object.freeze({
+        name: 'cln_srv_crd_root',
+        description: 'client service credit root',
+        pathRegEx: /^m\/(\d+)\/0\/0\/0$/,
+        pathParts: {
+            1: 'clientIndex'
+        }
+    }),
+    cln_msg_crd_addr: Object.freeze({
+        name: 'cln_msg_crd_addr',
+        description: 'client message credit address',
+        pathRegEx: /^m\/(\d+)\/0\/0\/0\/0$/,
+        pathParts: {
+            1: 'clientIndex'
+        }
+    }),
+    cln_asst_crd_addr: Object.freeze({
+        name: 'cln_asst_crd_addr',
+        description: 'client asset credit address',
+        pathRegEx: /^m\/(\d+)\/0\/0\/0\/1$/,
+        pathParts: {
+            1: 'clientIndex'
+        }
+    }),
+    cln_srv_crd_rsrv_addr: Object.freeze({
+        name: 'cln_srv_crd_rsrv_addr',
+        description: 'client service credit reserved address',
+        pathRegEx: /^m\/(\d+)\/0\/0\/0\/(\d+)$/,
+        pathParts: {
+            1: 'clientIndex',
+            2: 'addrIndex'
+        }
+    }),
+    dev_int_addr_root: Object.freeze({
+        name: 'dev_int_addr_root',
+        description: 'device internal addresses root',
+        pathRegEx: /^m\/(\d+)\/0\/(\d+)$/,
+        pathParts: {
+            1: 'clientIndex',
+            2: 'deviceIndex'
+        }
+    }),
+    dev_read_conf_addr: Object.freeze({
+        name: 'dev_read_conf_addr',
+        description: 'device read confirmation address',
+        pathRegEx: /^m\/(\d+)\/0\/(\d+)\/0$/,
+        pathParts: {
+            1: 'clientIndex',
+            2: 'deviceIndex'
+        }
+    }),
+    dev_int_rsrv_addr: Object.freeze({
+        name: 'dev_int_rsrv_addr',
+        description: 'device internal reserved address',
+        pathRegEx: /^m\/(\d+)\/0\/(\d+)\/(\d+)$/,
+        pathParts: {
+            1: 'clientIndex',
+            2: 'deviceIndex',
+            3: 'addrIndex'
+        }
+    }),
+    dev_pub_addr_root: Object.freeze({
+        name: 'dev_pub_addr_root',
+        description: 'device public addresses root',
+        pathRegEx: /^m\/(\d+)\/1\/(\d+)$/,
+        pathParts: {
+            1: 'clientIndex',
+            2: 'deviceIndex'
+        }
+    }),
+    dev_main_addr: Object.freeze({
+        name: 'dev_main_addr',
+        description: 'device main address',
+        pathRegEx: /^m\/(\d+)\/1\/(\d+)\/0$/,
+        pathParts: {
+            1: 'clientIndex',
+            2: 'deviceIndex'
+        }
+    }),
+    dev_asst_addr: Object.freeze({
+        name: 'dev_asst_addr',
+        description: 'device asset address',
+        pathRegEx: /^m\/(\d+)\/1\/(\d+)\/1$/,
+        pathParts: {
+            1: 'clientIndex',
+            2: 'deviceIndex'
+        }
+    }),
+    dev_pub_rsrv_addr: Object.freeze({
+        name: 'dev_pub_rsrv_addr',
+        description: 'device public reserved address',
+        pathRegEx: /^m\/(\d+)\/1\/(\d+)\/(\d+)$/,
+        pathParts: {
+            1: 'clientIndex',
+            2: 'deviceIndex',
+            3: 'addrIndex'
+        }
+    })
+});
 
 
 // Definition of module (private) functions
@@ -474,6 +1504,29 @@ function parentPath(path) {
     }
 
     return parentPath != undefined ? parentPath : null;
+}
+
+function getPathParts(docExtKey) {
+    var pathParts = {},
+        hasParts = false,
+        extKeyType,
+        searchResult;
+
+    if (docExtKey.type in KeyStore.extKeyType && 'pathParts' in (extKeyType = KeyStore.extKeyType[docExtKey.type])
+            && (searchResult = docExtKey.path.match(extKeyType.pathRegEx))) {
+        for (let partNum in extKeyType.pathParts) {
+            if (partNum < searchResult.length) {
+                pathParts[extKeyType.pathParts[partNum]] = searchResult[partNum];
+                hasParts = true;
+            }
+        }
+    }
+
+    return hasParts ? pathParts : null;
+}
+
+function isValidCatenisNodeIndex(index) {
+    return typeof index === 'number' && Number.isInteger(index) && index >= 0;
 }
 
 function isValidClientIndex(index) {
@@ -492,6 +1545,10 @@ function isValidAddressIndex(index) {
     return typeof index === 'number' && Number.isInteger(index) && index >= 0;
 }
 
+function isValidServiceCreditIndex(index) {
+    return typeof index === 'number' && Number.isInteger(index) && index >= 0 && index < numServiceCreditAddresses;
+}
+
 
 // Module code
 //
@@ -503,4 +1560,4 @@ if (typeof Catenis === 'undefined')
 if (typeof Catenis.module === 'undefined')
     Catenis.module = {};
 
-Catenis.module.KeyStore = KeyStore;
+Catenis.module.KeyStore = Object.freeze(KeyStore);

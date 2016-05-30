@@ -4,18 +4,8 @@
 
 //console.log('[Application.js]: This code just ran.');
 
-// Fix default config file folder.
-//  Note: this is necessary because process.cwd()
-//  (which is used by the config module to define the
-//  default config folder) does not point to the
-//  Meteor application folder. Instead, the application
-//  folder is gotten from process.env.PWD and set
-//  to the environment variable NODE_CONFIG_DIR,
-//  which is used by the config module to set the
-//  default config folder if it is defined.
-if (process.env.NODE_CONFIG_DIR === undefined) {
-    process.env.NODE_CONFIG_DIR = Npm.require('path').join(process.env.PWD, 'config');
-}
+// Module variables
+//
 
 // References to external modules
 var config = Npm.require('config');
@@ -24,35 +14,91 @@ var fs = Npm.require('fs');
 var crypto = Npm.require('crypto');
 var bitcoin = Npm.require('bitcoinjs-lib');
 
-// Config variables
-var appConfig = config.get('application'),
-    appSeedFilenameConfig = appConfig.get('seedFilename'),
-    appCryptoNetwork = appConfig.get('cryptoNetwork');
+// Config entries
+var appConfig = config.get('application');
 
+// Configuration settings
+var cfgSettings = {
+    appName: appConfig.get('appName'),
+    seedFilename: appConfig.get('seedFilename'),
+    walletPswLength: appConfig.get('walletPswLength'),
+    cryptoNetwork: appConfig.get('cryptoNetwork')
+};
+
+// Catenis Hub node index
+export const ctnHubNodeIndex = 0;
 
 // Definition of function classes
 //
 
 // Application function class
 function Application() {
+    // Save Catenis node index used by application
+    Object.defineProperty(this, 'ctnHubNodeIndex', {
+        get: function () {
+            return ctnHubNodeIndex;
+        }
+    });
+    
     // Get application seed
-    var appSeedPath = path.join(process.env.PWD, appSeedFilenameConfig),
+    var appSeedPath = path.join(process.env.PWD, cfgSettings.seedFilename),
         encData = fs.readFileSync(appSeedPath, {encoding: 'utf8'});
 
-    this.seed = decryptSeed(new Buffer(encData, 'base64'));
+    Object.defineProperty(this, 'seed', {
+        get: function () {
+            return decryptSeed(new Buffer(encData, 'base64'));
+        }
+    });
+
+    Object.defineProperty(this, 'walletPsw', {
+        get: function () {
+            var seed = this.seed,
+                seedLength = seed.length,
+                pswLength = seedLength < cfgSettings.walletPswLength ? seedLength : cfgSettings.walletPswLength,
+                psw = new Buffer(pswLength);
+
+            for (let idx = 0; idx < pswLength; idx++) {
+                psw[idx] = seed[idx % 2 == 0 ? idx / 2 : seedLength - Math.floor(idx / 2) - 1]
+            }
+
+            return psw;
+        }
+    });
 
     if (! isSeedValid(this.seed)) {
         throw new Error('Application seed does not match seed currently recorded onto the database');
     }
 
     // Get crypto network
-    this.cryptoNetwork = bitcoin.networks[appCryptoNetwork];
+    this.cryptoNetworkName = cfgSettings.cryptoNetwork;
+    this.cryptoNetwork = bitcoin.networks[this.cryptoNetworkName];
 
     if (this.cryptoNetwork == undefined) {
-        throw new Error('Invalid/unknown crypto network: ' + appCryptoNetwork);
+        throw new Error('Invalid/unknown crypto network: ' + this.cryptoNetworkName);
     }
+
+    this.waitingBitcoinCoreRescan = false;
 }
 
+
+// Public Application object methods
+//
+
+Application.prototype.setWaitingBitcoinCoreRescan = function (waiting) {
+    if (waiting == undefined) {
+        waiting = true;
+    }
+    
+    this.waitingBitcoinCoreRescan = waiting;
+};
+
+Application.prototype.getWaitingBitcoinCoreRescan = function () {
+    return this.waitingBitcoinCoreRescan;
+}
+
+Application.prototype.isBitcoinCoreReady = function () {
+    return !this.waitingBitcoinCoreRescan;
+};
 
 // Application function class (public) methods
 //
@@ -61,6 +107,10 @@ Application.initialize = function () {
     // Instantiate App object
     Catenis.application = new Application();
 };
+
+
+// Application function class (public) properties
+//
 
 
 // Definition of module (private) functions
@@ -86,19 +136,19 @@ function isSeedValid(seed) {
     var seedHash = sha1Hash.digest('base64');
 
     // Compare with seedHash on the database
-    var app = Catenis.module.DB.Application.find({}, {fields: {seedHash: 1}}).fetch()[0],
+    var docApp = Catenis.db.collection.Application.find({}, {fields: {seedHash: 1}}).fetch()[0],
         isValid = false;
 
-    if (app.seedHash !== null) {
+    if (docApp.seedHash !== null) {
         // Check if seed hash matches the seed hash on the database
-        if (app.seedHash === seedHash) {
+        if (docApp.seedHash === seedHash) {
             isValid = true;
         }
     }
     else {
         // Application seed not yet defined. Save seed hash onto database
         //  and indicate that it is valid
-        Catenis.module.DB.Application.update({_id: app._id}, {$set: {seedHash: seedHash}});
+        Catenis.db.collection.Application.update({_id: docApp._id}, {$set: {seedHash: seedHash}});
         isValid = true;
     }
 
@@ -116,4 +166,4 @@ if (typeof Catenis === 'undefined')
 if (typeof Catenis.module === 'undefined')
     Catenis.module = {};
 
-Catenis.module.Application = Application;
+Catenis.module.Application = Object.freeze(Application);

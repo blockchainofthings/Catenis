@@ -4,7 +4,7 @@
   "logging": {
     "console": {
       "active": true,
-      "logLevel": "DEBUG"
+      "logLevel": "TRACE"
     },
     "file": {
       "active": true,
@@ -20,5 +20,17 @@
       "toAddresses": "claudiosdc@gmail.com", // Can be set to a comma separated list of e-mail addresses
       "fromAddress": "Catenis <csdecastro@netzero.com>"
     }
+  },
+  // Parameters pertaining to BitcoinCore module
+  "bitcoinCore": {
+    "rpcConnectionTimeout": 2000,  // Timeout, in miliseconds, for RPC connection with the bitcoin server.
+    "rescanTimeout": 900000 // Timeout, in miniseconds, for waiting on Bitcoin Core to finish rescanning the blockchain after importing private key
+  },
+  // Parameters pertaining to CatenisHubAddress module
+  "catenisHubAddress": {
+    "fundingPaymentAddressValidity":  14400, // Time, in seconds, before which a newly issued Funding Payment address expires
+    "fundingChangeAddressValidity": 900, // Time, in seconds, before which a newly issued Funding Change address expires
+    "payTxExpenseAddressValidity": 900, // Time, in seconds, before which a newly issued Pay Tx Expense address expires
+    "updateIssuedAddressesInterval": 1800000 // Time interval, in miliseconds, for executing method to update issued addresses
   }
 }

@@ -20,8 +20,22 @@ if (process.env.NODE_CONFIG_DIR === undefined) {
     process.env.NODE_CONFIG_DIR = Npm.require('path').join(process.env.PWD, 'config');
 }
 
+// NOTE: the solution below MUST NOT be used because it changes the
+//  native type objects (like Number) so argument validation for some
+//  Meteor functions including arguments of those types (e.g. collection.find({},{limit:1})
+//  will ALWAYS FAIL. As a workaround, selective pollyfills are manually
+//  included (see following lines).
+//
+// Add ECMAScript-2015 (ES6) features to objects globally
+//Npm.require('babel-polyfill');
+
+// Pollyfills to add missing ECMAScript-2015 (ES6) features that are
+//  being used throughout the code
+Number.isInteger = Number.isInteger || function(value) {
+    return typeof value === "number" && isFinite(value) && Math.floor(value) === value;
+};
+
 // References to external moudules
-Npm.require('babel-polyfill');  // Add ECMAScript-2015 (ES6) features to objects globally
 var config = Npm.require('config');
 var path = Npm.require('path');
 var winston = Npm.require('winston');

@@ -1,9 +1,17 @@
 // Config file with specific settings for production environment
 {
+  // Parameters pertaining to the Catenis application
+  "application": {
+    "cryptoNetwork": "bitcoin"
+  },
   // Parameters pertaining to logging mechanism
   "logging": {
     "email": {
       "toAddresses": "andre@blockchainofthings.com, jason@blockchainofthings.com, claudio@hiades.com.br"
     }
+  },
+  // Parameters pertaining to BitcoinCore module
+  "bitcoinCore": {
+    "serverHost": "10.1.0.5" // Bitcoin server host name/IP address
   }
 }

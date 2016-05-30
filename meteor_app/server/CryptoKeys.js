@@ -4,18 +4,8 @@
 
 //console.log('[CryptoKeys.js]: This code just ran.');
 
-// Fix default config file folder.
-//  Note: this is necessary because process.cwd()
-//  (which is used by the config module to define the
-//  default config folder) does not point to the
-//  Meteor application folder. Instead, the application
-//  folder is gotten from process.env.PWD and set
-//  to the environment variable NODE_CONFIG_DIR,
-//  which is used by the config module to set the
-//  default config folder if it is defined.
-if (process.env.NODE_CONFIG_DIR === undefined) {
-    process.env.NODE_CONFIG_DIR = Npm.require('path').join(process.env.PWD, 'config');
-}
+// Module variables
+//
 
 // References to external modules
 var bitcoin = Npm.require('bitcoinjs-lib');
@@ -25,8 +15,9 @@ var secp256k1 = Npm.require('secp256k1');
 var crypto = Npm.require('crypto');
 var Future = Npm.require('fibers/future');
 
-// Module variables
-var iv = [128,54,254,30,235,181,211,89,160,214,109,196,40,175,106,102]; // iv generated as: crypto.randomBytes(16).toJSON()
+// Initialization vector - generated as: crypto.randomBytes(16).toJSON()
+var iv = [128,54,254,30,235,181,211,89,160,214,109,196,40,175,106,102]; 
+
 
 // Definition of function classes
 //
@@ -42,7 +33,7 @@ function CryptoKeys(keyPair) {
 
 CryptoKeys.prototype.hasPrivateKey = function () {
     return this.keyPair.d ? true : false;
-}
+};
 
 CryptoKeys.prototype.getPrivateKey = function () {
     if (!this.hasPrivateKey()) {
@@ -50,23 +41,35 @@ CryptoKeys.prototype.getPrivateKey = function () {
     }
 
     return this.keyPair.d.toBuffer(32);
+};
+
+CryptoKeys.prototype.exportPrivateKey = function () {
+    if (!this.hasPrivateKey()) {
+        throw new Error('Missing private key')
+    }
+
+    return this.keyPair.toWIF();
+};
+
+CryptoKeys.prototype.exportPublicKey = function () {
+    return this.getCompressedPublicKey().toString('hex');
 }
 
 CryptoKeys.prototype.getCompressedPublicKey = function () {
     var pubKey = this.keyPair.getPublicKeyBuffer();
 
     return this.keyPair.compressed ? pubKey : secp256k1.publicKeyConvert(pubKey, true);
-}
+};
 
 CryptoKeys.prototype.getUncompressedPublicKey = function () {
     var pubKey = this.keyPair.getPublicKeyBuffer();
 
     return this.keyPair.compressed ? secp256k1.publicKeyConvert(pubKey, false) : pubKey;
-}
+};
 
 CryptoKeys.prototype.getAddress = function () {
     return this.keyPair.getAddress();
-}
+};
 
 // NOTE: the length of the encrypted data will have a length that is a multiple of 16.
 //  One can use the following formula to calculate the size of the encrypted data
@@ -96,7 +99,7 @@ CryptoKeys.prototype.encryptDataToSend = function (destKeys, data) {
     fut.wait();
 
     return encData;
-}
+};
 
 CryptoKeys.prototype.decryptReceivedData = function (sourceKeys, data) {
     if (!this.hasPrivateKey()) {
@@ -123,7 +126,35 @@ CryptoKeys.prototype.decryptReceivedData = function (sourceKeys, data) {
     fut.wait();
 
     return decData;
-}
+};
+
+
+// CryptoKeys function class (public) methods
+//
+
+// Converts a list of crypto keys into a list of addresses
+CryptoKeys.toAddressList = function (listKeys) {
+    var listAddress = [];
+
+    listKeys.forEach(function (keys) {
+        listAddress.push(keys.getAddress());
+    });
+
+    return listAddress;
+};
+
+// Converts a list of crypto keys into a list of private keys in export format (WIF)
+CryptoKeys.toExportPrivateKeyList = function (listKeys) {
+    var listPrivateKey = [];
+
+    listKeys.forEach(function (keys) {
+        if (keys.hasPrivateKey()) {
+            listPrivateKey.push(keys.exportPrivateKey());
+        }
+    });
+
+    return listPrivateKey;
+};
 
 
 // Definitions of module (private) functions
@@ -170,4 +201,4 @@ if (typeof Catenis === 'undefined')
 if (typeof Catenis.module === 'undefined')
     Catenis.module = {};
 
-Catenis.module.CryptoKeys = CryptoKeys;
+Catenis.module.CryptoKeys = Object.freeze(CryptoKeys);
