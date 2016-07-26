@@ -973,50 +973,16 @@ BlockchainAddress.retrieveObsoleteAddress = function (addr) {
 };
 
 BlockchainAddress.revertAddress = function (addr) {
-    // Try to retrieve issued address to revert
-    var docIssuedAddrs = Catenis.db.collection.IssuedBlockchainAddress.find({addrHash: hashAddress(addr), status: 'new'}, {fields: {type: 1, path: 1, addrIndex: 1}}).fetch(),
-        result = false;
+    var result = false,
+        addrTypeAndPath = Catenis.keyStore.getTypeAndPathByAddress(addr);
 
-    if (docIssuedAddrs.length > 0) {
-        if (docIssuedAddrs.length == 1) {
-            // Only one doc/rec returned
-            let docAddrToRevert = docIssuedAddrs[0],
-                addrKeys = Catenis.keyStore.getCryptoKeysByPath(docAddrToRevert.path);
+    if (addrTypeAndPath != null) {
+        let addrPathParts = Catenis.module.KeyStore.getPathParts(addrTypeAndPath),
+            classInstance = BlockchainAddress.getInstance({type: addrTypeAndPath.type, pathParts: addrPathParts});
 
-            // Make sure that this is the correct address (though unlikely, not impossible
-            //  since there could be one or more addresses with the same hash)
-            if (addrKeys != null && addrKeys.getAddress() === addr) {
-                let classInstance = BlockchainAddress.getInstance({type: docAddrToRevert.type, pathParts: Catenis.module.KeyStore.getPathParts(docAddrToRevert)});
-
-                if (classInstance != null) {
-                    // Revert address
-                    result = revertAddress.call(classInstance, addr, docAddrToRevert.addrIndex);
-                }
-            }
-        }
-        else {
-            // More than one doc/rec returned (though unlikely, not impossible).
-            //  Find the one that has the correct address
-            let docAddrToRevert;
-
-            if ((docAddrToRevert = docIssuedAddrs.find(function (docIssuedAddr) {
-                    let addrKeys = Catenis.keyStore.getCryptoKeysByPath(docIssuedAddr.path),
-                        found = false;
-
-                    // Make sure that this is the correct address
-                    if (addrKeys != null && addrKeys.getAddress() === addr) {
-                        found = true;
-                    }
-
-                    return found;
-                })) != undefined) {
-                let classInstance = BlockchainAddress.getInstance({type: docAddrToRevert.type, pathParts: Catenis.module.KeyStore.getPathParts(docAddrToRevert)});
-
-                if (classInstance != null) {
-                    // Revert address
-                    result = revertAddress.call(classInstance, addr, docAddrToRevert.addrIndex);
-                }
-            }
+        if (classInstance != null) {
+            // Revert address
+            result = revertAddress.call(classInstance, addr, addrPathParts.addrIndex);
         }
     }
 
@@ -1024,110 +990,46 @@ BlockchainAddress.revertAddress = function (addr) {
 };
 
 BlockchainAddress.revertAddressList = function (addrList) {
-    // Check whether addresses have balance
     var addressWithBalance = BlockchainAddress.checkAddressesWithBalance(addrList),
-        addrsToRevertByHash = new Map();
+        addrsToRevertByClassInstance = new Map();
 
     addrList.forEach(function (addr) {
         if (!addressWithBalance[addr]) {
-            // Only revert address if it does not currently have balance
-            let addrHash = hashAddress(addr);
+            // Only consider addresses that do not have balance
+            let addrTypeAndPath = Catenis.keyStore.getTypeAndPathByAddress(addr);
 
-            if (addrsToRevertByHash.has(addrHash)) {
-                addrsToRevertByHash.get(addrHash).push(addr);
-            }
-            else {
-                addrsToRevertByHash.set(addrHash, [addr]);
+            if (addrTypeAndPath != null) {
+                let addrPathParts = Catenis.module.KeyStore.getPathParts(addrTypeAndPath),
+                    classInstance = BlockchainAddress.getInstance({type: addrTypeAndPath.type, pathParts: addrPathParts});
+
+                if (classInstance != null) {
+                    // Save address to revert
+                    if (addrsToRevertByClassInstance.has(classInstance)) {
+                        addrsToRevertByClassInstance.get(classInstance).push({address: addr, addrIndex: addrPathParts.addrIndex});
+                    }
+                    else {
+                        addrsToRevertByClassInstance.set(classInstance, [{address: addr, addrIndex: addrPathParts.addrIndex}]);
+                    }
+                }
             }
         }
     });
 
-    var addrHashes = Array.from(addrsToRevertByHash.keys());
+    var countRevertedAddr = 0;
 
-    // Try to retrieve issued addresses to revert
-    var docIssuedAddrs = Catenis.db.collection.IssuedBlockchainAddress.find({addrHash: {$in: addrHashes}, status: 'new'}, {fields: {type: 1, path: 1, addrIndex: 1}, sort: {addrHash: 1}}).fetch(),
-        countRevertedAddr = 0;
+    if (addrsToRevertByClassInstance.size > 0) {
+        for (let [classInstance, addrEntries] of addrsToRevertByClassInstance.entries()) {
+            // Make sure that addresses with higher index are processed first
+            addrEntries = addrEntries.sort(function (a, b) {
+                return a.addrIndex > b.addrIndex ? -1 : (a.addrIndex < b.addrIndex ? 1 : 0);
+            });
 
-    if (docIssuedAddrs.length > 0) {
-        var addrsToRevertByClassInstance = new Map();
-
-        for (let lmtIdx = docIssuedAddrs.length, idx = 0; idx < lmtIdx; idx++) {
-            // Group returned docs by address hash
-            var docGroupAddrs = [docIssuedAddrs[idx]],
-                addrHash = docIssuedAddrs[idx].addrHash;
-
-            while (idx < lmtIdx - 1 && addrHash === docIssuedAddrs[idx + 1].addrHash) {
-                docGroupAddrs.push(docIssuedAddrs[++idx]);
-            }
-
-            addrsToRevertByHash.get(addrHash).forEach(function (addr) {
-                if (docGroupAddrs.length == 1) {
-                    // Only one doc/rec in the group
-                    let docAddrToRevert = docGroupAddrs[0],
-                        addrKeys = Catenis.keyStore.getCryptoKeysByPath(docAddrToRevert.path);
-
-                    // Make sure that this is the correct address (though unlikely, not impossible
-                    //  since there could be one or more addresses with the same hash)
-                    if (addrKeys != null && addrKeys.getAddress() === addr) {
-                        let classInstance = BlockchainAddress.getInstance({type: docAddrToRevert.type, pathParts: Catenis.module.KeyStore.getPathParts(docAddrToRevert)});
-
-                        if (classInstance != null) {
-                            // Save address to revert
-                            if (addrsToRevertByClassInstance.has(classInstance)) {
-                                addrsToRevertByClassInstance.get(classInstance).push({address: addr, addrIndex: docAddrToRevert.addrIndex});
-                            }
-                            else {
-                                addrsToRevertByClassInstance.set(classInstance, [{address: addr, addrIndex: docAddrToRevert.addrIndex}]);
-                            }
-                        }
-                    }
-                }
-                else {
-                    // More than one doc/rec in the group (though unlikely, not impossible).
-                    //  Find the one that has the correct address
-                    let docAddrToRevert;
-
-                    if ((docAddrToRevert = docGroupAddrs.find(function (docIssuedAddr) {
-                            let addrKeys = Catenis.keyStore.getCryptoKeysByPath(docIssuedAddr.path),
-                                found = false;
-
-                            // Make sure that this is the correct address
-                            if (addrKeys != null && addrKeys.getAddress() === addr) {
-                                found = true;
-                            }
-
-                            return found;
-                        })) != undefined) {
-                        let classInstance = BlockchainAddress.getInstance({type: docAddrToRevert.type, pathParts: Catenis.module.KeyStore.getPathParts(docAddrToRevert)});
-
-                        if (classInstance != null) {
-                            // Save address to revert
-                            if (addrsToRevertByClassInstance.has(classInstance)) {
-                                addrsToRevertByClassInstance.get(classInstance).push({address: addr, addrIndex: docAddrToRevert.addrIndex});
-                            }
-                            else {
-                                addrsToRevertByClassInstance.set(classInstance, [{address: addr, addrIndex: docAddrToRevert.addrIndex}]);
-                            }
-                        }
-                    }
+            addrEntries.forEach(function (addrEntry) {
+                // Revert address
+                if (revertAddress.call(classInstance, addrEntry.address, addrEntry.addrIndex, true)) {
+                    countRevertedAddr++;
                 }
             });
-        }
-
-        for (let [classInstance, addrEntries] of addrsToRevertByClassInstance.entries()) {
-            if (addrEntries.length > 0) {
-                // Make sure that addresses with higher index are processed first
-                addrEntries = addrEntries.sort(function (a, b) {
-                    return a.addrIndex > b.addrIndex ? -1 : (a.addrIndex < b.addrIndex ? 1 : 0);
-                });
-
-                addrEntries.forEach(function (addrEntry) {
-                    // Revert address
-                    if (revertAddress.call(classInstance, addrEntry.address, addrEntry.addrIndex, true)) {
-                        countRevertedAddr++;
-                    }
-                });
-            }
         }
     }
 
