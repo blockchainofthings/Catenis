@@ -31,6 +31,7 @@ if (process.env.NODE_CONFIG_DIR === undefined) {
 
 // Pollyfills to add missing ECMAScript-2015 (ES6) features that are
 //  being used throughout the code
+//noinspection JSPrimitiveTypeWrapperUsage
 Number.isInteger = Number.isInteger || function(value) {
     return typeof value === "number" && isFinite(value) && Math.floor(value) === value;
 };
@@ -79,7 +80,7 @@ var log4jColors = {
 var emailSecureProtocols = {
     ssl: 465,
     tls: 587
-}
+};
 
 // Config variables
 var consoleLogActive = logConsoleConfig.get('active'),

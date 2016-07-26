@@ -12,7 +12,7 @@
     },
     "email": {
       "active": false,
-      "logLevel": "FATAL",
+      "logLevel": "ACTION",
       "smtpHost": "smtp.netzero.com",
       "secureProto": "ssl", // Valid options: none, ssl or tls
       "username": "csdecastro", // To be set only if required by SMTP host
@@ -21,16 +21,23 @@
       "fromAddress": "Catenis <csdecastro@netzero.com>"
     }
   },
+  // Parameters pertaining to BitcoinFees module
+  "bitcoinFees": {
+    "retrieveFeesInterval": 86400000,  // Time interval, in miliseconds, for executing method to retrieve latest bitcoin fees
+    "numDbRecsToMaintain": 2000,  // Number of database docs/recs used to store latest fees that should be maintained when puging the database
+    "dbPurgeHours": 2,  // Hours component of time when database purge should take place
+    "dbPurgeMinutes": 0,  // Minutes component of time when database purge should take place
+    "dbPurgeSeconds": 0,  // Seconds component of time when database purge should take place
+    "dbPurgeInterval": 86400000  // Time interval, in miliseconds, for executing process to purge database (delete oldest fees docs/recs)
+  },
+  // Parameters pertaining to KeyStore module
+  "keyStore": {
+    "obsoleteExtKeyTimeToPurge": 300, // Time, in seconds, before an obsolete HD extended key is purged from local key storage
+    "purgeUnusedExtKeyInternal": 1800000  // Time interval, in miliseconds, for executing method to purge unused HD extended keys form local key storage
+  },
   // Parameters pertaining to BitcoinCore module
   "bitcoinCore": {
-    "rpcConnectionTimeout": 2000,  // Timeout, in miliseconds, for RPC connection with the bitcoin server.
+    "rpcConnectionTimeout": 30000,  // Timeout, in miliseconds, for RPC connection with the bitcoin server.
     "rescanTimeout": 900000 // Timeout, in miniseconds, for waiting on Bitcoin Core to finish rescanning the blockchain after importing private key
-  },
-  // Parameters pertaining to CatenisHubAddress module
-  "catenisHubAddress": {
-    "fundingPaymentAddressValidity":  14400, // Time, in seconds, before which a newly issued Funding Payment address expires
-    "fundingChangeAddressValidity": 900, // Time, in seconds, before which a newly issued Funding Change address expires
-    "payTxExpenseAddressValidity": 900, // Time, in seconds, before which a newly issued Pay Tx Expense address expires
-    "updateIssuedAddressesInterval": 1800000 // Time interval, in miliseconds, for executing method to update issued addresses
   }
 }

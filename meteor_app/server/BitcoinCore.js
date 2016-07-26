@@ -9,9 +9,8 @@
 
 // References to external modules
 var util = Npm.require('util');
-var http = Npm.require('http');
 var config = Npm.require('config');
-var BitcoinLib = Npm.require('bitcoin');
+var bitcoinCoreLib = Npm.require('bitcoin');
 
 // Config entries
 var bitcoinCoreConfig = config.get('bitcoinCore');
@@ -44,11 +43,11 @@ function BitcoinCore(network, host, username, password, timeout) {
         opts.timeout = timeout;
     }
 
-    this.btcClient = new BitcoinLib.Client(opts);
+    this.btcClient = new bitcoinCoreLib.Client(opts);
 
     this.rpcApi = {
         // Note: the 'command' method below should be used when calling a Bitcoin Core
-        //  JSON RPC method that is not directly exposed by the BitcoinLib module.
+        //  JSON RPC method that is not directly exposed by the bitcoinCoreLib module.
         //  The following Bitcoin Core JSON RPC methods are being called through this
         //  mechanism: 'importpubkey'
         command: Meteor.wrapAsync(this.btcClient.cmd, this.btcClient),
@@ -69,7 +68,6 @@ function BitcoinCore(network, host, username, password, timeout) {
         gettransaction: Meteor.wrapAsync(this.btcClient.getTransaction, this.btcClient), // INCLUDE_WATCH_ONLY ALWAYS SET
         getrawtransaction: Meteor.wrapAsync(this.btcClient.getRawTransaction, this.btcClient), // TWO VARIANTS: VERBOSE SET AND NOT
         decoderawtransaction: Meteor.wrapAsync(this.btcClient.decodeRawTransaction, this.btcClient),
-        // TODO: implement the methods listed below
         decodescript: Meteor.wrapAsync(this.btcClient.decodeScript, this.btcClient),
         getaddressesbyaccount: Meteor.wrapAsync(this.btcClient.getAddressesByAccount, this.btcClient)  // USE IT AS JUST GET_ADDRESSES (ACCOUNT = "")
     };
@@ -99,7 +97,7 @@ BitcoinCore.prototype.getBlockchainInfo = function () {
 
 // NOTE: this method should not be called since no private keys
 //  are going to be added to the wallet but only public keys
-BitcoinCore.prototype.importPrivateKey = function (privKeyWif, rescan) {
+BitcoinCore.prototype.importPrivateKey = function (privKeyWif, rescan, callback) {
     if (rescan == undefined) {
         rescan = false;
     }
@@ -177,6 +175,11 @@ BitcoinCore.prototype.importPrivateKey = function (privKeyWif, rescan) {
                         lockWallet.call(self);
                         unlockedWallet = false;
                     }
+
+                    if (callback != undefined && typeof callback === 'function') {
+                        // Return error
+                        callback(new Meteor.Error('ctn_btcore_impkey_conn_closed', 'Connection closed while waiting for Bitcoin Core to finish rescanning the blockchain after importing public key'));
+                    }
                 }
             });
         });
@@ -198,6 +201,11 @@ BitcoinCore.prototype.importPrivateKey = function (privKeyWif, rescan) {
 
             rescanTimeout = true;
             request.abort();
+
+            if (callback != undefined && typeof callback === 'function') {
+                // Return error
+                callback(new Meteor.Error('ctn_btcore_impkey_timeout', 'Timeout while waiting for Bitcoin Core to finish rescanning the blockchain after importing public key'));
+            }
         });
 
         request.on('error', function (err) {
@@ -221,8 +229,16 @@ BitcoinCore.prototype.importPrivateKey = function (privKeyWif, rescan) {
                     unlockedWallet = false;
                 }
 
-                // Rethrow error
-                throw err;
+                var retError = new Meteor.Error('ctn_btcore_impkey_conn_error', errMsg, err.stack);
+
+                if (callback != undefined && typeof callback === 'function') {
+                    // Return error
+                    callback(retError);
+                }
+                else {
+                    // No callback; just throw error
+                    throw retError;
+                }
             }
         });
 
@@ -237,6 +253,11 @@ BitcoinCore.prototype.importPrivateKey = function (privKeyWif, rescan) {
                 lockWallet.call(self);
                 unlockedWallet = false;
             }
+
+            if (callback != undefined && typeof callback === 'function') {
+                // Return successful result
+                callback(undefined, true);
+            }
         });
 
         // Indicate that we are waiting on Bitcoin Core to finish rescanning
@@ -247,7 +268,7 @@ BitcoinCore.prototype.importPrivateKey = function (privKeyWif, rescan) {
     }
 };
 
-BitcoinCore.prototype.importPublicKey = function (pubKeyHex, rescan) {
+BitcoinCore.prototype.importPublicKey = function (pubKeyHex, rescan, callback) {
     if (rescan == undefined) {
         rescan = false;
     }
@@ -296,8 +317,6 @@ BitcoinCore.prototype.importPublicKey = function (pubKeyHex, rescan) {
         //  sends the response back after the rescan is done
         request.setSocketKeepAlive(true);
 
-        var self = this;
-
         request.on('socket', function (socket) {
             socket.on('connect', function () {
                 Catenis.logger.TRACE('Connection established to call Bitcoin Core \'importpubkey\' RPC method');
@@ -310,6 +329,11 @@ BitcoinCore.prototype.importPublicKey = function (pubKeyHex, rescan) {
                     //  waiting indication
                     Catenis.logger.ERROR('Connection closed while waiting for Bitcoin Core to finish rescanning the blockchain after importing public key');
                     Catenis.application.setWaitingBitcoinCoreRescan(false);
+
+                    if (callback != undefined && typeof callback === 'function') {
+                        // Return error
+                        callback(new Meteor.Error('ctn_btcore_impkey_conn_closed', 'Connection closed while waiting for Bitcoin Core to finish rescanning the blockchain after importing public key'));
+                    }
                 }
             });
         });
@@ -325,6 +349,11 @@ BitcoinCore.prototype.importPublicKey = function (pubKeyHex, rescan) {
 
             rescanTimeout = true;
             request.abort();
+
+            if (callback != undefined && typeof callback === 'function') {
+                // Return error
+                callback(new Meteor.Error('ctn_btcore_impkey_timeout', 'Timeout while waiting for Bitcoin Core to finish rescanning the blockchain after importing public key'));
+            }
         });
 
         request.on('error', function (err) {
@@ -342,8 +371,16 @@ BitcoinCore.prototype.importPublicKey = function (pubKeyHex, rescan) {
 
                 Catenis.application.setWaitingBitcoinCoreRescan(false);
 
-                // Rethrow error
-                throw err;
+                var retError = new Meteor.Error('ctn_btcore_impkey_conn_error', errMsg, err.stack);
+
+                if (callback != undefined && typeof callback === 'function') {
+                    // Return error
+                    callback(retError);
+                }
+                else {
+                    // No callback; just throw error
+                    throw retError;
+                }
             }
         });
 
@@ -352,6 +389,11 @@ BitcoinCore.prototype.importPublicKey = function (pubKeyHex, rescan) {
             //  waiting on Bitcoin Core to finish rescanning the blockchain
             Catenis.logger.TRACE('Bitcoin Core finished rescanning the blockchain after importing public key');
             Catenis.application.setWaitingBitcoinCoreRescan(false);
+
+            if (callback != undefined && typeof callback === 'function') {
+                // Return successful result
+                callback(undefined, true);
+            }
         });
 
         // Indicate that we are waiting on Bitcoin Core to finish rescanning
@@ -366,6 +408,11 @@ BitcoinCore.prototype.importPublicKey = function (pubKeyHex, rescan) {
 //  an array of blockchain addresses
 BitcoinCore.prototype.listUnspent = function (minConf, addresses) {
     var args = [];
+    
+    if (typeof minConf === 'string' && addresses == undefined) {
+        addresses = minConf;
+        minConf = undefined;
+    }
 
     if (minConf != undefined) {
         args.push(minConf);
@@ -682,7 +729,7 @@ function handleError(methodName, err) {
 
     // Log error and rethrow it
     Catenis.logger.DEBUG(errMsg, err);
-    throw err;
+    throw new Meteor.Error('ctn_btcore_rpc_error', errMsg, err.stack);
 }
 
 function convertTxoutStrToObj(txout) {

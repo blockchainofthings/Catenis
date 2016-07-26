@@ -64,10 +64,30 @@ Database.inititalize = function() {
         Application: {
             initFunc: initApplication
         },
-        IssuedCatenisHubAddress: {
+        BitcoinFees: {
             indices: [{
                 fields: {
-                    type: 1,
+                    createdDate: 1
+                },
+                opts: {
+                    background: true,
+                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                }
+            }]
+        },
+        IssuedBlockchainAddress: {
+            indices: [{
+                fields: {
+                    type: 1
+                },
+                opts: {
+                    background: true,
+                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                }
+            },
+            {
+                fields: {
+                    parentPath: 1,
                     addrIndex: 1
                 },
                 opts: {
@@ -78,7 +98,7 @@ Database.inititalize = function() {
             },
             {
                 fields: {
-                    addrIndex: 1
+                    parentPath: 1
                 },
                 opts: {
                     background: true,
@@ -91,6 +111,24 @@ Database.inititalize = function() {
                 },
                 opts: {
                     unique: true,
+                    background: true,
+                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                }
+            },
+            {
+                fields: {
+                    addrIndex: 1
+                },
+                opts: {
+                    background: true,
+                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                }
+            },
+            {
+                fields: {
+                    addrHash: 1
+                },
+                opts: {
                     sparse: true,
                     background: true,
                     safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
@@ -162,6 +200,7 @@ Database.inititalize = function() {
                 },
                 opts: {
                     unique: true,
+                    sparse: true,
                     background: true,
                     safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
                 }
@@ -171,7 +210,6 @@ Database.inititalize = function() {
                     catenisNode_id: 1
                 },
                 opts: {
-                    unique: true,
                     background: true,
                     safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
                 }
@@ -207,7 +245,81 @@ Database.inititalize = function() {
             },
             {
                 fields: {
+                    status: 1
+                },
+                opts: {
+                    background: true,
+                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                }
+            },
+            {
+                fields: {
                     createdDate: 1
+                },
+                opts: {
+                    background: true,
+                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                }
+            },
+            {
+                fields: {
+                    lastStatusChangedDate: 1
+                },
+                opts: {
+                    background: true,
+                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                }
+            },
+            {
+                fields: {
+                    lastApiAccessGenKeyModifiedDate: 1
+                },
+                opts: {
+                    background: true,
+                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                }
+            }]
+        },
+        ServiceCredit: {
+            indices: [{
+                fields: {
+                    client_id: 1
+                },
+                opts: {
+                    background: true,
+                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                }
+            },
+            {
+                fields: {
+                    srvCreditType: 1
+                },
+                opts: {
+                    background: true,
+                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                }
+            },
+            {
+                fields: {
+                    remainCredits: 1
+                },
+                opts: {
+                    background: true,
+                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                }
+            },
+            {
+                fields: {
+                    createdDate: 1
+                },
+                opts: {
+                    background: true,
+                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                }
+            },
+            {
+                fields: {
+                    lastCreditUpdatedDate: 1
                 },
                 opts: {
                     background: true,
@@ -249,11 +361,29 @@ Database.inititalize = function() {
             },
             {
                 fields: {
-                    'props.productId': 1
+                    'props.prodUniqueId': 1
                 },
                 opts: {
                     unique: true,
-                    sparce: true,
+                    sparse: true,
+                    background: true,
+                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                }
+            },
+            {
+                fields: {
+                    'props.lastModifiedDate': 1
+                },
+                opts: {
+                    background: true,
+                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                }
+            },
+            {
+                fields: {
+                    status: 1
+                },
+                opts: {
                     background: true,
                     safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
                 }
@@ -263,6 +393,73 @@ Database.inititalize = function() {
                     createdDate: 1
                 },
                 opts: {
+                    background: true,
+                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                }
+            },
+            {
+                fields: {
+                    lastStatusChangedDate: 1
+                },
+                opts: {
+                    background: true,
+                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                }
+            },
+            {
+                fields: {
+                    lastApiAccessGenKeyModifiedDate: 1
+                },
+                opts: {
+                    background: true,
+                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                }
+            }]
+        },
+        SentTransaction: {
+            indices: [{
+                fields: {
+                    type: 1
+                },
+                opts: {
+                    background: true,
+                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                }
+            },
+            {
+                fields: {
+                    txid: 1
+                },
+                opts: {
+                    unique: true,
+                    background: true,
+                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                }
+            },
+            {
+                fields: {
+                    sentDate: 1
+                },
+                opts: {
+                    background: true,
+                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                }
+            },
+                {
+                    fields: {
+                        'confirmation.confirmed': 1
+                    },
+                    opts: {
+                        background: true,
+                        safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                    }
+                },
+            {
+                fields: {
+                    'confirmation.confirmationDate': 1
+                },
+                opts: {
+                    sparse: true,
                     background: true,
                     safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
                 }
@@ -287,7 +484,7 @@ function initApplication() {
     if (docApps.length == 0) {
         // No doc/rec defined yet. Create new doc/rec with default settings
         this.collection.Application.insert({
-            seedHash: null,   // Hash of application seed - not yet defined
+            seedHmac: null   // HMAC used to validate the application seed - not yet defined
         });
     }
     else if (docApps.length > 1) {

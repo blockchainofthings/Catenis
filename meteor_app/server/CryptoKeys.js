@@ -8,8 +8,6 @@
 //
 
 // References to external modules
-var bitcoin = Npm.require('bitcoinjs-lib');
-var wif = Npm.require('wif');
 var eccrypto = Npm.require('eccrypto');
 var secp256k1 = Npm.require('secp256k1');
 var crypto = Npm.require('crypto');
@@ -53,7 +51,7 @@ CryptoKeys.prototype.exportPrivateKey = function () {
 
 CryptoKeys.prototype.exportPublicKey = function () {
     return this.getCompressedPublicKey().toString('hex');
-}
+};
 
 CryptoKeys.prototype.getCompressedPublicKey = function () {
     var pubKey = this.keyPair.getPublicKeyBuffer();
@@ -98,6 +96,7 @@ CryptoKeys.prototype.encryptDataToSend = function (destKeys, data) {
 
     fut.wait();
 
+    //noinspection JSUnusedAssignment
     return encData;
 };
 
@@ -125,6 +124,7 @@ CryptoKeys.prototype.decryptReceivedData = function (sourceKeys, data) {
 
     fut.wait();
 
+    //noinspection JSUnusedAssignment
     return decData;
 };
 
@@ -187,6 +187,7 @@ function calcMacEncData(privKey, encResult) {
 
     fut.wait();
 
+    //noinspection JSUnusedAssignment
     return mac;
 }
 

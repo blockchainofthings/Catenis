@@ -12,7 +12,7 @@ var config = Npm.require('config');
 var path = Npm.require('path');
 var fs = Npm.require('fs');
 var crypto = Npm.require('crypto');
-var bitcoin = Npm.require('bitcoinjs-lib');
+var bitcoinLib = Npm.require('bitcoinjs-lib');
 
 // Config entries
 var appConfig = config.get('application');
@@ -52,6 +52,7 @@ function Application() {
 
     Object.defineProperty(this, 'walletPsw', {
         get: function () {
+            //noinspection JSPotentiallyInvalidUsageOfThis
             var seed = this.seed,
                 seedLength = seed.length,
                 pswLength = seedLength < cfgSettings.walletPswLength ? seedLength : cfgSettings.walletPswLength,
@@ -71,7 +72,7 @@ function Application() {
 
     // Get crypto network
     this.cryptoNetworkName = cfgSettings.cryptoNetwork;
-    this.cryptoNetwork = bitcoin.networks[this.cryptoNetworkName];
+    this.cryptoNetwork = bitcoinLib.networks[this.cryptoNetworkName];
 
     if (this.cryptoNetwork == undefined) {
         throw new Error('Invalid/unknown crypto network: ' + this.cryptoNetworkName);
@@ -94,7 +95,7 @@ Application.prototype.setWaitingBitcoinCoreRescan = function (waiting) {
 
 Application.prototype.getWaitingBitcoinCoreRescan = function () {
     return this.waitingBitcoinCoreRescan;
-}
+};
 
 Application.prototype.isBitcoinCoreReady = function () {
     return !this.waitingBitcoinCoreRescan;
@@ -107,6 +108,13 @@ Application.initialize = function () {
     // Instantiate App object
     Catenis.application = new Application();
 };
+
+
+// Application function class (public) properties
+//
+
+Application.exitCode = Object.freeze({
+});
 
 
 // Application function class (public) properties
@@ -129,26 +137,23 @@ function decryptSeed(encData) {
 }
 
 function isSeedValid(seed) {
-    // Calculate seed hash
-    var sha1Hash = crypto.createHash('sha1');
-
-    sha1Hash.update('This is it: Catenis App seed' + seed.toString(), 'utf8');
-    var seedHash = sha1Hash.digest('base64');
+    // Calculate seed HMAC
+    var seedHmac = crypto.createHmac('sha256', seed).update('This is it: Catenis App seed', 'utf8').digest('base64');
 
     // Compare with seedHash on the database
-    var docApp = Catenis.db.collection.Application.find({}, {fields: {seedHash: 1}}).fetch()[0],
+    var docApp = Catenis.db.collection.Application.find({}, {fields: {seedHmac: 1}}).fetch()[0],
         isValid = false;
 
-    if (docApp.seedHash !== null) {
-        // Check if seed hash matches the seed hash on the database
-        if (docApp.seedHash === seedHash) {
+    if (docApp.seedHmac !== null) {
+        // Check if seed HMAC matches the seed HMAC on the database
+        if (docApp.seedHmac === seedHmac) {
             isValid = true;
         }
     }
     else {
-        // Application seed not yet defined. Save seed hash onto database
+        // Application seed not yet defined. Save seed HMAC onto database
         //  and indicate that it is valid
-        Catenis.db.collection.Application.update({_id: docApp._id}, {$set: {seedHash: seedHash}});
+        Catenis.db.collection.Application.update({_id: docApp._id}, {$set: {seedHmac: seedHmac}});
         isValid = true;
     }
 
