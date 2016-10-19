@@ -127,7 +127,7 @@ Application.exitCode = Object.freeze({
 // Receives a buffer with the ciphered seed data,
 //  and returns a buffer with the deciphered data
 function decryptSeed(encData) {
-    var x = [ 83, 84, 78, 106, 77, 72, 82, 76, 100, 68, 78, 117, 77, 84, 85, 106, 78, 122, 99, 61],
+    var x = [ 78, 87, 108, 79, 77, 49, 82, 65, 89, 122, 69, 122, 75, 71, 103, 104, 84, 121, 115, 61],
         dec = crypto.createDecipher('des-ede3-cbc', (new Buffer((new Buffer(x)).toString(), 'base64')).toString());
 
     var decBuf1 = dec.update(encData),

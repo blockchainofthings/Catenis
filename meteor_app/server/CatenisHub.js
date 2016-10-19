@@ -124,7 +124,7 @@ function fundDeviceMainAddresses(amountPerAddress) {
         }
 
         // TODO: put system in an error condition so nothing can be done but generate new fund address to send funds to the system
-        // TODO: implement mechanism to check when system receives funds, and reset error the error condition described above
+        // TODO: implement mechanism to check when system receives funds, and reset the error condition described above
     }
 }
 

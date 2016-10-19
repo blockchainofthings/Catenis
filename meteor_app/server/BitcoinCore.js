@@ -62,7 +62,8 @@ function BitcoinCore(network, host, username, password, timeout) {
         walletlock: Meteor.wrapAsync(this.btcClient.walletLock, this.btcClient),
         getmempoolinfo: Meteor.wrapAsync(this.btcClient.getMempoolInfo, this.btcClient),
         getrawmempool: Meteor.wrapAsync(this.btcClient.getRawMemPool, this.btcClient),  // TWO VARIANTS: VERBOSE SET AND NOT
-        getblock: Meteor.wrapAsync(this.btcClient.getBlock, this.btcClient),
+        getblock: Meteor.wrapAsync(this.btcClient.getBlock, this.btcClient),    // TOW VARIANTS: VERBOSE SET AND NOT
+        getblockcount: Meteor.wrapAsync(this.btcClient.getBlockCount, this.btcClient),
         getblockhash: Meteor.wrapAsync(this.btcClient.getBlockHash, this.btcClient),
         gettxout: Meteor.wrapAsync(this.btcClient.getTxOut, this.btcClient),
         gettransaction: Meteor.wrapAsync(this.btcClient.getTransaction, this.btcClient), // INCLUDE_WATCH_ONLY ALWAYS SET
@@ -528,12 +529,31 @@ BitcoinCore.prototype.getRawMempool = function (verbose) {
     }
 };
 
-BitcoinCore.prototype.getBlock = function (blockHash) {
+// Note: by default the verbose arg is set to true what makes
+//  the method return an object. Otherwise (verbose specifically
+//  set as false), the method returns a hex encoded string, which
+//  represents the block contents
+BitcoinCore.prototype.getBlock = function (blockHash, verbose) {
+    var args = [blockHash];
+
+    if (verbose != undefined) {
+        args.push(verbose);
+    }
+
     try {
-        return this.rpcApi.getblock(blockHash);
+        return this.rpcApi.getblock.apply(this.btcClient, args);
     }
     catch (err) {
         handleError('getblock', err);
+    }
+};
+
+BitcoinCore.prototype.getBlockCount = function () {
+    try {
+        return this.rpcApi.getblockcount();
+    }
+    catch (err) {
+        handleError('getblockcount', err);
     }
 };
 
@@ -560,12 +580,12 @@ BitcoinCore.prototype.getTxOut = function (txid, vout) {
 // Note: this Bitcoin Core JSON RPC method only returns information
 //  for transactions associated with the addresses currently added
 //  onto the wallet
-BitcoinCore.prototype.getTransaction = function (txid) {
+BitcoinCore.prototype.getTransaction = function (txid, logError = true) {
     try {
         return this.rpcApi.gettransaction(txid, true);
     }
     catch (err) {
-        handleError('gettransaction', err);
+        handleError('gettransaction', err, logError);
     }
 };
 
@@ -720,7 +740,7 @@ BitcoinCore.rpcErrorMessage = {
 // Definition of module (private) functions
 //
 
-function handleError(methodName, err) {
+function handleError(methodName, err, logError = true) {
     var errMsg = util.format('Error calling Bitcoin Core \'%s\' RPC method.', methodName);
 
     if (typeof err.code !== 'undefined') {
@@ -728,8 +748,10 @@ function handleError(methodName, err) {
     }
 
     // Log error and rethrow it
-    Catenis.logger.DEBUG(errMsg, err);
-    throw new Meteor.Error('ctn_btcore_rpc_error', errMsg, err.stack);
+    if (logError) {
+        Catenis.logger.DEBUG(errMsg, err);
+    }
+    throw new Meteor.Error('ctn_btcore_rpc_error', errMsg, err);
 }
 
 function convertTxoutStrToObj(txout) {

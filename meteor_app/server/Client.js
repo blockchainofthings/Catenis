@@ -236,7 +236,7 @@ Client.prototype.addServiceCredit = function (srvCreditType, count) {
         throw new Meteor.Error('ctn_client_add_srv_credit_inv_args', util.format('Invalid %s argument%s', errArgs.join(', '), errArgs.length > 1 ? 's' : ''));
     }
 
-    // TODO: determine number of client service credit addresses to use (based on count), allocate those new service credit addresses, create and send transaction to fund them
+    // TODO: determine number of client service credit addresses to use (based on count), allocate those new service credit addresses, create and send transaction to fund them, and to fund pay tx expense too
 
     try {
         // Record new service credit add transaction to database
@@ -379,7 +379,7 @@ Client.prototype.createDevice = function (props, ownApiAccessKey = false) {
         var deviceIndex = this.lastDeviceIndex;
 
         //noinspection StatementWithEmptyBodyJS
-        while (!Catenis.keyStore.initClientHDNodes(++deviceIndex));
+        while (!Catenis.keyStore.initDeviceHDNodes(this.clientIndex, ++deviceIndex));
 
         // Prepare to create new Device doc/rec
         docDevice = {

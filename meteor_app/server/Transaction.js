@@ -326,21 +326,30 @@ Transaction.prototype.sendTransaction = function (resend = false) {
     return this.txid;
 };
 
-//  type: [string] // Valid values: 'funding', 'send_message', 'read_confirmation', 'issue_locked_asset', 'issue_unlocked_asset',
-//                      'transfer_asset'
+//  type: [Object] // Object of type Transaction.type identifying the type of transaction. All transaction types are accepted
+//                     except 'sys_funding'
 //  info: [Object]  // One of the following, according to the specified type (previous argument)
 //    funding: {
-//      payees: [Array(string)] // Identifies the type of blockchain addresses (from Catenis.module.KeyStore.extKeyType)
-//                                  that receive the funds. Valid values: 'ctnd_dev_main_addr', 'ctnd_node_fund_pay_addr',
+//      event: {
+//          name: [string],  // Identifies the event that triggered the funding action (from Catenis.module.FundTransaction.fundingEvent).
+//                               Valid values: 'provision_ctn_hub_device', 'provision_client_srv_credit', 'provision_client_device',
+//                               'add_extra_tx_pay_funds'
+//          entityId: [string]  // Id of the entity associated with the event. Should only exist for 'provision_client_srv_credit'
+//                                  and 'provision_client_device' events. For 'provision_client_srv_credit' events, it refers to the
+//                                  clientId; for 'provision_client_device' events, it refers to the deviceId
+//      },
+//      payees: [Array(string)] // Identifies the type of blockchain addresses that receive the funds. Valid values (from
+//                                  Catenis.module.KeyStore.extKeyType): 'ctnd_dev_main_addr', 'ctnd_node_fund_pay_addr',
 //                                  'ctnd_pay_tx_exp_addr', 'cln_msg_crd_addr', 'cln_asst_crd_addr', 'dev_read_conf_addr',
 //                                  'dev_main_addr', 'dev_asst_issu_addr'
 //    }
-//    sendMessage: {
+//    send_message: {
 //      originDeviceId: [string], // External ID of the device that sent the message
 //      targetDeviceId: [string], // External ID of the device that receives the message
-//      readConfirmVout: [integer] // The index of the output within this transaction that is used for read confirmation
+//      readConfirmation: {
+//        vout: [integer] // The index of the output within this transaction that is used for read confirmation
 //    }
-//    readConfirmation: {
+//    read_confirmation: {
 //      txouts: [{ // Identifies the read confirmation tx outputs that are spent by this transaction
 //        txid: [string], // Blockchain attributed ID of the transaction containing the read confirmation output that is spent
 //        vout: [integer] // The index of the output within the transaction that is spent
@@ -348,21 +357,27 @@ Transaction.prototype.sendTransaction = function (resend = false) {
 //      feeAmount: [integer], // Amount, in satoshis, paid as fee for this transaction
 //      txSize: [integer] // Transaction size, in bytes. Used to calculate fee rate
 //    }
-//    issueLockedAsset: {
+//    issue_locked_asset: {
 //      assetId: [string], // ID that uniquely identifies the Colored Coins asset that is issued
 //      deviceId: [string] // External ID of the device that is issuing the asset
 //    }
-//    issueUnlockedAsset: {
+//    issue_unlocked_asset: {
 //      assetId: [string], // ID that uniquely identifies the coloredCoin asset that is issued
 //      deviceId: [string] // External ID of the device that is issuing the asset
 //    }
-//    transferAsset: {
+//    transfer_asset: {
 //      assetId: [string], // ID that uniquely identifies the Colored Coins asset that is transferred
 //      originDeviceId: [string], // External ID of the device that sent the assets
 //      targetDeviceId: [string] // External ID of the device that receives the assets
 //    }
 //
 Transaction.prototype.saveSentTransaction = function (type, info) {
+    // Validate type argument
+    if (!isValidSentTransactionType(type)) {
+        Catenis.logger.ERROR('Transaction.saveSentTransaction method called with invalid argument', {type: type});
+        throw Error('Invalid type argument');
+    }
+
     if (this.txid != undefined && !this.txSaved) {
         // Prepare to save transaction information
         let inputs = this.inputs.map(function (input) {
@@ -372,18 +387,18 @@ Transaction.prototype.saveSentTransaction = function (type, info) {
             };
         });
 
-        let typeInfo = {};
-        typeInfo[type] = info;
+        let txInfo = {};
+        txInfo[type.dbInfoEntryName] = info;
 
         var docId = Catenis.db.collection.SentTransaction.insert({
-            type: type,
+            type: type.name,
             txid: this.txid,
             inputs: inputs,
             sentDate: new Date(Date.now()),
             confirmation: {
                 confirmed: false
             },
-            info: typeInfo
+            info: txInfo
         });
 
         // Indicate that transaction has been saved
@@ -463,12 +478,58 @@ Transaction.outputType = Object.freeze({
     nullData: 'nullData'
 });
 
+Transaction.type = Object.freeze({
+    sys_funding: Object.freeze({
+        name: 'sys_funding',
+        description: 'Transaction issued from outside of the system used to send crypto currency funds to the system',
+    }),
+    funding: Object.freeze({
+        name: 'funding',
+        description: 'Transaction used to transfer crypto currency funds to internal blockchain addresses controlled by the system',
+        dbInfoEntryName: 'funding'
+    }),
+    send_message: Object.freeze({
+        name: 'send_message',
+        description: 'Transaction used to send a message from origin device to target device',
+        dbInfoEntryName: 'sendMessage'
+    }),
+    read_confirmation: Object.freeze({
+        name: 'read_confirmation',
+        description: 'Transaction used to spend read confirmation output(s) from send message transactions thus indicating that message has been read by target device',
+        dbInfoEntryName: 'readConfirmation'
+    }),
+    issue_locked_asset: Object.freeze({
+        name: 'issue_locked_asset',
+        description: 'Transaction used to issue (Colored Coins) assets (of a given type) that cannot be reissued for a device',
+        dbInfoEntryName: 'issueLockedAsset'
+    }),
+    issue_unlocked_asset: Object.freeze({
+        name: 'issue_unlocked_asset',
+        description: 'Transaction used to issue or reissue (Colored Coins) assets (of a given type) for a device',
+        dbInfoEntryName: 'issueUnlockedAsset'
+    }),
+    transfer_asset: Object.freeze({
+        name: 'transfer_asset',
+        description: 'Transaction used to transfer an amount of (Colored Coins) assets (of a given type) owned by a device to another device',
+        dbInfoEntryName: 'transferAsset'
+    })
+});
+
 
 // Definition of module (private) functions
 //
 
-/*function module_func() {
-}*/
+function isValidSentTransactionType(type) {
+    isValid = false;
+
+    if (typeof event === 'object' && event != null && typeof event.name === 'string') {
+        isValid = Object.keys(Transaction.type).some(function (key) {
+            return Transaction.type[key].name !== Transction.type.sys_funding.name && Transaction.type[key].name === event.name;
+        });
+    }
+
+    return isValid;
+}
 
 
 // Module code

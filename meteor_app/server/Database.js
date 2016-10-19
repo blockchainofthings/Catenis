@@ -445,18 +445,28 @@ Database.inititalize = function() {
                     safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
                 }
             },
-                {
-                    fields: {
-                        'confirmation.confirmed': 1
-                    },
-                    opts: {
-                        background: true,
-                        safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
-                    }
+            {
+                fields: {
+                    'confirmation.confirmed': 1
                 },
+                opts: {
+                    background: true,
+                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                }
+            },
             {
                 fields: {
                     'confirmation.confirmationDate': 1
+                },
+                opts: {
+                    sparse: true,
+                    background: true,
+                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                }
+            },
+            {
+                fields: {
+                    'replacedByTxid': 1
                 },
                 opts: {
                     sparse: true,

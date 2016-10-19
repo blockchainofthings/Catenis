@@ -26,6 +26,7 @@ Meteor.startup(function () {
     Catenis.module.BlockchainAddress.BlockchainAddress.initialize();
     Catenis.module.CatenisHub.initialize();
     Catenis.module.Client.initialize();
+    Catenis.module.TransactionMonitor.initialize();
     Catenis.logger.INFO('Initialization ended.');
     
     // Make sure that all addresses are currently imported onto Bitcoin Core, and import the ones that are not

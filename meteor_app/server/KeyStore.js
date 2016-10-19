@@ -99,6 +99,7 @@
 //
 //      m/i/1/j/0/* (i,j>=1) -> device #j of client #i main addresses HD extended key
 //      m/i/1/j/1/* (i,j>=1) -> device #j of client #i asset addresses HD extended key
+//      m/i/1/j/2/* (i,j>=1) -> device #j of client #i asset issuance addresses HD extended key
 //
 //  Please refer to BIP-32 (https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki) for more information.
 //
@@ -120,7 +121,7 @@ var configKeyStore = config.get('keyStore');
 // Configuration settings
 var cfgSettings = {
     obsoleteExtKeyTimeToPurge: configKeyStore.get('obsoleteExtKeyTimeToPurge'),
-    purgeUnusedExtKeyInternal: configKeyStore.get('purgeUnusedExtKeyInternal')
+    purgeUnusedExtKeyInterval: configKeyStore.get('purgeUnusedExtKeyInterval')
 };
 
 const numServiceCreditAddrRoots = 10,
@@ -136,6 +137,19 @@ var purgeUnusedExtKeyInternalHandle;
 //
 
 // KeyStore function class
+//
+// Internal storage (loki DB collection) structure: {
+//      type: [string],
+//      path: [string],
+//      parentPath: [string],
+//      depth: [integer],
+//      index: [integer],
+//      strHDNode: [string],
+//      address: [string],
+//      isLeaf: [boolean],
+//      isReserved: [boolean],
+//      isObsolete: [boolean]
+//  }
 function KeyStore(ctnHubNodeIndex, seed, cryptoNetwork) {
     this.ctnHubNodeIndex = ctnHubNodeIndex;
     this.cryptoNetwork = cryptoNetwork;
@@ -1806,7 +1820,7 @@ KeyStore.initialize = function () {
     //  and set recurring timer to execute it periodically
     purgeUnusedExtendedKeys.call(Catenis.keyStore);
     Catenis.logger.TRACE('Setting recurring timer to purge unused HD extended keys from local key storage');
-    purgeUnusedExtKeyInternalHandle = Meteor.setInterval(purgeUnusedExtendedKeys.bind(Catenis.keyStore), cfgSettings.purgeUnusedExtKeyInternal);
+    purgeUnusedExtKeyInternalHandle = Meteor.setInterval(purgeUnusedExtendedKeys.bind(Catenis.keyStore), cfgSettings.purgeUnusedExtKeyInterval);
 };
 
 KeyStore.catenisNodeFundingPaymentRootPath = function (ctnNodeIndex) {

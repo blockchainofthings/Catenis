@@ -47,7 +47,7 @@
   // Parameters pertaining to KeyStore module
   "keyStore": {
     "obsoleteExtKeyTimeToPurge": 345600, // Time, in seconds, before an obsolete HD extended key is purged from local key storage
-    "purgeUnusedExtKeyInternal": 43200000  // Time interval, in miliseconds, for executing method to purge unused HD extended keys form local key storage
+    "purgeUnusedExtKeyInterval": 43200000  // Time interval, in miliseconds, for executing method to purge unused HD extended keys form local key storage
   },
   // Parameters pertaining to BitcoinCore module
   "bitcoinCore": {
@@ -156,5 +156,11 @@
                         //  NOTE: this value should be reviewed for segwit transactions
     "txOutputSize": 34 // Size, in bytes, of a typical (P2PKH) transaction output
                        //  NOTE: this value should be reviewed for segwit transactions
+  },
+  // Parameters pertaining to TransactionMonitor module
+  "transactionMonitor": {
+    "blockchainPollingInterval": 15000, // Time interval, in miliseconds, for polling the blockchain for newly arrived transactions and blocks
+    "mempoolExpiryHours": 72,  // Time, in hours, after which transactions are evicted from Bitcoin Core' mempool
+    "confirmSentTxTime": 30  // Time, in minutes, after which a sent transaction should have been confirmed
   }
 }

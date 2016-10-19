@@ -8,17 +8,59 @@
 //
 
 // References to external modules
-
+var util = Npm.require('util');
 
 // Definition of function classes
 //
 
 // FundTransaction function class
 //
+//  Constructor arguments:
+//    fundingEvent: [Object] // Object of type FundTransaction.fundingEvent identifying the funding event
+//    entityId: [string] (optional) // Should be specified only for 'provision_client_srv_credit' and 'provision_client_device'
+//                                      funding events. For the first case, it must match a valid client Id, and, for the
+//                                      second case, it must match a valid device Id
+//
 // NOTE: make sure that objects of this function class are instantiated and used (their methods
 //  called) from code executed from the FundSource.utxoCS critical section object
-function FundTransaction() {
+function FundTransaction(fundingEvent, entityId) {
+    // Validate funding event argument
+    if (!isValidFundingEvent(fundingEvent)) {
+        Catenis.logger.ERROR('FundTransaction function class constructor called with invalid argument', {fundingEvent: fundingEvent});
+        throw Error('Invalid fundingEvent argument');
+    }
+
+    // Validate entity ID argument
+    if (fundingEvent.name === FundTransaction.fundingEvent.provision_client_srv_credit || fundingEvent.name === FundTransaction.fundingEvent.provision_client_device) {
+        if (entityId == null) {
+            Catenis.logger.ERROR('FundTransaction function class constructor called with invalid argument; missing entity ID');
+            throw Error('Invalid entityId argument');
+        }
+        else {
+            // Make sure that entity ID is a valid reference to the right entity
+            if (fundingEvent.name === FundTransaction.fundingEvent.provision_client_srv_credit) {
+                let docClient = Catenis.db.Client.find({clientId: entityId}, {fields: {_id: 1}}).fetch();
+
+                if (docClient == undefined) {
+                    Catenis.logger.ERROR('FundTransaction function class constructor called with invalid argument; entity ID not a valid client Id', {entityId: entityId});
+                    throw Error('Invalid entityId argument');
+                }
+            }
+            else {
+                let docDevice = Catenis.db.Client.find({deviceId: entityId}, {fields: {_id: 1}}).fetch();
+
+                if (docDevice == undefined) {
+                    Catenis.logger.ERROR('FundTransaction function class constructor called with invalid argument; entity ID not a valid client Id', {entityId: entityId});
+                    throw Error('Invalid entityId argument');
+                }
+            }
+        }
+    }
+
+
     this.transact = new Catenis.module.Transaction();
+    this.fundingEvent = fundingEvent;
+    this.entityId = entityId;
     this.payees = [];
     this.fundsAllocated = false;
 }
@@ -100,7 +142,11 @@ FundTransaction.prototype.sendTransaction = function () {
         this.transact.sendTransaction();
 
         // Save sent transaction onto local database
-        this.transact.saveSentTransaction('funding', {
+        this.transact.saveSentTransaction(Catenis.module.Transaction.type.funding, {
+            event: {
+                name: this.fundingEvent.name,
+                entityId: this.entityId
+            },
             payees: this.payees
         });
 
@@ -131,9 +177,40 @@ FundTransaction.prototype.revertPayeeAddresses = function () {
 // FundTransaction function class (public) properties
 //
 
+FundTransaction.fundingEvent = Object.freeze({
+    provision_ctn_hub_device: Object.freeze({
+        name: 'provision_ctn_hub_device',
+        description: 'Provision Catenis Hub device'
+    }),
+    provision_client_srv_credit: Object.freeze({
+        name: 'provision_client_srv_credit',
+        description: 'Provision of client service credit'
+    }),
+    provision_client_device: Object.freeze({
+        name: 'provision_client_device',
+        description: 'Provision of client device'
+    }),
+    add_extra_tx_pay_funds: Object.freeze({
+        name: 'add_extra_tx_pay_funds',
+        description: 'Add extra fund for pay tx expense'
+    })
+});
+
 
 // Definition of module (private) functions
 //
+
+function isValidFundingEvent(event) {
+    isValid = false;
+
+    if (typeof event === 'object' && event != null && typeof event.name === 'string') {
+        isValid = Object.keys(FundTransaction.fundingEvent).some(function (key) {
+            return FundTransaction.fundingEvent[key].name === event.name;
+        });
+    }
+
+    return isValid;
+}
 
 
 // Module code

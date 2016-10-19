@@ -35,7 +35,7 @@ export class CriticalSection {
                 }
 
                 code();
-            }).wait()
+            }).wait();
         }
         finally {
             // Code has finished executing (either gracefully or with error).
