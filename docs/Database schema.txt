@@ -1,0 +1,193 @@
+Catenis app database schema:
+
+// NOTE: there should be one and only one document (record) for the Catenis collection
+Application {
+  _id: [string], // MongoDB internal document ID provided by Meteor
+  seedHmac: [string],  // Base-64 formatted HMAC-SHA256 signature of a predefined text using the application seed as the key. This is used to validate the application seed
+  lastBlockHeight: [number]  // Height of last blockchain block that has already been processed by the application
+}
+
+BitcoinFees {
+  _id: [string],  / MongoDB internal document ID provided by Meteor
+  recommended: {
+    fastestFee: [integer],
+    halfHourFee: [integer],
+    hourFee: [integer]
+  }
+  list: {
+    fees: [{
+      minFee: [integer],
+      maxFee: [integer],
+      minDelay: [integer],
+      maxDelay: [integer],
+      minMinutes: [integer],
+      maxMinutes: [integer]
+    }]
+  },
+  createdDate: [date/time] // Date and time when doc/rec has been created
+}
+
+IssuedBlockchainAddress {
+  _id: [string], // MongoDB internal document ID provided by Meteor
+  type: [string],  // Name of address type (HD node extended key type)
+  parentPath: [string],  // Path of the HD node from which this address is derived
+  path: [string],  // The HD node path which identifies this address
+  addrIndex: [integer],  // The position occupied by this address within the range of addresses of that type
+  addressHash: [string],  // Base-64 formatted SHA256 hash of blockchain address
+  issuedDate: [date/time],  // Date and time when address has been issued (doc/rec created)
+  expirationDate: [date/time],  // Date and time until when this address is considered to be valid to receive payments
+  status: [string],  // Valid values: 'new' (from creation util expiration date), 'expired' (after expiration date while there are UTXOs associated with it), 'obsolete' (after expiration date if there are no UTXOs associated with it), 'nonexistent' (address for given index does not exist), 'discarded' (excluded from current available range of addresses of that type)
+  lastStatusChangedDate: [date/time]  // Date and time when status has been last modified
+}
+
+CatenisNode {
+  _id: [string], // MongoDB internal document ID provided by Meteor
+  type: [string],  // Identifies the type of Catenis node. Valid values: 'hub' (Catenis Hub node; cntNodeIndex = 0), 'gateway' (Catenis Gateway node; cntNodeIndex >= 1)
+  ctnNodeIndex: [integer],  // HD node index associated with this Catenis node
+  createdDate: [date/time]  // Date and time when doc/rec has been created
+}
+
+Client {
+  _id: [string], // MongoDB internal document ID provided by Meteor
+  user_id: [string],  // MongoDB internal ID of User doc/rec with which this client is associated
+  catenisNode_id: [string],  // MongoDB internal ID of CatenisNode doc/rec with which this client is associated
+  clientId: [string],  // External ID used to uniquely identify this client
+  clientIndex: [integer],  // HD node index associated with this client (this should be a unique ID)
+  props: {
+    name: [string],  // Client name
+    lastModifiedDate: [date/time]  // Date and time when one of the client's properties had been last modified
+  },
+  apiAccessGenKey: [string],  // Key used to generate default secret key used for client's devices to access the Catenis API
+  status: [string],  // Valid values: 'new' (newly created client awaiting activation); 'active' (client is in normal use mode); 'deleted' (client has been logically deleted)
+  createdDate: [date/time],  // Date and time when doc/rec has been created
+  lastStatusChangedDate: [date/time], // Date and time when status has been last changed
+  lastApiAccessGenKeyModifiedDate: [date/time], // date and time when API access generator key has been last modified
+  _deleted: {  // Used to record the latest state of fields that are somehow changed once the doc/rec is marked as logically deleted. This field shall only exist while the doc/rec is logically deleted
+    user_id: [string],  // The original field should be removed
+    status: [string]  // The original field should have its value changed to 'deleted'
+    deletedDate: [date/time]  // Date and time when doc/rec has been marked as logically deleted
+  }
+}
+
+ServiceCredit {
+  _id: [string], // MongoDB internal document ID provided by Meteor
+  client_id: [string], // MongoDB internal ID of Client doc/rec with which this service credit entry is associated
+  srvCreditType: [string],  // Valid values: 'message' - message credit; 'asset' - asset credit
+  initCredits: [integer],  // Number of credits initially given
+  remainCredits: [integer],  // Number of credits remaining (not yet used)
+  createdDate: [date/time],  // Date and time when doc/rec has been created (credits initially given)
+  lastCreditUpdatedDate: [date/time]  // Date and time when remaining credits has been last updated
+} 
+
+Device {
+  _id: [string], // MongoDB internal document ID provided by Meteor
+  client_id: [string],  // MongoDB internal ID of Client doc/rec with which this device is associated
+  deviceId: [string],  // External ID used to uniquely identify this device
+  index: {  // This composite field should be a unique ID
+    clientIndex: [integer],  // HD node index associated with the client with which this device is associated
+    deviceIndex: [integer]  // HD node index associated with this client's device 
+  },
+  props: {
+    name: [string],  // Device name
+    prodUniqueId: [string],  // Proprietary ID that uniquely identifies the client's physical device/product that is associated to this logical device
+    lastModifiedDate: [date/time]  // Date and time when one of the device's properties had been last modified
+  },
+  apiAccessGenKey: [string],  // Key used to generate secret key used for accessing the Catenis API. If not defined, should use Client's default API access key
+  status: [string],  // Valid values: 'new' (newly created device awaiting activation); 'active' (device in normal use mode - after device's main/asset addresses have been provisioned); 'deleted' (device has been logically deleted)
+  createdDate: [date/time],  // Date and time when doc/rec was created
+  lastStatusChangedDate: [date/time], // Date and time when status has been last changed
+  lastApiAccessGenKeyModifiedDate: [date/time], // Date and time when API access generator key has been last modified
+  _deleted: {  // Used to record the latest state of fields that are somehow changed once the doc/rec is marked as logically deleted. This field shall only exist while the doc/rec is logically deleted
+    prodUniqueId: [string],  // The original field should be removed
+    status: [string], // The original field should have its value changed to 'deleted'
+    deletedDate: [date/time]  // Date and time when doc/rec has been marked as logically deleted
+  }
+}
+
+SentTransaction {
+  _id: [string], // MongoDB internal document ID provided by Meteor
+  type: [string], // Identifies the type of transaction that was sent. Valid values (from Catenis.module.Transaction.type): 'funding', 'send_message', 'read_confirmation', 'issue_locked_asset', 'issue_unlocked_asset', 'transfer_asset'
+  txid: [string], // Blockchain attributed ID (hash) of the sent transaction
+  inputs: [{ // Identifies the UTXOs that are spent by this transaction (recorded for the purpose of working around txid's malleability issue)
+    txid: [string], // Blockchain attributed ID of the transaction containing the UTXO that is spent
+    vout: [integer] // The index of the output within the transaction that is spent
+  }],
+  sentDate: [date/time], // Date and time when transaction was sent to the blockchain network
+  confirmation: {
+    confirmed: [boolean], // Indicates whether this transaction has already been confirmed within the blockchain
+    blockHash: [string], // Hash (ID) of blockchain block that contains this transaction
+    confirmationDate: [date/time], // Date and time when transaction has been confirmed. This is derived from the block time
+  },
+  replacedByTxid: [string], // Blockchain attributed ID (hash) of the transaction that replaces (by means of the RBF - Replace By Fee feature) this transaction (which in turn shall never make to the blockchain and thus shall never be confirmed). This is primarily intended for transactions of the 'read_confirmation' type. This field should only exist if the transaction has been replaced
+  info: {  // Specific information about the transaction according to its type
+    funding: {  // Information for funding transactions
+      event: {
+        name: [string], // Identifies the event that triggered the funding action. Valid values (from Catenis.module.FundTransaction.fundingEvent): 'provision_ctn_hub_device', 'provision_client_srv_credit', 'provision_client_device', 'add_extra_tx_pay_funds'
+        entityId: [string] // Id of the entity associated with the event. Should only exist for 'provision_client_srv_credit' and 'provision_client_device' events. For 'provision_client_srv_credit' events, it refers to the clientId; for 'provision_client_device' events, it refers to the deviceId
+      },
+      payees: [Array(string)] // Identifies the type of blockchain addresses that receive the funds. Valid values (from Catenis.module.KeyStore.extKeyType): 'ctnd_dev_main_addr', 'ctnd_pay_tx_exp_addr', 'cln_msg_crd_addr', 'cln_asst_crd_addr', 'dev_main_addr', 'dev_asst_issu_addr'
+    },
+    sendMessage: { // Information for send message transactions
+      originDeviceId: [string], // External ID of the device that sent the message
+      targetDeviceId: [string], // External ID of the device that receives the message
+      readConfirmation: {
+        vout: [integer] // The index of the output within this transaction that is used for read confirmation
+      }
+    },
+    readConfirmation: {
+      txouts: [{ // Identifies the read confirmation tx outputs that are spent by this transaction
+        txid: [string], // Blockchain attributed ID of the transaction containing the read confirmation output that is spent
+        vout: [integer] // The index of the output within the transaction that is spent
+      }],
+      feeAmount: [integer], // Amount, in satoshis, paid as fee for this transaction
+      txSize: [integer] // Transaction size, in bytes. Used to calculate fee rate
+    },
+    issueLockedAsset: {
+      assetId: [string], // ID that uniquely identifies the Colored Coins asset that is issued
+      deviceId: [string] // External ID of the device that is issuing the asset
+    },
+    issueUnlockedAsset: {
+      assetId: [string], // ID that uniquely identifies the coloredCoin asset that is issued
+      deviceId: [string] // External ID of the device that is issuing the asset
+    },
+    transferAsset: {
+      assetId: [string], // ID that uniquely identifies the Colored Coins asset that is transferred
+      originDeviceId: [string], // External ID of the device that sent the assets
+      targetDeviceId: [string] // External ID of the device that receives the assets
+    }
+  }
+}
+
+ReceivedTransaction {
+  _id: [string], // MongoDB internal document ID provided by Meteor
+  type: [string], // Identifies the type of transaction that was received. Valid values (from Catenis.module.Transaction.type): 'sys_funding', 'send_message', 'read_confirmation', 'transfer_asset'
+  txid: [string], // Blockchain attributed ID (hash) of the received transaction
+  receivedDate: [date/time], // Date and time when transaction was received. This is derived from timereceived property returned by gettransaction RPC method
+  sentTransaction_id: [string], // MongoDB internal ID of SentTransaction doc/rec which corresponds to this transaction. This field should be filled (exist) for all received transactions that have been sent by the same Catenis node. Note that for transactions of the 'sys_funding' type this field must never be filled (exist) since those types of transactions are not sent by the system
+  confirmation: {
+    confirmed: [boolean], // Indicates whether this transaction has already been confirmed within the blockchain
+    blockHash: [string], // Hash (ID) of blockchain block that contains this transaction
+    confirmationDate: [date/time], // Date and time when transaction has been confirmed. This is derived from the block time
+  },
+  info: {  // Specific information about the transaction according to its type. This does not apply for transactions of the 'sys_funding' type
+    sendMessage: { // Information for send message transactions
+      originDeviceId: [string], // External ID of the device that sent the message
+      targetDeviceId: [string], // External ID of the device that receives the message
+      readConfirmation: {
+        vout: [integer], // The index of the output within this transaction that is used for read confirmation
+        spent: [boolean] // Indicates whether the read confirmation output has already been spent by a transaction (of the 'read_confirmation' type)
+      }
+    },
+    readConfirmation: {
+      txouts: [{ // Identifies the read confirmation tx outputs that are spent by this transaction
+        txid: [string], // Blockchain attributed ID of the transaction containing the read confirmation output that is spent
+        vout: [integer] // The index of the output within the transaction that is spent
+      }]
+    },
+    transferAsset: {
+      assetId: [string], // ID that uniquely identifies the Colored Coins asset that is transferred
+      originDeviceId: [string], // External ID of the device that sent the assets
+      targetDeviceId: [string] // External ID of the device that receives the assets
+    }
+  }
+}
