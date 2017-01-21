@@ -59,7 +59,8 @@ function Database(collections) {
 // Database function class (public) methods
 //
 
-Database.inititalize = function() {
+Database.initialize = function() {
+    Catenis.logger.TRACE('DB initialization');
     var collections = {
         Application: {
             initFunc: initApplication
@@ -184,7 +185,25 @@ Database.inititalize = function() {
             },
             {
                 fields: {
+                    status: 1
+                },
+                opts: {
+                    background: true,
+                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                }
+            },
+            {
+                fields: {
                     createdDate: 1
+                },
+                opts: {
+                    background: true,
+                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                }
+            },
+            {
+                fields: {
+                    lastStatusChangedDate: 1
                 },
                 opts: {
                     background: true,
@@ -226,7 +245,8 @@ Database.inititalize = function() {
             },
             {
                 fields: {
-                    clientIndex: 1
+                    'index.ctnNodeIndex': 1,
+                    'index.clientIndex': 1
                 },
                 opts: {
                     unique: true,
@@ -301,6 +321,25 @@ Database.inititalize = function() {
             },
             {
                 fields: {
+                    'fundingTx.txid': 1
+                },
+                opts: {
+                    unique: true,
+                    background: true,
+                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                }
+            },
+            {
+                fields: {
+                    'fundingTx.confirmed': 1
+                },
+                opts: {
+                    background: true,
+                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                }
+            },
+            {
+                fields: {
                     remainCredits: 1
                 },
                 opts: {
@@ -333,7 +372,6 @@ Database.inititalize = function() {
                     client_id: 1
                 },
                 opts: {
-                    unique: true,
                     background: true,
                     safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
                 }
@@ -350,6 +388,7 @@ Database.inititalize = function() {
             },
             {
                 fields: {
+                    'index.ctnNodeIndex': 1,
                     'index.clientIndex': 1,
                     'index.deviceIndex': 1
                 },
@@ -474,6 +513,77 @@ Database.inititalize = function() {
                     safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
                 }
             }]
+        },
+        ReceivedTransaction: {
+            indices: [{
+                fields: {
+                    type: 1
+                },
+                opts: {
+                    background: true,
+                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                }
+            },
+            {
+                fields: {
+                    txid: 1
+                },
+                opts: {
+                    unique: true,
+                    background: true,
+                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                }
+            },
+            {
+                fields: {
+                    receivedDate: 1
+                },
+                opts: {
+                    background: true,
+                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                }
+            },
+            {
+                fields: {
+                    sentTransaction_id: 1
+                },
+                opts: {
+                    sparse: true,
+                    background: true,
+                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                }
+            },
+            {
+                fields: {
+                    'confirmation.confirmed': 1
+                },
+                opts: {
+                    sparse: true,
+                    background: true,
+                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                }
+            },
+            {
+                fields: {
+                    'confirmation.confirmationDate': 1
+                },
+                opts: {
+                    sparse: true,
+                    background: true,
+                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                }
+            },
+            {
+                fields: {
+                    'info.sendMessage.readConfirmation.spent': 1
+                },
+                opts: {
+                    sparse: true,
+                    background: true,
+                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                }
+            },
+            ]
         }
     };
 
@@ -505,13 +615,18 @@ function initApplication() {
 
 function initCatenisNode() {
     // Make sure that Catenis Hub doc/rec is already created
-    var docCtnNodes = this.collection.CatenisNode.find({type: 'hub'}, {fields: {_id: 1, ctnNodeIndex: 1}}).fetch();
+    var docCtnNodes = this.collection.CatenisNode.find({type: Catenis.module.CatenisNode.nodeType.hub.name}, {fields: {_id: 1, ctnNodeIndex: 1}}).fetch();
 
     if (docCtnNodes.length == 0) {
         // No doc/rec defined yet. Create new doc/rec with default settings
         this.collection.CatenisNode.insert({
-            type: 'hub',
+            type: Catenis.module.CatenisNode.nodeType.hub.name,
             ctnNodeIndex: ctnHubNodeIndex,
+            props: {
+                name: 'Catenis Hub',
+                description: 'Central Catenis node used to house clients that access the system through the Internet'
+            },
+            status: Catenis.module.CatenisNode.status.active.name,
             createdDate: new Date()
         })
     }

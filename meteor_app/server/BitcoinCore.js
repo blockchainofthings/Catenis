@@ -592,7 +592,7 @@ BitcoinCore.prototype.getTransaction = function (txid, logError = true) {
 // Note: by default the verbose arg is set to false what makes
 //  the method return the transaction as a hex enconded string.
 //  Otherwise, is returns an object with the transaction details
-BitcoinCore.prototype.getRawTransaction = function (txid, verbose) {
+BitcoinCore.prototype.getRawTransaction = function (txid, verbose, logError = true) {
     var args = [txid];
 
     if (verbose != undefined) {
@@ -603,16 +603,16 @@ BitcoinCore.prototype.getRawTransaction = function (txid, verbose) {
         return this.rpcApi.getrawtransaction.apply(this.btcClient, args);
     }
     catch (err) {
-        handleError('getrawtransaction', err);
+        handleError('getrawtransaction', err, logError);
     }
 };
 
-BitcoinCore.prototype.decodeRawTransaction = function (hexTx) {
+BitcoinCore.prototype.decodeRawTransaction = function (hexTx, logError = true) {
     try {
         return this.rpcApi.decoderawtransaction(hexTx);
     }
     catch (err) {
-        handleError('decoderawtransaction', err);
+        handleError('decoderawtransaction', err, logError);
     }
 };
 
@@ -639,6 +639,7 @@ BitcoinCore.prototype.getAddresses = function () {
 //
 
 BitcoinCore.initialize = function () {
+    Catenis.logger.TRACE('BitcoinCore initialization');
     // Instantiate BitcoinCore object
     Catenis.bitcoinCore = new BitcoinCore(Catenis.application.cryptoNetworkName, cfgSettings.serverHost, cfgSettings.rpcUser, cfgSettings.rpcPassword, cfgSettings.rpcConnectionTimeout);
 };

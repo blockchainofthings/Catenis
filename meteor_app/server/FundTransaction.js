@@ -16,7 +16,7 @@ var util = Npm.require('util');
 // FundTransaction function class
 //
 //  Constructor arguments:
-//    fundingEvent: [Object] // Object of type FundTransaction.fundingEvent identifying the funding event
+//    fundingEvent: [Object] // Object of type Catenis.module.FundTransaction.fundingEvent identifying the funding event
 //    entityId: [string] (optional) // Should be specified only for 'provision_client_srv_credit' and 'provision_client_device'
 //                                      funding events. For the first case, it must match a valid client Id, and, for the
 //                                      second case, it must match a valid device Id
@@ -57,7 +57,6 @@ function FundTransaction(fundingEvent, entityId) {
         }
     }
 
-
     this.transact = new Catenis.module.Transaction();
     this.fundingEvent = fundingEvent;
     this.entityId = entityId;
@@ -75,14 +74,14 @@ function FundTransaction(fundingEvent, entityId) {
 FundTransaction.prototype.addPayees = function (blockchainAddress, amountPerAddress) {
     // Prepare list of outputs to be added to transaction by generating
     //  new addresses and associating them with the respective amount
-    var p2PKHOutputs = amountPerAddress.map(function (amount) {
+    var payInfos = amountPerAddress.map(function (amount) {
         return {
             address: blockchainAddress.newAddressKeys().getAddress(),
             amount: amount
         }
     });
 
-    this.transact.addP2PKHOutputs(p2PKHOutputs);
+    this.transact.addP2PKHOutputs(payInfos);
 
     // Save type of payee
     this.payees.push(blockchainAddress.type);
@@ -92,7 +91,7 @@ FundTransaction.prototype.addPayingSource = function () {
     var result = false;
 
     if (!this.fundsAllocated) {
-        var fundSrc = new Catenis.module.FundSource(Catenis.ctnHub.listFundingAddressesInUse(), {});
+        var fundSrc = new Catenis.module.FundSource(Catenis.ctnHubNode.listFundingAddressesInUse(), {});
 
         // Try to allocate UTXOs to pay for tx expense using optimum fee rate and default
         //  payment resolution
@@ -112,7 +111,8 @@ FundTransaction.prototype.addPayingSource = function () {
             var inputs = fundResult.utxos.map(function (utxo) {
                 return {
                     txout: utxo.txout,
-                    addrKeys: Catenis.keyStore.getCryptoKeysByAddress(utxo.address)
+                    address: utxo.address,
+                    addrInfo: Catenis.keyStore.getAddressInfo(utxo.address)
                 }
             });
 
@@ -120,7 +120,7 @@ FundTransaction.prototype.addPayingSource = function () {
 
             if (fundResult.changeAmount > 0) {
                 // Add new output to receive change
-                this.transact.addP2PKHOutput(Catenis.ctnHub.fundingChangeAddr.newAddressKeys().getAddress(), fundResult.changeAmount);
+                this.transact.addP2PKHOutput(Catenis.ctnHubNode.fundingChangeAddr.newAddressKeys().getAddress(), fundResult.changeAmount);
             }
 
             // Indicate that funds to pay for tx expense have been allocated
@@ -151,7 +151,7 @@ FundTransaction.prototype.sendTransaction = function () {
         });
 
         // Check if system funding balance is still within safe limits
-        Catenis.ctnHub.checkFundingBalance();
+        Catenis.ctnHubNode.checkFundingBalance();
     }
 
     return this.transact.txid;
@@ -159,7 +159,7 @@ FundTransaction.prototype.sendTransaction = function () {
 
 FundTransaction.prototype.revertPayeeAddresses = function () {
     if (this.payees.length > 0) {
-        Catenis.module.BlockchainAddress.BlockchainAddress.revertAddressList(this.transact.listOutputAddresses());
+        this.transact.revertOutputAddresses();
     }
 };
 
@@ -178,9 +178,9 @@ FundTransaction.prototype.revertPayeeAddresses = function () {
 //
 
 FundTransaction.fundingEvent = Object.freeze({
-    provision_ctn_hub_device: Object.freeze({
-        name: 'provision_ctn_hub_device',
-        description: 'Provision Catenis Hub device'
+    provision_system_device: Object.freeze({
+        name: 'provision_system_device',
+        description: 'Provision system device'
     }),
     provision_client_srv_credit: Object.freeze({
         name: 'provision_client_srv_credit',

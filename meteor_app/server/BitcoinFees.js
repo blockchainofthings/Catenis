@@ -109,6 +109,7 @@ function retrieveFees() {
 //
 
 BitcoinFees.initialize = function () {
+    Catenis.logger.TRACE('BitcoinFees initialization');
     Catenis.bitcoinFees = new BitcoinFees(cfgSettings.apiVer1Url);
 
     // Execute process to retrieve current bitcoin fees now

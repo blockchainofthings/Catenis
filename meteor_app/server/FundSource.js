@@ -12,7 +12,7 @@ var config = Npm.require('config');
 var loki = Npm.require('lokijs');
 var BigNumber = Npm.require('bignumber.js');
 
-import {CriticalSection} from './CriticalSection.js';
+import { CriticalSection } from './CriticalSection.js';
 
 // Config entries
 var fundSourceConfig = config.get('fundSource');

@@ -14,8 +14,9 @@ var config = Npm.require('config');
 var serviceConfig = config.get('service');
 var srvMessageConfig = serviceConfig.get('message');
 var srvMsgTypTxCfgConfig = srvMessageConfig.get('typicalTxConfig');
+var srvMsgTypTxCfgSysMsgConfig = srvMsgTypTxCfgConfig.get('sysMessage');
 var srvMsgTypTxCfgSendMsgConfig = srvMsgTypTxCfgConfig.get('sendMessage');
-var srvMsgTypTxCfgCtnNodeSendMsgConfig = srvMsgTypTxCfgConfig.get('ctnNodeSendMessage');
+var srvMsgTypTxCfgLogMsgConfig = srvMsgTypTxCfgConfig.get('logMessage');
 var srvMsgTypTxCfgReadConfirm = srvMsgTypTxCfgConfig.get('readConfirmation');
 var srvAssetConfig = serviceConfig.get('asset');
 var srvAssetTxWeights = srvAssetConfig.get('txWeights');
@@ -34,25 +35,34 @@ var cfgSettings = {
     minFundDevicesProvision: serviceConfig.get('minFundDevicesProvision'),
     minFundMessageCreditsProvision: serviceConfig.get('minFundMessageCreditsProvision'),
     minFundAssetCreditsProvision: serviceConfig.get('minFundAssetCreditsProvision'),
-    catenisNodeMessageCredits: serviceConfig.get('catenisNodeMessageCredits'),
+    percSendMessageCredit: serviceConfig.get('percSendMessageCredit'),
+    percLogMessageCredit: serviceConfig.get('percLogMessageCredit'),
+    systemMessageCredits: serviceConfig.get('systemMessageCredits'),
     fundPayTxResolution: serviceConfig.get('fundPayTxResolution'),
     fundPayTxMultiplyFactor: serviceConfig.get('fundPayTxMultiplyFactor'),
+    minFundPayTxAmountMultiplyFactor: serviceConfig.get('minFundPayTxAmountMultiplyFactor'),
     message: {
         messagesPerMinute: srvMessageConfig.get('messagesPerMinute'),
         minutesToConfirm: srvMessageConfig.get('minutesToConfirm'),
         unconfMainAddrReuses: srvMessageConfig.get('unconfMainAddrReuses'),
         fundMainAddrAmount: srvMessageConfig.get('fundMainAddrAmount'),
         fundMainAddrMultiplyFactor: srvMessageConfig.get('fundMainAddrMultiplyFactor'),
+        readConfimAddrAmount: srvMessageConfig.get('readConfimAddrAmount'),
         typicalTxConfig: {
-            ctnNodeSendMessage: {
-                numInputs: srvMsgTypTxCfgCtnNodeSendMsgConfig.get('numInputs'),
-                numOutputs: srvMsgTypTxCfgCtnNodeSendMsgConfig.get('numOutputs'),
-                nullDataPlayloadSize: srvMsgTypTxCfgCtnNodeSendMsgConfig.get('nullDataPlayloadSize')
+            sysMessage: {
+                numInputs: srvMsgTypTxCfgSysMsgConfig.get('numInputs'),
+                numOutputs: srvMsgTypTxCfgSysMsgConfig.get('numOutputs'),
+                nullDataPlayloadSize: srvMsgTypTxCfgSysMsgConfig.get('nullDataPlayloadSize')
             },
             sendMessage: {
                 numInputs: srvMsgTypTxCfgSendMsgConfig.get('numInputs'),
                 numOutputs: srvMsgTypTxCfgSendMsgConfig.get('numOutputs'),
                 nullDataPlayloadSize: srvMsgTypTxCfgSendMsgConfig.get('nullDataPlayloadSize')
+            },
+            logMessage: {
+                numInputs: srvMsgTypTxCfgLogMsgConfig.get('numInputs'),
+                numOutputs: srvMsgTypTxCfgLogMsgConfig.get('numOutputs'),
+                nullDataPlayloadSize: srvMsgTypTxCfgLogMsgConfig.get('nullDataPlayloadSize')
             },
             readConfirmation: {
                 numInputs: srvMsgTypTxCfgReadConfirm.get('numInputs'),
@@ -106,17 +116,19 @@ function Service() {
 
 Service.testFunctions = function () {
     return {
-        catenisNodeProvisionCost: catenisNodeProvisionCost(),
-        numActiveCatenisNodeDeviceMainAddresses: numActiveCatenisNodeDeviceMainAddresses(),
-        estimatedCatenisNodeMessageTxCost: estimatedCatenisNodeMessageTxCost(),
-        typicalCatenisNodeSendMessageTxSize: typicalCatenisNodeSendMessageTxSize(),
+        systemProvisionCost: systemProvisionCost(),
+        numActiveSystemDeviceMainAddresses: numActiveSystemDeviceMainAddresses(),
+        estimatedSystemMessageTxCost: estimatedSystemMessageTxCost(),
+        typicalSystemMessageTxSize: typicalSystemMessageTxSize(),
         clientProvisionCost: clientProvisionCost(),
         deviceProvisionCost: deviceProvisionCost(),
         deviceMessageProvisionCost: deviceMessageProvisionCost(),
         numActiveDeviceMainAddresses: numActiveDeviceMainAddresses(),
-        estimatedMessageTxCost: estimatedMessageTxCost(),
+        estimatedSendMessageTotalTxCost: estimatedSendMessageTotalTxCost(),
         estimatedSendMessageTxCost: estimatedSendMessageTxCost(),
         typicalSendMessageTxSize: typicalSendMessageTxSize(),
+        estimatedLogMessageTxCost: estimatedLogMessageTxCost(),
+        typicalLogMessageTxSize: typicalLogMessageTxSize(),
         typicalReadConfirmationTxPayAmount: typicalReadConfirmationTxPayAmount(),
         deviceAssetProvisionCost: deviceAssetProvisionCost(),
         numActiveDeviceAssetIssuanceAddresses: numActiveDeviceAssetIssuanceAddresses(),
@@ -129,11 +141,13 @@ Service.testFunctions = function () {
 };
 
 Service.getExpectedPayTxExpenseBalance = function (messageCredits, unreadMessages, assetCredits) {
-    return messageCredits * estimatedSendMessageTxCost() + unreadMessages * typicalReadConfirmationTxPayAmount() + assetCredits * estimatedAssetTxCost();
+    const splitMsgCredits = splitMessageCredits(messageCredits);
+
+    return splitMsgCredits.logMsgCredits * estimatedLogMessageTxCost() + splitMsgCredits.sendMsgCredits * estimatedSendMessageTxCost() + unreadMessages * typicalReadConfirmationTxPayAmount() + assetCredits * estimatedAssetTxCost();
 };
 
-Service.distributeCatenisNodeDeviceMainAddressFund = function () {
-    let totalAmount = numActiveCatenisNodeDeviceMainAddresses() * cfgSettings.message.fundMainAddrAmount;
+Service.distributeSystemDeviceMainAddressFund = function () {
+    let totalAmount = numActiveSystemDeviceMainAddresses() * cfgSettings.message.fundMainAddrAmount;
 
     return {
         totalAmount: totalAmount,
@@ -169,16 +183,22 @@ Service.distributeDeviceAssetIssuanceAddressFund = function () {
 };
 
 Service.distributePayMessageTxExpenseFund = function (credits, safetyFactor = 0) {
-    let totalAmount = Math.ceil((credits * estimatedMessageTxCost() * (1 + safetyFactor)) / cfgSettings.paymentResolution) * cfgSettings.paymentResolution;
+    const splitMsgCredits = splitMessageCredits(credits);
 
-    return {
-        totalAmount: totalAmount,
-        amountPerAddress: distributePayment(totalAmount, cfgSettings.fundPayTxResolution, cfgSettings.fundPayTxMultiplyFactor, cfgSettings.fundPayTxMultiplyFactor)
-    };
+    return Service.distributePayTxExpenseFund((splitMsgCredits.sendMsgCredits * estimatedSendMessageTotalTxCost() + splitMsgCredits.logMsgCredits * estimatedLogMessageTxCost()) * (1 + safetyFactor));
 };
 
 Service.distributePayAssetTxExpenseFund = function (credits, safetyFactor = 0) {
-    let totalAmount = Math.ceil((credits * estimatedAssetTxCost() * (1 + safetyFactor)) / cfgSettings.paymentResolution) * cfgSettings.paymentResolution;
+    return Service.distributePayTxExpenseFund(credits * estimatedAssetTxCost() * (1 + safetyFactor));
+};
+
+Service.distributePayTxExpenseFund = function (amount) {
+    let totalAmount = Math.ceil(amount / cfgSettings.paymentResolution) * cfgSettings.paymentResolution;
+
+    // Make sure that amount to fund is not below minimum
+    if (totalAmount < cfgSettings.minFundPayTxAmountMultiplyFactor * cfgSettings.paymentResolution) {
+        totalAmount = cfgSettings.minFundPayTxAmountMultiplyFactor * cfgSettings.paymentResolution;
+    }
 
     return {
         totalAmount: totalAmount,
@@ -194,26 +214,28 @@ Service.distributePayAssetTxExpenseFund = function (credits, safetyFactor = 0) {
 // Definition of module (private) functions
 //
 
-function catenisNodeProvisionCost() {
-    // Includes cost to pay for expense of txs issued by Catenis Node device
-    return cfgSettings.catenisNodeMessageCredits * estimatedCatenisNodeMessageTxCost();
+function systemProvisionCost() {
+    // Includes cost to pay for expense of txs issued by system device
+    return cfgSettings.systemMessageCredits * estimatedSystemMessageTxCost();
 }
 
-function numActiveCatenisNodeDeviceMainAddresses() {
+function numActiveSystemDeviceMainAddresses() {
     return Math.ceil((cfgSettings.message.messagesPerMinute * cfgSettings.message.minutesToConfirm) / cfgSettings.message.unconfMainAddrReuses);
 }
 
-function estimatedCatenisNodeMessageTxCost() {
-    return Math.ceil((typicalCatenisNodeSendMessageTxSize() * Catenis.bitcoinFees.getFeeRateByTime(cfgSettings.message.minutesToConfirm)) / cfgSettings.paymentResolution) * cfgSettings.paymentResolution;
+function estimatedSystemMessageTxCost() {
+    return Math.ceil((typicalSystemMessageTxSize() * Catenis.bitcoinFees.getFeeRateByTime(cfgSettings.message.minutesToConfirm)) / cfgSettings.paymentResolution) * cfgSettings.paymentResolution;
 }
 
-function typicalCatenisNodeSendMessageTxSize() {
-    return Catenis.module.Transaction.computeTransactionSize(cfgSettings.message.typicalTxConfig.ctnNodeSendMessage.numInputs, cfgSettings.message.typicalTxConfig.ctnNodeSendMessage.numOutputs, cfgSettings.message.typicalTxConfig.ctnNodeSendMessage.nullDataPlayloadSize);
+function typicalSystemMessageTxSize() {
+    return Catenis.module.Transaction.computeTransactionSize(cfgSettings.message.typicalTxConfig.sysMessage.numInputs, cfgSettings.message.typicalTxConfig.sysMessage.numOutputs, cfgSettings.message.typicalTxConfig.sysMessage.nullDataPlayloadSize);
 }
 
 function clientProvisionCost(messageCredits = cfgSettings.minFundMessageCreditsProvision, assetCredits = cfgSettings.minFundAssetCreditsProvision) {
     // Includes cost to pay for expense of txs issued by client's devices + cost to fund client service credit addresses
-    return messageCredits * estimatedMessageTxCost() + assetCredits * estimatedAssetTxCost() + (messageCredits + assetCredits) * cfgSettings.serviceCreditAmount;
+    const splitMsgCredits = splitMessageCredits(messageCredits);
+
+    return splitMsgCredits.sendMsgCredits * estimatedSendMessageTotalTxCost() + splitMsgCredits.logMsgCredits * estimatedLogMessageTxCost() + assetCredits * estimatedAssetTxCost() + (messageCredits + assetCredits) * cfgSettings.serviceCreditAmount;
 }
 
 function deviceProvisionCost() {
@@ -229,7 +251,7 @@ function numActiveDeviceMainAddresses() {
     return Math.ceil((cfgSettings.message.messagesPerMinute * cfgSettings.message.minutesToConfirm) / cfgSettings.message.unconfMainAddrReuses);
 }
 
-function estimatedMessageTxCost() {
+function estimatedSendMessageTotalTxCost() {
     // Send message tx cost + read confirmation tx cost
     return Math.ceil((typicalSendMessageTxSize() * Catenis.bitcoinFees.getFeeRateByTime(cfgSettings.message.minutesToConfirm) + typicalReadConfirmationTxPayAmount()) / cfgSettings.paymentResolution) * cfgSettings.paymentResolution;
 }
@@ -240,6 +262,14 @@ function estimatedSendMessageTxCost() {
 
 function typicalSendMessageTxSize() {
     return Catenis.module.Transaction.computeTransactionSize(cfgSettings.message.typicalTxConfig.sendMessage.numInputs, cfgSettings.message.typicalTxConfig.sendMessage.numOutputs, cfgSettings.message.typicalTxConfig.sendMessage.nullDataPlayloadSize);
+}
+
+function estimatedLogMessageTxCost() {
+    return Math.ceil((typicalLogMessageTxSize() * Catenis.bitcoinFees.getFeeRateByTime(cfgSettings.message.minutesToConfirm)) / cfgSettings.paymentResolution) * cfgSettings.paymentResolution;
+}
+
+function typicalLogMessageTxSize() {
+    return Catenis.module.Transaction.computeTransactionSize(cfgSettings.message.typicalTxConfig.logMessage.numInputs, cfgSettings.message.typicalTxConfig.logMessage.numOutputs, cfgSettings.message.typicalTxConfig.logMessage.nullDataPlayloadSize);
 }
 
 function typicalReadConfirmationTxPayAmount() {
@@ -340,6 +370,14 @@ function distributePayment(totalAmount, payAmount, addressesPerBatch, paysPerAdd
     return payments;
 }
 
+function splitMessageCredits(credits) {
+    const sendMsgCredits = Math.round(credits * cfgSettings.percSendMessageCredit / 100);
+
+    return {
+        sendMsgCredits: sendMsgCredits,
+        logMsgCredits: credits - sendMsgCredits
+    }
+}
 
 // Module code
 //
@@ -354,7 +392,37 @@ Object.defineProperties(Service, {
     },
     minimumFundingBalance: {
         get: function () {
-            return catenisNodeProvisionCost() + cfgSettings.minFundClientsProvision * clientProvisionCost() + cfgSettings.minFundClientsProvision * cfgSettings.minFundDevicesProvision * deviceProvisionCost();
+            return systemProvisionCost() + cfgSettings.minFundClientsProvision * clientProvisionCost() + cfgSettings.minFundClientsProvision * cfgSettings.minFundDevicesProvision * deviceProvisionCost();
+        },
+        enumerable: true
+    },
+    clientServiceCreditAmount: {
+        get: function () {
+            return cfgSettings.serviceCreditAmount;
+        },
+        enumerable: true
+    },
+    devMainAddrAmount: {
+        get: function () {
+            return cfgSettings.message.fundMainAddrAmount;
+        },
+        enumerable: true
+    },
+    devMainAddrMinBalance: {
+        get: function () {
+            return deviceMessageProvisionCost();
+        },
+        enumerable: true
+    },
+    devReadConfirmAddrAmount: {
+        get: function () {
+            return cfgSettings.message.readConfimAddrAmount;
+        },
+        enumerable: true
+    },
+    devAssetIssuanceAddrAmount: {
+        get: function () {
+            return cfgSettings.asset.fundAssetIssueAddrAmount;
         },
         enumerable: true
     }

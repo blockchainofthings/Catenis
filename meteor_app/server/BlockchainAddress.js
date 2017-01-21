@@ -21,10 +21,10 @@ var configBcAddress = config.get('blockchainAddress'),
 // Configuration settings
 var cfgSettings = {
     addressValidity: {
-        catenisNodeDeviceMain: configBcAddrValidity.get('catenisNodeDeviceMain'),
-        catenisNodeFundingPayment: configBcAddrValidity.get('catenisNodeFundingPayment'),
-        catenisNodeFundingChange: configBcAddrValidity.get('catenisNodeFundingChange'),
-        catenisNodePayTxExpense: configBcAddrValidity.get('catenisNodePayTxExpense'),
+        systemDeviceMain: configBcAddrValidity.get('systemDeviceMain'),
+        systemFundingPayment: configBcAddrValidity.get('systemFundingPayment'),
+        systemFundingChange: configBcAddrValidity.get('systemFundingChange'),
+        systemPayTxExpense: configBcAddrValidity.get('systemPayTxExpense'),
         clientMessageCredit: configBcAddrValidity.get('clientMessageCredit'),
         clientAssetCredit: configBcAddrValidity.get('clientAssetCredit'),
         deviceReadConfirm: configBcAddrValidity.get('deviceReadConfirm'),
@@ -47,24 +47,24 @@ var updtIssuedAddrsIntervalHandle,
 // Definition of function classes
 //
 
-// CatenisNodeDeviceMainAddress derived class
-class CatenisNodeDeviceMainAddress extends BlockchainAddress {
+// SystemDeviceMainAddress derived class
+class SystemDeviceMainAddress extends BlockchainAddress {
     constructor (ctnNodeIndex) {
         super();
-        this.type = Catenis.module.KeyStore.extKeyType.ctnd_dev_main_addr.name;
-        this.parentPath = Catenis.module.KeyStore.catenisNodeDeviceMainAddressRootPath(ctnNodeIndex);
+        this.type = Catenis.module.KeyStore.extKeyType.sys_dev_main_addr.name;
+        this.parentPath = Catenis.module.KeyStore.systemDeviceMainAddressRootPath(ctnNodeIndex);
 
         // Make sure that an object of this class has not been instantiated yet
         if (hasInstantiatedObject(this.parentPath)) {
-            Catenis.logger.ERROR(util.format('CatenisNodeDeviceMainAddress object for the given Catenis node index (%d) has already been instantiated', ctnNodeIndex));
-            throw new Error(util.format('CatenisNodeDeviceMainAddress object for the given Catenis node index (%d) has already been instantiated', ctnNodeIndex));
+            Catenis.logger.ERROR(util.format('SystemDeviceMainAddress object for the given Catenis node index (%d) has already been instantiated', ctnNodeIndex));
+            throw new Error(util.format('SystemDeviceMainAddress object for the given Catenis node index (%d) has already been instantiated', ctnNodeIndex));
         }
 
-        this.addressValidity = cfgSettings.addressValidity.catenisNodeDeviceMain;
+        this.addressValidity = cfgSettings.addressValidity.systemDeviceMain;
 
         // Assign address manipulation functions
-        this._getAddressKeys = Catenis.keyStore.getCatenisNodeDeviceMainAddressKeys.bind(Catenis.keyStore, ctnNodeIndex);
-        this._listAddressesInUse = Catenis.keyStore.listCatenisNodeDeviceMainAddressesInUse.bind(Catenis.keyStore, ctnNodeIndex);
+        this._getAddressKeys = Catenis.keyStore.getSystemDeviceMainAddressKeys.bind(Catenis.keyStore, ctnNodeIndex);
+        this._listAddressesInUse = Catenis.keyStore.listSystemDeviceMainAddressesInUse.bind(Catenis.keyStore, ctnNodeIndex);
 
         // Initialize bounding indices
         setBoundingIndices.call(this);
@@ -88,31 +88,31 @@ class CatenisNodeDeviceMainAddress extends BlockchainAddress {
         }
 
         // Check if an instance of this class has already been instantiated
-        var parentPath = Catenis.module.KeyStore.catenisNodeDeviceMainAddressRootPath(ctnNodeIndex);
+        var parentPath = Catenis.module.KeyStore.systemDeviceMainAddressRootPath(ctnNodeIndex);
 
         return hasInstantiatedObject(parentPath) ? getInstantiatedObject(parentPath)
-            : new CatenisNodeDeviceMainAddress(ctnNodeIndex);
+            : new SystemDeviceMainAddress(ctnNodeIndex);
     }
 }
 
-// CatenisNodeFundingPaymentAddress derived class
-class CatenisNodeFundingPaymentAddress extends BlockchainAddress {
+// SystemFundingPaymentAddress derived class
+class SystemFundingPaymentAddress extends BlockchainAddress {
     constructor (ctnNodeIndex) {
         super();
-        this.type = Catenis.module.KeyStore.extKeyType.ctnd_fund_pay_addr.name;
-        this.parentPath = Catenis.module.KeyStore.catenisNodeFundingPaymentRootPath(ctnNodeIndex);
+        this.type = Catenis.module.KeyStore.extKeyType.sys_fund_pay_addr.name;
+        this.parentPath = Catenis.module.KeyStore.systemFundingPaymentRootPath(ctnNodeIndex);
 
         // Make sure that an object of this class has not been instantiated yet
         if (hasInstantiatedObject(this.parentPath)) {
-            Catenis.logger.ERROR(util.format('CatenisNodeFundingPaymentAddress object for the given Catenis node index (%d) has already been instantiated', ctnNodeIndex));
-            throw new Error(util.format('CatenisNodeFundingPaymentAddress object for the given Catenis node index (%d) has already been instantiated', ctnNodeIndex));
+            Catenis.logger.ERROR(util.format('SystemFundingPaymentAddress object for the given Catenis node index (%d) has already been instantiated', ctnNodeIndex));
+            throw new Error(util.format('SystemFundingPaymentAddress object for the given Catenis node index (%d) has already been instantiated', ctnNodeIndex));
         }
 
-        this.addressValidity = cfgSettings.addressValidity.catenisNodeFundingPayment;
+        this.addressValidity = cfgSettings.addressValidity.systemFundingPayment;
 
         // Assign address manipulation functions
-        this._getAddressKeys = Catenis.keyStore.getCatenisNodeFundingPaymentAddressKeys.bind(Catenis.keyStore, ctnNodeIndex);
-        this._listAddressesInUse = Catenis.keyStore.listCatenisNodeFundingPaymentAddressesInUse.bind(Catenis.keyStore, ctnNodeIndex);
+        this._getAddressKeys = Catenis.keyStore.getSystemFundingPaymentAddressKeys.bind(Catenis.keyStore, ctnNodeIndex);
+        this._listAddressesInUse = Catenis.keyStore.listSystemFundingPaymentAddressesInUse.bind(Catenis.keyStore, ctnNodeIndex);
 
         // Initialize bounding indices
         setBoundingIndices.call(this);
@@ -136,31 +136,31 @@ class CatenisNodeFundingPaymentAddress extends BlockchainAddress {
         }
 
         // Check if an instance of this class has already been instantiated
-        var parentPath = Catenis.module.KeyStore.catenisNodeFundingPaymentRootPath(ctnNodeIndex);
+        var parentPath = Catenis.module.KeyStore.systemFundingPaymentRootPath(ctnNodeIndex);
 
         return hasInstantiatedObject(parentPath) ? getInstantiatedObject(parentPath)
-                : new CatenisNodeFundingPaymentAddress(ctnNodeIndex);
+                : new SystemFundingPaymentAddress(ctnNodeIndex);
     }
 }
 
-// CatenisNodeFundingChangeAddress derived class
-class CatenisNodeFundingChangeAddress extends BlockchainAddress {
+// SystemFundingChangeAddress derived class
+class SystemFundingChangeAddress extends BlockchainAddress {
     constructor (ctnNodeIndex) {
         super();
-        this.type = Catenis.module.KeyStore.extKeyType.ctnd_fund_chg_addr.name;
-        this.parentPath = Catenis.module.KeyStore.catenisNodeFundingChangeRootPath(ctnNodeIndex);
+        this.type = Catenis.module.KeyStore.extKeyType.sys_fund_chg_addr.name;
+        this.parentPath = Catenis.module.KeyStore.systemFundingChangeRootPath(ctnNodeIndex);
 
         // Make sure that an object of this class has not been instantiated yet
         if (hasInstantiatedObject(this.parentPath)) {
-            Catenis.logger.ERROR(util.format('CatenisNodeFundingChangeAddress object for the given Catenis node index (%d) has already been instantiated', ctnNodeIndex));
-            throw new Error(util.format('CatenisNodeFundingChangeAddress object for the given Catenis node index (%d) has already been instantiated', ctnNodeIndex));
+            Catenis.logger.ERROR(util.format('SystemFundingChangeAddress object for the given Catenis node index (%d) has already been instantiated', ctnNodeIndex));
+            throw new Error(util.format('SystemFundingChangeAddress object for the given Catenis node index (%d) has already been instantiated', ctnNodeIndex));
         }
 
-        this.addressValidity = cfgSettings.addressValidity.catenisNodeFundingChange;
+        this.addressValidity = cfgSettings.addressValidity.systemFundingChange;
 
         // Assign address manipulation functions
-        this._getAddressKeys = Catenis.keyStore.getCatenisNodeFundingChangeAddressKeys.bind(Catenis.keyStore, ctnNodeIndex);
-        this._listAddressesInUse = Catenis.keyStore.listCatenisNodeFundingChangeAddressesInUse.bind(Catenis.keyStore, ctnNodeIndex);
+        this._getAddressKeys = Catenis.keyStore.getSystemFundingChangeAddressKeys.bind(Catenis.keyStore, ctnNodeIndex);
+        this._listAddressesInUse = Catenis.keyStore.listSystemFundingChangeAddressesInUse.bind(Catenis.keyStore, ctnNodeIndex);
 
         // Initialize bounding indices
         setBoundingIndices.call(this);
@@ -184,31 +184,31 @@ class CatenisNodeFundingChangeAddress extends BlockchainAddress {
         }
 
         // Check if an instance of this class has already been instantiated
-        var parentPath = Catenis.module.KeyStore.catenisNodeFundingChangeRootPath(ctnNodeIndex);
+        var parentPath = Catenis.module.KeyStore.systemFundingChangeRootPath(ctnNodeIndex);
 
         return hasInstantiatedObject(parentPath) ? getInstantiatedObject(parentPath)
-            : new CatenisNodeFundingChangeAddress(ctnNodeIndex);
+            : new SystemFundingChangeAddress(ctnNodeIndex);
     }
 }
 
-// CatenisNodePayTxExpenseAddress derived class
-class CatenisNodePayTxExpenseAddress extends BlockchainAddress {
+// SystemPayTxExpenseAddress derived class
+class SystemPayTxExpenseAddress extends BlockchainAddress {
     constructor (ctnNodeIndex) {
         super();
-        this.type = Catenis.module.KeyStore.extKeyType.ctnd_pay_tx_exp_addr.name;
-        this.parentPath = Catenis.module.KeyStore.catenisNodePayTxExpenseRootPath(ctnNodeIndex);
+        this.type = Catenis.module.KeyStore.extKeyType.sys_pay_tx_exp_addr.name;
+        this.parentPath = Catenis.module.KeyStore.systemPayTxExpenseRootPath(ctnNodeIndex);
 
         // Make sure that an object of this class has not been instantiated yet
         if (hasInstantiatedObject(this.parentPath)) {
-            Catenis.logger.ERROR(util.format('CatenisNodePayTxExpenseAddress object for the given Catenis node index (%d) has already been instantiated', ctnNodeIndex));
-            throw new Error(util.format('CatenisNodePayTxExpenseAddress object for the given Catenis node index (%d) has already been instantiated', ctnNodeIndex));
+            Catenis.logger.ERROR(util.format('SystemPayTxExpenseAddress object for the given Catenis node index (%d) has already been instantiated', ctnNodeIndex));
+            throw new Error(util.format('SystemPayTxExpenseAddress object for the given Catenis node index (%d) has already been instantiated', ctnNodeIndex));
         }
 
-        this.addressValidity = cfgSettings.addressValidity.catenisNodePayTxExpense;
+        this.addressValidity = cfgSettings.addressValidity.systemPayTxExpense;
 
         // Assign address manipulation functions
-        this._getAddressKeys = Catenis.keyStore.getCatenisNodePayTxExpenseAddressKeys.bind(Catenis.keyStore, ctnNodeIndex);
-        this._listAddressesInUse = Catenis.keyStore.listCatenisNodePayTxExpenseAddressesInUse.bind(Catenis.keyStore, ctnNodeIndex);
+        this._getAddressKeys = Catenis.keyStore.getSystemPayTxExpenseAddressKeys.bind(Catenis.keyStore, ctnNodeIndex);
+        this._listAddressesInUse = Catenis.keyStore.listSystemPayTxExpenseAddressesInUse.bind(Catenis.keyStore, ctnNodeIndex);
 
         // Initialize bounding indices
         setBoundingIndices.call(this);
@@ -232,31 +232,31 @@ class CatenisNodePayTxExpenseAddress extends BlockchainAddress {
         }
 
         // Check if an instance of this class has already been instantiated
-        var parentPath = Catenis.module.KeyStore.catenisNodePayTxExpenseRootPath(ctnNodeIndex);
+        var parentPath = Catenis.module.KeyStore.systemPayTxExpenseRootPath(ctnNodeIndex);
 
         return hasInstantiatedObject(parentPath) ? getInstantiatedObject(parentPath)
-            : new CatenisNodePayTxExpenseAddress(ctnNodeIndex);
+            : new SystemPayTxExpenseAddress(ctnNodeIndex);
     }
 }
 
 // ClientMessageCreditAddress derived class
 class ClientMessageCreditAddress extends BlockchainAddress {
-    constructor (clientIndex) {
+    constructor (ctnNodeIndex, clientIndex) {
         super();
         this.type = Catenis.module.KeyStore.extKeyType.cln_msg_crd_addr.name;
-        this.parentPath = Catenis.module.KeyStore.clientMessageCreditAddressRootPath(clientIndex);
+        this.parentPath = Catenis.module.KeyStore.clientMessageCreditAddressRootPath(ctnNodeIndex, clientIndex);
 
         // Make sure that an object of this class has not been instantiated yet
         if (hasInstantiatedObject(this.parentPath)) {
-            Catenis.logger.ERROR(util.format('ClientMessageCreditAddress object for the given client index (%d) has already been instantiated', clientIndex));
-            throw new Error(util.format('ClientMessageCreditAddress object for the given client index (%d) has already been instantiated', clientIndex));
+            Catenis.logger.ERROR(util.format('ClientMessageCreditAddress object for the given Catenis node and client indices (%d and %d, respectively) has already been instantiated', ctnNodeIndex, clientIndex));
+            throw new Error(util.format('ClientMessageCreditAddress object for the given Catenis node and client indices (%d and %d, respectively) has already been instantiated', ctnNodeIndex, clientIndex));
         }
 
         this.addressValidity = cfgSettings.addressValidity.clientMessageCredit;
 
         // Assign address manipulation functions
-        this._getAddressKeys = Catenis.keyStore.getClientMessageCreditAddressKeys.bind(Catenis.keyStore, clientIndex);
-        this._listAddressesInUse = Catenis.keyStore.listClientMessageCreditAddressesInUse.bind(Catenis.keyStore, clientIndex);
+        this._getAddressKeys = Catenis.keyStore.getClientMessageCreditAddressKeys.bind(Catenis.keyStore, ctnNodeIndex, clientIndex);
+        this._listAddressesInUse = Catenis.keyStore.listClientMessageCreditAddressesInUse.bind(Catenis.keyStore, ctnNodeIndex, clientIndex);
 
         // Initialize bounding indices
         setBoundingIndices.call(this);
@@ -267,44 +267,47 @@ class ClientMessageCreditAddress extends BlockchainAddress {
 
     // Get instance of this class
     //
-    //  clientIndex: [integer]
+    //  ctnNodeIndex: [integer]
     //                or
     //                {  // Options object
+    //      ctnNodeIndex: [integer],
     //      clientIndex: [integer]
-    //  }
+    //  },
+    //  clientIndex: [integer]
     //
-    static getInstance(clientIndex) {
-        if (typeof clientIndex === 'object') {
+    static getInstance(ctnNodeIndex, clientIndex) {
+        if (typeof ctnNodeIndex === 'object') {
             // Options object passed instead of plain arguments
-            clientIndex = clientIndex.clientIndex;
+            clientIndex = ctnNodeIndex.clientIndex;
+            ctnNodeIndex = ctnNodeIndex.ctnNodeIndex;
         }
 
         // Check if an instance of this class has already been instantiated
-        var parentPath = Catenis.module.KeyStore.clientMessageCreditAddressRootPath(clientIndex);
+        var parentPath = Catenis.module.KeyStore.clientMessageCreditAddressRootPath(ctnNodeIndex, clientIndex);
 
         return hasInstantiatedObject(parentPath) ? getInstantiatedObject(parentPath)
-            : new ClientMessageCreditAddress(clientIndex);
+            : new ClientMessageCreditAddress(ctnNodeIndex, clientIndex);
     }
 }
 
 // ClientAssetCreditAddress derived class
 class ClientAssetCreditAddress extends BlockchainAddress {
-    constructor (clientIndex) {
+    constructor (ctnNodeIndex, clientIndex) {
         super();
         this.type = Catenis.module.KeyStore.extKeyType.cln_asst_crd_addr.name;
-        this.parentPath = Catenis.module.KeyStore.clientAssetCreditAddressRootPath(clientIndex);
+        this.parentPath = Catenis.module.KeyStore.clientAssetCreditAddressRootPath(ctnNodeIndex, clientIndex);
 
         // Make sure that an object of this class has not been instantiated yet
         if (hasInstantiatedObject(this.parentPath)) {
-            Catenis.logger.ERROR(util.format('ClientAssetCreditAddress object for the given client index (%d) has already been instantiated', clientIndex));
-            throw new Error(util.format('ClientAssetCreditAddress object for the given client index (%d) has already been instantiated', clientIndex));
+            Catenis.logger.ERROR(util.format('ClientAssetCreditAddress object for the given Catenis node and client indices (%d and %d, respectively) has already been instantiated', ctnNodeIndex, clientIndex));
+            throw new Error(util.format('ClientAssetCreditAddress object for the given Catenis node and client indices (%d and %d, respectively) has already been instantiated', ctnNodeIndex, clientIndex));
         }
 
         this.addressValidity = cfgSettings.addressValidity.clientAssetCredit;
 
         // Assign address manipulation functions
-        this._getAddressKeys = Catenis.keyStore.getClientAssetCreditAddressKeys.bind(Catenis.keyStore, clientIndex);
-        this._listAddressesInUse = Catenis.keyStore.listClientAssetCreditAddressesInUse.bind(Catenis.keyStore, clientIndex);
+        this._getAddressKeys = Catenis.keyStore.getClientAssetCreditAddressKeys.bind(Catenis.keyStore, ctnNodeIndex, clientIndex);
+        this._listAddressesInUse = Catenis.keyStore.listClientAssetCreditAddressesInUse.bind(Catenis.keyStore, ctnNodeIndex, clientIndex);
 
         // Initialize bounding indices
         setBoundingIndices.call(this);
@@ -315,44 +318,47 @@ class ClientAssetCreditAddress extends BlockchainAddress {
 
     // Get instance of this class
     //
-    //  clientIndex: [integer]
+    //  ctnNodeIndex: [integer]
     //                or
     //                {  // Options object
+    //      ctnNodeIndex: [integer],
     //      clientIndex: [integer]
-    //  }
+    //  },
+    //  clientIndex: [integer]
     //
-    static getInstance(clientIndex) {
-        if (typeof clientIndex === 'object') {
+    static getInstance(ctnNodeIndex, clientIndex) {
+        if (typeof ctnNodeIndex === 'object') {
             // Options object passed instead of plain arguments
-            clientIndex = clientIndex.clientIndex;
+            clientIndex = ctnNodeIndex.clientIndex;
+            ctnNodeIndex = ctnNodeIndex.ctnNodeIndex;
         }
 
         // Check if an instance of this class has already been instantiated
-        var parentPath = Catenis.module.KeyStore.clientAssetCreditAddressRootPath(clientIndex);
+        var parentPath = Catenis.module.KeyStore.clientAssetCreditAddressRootPath(ctnNodeIndex, clientIndex);
 
         return hasInstantiatedObject(parentPath) ? getInstantiatedObject(parentPath)
-            : new ClientAssetCreditAddress(clientIndex);
+            : new ClientAssetCreditAddress(ctnNodeIndex, clientIndex);
     }
 }
 
 // DeviceReadConfirmAddress derived class
 class DeviceReadConfirmAddress extends BlockchainAddress {
-    constructor (clientIndex, deviceIndex) {
+    constructor (ctnNodeIndex, clientIndex, deviceIndex) {
         super();
         this.type = Catenis.module.KeyStore.extKeyType.dev_read_conf_addr.name;
-        this.parentPath = Catenis.module.KeyStore.deviceReadConfirmAddressRootPath(clientIndex, deviceIndex);
+        this.parentPath = Catenis.module.KeyStore.deviceReadConfirmAddressRootPath(ctnNodeIndex, clientIndex, deviceIndex);
 
         // Make sure that an object of this class has not been instantiated yet
         if (hasInstantiatedObject(this.parentPath)) {
-            Catenis.logger.ERROR(util.format('DeviceReadConfirmAddress object for the given client and device indices (%d and %d, respectively) has already been instantiated', clientIndex, deviceIndex));
-            throw new Error(util.format('DeviceReadConfirmAddress object for the given client and device indices (%d and %d, respectively) has already been instantiated', clientIndex, deviceIndex));
+            Catenis.logger.ERROR(util.format('DeviceReadConfirmAddress object for the given Catenis node, client and device indices (%d, %d and %d, respectively) has already been instantiated', ctnNodeIndex, clientIndex, deviceIndex));
+            throw new Error(util.format('DeviceReadConfirmAddress object for the given Catenis node, client and device indices (%d, %d and %d, respectively) has already been instantiated', ctnNodeIndex, clientIndex, deviceIndex));
         }
 
         this.addressValidity = cfgSettings.addressValidity.deviceReadConfirm;
 
         // Assign address manipulation functions
-        this._getAddressKeys = Catenis.keyStore.getDeviceReadConfirmAddressKeys.bind(Catenis.keyStore, clientIndex, deviceIndex);
-        this._listAddressesInUse = Catenis.keyStore.listDeviceReadConfirmAddressesInUse.bind(Catenis.keyStore, clientIndex, deviceIndex);
+        this._getAddressKeys = Catenis.keyStore.getDeviceReadConfirmAddressKeys.bind(Catenis.keyStore, ctnNodeIndex, clientIndex, deviceIndex);
+        this._listAddressesInUse = Catenis.keyStore.listDeviceReadConfirmAddressesInUse.bind(Catenis.keyStore, ctnNodeIndex, clientIndex, deviceIndex);
 
         // Initialize bounding indices
         setBoundingIndices.call(this);
@@ -363,47 +369,50 @@ class DeviceReadConfirmAddress extends BlockchainAddress {
 
     // Get instance of this class
     //
-    //  clientIndex: [integer]
-    //               or
-    //               {  // Options object
+    //  ctnNodeIndex: [integer]
+    //                or
+    //                {  // Options object
+    //      ctnNodeIndex: [integer],
     //      clientIndex: [integer],
     //      deviceIndex: [integer]
     //  },
+    //  clientIndex: [integer],
     //  deviceIndex: [integer]
     //
-    static getInstance(clientIndex, deviceIndex) {
-        if (typeof clientIndex === 'object') {
+    static getInstance(ctnNodeIndex, clientIndex, deviceIndex) {
+        if (typeof ctnNodeIndex === 'object') {
             // Options object passed instead of plain arguments
-            deviceIndex = clientIndex.deviceIndex;
-            clientIndex = clientIndex.clientIndex;
+            deviceIndex = ctnNodeIndex.deviceIndex;
+            clientIndex = ctnNodeIndex.clientIndex;
+            ctnNodeIndex = ctnNodeIndex.ctnNodeIndex;
         }
 
         // Check if an instance of this class has already been instantiated
-        var parentPath = Catenis.module.KeyStore.deviceReadConfirmAddressRootPath(clientIndex, deviceIndex);
+        var parentPath = Catenis.module.KeyStore.deviceReadConfirmAddressRootPath(ctnNodeIndex, clientIndex, deviceIndex);
 
         return hasInstantiatedObject(parentPath) ? getInstantiatedObject(parentPath)
-            : new DeviceReadConfirmAddress(clientIndex, deviceIndex);
+            : new DeviceReadConfirmAddress(ctnNodeIndex, clientIndex, deviceIndex);
     }
 }
 
 // DeviceMainAddress derived class
 class DeviceMainAddress extends BlockchainAddress {
-    constructor (clientIndex, deviceIndex) {
+    constructor (ctnNodeIndex, clientIndex, deviceIndex) {
         super();
         this.type = Catenis.module.KeyStore.extKeyType.dev_main_addr.name;
-        this.parentPath = Catenis.module.KeyStore.deviceMainAddressRootPath(clientIndex, deviceIndex);
+        this.parentPath = Catenis.module.KeyStore.deviceMainAddressRootPath(ctnNodeIndex, clientIndex, deviceIndex);
 
         // Make sure that an object of this class has not been instantiated yet
         if (hasInstantiatedObject(this.parentPath)) {
-            Catenis.logger.ERROR(util.format('DeviceMainAddress object for the given client and device indices (%d and %d, respectively) has already been instantiated', clientIndex, deviceIndex));
-            throw new Error(util.format('DeviceMainAddress object for the given client and device indices (%d and %d, respectively) has already been instantiated', clientIndex, deviceIndex));
+            Catenis.logger.ERROR(util.format('DeviceMainAddress object for the given Catenis node, client and device indices (%d, %d and %d, respectively) has already been instantiated', ctnNodeIndex, clientIndex, deviceIndex));
+            throw new Error(util.format('DeviceMainAddress object for the given Catenis node, client and device indices (%d, %d and %d, respectively) has already been instantiated', ctnNodeIndex, clientIndex, deviceIndex));
         }
 
         this.addressValidity = cfgSettings.addressValidity.deviceMain;
 
         // Assign address manipulation functions
-        this._getAddressKeys = Catenis.keyStore.getDeviceMainAddressKeys.bind(Catenis.keyStore, clientIndex, deviceIndex);
-        this._listAddressesInUse = Catenis.keyStore.listDeviceMainAddressesInUse.bind(Catenis.keyStore, clientIndex, deviceIndex);
+        this._getAddressKeys = Catenis.keyStore.getDeviceMainAddressKeys.bind(Catenis.keyStore, ctnNodeIndex, clientIndex, deviceIndex);
+        this._listAddressesInUse = Catenis.keyStore.listDeviceMainAddressesInUse.bind(Catenis.keyStore, ctnNodeIndex, clientIndex, deviceIndex);
 
         // Initialize bounding indices
         setBoundingIndices.call(this);
@@ -414,47 +423,50 @@ class DeviceMainAddress extends BlockchainAddress {
 
     // Get instance of this class
     //
-    //  clientIndex: [integer]
-    //               or
-    //               {  // Options object
+    //  ctnNodeIndex: [integer]
+    //                or
+    //                {  // Options object
+    //      ctnNodeIndex: [integer],
     //      clientIndex: [integer],
     //      deviceIndex: [integer]
     //  },
+    //  clientIndex: [integer],
     //  deviceIndex: [integer]
     //
-    static getInstance(clientIndex, deviceIndex) {
-        if (typeof clientIndex === 'object') {
+    static getInstance(ctnNodeIndex, clientIndex, deviceIndex) {
+        if (typeof ctnNodeIndex === 'object') {
             // Options object passed instead of plain arguments
-            deviceIndex = clientIndex.deviceIndex;
-            clientIndex = clientIndex.clientIndex;
+            deviceIndex = ctnNodeIndex.deviceIndex;
+            clientIndex = ctnNodeIndex.clientIndex;
+            ctnNodeIndex = ctnNodeIndex.ctnNodeIndex;
         }
 
         // Check if an instance of this class has already been instantiated
-        var parentPath = Catenis.module.KeyStore.deviceMainAddressRootPath(clientIndex, deviceIndex);
+        var parentPath = Catenis.module.KeyStore.deviceMainAddressRootPath(ctnNodeIndex, clientIndex, deviceIndex);
 
         return hasInstantiatedObject(parentPath) ? getInstantiatedObject(parentPath)
-            : new DeviceMainAddress(clientIndex, deviceIndex);
+            : new DeviceMainAddress(ctnNodeIndex, clientIndex, deviceIndex);
     }
 }
 
 // DeviceAssetAddress derived class
 class DeviceAssetAddress extends BlockchainAddress {
-    constructor (clientIndex, deviceIndex) {
+    constructor (ctnNodeIndex, clientIndex, deviceIndex) {
         super();
         this.type = Catenis.module.KeyStore.extKeyType.dev_asst_addr.name;
-        this.parentPath = Catenis.module.KeyStore.deviceAssetAddressRootPath(clientIndex, deviceIndex);
+        this.parentPath = Catenis.module.KeyStore.deviceAssetAddressRootPath(ctnNodeIndex, clientIndex, deviceIndex);
 
         // Make sure that an object of this class has not been instantiated yet
         if (hasInstantiatedObject(this.parentPath)) {
-            Catenis.logger.ERROR(util.format('DeviceAssetAddress object for the given client and device indices (%d and %d, respectively) has already been instantiated', clientIndex, deviceIndex));
-            throw new Error(util.format('DeviceAssetAddress object for the given client and device indices (%d and %d, respectively) has already been instantiated', clientIndex, deviceIndex));
+            Catenis.logger.ERROR(util.format('DeviceAssetAddress object for the given Catenis node, client and device indices (%d, %d and %d, respectively) has already been instantiated', ctnNodeIndex, clientIndex, deviceIndex));
+            throw new Error(util.format('DeviceAssetAddress object for the given Catenis node, client and device indices (%d, %d and %d, respectively) has already been instantiated', ctnNodeIndex, clientIndex, deviceIndex));
         }
 
         this.addressValidity = cfgSettings.addressValidity.deviceAsset;
 
         // Assign address manipulation functions
-        this._getAddressKeys = Catenis.keyStore.getDeviceAssetAddressKeys.bind(Catenis.keyStore, clientIndex, deviceIndex);
-        this._listAddressesInUse = Catenis.keyStore.listDeviceAssetAddressesInUse.bind(Catenis.keyStore, clientIndex, deviceIndex);
+        this._getAddressKeys = Catenis.keyStore.getDeviceAssetAddressKeys.bind(Catenis.keyStore, ctnNodeIndex, clientIndex, deviceIndex);
+        this._listAddressesInUse = Catenis.keyStore.listDeviceAssetAddressesInUse.bind(Catenis.keyStore, ctnNodeIndex, clientIndex, deviceIndex);
 
         // Initialize bounding indices
         setBoundingIndices.call(this);
@@ -465,48 +477,51 @@ class DeviceAssetAddress extends BlockchainAddress {
 
     // Get instance of this class
     //
-    //  clientIndex: [integer]
-    //               or
-    //               {  // Options object
+    //  ctnNodeIndex: [integer]
+    //                or
+    //                {  // Options object
+    //      ctnNodeIndex: [integer],
     //      clientIndex: [integer],
     //      deviceIndex: [integer]
     //  },
+    //  clientIndex: [integer],
     //  deviceIndex: [integer]
     //
-    static getInstance(clientIndex, deviceIndex) {
-        if (typeof clientIndex === 'object') {
+    static getInstance(ctnNodeIndex, clientIndex, deviceIndex) {
+        if (typeof ctnNodeIndex === 'object') {
             // Options object passed instead of plain arguments
-            deviceIndex = clientIndex.deviceIndex;
-            clientIndex = clientIndex.clientIndex;
+            deviceIndex = ctnNodeIndex.deviceIndex;
+            clientIndex = ctnNodeIndex.clientIndex;
+            ctnNodeIndex = ctnNodeIndex.ctnNodeIndex;
         }
 
         // Check if an instance of this class has already been instantiated
-        var parentPath = Catenis.module.KeyStore.deviceAssetAddressRootPath(clientIndex, deviceIndex);
+        var parentPath = Catenis.module.KeyStore.deviceAssetAddressRootPath(ctnNodeIndex, clientIndex, deviceIndex);
 
         return hasInstantiatedObject(parentPath) ? getInstantiatedObject(parentPath)
-            : new DeviceAssetAddress(clientIndex, deviceIndex);
+            : new DeviceAssetAddress(ctnNodeIndex, clientIndex, deviceIndex);
     }
 }
 
 // DeviceAssetIssuanceAddress derived class
 class DeviceAssetIssuanceAddress extends BlockchainAddress {
-    constructor (clientIndex, deviceIndex) {
+    constructor (ctnNodeIndex, clientIndex, deviceIndex) {
         super();
         this.type = Catenis.module.KeyStore.extKeyType.dev_asst_issu_addr.name;
-        this.parentPath = Catenis.module.KeyStore.deviceAssetIssuanceAddressRootPath(clientIndex, deviceIndex);
+        this.parentPath = Catenis.module.KeyStore.deviceAssetIssuanceAddressRootPath(ctnNodeIndex, clientIndex, deviceIndex);
 
         // Make sure that an object of this class has not been instantiated yet
         if (hasInstantiatedObject(this.parentPath)) {
-            Catenis.logger.ERROR(util.format('DeviceAssetIssuanceAddress object for the given client and device indices (%d and %d, respectively) has already been instantiated', clientIndex, deviceIndex));
-            throw new Error(util.format('DeviceAssetIssuanceAddress object for the given client and device indices (%d and %d, respectively) has already been instantiated', clientIndex, deviceIndex));
+            Catenis.logger.ERROR(util.format('DeviceAssetIssuanceAddress object for the given Catenis node, client and device indices (%d, %d and %d, respectively) has already been instantiated', ctnNodeIndex, clientIndex, deviceIndex));
+            throw new Error(util.format('DeviceAssetIssuanceAddress object for the given Catenis node, client and device indices (%d, %d and %d, respectively) has already been instantiated', ctnNodeIndex, clientIndex, deviceIndex));
         }
 
         this.addressValidity = cfgSettings.addressValidity.deviceAssetIssuance;
 
         // Assign address manipulation functions
-        this._getAddressKeys = Catenis.keyStore.getDeviceAssetIssuanceAddressKeys.bind(Catenis.keyStore, clientIndex, deviceIndex);
-        this._listAddressesInUse = Catenis.keyStore.listDeviceAssetIssuanceAddressesInUse.bind(Catenis.keyStore, clientIndex, deviceIndex);
-        this._latestAddressInUse = Catenis.keyStore.latestDeviceAssetIssuanceAddressInUse.bind(Catenis.keyStore, clientIndex, deviceIndex);
+        this._getAddressKeys = Catenis.keyStore.getDeviceAssetIssuanceAddressKeys.bind(Catenis.keyStore, ctnNodeIndex, clientIndex, deviceIndex);
+        this._listAddressesInUse = Catenis.keyStore.listDeviceAssetIssuanceAddressesInUse.bind(Catenis.keyStore, ctnNodeIndex, clientIndex, deviceIndex);
+        this._latestAddressInUse = Catenis.keyStore.latestDeviceAssetIssuanceAddressInUse.bind(Catenis.keyStore, ctnNodeIndex, clientIndex, deviceIndex);
 
         // Initialize bounding indices
         setBoundingIndices.call(this);
@@ -517,26 +532,29 @@ class DeviceAssetIssuanceAddress extends BlockchainAddress {
 
     // Get instance of this class
     //
-    //  clientIndex: [integer]
-    //               or
-    //               {  // Options object
+    //  ctnNodeIndex: [integer]
+    //                or
+    //                {  // Options object
+    //      ctnNodeIndex: [integer],
     //      clientIndex: [integer],
     //      deviceIndex: [integer]
     //  },
+    //  clientIndex: [integer],
     //  deviceIndex: [integer]
     //
-    static getInstance(clientIndex, deviceIndex) {
-        if (typeof clientIndex === 'object') {
+    static getInstance(ctnNodeIndex, clientIndex, deviceIndex) {
+        if (typeof ctnNodeIndex === 'object') {
             // Options object passed instead of plain arguments
-            deviceIndex = clientIndex.deviceIndex;
-            clientIndex = clientIndex.clientIndex;
+            deviceIndex = ctnNodeIndex.deviceIndex;
+            clientIndex = ctnNodeIndex.clientIndex;
+            ctnNodeIndex = ctnNodeIndex.ctnNodeIndex;
         }
 
         // Check if an instance of this class has already been instantiated
-        var parentPath = Catenis.module.KeyStore.deviceAssetIssuanceAddressRootPath(clientIndex, deviceIndex);
+        var parentPath = Catenis.module.KeyStore.deviceAssetIssuanceAddressRootPath(ctnNodeIndex, clientIndex, deviceIndex);
 
         return hasInstantiatedObject(parentPath) ? getInstantiatedObject(parentPath)
-            : new DeviceAssetIssuanceAddress(clientIndex, deviceIndex);
+            : new DeviceAssetIssuanceAddress(ctnNodeIndex, clientIndex, deviceIndex);
     }
 }
 
@@ -761,11 +779,45 @@ function revertAddress(address, addrIndex, balanceChecked = false) {
     return result;
 }
 
+// Change address status from obsolete back to expired
+function resetObsoleteAddress(addr, docIssuedAddr) {
+    // Execute code in critical section to avoid DB concurrency
+    dbCS.execute(() => {
+        // Change address status on database
+        Catenis.db.collection.IssuedBlockchainAddress.update({_id: docIssuedAddr._id}, {
+            $set: {
+                status: 'expired',
+                lastStatusChangedDate: new Date(Date.now())
+            }
+        });
+
+        // Change address status on local key storage
+        Catenis.keyStore.resetObsoleteAddress(addr);
+
+        // Adjust address indices
+        if (this.firstInUseAddrIndex == -1) {
+            this.firstInUseAddrIndex = this.lastInUseAddrIndex = docIssuedAddr.addrIndex;
+        }
+        else if (docIssuedAddr.addrIndex < this.firstInUseAddrIndex) {
+            this.firstInUseAddrIndex = docIssuedAddr.addrIndex;
+        }
+        else if (docIssuedAddr.addrIndex > this.lastInUseAddrIndex) {
+            this.lastInUseAddrIndex = docIssuedAddr.addrIndex;
+        }
+
+        if (this.lastIssuedAddrIndex == -1 || docIssuedAddr.addrIndex > this.lastIssuedAddrIndex) {
+            // This should never happen; just do it for consistency
+            this.lastIssuedAddrIndex = docIssuedAddr.addrIndex;
+        }
+    });
+}
+
 
 // BlockchainAddress function class (public) methods
 //
 
 BlockchainAddress.initialize = function () {
+    Catenis.logger.TRACE('BlockchainAddress initialization');
     // Update issued blockchain addresses now, and set recurring timer
     //  to update issued blockchain addresses periodically later
     updateIssuedAddresses();
@@ -922,6 +974,12 @@ BlockchainAddress.retrieveObsoleteAddress = function (addr) {
                         //  since there could be one or more addresses with the same hash)
                         if (addrKeys.getAddress() === addr) {
                             result = true;
+
+                            // Check if address is in use
+                            if (BlockchainAddress.isAddressWithBalance(addr)) {
+                                // If so, reset address status back to expired
+                                resetObsoleteAddress.call(classInstance, addr, docIssuedAddr);
+                            }
                         }
                         else {
                             // Wrong address has been retrieved. Remove it from local key storage
@@ -953,6 +1011,12 @@ BlockchainAddress.retrieveObsoleteAddress = function (addr) {
                                 //  since there could be one or more addresses with the same hash)
                                 if (addrKeys.getAddress() === addr) {
                                     found = true;
+
+                                    // Check if address is in use
+                                    if (BlockchainAddress.isAddressWithBalance(addr)) {
+                                        // If so, reset address status back to expired
+                                        resetObsoleteAddress.call(classInstance, addr, docIssuedAddr);
+                                    }
                                 }
                                 else {
                                     // Wrong address has been retrieved. Remove it from local key storage
@@ -983,6 +1047,27 @@ BlockchainAddress.revertAddress = function (addr) {
         if (classInstance != null) {
             // Revert address
             result = revertAddress.call(classInstance, addr, addrPathParts.addrIndex);
+        }
+    }
+
+    return result;
+};
+
+// Check if address marked as obsolete is in use and reset its status if so
+BlockchainAddress.checkObsoleteAddress = function (addr) {
+    let addrTypeAndPath = Catenis.keyStore.getTypeAndPathByAddress(addr),
+        result = false;
+
+    if (addrTypeAndPath != null) {
+        let docIssuedAddr = Catenis.db.collection.IssuedBlockchainAddress.findOne({path: addrTypeAndPath.path});
+
+        if (docIssuedAddr != undefined && docIssuedAddr.status === 'obsolete' && BlockchainAddress.isAddressWithBalance(addr)) {
+            let addrPathParts = Catenis.module.KeyStore.getPathParts(addrTypeAndPath),
+                classInstance = BlockchainAddress.getInstance({type: addrTypeAndPath.type, pathParts: addrPathParts});
+
+            resetObsoleteAddress.call(classInstance, addr, docIssuedAddr);
+
+            result = true;
         }
     }
 
@@ -1204,10 +1289,10 @@ function deleteInstatiatedObject(parentPath) {
 //      appear after the declaration of the derived classes
 //
 var classByType = {
-    ctnd_dev_main_addr: CatenisNodeDeviceMainAddress,
-    ctnd_fund_pay_addr: CatenisNodeFundingPaymentAddress,
-    ctnd_fund_chg_addr: CatenisNodeFundingChangeAddress,
-    ctnd_pay_tx_exp_addr: CatenisNodePayTxExpenseAddress,
+    sys_dev_main_addr: SystemDeviceMainAddress,
+    sys_fund_pay_addr: SystemFundingPaymentAddress,
+    sys_fund_chg_addr: SystemFundingChangeAddress,
+    sys_pay_tx_exp_addr: SystemPayTxExpenseAddress,
     cln_msg_crd_addr: ClientMessageCreditAddress,
     cln_asst_crd_addr: ClientAssetCreditAddress,
     dev_read_conf_addr: DeviceReadConfirmAddress,
@@ -1241,10 +1326,10 @@ if (typeof Catenis.module === 'undefined')
 
 Catenis.module.BlockchainAddress = {
     BlockchainAddress: Object.freeze(BlockchainAddress),
-    CatenisNodeDeviceMainAddress: Object.freeze(CatenisNodeDeviceMainAddress),
-    CatenisNodeFundingPaymentAddress: Object.freeze(CatenisNodeFundingPaymentAddress),
-    CatenisNodeFundingChangeAddress: Object.freeze(CatenisNodeFundingChangeAddress),
-    CatenisNodePayTxExpenseAddress: Object.freeze(CatenisNodePayTxExpenseAddress),
+    SystemDeviceMainAddress: Object.freeze(SystemDeviceMainAddress),
+    SystemFundingPaymentAddress: Object.freeze(SystemFundingPaymentAddress),
+    SystemFundingChangeAddress: Object.freeze(SystemFundingChangeAddress),
+    SystemPayTxExpenseAddress: Object.freeze(SystemPayTxExpenseAddress),
     ClientMessageCreditAddress: Object.freeze(ClientMessageCreditAddress),
     ClientAssetCreditAddress: Object.freeze(ClientAssetCreditAddress),
     DeviceReadConfirmAddress: Object.freeze(DeviceReadConfirmAddress),

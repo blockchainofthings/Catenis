@@ -5,7 +5,7 @@
 //var Future = Npm.require('fibers/future');
 var util = Npm.require('util');
 
-import {CriticalSection} from '../CriticalSection.js';
+import { CriticalSection } from '../CriticalSection.js';
 
 // Instantiate critical section object
 var tstCS = new CriticalSection();

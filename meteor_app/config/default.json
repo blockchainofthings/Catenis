@@ -5,7 +5,14 @@
     "appName": "Catenis",
     "seedFilename": "seed.dat",
     "walletPswLength": 16,
-    "cryptoNetwork": "testnet"
+    "cryptoNetwork": "testnet",  // Available values: 'bitcoin' (for Bitcoin's production blockchain), 'testnet' (for Bitcoin's test blockchain)
+    "shutdownTimeout": 30000   // Time, in miliseconds, that the application should wait after it receives a terminate request before it actually terminates
+  },
+  // Parameters pertaining to the Startup module
+  "startup": {
+    "fixMissingAddresses": false, // Indicate if issued blockchain addresses are missing from BitcoinCore wallet they should be automaically included
+    "bypassProcessing": false     // NOTE: this option is for DEBUG ONLY. Bypass all processing, so the app starts but does not do anything. This allows
+                                  //  for debuging via 'meteor shell' or 'meteor mongo'
   },
   // Parameters pertaining to logging mechanism
   "logging": {
@@ -51,7 +58,7 @@
   },
   // Parameters pertaining to BitcoinCore module
   "bitcoinCore": {
-    "serverHost": "catenis1", // Bitcoin Core server host name/IP address
+    "serverHost": "catenis-btccore", // Bitcoin Core server host name/IP address
     "mainRpcPort": 8332, // Port used to connect with Bitcoin Core server via its RPC interface to interact with bitcoin's main blockchain
     "testnetRpcPort": 18332, // Port used to connect with Bitcoin Core server via its RPC interface to interact with bitcoin's testnet blockchain
     "rpcUser": "??????", // Username used to connect with Bitcoin Core server via its RPC interface
@@ -62,10 +69,10 @@
   // Parameters pertaining to BlockchainAddress module
   "blockchainAddress": {
     "addressValidity": {  // Time, in seconds, before which a newly issued address expires
-      "catenisNodeDeviceMain": 900,
-      "catenisNodeFundingPayment":  14400,
-      "catenisNodeFundingChange": 900,
-      "catenisNodePayTxExpense": 900,
+      "systemDeviceMain": 900,
+      "systemFundingPayment":  14400,
+      "systemFundingChange": 900,
+      "systemPayTxExpense": 900,
       "clientMessageCredit": 900,
       "clientAssetCredit": 900,
       "deviceReadConfirm": 900,
@@ -93,24 +100,35 @@
     "minFundDevicesProvision": 10,  // Number of devices per client that minimum fund balance should be able to provision
     "minFundMessageCreditsProvision": 100,  // Message credit amount per device that mininum fund balance should be able to provision
     "minFundAssetCreditsProvision": 100,  // Asset credit amount per device that mininum fund balance should be able to provision
-    "catenisNodeMessageCredits": 100,  // Credits that should be considered to be pre-allocated to Catenis node to send system messages
+    "percSendMessageCredit": 60,  // Percentage of client message credit that should be accounted for send message service
+                                  //  NOTE: this value and the value below (percLogMessageCredit) must add up to 100
+    "percLogMessageCredit": 40,  // Percentage of client message credit that should be accounted for log message service
+                                 //  NOTE: this value and the value above (percSendMessageCredit) must add up to 100
+    "systemMessageCredits": 100,  // Credits that should be considered to be pre-allocated to system to send system messages
     "fundPayTxResolution": 10000,  // Resolution of amount allocated to system pay tx expense addresses
     "fundPayTxMultiplyFactor": 10,  // Maximum number of fund pay tx expense (fundPayTxResolution) that can be pre-allocated to a system pay tx expense addr
+    "minFundPayTxAmountMultiplyFactor": 10,  // Multiply factor used to determine mininum amount (x fundPayTxResolution) that should be used to fund system pay tx expense addresses
     "message": {
       "messagesPerMinute": 4,  // Number of messages sents per minute that is expected to be sustained
       "minutesToConfirm": 60,  // Time, in minutes, within which send message txs are expected to be confirmed
       "unconfMainAddrReuses": 10,  // Number of times an UTXO associated with a device main addr is expected to be reused
-      "fundMainAddrAmount": 600, // Amount, in stoshis, that should be allocated to a device main addr
+      "fundMainAddrAmount": 600, // Amount, in satoshis, that should be allocated to a device main addr
       "fundMainAddrMultiplyFactor": 10,  // Maximum number of fund amount (fundMainAddrAmount) that can be pre-allocated to a device main addr
+      "readConfimAddrAmount": 600,  // Amount, in satoshis, that should be paid to read confirmation address output of send message tx
       "typicalTxConfig": {  // Typical transaction configuration
-        "ctnNodeSendMessage": {        // Catenis Node send message transaction
+        "sysMessage": {     // System message transaction
           "numInputs": 3,         // Number of inputs (that spend P2PKH outputs)
           "numOutputs": 3,        // Number of (P2PKH) outputs
           "nullDataPlayloadSize": 80  // Size, in bytes, of payload of null data output
         },
-        "sendMessage": {        // Device send message transaction
+        "sendMessage": {        // Send message transaction
           "numInputs": 4,         // Number of inputs (that spend P2PKH outputs)
           "numOutputs": 4,        // Number of (P2PKH) outputs
+          "nullDataPlayloadSize": 80  // Size, in bytes, of payload of null data output
+        },
+        "logMessage": {        // Log message transaction
+          "numInputs": 4,         // Number of inputs (that spend P2PKH outputs)
+          "numOutputs": 2,        // Number of (P2PKH) outputs
           "nullDataPlayloadSize": 80  // Size, in bytes, of payload of null data output
         },
         "readConfirmation": {   // Read confirmation transaction
@@ -150,6 +168,15 @@
       }
     }
   },
+  // Parameters pertaining to Client module
+  "client": {
+    "fundPayTxExpenseSafetyFactor": 0.3   // Safety factor used when funding system pay tx expense addresses
+  },
+  // Parameters pertaining to Device module
+  "device": {
+    "creditsToSendMessage": 1,  // Number of client service credits that is required for a device to send a message
+    "creditsToLogMessage": 1    // Number of client service credits that is required for a device to send a message
+  },
   // Parameters pertaining to Transaction module
   "transaction": {
     "txInputSize": 148, // Size, in bytes, of typical transaction input (spending a P2PKH UTXO)
@@ -162,5 +189,23 @@
     "blockchainPollingInterval": 15000, // Time interval, in miliseconds, for polling the blockchain for newly arrived transactions and blocks
     "mempoolExpiryHours": 72,  // Time, in hours, after which transactions are evicted from Bitcoin Core' mempool
     "confirmSentTxTime": 30  // Time, in minutes, after which a sent transaction should have been confirmed
+  },
+  // Parameters pertaining to CatenisMessage module
+  "catenisMessage": {
+    "nullDataMaxSize": 80,  // Maximum size, in bytes, of data that fits in null data output
+    "defaultStorageProvider": "ipfs"
+  },
+  // Parameters pertaining to MessageStorage module
+  "messageStorage": {
+    "ipfs": {
+      "apiHost": "127.0.0.1",
+      "apiPort": 5001,
+      "apiProtocol": "http"
+    }
+  },
+  // Parameters pertaining to RestApi module
+  "restApi": {
+    "rootPath": "api",
+    "version": "0.1"
   }
 }

@@ -1,5 +1,17 @@
 // Config file with specific settings for development environment
 {
+  // Parameters pertaining to the Catenis application
+  "application": {
+    "seedFilename": "seed.test2.dat",
+    "cryptoNetwork": "testnet",  // Available values: 'bitcoin' (for Bitcoin's production blockchain), 'testnet' (for Bitcoin's test blockchain)
+    "shutdownTimeout": 30000   // Time, in miliseconds, that the application should wait after it receives a terminate request before it actually terminates
+  },
+  // Parameters pertaining to the Startup module
+  "startup": {
+    "fixMissingAddresses": false, // Indicate if issued blockchain addresses are missing from BitcoinCore wallet they should be automaically included
+    "bypassProcessing": false     // NOTE: this option is for DEBUG ONLY. Bypass all processing, so the app starts but does not do anything. This allows
+                                  //  for debuging via 'meteor shell' or 'meteor mongo'
+  },
   // Parameters pertaining to logging mechanism
   "logging": {
     "console": {
@@ -37,6 +49,8 @@
   },
   // Parameters pertaining to BitcoinCore module
   "bitcoinCore": {
+    "serverHost": "10.8.0.1", // Bitcoin Core server host name/IP address (access via VPN)
+    //"serverHost": "catenis-btccore", // Bitcoin Core server host name/IP address
     "rpcConnectionTimeout": 30000,  // Timeout, in miliseconds, for RPC connection with the bitcoin server.
     "rescanTimeout": 900000 // Timeout, in miniseconds, for waiting on Bitcoin Core to finish rescanning the blockchain after importing private key
   }

@@ -75,7 +75,7 @@ CryptoKeys.prototype.getAddress = function () {
 //
 //  (Math.floor(data.length / 16) + 1) * 16
 //
-CryptoKeys.prototype.encryptDataToSend = function (destKeys, data) {
+CryptoKeys.prototype.encryptData = function (destKeys, data) {
     if (!this.hasPrivateKey()) {
         throw new Error('Cannot encrypt data; missing private key')
     }
@@ -100,7 +100,7 @@ CryptoKeys.prototype.encryptDataToSend = function (destKeys, data) {
     return encData;
 };
 
-CryptoKeys.prototype.decryptReceivedData = function (sourceKeys, data) {
+CryptoKeys.prototype.decryptData = function (sourceKeys, data) {
     if (!this.hasPrivateKey()) {
         throw new Error('Cannot decrypt data; missing private key')
     }

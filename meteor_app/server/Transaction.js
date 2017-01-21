@@ -10,6 +10,8 @@
 // References to external modules
 var config = Npm.require('config');
 var bitcoinLib = Npm.require('bitcoinjs-lib');
+var BigNumber = Npm.require('bignumber.js');
+var util = Npm.require('util');
 
 // Config entries
 var configTransact = config.get('transaction');
@@ -20,6 +22,7 @@ var cfgSettings = {
     txOutputSize: configTransact.get('txOutputSize')
 };
 
+export { Transaction };
 
 // Definition of function classes
 //
@@ -27,22 +30,38 @@ var cfgSettings = {
 // Transaction function class
 //
 //  input: {
-//    txout: {
+//    txout: {  // Unspent output being spent
 //      txid: [string],
 //      vout: [number],
-//      amount: [number]   // In satoshis
+//      amount: [number]   // (in satoshis)
 //    },
-//    addrKeys: [CryptoKeys object]
+//    address:  // (optional) Blockchain address associated with unspent output being spent
+//    addrInfo: {   // Info about blockchain address associated with unspent output being spent (as returned by Catenis.keyStore.getAddressInfo())
+//                  //  (should only exist for addresses that belong to this Catenis node)
+//      cryptoKeys: [CryptoKeys object],  // Pair of crypto keys associated with this address
+//      type: [string],  // Type of address from Catenis.KeyStore.extKeyType
+//      path: [string],  // Path of the HD extended key associated with this address
+//      isObsolete: [boolean],  // Indicates whether this address is not in used anymore
+//      pathParts: [object]  // Object with components that make up the HD extended key path associated with this address
+//    }
 //  }
 //
 //  output: {
-//    type: [string],   // Either p2PKH' or 'nullData'
-//    p2PKH: {      // Should only exist if type = 'p2PKH'
-//      address: [string],
-//      amount: [number],   // In satoshis
+//    type: [string],   // Either 'P2PKH', 'P2SH' or 'nullData'
+//    payInfo: {        // Should only exist for 'P2PKH' or 'P2SH' output types
+//      address: [string],   // Blockchain address to where payment should be sent
+//      amount: [number],    // Amount (in satoshis) to send
+//      addrInfo: {   // Info about blockchain address to where pyment should be sent (as returned by Catenis.keyStore.getAddressInfo())
+//                    //  (should only exist for deserialized transactions (generated from Transaction.fromHex() for addresses
+//                    //   that belong to this Catenis node)
+//        cryptoKeys: [CryptoKeys object],  // Pair of crypto keys associated with this address
+//        type: [string],  // Type of address from Catenis.KeyStore.extKeyType
+//        path: [string],  // Path of the HD extended key associated with this address
+//        isObsolete: [boolean],  // Indicates whether this address is not in used anymore
+//        pathParts: [object]  // Object with components that make up the HD extended key path associated with this address
+//      }
 //    },
-//    nullData: {   // Should only exist if type = 'nullData'
-//      data: [Buffer object]
+//    data: [Buffer object] // Should only exist for 'nullData' output type
 //  }
 
 function Transaction() {
@@ -53,6 +72,16 @@ function Transaction() {
     this.rawTransaction = undefined;
     this.txid = undefined;
     this.txSaved = false;
+
+    // Input and output sequence of tokens. Each token corresponds to an input/output
+    //  of the transaction, and basically identifies what type of blockchain address
+    //  that input/output is associated with (or if it is not associated with any address
+    //  at all, which is the case of a null data output). They are used to identify a given
+    //  type of (Catenis issued) transaction, by matching these sequences with some
+    //  predefined input/output patterns.
+    //  They should only exist for deserialized transactions
+    this.inTokenSequence = undefined;
+    this.outTokenSequence = undefined;
 }
 
 
@@ -93,11 +122,17 @@ Transaction.prototype.addInputs = function (inputs, pos) {
     invalidateTx.call(this);
 };
 
-Transaction.prototype.addInput = function (txout, addrKeys, pos) {
-    this.addInputs({
+Transaction.prototype.addInput = function (txout, address, addrInfo, pos) {
+    var input = {
         txout: txout,
-        addrKeys: addrKeys
-    }, pos);
+        address: address
+    };
+
+    if (addrInfo != undefined) {
+        input.addrInfo = addrInfo;
+    }
+
+    this.addInputs(input, pos);
 };
 
 Transaction.prototype.lastInputPosition = function () {
@@ -122,19 +157,19 @@ Transaction.prototype.removeInputAt = function (pos) {
     return input;
 };
 
-Transaction.prototype.addP2PKHOutputs = function (p2PKHs, pos) {
-    if (!Array.isArray(p2PKHs)) {
-        p2PKHs = [p2PKHs];
+Transaction.prototype.addP2PKHOutputs = function (payInfos, pos) {
+    if (!Array.isArray(payInfos)) {
+        payInfos = [payInfos];
     }
 
     if (pos != undefined && pos < 0) {
         pos = 0;
     }
 
-    var outputs = p2PKHs.map(function (p2PKH) {
+    var outputs = payInfos.map(function (payInfo) {
         return {
-            type: Transaction.outputType.p2PKH,
-            p2PKH: p2PKH
+            type: Transaction.outputType.P2PKH,
+            payInfo: payInfo
         }
     });
 
@@ -158,9 +193,7 @@ Transaction.prototype.addNullDataOutput = function (data, pos) {
     if (!this.hasNullDataOutput) {
         addOutputs.call(this, {
             type: Transaction.outputType.nullData,
-            nullData: {
-                data: data
-            }
+            data: data
         }, pos);
         this.hasNullDataOutput = true;
         this.nullDataPayloadSize = data.length;
@@ -197,10 +230,6 @@ Transaction.prototype.removeOutputAt = function (pos) {
     return output;
 };
 
-Transaction.prototype.hasNullDataOutput = function () {
-    return this.hasNullDataOutput;
-};
-
 Transaction.prototype.getNullDataOutputPosition = function () {
     var pos;
 
@@ -225,7 +254,7 @@ Transaction.prototype.getNullDataOutput = function () {
 
     if (this.hasNullDataOutput) {
         output = this.outputs.find(function (output) {
-            return output.type == Transaction.outputType.nullData;
+            return output.type === Transaction.outputType.nullData;
         });
 
         if (output == undefined) {
@@ -242,8 +271,8 @@ Transaction.prototype.listOutputAddresses = function () {
     var addrList = [];
 
     this.outputs.forEach(function (output) {
-        if (output.type == Transaction.outputType.p2PKH) {
-            addrList.push(output.p2PKH.address);
+        if (output.type == Transaction.outputType.P2PKH) {
+            addrList.push(output.payInfo.address);
         }
     });
 
@@ -258,7 +287,7 @@ Transaction.prototype.totalInputsAmount = function () {
 
 Transaction.prototype.totalOutputsAmount = function () {
     return this.outputs.reduce(function (sum, output) {
-        return sum + (output.type == Transaction.outputType.p2PKH ? output.p2PKH.amount : 0);
+        return sum + (output.type == Transaction.outputType.P2PKH ? output.payInfo.amount : 0);
     }, 0);
 };
 
@@ -276,7 +305,7 @@ Transaction.prototype.countOutputs = function () {
 
 Transaction.prototype.countP2PKHOutputs = function () {
     return this.outputs.reduce(function (count, output) {
-        return output.type == Transaction.outputType.p2PKH ? count + 1 : count;
+        return output.type == Transaction.outputType.P2PKH ? count + 1 : count;
     }, 0);
 };
 
@@ -296,11 +325,11 @@ Transaction.prototype.getTransaction = function () {
         });
 
         this.outputs.forEach(function (output) {
-            if (output.type == Transaction.outputType.p2PKH) {
-                txBuilder.addOutput(output.p2PKH.address, output.p2PKH.amount);
+            if (output.type == Transaction.outputType.P2PKH) {
+                txBuilder.addOutput(output.payInfo.address, output.payInfo.amount);
             }
             else if (output.type == Transaction.outputType.nullData) {
-                txBuilder.addOutput(bitcoinLib.script.nullDataOutput(output.nullData.data));
+                txBuilder.addOutput(bitcoinLib.script.nullDataOutput(output.data), 1000);
             }
         });
 
@@ -308,7 +337,9 @@ Transaction.prototype.getTransaction = function () {
         var vinIdx = 0;
 
         this.inputs.forEach(function (input) {
-            txBuilder.sign(vins[vinIdx++], input.addrKeys.keyPair);
+            if (input.addrInfo != null) {
+                txBuilder.sign(vins[vinIdx++], input.addrInfo.cryptoKeys.keyPair);
+            }
         });
 
         this.rawTransaction = txBuilder.build().toHex();
@@ -332,15 +363,15 @@ Transaction.prototype.sendTransaction = function (resend = false) {
 //    funding: {
 //      event: {
 //          name: [string],  // Identifies the event that triggered the funding action (from Catenis.module.FundTransaction.fundingEvent).
-//                               Valid values: 'provision_ctn_hub_device', 'provision_client_srv_credit', 'provision_client_device',
+//                               Valid values: 'provision_system_device', 'provision_client_srv_credit', 'provision_client_device',
 //                               'add_extra_tx_pay_funds'
 //          entityId: [string]  // Id of the entity associated with the event. Should only exist for 'provision_client_srv_credit'
 //                                  and 'provision_client_device' events. For 'provision_client_srv_credit' events, it refers to the
 //                                  clientId; for 'provision_client_device' events, it refers to the deviceId
 //      },
 //      payees: [Array(string)] // Identifies the type of blockchain addresses that receive the funds. Valid values (from
-//                                  Catenis.module.KeyStore.extKeyType): 'ctnd_dev_main_addr', 'ctnd_node_fund_pay_addr',
-//                                  'ctnd_pay_tx_exp_addr', 'cln_msg_crd_addr', 'cln_asst_crd_addr', 'dev_read_conf_addr',
+//                                  Catenis.module.KeyStore.extKeyType): 'sys_dev_main_addr', 'sys_node_fund_pay_addr',
+//                                  'sys_pay_tx_exp_addr', 'cln_msg_crd_addr', 'cln_asst_crd_addr', 'dev_read_conf_addr',
 //                                  'dev_main_addr', 'dev_asst_issu_addr'
 //    }
 //    send_message: {
@@ -348,6 +379,10 @@ Transaction.prototype.sendTransaction = function (resend = false) {
 //      targetDeviceId: [string], // External ID of the device that receives the message
 //      readConfirmation: {
 //        vout: [integer] // The index of the output within this transaction that is used for read confirmation
+//      }
+//    }
+//    log_message: {
+//      deviceId: [string], // External ID of the device that logged the message
 //    }
 //    read_confirmation: {
 //      txouts: [{ // Identifies the read confirmation tx outputs that are spent by this transaction
@@ -408,7 +443,37 @@ Transaction.prototype.saveSentTransaction = function (type, info) {
     return docId;
 };
 
-// TODO: implement mechanism (for now via polling) to update confirmation status of saved transactions. This mechanism should issue events according to the transaction type to advise when a transaction is confirmed
+// Indicates whether transaction's inputs and outputs matches the
+//  sequences defined by the corresponding regular expression
+//
+//  Arguments:
+//    transactFuncClass: [Function]  // Any of transaction function classes that exposes the property matchingPattern of
+//                                   //  type object (having the keys input and/or output)
+//
+Transaction.prototype.matches = function (transactFuncClass) {
+    // Validate argument
+    if (!isTransactFuncClassToMatch(transactFuncClass)) {
+        Catenis.logger.ERROR('Transaction.matches method called with invalid argument', {transactFuncClass: transactFuncClass});
+        throw Error('Invalid transactFuncClass argument');
+    }
+
+    if (this.inTokenSequence == undefined) {
+        initInputTokenSequence.call(this);
+    }
+
+    if (this.outTokenSequence == undefined) {
+        initOutputTokenSequence.call(this);
+    }
+
+    return (transactFuncClass.matchingPattern.input != undefined ? (new RegExp(transactFuncClass.matchingPattern.input)).test(this.inTokenSequence) : true) && (transactFuncClass.matchingPattern.output != undefined ? (new RegExp(transactFuncClass.matchingPattern.output)).test(this.outTokenSequence) : true);
+};
+
+Transaction.prototype.revertOutputAddresses = function () {
+    if (this.outputs.length > 0) {
+        Catenis.module.BlockchainAddress.BlockchainAddress.revertAddressList(this.listOutputAddresses());
+    }
+};
+
 
 // Module functions used to simulate private Transaction object methods
 //  NOTE: these functions need to be bound to a Transaction object reference (this) before
@@ -455,6 +520,50 @@ function addOutputs(outputs, pos) {
     invalidateTx.call(this);
 }
 
+function initInputTokenSequence() {
+    this.inTokenSequence = this.inputs.reduce((seq, input) => {
+        var addrType = ('addrInfo' in input) ? input.addrInfo.type : null;
+        var ioToken = getIOTokenFromAddrType(addrType);
+
+        if (ioToken != undefined) {
+            seq += ioToken;
+        }
+        else {
+            // Could not get IO token from address type.
+            //  Log error condition
+            Catenis.logger.ERROR('Could not get input/output token from blockchain address type', {addrType: input.addrInfo.type});
+        }
+
+        return seq;
+    }, '');
+}
+
+function initOutputTokenSequence() {
+    this.outTokenSequence = this.outputs.reduce((seq, output) => {
+        var addrType = null;
+
+        if (output.type === Transaction.outputType.nullData) {
+            addrType = undefined;
+        }
+        else if (output.type === Transaction.outputType.P2PKH || output.type === Transaction.outputType.P2SH) {
+            addrType = ('addrInfo' in output.payInfo) ? output.payInfo.addrInfo.type : null;
+        }
+
+        var ioToken = getIOTokenFromAddrType(addrType);
+
+        if (ioToken != undefined) {
+            seq += ioToken;
+        }
+        else {
+            // Could not get IO token from address type.
+            //  Log error condition
+            Catenis.logger.ERROR('Could not get input/output token from blockchain address type', {addrType: input.addrInfo.type});
+        }
+
+        return seq;
+    }, '');
+}
+
 
 // Transaction function class (public) methods
 //
@@ -469,13 +578,163 @@ Transaction.computeTransactionSize = function (nInputs, nOutputs, nullDataPayloa
     return nInputs * cfgSettings.txInputSize + nOutputs * cfgSettings.txOutputSize + (nullDataPayloadSize > 0 ? (nullDataPayloadSize <= 75 ? 11 :13) + nullDataPayloadSize : 0) + 10;
 };
 
+Transaction.fromTxid = function (txid) {
+    return Transaction.fromHex(Catenis.bitcoinCore.getRawTransaction(txid, false, false));
+};
+
+Transaction.fromHex = function (hexTx) {
+    // Try to decode transaction
+    try {
+        var decodedTx = Catenis.bitcoinCore.decodeRawTransaction(hexTx, false);
+
+        if (decodedTx != undefined) {
+            var tx = new Transaction();
+
+            // Save basic transaction info
+            tx.rawTransaction = hexTx;
+            tx.txid = decodedTx.txid;
+
+            // Get inputs
+            var txidTxouts = new Map();
+
+            decodedTx.vin.forEach(function (input, idx) {
+                tx.inputs.push({
+                    txout: {
+                        txid: input.txid,
+                        vout: input.vout
+                    }
+                });
+
+                // Save tx out to retrieve further info
+                if (txidTxouts.has(input.txid)) {
+                    txidTxouts.get(input.txid).push({
+                        vout: input.vout,
+                        vin: idx
+                    });
+                }
+                else {
+                    txidTxouts.set(input.txid, [{
+                        vout: input.vout,
+                        vin: idx
+                    }]);
+                }
+            });
+
+            // Get the amount and address associated with each input of the transaction
+            //  by retrieving information about each spent output
+            for (let txoutid of txidTxouts.keys()) {
+                try {
+                    // Retrieve information about transaction containing outputs
+                    //  spent by this transaction's inputs
+                    let decodedTxout = Catenis.bitcoinCore.getRawTransaction(txoutid, true, false);
+
+                    txidTxouts.get(txoutid).forEach(function (txout) {
+                        let input = tx.inputs[txout.vin];
+                        let output = decodedTxout.vout[txout.vout];
+
+                        // Save amount of output spent by input
+                        input.txout.amount = new BigNumber(output.value).times(100000000).toNumber();
+
+                        if (output.scriptPubKey.type === 'pubkeyhash' || output.scriptPubKey.type === 'scripthash') {
+                            // Save address associated with output spent by input
+                            input.address = output.scriptPubKey.addresses[0];
+
+                            // Since all Catenis node's blockchain addresses are of the P2PKH type,
+                            //  we filter that specific type before trying to get its information
+                            if (output.scriptPubKey.type === 'pubkeyhash') {
+                                // Try to get information about address associated with
+                                //  spent output
+                                let addrInfo = Catenis.keyStore.getAddressInfo(output.scriptPubKey.addresses[0], true);
+
+                                if (addrInfo != null) {
+                                    input.addrInfo = addrInfo;
+                                }
+                            }
+                        }
+                    })
+                }
+                catch (err) {
+                    // Error retrieving info about tx output. Just log error
+                    Catenis.logger.ERROR(util.format('Error retrieving information about tx output (txid: %s).', txoutid), err);
+                }
+            }
+
+            // Get outputs
+            decodedTx.vout.forEach(function(output) {
+                // Identity type of output
+                let txOutput = {};
+
+                if (output.scriptPubKey.type === 'pubkeyhash') {
+                    txOutput.type = Transaction.outputType.P2PKH;
+                    txOutput.payInfo = {
+                        address: output.scriptPubKey.addresses[0],
+                        amount: new BigNumber(output.value).times(100000000).toNumber()
+                    };
+
+                    // Try to get information about address associated with output
+                    let addrInfo = Catenis.keyStore.getAddressInfo(txOutput.payInfo.address, true);
+
+                    if (addrInfo != null) {
+                        txOutput.payInfo.addrInfo = addrInfo;
+                    }
+                }
+                else if (output.scriptPubKey.type === 'scripthash') {
+                    txOutput.type = Transaction.outputType.P2SH;
+                    txOutput.payInfo = {
+                        address: output.scriptPubKey.addresses[0],
+                        amount: new BigNumber(output.value).times(100000000).toNumber()
+                    };
+
+                    // Try to get information about address associated with output
+                    let addrInfo = Catenis.keyStore.getAddressInfo(txOutput.payInfo.address, true);
+
+                    if (addrInfo != null) {
+                        txOutput.payInfo.addrInfo = addrInfo;
+                    }
+                }
+                else if (output.scriptPubKey.type === 'nulldata') {
+                    txOutput.type = Transaction.outputType.nullData;
+                    txOutput.data = bitcoinLib.script.decompile(new Buffer(output.scriptPubKey.hex,'hex'))[1];
+
+                    // Add information about null data
+                    tx.hasNullDataOutput = true;
+                    tx.nullDataPayloadSize = txOutput.data.length;
+                }
+                else {
+                    // An unexpected scriptPubKey type. Log error and save type as it is
+                    Catenis.logger.WARN('Transaction output with an unexpected scriptPubKey type', {output: output});
+
+                    txOutput.type = output.scriptPubKey.type;
+                }
+
+                tx.outputs.push(txOutput);
+            });
+
+            // Initialize both input and output toke sequences
+            initInputTokenSequence.call(tx);
+            initOutputTokenSequence.call(tx);
+
+            // Return deserialized transaction
+            return tx;
+        }
+    }
+    catch (err) {
+        if (!((err instanceof Meteor.Error) && err.details != undefined && typeof err.details.code === 'number'
+                && err.details.code == Catenis.module.BitcoinCore.rpcErrorCode.RPC_DESERIALIZATION_ERROR)) {
+            // An error other than failure to deserialize transaction.
+            //  Just re-throws it
+            throw err;
+        }
+    }
+};
 
 // Transaction function class (public) properties
 //
 
 Transaction.outputType = Object.freeze({
-    p2PKH: 'p2PKH',
-    nullData: 'nullData'
+    P2PKH: 'P2PKH',         // Pay to public key hash
+    P2SH: 'P2SH',           // Pay to script hash
+    nullData: 'nullData'    // Null data (OP_RETURN) output
 });
 
 Transaction.type = Object.freeze({
@@ -492,6 +751,11 @@ Transaction.type = Object.freeze({
         name: 'send_message',
         description: 'Transaction used to send a message from origin device to target device',
         dbInfoEntryName: 'sendMessage'
+    }),
+    log_message: Object.freeze({
+        name: 'log_message',
+        description: 'Transaction used to log a message of a device',
+        dbInfoEntryName: 'logMessage'
     }),
     read_confirmation: Object.freeze({
         name: 'read_confirmation',
@@ -515,6 +779,74 @@ Transaction.type = Object.freeze({
     })
 });
 
+Transaction.ioToken = Object.freeze({
+    null_data: Object.freeze({
+        name: 'null_data',
+        token: '<null_data>',
+        description: 'Null data output'
+    }),
+    p2_unknown_addr: Object.freeze({
+        name: 'p2_unknown_addr',
+        token: '<p2_unknown_addr>',
+        description: 'Output (or input spending such output) paying to an unknown address'
+    }),
+    p2_sys_dev_main_addr: Object.freeze({
+        name: 'p2_sys_dev_main_addr',
+        token: '<p2_sys_dev_main_addr>',
+        description: 'Output (or input spending such output) paying to a Catenis node devive main address'
+    }),
+    p2_sys_fund_pay_addr: Object.freeze({
+        name: 'p2_sys_fund_pay_addr',
+        token: '<p2_sys_fund_pay_addr>',
+        description: 'Output (or input spending such output) paying to a Catenis node funding payment address'
+    }),
+    p2_sys_fund_chg_addr: Object.freeze({
+        name: 'p2_sys_fund_chg_addr',
+        token: '<p2_sys_fund_chg_addr>',
+        description: 'Output (or input spending such output) paying to a Catenis node funding change address'
+    }),
+    p2_sys_pay_tx_exp_addr: Object.freeze({
+        name: 'p2_sys_pay_tx_exp_addr',
+        token: '<p2_sys_pay_tx_exp_addr>',
+        description: 'Output (or input spending such output) paying to a Catenis node pay tx expense address'
+    }),
+    p2_cln_msg_crd_addr: Object.freeze({
+        name: 'p2_cln_msg_crd_addr',
+        token: '<p2_cln_msg_crd_addr>',
+        description: 'Output (or input spending such output) paying to a client message credit address'
+    }),
+    p2_cln_asst_crd_addr: Object.freeze({
+        name: 'p2_cln_asst_crd_addr',
+        token: '<p2_cln_asst_crd_addr>',
+        description: 'Output (or input spending such output) paying to a client asset credit address'
+    }),
+    p2_dev_read_conf_addr: Object.freeze({
+        name: 'p2_dev_read_conf_addr',
+        token: '<p2_dev_read_conf_addr>',
+        description: 'Output (or input spending such output) paying to a device read confirmation address'
+    }),
+    p2_dev_main_addr: Object.freeze({
+        name: 'p2_dev_main_addr',
+        token: '<p2_dev_main_addr>',
+        description: 'Output (or input spending such output) paying to a device main address'
+    }),
+    p2_dev_asst_addr: Object.freeze({
+        name: 'p2_dev_asst_addr',
+        token: '<p2_dev_asst_addr>',
+        description: 'Output (or input spending such output) paying to a device asset address'
+    }),
+    p2_dev_asst_issu_addr: Object.freeze({
+        name: 'p2_dev_asst_issu_addr',
+        token: '<p2_dev_asst_issu_addr>',
+        description: 'Output (or input spending such output) paying to a device asset issuance address'
+    }),
+    p2_dev_pub_rsrv_addr: Object.freeze({
+        name: 'p2_dev_pub_rsrv_addr',
+        token: '<p2_dev_pub_rsrv_addr>',
+        description: 'Output (or input spending such output) paying to a device public reserved address'
+    })
+});
+
 
 // Definition of module (private) functions
 //
@@ -522,13 +854,37 @@ Transaction.type = Object.freeze({
 function isValidSentTransactionType(type) {
     isValid = false;
 
-    if (typeof event === 'object' && event != null && typeof event.name === 'string') {
+    if (typeof type === 'object' && type != null && typeof type.name === 'string') {
         isValid = Object.keys(Transaction.type).some(function (key) {
-            return Transaction.type[key].name !== Transction.type.sys_funding.name && Transaction.type[key].name === event.name;
+            return Transaction.type[key].name !== Transaction.type.sys_funding.name && Transaction.type[key].name === type.name;
         });
     }
 
     return isValid;
+}
+
+// addrType: [string]  //  undefined: null data output
+//                     //  null: pay to unknown address
+//                     //  address type from Catenis.module.KeyStore.extKeyType.name: pay to that type of address
+function getIOTokenFromAddrType(addrType) {
+    var ioTokenName = addrType === undefined ? Transaction.ioToken.null_data.name :
+            (addrType === null ? Transaction.ioToken.p2_unknown_addr.name : 'p2_' + addrType);
+
+    return Transaction.ioToken[ioTokenName].token;
+}
+
+function isTransactFuncClassToMatch(transactFuncClass) {
+    let result = false;
+
+    if (typeof transactFuncClass === 'function') {
+        let hasProp = Object.getOwnPropertyNames(transactFuncClass).some((propName) => {
+            return propName === 'matchingPattern';
+        });
+
+        result = hasProp && typeof transactFuncClass.matchingPattern === 'object';
+    }
+
+    return result;
 }
 
 

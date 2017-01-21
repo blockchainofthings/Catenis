@@ -2,7 +2,8 @@
 {
   // Parameters pertaining to the Catenis application
   "application": {
-    "cryptoNetwork": "bitcoin"
+    "cryptoNetwork": "bitcoin",   // Available values: 'bitcoin' (for Bitcoin's production blockchain), 'testnet' (for Bitcoin's test blockchain)
+    "shutdownTimeout": 30000   // Time, in miliseconds, that the application should wait after it receives a terminate request before it actually terminates
   },
   // Parameters pertaining to logging mechanism
   "logging": {
@@ -12,6 +13,6 @@
   },
   // Parameters pertaining to BitcoinCore module
   "bitcoinCore": {
-    "serverHost": "10.1.0.5" // Bitcoin server host name/IP address
+    "serverHost": "10.0.0.4" // Bitcoin server host name/IP address
   }
 }

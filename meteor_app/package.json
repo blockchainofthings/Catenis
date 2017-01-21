@@ -1,0 +1,30 @@
+{
+  "name": "catenis",
+  "version": "0.0.1",
+  "description": "Catenis Enterprise application",
+  "main": "Catenis.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Cláudio Sá de Castro",
+  "license": "ISC",
+  "dependencies": {
+    "babel-runtime": "^6.20.0",
+    "bcrypt": "^1.0.1",
+    "bignumber.js": "^2.3.0",
+    "bitcoin": "^3.0.1",
+    "cc-assetid-encoder": "^0.6.0",
+    "coloredcoinsd-wraper": "^0.4.8",
+    "config": "^1.17.1",
+    "eccrypto": "^1.0.3",
+    "fibers": "^1.0.15",
+    "ipfs-api": "^12.1.2",
+    "lokijs": "^1.3.16",
+    "mongodb": "^2.2.11",
+    "secp256k1": "^2.0.10",
+    "stack-trace": "0.0.9",
+    "winston": "^2.3.0",
+    "winston-daily-rotate-file": "^1.0.1",
+    "winston-mail": "^1.0.0"
+  }
+}
