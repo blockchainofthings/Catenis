@@ -317,13 +317,20 @@ Client.prototype.createDevice = function (props, ownApiAccessKey = false) {
         // Get next device index and validate it
         let deviceIndex = this.lastDeviceIndex;
 
-        //noinspection StatementWithEmptyBodyJS
-        while (!Catenis.keyStore.initDeviceHDNodes(this.ctnNode.ctnNodeIndex, this.clientIndex, ++deviceIndex));
+        // Get next good device index
+        let deviceId = undefined;
+
+        do {
+            if (Catenis.keyStore.initDeviceHDNodes(this.ctnNode.ctnNodeIndex, this.clientIndex, ++deviceIndex)) {
+                deviceId = newDeviceId(this.ctnNode.ctnNodeIndex, this.clientIndex, deviceIndex);
+            }
+        }
+        while (!deviceId);
 
         // Prepare to create new Device doc/rec
         docDevice = {
             client_id: this.doc_id,
-            deviceId: newDeviceId(),
+            deviceId: deviceId,
             index: {
                 ctnNodeIndex: this.ctnNode.ctnNodeIndex,
                 clientIndex: this.clientIndex,
@@ -692,8 +699,18 @@ Client.status = Object.freeze({
 // Definition of module (private) functions
 //
 
-function newDeviceId() {
-    return 'd' + Random.id(19);
+// Create new device ID dependent on Catenis node index, client index and device index
+function newDeviceId(ctnNodeIndex, clientIndex, deviceIndex) {
+    let id = 'd' + Random.createWithSeeds(Array.from(Catenis.application.seed.toString() + ':ctnNodeIndex:' + ctnNodeIndex + ',clientIndex:' + clientIndex + ',deviceIndex:' + deviceIndex)).id(19);
+    let doc = undefined;
+
+    if ((doc = Catenis.db.collection.Device.findOne({deviceId: id}, {fields:{_id: 1, index: 1}}))) {
+        // New device ID is already in use. Log warning condition and reset ID
+        Catenis.logger.WARN(util.format('Device ID for Catenis node index %d, client index %d and device index %d is already in use', ctnNodeIndex, clientIndex, deviceIndex), {existingDeviceDoc: doc});
+        id = undefined;
+    }
+
+    return id;
 }
 
 function isValidServiceCreditType(type) {

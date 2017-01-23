@@ -265,13 +265,20 @@ CatenisNode.prototype.createClient = function (props, user_id) {
         // Get next client index and validate it
         let clientIndex = this.lastClientIndex;
 
-        //noinspection StatementWithEmptyBodyJS
-        while (!Catenis.keyStore.initClientHDNodes(this.ctnNodeIndex, ++clientIndex));
+        // Get next good client index
+        let clientId = undefined;
+
+        do {
+            if (Catenis.keyStore.initClientHDNodes(this.ctnNodeIndex, ++clientIndex)) {
+                clientId = newClientId(this.ctnNodeIndex, clientIndex);
+            }
+        }
+        while (!clientId);
 
         // Prepare to create Client doc/rec
         docClient = {
             catenisNode_id: this.doc_id,
-            clientId: newClientId(),
+            clientId: clientId,
             index: {
                 ctnNodeIndex: this.ctnNodeIndex,
                 clientIndex: clientIndex,
@@ -541,8 +548,18 @@ CatenisNode.status = Object.freeze({
 // Definition of module (private) functions
 //
 
-function newClientId() {
-    return 'c' + Random.id(19);
+// Create new client ID dependent on Catenis node index and client index
+function newClientId(ctnNodeIndex, clientIndex) {
+    let id = 'c' + Random.createWithSeeds(Array.from(Catenis.application.seed.toString() + ':ctnNodeIndex:' + ctnNodeIndex + ',clientIndex:' + clientIndex)).id(19);
+    let doc = undefined;
+
+    if ((doc = Catenis.db.collection.Client.findOne({clientId: id}, {fields:{_id: 1, index: 1}}))) {
+        // New client ID is already in use. Log warning condition and reset ID
+        Catenis.logger.WARN(util.format('Client ID for Catenis node index %d and client index %d is already in use', ctnNodeIndex, clientIndex), {existingClientDoc: doc});
+        id = undefined;
+    }
+
+    return id;
 }
 
 
