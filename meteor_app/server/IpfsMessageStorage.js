@@ -11,14 +11,23 @@
 // Module variables
 //
 
-// References to external modules
-const ipfsApi = Npm.require('ipfs-api');
-const crypto = Npm.require('crypto');
-const util = Npm.require('util');
-const Future = Npm.require('fibers/future');
+// References to external code
+//
+// Internal node modules
+//  NOTE: the reference of these modules are done sing 'require()' instead of 'import' to
+//      to avoid annoying WebStorm warning message: 'default export is not defined in
+//      imported module'
+const util = require('util');
+const crypto = require('crypto');
+// Third-party node modules
+import ipfsApi from 'ipfs-api';
+import Future from 'fibers/future';
+// Meteor packages
+import { Meteor } from 'meteor/meteor';
 
-import { MessageStorage } from './MessageStorage.js';
-
+// References code in other (Catenis) modules
+import { Catenis } from './Catenis';
+import { MessageStorage } from './MessageStorage';
 
 // Definition of classes
 //
@@ -206,10 +215,4 @@ function hashRipemd160(data) {
 //
 
 // Save module function class reference
-if (typeof Catenis === 'undefined')
-    Catenis = {};
-
-if (typeof Catenis.module === 'undefined')
-    Catenis.module = {};
-
 Catenis.module.IpfsMessageStorage = Object.freeze(IpfsMessageStorage);

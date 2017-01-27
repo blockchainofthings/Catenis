@@ -7,8 +7,20 @@
 // Module variables
 //
 
-// References to external modules
-var BigNumber = Npm.require('bignumber.js');
+// References to external code
+//
+// Internal node modules
+//  NOTE: the reference of these modules are done sing 'require()' instead of 'import' to
+//      to avoid annoying WebStorm warning message: 'default export is not defined in
+//      imported module'
+//const util = require('util');
+// Third-party node modules
+import BigNumber from 'bignumber.js';
+// Meteor packages
+//import { Meteor } from 'meteor/meteor';
+
+// References code in other (Catenis) modules
+import { Catenis } from './Catenis';
 
 
 // Definition of function classes
@@ -57,15 +69,13 @@ Util.spendUtxo = function (txout, origAddress, destAddress, fee) {
 //  destAddress: [string]
 //  fee: [number]
 Util.spendAddresses = function (origAddresses, destAddress, fee) {
-    address = Array.isArray(origAddresses) ? origAddresses : [origAddresses];
+    const utxos = Catenis.bitcoinCore.listUnspent(0, origAddresses);
 
-    var utxos = Catenis.bitcoinCore.listUnspent(0, origAddresses);
+    const inputs = [];
+    let totalAmount = 0;
 
-    var inputs = [],
-        totalAmount = 0;
-
-    utxos.forEach(function (utxo) {
-        let input = {
+    utxos.forEach((utxo) => {
+        const input = {
             txout: {
                 txid: utxo.txid,
                 vout: utxo.vout,
@@ -74,7 +84,7 @@ Util.spendAddresses = function (origAddresses, destAddress, fee) {
             address: utxo.address
         };
 
-        let addrInfo = Catenis.keyStore.getAddressInfo(utxo.address, true);
+        const addrInfo = Catenis.keyStore.getAddressInfo(utxo.address, true);
 
         if (addrInfo != null) {
             input.addrInfo = addrInfo;
@@ -87,7 +97,7 @@ Util.spendAddresses = function (origAddresses, destAddress, fee) {
     fee = fee != undefined && fee >= 1000 ? fee : 1000;
 
     if (totalAmount >= fee + 600) {
-        let tx = new Catenis.module.Transaction();
+        const tx = new Catenis.module.Transaction();
 
         tx.addInputs(inputs);
         tx.addP2PKHOutput(destAddress, totalAmount - fee);
@@ -112,10 +122,4 @@ Util.spendAddresses = function (origAddresses, destAddress, fee) {
 //
 
 // Save module function class reference
-if (typeof Catenis === 'undefined')
-    Catenis = {};
-
-if (typeof Catenis.module === 'undefined')
-    Catenis.module = {};
-
 Catenis.module.Util = Object.freeze(Util);

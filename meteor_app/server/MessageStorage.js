@@ -4,8 +4,20 @@
 
 //console.log('[MessageStorage.js]: This code just ran.');
 
-// References to external modules
-const config = Npm.require('config');
+// References to external code
+//
+// Internal node modules
+//  NOTE: the reference of these modules are done sing 'require()' instead of 'import' to
+//      to avoid annoying WebStorm warning message: 'default export is not defined in
+//      imported module'
+//const util = require('util');
+// Third-party node modules
+import config from 'config';
+// Meteor packages
+//import { Meteor } from 'meteor/meteor';
+
+// References code in other (Catenis) modules
+import { Catenis } from './Catenis';
 
 // Config entries
 const configMsgStorage = config.get('messageStorage');
@@ -86,10 +98,4 @@ MessageStorage.instances = new Map();
 //
 
 // Save module function class reference
-if (typeof Catenis === 'undefined')
-    Catenis = {};
-
-if (typeof Catenis.module === 'undefined')
-    Catenis.module = {};
-
 Catenis.module.MessageStorage = Object.freeze(MessageStorage);

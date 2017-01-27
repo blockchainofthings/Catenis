@@ -7,9 +7,22 @@
 // Module variables
 //
 
-// References to external modules
-const util = Npm.require('util');
-const config = Npm.require('config');
+// References to external code
+//
+// Internal node modules
+//  NOTE: the reference of these modules are done sing 'require()' instead of 'import' to
+//      to avoid annoying WebStorm warning message: 'default export is not defined in
+//      imported module'
+const util = require('util');
+// Third-party node modules
+import config from 'config';
+// Meteor packages
+import { Meteor } from 'meteor/meteor';
+
+// References code in other (Catenis) modules
+import { Catenis } from './Catenis';
+import { CriticalSection } from './CriticalSection';
+import { TransactionMonitor } from './TransactionMonitor';
 
 // Config entries
 const deviceConfig = config.get('device');
@@ -19,9 +32,6 @@ export const cfgSettings = {
     creditsToSendMessage: deviceConfig.get('creditsToSendMessage'),
     creditsToLogMessage: deviceConfig.get('creditsToLogMessage')
 };
-
-import { CriticalSection } from './CriticalSection.js';
-import { TransactionMonitor } from './TransactionMonitor.js';
 
 
 // Definition of function classes
@@ -55,6 +65,7 @@ function Device(docDevice, client) {
         get: function () {
             // Use API access secret from client is an API access generator key is not defined
             //  for the device
+            //noinspection JSPotentiallyInvalidUsageOfThis
             return docDevice.apiAccessGenKey != null ? crypto.createHmac('sha512', docDevice.apiAccessGenKey).update('And here it is: the Catenis API key for device' + this.clientId).digest('hex')
                     : this.client.apiAccessSecret;
         }
@@ -112,6 +123,7 @@ Device.prototype.enable = function () {
 
     activateDevice.call(this);
 };
+// TODO: add method renewApiAccessGenKey (same as we have for Client)
 
 Device.prototype.delete = function (deletedDate) {
     if (this.status !== Device.status.deleted.name) {
@@ -289,6 +301,7 @@ Device.prototype.sendMessage = function (targetDeviceId, message, encryptMessage
         if (targetDevice.status === Device.status.deleted.name) {
             // Cannot send message to a deleted device. Log error and throw exception
             Catenis.logger.ERROR('Cannot send message to a deleted device', {deviceId: targetDeviceId});
+            //noinspection ExceptionCaughtLocallyJS
             throw new Meteor.Error('ctn_device_target_deleted', util.format('Cannot send message to a deleted device (deviceId: %s)', targetDeviceId));
         }
 
@@ -296,6 +309,7 @@ Device.prototype.sendMessage = function (targetDeviceId, message, encryptMessage
         if (targetDevice.status !== Device.status.active.name) {
             // Cannot send message to a device that is not active. Log error condition and throw exception
             Catenis.logger.ERROR('Cannot send message to a device that is not active', {deviceId: targetDeviceId});
+            //noinspection ExceptionCaughtLocallyJS
             throw new Meteor.Error('ctn_device_target_not_active', util.format('Cannot send message to a device that is not active (deviceId: %s)', targetDeviceId));
         }
     }
@@ -710,10 +724,4 @@ function fundingOfAddressesConfirmed(data) {
 //
 
 // Save module function class reference
-if (typeof Catenis === 'undefined')
-    Catenis = {};
-
-if (typeof Catenis.module === 'undefined')
-    Catenis.module = {};
-
 Catenis.module.Device = Object.freeze(Device);

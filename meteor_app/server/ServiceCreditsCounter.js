@@ -4,14 +4,23 @@
 
 //console.log('[ServiceCreditsCounter.js]: This code just ran.');
 
-// References to external modules
-//const config = Npm.require('config');
+// References to external code
+//
+// Internal node modules
+//  NOTE: the reference of these modules are done sing 'require()' instead of 'import' to
+//      to avoid annoying WebStorm warning message: 'default export is not defined in
+//      imported module'
+//const util = require('util');
+// Third-party node modules
+//import config from 'config';
+// Meteor packages
+//import { Meteor } from 'meteor/meteor';
 
 
 // Definition of class
 //
 
-class ServiceCreditsCounter {
+export class ServiceCreditsCounter {
     constructor() {
         this.confirmed = 0;
         this.unconfirmed = 0;
@@ -52,5 +61,3 @@ class ServiceCreditsCounter {
         this.addUnconfirmed(compDiffCount.unconfirmed);
     }
 }
-
-export { ServiceCreditsCounter };

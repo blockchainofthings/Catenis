@@ -7,18 +7,31 @@
 // Module variables
 //
 
-// References to external modules
-var config = Npm.require('config');
-var path = Npm.require('path');
-var fs = Npm.require('fs');
-var crypto = Npm.require('crypto');
-var bitcoinLib = Npm.require('bitcoinjs-lib');
+// References to external code
+//
+// Internal node modules
+//  NOTE: the reference of these modules are done sing 'require()' instead of 'import' to
+//      to avoid annoying WebStorm warning message: 'default export is not defined in
+//      imported module'
+const crypto = require('crypto');
+const path = require('path');
+const fs = require('fs');
+// Third-party node modules
+import config from 'config';
+import bitcoinLib from 'bitcoinjs-lib';
+// Meteor packages
+import { Meteor } from 'meteor/meteor';
+
+// References code in other (Catenis) modules
+import { Catenis } from './Catenis';
+import { TransactionMonitor } from './TransactionMonitor';
+
 
 // Config entries
-var appConfig = config.get('application');
+const appConfig = config.get('application');
 
 // Configuration settings
-var cfgSettings = {
+const cfgSettings = {
     appName: appConfig.get('appName'),
     seedFilename: appConfig.get('seedFilename'),
     walletPswLength: appConfig.get('walletPswLength'),
@@ -35,7 +48,6 @@ const statusRegEx = {
     paused: /^paused(?:$|_)/
 };
 
-import { TransactionMonitor } from './TransactionMonitor.js';
 
 // Definition of function classes
 //
@@ -50,7 +62,7 @@ function Application() {
     });
     
     // Get application seed
-    var appSeedPath = path.join(process.env.PWD, cfgSettings.seedFilename),
+    const appSeedPath = path.join(process.env.PWD, cfgSettings.seedFilename),
         encData = fs.readFileSync(appSeedPath, {encoding: 'utf8'});
 
     Object.defineProperty(this, 'seed', {
@@ -62,7 +74,7 @@ function Application() {
     Object.defineProperty(this, 'walletPsw', {
         get: function () {
             //noinspection JSPotentiallyInvalidUsageOfThis
-            var seed = this.seed,
+            const seed = this.seed,
                 seedLength = seed.length,
                 pswLength = seedLength < cfgSettings.walletPswLength ? seedLength : cfgSettings.walletPswLength,
                 psw = new Buffer(pswLength);
@@ -275,10 +287,10 @@ Application.processingStatus = Object.freeze({
 // Receives a buffer with the ciphered seed data,
 //  and returns a buffer with the deciphered data
 function decryptSeed(encData) {
-    var x = [ 78, 87, 108, 79, 77, 49, 82, 65, 89, 122, 69, 122, 75, 71, 103, 104, 84, 121, 115, 61],
+    const x = [ 78, 87, 108, 79, 77, 49, 82, 65, 89, 122, 69, 122, 75, 71, 103, 104, 84, 121, 115, 61],
         dec = crypto.createDecipher('des-ede3-cbc', (new Buffer((new Buffer(x)).toString(), 'base64')).toString());
 
-    var decBuf1 = dec.update(encData),
+    const decBuf1 = dec.update(encData),
         decBuf2 = dec.final();
 
     return Buffer.concat([decBuf1, decBuf2]);
@@ -286,11 +298,12 @@ function decryptSeed(encData) {
 
 function isSeedValid(seed) {
     // Calculate seed HMAC
-    var seedHmac = crypto.createHmac('sha256', seed).update('This is it: Catenis App seed', 'utf8').digest('base64');
+    const seedHmac = crypto.createHmac('sha256', seed).update('This is it: Catenis App seed', 'utf8').digest('base64');
 
     // Compare with seedHash on the database
-    var docApp = Catenis.db.collection.Application.find({}, {fields: {seedHmac: 1}}).fetch()[0],
-        isValid = false;
+    const docApp = Catenis.db.collection.Application.find({}, {fields: {seedHmac: 1}}).fetch()[0];
+
+    let isValid = false;
 
     if (docApp.seedHmac !== null) {
         // Check if seed HMAC matches the seed HMAC on the database
@@ -318,10 +331,4 @@ function shutdown() {
 //
 
 // Save module function class reference
-if (typeof Catenis === 'undefined')
-    Catenis = {};
-
-if (typeof Catenis.module === 'undefined')
-    Catenis.module = {};
-
 Catenis.module.Application = Object.freeze(Application);

@@ -8,13 +8,26 @@
 //
 
 // References to external modules
-var eccrypto = Npm.require('eccrypto');
-var secp256k1 = Npm.require('secp256k1');
-var crypto = Npm.require('crypto');
-var Future = Npm.require('fibers/future');
+
+// References to external code
+//
+// Internal node modules
+//  NOTE: the reference of these modules are done sing 'require()' instead of 'import' to
+//      to avoid annoying WebStorm warning message: 'default export is not defined in
+//      imported module'
+const crypto = require('crypto');
+// Third-party node modules
+import eccrypto from 'eccrypto';
+import secp256k1 from 'secp256k1';
+import Future from 'fibers/future';
+// Meteor packages
+//import { Meteor } from 'meteor/meteor';
+
+// References code in other (Catenis) modules
+import { Catenis } from './Catenis';
 
 // Initialization vector - generated as: crypto.randomBytes(16).toJSON()
-var iv = [128,54,254,30,235,181,211,89,160,214,109,196,40,175,106,102]; 
+const iv = [128,54,254,30,235,181,211,89,160,214,109,196,40,175,106,102];
 
 
 // Definition of function classes
@@ -54,13 +67,13 @@ CryptoKeys.prototype.exportPublicKey = function () {
 };
 
 CryptoKeys.prototype.getCompressedPublicKey = function () {
-    var pubKey = this.keyPair.getPublicKeyBuffer();
+    const pubKey = this.keyPair.getPublicKeyBuffer();
 
     return this.keyPair.compressed ? pubKey : secp256k1.publicKeyConvert(pubKey, true);
 };
 
 CryptoKeys.prototype.getUncompressedPublicKey = function () {
-    var pubKey = this.keyPair.getPublicKeyBuffer();
+    const pubKey = this.keyPair.getPublicKeyBuffer();
 
     return this.keyPair.compressed ? secp256k1.publicKeyConvert(pubKey, false) : pubKey;
 };
@@ -81,22 +94,21 @@ CryptoKeys.prototype.encryptData = function (destKeys, data) {
     }
 
     // Future required to synchronize call to eccrypto methods, which are asynchronous in nature (via promises)
-    var fut = new Future(),
-        encData,
+    const fut = new Future(),
         opts = {iv: Buffer(iv), ephemPrivateKey: this.getPrivateKey()};
+    let encData = undefined;
 
     // NOTE: only works with UNCOMPRESSED public key
-    eccrypto.encrypt(destKeys.getUncompressedPublicKey(), data, opts).then(function(encrypted) {
+    eccrypto.encrypt(destKeys.getUncompressedPublicKey(), data, opts).then((encrypted) => {
         encData = encrypted.ciphertext;
         fut.return();
-    }, function(error) {
+    }, (error) => {
         fut.throw(new Error('Failure encrypting data to send: ' + error));
         fut.return();
     });
 
     fut.wait();
 
-    //noinspection JSUnusedAssignment
     return encData;
 };
 
@@ -106,25 +118,25 @@ CryptoKeys.prototype.decryptData = function (sourceKeys, data) {
     }
 
     // Future required to synchronize call to eccrypto methods, which are asynchronous in nature (via promises)
-    var fut = new Future(),
-        decData,
+    const fut = new Future(),
         // NOTE: only works with UNCOMPRESSED public key
         opts = {iv: Buffer(iv), ephemPublicKey: sourceKeys.getUncompressedPublicKey(), ciphertext: data},
         privKey = this.getPrivateKey();
+    let decData = undefined;
 
     opts.mac = calcMacEncData(privKey, opts);
 
-    eccrypto.decrypt(this.getPrivateKey(), opts).then(function(plaindata) {
+    //noinspection JSCheckFunctionSignatures
+    eccrypto.decrypt(this.getPrivateKey(), opts).then((plaindata) => {
         decData = plaindata;
         fut.return();
-    }, function(error) {
+    }, (error) => {
         fut.throw(new Error ('Failure decrypting received data: ' + error));
         fut.return();
     });
 
     fut.wait();
 
-    //noinspection JSUnusedAssignment
     return decData;
 };
 
@@ -134,9 +146,9 @@ CryptoKeys.prototype.decryptData = function (sourceKeys, data) {
 
 // Converts a list of crypto keys into a list of addresses
 CryptoKeys.toAddressList = function (listKeys) {
-    var listAddress = [];
+    const listAddress = [];
 
-    listKeys.forEach(function (keys) {
+    listKeys.forEach((keys) => {
         listAddress.push(keys.getAddress());
     });
 
@@ -145,9 +157,9 @@ CryptoKeys.toAddressList = function (listKeys) {
 
 // Converts a list of crypto keys into a list of private keys in export format (WIF)
 CryptoKeys.toExportPrivateKeyList = function (listKeys) {
-    var listPrivateKey = [];
+    const listPrivateKey = [];
 
-    listKeys.forEach(function (keys) {
+    listKeys.forEach((keys) => {
         if (keys.hasPrivateKey()) {
             listPrivateKey.push(keys.exportPrivateKey());
         }
@@ -170,24 +182,23 @@ function hmacSha256(key, msg) {
 
 // Mac required to validated encrypted message
 function calcMacEncData(privKey, encResult) {
-    var mac,
-        // Future required to synchronize call to eccrypto methods, which are asynchronous in nature (via promises)
-        fut = new Future();
+    // Future required to synchronize call to eccrypto methods, which are asynchronous in nature (via promises)
+    const fut = new Future();
+    let mac = undefined;
 
-    eccrypto.derive(privKey, encResult.ephemPublicKey).then(function(Px) {
-        var hash = sha512(Px);
-        var macKey = hash.slice(32);
-        var dataToMac = Buffer.concat([encResult.iv, encResult.ephemPublicKey, encResult.ciphertext]);
+    eccrypto.derive(privKey, encResult.ephemPublicKey).then((Px) => {
+        const hash = sha512(Px);
+        const macKey = hash.slice(32);
+        const dataToMac = Buffer.concat([encResult.iv, encResult.ephemPublicKey, encResult.ciphertext]);
         mac = hmacSha256(macKey, dataToMac);
         fut.return();
-    },function(error) {
+    }, (error) => {
         fut.throw(new Error ('Failure deriving shared secret for private & public keys: ' + error));
         fut.return();
     });
 
     fut.wait();
 
-    //noinspection JSUnusedAssignment
     return mac;
 }
 
@@ -196,10 +207,4 @@ function calcMacEncData(privKey, encResult) {
 //
 
 // Save module function class reference
-if (typeof Catenis === 'undefined')
-    Catenis = {};
-
-if (typeof Catenis.module === 'undefined')
-    Catenis.module = {};
-
 Catenis.module.CryptoKeys = Object.freeze(CryptoKeys);

@@ -7,16 +7,27 @@
 // Module variables
 //
 
-// References to external modules
-var util = Npm.require('util');
-var config = Npm.require('config');
-var bitcoinCoreLib = Npm.require('bitcoin');
+// References to external code
+//
+// Internal node modules
+//  NOTE: the reference of these modules are done sing 'require()' instead of 'import' to
+//      to avoid annoying WebStorm warning message: 'default export is not defined in
+//      imported module'
+const util = require('util');
+// Third-party node modules
+import config from 'config';
+import bitcoinCoreLib from 'bitcoin';
+// Meteor packages
+import { Meteor } from 'meteor/meteor';
+
+// References code in other (Catenis) modules
+import { Catenis } from './Catenis';
 
 // Config entries
-var bitcoinCoreConfig = config.get('bitcoinCore');
+const bitcoinCoreConfig = config.get('bitcoinCore');
 
 // Configuration settings
-var cfgSettings = {
+const cfgSettings = {
     serverHost: bitcoinCoreConfig.get('serverHost'),
     mainRpcPort: bitcoinCoreConfig.get('mainRpcPort'),
     testnetRpcPort: bitcoinCoreConfig.get('testnetRpcPort'),
@@ -32,7 +43,7 @@ var cfgSettings = {
 
 // BitcoinCore function class
 function BitcoinCore(network, host, username, password, timeout) {
-    var opts = {
+    const opts = {
         host: host,
         port: network === 'testnet' ? cfgSettings.testnetRpcPort : cfgSettings.mainRpcPort,
         user: username,
@@ -45,6 +56,7 @@ function BitcoinCore(network, host, username, password, timeout) {
 
     this.btcClient = new bitcoinCoreLib.Client(opts);
 
+    //noinspection JSCheckFunctionSignatures
     this.rpcApi = {
         // Note: the 'command' method below should be used when calling a Bitcoin Core
         //  JSON RPC method that is not directly exposed by the bitcoinCoreLib module.
@@ -104,7 +116,7 @@ BitcoinCore.prototype.importPrivateKey = function (privKeyWif, rescan, callback)
     }
 
     // Unlock wallet
-    var unlockedWallet = unlockWallet.call(this);
+    let unlockedWallet = unlockWallet.call(this);
 
     if (!rescan) {
         try {
@@ -127,7 +139,7 @@ BitcoinCore.prototype.importPrivateKey = function (privKeyWif, rescan, callback)
         //  remain open until the RPC call returns or a (sufficient long) timeout takes place. It
         //  is also important not to block this call. In order to do so, we should NOT use the
         //  'bitcoin' module, but make the RPC call manually so we have the necessary control
-        var requestJSON = JSON.stringify({id: Date.now(), method: 'importprivkey', params: [privKeyWif, '', true]}),
+        const requestJSON = JSON.stringify({id: Date.now(), method: 'importprivkey', params: [privKeyWif, '', true]}),
             requestOptions = {
             host: this.btcClient.rpc.opts.host || 'localhost',
             port: this.btcClient.rpc.opts.port || 8332,
@@ -150,19 +162,17 @@ BitcoinCore.prototype.importPrivateKey = function (privKeyWif, rescan, callback)
             requestOptions.auth = this.btcClient.rpc.opts.user + ':' + this.btcClient.rpc.opts.pass;
         }
 
-        var request = this.btcClient.rpc.http.request(requestOptions);
+        const request = this.btcClient.rpc.http.request(requestOptions);
 
         // Make sure that the connection will remain open, and Bitcoin Core
         //  sends the response back after the rescan is done
         request.setSocketKeepAlive(true);
 
-        var self = this;
-
-        request.on('socket', function (socket) {
-            socket.on('connect', function () {
+        request.on('socket', (socket) => {
+            socket.on('connect', () => {
                 Catenis.logger.TRACE('Connection established to call Bitcoin Core \'importprivkey\' RPC method');
             });
-            socket.on('close', function (had_error) {
+            socket.on('close', (had_error) => {
                 Catenis.logger.TRACE('Connection to call Bitcoin Core \'importprivkey\' RPC method closed');
                 if (Catenis.application.getWaitingBitcoinCoreRescan()) {
                     // Connection closed while still waiting on Bitcoin Core to
@@ -173,7 +183,7 @@ BitcoinCore.prototype.importPrivateKey = function (privKeyWif, rescan, callback)
 
                     // Lock wallet back
                     if (unlockedWallet) {
-                        lockWallet.call(self);
+                        lockWallet.call(this);
                         unlockedWallet = false;
                     }
 
@@ -185,9 +195,9 @@ BitcoinCore.prototype.importPrivateKey = function (privKeyWif, rescan, callback)
             });
         });
 
-        var rescanTimeout = false;
+        let rescanTimeout = false;
 
-        request.setTimeout(cfgSettings.rescanTimeout, function () {
+        request.setTimeout(cfgSettings.rescanTimeout, () => {
             // Timeout while waiting for 'importprivkey' method to return.
             //  Log an error condition, and clear indication that we are waiting
             //  on Bitcoin Core to finish rescanning the blockchain
@@ -196,7 +206,7 @@ BitcoinCore.prototype.importPrivateKey = function (privKeyWif, rescan, callback)
 
             // Lock wallet back
             if (unlockedWallet) {
-                lockWallet.call(self);
+                lockWallet.call(this);
                 unlockedWallet = false;
             }
 
@@ -209,12 +219,12 @@ BitcoinCore.prototype.importPrivateKey = function (privKeyWif, rescan, callback)
             }
         });
 
-        request.on('error', function (err) {
+        request.on('error', (err) => {
             if (err.code !== 'ECONNRESET' || !rescanTimeout) {
                 // Error while waiting for 'importprivkey' method to return.
                 //  Log error, and clear indication that we are waiting on
                 //  Bitcoin Core to finish rescanning the blockchain
-                var errMsg = 'Error while waiting for Bitcoin Core to finish rescanning the blockchain after importing private key.';
+                let errMsg = 'Error while waiting for Bitcoin Core to finish rescanning the blockchain after importing private key.';
 
                 if (typeof err.code !== 'undefined') {
                     errMsg += util.format(' Returned error code: %s.', err.code);
@@ -226,11 +236,11 @@ BitcoinCore.prototype.importPrivateKey = function (privKeyWif, rescan, callback)
 
                 // Lock wallet back
                 if (unlockedWallet) {
-                    lockWallet.call(self);
+                    lockWallet.call(this);
                     unlockedWallet = false;
                 }
 
-                var retError = new Meteor.Error('ctn_btcore_impkey_conn_error', errMsg, err.stack);
+                const retError = new Meteor.Error('ctn_btcore_impkey_conn_error', errMsg, err.stack);
 
                 if (callback != undefined && typeof callback === 'function') {
                     // Return error
@@ -243,7 +253,7 @@ BitcoinCore.prototype.importPrivateKey = function (privKeyWif, rescan, callback)
             }
         });
 
-        request.on('response', function (response) {
+        request.on('response', (response) => {
             // 'importprivkey' method returned. Clear indication that we are
             //  waiting on Bitcoin Core to finish rescanning the blockchain
             Catenis.logger.TRACE('Bitcoin Core finished rescanning the blockchain after importing private key');
@@ -251,7 +261,7 @@ BitcoinCore.prototype.importPrivateKey = function (privKeyWif, rescan, callback)
 
             // Lock wallet back
             if (unlockedWallet) {
-                lockWallet.call(self);
+                lockWallet.call(this);
                 unlockedWallet = false;
             }
 
@@ -289,7 +299,7 @@ BitcoinCore.prototype.importPublicKey = function (pubKeyHex, rescan, callback) {
         //  remain open until the RPC call returns or a (sufficient long) timeout takes place. It
         //  is also important not to block this call. In order to do so, we should NOT use the
         //  'bitcoin' module, but make the RPC call manually so we have the necessary control
-        var requestJSON = JSON.stringify({id: Date.now(), method: 'importpubkey', params: [pubKeyHex, '', true]}),
+        const requestJSON = JSON.stringify({id: Date.now(), method: 'importpubkey', params: [pubKeyHex, '', true]}),
             requestOptions = {
                 host: this.btcClient.rpc.opts.host || 'localhost',
                 port: this.btcClient.rpc.opts.port || 8332,
@@ -312,17 +322,17 @@ BitcoinCore.prototype.importPublicKey = function (pubKeyHex, rescan, callback) {
             requestOptions.auth = this.btcClient.rpc.opts.user + ':' + this.btcClient.rpc.opts.pass;
         }
 
-        var request = this.btcClient.rpc.http.request(requestOptions);
+        const request = this.btcClient.rpc.http.request(requestOptions);
 
         // Make sure that the connection will remain open, and Bitcoin Core
         //  sends the response back after the rescan is done
         request.setSocketKeepAlive(true);
 
-        request.on('socket', function (socket) {
-            socket.on('connect', function () {
+        request.on('socket', (socket) => {
+            socket.on('connect', () => {
                 Catenis.logger.TRACE('Connection established to call Bitcoin Core \'importpubkey\' RPC method');
             });
-            socket.on('close', function (had_error) {
+            socket.on('close', (had_error) => {
                 Catenis.logger.TRACE('Connection to call Bitcoin Core \'importpubkey\' RPC method closed');
                 if (Catenis.application.getWaitingBitcoinCoreRescan()) {
                     // Connection closed while still waiting on Bitcoin Core to
@@ -339,9 +349,9 @@ BitcoinCore.prototype.importPublicKey = function (pubKeyHex, rescan, callback) {
             });
         });
 
-        var rescanTimeout = false;
+        let rescanTimeout = false;
 
-        request.setTimeout(cfgSettings.rescanTimeout, function () {
+        request.setTimeout(cfgSettings.rescanTimeout, () => {
             // Timeout while waiting for 'importpubkey' method to return.
             //  Log an error condition, and clear indication that we are waiting
             //  on Bitcoin Core to finish rescanning the blockchain
@@ -357,12 +367,12 @@ BitcoinCore.prototype.importPublicKey = function (pubKeyHex, rescan, callback) {
             }
         });
 
-        request.on('error', function (err) {
+        request.on('error', (err) => {
             if (err.code !== 'ECONNRESET' || !rescanTimeout) {
                 // Error while waiting for 'importpubkey' method to return.
                 //  Log error, and clear indication that we are waiting on
                 //  Bitcoin Core to finish rescanning the blockchain
-                var errMsg = 'Error while waiting for Bitcoin Core to finish rescanning the blockchain after importing public key.';
+                let errMsg = 'Error while waiting for Bitcoin Core to finish rescanning the blockchain after importing public key.';
 
                 if (typeof err.code !== 'undefined') {
                     errMsg += util.format(' Returned error code: %s.', err.code);
@@ -372,7 +382,7 @@ BitcoinCore.prototype.importPublicKey = function (pubKeyHex, rescan, callback) {
 
                 Catenis.application.setWaitingBitcoinCoreRescan(false);
 
-                var retError = new Meteor.Error('ctn_btcore_impkey_conn_error', errMsg, err.stack);
+                const retError = new Meteor.Error('ctn_btcore_impkey_conn_error', errMsg, err.stack);
 
                 if (callback != undefined && typeof callback === 'function') {
                     // Return error
@@ -385,7 +395,7 @@ BitcoinCore.prototype.importPublicKey = function (pubKeyHex, rescan, callback) {
             }
         });
 
-        request.on('response', function (response) {
+        request.on('response', (response) => {
             // 'importpubkey' method returned. Clear indication that we are
             //  waiting on Bitcoin Core to finish rescanning the blockchain
             Catenis.logger.TRACE('Bitcoin Core finished rescanning the blockchain after importing public key');
@@ -408,7 +418,7 @@ BitcoinCore.prototype.importPublicKey = function (pubKeyHex, rescan, callback) {
 // Note: the 'addresses' arg can be either a single blockchain address or
 //  an array of blockchain addresses
 BitcoinCore.prototype.listUnspent = function (minConf, addresses) {
-    var args = [];
+    const args = [];
     
     if (typeof minConf === 'string' && addresses == undefined) {
         addresses = minConf;
@@ -459,7 +469,7 @@ BitcoinCore.prototype.lockUnspent = function (txouts) {
         txouts = [txouts];
     }
 
-    txouts = txouts.map(function (txout) {
+    txouts = txouts.map((txout) => {
         return convertTxoutStrToObj(txout);
     });
 
@@ -480,7 +490,7 @@ BitcoinCore.prototype.unlockUnspent = function (txouts) {
         txouts = [txouts];
     }
 
-    txouts = txouts.map(function (txout) {
+    txouts = txouts.map((txout) => {
         return convertTxoutStrToObj(txout);
     });
 
@@ -515,7 +525,7 @@ BitcoinCore.prototype.getMempoolInfo = function () {
 //  it returns an object where each key is a transaction ID the
 //  value of which is an object with the transaction details
 BitcoinCore.prototype.getRawMempool = function (verbose) {
-    var args = [];
+    const args = [];
 
     if (verbose != undefined) {
         args.push(verbose);
@@ -534,7 +544,7 @@ BitcoinCore.prototype.getRawMempool = function (verbose) {
 //  set as false), the method returns a hex encoded string, which
 //  represents the block contents
 BitcoinCore.prototype.getBlock = function (blockHash, verbose) {
-    var args = [blockHash];
+    const args = [blockHash];
 
     if (verbose != undefined) {
         args.push(verbose);
@@ -593,7 +603,7 @@ BitcoinCore.prototype.getTransaction = function (txid, logError = true) {
 //  the method return the transaction as a hex enconded string.
 //  Otherwise, is returns an object with the transaction details
 BitcoinCore.prototype.getRawTransaction = function (txid, verbose, logError = true) {
-    var args = [txid];
+    const args = [txid];
 
     if (verbose != undefined) {
         args.push(verbose ? 1 : 0);
@@ -742,7 +752,7 @@ BitcoinCore.rpcErrorMessage = {
 //
 
 function handleError(methodName, err, logError = true) {
-    var errMsg = util.format('Error calling Bitcoin Core \'%s\' RPC method.', methodName);
+    let errMsg = util.format('Error calling Bitcoin Core \'%s\' RPC method.', methodName);
 
     if (typeof err.code !== 'undefined') {
         errMsg += util.format(' Returned error code: %s.', err.code);
@@ -756,7 +766,7 @@ function handleError(methodName, err, logError = true) {
 }
 
 function convertTxoutStrToObj(txout) {
-    var result = txout,
+    let result = txout,
         searchResult;
 
     if (typeof txout == 'string' && (searchResult = txout.match(/^(\w+):(\d+)$/))) {
@@ -767,7 +777,7 @@ function convertTxoutStrToObj(txout) {
 }
 
 function unlockWallet() {
-    var result = false;
+    let result = false;
 
     try {
         this.rpcApi.walletpassphrase(Catenis.application.walletPsw.toString(), 1);
@@ -808,10 +818,4 @@ function lockWallet() {
 //
 
 // Save module function class reference
-if (typeof Catenis === 'undefined')
-    Catenis = {};
-
-if (typeof Catenis.module === 'undefined')
-    Catenis.module = {};
-
 Catenis.module.BitcoinCore = Object.freeze(BitcoinCore);

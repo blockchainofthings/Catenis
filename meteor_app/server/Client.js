@@ -7,10 +7,24 @@
 // Module variables
 //
 
-// References to external modules
-const util = Npm.require('util');
-const crypto = Npm.require('crypto');
-const config = Npm.require('config');
+// References to external code
+//
+// Internal node modules
+//  NOTE: the reference of these modules are done sing 'require()' instead of 'import' to
+//      to avoid annoying WebStorm warning message: 'default export is not defined in
+//      imported module'
+const util = require('util');
+const crypto = require('crypto');
+// Third-party node modules
+import config from 'config';
+// Meteor packages
+import { Meteor } from 'meteor/meteor';
+
+// References code in other (Catenis) modules
+import { Catenis } from './Catenis';
+import { CriticalSection } from './CriticalSection';
+import { ServiceCreditsCounter } from './ServiceCreditsCounter';
+import { TransactionMonitor } from './TransactionMonitor';
 
 // Config entries
 const clientConfig = config.get('client');
@@ -19,10 +33,6 @@ const clientConfig = config.get('client');
 const cfgSettings = {
     fundPayTxExpenseSafetyFactor: clientConfig.get('fundPayTxExpenseSafetyFactor')
 };
-
-import { CriticalSection } from './CriticalSection.js';
-import { ServiceCreditsCounter } from './ServiceCreditsCounter';
-import { TransactionMonitor } from './TransactionMonitor.js';
 
 
 // Definition of function classes
@@ -57,7 +67,8 @@ function Client(docClient, ctnNode, initializeDevices) {
 
     Object.defineProperty(this, 'apiAccessSecret', {
         get: function () {
-            return crypto.createHmac('sha512', docClient.apiAccessGenKey).update('And here it is: the Catenis API key for client' + docClient.clientId).digest('hex');
+            //noinspection JSPotentiallyInvalidUsageOfThis,JSCheckFunctionSignatures
+            return crypto.createHmac('sha512', this.apiAccessGenKey).update('And here it is: the Catenis API key for client' + this.clientId).digest('hex');
         }
     });
 
@@ -514,7 +525,7 @@ function spendServiceCredit(srvCreditType, count) {
             remainCount = count;
 
         // Take into account only already confirmed service credits
-        Catenis.db.collection.ServiceCredit.find({client_id: this.doc_id, srvCreditType: srvCreditType, 'fundingTx.confirmed': true, remainCredits: {$gt: 0}}, {fields: {_id: 1, remainCredits: 1}, sort: {createdDate: 1}}).fetch().some(function (doc) {
+        Catenis.db.collection.ServiceCredit.find({client_id: this.doc_id, srvCreditType: srvCreditType, 'fundingTx.confirmed': true, remainCredits: {$gt: 0}}, {fields: {_id: 1, remainCredits: 1}, sort: {createdDate: 1}}).fetch().some((doc) => {
             if (doc.remainCredits <= remainCount) {
                 srvCreditIdsToZero.push(doc._id);
                 remainCount -= doc.remainCredits;
@@ -563,7 +574,7 @@ function spendServiceCredit(srvCreditType, count) {
 // Return:
 //   srvCreditCount: [Object of ServiceCreditsCounter]
 function availableServiceCredits(srvCreditType) {
-    return Catenis.db.collection.ServiceCredit.find({client_id: this.doc_id, srvCreditType: srvCreditType, remainCredits: {$gt: 0}}, {fields: {_id: 1, 'fundingTx.confirmed': 1, remainCredits: 1}}).fetch().reduce(function (sum, doc) {
+    return Catenis.db.collection.ServiceCredit.find({client_id: this.doc_id, srvCreditType: srvCreditType, remainCredits: {$gt: 0}}, {fields: {_id: 1, 'fundingTx.confirmed': 1, remainCredits: 1}}).fetch().reduce((sum, doc) => {
         if (doc.fundingTx.confirmed) {
             sum.addConfirmed(doc.remainCredits);
         }
@@ -702,7 +713,7 @@ Client.status = Object.freeze({
 // Create new device ID dependent on Catenis node index, client index and device index
 function newDeviceId(ctnNodeIndex, clientIndex, deviceIndex) {
     let id = 'd' + Random.createWithSeeds(Array.from(Catenis.application.seed.toString() + ':ctnNodeIndex:' + ctnNodeIndex + ',clientIndex:' + clientIndex + ',deviceIndex:' + deviceIndex)).id(19);
-    let doc = undefined;
+    let doc;
 
     if ((doc = Catenis.db.collection.Device.findOne({deviceId: id}, {fields:{_id: 1, index: 1}}))) {
         // New device ID is already in use. Log warning condition and reset ID
@@ -714,7 +725,7 @@ function newDeviceId(ctnNodeIndex, clientIndex, deviceIndex) {
 }
 
 function isValidServiceCreditType(type) {
-    return Object.keys(Client.serviceCreditType).some(function (key) {
+    return Object.keys(Client.serviceCreditType).some((key) => {
         return Client.serviceCreditType[key] === type;
     });
 }
@@ -741,17 +752,11 @@ function serviceCreditsConfirmed(data) {
 
 Object.defineProperty(Client, 'totalRemainingCredits', {
     get: function () {
-        return Catenis.db.collection.ServiceCredit.find({remainCredits: {$gt: 0}}, {fields: {remainCredits: 1}}).fetch().reduce(function (sum, doc) {
+        return Catenis.db.collection.ServiceCredit.find({remainCredits: {$gt: 0}}, {fields: {remainCredits: 1}}).fetch().reduce((sum, doc) => {
             return sum + doc.remainCredits;
         }, 0);
     }
 });
 
 // Save module function class reference
-if (typeof Catenis === 'undefined')
-    Catenis = {};
-
-if (typeof Catenis.module === 'undefined')
-    Catenis.module = {};
-
 Catenis.module.Client = Object.freeze(Client);

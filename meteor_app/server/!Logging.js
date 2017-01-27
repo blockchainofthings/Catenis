@@ -7,55 +7,39 @@
 //  this piece of code will be loaded before any other server code
 //console.log('[!Logging.js]: This code just ran.');
 
-// Fix default config file folder.
-//  Note: this is necessary because process.cwd()
-//  (which is used by the config module to define the
-//  default config folder) does not point to the
-//  Meteor application folder. Instead, the application
-//  folder is gotten from process.env.PWD and set
-//  to the environment variable NODE_CONFIG_DIR,
-//  which is used by the config module to set the
-//  default config folder if it is defined.
-if (process.env.NODE_CONFIG_DIR === undefined) {
-    process.env.NODE_CONFIG_DIR = Npm.require('path').join(process.env.PWD, 'config');
-}
-
-// NOTE: the solution below MUST NOT be used because it changes the
-//  native type objects (like Number) so argument validation for some
-//  Meteor functions including arguments of those types (e.g. collection.find({},{limit:1})
-//  will ALWAYS FAIL. As a workaround, selective pollyfills are manually
-//  included (see following lines).
+// Module variables
 //
-// Add ECMAScript-2015 (ES6) features to objects globally
-//Npm.require('babel-polyfill');
 
-// Pollyfills to add missing ECMAScript-2015 (ES6) features that are
-//  being used throughout the code
-//noinspection JSPrimitiveTypeWrapperUsage
-Number.isInteger = Number.isInteger || function(value) {
-    return typeof value === "number" && isFinite(value) && Math.floor(value) === value;
-};
+// Make sure that environment is properly configured before anything else
+import './ConfigEnv';
 
-// References to external moudules
-var config = Npm.require('config');
-var path = Npm.require('path');
-var winston = Npm.require('winston');
-var winstonTransportsDailyRotateFile = Npm.require('winston-daily-rotate-file');
-var winstonTransportMail = Npm.require('winston-mail').Mail;
-var util = Npm.require('util');
-
-// Config variables
-var loggingConfig = config.get('logging'),
-    logConsoleConfig = loggingConfig.get('console'),
-    logFileConfig = loggingConfig.get('file'),
-    logEmailConfig = loggingConfig.get('email');
-
-
-// Module code
+// References to external code
 //
+// Internal node modules
+//  NOTE: the reference of these modules are done sing 'require()' instead of 'import' to
+//      to avoid annoying WebStorm warning message: 'default export is not defined in
+//      imported module'
+const util = require('util');
+const path = require('path');
+// Third-party node modules
+import config from 'config';
+import winston from 'winston';
+import winstonTransportsDailyRotateFile from 'winston-daily-rotate-file';
+import winstonTransportMail from 'winston-mail';
+// Meteor packages
+//import { Meteor } from 'meteor/meteor';
+
+// References code in other (Catenis) modules
+import { Catenis } from './Catenis';
+
+// Config entries
+const loggingConfig = config.get('logging');
+const logConsoleConfig = loggingConfig.get('console');
+const logFileConfig = loggingConfig.get('file');
+const logEmailConfig = loggingConfig.get('email');
 
 // Definition of logging levels based on Log4J
-var log4jLevels = {
+const log4jLevels = {
     FATAL: 0,
     ERROR: 100,
     ACTION: 150,
@@ -65,7 +49,40 @@ var log4jLevels = {
     TRACE: 500,
     ALL: 9999
 };
-var log4jColors = {
+
+// Valid e-mail secure protocols with their respective default ports
+const emailSecureProtocols = {
+    ssl: 465,
+    tls: 587
+};
+
+// Configuration settings
+const cfgSettings = {
+    console: {
+        active: logConsoleConfig.get('active'),
+        logLevel: logConsoleConfig.has('logLevel') && (logConsoleConfig.get('logLevel') in log4jLevels) ? logConsoleConfig.get('logLevel') : 'INFO'
+    },
+    file: {
+        active: logFileConfig.get('active'),
+        logLevel: logFileConfig.has('logLevel') && (logFileConfig.get('logLevel') in log4jLevels) ? logFileConfig.get('logLevel') : 'ALL',
+        logDir: logFileConfig.get('logDir'),
+        logFilename: logFileConfig.get('logFilename')
+    },
+    email: {
+        active: logEmailConfig.get('active'),
+        logLevel: logEmailConfig.has('logLevel') && (logEmailConfig.get('logLevel') in log4jLevels) ? logEmailConfig.get('logLevel') : 'WARN',
+        smtpHost: logEmailConfig.get('smtpHost'),
+        secureProto: logEmailConfig.has('secureProto') && (logEmailConfig.get('secureProto') in emailSecureProtocols) ? logEmailConfig.get('secureProto') : undefined,
+        smtpPort: logEmailConfig.has('smtpPort') ? logEmailConfig.get('smtpPort') : undefined,
+        username: logEmailConfig.has('username') ? logEmailConfig.get('username') : undefined,
+        password: logEmailConfig.has('password') ? logEmailConfig.get('password') : undefined,
+        toAddresses: logEmailConfig.get('toAddresses'),
+        fromAddress: logEmailConfig.get('fromAddress'),
+        subject: logEmailConfig.get('subject')
+    }
+};
+
+const log4jColors = {
     FATAL: 'magenta',
     ERROR: 'red',
     ACTION: 'cyan',
@@ -76,34 +93,10 @@ var log4jColors = {
     ALL: 'gray'
 };
 
-// Valid e-mail secure protocols with their respective default ports
-var emailSecureProtocols = {
-    ssl: 465,
-    tls: 587
-};
-
-// Config variables
-var consoleLogActive = logConsoleConfig.get('active'),
-    consoleLogLevel = logConsoleConfig.has('logLevel') && (logConsoleConfig.get('logLevel') in log4jLevels) ? logConsoleConfig.get('logLevel') : 'INFO',
-    fileLogActive = logFileConfig.get('active'),
-    fileLogLevel = logFileConfig.has('logLevel') && (logFileConfig.get('logLevel') in log4jLevels) ? logFileConfig.get('logLevel') : 'ALL',
-    logDir = logFileConfig.get('logDir'),
-    logFilename = logFileConfig.get('logFilename'),
-    emailLogActive = logEmailConfig.get('active'),
-    emailLogLevel = logEmailConfig.has('logLevel') && (logEmailConfig.get('logLevel') in log4jLevels) ? logEmailConfig.get('logLevel') : 'WARN',
-    smtpHost = logEmailConfig.get('smtpHost'),
-    emailSecureProto = logEmailConfig.has('secureProto') && (logEmailConfig.get('secureProto') in emailSecureProtocols) ? logEmailConfig.get('secureProto') : undefined,
-    smtpPort = logEmailConfig.has('smtpPort') ? logEmailConfig.get('smtpPort') : undefined,
-    emailUsername = logEmailConfig.has('username') ? logEmailConfig.get('username') : undefined,
-    emailPassword = logEmailConfig.has('password') ? logEmailConfig.get('password') : undefined,
-    emailToAddresses = logEmailConfig.get('toAddresses'),
-    emailFromAddress = logEmailConfig.get('fromAddress'),
-    emailSubject = logEmailConfig.get('subject');
-
 // Definition of parameters for each different logging output (transport)
-var consoleTranspParams = {
-        level: consoleLogLevel,
-        silent: !consoleLogActive,
+const consoleTranspParams = {
+        level: cfgSettings.console.logLevel,
+        silent: !cfgSettings.console.active,
         colorize: true,
         handleExceptions: true,
         exceptionsLevel: 'FATAL',
@@ -113,23 +106,23 @@ var consoleTranspParams = {
         prettyPrint: true
     },
     fileTranspParams = {
-        level: fileLogLevel,
-        silent: !fileLogActive,
+        level: cfgSettings.file.logLevel,
+        silent: !cfgSettings.file.active,
         colorize: false,
         handleExceptions: true,
         exceptionsLevel: 'FATAL',
         humanReadableUnhandledException: true,
-        filename: path.join(process.env.PWD, logDir, logFilename),
+        filename: path.join(process.env.PWD, cfgSettings.file.logDir, cfgSettings.file.logFilename),
         json: false,
         prettyPrint: true
     },
     emailTranspParams = {
-        level: emailLogLevel,
-        silent: !emailLogActive,
-        host: smtpHost,
-        to: emailToAddresses,
-        from: emailFromAddress,
-        subject: emailSubject,
+        level: cfgSettings.email.logLevel,
+        silent: !cfgSettings.email.active,
+        host: cfgSettings.email.smtpHost,
+        to: cfgSettings.email.toAddresses,
+        from: cfgSettings.email.fromAddress,
+        subject: cfgSettings.email.subject,
         html: false,
         handleExceptions: true,
         exceptionsLevel: 'FATAL',
@@ -137,9 +130,13 @@ var consoleTranspParams = {
         prettyPrint: true
     };
 
+
+// Module code
+//
+
 // Complement logging transport parameters
-if (emailSecureProto != undefined) {
-    if (emailSecureProto === 'ssl') {
+if (cfgSettings.email.secureProto != undefined) {
+    if (cfgSettings.email.secureProto === 'ssl') {
         emailTranspParams.ssl = true;
     }
     else if (emailTranspParams === 'tls') {
@@ -147,16 +144,16 @@ if (emailSecureProto != undefined) {
     }
 }
 
-if (smtpPort != undefined && typeof smtpPort === 'number') {
-    emailTranspParams.port = smtpPort;
+if (cfgSettings.email.smtpPort != undefined && typeof cfgSettings.email.smtpPort === 'number') {
+    emailTranspParams.port = cfgSettings.email.smtpPort;
 }
 
-if (emailUsername != undefined) {
-    emailTranspParams.username = emailUsername;
+if (cfgSettings.email.username != undefined) {
+    emailTranspParams.username = cfgSettings.email.username;
 }
 
-if (emailPassword != undefined) {
-    emailTranspParams.password = emailPassword;
+if (cfgSettings.email.password != undefined) {
+    emailTranspParams.password = cfgSettings.email.password;
 }
 
 // Instantiate Logger object
@@ -169,9 +166,6 @@ if (emailPassword != undefined) {
 //  Example:
 //  Catenis.logger.ERROR('Test error message.', {stackTrace: stackTrace.get()});
 //
-if (typeof Catenis === 'undefined')
-    Catenis = {};
-
 Catenis.logger = new (winston.Logger)({
     levels: log4jLevels,
     colors: log4jColors,
@@ -179,7 +173,7 @@ Catenis.logger = new (winston.Logger)({
     transports: [
         new (winston.transports.Console)(consoleTranspParams),
         new (winstonTransportsDailyRotateFile)(fileTranspParams),
-        new (winstonTransportMail)(emailTranspParams)
+        new (winstonTransportMail.Mail)(emailTranspParams)
     ]
 });
 
@@ -189,9 +183,9 @@ Catenis.logger.filters.push(function (level, msg, meta, inst) {
     if (typeof meta.stackTrace !== 'undefined') {
         // Prepare prefix with filename, linenumber and function name
         //  from trace info
-        var trace = meta.stackTrace[0],
-            prefix = util.format('[%s, %d', trace.getFileName(), trace.getLineNumber()),
-            functionName = trace.getFunctionName();
+        const trace = meta.stackTrace[0];
+        let prefix = util.format('[%s, %d', trace.getFileName(), trace.getLineNumber());
+        const functionName = trace.getFunctionName();
 
         if (functionName != null) {
             prefix = util.format('%s (%s)]', prefix, functionName);
@@ -202,8 +196,8 @@ Catenis.logger.filters.push(function (level, msg, meta, inst) {
 
         if (msg != undefined && msg != null && msg.length > 0) {
             // Get white spaces from beginning of message
-            var spaces = '',
-                match = msg.match(/^\s*/);
+            let spaces = '';
+            const match = msg.match(/^\s*/);
 
             if (match != null && match.length > 0) {
                 spaces = match[0];
@@ -236,7 +230,7 @@ Catenis.logger.filters.push(function (level, msg, meta, inst) {
     else if (Object.keys(meta).length > 0) {
         // Some meta object has been passed.
         //  Make sure that null message is not printed
-        var trimMsg = msg.trim();
+        const trimMsg = msg.trim();
 
         if (trimMsg === 'null') {
             msg = msg.replace('null', '');

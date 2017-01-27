@@ -7,10 +7,22 @@
 // Module variables
 //
 
-// References to external modules
-const util = Npm.require('util');
+// References to external code
+//
+// Internal node modules
+//  NOTE: the reference of these modules are done sing 'require()' instead of 'import' to
+//      to avoid annoying WebStorm warning message: 'default export is not defined in
+//      imported module'
+const util = require('util');
+// Third-party node modules
+//import config from 'config';
+// Meteor packages
+import { Meteor } from 'meteor/meteor';
 
-import { cfgSettings as deviceCfgSettings } from './Device.js';
+// References code in other (Catenis) modules
+import { Catenis } from './Catenis';
+import { cfgSettings as deviceCfgSettings } from './Device';
+import { Transaction } from './Transaction';
 
 
 // Definition of function classes
@@ -182,7 +194,7 @@ LogMessageTransaction.prototype.buildTransaction = function () {
         }
 
         // Add inputs spending the allocated UTXOs to the transaction
-        const inputs = payTxAllocResult.utxos.map(function (utxo) {
+        const inputs = payTxAllocResult.utxos.map((utxo) => {
             return {
                 txout: utxo.txout,
                 address: utxo.address,
@@ -342,8 +354,6 @@ LogMessageTransaction.checkTransaction = function (transact) {
 // LogMessageTransaction function class (public) properties
 //
 
-import { Transaction } from './Transaction.js';
-
 LogMessageTransaction.matchingPattern = Object.freeze({
     input: util.format('^(?:%s)(?:%s)(?:%s)+$',
         Transaction.ioToken.p2_dev_main_addr.token,
@@ -372,10 +382,4 @@ function getAddrAndAddrInfo(obj) {
 //
 
 // Save module function class reference
-if (typeof Catenis === 'undefined')
-    Catenis = {};
-
-if (typeof Catenis.module === 'undefined')
-    Catenis.module = {};
-
 Catenis.module.LogMessageTransaction = Object.freeze(LogMessageTransaction);

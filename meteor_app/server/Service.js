@@ -7,27 +7,38 @@
 // Module variables
 //
 
-// References to external modules
-var config = Npm.require('config');
+// References to external code
+//
+// Internal node modules
+//  NOTE: the reference of these modules are done sing 'require()' instead of 'import' to
+//      to avoid annoying WebStorm warning message: 'default export is not defined in
+//      imported module'
+//const util = require('util');
+// Third-party node modules
+import config from 'config';
+// Meteor packages
+//import { Meteor } from 'meteor/meteor';
+
+// References code in other (Catenis) modules
+import { Catenis } from './Catenis';
 
 // Config entries
-var serviceConfig = config.get('service');
-var srvMessageConfig = serviceConfig.get('message');
-var srvMsgTypTxCfgConfig = srvMessageConfig.get('typicalTxConfig');
-var srvMsgTypTxCfgSysMsgConfig = srvMsgTypTxCfgConfig.get('sysMessage');
-var srvMsgTypTxCfgSendMsgConfig = srvMsgTypTxCfgConfig.get('sendMessage');
-var srvMsgTypTxCfgLogMsgConfig = srvMsgTypTxCfgConfig.get('logMessage');
-var srvMsgTypTxCfgReadConfirm = srvMsgTypTxCfgConfig.get('readConfirmation');
-var srvAssetConfig = serviceConfig.get('asset');
-var srvAssetTxWeights = srvAssetConfig.get('txWeights');
-var srvAstTypTxCfgConfig = srvAssetConfig.get('typicalTxConfig');
-var srvAstTypTxCfgIssueLockedAsset = srvAstTypTxCfgConfig.get('issueLockedAsset');
-var srvAstTypTxCfgIssueUnlockedAsset = srvAstTypTxCfgConfig.get('issueUnlockedAsset');
-var srvAstTypTxCfgTransferAsset = srvAstTypTxCfgConfig.get('transferAsset');
-
+const serviceConfig = config.get('service');
+const srvMessageConfig = serviceConfig.get('message');
+const srvMsgTypTxCfgConfig = srvMessageConfig.get('typicalTxConfig');
+const srvMsgTypTxCfgSysMsgConfig = srvMsgTypTxCfgConfig.get('sysMessage');
+const srvMsgTypTxCfgSendMsgConfig = srvMsgTypTxCfgConfig.get('sendMessage');
+const srvMsgTypTxCfgLogMsgConfig = srvMsgTypTxCfgConfig.get('logMessage');
+const srvMsgTypTxCfgReadConfirm = srvMsgTypTxCfgConfig.get('readConfirmation');
+const srvAssetConfig = serviceConfig.get('asset');
+const srvAssetTxWeights = srvAssetConfig.get('txWeights');
+const srvAstTypTxCfgConfig = srvAssetConfig.get('typicalTxConfig');
+const srvAstTypTxCfgIssueLockedAsset = srvAstTypTxCfgConfig.get('issueLockedAsset');
+const srvAstTypTxCfgIssueUnlockedAsset = srvAstTypTxCfgConfig.get('issueUnlockedAsset');
+const srvAstTypTxCfgTransferAsset = srvAstTypTxCfgConfig.get('transferAsset');
 
 // Configuration settings
-var cfgSettings = {
+const cfgSettings = {
     paymentResolution: serviceConfig.get('paymentResolution'),
     serviceCreditAmount: serviceConfig.get('serviceCreditAmount'),
     serviceCreditMultiplyFactor: serviceConfig.get('serviceCreditMultiplyFactor'),
@@ -277,7 +288,7 @@ function typicalReadConfirmationTxPayAmount() {
     //  read confirmation outputs (by using the RBF - Replace By Fee
     //  feature), we need to compute an average fee (paid amount) per
     //  message (read confirmation output)
-    var lastFee = 0,
+    let lastFee = 0,
         lastFeeRate = 0,
         sumFeePerMsg = 0,
         numMsgs,
@@ -286,11 +297,11 @@ function typicalReadConfirmationTxPayAmount() {
 
     for (numMsgs = 1; numMsgs <= 10; numMsgs++, txInputs++, txOutputs++) {
         // Compute transaction size
-        var txSize = Catenis.module.Transaction.computeTransactionSize(txInputs, txOutputs, cfgSettings.message.typicalTxConfig.readConfirmation.nullDataPlayloadSize);
+        const txSize = Catenis.module.Transaction.computeTransactionSize(txInputs, txOutputs, cfgSettings.message.typicalTxConfig.readConfirmation.nullDataPlayloadSize);
 
         // Calculate fee
-        var feeRate = lastFeeRate + 1,
-            fee = Math.ceil((txSize * feeRate) / cfgSettings.paymentResolution) * cfgSettings.paymentResolution;
+        const feeRate = lastFeeRate + 1;
+        let fee = Math.ceil((txSize * feeRate) / cfgSettings.paymentResolution) * cfgSettings.paymentResolution;
 
         // Make sure that new fee is larger than latest fee
         if (fee < lastFee) {
@@ -333,19 +344,19 @@ function typicalTransferAssetTxSize() {
 }
 
 function typicalAverageAssetTxSize() {
-    var totalWeights = cfgSettings.asset.txWeights.issueLockedAsset + cfgSettings.asset.txWeights.issueUnlockedAsset + cfgSettings.asset.txWeights.transferAsset;
+    const totalWeights = cfgSettings.asset.txWeights.issueLockedAsset + cfgSettings.asset.txWeights.issueUnlockedAsset + cfgSettings.asset.txWeights.transferAsset;
 
     return Math.ceil((typicalIssueLockedAssetTxSize() * cfgSettings.asset.txWeights.issueLockedAsset + typicalIssueUnlockedAssetTxSize() * cfgSettings.asset.txWeights.issueUnlockedAsset + typicalTransferAssetTxSize() * cfgSettings.asset.txWeights.transferAsset) / totalWeights);
 }
 
 // NOTE: totalAmount should be a multiple of payAmount
 function distributePayment(totalAmount, payAmount, addressesPerBatch, paysPerAddress) {
-    var maxBatchAmount = payAmount * addressesPerBatch * paysPerAddress,
-        remainAmount = totalAmount,
+    const maxBatchAmount = payAmount * addressesPerBatch * paysPerAddress,
         payments = [];
+    let remainAmount = totalAmount;
 
     for (let batchNum = 1, maxBatches = Math.ceil(totalAmount / maxBatchAmount); batchNum <= maxBatches; batchNum++) {
-        let workAmount = remainAmount > maxBatchAmount ? maxBatchAmount : remainAmount,
+        const workAmount = remainAmount > maxBatchAmount ? maxBatchAmount : remainAmount,
             payIdxOffset = (batchNum - 1) * addressesPerBatch,
             payPerAddress = Math.floor(workAmount / (payAmount * addressesPerBatch)),
             extraPays = Math.ceil((workAmount % (payAmount * addressesPerBatch)) / payAmount);
@@ -429,10 +440,4 @@ Object.defineProperties(Service, {
 });
 
 // Save module function class reference
-if (typeof Catenis === 'undefined')
-    Catenis = {};
-
-if (typeof Catenis.module === 'undefined')
-    Catenis.module = {};
-
 Catenis.module.Service = Object.freeze(Service);

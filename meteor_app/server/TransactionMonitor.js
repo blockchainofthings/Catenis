@@ -20,9 +20,22 @@
 //
 
 // References to external modules
-const events = Npm.require('events');
-const config = Npm.require('config');
-const util = Npm.require('util');
+
+// References to external code
+//
+// Internal node modules
+//  NOTE: the reference of these modules are done sing 'require()' instead of 'import' to
+//      to avoid annoying WebStorm warning message: 'default export is not defined in
+//      imported module'
+const util = require('util');
+const events = require('events');
+// Third-party node modules
+import config from 'config';
+// Meteor packages
+import { Meteor } from 'meteor/meteor';
+
+// References code in other (Catenis) modules
+import { Catenis } from './Catenis';
 
 // Config entries
 const txMonitorConfig = config.get('transactionMonitor');
@@ -59,6 +72,7 @@ class TransactionMonitor extends events.EventEmitter {
 
         // Set up event handlers
         externalEventHandlers.forEach(eventHandler => {
+            //noinspection JSCheckFunctionSignatures
             this.on(eventHandler.event, eventHandler.handler);
         });
 
@@ -184,21 +198,21 @@ function pollBlockchain() {
                     }
 
                     do {
-                        let blockInfo = Catenis.bitcoinCore.getBlock(Catenis.bitcoinCore.getBlockHash(currBlockHeight));
+                        const blockInfo = Catenis.bitcoinCore.getBlock(Catenis.bitcoinCore.getBlockHash(currBlockHeight));
                         Catenis.logger.DEBUG(util.format('pollBlockchain(): processing block #%d of #%d', currBlockHeight, blockCount));
 
                         // Identify transactions within the block that have not yet been processed
-                        let alreadyProcessedTxids = [];
+                        const alreadyProcessedTxids = [];
 
                         // Process block only if it has more than one transaction, since a block
                         //  always has one coinbase transaction
                         if (blockInfo.tx.length > 1) {
                             // Iterate through block's transactions identifying Catenis transactions
                             //  in block, and the ones that are new
-                            let ctnTxsInBlock = [];
+                            const ctnTxsInBlock = [];
 
                             newCtnTxids = blockInfo.tx.reduce((result, txid) => {
-                                let txInfo;
+                                let txInfo = undefined;
 
                                 // Retrieve info of transactions that are associated with
                                 //  Catenis addresses (addresses imported onto BitcoinCore)
@@ -288,7 +302,7 @@ function pollBlockchain() {
 
                 // Purge old tx ids from list of processed tx ids
                 if (this.processedTxids.size > 0) {
-                    let dtNow = new Date(Date.now()),
+                    const dtNow = new Date(Date.now()),
                         limitTime = dtNow.setHours(dtNow.getHours - cfgSettings.mempoolExpiryHours);
 
                     for (let [txid, time] of this.processedTxids) {
@@ -329,18 +343,19 @@ function handleNewBlocks(data) {
 
         // Confirm transactions found in received blocks
         for (let blockHeight in data) {
-            let blockInfo = data[blockHeight];
+            //noinspection JSUnfilteredForInLoop
+            const blockInfo = data[blockHeight];
 
             if (blockInfo.ctnTx != undefined) {
                 // Block has Catenis transactions.
                 //  Retrieve sent transactions found in block that are not yet confirmed
-                let idSentTxDocsToUpdate = Catenis.db.collection.SentTransaction.find({
+                const idSentTxDocsToUpdate = Catenis.db.collection.SentTransaction.find({
                     txid: {$in: blockInfo.ctnTx},
                     'confirmation.confirmed': false
-                }, {fields: {_id: 1, type: 1, txid: 1, replacedByTxid: 1, info: 1}}).map(function (doc) {
+                }, {fields: {_id: 1, type: 1, txid: 1, replacedByTxid: 1, info: 1}}).map((doc) => {
                     if (doc.type === Catenis.module.Transaction.type.funding.name) {
                         // Prepare to emit event notifying of confirmation of funding transaction
-                        let notifyEvent = getTxConfNotifyEventFromFundingEvent(doc.info.funding.event.name);
+                        const notifyEvent = getTxConfNotifyEventFromFundingEvent(doc.info.funding.event.name);
 
                         if (notifyEvent != undefined) {
                             eventsToEmit.push({
@@ -359,10 +374,10 @@ function handleNewBlocks(data) {
                     }
                     else if (doc.type === Catenis.module.Transaction.type.issue_locked_asset.name || doc.type === Catenis.module.Transaction.type.issue_unlocked_asset.name) {
                         // Prepare to emit event notifying of confirmation of asset issuance transaction
-                        let notifyEvent = getTxConfNotifyEventFromTxType(doc.type);
+                        const notifyEvent = getTxConfNotifyEventFromTxType(doc.type);
 
                         if (notifyEvent != undefined) {
-                            let txInfo = doc.info[Catenis.module.Transaction.type[doc.type].dbInfoEntryName];
+                            const txInfo = doc.info[Catenis.module.Transaction.type[doc.type].dbInfoEntryName];
 
                             eventsToEmit.push({
                                 name: notifyEvent.name,
@@ -407,11 +422,11 @@ function handleNewBlocks(data) {
                 // Retrieve received transactions found in block that are not yet confirmed
                 //  Note: only transactions received that have not been sent by this Catenis node
                 //      should have been considered
-                let idRcvdTxDocsToUpdate = Catenis.db.collection.ReceivedTransaction.find({
+                const idRcvdTxDocsToUpdate = Catenis.db.collection.ReceivedTransaction.find({
                     txid: {$in: blockInfo.ctnTx},
                     sentTransaction_id: {$exists: false},
                     'confirmation.confirmed': false
-                }, {fields: {_id: 1, type: 1, txid: 1}}).map(function (doc) {
+                }, {fields: {_id: 1, type: 1, txid: 1}}).map((doc) => {
                     if (doc.type === Catenis.module.Transaction.type.sys_funding.name) {
                         // Prepare to emit event notifying of confirmation of system funding transaction
                         eventsToEmit.push({
@@ -450,12 +465,12 @@ function handleNewBlocks(data) {
             replacedByTxid: {$exists: false}
         }, {fields: {_id: 1, type:1, txid: 1, info: 1}}).forEach(doc => {
             // Retrieve transaction information
-            let txInfo = Catenis.bitcoinCore.getTransaction(doc.txid);
+            const txInfo = Catenis.bitcoinCore.getTransaction(doc.txid);
 
             if (txInfo.confirmations > 0) {
                 if (doc.type === Catenis.module.Transaction.type.funding.name) {
                     // Prepare to emit event notifying of confirmation of funding transaction
-                    let notifyEvent = getTxConfNotifyEventFromFundingEvent(doc.info.funding.event.name);
+                    const notifyEvent = getTxConfNotifyEventFromFundingEvent(doc.info.funding.event.name);
 
                     if (notifyEvent != undefined) {
                         eventsToEmit.push({
@@ -474,10 +489,10 @@ function handleNewBlocks(data) {
                 }
                 else if (doc.type === Catenis.module.Transaction.type.issue_locked_asset.name || doc.type === Catenis.module.Transaction.type.issue_unlocked_asset.name) {
                     // Prepare to emit event notifying of confirmation of asset issuance transaction
-                    let notifyEvent = getTxConfNotifyEventFromTxType(doc.type);
+                    const notifyEvent = getTxConfNotifyEventFromTxType(doc.type);
 
                     if (notifyEvent != undefined) {
-                        let txInfo = doc.info[Catenis.module.Transaction.type[doc.type].dbInfoEntryName];
+                        const txInfo = doc.info[Catenis.module.Transaction.type[doc.type].dbInfoEntryName];
 
                         eventsToEmit.push({
                             name: notifyEvent.name,
@@ -495,7 +510,7 @@ function handleNewBlocks(data) {
                     }
                 }
 
-                let block = {
+                const block = {
                     hash: txInfo.blockhash,
                     time: txInfo.blocktime
                 };
@@ -532,7 +547,7 @@ function handleNewBlocks(data) {
             receivedDate: {$lt: limitDate}
         }, {fields: {_id: 1, type:1, txid: 1}}).forEach(doc => {
             // Retrieve transaction information
-            let txInfo = Catenis.bitcoinCore.getTransaction(doc.txid);
+            const txInfo = Catenis.bitcoinCore.getTransaction(doc.txid);
 
             if (txInfo.confirmations > 0) {
                 if (doc.type === Catenis.module.Transaction.type.sys_funding.name) {
@@ -545,7 +560,7 @@ function handleNewBlocks(data) {
                     });
                 }
 
-                let block = {
+                const block = {
                     hash: txInfo.blockhash,
                     time: txInfo.blocktime
                 };
@@ -601,10 +616,10 @@ function handleNewTransactions(data) {
             type: {$in: [Catenis.module.Transaction.type.send_message.name, Catenis.module.Transaction.type.read_confirmation.name, Catenis.module.Transaction.type.transfer_asset.name]}
         }, {fields: {_id: 1, type: 1, txid: 1, info:1}}).forEach(doc => {
             // Prepare to emit event notifying of new transaction received
-            let notifyEvent = getTxRcvdNotifyEventFromTxType(doc.type);
+            const notifyEvent = getTxRcvdNotifyEventFromTxType(doc.type);
 
             if (notifyEvent != undefined) {
-                let eventData = {
+                const eventData = {
                     txid: doc.txid
                 };
 
@@ -633,7 +648,7 @@ function handleNewTransactions(data) {
             }
 
             // Fix tx info to be saved to local database
-            let docInfo = doc.info;
+            const docInfo = doc.info;
 
             if (doc.type === Catenis.module.Transaction.type.send_message.name) {
                 // Add field that indicates whether read confirmation output has been spent
@@ -657,15 +672,18 @@ function handleNewTransactions(data) {
 
         // For all other transactions (not the ones sent by this Catenis node)...
         for (let txid in data) {
+            //noinspection JSUnfilteredForInLoop
             if (!txidRcvdTxDocToCreate.has(txid)) {
                 // Parse transaction's outputs and try to identify the type
                 //  of transaction
-                let voutInfo = parseTxVouts(data[txid].details);
+                //noinspection JSUnfilteredForInLoop
+                const voutInfo = parseTxVouts(data[txid].details);
 
                 if (isSysFundingTxVouts(voutInfo)) {
                     // Transaction used to fund the system has been received
 
                     // Prepare to emit event notifying of new transaction received
+                    //noinspection JSUnfilteredForInLoop
                     eventsToEmit.push({
                         name: TransactionMonitor.notifyEvent.sys_funding_tx_rcvd.name,
                         data: {
@@ -674,6 +692,7 @@ function handleNewTransactions(data) {
                     });
 
                     // Prepared to save received tx to the local database
+                    //noinspection JSUnfilteredForInLoop
                     txidRcvdTxDocToCreate.set(txid, {
                         type: Catenis.module.Transaction.type.sys_funding.name,
                         txid: txid,
@@ -784,7 +803,7 @@ function parseTxVouts(txDetails) {
     txDetails.forEach(detail => {
         if (!voutInfo.has(detail.vout)) {
             if ('address' in detail) {
-                let addrInfo = Catenis.keyStore.getAddressInfo(detail.address, true);
+                const addrInfo = Catenis.keyStore.getAddressInfo(detail.address, true);
 
                 if (addrInfo != null) {
                     voutInfo.set(detail.vout, {
@@ -839,10 +858,4 @@ function isSendMessageTxVouts(voutInfo) {
 //
 
 // Save module class reference
-if (typeof Catenis === 'undefined')
-    Catenis = {};
-
-if (typeof Catenis.module === 'undefined')
-    Catenis.module = {};
-
 Catenis.module.TransactionMonitor = Object.freeze(TransactionMonitor);

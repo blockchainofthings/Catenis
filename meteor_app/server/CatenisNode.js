@@ -7,12 +7,20 @@
 // Module variables
 //
 
-// References to external modules
-const util = Npm.require('util');
-const config = Npm.require('config');
+// References to external code
+//
+// Internal node modules
+//  NOTE: the reference of these modules are done sing 'require()' instead of 'import' to
+//      to avoid annoying WebStorm warning message: 'default export is not defined in
+//      imported module'
+const util = require('util');
+// Meteor packages
+import { Meteor } from 'meteor/meteor';
 
-import { CriticalSection } from './CriticalSection.js';
-import { ServiceCreditsCounter } from './ServiceCreditsCounter.js';
+// References code in other (Catenis) modules
+import { Catenis } from './Catenis';
+import { CriticalSection } from './CriticalSection';
+import { ServiceCreditsCounter } from './ServiceCreditsCounter';
 
 // Critical section object to avoid concurrent access to database at the
 //  module level (when creating new Catenis nodes basically)
@@ -158,7 +166,7 @@ CatenisNode.prototype.checkPayTxExpenseFundingBalance = function () {
     if (checkResult.currBalance < checkResult.expectedBalance) {
         // Refund system pay tx expense addresses
         // Allocate system pay tx expense addresses...
-        let distribFund = Catenis.module.Service.distributePayTxExpenseFund(checkResult.expectedBalance - checkResult.currBalance);
+        const distribFund = Catenis.module.Service.distributePayTxExpenseFund(checkResult.expectedBalance - checkResult.currBalance);
 
         // ...and try to fund them
         this.fundPayTxExpenseAddresses(distribFund.amountPerAddress);
@@ -423,7 +431,7 @@ CatenisNode.initialize = function () {
 
     // Instantiate all gateway Catenis nodes so their associated addresses are
     //  loaded onto local key storage
-    Catenis.db.collection.CatenisNode.find({type: CatenisNode.nodeType.gateway.name}).forEach(function (doc) {
+    Catenis.db.collection.CatenisNode.find({type: CatenisNode.nodeType.gateway.name}).forEach((doc) => {
         // Instantiate CatenisNode object making sure that associated clients are also initialized
         new CatenisNode(doc, true);
     });
@@ -456,7 +464,7 @@ CatenisNode.createCatenisNode = function (props) {
         while (!Catenis.keyStore.initCatenisNodeHDNodes(++ctnNodeIndex));
 
         // Prepare to create Catenis node doc/rec
-        let ctnNodeProps = typeof props === 'object' ? props : (typeof props === 'string' ? {name: props} : {});
+        const ctnNodeProps = typeof props === 'object' ? props : (typeof props === 'string' ? {name: props} : {});
 
         if (ctnNodeProps.name == undefined) {
             // If no name defined, use default naming for Catenis (gateway) node
@@ -551,7 +559,7 @@ CatenisNode.status = Object.freeze({
 // Create new client ID dependent on Catenis node index and client index
 function newClientId(ctnNodeIndex, clientIndex) {
     let id = 'c' + Random.createWithSeeds(Array.from(Catenis.application.seed.toString() + ':ctnNodeIndex:' + ctnNodeIndex + ',clientIndex:' + clientIndex)).id(19);
-    let doc = undefined;
+    let doc;
 
     if ((doc = Catenis.db.collection.Client.findOne({clientId: id}, {fields:{_id: 1, index: 1}}))) {
         // New client ID is already in use. Log warning condition and reset ID
@@ -567,10 +575,4 @@ function newClientId(ctnNodeIndex, clientIndex) {
 //
 
 // Save module function class reference
-if (typeof Catenis === 'undefined')
-    Catenis = {};
-
-if (typeof Catenis.module === 'undefined')
-    Catenis.module = {};
-
 Catenis.module.CatenisNode = Object.freeze(CatenisNode);

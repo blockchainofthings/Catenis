@@ -8,16 +8,29 @@
 //
 
 // References to external modules
-var config = Npm.require('config');
-var bitcoinLib = Npm.require('bitcoinjs-lib');
-var BigNumber = Npm.require('bignumber.js');
-var util = Npm.require('util');
+
+// References to external code
+//
+// Internal node modules
+//  NOTE: the reference of these modules are done sing 'require()' instead of 'import' to
+//      to avoid annoying WebStorm warning message: 'default export is not defined in
+//      imported module'
+const util = require('util');
+// Third-party node modules
+import config from 'config';
+import bitcoinLib from 'bitcoinjs-lib';
+import BigNumber from 'bignumber.js';
+// Meteor packages
+import { Meteor } from 'meteor/meteor';
+
+// References code in other (Catenis) modules
+import { Catenis } from './Catenis';
 
 // Config entries
-var configTransact = config.get('transaction');
+const configTransact = config.get('transaction');
 
 // Configuration settings
-var cfgSettings = {
+const cfgSettings = {
     txInputSize: configTransact.get('txInputSize'),
     txOutputSize: configTransact.get('txOutputSize')
 };
@@ -104,7 +117,7 @@ Transaction.prototype.addInputs = function (inputs, pos) {
     }
     else {
         // A specific position has been given
-        inputs.forEach(function (input, idx) {
+        inputs.forEach((input, idx) => {
             if (this.inputs[pos + idx] != undefined) {
                 // The postion is not yet taken. Just add new
                 //  input to that positon
@@ -116,14 +129,14 @@ Transaction.prototype.addInputs = function (inputs, pos) {
                 //  new input to that postion
                 this.inputs.splice(pos + idx, 0, input);
             }
-        }, this);
+        });
     }
 
     invalidateTx.call(this);
 };
 
 Transaction.prototype.addInput = function (txout, address, addrInfo, pos) {
-    var input = {
+    const input = {
         txout: txout,
         address: address
     };
@@ -144,7 +157,7 @@ Transaction.prototype.getInputAt = function (pos) {
 };
 
 Transaction.prototype.removeInputAt = function (pos) {
-    var input;
+    let input = undefined;
 
     if (this.inputs[pos] != undefined) {
         input = this.inputs.splice(pos, 1)[0];
@@ -166,7 +179,7 @@ Transaction.prototype.addP2PKHOutputs = function (payInfos, pos) {
         pos = 0;
     }
 
-    var outputs = payInfos.map(function (payInfo) {
+    const outputs = payInfos.map((payInfo) => {
         return {
             type: Transaction.outputType.P2PKH,
             payInfo: payInfo
@@ -188,7 +201,7 @@ Transaction.prototype.addNullDataOutput = function (data, pos) {
         data = new Buffer(data);
     }
 
-    var result = false;
+    let result = false;
 
     if (!this.hasNullDataOutput) {
         addOutputs.call(this, {
@@ -212,7 +225,7 @@ Transaction.prototype.getOutputAt = function (pos) {
 };
 
 Transaction.prototype.removeOutputAt = function (pos) {
-    var output;
+    let output = undefined;
 
     if (this.outputs[pos] != undefined) {
         output = this.outputs.splice(pos, 1)[0];
@@ -224,17 +237,17 @@ Transaction.prototype.removeOutputAt = function (pos) {
     }
 
     if (output != undefined) {
-        invalidateTx.call(this);;
+        invalidateTx.call(this);
     }
 
     return output;
 };
 
 Transaction.prototype.getNullDataOutputPosition = function () {
-    var pos;
+    let pos = defined;
 
     if (this.hasNullDataOutput) {
-        pos = this.outputs.findIndex(function (output) {
+        pos = this.outputs.findIndex((output) => {
             return output.type == Transaction.outputType.nullData;
         });
 
@@ -250,10 +263,10 @@ Transaction.prototype.getNullDataOutputPosition = function () {
 };
 
 Transaction.prototype.getNullDataOutput = function () {
-    var output;
+    let output = undefined;
 
     if (this.hasNullDataOutput) {
-        output = this.outputs.find(function (output) {
+        output = this.outputs.find((output) => {
             return output.type === Transaction.outputType.nullData;
         });
 
@@ -268,9 +281,9 @@ Transaction.prototype.getNullDataOutput = function () {
 };
 
 Transaction.prototype.listOutputAddresses = function () {
-    var addrList = [];
+    const addrList = [];
 
-    this.outputs.forEach(function (output) {
+    this.outputs.forEach((output) => {
         if (output.type == Transaction.outputType.P2PKH) {
             addrList.push(output.payInfo.address);
         }
@@ -280,31 +293,31 @@ Transaction.prototype.listOutputAddresses = function () {
 };
 
 Transaction.prototype.totalInputsAmount = function () {
-    return this.inputs.reduce(function (sum, input) {
+    return this.inputs.reduce((sum, input) => {
         return sum + input.txout.amount;
     }, 0);
 };
 
 Transaction.prototype.totalOutputsAmount = function () {
-    return this.outputs.reduce(function (sum, output) {
+    return this.outputs.reduce((sum, output) => {
         return sum + (output.type == Transaction.outputType.P2PKH ? output.payInfo.amount : 0);
     }, 0);
 };
 
 Transaction.prototype.countInputs = function () {
-    return this.inputs.reduce(function (count) {
+    return this.inputs.reduce((count) => {
         return count + 1;
     }, 0);
 };
 
 Transaction.prototype.countOutputs = function () {
-    return this.outputs.reduce(function (count) {
+    return this.outputs.reduce((count) => {
         return count + 1;
     }, 0);
 };
 
 Transaction.prototype.countP2PKHOutputs = function () {
-    return this.outputs.reduce(function (count, output) {
+    return this.outputs.reduce((count, output) => {
         return output.type == Transaction.outputType.P2PKH ? count + 1 : count;
     }, 0);
 };
@@ -317,14 +330,14 @@ Transaction.prototype.estimateSize = function () {
 Transaction.prototype.getTransaction = function () {
     if (this.rawTransaction == undefined) {
         // Build transaction adding all inputs and outputs in sequence
-        var txBuilder = new bitcoinLib.TransactionBuilder(Catenis.application.cryptoNetwork),
+        const txBuilder = new bitcoinLib.TransactionBuilder(Catenis.application.cryptoNetwork),
             vins = [];
 
-        this.inputs.forEach(function (input) {
+        this.inputs.forEach((input) => {
             vins.push(txBuilder.addInput(input.txout.txid, input.txout.vout));
         });
 
-        this.outputs.forEach(function (output) {
+        this.outputs.forEach((output) => {
             if (output.type == Transaction.outputType.P2PKH) {
                 txBuilder.addOutput(output.payInfo.address, output.payInfo.amount);
             }
@@ -334,9 +347,9 @@ Transaction.prototype.getTransaction = function () {
         });
 
         // Now, signs each input
-        var vinIdx = 0;
+        let vinIdx = 0;
 
-        this.inputs.forEach(function (input) {
+        this.inputs.forEach((input) => {
             if (input.addrInfo != null) {
                 txBuilder.sign(vins[vinIdx++], input.addrInfo.cryptoKeys.keyPair);
             }
@@ -413,19 +426,21 @@ Transaction.prototype.saveSentTransaction = function (type, info) {
         throw Error('Invalid type argument');
     }
 
+    let docId = undefined;
+
     if (this.txid != undefined && !this.txSaved) {
         // Prepare to save transaction information
-        let inputs = this.inputs.map(function (input) {
+        const inputs = this.inputs.map((input) => {
             return {
                 txid: input.txout.txid,
                 vout: input.txout.vout
             };
         });
 
-        let txInfo = {};
+        const txInfo = {};
         txInfo[type.dbInfoEntryName] = info;
 
-        var docId = Catenis.db.collection.SentTransaction.insert({
+        docId = Catenis.db.collection.SentTransaction.insert({
             type: type.name,
             txid: this.txid,
             inputs: inputs,
@@ -502,7 +517,7 @@ function addOutputs(outputs, pos) {
     }
     else {
         // A specific position has been given
-        outputs.forEach(function (output, idx) {
+        outputs.forEach((output, idx) => {
             if (this.outputs[pos + idx] != undefined) {
                 // The postion is not yet taken. Just add new
                 //  output to that positon
@@ -514,7 +529,7 @@ function addOutputs(outputs, pos) {
                 //  new output to that postion
                 this.outputs.splice(pos + idx, 0, output);
             }
-        }, this);
+        });
     }
 
     invalidateTx.call(this);
@@ -522,8 +537,8 @@ function addOutputs(outputs, pos) {
 
 function initInputTokenSequence() {
     this.inTokenSequence = this.inputs.reduce((seq, input) => {
-        var addrType = ('addrInfo' in input) ? input.addrInfo.type : null;
-        var ioToken = getIOTokenFromAddrType(addrType);
+        const addrType = ('addrInfo' in input) ? input.addrInfo.type : null;
+        const ioToken = getIOTokenFromAddrType(addrType);
 
         if (ioToken != undefined) {
             seq += ioToken;
@@ -540,7 +555,7 @@ function initInputTokenSequence() {
 
 function initOutputTokenSequence() {
     this.outTokenSequence = this.outputs.reduce((seq, output) => {
-        var addrType = null;
+        let addrType = null;
 
         if (output.type === Transaction.outputType.nullData) {
             addrType = undefined;
@@ -549,7 +564,7 @@ function initOutputTokenSequence() {
             addrType = ('addrInfo' in output.payInfo) ? output.payInfo.addrInfo.type : null;
         }
 
-        var ioToken = getIOTokenFromAddrType(addrType);
+        const ioToken = getIOTokenFromAddrType(addrType);
 
         if (ioToken != undefined) {
             seq += ioToken;
@@ -585,19 +600,19 @@ Transaction.fromTxid = function (txid) {
 Transaction.fromHex = function (hexTx) {
     // Try to decode transaction
     try {
-        var decodedTx = Catenis.bitcoinCore.decodeRawTransaction(hexTx, false);
+        const decodedTx = Catenis.bitcoinCore.decodeRawTransaction(hexTx, false);
 
         if (decodedTx != undefined) {
-            var tx = new Transaction();
+            const tx = new Transaction();
 
             // Save basic transaction info
             tx.rawTransaction = hexTx;
             tx.txid = decodedTx.txid;
 
             // Get inputs
-            var txidTxouts = new Map();
+            const txidTxouts = new Map();
 
-            decodedTx.vin.forEach(function (input, idx) {
+            decodedTx.vin.forEach((input, idx) => {
                 tx.inputs.push({
                     txout: {
                         txid: input.txid,
@@ -626,11 +641,11 @@ Transaction.fromHex = function (hexTx) {
                 try {
                     // Retrieve information about transaction containing outputs
                     //  spent by this transaction's inputs
-                    let decodedTxout = Catenis.bitcoinCore.getRawTransaction(txoutid, true, false);
+                    const decodedTxout = Catenis.bitcoinCore.getRawTransaction(txoutid, true, false);
 
-                    txidTxouts.get(txoutid).forEach(function (txout) {
-                        let input = tx.inputs[txout.vin];
-                        let output = decodedTxout.vout[txout.vout];
+                    txidTxouts.get(txoutid).forEach((txout) => {
+                        const input = tx.inputs[txout.vin];
+                        const output = decodedTxout.vout[txout.vout];
 
                         // Save amount of output spent by input
                         input.txout.amount = new BigNumber(output.value).times(100000000).toNumber();
@@ -644,7 +659,7 @@ Transaction.fromHex = function (hexTx) {
                             if (output.scriptPubKey.type === 'pubkeyhash') {
                                 // Try to get information about address associated with
                                 //  spent output
-                                let addrInfo = Catenis.keyStore.getAddressInfo(output.scriptPubKey.addresses[0], true);
+                                const addrInfo = Catenis.keyStore.getAddressInfo(output.scriptPubKey.addresses[0], true);
 
                                 if (addrInfo != null) {
                                     input.addrInfo = addrInfo;
@@ -660,9 +675,9 @@ Transaction.fromHex = function (hexTx) {
             }
 
             // Get outputs
-            decodedTx.vout.forEach(function(output) {
+            decodedTx.vout.forEach((output) => {
                 // Identity type of output
-                let txOutput = {};
+                const txOutput = {};
 
                 if (output.scriptPubKey.type === 'pubkeyhash') {
                     txOutput.type = Transaction.outputType.P2PKH;
@@ -672,7 +687,7 @@ Transaction.fromHex = function (hexTx) {
                     };
 
                     // Try to get information about address associated with output
-                    let addrInfo = Catenis.keyStore.getAddressInfo(txOutput.payInfo.address, true);
+                    const addrInfo = Catenis.keyStore.getAddressInfo(txOutput.payInfo.address, true);
 
                     if (addrInfo != null) {
                         txOutput.payInfo.addrInfo = addrInfo;
@@ -686,7 +701,7 @@ Transaction.fromHex = function (hexTx) {
                     };
 
                     // Try to get information about address associated with output
-                    let addrInfo = Catenis.keyStore.getAddressInfo(txOutput.payInfo.address, true);
+                    const addrInfo = Catenis.keyStore.getAddressInfo(txOutput.payInfo.address, true);
 
                     if (addrInfo != null) {
                         txOutput.payInfo.addrInfo = addrInfo;
@@ -852,10 +867,10 @@ Transaction.ioToken = Object.freeze({
 //
 
 function isValidSentTransactionType(type) {
-    isValid = false;
+    let isValid = false;
 
     if (typeof type === 'object' && type != null && typeof type.name === 'string') {
-        isValid = Object.keys(Transaction.type).some(function (key) {
+        isValid = Object.keys(Transaction.type).some((key) => {
             return Transaction.type[key].name !== Transaction.type.sys_funding.name && Transaction.type[key].name === type.name;
         });
     }
@@ -867,7 +882,7 @@ function isValidSentTransactionType(type) {
 //                     //  null: pay to unknown address
 //                     //  address type from Catenis.module.KeyStore.extKeyType.name: pay to that type of address
 function getIOTokenFromAddrType(addrType) {
-    var ioTokenName = addrType === undefined ? Transaction.ioToken.null_data.name :
+    const ioTokenName = addrType === undefined ? Transaction.ioToken.null_data.name :
             (addrType === null ? Transaction.ioToken.p2_unknown_addr.name : 'p2_' + addrType);
 
     return Transaction.ioToken[ioTokenName].token;
@@ -877,7 +892,7 @@ function isTransactFuncClassToMatch(transactFuncClass) {
     let result = false;
 
     if (typeof transactFuncClass === 'function') {
-        let hasProp = Object.getOwnPropertyNames(transactFuncClass).some((propName) => {
+        const hasProp = Object.getOwnPropertyNames(transactFuncClass).some((propName) => {
             return propName === 'matchingPattern';
         });
 
@@ -908,10 +923,4 @@ Object.defineProperties(Transaction, {
 });
 
 // Save module function class reference
-if (typeof Catenis === 'undefined')
-    Catenis = {};
-
-if (typeof Catenis.module === 'undefined')
-    Catenis.module = {};
-
 Catenis.module.Transaction = Object.freeze(Transaction);

@@ -8,9 +8,23 @@
 //
     
 // References to external modules
-var config = Npm.require('config');
-var ColoredcoinsdWrapper = Npm.require('coloredcoinsd-wraper');
-var ccAssetIdEncoder = Npm.require('cc-assetid-encoder');
+
+// References to external code
+//
+// Internal node modules
+//  NOTE: the reference of these modules are done sing 'require()' instead of 'import' to
+//      to avoid annoying WebStorm warning message: 'default export is not defined in
+//      imported module'
+const util = require('util');
+// Third-party node modules
+//import config from 'config';
+import ColoredcoinsdWrapper from 'coloredcoinsd-wraper';
+//import ccAssetIdEncoder from 'cc-assetid-encoder';
+// Meteor packages
+import { Meteor } from 'meteor/meteor';
+
+// References code in other (Catenis) modules
+import { Catenis } from './Catenis';
 
 // Config entries
 
@@ -37,7 +51,7 @@ function ColoredCoins(network) {
 //
 
 ColoredCoins.prototype.getIssueAssetTx = function (assetName, addr, amount, reissueable, fee, financeOutput, financeOutputTxid, transfers) {
-    var args = {
+    const args = {
         issueAddress: addr,
         amount: amount,
         divisibility: 0,
@@ -111,7 +125,7 @@ im8XqNWUxw678ZeqCjcaNuX6ZfvFuO9dD9FREg/VG/fpqptlLvYLQDth
 };
 
 ColoredCoins.prototype.getSendAssetTx = function (from, assetTransfers, fee, financeOutput, financeOutputTxid) {
-    var args = {
+    const args = {
         fee: typeof fee === 'number' ? fee : 1000,
         to: assetTransfers
     };
@@ -140,7 +154,7 @@ ColoredCoins.prototype.getSendAssetTx = function (from, assetTransfers, fee, fin
     catch (err) {
         console.log('getSendAssetTx exeception: ' + err);
         if (err.response) {
-            console.log('   response: ' + Npm.require('util').inspect(err.response, {depth: null}));
+            console.log('   response: ' + util.inspect(err.response, {depth: null}));
         }
     }
 };
@@ -161,7 +175,7 @@ ColoredCoins.initialize = function () {
 
 // DEBUG - begin
 ColoredCoins.test = function () {
-    var assetId = new Npm.require('cc-assetid-encoder')({
+    const assetId = new Npm.require('cc-assetid-encoder')({
         ccdata: [
             {
                 type: 'issuance',
@@ -218,23 +232,23 @@ ColoredCoins.test = function () {
         //var result = Catenis.coloredCoins.getIssueAssetTx('Test CTN asset #1', 'mztU1SD5Faf5EovTrB6xH7aCSdEqqoFAiS', 100, false, {value: 10000, n: 9, scriptPubKey: {asm: "OP_DUP OP_HASH160 a17cd6a7aa55b11bf8b67d2bc6f1209ef096f2f5 OP_EQUALVERIFY OP_CHECKSIG", hex: "76a914a17cd6a7aa55b11bf8b67d2bc6f1209ef096f2f588ac", reqSigs: 1, type: "pubkeyhash", "addresses": ["mvEpdsPAqkVPEacAD6SrYTGxqmujJidB37"]}}, '90049532eabb4ede69f76fe69faec396f0480ac0edb3aa83c96da64d27949441');
 
 
-        var addrInfoResult = Catenis.coloredCoins.getAddressInfo('mztU1SD5Faf5EovTrB6xH7aCSdEqqoFAiS').utxos.filter(function(utxo) {
-            return utxo.assets.length > 0 && utxo.assets.some(function(asset) {
+        const addrInfoResult = Catenis.coloredCoins.getAddressInfo('mztU1SD5Faf5EovTrB6xH7aCSdEqqoFAiS').utxos.filter((utxo) => {
+            return utxo.assets.length > 0 && utxo.assets.some((asset) => {
                     return asset.assetId == 'La6sBfG3yRFPogGmSxc4fcfNunLiE1iM3xrAa6';
                 });
         });
 
-        var addrInfoResult2 = Catenis.coloredCoins.getAddressInfo('mvEpdsPAqkVPEacAD6SrYTGxqmujJidB37').utxos.filter(function(utxo) {
-            return utxo.assets.length > 0 && utxo.assets.some(function(asset) {
+        const addrInfoResult2 = Catenis.coloredCoins.getAddressInfo('mvEpdsPAqkVPEacAD6SrYTGxqmujJidB37').utxos.filter((utxo) => {
+            return utxo.assets.length > 0 && utxo.assets.some((asset) => {
                     return asset.assetId == 'La6sBfG3yRFPogGmSxc4fcfNunLiE1iM3xrAa6';
                 });
         });
 
-        console.log('Address info result: ' + Npm.require('util').inspect(addrInfoResult, {showHidden: false, depth: null}));
+        console.log('Address info result: ' + util.inspect(addrInfoResult, {showHidden: false, depth: null}));
 
-        console.log('Address info result 2: ' + Npm.require('util').inspect(addrInfoResult2, {showHidden: false, depth: null}));
+        console.log('Address info result 2: ' + util.inspect(addrInfoResult2, {showHidden: false, depth: null}));
 
-        var result = Catenis.coloredCoins.getSendAssetTx(['0c05877567c4cfba0fa23adf4db34860ad224e05e75e37a99fc6dfb8f22daea7:0','8aa4f5b378b2ae6d8bbe47f49de818729b8e8bf7ebfc9a159d739bb430393c3a:0'], [{
+        const result = Catenis.coloredCoins.getSendAssetTx(['0c05877567c4cfba0fa23adf4db34860ad224e05e75e37a99fc6dfb8f22daea7:0','8aa4f5b378b2ae6d8bbe47f49de818729b8e8bf7ebfc9a159d739bb430393c3a:0'], [{
             address: 'mztU1SD5Faf5EovTrB6xH7aCSdEqqoFAiS',
             amount: 10,
             assetId: 'La6sBfG3yRFPogGmSxc4fcfNunLiE1iM3xrAa6'
@@ -267,7 +281,7 @@ ColoredCoins.test = function () {
             console.log('  message: ' + err.message);
         }
     }
-    console.log('Send asset tx result: ' + Npm.require('util').inspect(result, {depth: null}));
+    console.log('Send asset tx result: ' + util.inspect(result, {depth: null}));
 };
 // DEBUG - end
 
@@ -276,10 +290,4 @@ ColoredCoins.test = function () {
 //
 
 // Save module function class reference
-if (typeof Catenis === 'undefined')
-    Catenis = {};
-
-if (typeof Catenis.module === 'undefined')
-    Catenis.module = {};
-
 Catenis.module.ColoredCoins = Object.freeze(ColoredCoins);

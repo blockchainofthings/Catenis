@@ -7,7 +7,23 @@
 // Module variables
 //
 
-import { ctnHubNodeIndex } from './Application.js';
+// References to external code
+//
+// Internal node modules
+//  NOTE: the reference of these modules are done sing 'require()' instead of 'import' to
+//      to avoid annoying WebStorm warning message: 'default export is not defined in
+//      imported module'
+//const util = require('util');
+// Third-party node modules
+//import config from 'config';
+// Meteor packages
+import { Meteor } from 'meteor/meteor';
+import { Mongo } from 'meteor/mongo';
+
+// References code in other (Catenis) modules
+import { Catenis } from './Catenis';
+import { ctnHubNodeIndex } from './Application';
+
 
 // Definition of function classes
 //
@@ -17,20 +33,23 @@ function Database(collections) {
     this.collection = {};
     this.mongoCollection = {};
 
-    var initFuncs = [];
+    const initFuncs = [];
 
     for (let collName in collections) {
-        let collection = collections[collName];
+        //noinspection JSUnfilteredForInLoop
+        const collection = collections[collName];
 
         // Create the collection
+        //noinspection JSUnfilteredForInLoop
         this.collection[collName] = new Mongo.Collection(collName);
+        //noinspection JSUnfilteredForInLoop
         let thisMongoCollection = this.mongoCollection[collName] = this.collection[collName].rawCollection();
 
         // Create indices for the collection
         if ('indices' in collection) {
             let createIndex = Meteor.wrapAsync(thisMongoCollection.ensureIndex, thisMongoCollection);
 
-            collection.indices.forEach(function (index) {
+            collection.indices.forEach((index) => {
                 let args = [index.fields];
 
                 if ('opts' in index) {
@@ -48,10 +67,8 @@ function Database(collections) {
     }
 
     // Initialize the collections as needed
-    var self = this;
-    
-    initFuncs.forEach(function (initFunc) {
-        initFunc.call(self);
+    initFuncs.forEach((initFunc) => {
+        initFunc.call(this);
     });
 }
 
@@ -61,7 +78,7 @@ function Database(collections) {
 
 Database.initialize = function() {
     Catenis.logger.TRACE('DB initialization');
-    var collections = {
+    const collections = {
         Application: {
             initFunc: initApplication
         },
@@ -599,7 +616,7 @@ Database.initialize = function() {
 
 function initApplication() {
     // Make sure that Application collection has ONE and only one doc/rec
-    var docApps = this.collection.Application.find({}, {fields: {_id: 1}}).fetch();
+    const docApps = this.collection.Application.find({}, {fields: {_id: 1}}).fetch();
 
     if (docApps.length == 0) {
         // No doc/rec defined yet. Create new doc/rec with default settings
@@ -615,7 +632,7 @@ function initApplication() {
 
 function initCatenisNode() {
     // Make sure that Catenis Hub doc/rec is already created
-    var docCtnNodes = this.collection.CatenisNode.find({type: Catenis.module.CatenisNode.nodeType.hub.name}, {fields: {_id: 1, ctnNodeIndex: 1}}).fetch();
+    const docCtnNodes = this.collection.CatenisNode.find({type: Catenis.module.CatenisNode.nodeType.hub.name}, {fields: {_id: 1, ctnNodeIndex: 1}}).fetch();
 
     if (docCtnNodes.length == 0) {
         // No doc/rec defined yet. Create new doc/rec with default settings
@@ -652,10 +669,4 @@ function initCatenisNode() {
 //
 
 // Save module function class reference
-if (typeof Catenis === 'undefined')
-    Catenis = {};
-
-if (typeof Catenis.module === 'undefined')
-    Catenis.module = {};
-
 Catenis.module.DB = Object.freeze(Database);

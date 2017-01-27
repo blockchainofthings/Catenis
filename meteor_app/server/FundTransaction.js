@@ -7,8 +7,21 @@
 // Module variables
 //
 
-// References to external modules
-var util = Npm.require('util');
+// References to external code
+//
+// Internal node modules
+//  NOTE: the reference of these modules are done sing 'require()' instead of 'import' to
+//      to avoid annoying WebStorm warning message: 'default export is not defined in
+//      imported module'
+const util = require('util');
+// Third-party node modules
+//import config from 'config';
+// Meteor packages
+//import { Meteor } from 'meteor/meteor';
+
+// References code in other (Catenis) modules
+import { Catenis } from './Catenis';
+
 
 // Definition of function classes
 //
@@ -39,7 +52,7 @@ function FundTransaction(fundingEvent, entityId) {
         else {
             // Make sure that entity ID is a valid reference to the right entity
             if (fundingEvent.name === FundTransaction.fundingEvent.provision_client_srv_credit) {
-                let docClient = Catenis.db.Client.find({clientId: entityId}, {fields: {_id: 1}}).fetch();
+                const docClient = Catenis.db.Client.find({clientId: entityId}, {fields: {_id: 1}}).fetch();
 
                 if (docClient == undefined) {
                     Catenis.logger.ERROR('FundTransaction function class constructor called with invalid argument; entity ID not a valid client Id', {entityId: entityId});
@@ -47,7 +60,7 @@ function FundTransaction(fundingEvent, entityId) {
                 }
             }
             else {
-                let docDevice = Catenis.db.Client.find({deviceId: entityId}, {fields: {_id: 1}}).fetch();
+                const docDevice = Catenis.db.Client.find({deviceId: entityId}, {fields: {_id: 1}}).fetch();
 
                 if (docDevice == undefined) {
                     Catenis.logger.ERROR('FundTransaction function class constructor called with invalid argument; entity ID not a valid client Id', {entityId: entityId});
@@ -74,7 +87,7 @@ function FundTransaction(fundingEvent, entityId) {
 FundTransaction.prototype.addPayees = function (blockchainAddress, amountPerAddress) {
     // Prepare list of outputs to be added to transaction by generating
     //  new addresses and associating them with the respective amount
-    var payInfos = amountPerAddress.map(function (amount) {
+    const payInfos = amountPerAddress.map((amount) => {
         return {
             address: blockchainAddress.newAddressKeys().getAddress(),
             amount: amount
@@ -88,14 +101,14 @@ FundTransaction.prototype.addPayees = function (blockchainAddress, amountPerAddr
 };
 
 FundTransaction.prototype.addPayingSource = function () {
-    var result = false;
+    let result = false;
 
     if (!this.fundsAllocated) {
-        var fundSrc = new Catenis.module.FundSource(Catenis.ctnHubNode.listFundingAddressesInUse(), {});
+        const fundSrc = new Catenis.module.FundSource(Catenis.ctnHubNode.listFundingAddressesInUse(), {});
 
         // Try to allocate UTXOs to pay for tx expense using optimum fee rate and default
         //  payment resolution
-        var fundResult = fundSrc.allocateFundForTxExpense({
+        const fundResult = fundSrc.allocateFundForTxExpense({
             txSize: this.transact.estimateSize(),
             inputAmount: this.transact.totalInputsAmount(),
             outputAmount: this.transact.totalOutputsAmount()
@@ -108,7 +121,7 @@ FundTransaction.prototype.addPayingSource = function () {
             //  to be allocated while that code is running
 
             // Add inputs spending the allocated UTXOs to the transaction
-            var inputs = fundResult.utxos.map(function (utxo) {
+            const inputs = fundResult.utxos.map((utxo) => {
                 return {
                     txout: utxo.txout,
                     address: utxo.address,
@@ -201,10 +214,10 @@ FundTransaction.fundingEvent = Object.freeze({
 //
 
 function isValidFundingEvent(event) {
-    isValid = false;
+    let isValid = false;
 
     if (typeof event === 'object' && event != null && typeof event.name === 'string') {
-        isValid = Object.keys(FundTransaction.fundingEvent).some(function (key) {
+        isValid = Object.keys(FundTransaction.fundingEvent).some((key) => {
             return FundTransaction.fundingEvent[key].name === event.name;
         });
     }
@@ -217,10 +230,4 @@ function isValidFundingEvent(event) {
 //
 
 // Save module function class reference
-if (typeof Catenis === 'undefined')
-    Catenis = {};
-
-if (typeof Catenis.module === 'undefined')
-    Catenis.module = {};
-
 Catenis.module.FundTransaction = Object.freeze(FundTransaction);

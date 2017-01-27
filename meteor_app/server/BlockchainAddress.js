@@ -7,19 +7,29 @@
 // Module variables
 //
 
-// References to external modules
-var config = Npm.require('config');
-var util = Npm.require('util');
-var crypto = Npm.require('crypto');
+// References to external code
+//
+// Internal node modules
+//  NOTE: the reference of these modules are done sing 'require()' instead of 'import' to
+//      to avoid annoying WebStorm warning message: 'default export is not defined in
+//      imported module'
+const util = require('util');
+const crypto = require('crypto');
+// Third-party node modules
+import config from 'config';
+// Meteor packages
+import { Meteor } from 'meteor/meteor';
 
-import {CriticalSection} from './CriticalSection.js';
+// References code in other (Catenis) modules
+import { Catenis } from './Catenis';
+import { CriticalSection } from './CriticalSection';
 
 // Config entries
-var configBcAddress = config.get('blockchainAddress'),
+const configBcAddress = config.get('blockchainAddress'),
     configBcAddrValidity = configBcAddress.get('addressValidity');
 
 // Configuration settings
-var cfgSettings = {
+const cfgSettings = {
     addressValidity: {
         systemDeviceMain: configBcAddrValidity.get('systemDeviceMain'),
         systemFundingPayment: configBcAddrValidity.get('systemFundingPayment'),
@@ -38,9 +48,9 @@ var cfgSettings = {
 };
 
 // Critical section object to avoid concurrent access to database
-var dbCS = new CriticalSection();
+const dbCS = new CriticalSection();
 
-var updtIssuedAddrsIntervalHandle,
+let updtIssuedAddrsIntervalHandle,
     delInactiveObjectsIntervalHandle;
 
 
@@ -88,7 +98,7 @@ class SystemDeviceMainAddress extends BlockchainAddress {
         }
 
         // Check if an instance of this class has already been instantiated
-        var parentPath = Catenis.module.KeyStore.systemDeviceMainAddressRootPath(ctnNodeIndex);
+        const parentPath = Catenis.module.KeyStore.systemDeviceMainAddressRootPath(ctnNodeIndex);
 
         return hasInstantiatedObject(parentPath) ? getInstantiatedObject(parentPath)
             : new SystemDeviceMainAddress(ctnNodeIndex);
@@ -136,7 +146,7 @@ class SystemFundingPaymentAddress extends BlockchainAddress {
         }
 
         // Check if an instance of this class has already been instantiated
-        var parentPath = Catenis.module.KeyStore.systemFundingPaymentRootPath(ctnNodeIndex);
+        const parentPath = Catenis.module.KeyStore.systemFundingPaymentRootPath(ctnNodeIndex);
 
         return hasInstantiatedObject(parentPath) ? getInstantiatedObject(parentPath)
                 : new SystemFundingPaymentAddress(ctnNodeIndex);
@@ -184,7 +194,7 @@ class SystemFundingChangeAddress extends BlockchainAddress {
         }
 
         // Check if an instance of this class has already been instantiated
-        var parentPath = Catenis.module.KeyStore.systemFundingChangeRootPath(ctnNodeIndex);
+        const parentPath = Catenis.module.KeyStore.systemFundingChangeRootPath(ctnNodeIndex);
 
         return hasInstantiatedObject(parentPath) ? getInstantiatedObject(parentPath)
             : new SystemFundingChangeAddress(ctnNodeIndex);
@@ -232,7 +242,7 @@ class SystemPayTxExpenseAddress extends BlockchainAddress {
         }
 
         // Check if an instance of this class has already been instantiated
-        var parentPath = Catenis.module.KeyStore.systemPayTxExpenseRootPath(ctnNodeIndex);
+        const parentPath = Catenis.module.KeyStore.systemPayTxExpenseRootPath(ctnNodeIndex);
 
         return hasInstantiatedObject(parentPath) ? getInstantiatedObject(parentPath)
             : new SystemPayTxExpenseAddress(ctnNodeIndex);
@@ -283,7 +293,7 @@ class ClientMessageCreditAddress extends BlockchainAddress {
         }
 
         // Check if an instance of this class has already been instantiated
-        var parentPath = Catenis.module.KeyStore.clientMessageCreditAddressRootPath(ctnNodeIndex, clientIndex);
+        const parentPath = Catenis.module.KeyStore.clientMessageCreditAddressRootPath(ctnNodeIndex, clientIndex);
 
         return hasInstantiatedObject(parentPath) ? getInstantiatedObject(parentPath)
             : new ClientMessageCreditAddress(ctnNodeIndex, clientIndex);
@@ -334,7 +344,7 @@ class ClientAssetCreditAddress extends BlockchainAddress {
         }
 
         // Check if an instance of this class has already been instantiated
-        var parentPath = Catenis.module.KeyStore.clientAssetCreditAddressRootPath(ctnNodeIndex, clientIndex);
+        const parentPath = Catenis.module.KeyStore.clientAssetCreditAddressRootPath(ctnNodeIndex, clientIndex);
 
         return hasInstantiatedObject(parentPath) ? getInstantiatedObject(parentPath)
             : new ClientAssetCreditAddress(ctnNodeIndex, clientIndex);
@@ -388,7 +398,7 @@ class DeviceReadConfirmAddress extends BlockchainAddress {
         }
 
         // Check if an instance of this class has already been instantiated
-        var parentPath = Catenis.module.KeyStore.deviceReadConfirmAddressRootPath(ctnNodeIndex, clientIndex, deviceIndex);
+        const parentPath = Catenis.module.KeyStore.deviceReadConfirmAddressRootPath(ctnNodeIndex, clientIndex, deviceIndex);
 
         return hasInstantiatedObject(parentPath) ? getInstantiatedObject(parentPath)
             : new DeviceReadConfirmAddress(ctnNodeIndex, clientIndex, deviceIndex);
@@ -442,7 +452,7 @@ class DeviceMainAddress extends BlockchainAddress {
         }
 
         // Check if an instance of this class has already been instantiated
-        var parentPath = Catenis.module.KeyStore.deviceMainAddressRootPath(ctnNodeIndex, clientIndex, deviceIndex);
+        const parentPath = Catenis.module.KeyStore.deviceMainAddressRootPath(ctnNodeIndex, clientIndex, deviceIndex);
 
         return hasInstantiatedObject(parentPath) ? getInstantiatedObject(parentPath)
             : new DeviceMainAddress(ctnNodeIndex, clientIndex, deviceIndex);
@@ -496,7 +506,7 @@ class DeviceAssetAddress extends BlockchainAddress {
         }
 
         // Check if an instance of this class has already been instantiated
-        var parentPath = Catenis.module.KeyStore.deviceAssetAddressRootPath(ctnNodeIndex, clientIndex, deviceIndex);
+        const parentPath = Catenis.module.KeyStore.deviceAssetAddressRootPath(ctnNodeIndex, clientIndex, deviceIndex);
 
         return hasInstantiatedObject(parentPath) ? getInstantiatedObject(parentPath)
             : new DeviceAssetAddress(ctnNodeIndex, clientIndex, deviceIndex);
@@ -551,7 +561,7 @@ class DeviceAssetIssuanceAddress extends BlockchainAddress {
         }
 
         // Check if an instance of this class has already been instantiated
-        var parentPath = Catenis.module.KeyStore.deviceAssetIssuanceAddressRootPath(ctnNodeIndex, clientIndex, deviceIndex);
+        const parentPath = Catenis.module.KeyStore.deviceAssetIssuanceAddressRootPath(ctnNodeIndex, clientIndex, deviceIndex);
 
         return hasInstantiatedObject(parentPath) ? getInstantiatedObject(parentPath)
             : new DeviceAssetIssuanceAddress(ctnNodeIndex, clientIndex, deviceIndex);
@@ -591,12 +601,12 @@ function BlockchainAddress() {
 //
 
 BlockchainAddress.prototype.newAddressKeys = function () {
-    var addrKeys = null;
+    let addrKeys = null;
 
     // Execute code in critical section to avoid DB concurrency
     dbCS.execute(() => {
         // Try to get next address
-        var nonexistIndices = [];
+        const nonexistIndices = [];
 
         do {
             if ((addrKeys = this._getAddressKeys(++this.lastIssuedAddrIndex)) == null) {
@@ -609,22 +619,22 @@ BlockchainAddress.prototype.newAddressKeys = function () {
         Catenis.bitcoinCore.importPublicKey(addrKeys.exportPublicKey());
 
         // Save issued address
-        var issuedDate = new Date();
+        const issuedDate = new Date();
 
         if (nonexistIndices.length > 0) {
-            nonexistIndices.forEach(function (nonexistIndex) {
+            nonexistIndices.forEach((nonexistIndex) => {
                 Catenis.db.collection.IssuedBlockchainAddress.insert({
                     type: this.type,
                     parentPath: this.parentPath,
-                    path: util.format('%s/%d', this.parentPath, addrIndex),
+                    path: util.format('%s/%d', this.parentPath, nonexistIndex),
                     addrIndex: nonexistIndex,
                     issuedDate: issuedDate,
                     status: 'nonexistent'
                 });
-            }, this);
+            });
         }
 
-        var expirationDate = new Date(issuedDate.getTime());
+        const expirationDate = new Date(issuedDate.getTime());
         expirationDate.setSeconds(expirationDate.getSeconds() + this.addressValidity);
 
         Catenis.db.collection.IssuedBlockchainAddress.insert({
@@ -661,7 +671,7 @@ BlockchainAddress.prototype.listAddressesInUse = function () {
 //
 
 function setBoundingIndices() {
-    var docIssuedAddr = Catenis.db.collection.IssuedBlockchainAddress.findOne({parentPath: this.parentPath}, {fields: {addrIndex: 1}, sort: {addrIndex: -1}});
+    let docIssuedAddr = Catenis.db.collection.IssuedBlockchainAddress.findOne({parentPath: this.parentPath}, {fields: {addrIndex: 1}, sort: {addrIndex: -1}});
 
     if (docIssuedAddr != undefined) {
         this.lastIssuedAddrIndex = docIssuedAddr.addrIndex;
@@ -675,11 +685,11 @@ function setBoundingIndices() {
 
             // Add in-use addresses to KeyStore
             Catenis.db.collection.IssuedBlockchainAddress.find({parentPath: this.parentPath, $and: [{addrIndex: {$gte: this.firstInUseAddrIndex}}, {addrIndex: {$lte: this.lastInUseAddrIndex}}], status: {$ne: 'nonexistent'}},
-                    {fields: {addrIndex: 1, status: 1}, sort: {adrrIndex: 1}}).forEach(function (doc) {
+                    {fields: {addrIndex: 1, status: 1}, sort: {adrrIndex: 1}}).forEach((doc) => {
                 if (doc.status !== 'obsolete') {
                     this._getAddressKeys(doc.addrIndex);
                 }
-            }, this);
+            });
         }
         else {
             this.lastInUseAddrIndex = this.firstInUseAddrIndex = -1;
@@ -691,7 +701,7 @@ function setBoundingIndices() {
 }
 
 function updateInUseAddressIndices() {
-    var docIssuedAddr = Catenis.db.collection.IssuedBlockchainAddress.findOne({parentPath: this.parentPath, status: {$in: ['new', 'expired']}}, {fields: {addrIndex: 1}, sort: {addrIndex: -1}});
+    const docIssuedAddr = Catenis.db.collection.IssuedBlockchainAddress.findOne({parentPath: this.parentPath, status: {$in: ['new', 'expired']}}, {fields: {addrIndex: 1}, sort: {addrIndex: -1}});
 
     if (docIssuedAddr != undefined) {
         this.lastInUseAddrIndex = docIssuedAddr.addrIndex;
@@ -711,7 +721,7 @@ function updateInUseAddressIndices() {
 //  balanceChecked: [boolean}  // If true, address balance has already been checked and it is guaranteed that
 //      it has no balance. If false, no check has been performed yet
 function revertAddress(address, addrIndex, balanceChecked = false) {
-    var result = false;
+    let result = false;
 
     // Make sure that this is the last issued address, it
     //  is not obsolete and not currently in use
@@ -719,7 +729,7 @@ function revertAddress(address, addrIndex, balanceChecked = false) {
         // Execute code in critical section to avoid DB concurrency
         dbCS.execute(() => {
             // Exclude address from database
-            var count = Catenis.db.collection.IssuedBlockchainAddress.remove({
+            const count = Catenis.db.collection.IssuedBlockchainAddress.remove({
                 parentPath: this.parentPath,
                 addrIndex: addrIndex
             });
@@ -728,17 +738,17 @@ function revertAddress(address, addrIndex, balanceChecked = false) {
                 // Adjust indices
                 if (addrIndex > 0) {
                     // Retrieve any nonexistent address indices
-                    var docNonExistAddrs = Catenis.db.collection.IssuedBlockchainAddress.find({
+                    const docNonExistAddrs = Catenis.db.collection.IssuedBlockchainAddress.find({
                         parentPath: this.parentPath,
                         status: 'nonexistent'
                     }, {fields: {addrIndex: 1}, sort: {addrIndex: -1}}).fetch();
 
                     // Determine adjusted index
-                    var adjustIndex = addrIndex - 1;
+                    let adjustIndex = addrIndex - 1;
 
                     if (docNonExistAddrs.length > 0) {
                         // Make sure that adjusted index is not nonexistent
-                        docNonExistAddrs.some(function (docNonExistAddr) {
+                        docNonExistAddrs.some((docNonExistAddr) => {
                             if (docNonExistAddr.addrIndex == adjustIndex) {
                                 adjustIndex--;
 
@@ -836,7 +846,7 @@ BlockchainAddress.initialize = function () {
 // }
 BlockchainAddress.getInstance = function (opts) {
     // Call getInstance method of corresponding derived class
-    var drvClass,
+    let drvClass,
         classInstance = null;
 
     if ((drvClass = classByType[opts.type]) != null) {
@@ -849,11 +859,11 @@ BlockchainAddress.getInstance = function (opts) {
 // Check whether address has balance (there is any UTXO associated with it)
 BlockchainAddress.isAddressWithBalance = function (addr) {
     // Check if any UTXOs associated with address is locked
-    var hasLockedTxOuts = Catenis.bitcoinCore.listLockUnspent().some(function (lockTxOut) {
-        var txOutInfo = Catenis.bitcoinCore.getTxOut(lockTxOut.txid, lockTxOut.vout);
+    const hasLockedTxOuts = Catenis.bitcoinCore.listLockUnspent().some((lockTxOut) => {
+        const txOutInfo = Catenis.bitcoinCore.getTxOut(lockTxOut.txid, lockTxOut.vout);
 
         return txOutInfo != null && 'scriptPubKey' in txOutInfo && 'addresses' in txOutInfo.scriptPubKey
-            && txOutInfo.scriptPubKey.addresses.some(function (txOutAddr) {
+            && txOutInfo.scriptPubKey.addresses.some((txOutAddr) => {
                 return txOutAddr === addr;
             });
     });
@@ -863,7 +873,7 @@ BlockchainAddress.isAddressWithBalance = function (addr) {
     }
 
     // Now, check if there are any UTXOs associated with address
-    var unspentTxOuts = Catenis.bitcoinCore.listUnspent(0, addr);
+    const unspentTxOuts = Catenis.bitcoinCore.listUnspent(0, addr);
 
     return unspentTxOuts.length > 0;
 };
@@ -877,22 +887,22 @@ BlockchainAddress.isAddressWithBalance = function (addr) {
 //
 BlockchainAddress.checkAddressesWithBalance = function (addrList) {
     // Identify addresses that have locked UTXOs
-    var lockedAddresses = new Set();
+    const lockedAddresses = new Set();
 
-    Catenis.bitcoinCore.listLockUnspent().forEach(function (lockTxOut) {
+    Catenis.bitcoinCore.listLockUnspent().forEach((lockTxOut) => {
         let txOutInfo = Catenis.bitcoinCore.getTxOut(lockTxOut.txid, lockTxOut.vout);
 
         if (txOutInfo != null && 'scriptPubKey' in txOutInfo && 'addresses' in txOutInfo.scriptPubKey) {
-            txOutInfo.scriptPubKey.addresses.forEach(function (txOutAddr) {
+            txOutInfo.scriptPubKey.addresses.forEach((txOutAddr) => {
                 lockedAddresses.add(txOutAddr);
             });
         }
     });
 
-    var result = {},
+    const result = {},
         addrsToListUnspent = [];
 
-    addrList.forEach(function (addr) {
+    addrList.forEach((addr) => {
         if (lockedAddresses.has(addr)) {
             // If address has any locked UTXOs, indicate that it is in use
             result[addr] = true;
@@ -907,13 +917,13 @@ BlockchainAddress.checkAddressesWithBalance = function (addrList) {
         // Identify addresses that have UTXOs associated with them
         let addressesWithUtxo = new Set();
 
-        Catenis.bitcoinCore.listUnspent(0, addrsToListUnspent).forEach(function (utxo) {
+        Catenis.bitcoinCore.listUnspent(0, addrsToListUnspent).forEach((utxo) => {
             if (!addressesWithUtxo.has(utxo.address)) {
                 addressesWithUtxo.add(utxo.address);
             }
         });
 
-        addrsToListUnspent.forEach(function (addr) {
+        addrsToListUnspent.forEach((addr) => {
             result[addr] = addressesWithUtxo.has(addr);
         });
     }
@@ -931,12 +941,12 @@ BlockchainAddress.checkAddressesWithBalance = function (addrList) {
 //  }
 BlockchainAddress.getAddressOfIssuedBlockchainAddress = function (docIssuedAddr) {
     // Try to retrieve address crypto keys from local key storage
-    var addrKeys = Catenis.keyStore.getCryptoKeysByPath(docIssuedAddr.path);
+    let addrKeys = Catenis.keyStore.getCryptoKeysByPath(docIssuedAddr.path);
 
     if (addrKeys == null) {
         // Crypto keys of issued address is not yet in local storage.
         //  Bring it up
-        var classInstance = BlockchainAddress.getInstance({type: docIssuedAddr.type, pathParts: Catenis.module.KeyStore.getPathParts(docIssuedAddr)});
+        const classInstance = BlockchainAddress.getInstance({type: docIssuedAddr.type, pathParts: Catenis.module.KeyStore.getPathParts(docIssuedAddr)});
 
         if (classInstance != null) {
             // Store address in local key storage setting it as obsolete accordingly,
@@ -951,8 +961,8 @@ BlockchainAddress.getAddressOfIssuedBlockchainAddress = function (docIssuedAddr)
 // Place obsolete address back onto local key storage
 BlockchainAddress.retrieveObsoleteAddress = function (addr) {
     // Try to retrieve obsolete address from database
-    var docIssuedAddrs = Catenis.db.collection.IssuedBlockchainAddress.find({addrHash: hashAddress(addr), status: 'obsolete'}, {fields: {type: 1, path: 1, addrIndex: 1}}).fetch(),
-        result = false;
+    const docIssuedAddrs = Catenis.db.collection.IssuedBlockchainAddress.find({addrHash: hashAddress(addr), status: 'obsolete'}, {fields: {type: 1, path: 1, addrIndex: 1}}).fetch();
+    let result = false;
 
     if (docIssuedAddrs.length > 0) {
         if (docIssuedAddrs.length == 1) {
@@ -993,7 +1003,7 @@ BlockchainAddress.retrieveObsoleteAddress = function (addr) {
             // More than one doc/rec returned (though unlikely, not impossible since there could
             //  be one or more addresses with the same hash).
             //  Find the one that has the correct address
-            if (docIssuedAddrs.find(function (docIssuedAddr) {
+            if (docIssuedAddrs.find((docIssuedAddr) => {
                     let addrKeys = Catenis.keyStore.getCryptoKeysByPath(docIssuedAddr.path);
 
                     // Make sure that address is not yet in local key storage
@@ -1037,8 +1047,8 @@ BlockchainAddress.retrieveObsoleteAddress = function (addr) {
 };
 
 BlockchainAddress.revertAddress = function (addr) {
-    var result = false,
-        addrTypeAndPath = Catenis.keyStore.getTypeAndPathByAddress(addr);
+    const addrTypeAndPath = Catenis.keyStore.getTypeAndPathByAddress(addr);
+    let result = false;
 
     if (addrTypeAndPath != null) {
         let addrPathParts = Catenis.module.KeyStore.getPathParts(addrTypeAndPath),
@@ -1075,10 +1085,10 @@ BlockchainAddress.checkObsoleteAddress = function (addr) {
 };
 
 BlockchainAddress.revertAddressList = function (addrList) {
-    var addressWithBalance = BlockchainAddress.checkAddressesWithBalance(addrList),
+    const addressWithBalance = BlockchainAddress.checkAddressesWithBalance(addrList),
         addrsToRevertByClassInstance = new Map();
 
-    addrList.forEach(function (addr) {
+    addrList.forEach((addr) => {
         if (!addressWithBalance[addr]) {
             // Only consider addresses that do not have balance
             let addrTypeAndPath = Catenis.keyStore.getTypeAndPathByAddress(addr);
@@ -1100,16 +1110,16 @@ BlockchainAddress.revertAddressList = function (addrList) {
         }
     });
 
-    var countRevertedAddr = 0;
+    let countRevertedAddr = 0;
 
     if (addrsToRevertByClassInstance.size > 0) {
         for (let [classInstance, addrEntries] of addrsToRevertByClassInstance.entries()) {
             // Make sure that addresses with higher index are processed first
-            addrEntries = addrEntries.sort(function (a, b) {
+            addrEntries = addrEntries.sort((a, b) => {
                 return a.addrIndex > b.addrIndex ? -1 : (a.addrIndex < b.addrIndex ? 1 : 0);
             });
 
-            addrEntries.forEach(function (addrEntry) {
+            addrEntries.forEach((addrEntry) => {
                 // Revert address
                 if (revertAddress.call(classInstance, addrEntry.address, addrEntry.addrIndex, true)) {
                     countRevertedAddr++;
@@ -1139,10 +1149,10 @@ function deleteInactiveObjects() {
     Catenis.logger.TRACE('Executing process to delete inactive objects');
     // Calculate earliest date/time for instantiated object to have been accessed for it not to
     //  be considered inactive
-    var activeObjEarlietTime = new Date(Date.now());
+    const activeObjEarlietTime = new Date(Date.now());
     activeObjEarlietTime.setSeconds(activeObjEarlietTime.getSeconds() - cfgSettings.obsoleteExtKeyTimeToPurge);
 
-    var activeObjEarliestTimestamp = activeObjEarlietTime.getTime();
+    const activeObjEarliestTimestamp = activeObjEarlietTime.getTime();
 
     // Identify inactive objects and delete them
     for (let [parentPath, objEntry] of BlockchainAddress.instantiatedObjects.entries()) {
@@ -1157,10 +1167,10 @@ function updateIssuedAddresses() {
     // Execute code in critical section to avoid DB concurrency
     dbCS.execute(() => {
         // Identify issued blockchain addresses doc/rec that should be set as obsolete
-        var docIssuedAddrByExpiredAddr = new Map();
+        const docIssuedAddrByExpiredAddr = new Map();
 
         Catenis.db.collection.IssuedBlockchainAddress.find({status: 'expired'},
-            {fields: {_id: 1, type: 1, parentPath: 1, path: 1, addrIndex: 1, status: 1}}).forEach(function (doc) {
+            {fields: {_id: 1, type: 1, parentPath: 1, path: 1, addrIndex: 1, status: 1}}).forEach((doc) => {
             let addr = BlockchainAddress.getAddressOfIssuedBlockchainAddress(doc);
 
             if (addr != null) {
@@ -1168,7 +1178,7 @@ function updateIssuedAddresses() {
             }
         });
 
-        var idDocsToSetAsObsolete = [],
+        const idDocsToSetAsObsolete = [],
             addrsToSetAsObsolete = [],
             parentPathsToSetAsObsolete = new Set();
 
@@ -1177,7 +1187,7 @@ function updateIssuedAddresses() {
             let expiredAddrs = Array.from(docIssuedAddrByExpiredAddr.keys()),
                 addressWithBalance = BlockchainAddress.checkAddressesWithBalance(expiredAddrs);
 
-            expiredAddrs.forEach(function (addr) {
+            expiredAddrs.forEach((addr) => {
                 if (!addressWithBalance[addr]) {
                     // Mark address to be set as obsolete only if it does not have balance
                     idDocsToSetAsObsolete.push(docIssuedAddrByExpiredAddr.get(addr)._id);
@@ -1188,10 +1198,10 @@ function updateIssuedAddresses() {
         }
 
         // Identify issued blockchain addresses doc/rec that should be expired
-        var docIssuedAddrByNewAddrToExpire = new Map();
+        const docIssuedAddrByNewAddrToExpire = new Map();
 
         Catenis.db.collection.IssuedBlockchainAddress.find({status: 'new', expirationDate: {$lte: new Date()}},
-            {fields: {_id: 1, type: 1, path: 1, addrIndex: 1, status: 1}}).forEach(function (doc) {
+            {fields: {_id: 1, type: 1, path: 1, addrIndex: 1, status: 1}}).forEach((doc) => {
             let addr = BlockchainAddress.getAddressOfIssuedBlockchainAddress(doc);
 
             if (addr != null) {
@@ -1199,14 +1209,14 @@ function updateIssuedAddresses() {
             }
         });
 
-        var idDocsToExpire = [];
+        const idDocsToExpire = [];
 
         if (docIssuedAddrByNewAddrToExpire.size > 0) {
             // Check whether new addresses to expire have balance
             let toExpireAddrs = Array.from(docIssuedAddrByNewAddrToExpire.keys()),
                 addressWithBalance = BlockchainAddress.checkAddressesWithBalance(toExpireAddrs);
 
-            toExpireAddrs.forEach(function (addr) {
+            toExpireAddrs.forEach((addr) => {
                 if (!addressWithBalance[addr]) {
                     // If address does not have balance, mark it to be set directly as obsolete
                     idDocsToSetAsObsolete.push(docIssuedAddrByNewAddrToExpire.get(addr)._id);
@@ -1219,7 +1229,7 @@ function updateIssuedAddresses() {
             });
         }
 
-        var lastStatusChangedDate = new Date();
+        const lastStatusChangedDate = new Date();
 
         if (idDocsToExpire.length > 0) {
             // Set addresses as expired on local database
@@ -1262,8 +1272,8 @@ function setInstantiatedObject(parentPath, obj) {
 }
 
 function getInstantiatedObject(parentPath) {
-    var objEntry = BlockchainAddress.instantiatedObjects.get(parentPath),
-        obj = null;
+    const objEntry = BlockchainAddress.instantiatedObjects.get(parentPath);
+    let obj = null;
 
     if (objEntry != null) {
         obj = objEntry.obj;
@@ -1288,7 +1298,7 @@ function deleteInstatiatedObject(parentPath) {
 //  NOTE: this variable definition is here because it must
 //      appear after the declaration of the derived classes
 //
-var classByType = {
+const classByType = {
     sys_dev_main_addr: SystemDeviceMainAddress,
     sys_fund_pay_addr: SystemFundingPaymentAddress,
     sys_fund_chg_addr: SystemFundingChangeAddress,
@@ -1318,12 +1328,6 @@ Object.defineProperties(BlockchainAddress, {
 });
 
 // Save module function class reference
-if (typeof Catenis === 'undefined')
-    Catenis = {};
-
-if (typeof Catenis.module === 'undefined')
-    Catenis.module = {};
-
 Catenis.module.BlockchainAddress = {
     BlockchainAddress: Object.freeze(BlockchainAddress),
     SystemDeviceMainAddress: Object.freeze(SystemDeviceMainAddress),

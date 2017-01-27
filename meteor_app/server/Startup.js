@@ -7,14 +7,29 @@
 // Module variables
 //
 
-// References to external modules
-var config = Npm.require('config');
+// References to external code
+//
+// Internal node modules
+//  NOTE: the reference of these modules are done sing 'require()' instead of 'import' to
+//      to avoid annoying WebStorm warning message: 'default export is not defined in
+//      imported module'
+//const util = require('util');
+// Third-party node modules
+import config from 'config';
+// Meteor packages
+import { Meteor } from 'meteor/meteor';
+
+// References code in other (Catenis) modules
+import { Catenis } from './Catenis';
+// DEBUG - begin
+//import { resetBitcoinCore } from './Test/FundSourceTest';
+// DEBUG - end
 
 // Config entries
-var startupConfig = config.get('startup');
+const startupConfig = config.get('startup');
 
 // Configuration settings
-var startupConfig = {
+const cfgSettings = {
     fixMissingAddresses: startupConfig.get('fixMissingAddresses'),
     bypassProcessing: startupConfig.get('bypassProcessing')
 };
@@ -23,16 +38,12 @@ var startupConfig = {
 // Module code
 //
 
-// DEBUG - begin
-//import {resetBitcoinCore} from './Test/FundSourceTest.js';
-// DEBUG - end
-
 // Initialization code (on the server)
 Meteor.startup(function () {
     // DEBUG - begin
     //resetBitcoinCore();
     // DEBUG - end
-    if (startupConfig.bypassProcessing) {
+    if (cfgSettings.bypassProcessing) {
         Catenis.logger.INFO('Bypassing processing...');
     }
     else {
@@ -47,7 +58,7 @@ Meteor.startup(function () {
         Catenis.module.CatenisNode.initialize();
 
         // Make sure that all addresses are currently imported onto Bitcoin Core
-        CheckImportAddresses(startupConfig.fixMissingAddresses);
+        CheckImportAddresses(cfgSettings.fixMissingAddresses);
 
         Catenis.module.BlockchainAddress.BlockchainAddress.initialize();
         Catenis.module.Client.initialize();
@@ -62,10 +73,10 @@ Meteor.startup(function () {
 function CheckImportAddresses(fixMissingAddresses) {
     Catenis.logger.TRACE('Checking import addresses');
     // Retrieve list of addresses currently imported onto Bitcoin Core
-    var btcAddresses = new Set(Catenis.bitcoinCore.getAddresses());
+    const btcAddresses = new Set(Catenis.bitcoinCore.getAddresses());
 
     // Identify addresses currently in use that are not yet imported onto Bitcoin Core
-    var notImportedAddresses = Catenis.keyStore.listAddressesInUse().filter(function (addr) {
+    const notImportedAddresses = Catenis.keyStore.listAddressesInUse().filter((addr) => {
         return !btcAddresses.has(addr);
     });
 
@@ -74,9 +85,9 @@ function CheckImportAddresses(fixMissingAddresses) {
             // Import missing addresses
             Catenis.logger.WARN('There are blockchain addresses missing (not currently imported) from Bitcoin Core. They shall be imported now. The system might be unavailable for several minutes.');
 
-            var lastAddressToImport = notImportedAddresses.pop();
+            const lastAddressToImport = notImportedAddresses.pop();
 
-            notImportedAddresses.forEach(function (addr) {
+            notImportedAddresses.forEach((addr) => {
                 // Get public key associated with address and import it onto Bitcoin Core
                 //  without rescanning the blockchain
                 Catenis.bitcoinCore.importPublicKey(Catenis.keyStore.getCryptoKeysByAddress(addr).exportPublicKey(), false);

@@ -7,9 +7,20 @@
 // Module variables
 //
 
-// References to external modules
-const config = Npm.require('config');
-const util = Npm.require('util');
+// References to external code
+//
+// Internal node modules
+//  NOTE: the reference of these modules are done sing 'require()' instead of 'import' to
+//      to avoid annoying WebStorm warning message: 'default export is not defined in
+//      imported module'
+const util = require('util');
+// Third-party node modules
+import config from 'config';
+// Meteor packages
+import { Meteor } from 'meteor/meteor';
+
+// References code in other (Catenis) modules
+import { Catenis } from './Catenis';
 
 // Config entries
 const configCtnMessage = config.get('catenisMessage');
@@ -84,8 +95,8 @@ function CatenisMessage(message, funcByte, options) {
         }
         else {
             this.options.storageProvider = options.storageProvider != undefined ? options.storageProvider : CatenisMessage.defaultStorageProvider;
-            let msgStorage = Catenis.module.MessageStorage.getInstance(this.options.storageProvider);
-            let msgRef = msgStorage.store(message);
+            const msgStorage = Catenis.module.MessageStorage.getInstance(this.options.storageProvider);
+            const msgRef = msgStorage.store(message);
 
             this.msgPayload = new Buffer(msgRef.length + 1);
 
@@ -277,8 +288,8 @@ CatenisMessage.fromData = function (data, logError = true) {
         }
         else {
             // Read message storage provider byte code
-            let spByteCode = msgPayload.readUInt8(0);
-            let storageProvider = CatenisMessage.getStorageProviderByByteCode(spByteCode);
+            const spByteCode = msgPayload.readUInt8(0);
+            const storageProvider = CatenisMessage.getStorageProviderByByteCode(spByteCode);
 
             if (storageProvider == undefined) {
                 //noinspection ExceptionCaughtLocallyJS
@@ -286,16 +297,16 @@ CatenisMessage.fromData = function (data, logError = true) {
             }
 
             // Read message reference
-            let msgRef = new Buffer(msgPayload.length - 1);
+            const msgRef = new Buffer(msgPayload.length - 1);
 
             msgPayload.copy(msgRef, 0, 1);
 
-            let msgStorage = Catenis.module.MessageStorage.getInstance(storageProvider);
+            const msgStorage = Catenis.module.MessageStorage.getInstance(storageProvider);
 
             message = msgStorage.retrieve(msgRef);
         }
 
-        let ctnMessage = new CatenisMessage();
+        const ctnMessage = new CatenisMessage();
 
         ctnMessage.data = data;
         ctnMessage.verNum = verNum;
@@ -370,7 +381,7 @@ function isValidFunctionByte(funcByte) {
 
 function isValidOptionsByte(optsByte) {
     // Compute sum of all option bits
-    let optBitsSum = Object.keys(CatenisMessage.optionBit).reduce((sum, key) => {
+    const optBitsSum = Object.keys(CatenisMessage.optionBit).reduce((sum, key) => {
         return sum + CatenisMessage.optionBit[key];
     }, 0);
 
@@ -396,10 +407,4 @@ Object.defineProperty(CatenisMessage, 'defaultStorageProvider', {
 });
 
 // Save module function class reference
-if (typeof Catenis === 'undefined')
-    Catenis = {};
-
-if (typeof Catenis.module === 'undefined')
-    Catenis.module = {};
-
 Catenis.module.CatenisMessage = Object.freeze(CatenisMessage);

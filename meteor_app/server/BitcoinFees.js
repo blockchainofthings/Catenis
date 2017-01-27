@@ -7,15 +7,26 @@
 // Module variables
 //
 
-// References to external modules
-var util = Npm.require('util');
-var config = Npm.require('config');
+// References to external code
+//
+// Internal node modules
+//  NOTE: the reference of these modules are done sing 'require()' instead of 'import' to
+//      to avoid annoying WebStorm warning message: 'default export is not defined in
+//      imported module'
+const util = require('util');
+// Third-party node modules
+import config from 'config';
+// Meteor packages
+import { Meteor } from 'meteor/meteor';
+
+// References code in other (Catenis) modules
+import { Catenis } from './Catenis';
 
 // Config entries
-var btcFeesConfig = config.get('bitcoinFees');
+const btcFeesConfig = config.get('bitcoinFees');
 
 // Configuration settings
-var cfgSettings = {
+const cfgSettings = {
     apiVer1Url: btcFeesConfig.get('apiVer1Url'),
     recommendedFeesEndPoint: btcFeesConfig.get('recommendedFeesEndPoint'),
     listFeesEndPoint: btcFeesConfig.get('listFeesEndPoint'),
@@ -27,7 +38,7 @@ var cfgSettings = {
     dbPurgeInterval: btcFeesConfig.get('dbPurgeInterval')
 };
 
-var retrieveFeesIntervalHandle,
+let retrieveFeesIntervalHandle,
     dbPurgeIntervalHandle;
 
 
@@ -44,9 +55,9 @@ function BitcoinFees(apiUrl) {
 //
 
 BitcoinFees.prototype.getFeeRateByTime = function (confirmTime) {
-    var firstEntryLowestTime;
+    let firstEntryLowestTime = undefined;
 
-    var foundEntry = this.list.fees.find(function (entry) {
+    const foundEntry = this.list.fees.find((entry) => {
         if (firstEntryLowestTime == undefined || entry.maxMinutes < firstEntryLowestTime.maxMinutes) {
             firstEntryLowestTime = entry;
         }
@@ -69,13 +80,13 @@ BitcoinFees.prototype.getOptimumFeeRate = function () {
 //
 
 function recommendedFees() {
-    var endpointUrl = this.apiUrl + cfgSettings.recommendedFeesEndPoint;
+    const endpointUrl = this.apiUrl + cfgSettings.recommendedFeesEndPoint;
 
     return Meteor.http.get(endpointUrl, {json: true});
 }
 
 function listFees() {
-    var endpointUrl = this.apiUrl + cfgSettings.listFeesEndPoint;
+    const endpointUrl = this.apiUrl + cfgSettings.listFeesEndPoint;
 
     return Meteor.http.get(endpointUrl, {json: true});
 }
@@ -87,7 +98,7 @@ function retrieveFees() {
         this.list = fixListFees(listFees.call(this).data);
 
         // Get latest recorded fees
-        var docBtcFees = Catenis.db.collection.BitcoinFees.findOne({}, {sort: {createdDate: -1}});
+        const docBtcFees = Catenis.db.collection.BitcoinFees.findOne({}, {sort: {createdDate: -1}});
 
         if (docBtcFees == undefined || !_.isEqual(this.recommended, docBtcFees.recommended) || !_.isEqual(this.list, docBtcFees.list)) {
             // Record newly retrieved fees
@@ -117,7 +128,7 @@ BitcoinFees.initialize = function () {
 
     if (Catenis.bitcoinFees.recommended == undefined || Catenis.bitcoinFees.list == undefined) {
         // Current fees could not be retrieved. Try getting the latest recorded ones
-        var docBtcFees = Catenis.db.collection.BitcoinFees.findOne({}, {sort: {createdDate: -1}});
+        const docBtcFees = Catenis.db.collection.BitcoinFees.findOne({}, {sort: {createdDate: -1}});
 
         if (docBtcFees != undefined) {
             Catenis.bitcoinFees.recommended = docBtcFees.recommended;
@@ -134,7 +145,7 @@ BitcoinFees.initialize = function () {
     retrieveFeesIntervalHandle = Meteor.setInterval(retrieveFees.bind(Catenis.bitcoinFees), cfgSettings.retrieveFeesInterval);
 
     // Prepare to start process to periodically purge database
-    var timeToStart = timeToStartDbPurge();
+    const timeToStart = timeToStartDbPurge();
 
     if (timeToStart > cfgSettings.retrieveFeesInterval) {
         // Time to start purge is too faraway. Do purge now
@@ -154,7 +165,7 @@ BitcoinFees.initialize = function () {
 //
 
 function fixListFees(list) {
-    list.fees = list.fees.map(function (entry) {
+    list.fees = list.fees.map((entry) => {
         return _.omit(entry, ['dayCount', 'memCount']);
     });
 
@@ -162,9 +173,9 @@ function fixListFees(list) {
 }
 
 function timeToStartDbPurge() {
-    var now = Date.now(),
-        nowDate = new Date(now),
-        startDateTime = (new Date(nowDate.getFullYear(), nowDate.getMonth(), nowDate.getDate(), cfgSettings.dbPurgeHours, cfgSettings.dbPurgeMinutes, cfgSettings.dbPurgeSeconds)).getTime();
+    const now = Date.now(),
+        nowDate = new Date(now);
+    let startDateTime = (new Date(nowDate.getFullYear(), nowDate.getMonth(), nowDate.getDate(), cfgSettings.dbPurgeHours, cfgSettings.dbPurgeMinutes, cfgSettings.dbPurgeSeconds)).getTime();
 
     if (startDateTime < now) {
         // Adjust date (add one day)
@@ -186,7 +197,7 @@ function startDbPurge() {
 function purgeDatabase() {
     Catenis.logger.TRACE('Exececuting process to purge database by deleting oldest fees docs/recs');
 
-    var firstOldestFees = Catenis.db.collection.BitcoinFees.findOne({}, {fields: {createdDate: 1}, sort: {createdDate: -1}, skip: cfgSettings.numDbRecsToMaintain});
+    const firstOldestFees = Catenis.db.collection.BitcoinFees.findOne({}, {fields: {createdDate: 1}, sort: {createdDate: -1}, skip: cfgSettings.numDbRecsToMaintain});
 
     if (firstOldestFees != undefined) {
         try {
@@ -221,10 +232,4 @@ Object.defineProperties(BitcoinFees, {
 });
 
 // Save module function class reference
-if (typeof Catenis === 'undefined')
-    Catenis = {};
-
-if (typeof Catenis.module === 'undefined')
-    Catenis.module = {};
-
 Catenis.module.BitcoinFees = Object.freeze(BitcoinFees);

@@ -4,7 +4,20 @@
 
 //console.log('[CriticalSection.js]: This code just ran.');
 
-var Future = Npm.require('fibers/future');
+// Module variables
+//
+
+// References to external code
+//
+// Internal node modules
+//  NOTE: the reference of these modules are done sing 'require()' instead of 'import' to
+//      to avoid annoying WebStorm warning message: 'default export is not defined in
+//      imported module'
+//const util = require('util');
+// Third-party node modules
+import Future from 'fibers/future';
+// Meteor packages
+//import { Meteor } from 'meteor/meteor';
 
 export class CriticalSection {
     constructor () {
@@ -22,7 +35,7 @@ export class CriticalSection {
                 if (this.processing) {
                     // Already doing processing. Wait for current executing
                     //  code to finish before proceeding
-                    var fut = new Future();
+                    const fut = new Future();
 
                     this.waitingTasks.push(fut);
 
