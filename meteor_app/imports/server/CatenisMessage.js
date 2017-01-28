@@ -21,14 +21,24 @@ import { Meteor } from 'meteor/meteor';
 
 // References code in other (Catenis) modules
 import { Catenis } from './Catenis';
+import { IpfsMessageStorage } from './IpfsMessageStorage';
 
 // Config entries
-const configCtnMessage = config.get('catenisMessage');
+const ctnMessageConfig = config.get('catenisMessage');
+const ctnMsgStorageConfig = ctnMessageConfig.get('msgStorage');
+const ctnMsgStoIpfsConfig = ctnMsgStorageConfig.get('ipfs');
 
 // Configuration settings
 const cfgSettings = {
-    nullDataMaxSize: configCtnMessage.get('nullDataMaxSize'),
-    defaultStorageProvider: configCtnMessage.get('defaultStorageProvider')
+    nullDataMaxSize: ctnMessageConfig.get('nullDataMaxSize'),
+    defaultStorageProvider: ctnMessageConfig.get('defaultStorageProvider'),
+    msgStorage: {
+        ipfs: {
+            apiHost: ctnMsgStoIpfsConfig.get('apiHost'),
+            apiPort: ctnMsgStoIpfsConfig.get('apiPort'),
+            apiProtocol: ctnMsgStoIpfsConfig.get('apiProtocol')
+        }
+    }
 };
 
 const msgPrefix = 'CTN';
@@ -52,7 +62,7 @@ const versionNumber = 0;    // Current version in use. This number is limited to
 //      storageProvider: [Object] // (optional, default: defaultStorageProvider) A field of the CatenisMessage.storageProvider property identifying the type of external storage to be used to store the message that should not be embedded
 //    }
 //
-function CatenisMessage(message, funcByte, options) {
+export function CatenisMessage(message, funcByte, options) {
     if (message !== undefined) {
         this.message = message;
         this.verNum = versionNumber;
@@ -95,7 +105,7 @@ function CatenisMessage(message, funcByte, options) {
         }
         else {
             this.options.storageProvider = options.storageProvider != undefined ? options.storageProvider : CatenisMessage.defaultStorageProvider;
-            const msgStorage = Catenis.module.MessageStorage.getInstance(this.options.storageProvider);
+            const msgStorage = CatenisMessage.getMessageStorageInstance(this.options.storageProvider);
             const msgRef = msgStorage.store(message);
 
             this.msgPayload = new Buffer(msgRef.length + 1);
@@ -173,6 +183,32 @@ CatenisMessage.prototype.isLogMessage = function () {
 // CatenisMessage function class (public) methods
 //
 
+// Retrieve instance of a given message storage class
+//
+//  Arguments:
+//    storageProvided: [Object] // (optional, default: defaultStorageProvider) A field of the CatenisMessage.storageProvider property identifying the type of external storage to be used to store the message that should not be embedded
+CatenisMessage.getMessageStorageInstance = function(storageProvider) {
+    let instance;
+
+    if (CatenisMessage.msgStoInstances.has(storageProvider.byteCode)) {
+        // If an instance of the given message storage provider is already instantiated, just return it
+        instance = CatenisMessage.msgStoInstances.get(storageProvider.byteCode);
+    }
+    else {
+        // Otherwise, instantiate it now
+        switch(storageProvider.byteCode) {
+            case CatenisMessage.storageProvider.ipfs.byteCode:
+                instance = new IpfsMessageStorage(cfgSettings.msgStorage.ipfs.apiHost, cfgSettings.msgStorage.ipfs.apiPort, cfgSettings.msgStorage.ipfs.apiProtocol);
+
+                CatenisMessage.msgStoInstances.set(storageProvider.byteCode, instance);
+
+                break;
+        }
+    }
+
+    return instance;
+};
+
 CatenisMessage.getStorageProviderByName = function (spName) {
     let sp = undefined;
 
@@ -204,8 +240,8 @@ CatenisMessage.getStorageProviderByByteCode = function (byteCode) {
 };
 
 CatenisMessage.isValidStorageScheme = function (strScheme) {
-    return Object.keys(Catenis.module.CatenisMessage.storageScheme).some((key) => {
-        return Catenis.module.CatenisMessage.storageScheme[key] === strScheme;
+    return Object.keys(CatenisMessage.storageScheme).some((key) => {
+        return CatenisMessage.storageScheme[key] === strScheme;
     });
 };
 
@@ -213,9 +249,9 @@ CatenisMessage.isValidStorageProvider = function (sp) {
     let result = false;
 
     if (typeof sp === 'object' && sp !== null && ('byteCode' in sp) && ('name' in sp)) {
-        result = Object.keys(Catenis.module.CatenisMessage.storageProvider).some((key) => {
-            return Catenis.module.CatenisMessage.storageProvider[key].byteCode === sp.byteCode &&
-                Catenis.module.CatenisMessage.storageProvider[key].name === sp.name;
+        result = Object.keys(CatenisMessage.storageProvider).some((key) => {
+            return CatenisMessage.storageProvider[key].byteCode === sp.byteCode &&
+                CatenisMessage.storageProvider[key].name === sp.name;
         });
     }
 
@@ -301,7 +337,7 @@ CatenisMessage.fromData = function (data, logError = true) {
 
             msgPayload.copy(msgRef, 0, 1);
 
-            const msgStorage = Catenis.module.MessageStorage.getInstance(storageProvider);
+            const msgStorage = CatenisMessage.getMessageStorageInstance(storageProvider);
 
             message = msgStorage.retrieve(msgRef);
         }
@@ -357,6 +393,8 @@ CatenisMessage.storageScheme = Object.freeze({
                     //  in the designated external message storage
 });
 
+CatenisMessage.msgStoInstances = new Map();
+
 
 // Definition of module (private) functions
 //
@@ -406,5 +444,5 @@ Object.defineProperty(CatenisMessage, 'defaultStorageProvider', {
     enumerable: true
 });
 
-// Save module function class reference
-Catenis.module.CatenisMessage = Object.freeze(CatenisMessage);
+// Lock function class
+Object.freeze(CatenisMessage);

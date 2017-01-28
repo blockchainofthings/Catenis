@@ -23,6 +23,16 @@ import { Meteor } from 'meteor/meteor';
 import { Catenis } from './Catenis';
 import { CriticalSection } from './CriticalSection';
 import { TransactionMonitor } from './TransactionMonitor';
+import { BitcoinCore } from './BitcoinCore';
+import { DeviceMainAddress, DeviceReadConfirmAddress, DeviceAssetAddress, DeviceAssetIssuanceAddress } from './BlockchainAddress';
+import { CatenisNode } from './CatenisNode';
+import { FundSource } from './FundSource';
+import { FundTransaction } from './FundTransaction';
+import { LogMessageTransaction } from './LogMessageTransaction';
+import { SendMessageTransaction } from './SendMessageTransaction';
+import { Service } from './Service';
+import { Transaction } from './Transaction';
+import { Util } from './Util';
 
 // Config entries
 const deviceConfig = config.get('device');
@@ -42,7 +52,7 @@ export const cfgSettings = {
 //  Constructor arguments:
 //    docDevice: [Object] - Device database doc/rec
 //    client: [Object] - instance of Client function class with which device is associated
-function Device(docDevice, client) {
+export function Device(docDevice, client) {
     // Make sure that Client instance matches Device doc/rec
     if (docDevice.client_id !== client.doc_id) {
         // Client instance does not match Device doc/rec. Log error and throw exception
@@ -72,10 +82,10 @@ function Device(docDevice, client) {
     });
 
     // Instantiate objects to manage blockchain addresses for device
-    this.mainAddr = Catenis.module.BlockchainAddress.DeviceMainAddress.getInstance(this.client.ctnNode.ctnNodeIndex, this.client.clientIndex, this.deviceIndex);
-    this.readConfirmAddr = Catenis.module.BlockchainAddress.DeviceReadConfirmAddress.getInstance(this.client.ctnNode.ctnNodeIndex, this.client.clientIndex, this.deviceIndex);
-    this.assetAddr = Catenis.module.BlockchainAddress.DeviceAssetAddress.getInstance(this.client.ctnNode.ctnNodeIndex, this.client.clientIndex, this.deviceIndex);
-    this.assetIssuanceAddr = Catenis.module.BlockchainAddress.DeviceAssetIssuanceAddress.getInstance(this.client.ctnNode.ctnNodeIndex, this.client.clientIndex, this.deviceIndex);
+    this.mainAddr = DeviceMainAddress.getInstance(this.client.ctnNode.ctnNodeIndex, this.client.clientIndex, this.deviceIndex);
+    this.readConfirmAddr = DeviceReadConfirmAddress.getInstance(this.client.ctnNode.ctnNodeIndex, this.client.clientIndex, this.deviceIndex);
+    this.assetAddr = DeviceAssetAddress.getInstance(this.client.ctnNode.ctnNodeIndex, this.client.clientIndex, this.deviceIndex);
+    this.assetIssuanceAddr = DeviceAssetIssuanceAddress.getInstance(this.client.ctnNode.ctnNodeIndex, this.client.clientIndex, this.deviceIndex);
 
     // Critical section object to avoid concurrent access to database at the
     //  device object level (when updating device status basically)
@@ -177,21 +187,21 @@ Device.prototype.fundAddresses = function () {
     let newDevStatus = undefined;
 
     // Execute code in critical section to avoid UTXOs concurrency
-    Catenis.module.FundSource.utxoCS.execute(() => {
+    FundSource.utxoCS.execute(() => {
         // Check if device main and asset issuance addresses are already funded
         const devMainAddresses = this.mainAddr.listAddressesInUse(),
             assetIssuanceAddresses = this.assetIssuanceAddr.listAddressesInUse(),
-            devMainAddrDistribFund = Catenis.module.Service.distributeDeviceMainAddressFund(),
-            assetIssuanceAddrDistribFund = Catenis.module.Service.distributeDeviceAssetIssuanceAddressFund();
+            devMainAddrDistribFund = Service.distributeDeviceMainAddressFund(),
+            assetIssuanceAddrDistribFund = Service.distributeDeviceAssetIssuanceAddressFund();
 
         // If device main addresses already exist, check if their
         //  balance is as expected
-        const devMainAddrBalance = devMainAddresses.length > 0 ? (new Catenis.module.FundSource(devMainAddresses, {})).getBalance() : undefined;
+        const devMainAddrBalance = devMainAddresses.length > 0 ? (new FundSource(devMainAddresses, {})).getBalance() : undefined;
 
         if (devMainAddrBalance != undefined && devMainAddrBalance > 0 && devMainAddrBalance != devMainAddrDistribFund.totalAmount) {
             // Amount funded to device main addresses different than expected.
             //  Log inconsistent condition
-            Catenis.logger.WARN(util.format('Amount funded to device (Id: %s) main addresses different than expected. Current amount: %s, expected amount: %s', this.deviceId, Catenis.module.Util.formatCoins(devMainAddrBalance), Catenis.module.Util.formatCoins(devMainAddrDistribFund.totalAmount)));
+            Catenis.logger.WARN(util.format('Amount funded to device (Id: %s) main addresses different than expected. Current amount: %s, expected amount: %s', this.deviceId, Util.formatCoins(devMainAddrBalance), Util.formatCoins(devMainAddrDistribFund.totalAmount)));
 
             // Indicate that addresses should not be funded
             devMainAddrDistribFund.amountPerAddress = undefined;
@@ -199,12 +209,12 @@ Device.prototype.fundAddresses = function () {
 
         // If device asset issuance addresses already exist, check if their
         //  balance is as expected
-        const assetIssuanceAddrBalance = assetIssuanceAddresses.length > 0 ? (new Catenis.module.FundSource(assetIssuanceAddresses, {})).getBalance() : undefined;
+        const assetIssuanceAddrBalance = assetIssuanceAddresses.length > 0 ? (new FundSource(assetIssuanceAddresses, {})).getBalance() : undefined;
 
         if (assetIssuanceAddrBalance != undefined && assetIssuanceAddrBalance > 0 && assetIssuanceAddrBalance != assetIssuanceAddrDistribFund.totalAmount) {
             // Amount funded to device asset issuance addresses different than expected.
             //  Log inconsistent condition
-            Catenis.logger.WARN(util.format('Amount funded to device (Id: %s) asseet issuance addresses different than expected. Current amount: %s, expected amount: %s', this.deviceId, Catenis.module.Util.formatCoins(assetIssuanceAddrBalance), Catenis.module.Util.formatCoins(assetIssuanceAddrDistribFund.totalAmount)));
+            Catenis.logger.WARN(util.format('Amount funded to device (Id: %s) asseet issuance addresses different than expected. Current amount: %s, expected amount: %s', this.deviceId, Util.formatCoins(assetIssuanceAddrBalance), Util.formatCoins(assetIssuanceAddrDistribFund.totalAmount)));
 
             // Indicate that addresses should not be funded
             assetIssuanceAddrDistribFund.amountPerAddress = undefined;
@@ -263,8 +273,8 @@ Device.prototype.fundAddresses = function () {
 //    targetDeviceId: [String] // Device ID identifying the device to which the message should be sent
 //    message: [Object] // Object of type Buffer containing the message to be sent
 //    encryptMessage: [Boolean], // (optional, default: true) Indicates whether message should be encrypted before sending it
-//    storageScheme: [String], // (optional, default: 'auto') A field of the Catenis.module.CatenisMessage.storageScheme property identifying how the message should be stored
-//      storageProvider: [Object] // (optional, default: defaultStorageProvider) A field of the Catenis.module.CatenisMessage.storageProvider property
+//    storageScheme: [String], // (optional, default: 'auto') A field of the CatenisMessage.storageScheme property identifying how the message should be stored
+//      storageProvider: [Object] // (optional, default: defaultStorageProvider) A field of the CatenisMessage.storageProvider property
 //                                //    identifying the type of external storage to be used to store the message that should not be embedded
 //    }
 Device.prototype.sendMessage = function (targetDeviceId, message, encryptMessage = true, storageScheme = 'auto', storageProvider) {
@@ -328,12 +338,12 @@ Device.prototype.sendMessage = function (targetDeviceId, message, encryptMessage
     let sentTxId = undefined;
 
     // Execute code in critical section to avoid UTXOs concurrency
-    Catenis.module.FundSource.utxoCS.execute(() => {
+    FundSource.utxoCS.execute(() => {
         let sendMsgTransact = undefined;
 
         try {
             // Prepare transaction to send message to a device
-            sendMsgTransact = new Catenis.module.SendMessageTransaction(this, targetDevice, message, {
+            sendMsgTransact = new SendMessageTransaction(this, targetDevice, message, {
                 encrypted: encryptMessage,
                 storageScheme: storageScheme,
                 storageProvider: storageProvider
@@ -367,8 +377,8 @@ Device.prototype.sendMessage = function (targetDeviceId, message, encryptMessage
 //  Arguments:
 //    message: [Object] // Object of type Buffer containing the message to be logged
 //    encryptMessage: [Boolean], // (optional, default: true) Indicates whether message should be encrypted before logging it
-//    storageScheme: [String], // (optional, default: 'auto') A field of the Catenis.module.CatenisMessage.storageScheme property identifying how the message should be stored
-//      storageProvider: [Object] // (optional, default: defaultStorageProvider) A field of the Catenis.module.CatenisMessage.storageProvider property
+//    storageScheme: [String], // (optional, default: 'auto') A field of the CatenisMessage.storageScheme property identifying how the message should be stored
+//      storageProvider: [Object] // (optional, default: defaultStorageProvider) A field of the CatenisMessage.storageProvider property
 //                                //    identifying the type of external storage to be used to store the message that should not be embedded
 //    }
 Device.prototype.logMessage = function (message, encryptMessage = true, storageScheme = 'auto', storageProvider) {
@@ -398,12 +408,12 @@ Device.prototype.logMessage = function (message, encryptMessage = true, storageS
     let sentTxId = undefined;
 
     // Execute code in critical section to avoid UTXOs concurrency
-    Catenis.module.FundSource.utxoCS.execute(() => {
+    FundSource.utxoCS.execute(() => {
         let logMsgTransact = undefined;
 
         try {
             // Prepare transaction to log message
-            logMsgTransact = new Catenis.module.LogMessageTransaction(this, message, {
+            logMsgTransact = new LogMessageTransaction(this, message, {
                 encrypted: encryptMessage,
                 storageScheme: storageScheme,
                 storageProvider: storageProvider
@@ -450,11 +460,11 @@ Device.prototype.readMessage = function (txid) {
     let transact = undefined;
 
     try {
-        transact = Catenis.module.Transaction.fromTxid(txid);
+        transact = Transaction.fromTxid(txid);
     }
     catch (err) {
         if ((err instanceof Meteor.Error) && err.details != undefined && typeof err.details.code === 'number'
-            && err.details.code == Catenis.module.BitcoinCore.rpcErrorCode.RPC_INVALID_ADDRESS_OR_KEY) {
+            && err.details.code == BitcoinCore.rpcErrorCode.RPC_INVALID_ADDRESS_OR_KEY) {
             // Error indicating that transaction id is not valid.
             //  Throws local error
             throw new Meteor.Error('ctn_device_invalid_txid', util.format('This is not a valid transaction id: %s', txid));
@@ -467,7 +477,7 @@ Device.prototype.readMessage = function (txid) {
     }
 
     // First, check if this is a send message transaction
-    const sendMsgTransact = Catenis.module.SendMessageTransaction.checkTransaction(transact);
+    const sendMsgTransact = SendMessageTransaction.checkTransaction(transact);
 
     if (sendMsgTransact != undefined) {
         // Make sure that this message was intended to this device
@@ -483,7 +493,7 @@ Device.prototype.readMessage = function (txid) {
     }
     else {
         // If not, then check if this is a log message transaction
-        const logMsgTransact = Catenis.module.LogMessageTransaction.checkTransaction(transact);
+        const logMsgTransact = LogMessageTransaction.checkTransaction(transact);
 
         if (logMsgTransact != undefined) {
             // Return message
@@ -512,7 +522,7 @@ function fundDeviceAddresses(amountPerDevMainAddress, amountPerAssetIssuanceAddr
 
     try {
         // Prepare transaction to fund device main addresses
-        fundTransact = new Catenis.module.FundTransaction(Catenis.module.FundTransaction.fundingEvent.provision_client_device, this.deviceId);
+        fundTransact = new FundTransaction(FundTransaction.fundingEvent.provision_client_device, this.deviceId);
 
         if (amountPerDevMainAddress != undefined) {
             fundTransact.addPayees(this.mainAddr, amountPerDevMainAddress);
@@ -633,7 +643,7 @@ Device.getDeviceByDeviceId = function (deviceId) {
         throw new Meteor.Error('ctn_device_not_found', util.format('Could not find device with given device ID (%s)', deviceId));
     }
 
-    return new Device(docDevice, Catenis.module.CatenisNode.getCatenisNodeByIndex(docDevice.index.ctnNodeIndex).getClientByIndex(docDevice.index.clientIndex));
+    return new Device(docDevice, CatenisNode.getCatenisNodeByIndex(docDevice.index.ctnNodeIndex).getClientByIndex(docDevice.index.clientIndex));
 };
 
 Device.getDeviceByProductUniqueId = function (prodUniqueId) {
@@ -646,7 +656,7 @@ Device.getDeviceByProductUniqueId = function (prodUniqueId) {
         throw new Meteor.Error('ctn_device_not_found', util.format('Could not find device with given product unique ID (%s)', prodUniqueId));
     }
 
-    return new Device(docDevice, Catenis.module.CatenisNode.getCatenisNodeByIndex(docDevice.index.ctnNodeIndex).getClientByIndex(docDevice.index.clientIndex));
+    return new Device(docDevice, CatenisNode.getCatenisNodeByIndex(docDevice.index.ctnNodeIndex).getClientByIndex(docDevice.index.clientIndex));
 };
 
 Device.checkDevicesToFund = function () {
@@ -654,7 +664,7 @@ Device.checkDevicesToFund = function () {
     Catenis.db.collection.Device.find({status: Device.status.new.name}).forEach(doc => {
         try {
             Catenis.logger.TRACE(util.format('Funding addresses of existing device (deviceId: %s)', doc.deviceId));
-            (new Device(doc, Catenis.module.CatenisNode.getCatenisNodeByIndex(doc.index.ctnNodeIndex).getClientByIndex(doc.index.clientIndex))).fundAddresses();
+            (new Device(doc, CatenisNode.getCatenisNodeByIndex(doc.index.ctnNodeIndex).getClientByIndex(doc.index.clientIndex))).fundAddresses();
         }
         catch (err) {
             // Error trying to fund addresses of device. Log error condition
@@ -723,5 +733,5 @@ function fundingOfAddressesConfirmed(data) {
 // Module code
 //
 
-// Save module function class reference
-Catenis.module.Device = Object.freeze(Device);
+// Lock function class
+Object.freeze(Device);

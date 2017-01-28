@@ -3,13 +3,18 @@
  */
 
 //console.log('[FundSourceTest.js]: This code just ran.');
+
+// References code in other (Catenis) modules
+import { Catenis } from '../Catenis';
+import { BitcoinCore } from '../BitcoinCore';
+
     
 function testListUnspent(numConf, addresses) {
     if (!Array.isArray(addresses)) {
         addresses = [addresses];
     }
 
-    var setAddresses = new Set(addresses);
+    const setAddresses = new Set(addresses);
     
     return utxos.filter(function (utxo) {
         return setAddresses.has(utxo.address) && utxo.confirmations >= numConf;
@@ -21,11 +26,11 @@ function testGetRawMempool() {
 }
 
 export function resetBitcoinCore() {
-    Catenis.module.BitcoinCore.prototype.listUnspent = testListUnspent;
-    Catenis.module.BitcoinCore.prototype.getRawMempool = testGetRawMempool;
+    BitcoinCore.prototype.listUnspent = testListUnspent;
+    BitcoinCore.prototype.getRawMempool = testGetRawMempool;
 }
     
-var utxos = [
+const utxos = [
     {
         "txid": "28aa78e054c8841f583853bb354cd08507b51da2b16cf17235ac54308ab58a0e",
         "vout": 0,
@@ -7305,9 +7310,6 @@ var mempool = {
 };
 
 // Save module function class reference
-if (typeof Catenis === 'undefined')
-    Catenis = {};
-
 if (typeof Catenis.test === 'undefined')
     Catenis.test = {};
 

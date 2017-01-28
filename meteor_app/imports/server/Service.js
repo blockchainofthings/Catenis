@@ -21,6 +21,7 @@ import config from 'config';
 
 // References code in other (Catenis) modules
 import { Catenis } from './Catenis';
+import { Transaction } from './Transaction';
 
 // Config entries
 const serviceConfig = config.get('service');
@@ -118,7 +119,7 @@ const cfgSettings = {
 //
 
 // Service function class
-function Service() {
+export function Service() {
 }
 
 
@@ -239,7 +240,7 @@ function estimatedSystemMessageTxCost() {
 }
 
 function typicalSystemMessageTxSize() {
-    return Catenis.module.Transaction.computeTransactionSize(cfgSettings.message.typicalTxConfig.sysMessage.numInputs, cfgSettings.message.typicalTxConfig.sysMessage.numOutputs, cfgSettings.message.typicalTxConfig.sysMessage.nullDataPlayloadSize);
+    return Transaction.computeTransactionSize(cfgSettings.message.typicalTxConfig.sysMessage.numInputs, cfgSettings.message.typicalTxConfig.sysMessage.numOutputs, cfgSettings.message.typicalTxConfig.sysMessage.nullDataPlayloadSize);
 }
 
 function clientProvisionCost(messageCredits = cfgSettings.minFundMessageCreditsProvision, assetCredits = cfgSettings.minFundAssetCreditsProvision) {
@@ -272,7 +273,7 @@ function estimatedSendMessageTxCost() {
 }
 
 function typicalSendMessageTxSize() {
-    return Catenis.module.Transaction.computeTransactionSize(cfgSettings.message.typicalTxConfig.sendMessage.numInputs, cfgSettings.message.typicalTxConfig.sendMessage.numOutputs, cfgSettings.message.typicalTxConfig.sendMessage.nullDataPlayloadSize);
+    return Transaction.computeTransactionSize(cfgSettings.message.typicalTxConfig.sendMessage.numInputs, cfgSettings.message.typicalTxConfig.sendMessage.numOutputs, cfgSettings.message.typicalTxConfig.sendMessage.nullDataPlayloadSize);
 }
 
 function estimatedLogMessageTxCost() {
@@ -280,7 +281,7 @@ function estimatedLogMessageTxCost() {
 }
 
 function typicalLogMessageTxSize() {
-    return Catenis.module.Transaction.computeTransactionSize(cfgSettings.message.typicalTxConfig.logMessage.numInputs, cfgSettings.message.typicalTxConfig.logMessage.numOutputs, cfgSettings.message.typicalTxConfig.logMessage.nullDataPlayloadSize);
+    return Transaction.computeTransactionSize(cfgSettings.message.typicalTxConfig.logMessage.numInputs, cfgSettings.message.typicalTxConfig.logMessage.numOutputs, cfgSettings.message.typicalTxConfig.logMessage.nullDataPlayloadSize);
 }
 
 function typicalReadConfirmationTxPayAmount() {
@@ -297,7 +298,7 @@ function typicalReadConfirmationTxPayAmount() {
 
     for (numMsgs = 1; numMsgs <= 10; numMsgs++, txInputs++, txOutputs++) {
         // Compute transaction size
-        const txSize = Catenis.module.Transaction.computeTransactionSize(txInputs, txOutputs, cfgSettings.message.typicalTxConfig.readConfirmation.nullDataPlayloadSize);
+        const txSize = Transaction.computeTransactionSize(txInputs, txOutputs, cfgSettings.message.typicalTxConfig.readConfirmation.nullDataPlayloadSize);
 
         // Calculate fee
         const feeRate = lastFeeRate + 1;
@@ -332,15 +333,15 @@ function estimatedAssetTxCost() {
 }
 
 function typicalIssueLockedAssetTxSize() {
-    return Catenis.module.Transaction.computeTransactionSize(cfgSettings.asset.typicalTxConfig.issueLockedAsset.numInputs, cfgSettings.asset.typicalTxConfig.issueLockedAsset.numOutputs, cfgSettings.asset.typicalTxConfig.issueLockedAsset.nullDataPlayloadSize);
+    return Transaction.computeTransactionSize(cfgSettings.asset.typicalTxConfig.issueLockedAsset.numInputs, cfgSettings.asset.typicalTxConfig.issueLockedAsset.numOutputs, cfgSettings.asset.typicalTxConfig.issueLockedAsset.nullDataPlayloadSize);
 }
 
 function typicalIssueUnlockedAssetTxSize() {
-    return Catenis.module.Transaction.computeTransactionSize(cfgSettings.asset.typicalTxConfig.issueUnlockedAsset.numInputs, cfgSettings.asset.typicalTxConfig.issueUnlockedAsset.numOutputs, cfgSettings.asset.typicalTxConfig.issueUnlockedAsset.nullDataPlayloadSize);
+    return Transaction.computeTransactionSize(cfgSettings.asset.typicalTxConfig.issueUnlockedAsset.numInputs, cfgSettings.asset.typicalTxConfig.issueUnlockedAsset.numOutputs, cfgSettings.asset.typicalTxConfig.issueUnlockedAsset.nullDataPlayloadSize);
 }
 
 function typicalTransferAssetTxSize() {
-    return Catenis.module.Transaction.computeTransactionSize(cfgSettings.asset.typicalTxConfig.transferAsset.numInputs, cfgSettings.asset.typicalTxConfig.transferAsset.numOutputs, cfgSettings.asset.typicalTxConfig.transferAsset.nullDataPlayloadSize);
+    return Transaction.computeTransactionSize(cfgSettings.asset.typicalTxConfig.transferAsset.numInputs, cfgSettings.asset.typicalTxConfig.transferAsset.numOutputs, cfgSettings.asset.typicalTxConfig.transferAsset.nullDataPlayloadSize);
 }
 
 function typicalAverageAssetTxSize() {
@@ -439,5 +440,5 @@ Object.defineProperties(Service, {
     }
 });
 
-// Save module function class reference
-Catenis.module.Service = Object.freeze(Service);
+// Lock function class
+Object.freeze(Service);

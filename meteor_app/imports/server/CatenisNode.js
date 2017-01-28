@@ -21,6 +21,13 @@ import { Meteor } from 'meteor/meteor';
 import { Catenis } from './Catenis';
 import { CriticalSection } from './CriticalSection';
 import { ServiceCreditsCounter } from './ServiceCreditsCounter';
+import { SystemDeviceMainAddress, SystemFundingPaymentAddress, SystemFundingChangeAddress, SystemPayTxExpenseAddress } from './BlockchainAddress';
+import { Client } from './Client';
+import { FundSource } from './FundSource';
+import { FundTransaction } from './FundTransaction';
+import { Service } from './Service';
+import { Transaction } from './Transaction';
+import { Util } from './Util';
 
 // Critical section object to avoid concurrent access to database at the
 //  module level (when creating new Catenis nodes basically)
@@ -31,7 +38,7 @@ const dbCS = new CriticalSection();
 //
 
 // CatenisNode function class
-function CatenisNode(docCtnNode, initializeClients) {
+export function CatenisNode(docCtnNode, initializeClients) {
     // Save relevant info from CatenisNode doc/rec
     this.doc_id = docCtnNode._id;
     this.type = docCtnNode.type;
@@ -39,10 +46,10 @@ function CatenisNode(docCtnNode, initializeClients) {
     this.status = docCtnNode.status;
 
     // Instantiate objects to manage blockchain addresses for Catenis node
-    this.deviceMainAddr = Catenis.module.BlockchainAddress.SystemDeviceMainAddress.getInstance(this.ctnNodeIndex);
-    this.fundingPaymentAddr = Catenis.module.BlockchainAddress.SystemFundingPaymentAddress.getInstance(this.ctnNodeIndex);
-    this.fundingChangeAddr = Catenis.module.BlockchainAddress.SystemFundingChangeAddress.getInstance(this.ctnNodeIndex);
-    this.payTxExpenseAddr = Catenis.module.BlockchainAddress.SystemPayTxExpenseAddress.getInstance(this.ctnNodeIndex);
+    this.deviceMainAddr = SystemDeviceMainAddress.getInstance(this.ctnNodeIndex);
+    this.fundingPaymentAddr = SystemFundingPaymentAddress.getInstance(this.ctnNodeIndex);
+    this.fundingChangeAddr = SystemFundingChangeAddress.getInstance(this.ctnNodeIndex);
+    this.payTxExpenseAddr = SystemPayTxExpenseAddress.getInstance(this.ctnNodeIndex);
 
     // Retrieve (HD node) index of last Client doc/rec created for this Catenis node
     const docClient = Catenis.db.collection.Client.findOne({catenisNode_id: this.doc_id}, {fields: {'index.clientIndex': 1}, sort: {'index.clientIndex': -1}});
@@ -56,10 +63,10 @@ function CatenisNode(docCtnNode, initializeClients) {
     if (initializeClients) {
         // Instantiate all (non-deleted) clients so their associated addresses are
         //  loaded onto local key storage
-        Catenis.db.collection.Client.find({status: {$ne: Catenis.module.Client.status.deleted.name}}).forEach((doc) => {
+        Catenis.db.collection.Client.find({status: {$ne: Client.status.deleted.name}}).forEach((doc) => {
             // Instantiate Client object making sure that associated devices are also initialized
             Catenis.logger.TRACE('About to initialize client', {clientId: doc.clientId});
-            new Catenis.module.Client(doc, this, true);
+            new Client(doc, this, true);
         });
     }
 }
@@ -71,26 +78,26 @@ function CatenisNode(docCtnNode, initializeClients) {
 // NOTE: this method should be used ONLY with the Catenis Hub instance
 CatenisNode.prototype.startNode = function () {
     // Execute code in critical section to avoid UTXOs concurrency
-    Catenis.module.FundSource.utxoCS.execute(() => {
+    FundSource.utxoCS.execute(() => {
         // Make sure that system is properly funded
         this.checkFundingBalance();
 
         // Check if system device main addresses are already funded
         const devMainAddresses = this.deviceMainAddr.listAddressesInUse(),
-              distribFund = Catenis.module.Service.distributeSystemDeviceMainAddressFund();
+              distribFund = Service.distributeSystemDeviceMainAddressFund();
         let devMainAddrBalance = undefined;
 
         if (devMainAddresses.length > 0) {
             // System device main addresses already exist. Check if
             //  balance is as expected
-            devMainAddrBalance = (new Catenis.module.FundSource(devMainAddresses, {})).getBalance();
+            devMainAddrBalance = (new FundSource(devMainAddresses, {})).getBalance();
         }
 
         if (devMainAddrBalance != undefined && devMainAddrBalance > 0) {
             if (devMainAddrBalance != distribFund.totalAmount) {
                 // Amount funded to system device main addresses different than expected.
                 //  Log inconsistent condition
-                Catenis.logger.WARN(util.format('Amount funded to Catenis node #%d system device main addresses different than expected. Current amount: %s, expected amount: %s', this.ctnNodeIndex, Catenis.module.Util.formatCoins(devMainAddrBalance), Catenis.module.Util.formatCoins(distribFund.totalAmount)));
+                Catenis.logger.WARN(util.format('Amount funded to Catenis node #%d system device main addresses different than expected. Current amount: %s, expected amount: %s', this.ctnNodeIndex, Util.formatCoins(devMainAddrBalance), Util.formatCoins(distribFund.totalAmount)));
             }
         }
         else {
@@ -108,8 +115,8 @@ CatenisNode.prototype.listFundingAddressesInUse = function () {
 //  critical section object
 CatenisNode.prototype.checkFundingBalance = function () {
     const checkResult = {
-        currBalance: (new Catenis.module.FundSource(this.listFundingAddressesInUse(), {})).getBalance(),
-        minBalance: Catenis.module.Service.minimumFundingBalance,
+        currBalance: (new FundSource(this.listFundingAddressesInUse(), {})).getBalance(),
+        minBalance: Service.minimumFundingBalance,
         balanceOK: function () {
             return this.currBalance >= this.minBalance;
         }
@@ -118,7 +125,7 @@ CatenisNode.prototype.checkFundingBalance = function () {
     if (checkResult.currBalance < checkResult.minBalance) {
         // Funding balance too low. Send notification refund the system
         Catenis.logger.ACTION('Catenis funding balance too low.', util.format('\nCurrent balance: %s, expected minimum balance: %s\n\nACTION REQUIRED: please refund Catenis immediately.',
-            Catenis.module.Util.formatCoins(checkResult.currBalance), Catenis.module.Util.formatCoins(checkResult.minBalance)));
+            Util.formatCoins(checkResult.currBalance), Util.formatCoins(checkResult.minBalance)));
     }
 
     return checkResult;
@@ -127,8 +134,8 @@ CatenisNode.prototype.checkFundingBalance = function () {
 CatenisNode.prototype.currentServiceCreditsCount = function () {
     const counter = {};
 
-    counter[Catenis.module.Client.serviceCreditType.message] = new ServiceCreditsCounter();
-    counter[Catenis.module.Client.serviceCreditType.asset] = new ServiceCreditsCounter();
+    counter[Client.serviceCreditType.message] = new ServiceCreditsCounter();
+    counter[Client.serviceCreditType.asset] = new ServiceCreditsCounter();
 
     // Compute remaining service credits for all clients of this Catenis node
     Catenis.db.collection.Client.find({catenisNode_id: this.doc_id}, {fields: {_id: 1}}).forEach(clientDoc => {
@@ -148,7 +155,7 @@ CatenisNode.prototype.currentServiceCreditsCount = function () {
 };
 
 CatenisNode.prototype.currentUnreadMessagesCount = function () {
-    return Catenis.db.collection.ReceivedTransaction.find({type: Catenis.module.Transaction.type.send_message.name, 'info.sendMessage.readConfirmation.spent': false}, {fields: {_id: 1}}).count();
+    return Catenis.db.collection.ReceivedTransaction.find({type: Transaction.type.send_message.name, 'info.sendMessage.readConfirmation.spent': false}, {fields: {_id: 1}}).count();
 };
 
 // NOTE: make sure that this method is called from code executed from the FundSource.utxoCS
@@ -156,8 +163,8 @@ CatenisNode.prototype.currentUnreadMessagesCount = function () {
 CatenisNode.prototype.checkPayTxExpenseFundingBalance = function () {
     const currServiceCreditsCount = this.currentServiceCreditsCount();
     const checkResult = {
-        currBalance: (new Catenis.module.FundSource(this.listFundingAddressesInUse(), {})).getBalance(),
-        expectedBalance: Catenis.module.Service.getExpectedPayTxExpenseBalance(currServiceCreditsCount[Catenis.module.Client.serviceCreditType.message].total, this.currentUnreadMessagesCount(), currServiceCreditsCount[Catenis.module.Client.serviceCreditType.asset].total),
+        currBalance: (new FundSource(this.listFundingAddressesInUse(), {})).getBalance(),
+        expectedBalance: Service.getExpectedPayTxExpenseBalance(currServiceCreditsCount[Client.serviceCreditType.message].total, this.currentUnreadMessagesCount(), currServiceCreditsCount[Client.serviceCreditType.asset].total),
         balanceOK: function () {
             return this.currBalance >= this.expectedBalance;
         }
@@ -166,7 +173,7 @@ CatenisNode.prototype.checkPayTxExpenseFundingBalance = function () {
     if (checkResult.currBalance < checkResult.expectedBalance) {
         // Refund system pay tx expense addresses
         // Allocate system pay tx expense addresses...
-        const distribFund = Catenis.module.Service.distributePayTxExpenseFund(checkResult.expectedBalance - checkResult.currBalance);
+        const distribFund = Service.distributePayTxExpenseFund(checkResult.expectedBalance - checkResult.currBalance);
 
         // ...and try to fund them
         this.fundPayTxExpenseAddresses(distribFund.amountPerAddress);
@@ -180,7 +187,7 @@ CatenisNode.prototype.getClientByIndex = function (clientIndex) {
     const docClient = Catenis.db.collection.Client.findOne({
         'index.ctnNodeIndex': this.ctnNodeIndex,
         'index.clientIndex': clientIndex,
-        status: {$ne: Catenis.module.Client.status.deleted.name}
+        status: {$ne: Client.status.deleted.name}
     });
 
     if (docClient == undefined) {
@@ -189,7 +196,7 @@ CatenisNode.prototype.getClientByIndex = function (clientIndex) {
         throw new Meteor.Error('ctn_client_not_found', util.format('Could not find client with given index (%s) for this Catenis node (ctnNodeIndex: %s)', clientIndex, this.ctnNodeIndex));
     }
 
-    return new Catenis.module.Client(docClient, this);
+    return new Client(docClient, this);
 };
 
 CatenisNode.prototype.delete = function () {
@@ -199,7 +206,7 @@ CatenisNode.prototype.delete = function () {
         // Iteratively deletes all clients associated with this Catenis node
         Catenis.db.collection.Client.find({
             catenisNode_id: this.doc_id,
-            status: {$ne: Catenis.module.Client.status.deleted.name}
+            status: {$ne: Client.status.deleted.name}
         }, {fields: {'index.clientId': 1}}).forEach(doc => {
             this.getClientByIndex(doc.index.clientIndex).delete(deletedDate);
         });
@@ -293,7 +300,7 @@ CatenisNode.prototype.createClient = function (props, user_id) {
             },
             props: typeof props === 'object' ? props : (typeof props === 'string' ? {name: props} : {}),
             apiAccessGenKey: Random.secret(),
-            status: user_id != undefined && docUser.services != undefined && docUser.services.password != undefined ? Catenis.module.Client.status.active.name : Catenis.module.Client.status.new.name,
+            status: user_id != undefined && docUser.services != undefined && docUser.services.password != undefined ? Client.status.active.name : Client.status.new.name,
             createdDate: new Date(Date.now())
         };
 
@@ -338,7 +345,7 @@ CatenisNode.prototype.fundPayTxExpenseAddresses = function (amountPerAddress) {
 
     try {
         // Prepare transaction to fund system pay tx expense addresses
-        fundTransact = new Catenis.module.FundTransaction(Catenis.module.FundTransaction.fundingEvent.add_extra_tx_pay_funds);
+        fundTransact = new FundTransaction(FundTransaction.fundingEvent.add_extra_tx_pay_funds);
 
         fundTransact.addPayees(this.payTxExpenseAddr, amountPerAddress);
 
@@ -382,7 +389,7 @@ function fundDeviceMainAddresses(amountPerAddress) {
 
     try {
         // Prepare transaction to fund system device main addresses
-        fundTransact = new Catenis.module.FundTransaction(Catenis.module.FundTransaction.fundingEvent.provision_system_device);
+        fundTransact = new FundTransaction(FundTransaction.fundingEvent.provision_system_device);
 
         fundTransact.addPayees(this.deviceMainAddr, amountPerAddress);
 
@@ -526,7 +533,7 @@ CatenisNode.getCatenisNodeByIndex = function (ctnNodeIndex) {
 
 // NOTE: the lastCtnNodeIndex property below needs to be defined as a field of another property of type object
 //      otherwise we shall not be able to change its value later (in the initialize() method) since the
-//      CatenisNode object is frozen before it is assigned to the Catenis.module object.
+//      CatenisNode (function class) object is frozen.
 CatenisNode.ctnNodeCtrl = {
     lastCtnNodeIndex: 0
 };
@@ -574,5 +581,5 @@ function newClientId(ctnNodeIndex, clientIndex) {
 // Module code
 //
 
-// Save module function class reference
-Catenis.module.CatenisNode = Object.freeze(CatenisNode);
+// Lock function class
+Object.freeze(CatenisNode);

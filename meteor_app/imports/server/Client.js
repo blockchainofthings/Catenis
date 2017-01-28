@@ -25,6 +25,12 @@ import { Catenis } from './Catenis';
 import { CriticalSection } from './CriticalSection';
 import { ServiceCreditsCounter } from './ServiceCreditsCounter';
 import { TransactionMonitor } from './TransactionMonitor';
+import { ClientMessageCreditAddress, ClientAssetCreditAddress } from './BlockchainAddress';
+import { CatenisNode } from './CatenisNode';
+import { Device } from './Device';
+import { FundSource } from './FundSource';
+import { FundTransaction } from './FundTransaction';
+import { Service} from './Service';
 
 // Config entries
 const clientConfig = config.get('client');
@@ -45,7 +51,7 @@ const cfgSettings = {
 //    ctnNode: [Object] - instance of CatenisNode function class with which client is associated
 //    initializeDevices: [boolean] - (optional) indicates whether devices associated with this client
 //                              should also be initialized. Defaults to false.
-function Client(docClient, ctnNode, initializeDevices) {
+export function Client(docClient, ctnNode, initializeDevices) {
     // Make sure that CatenisNode instance matches Client doc/rec
     if (docClient.catenisNode_id !== ctnNode.doc_id) {
         // CatenisNode instance does not match Client doc/rec. Log error and throw exception
@@ -73,8 +79,8 @@ function Client(docClient, ctnNode, initializeDevices) {
     });
 
     // Instantiate objects to manage blockchain addresses for client
-    this.messageCreditAddr = Catenis.module.BlockchainAddress.ClientMessageCreditAddress.getInstance(this.ctnNode.ctnNodeIndex, this.clientIndex);
-    this.assetCreditAddr = Catenis.module.BlockchainAddress.ClientAssetCreditAddress.getInstance(this.ctnNode.ctnNodeIndex, this.clientIndex);
+    this.messageCreditAddr = ClientMessageCreditAddress.getInstance(this.ctnNode.ctnNodeIndex, this.clientIndex);
+    this.assetCreditAddr = ClientAssetCreditAddress.getInstance(this.ctnNode.ctnNodeIndex, this.clientIndex);
 
     // Retrieve (HD node) index of last Device doc/rec created for this client
     const docDevice = Catenis.db.collection.Device.findOne({client_id: this.doc_id}, {fields: {'index.deviceIndex': 1}, sort: {'index.deviceIndex': -1}});
@@ -89,10 +95,10 @@ function Client(docClient, ctnNode, initializeDevices) {
     if (initializeDevices) {
         // Instantiate all (non-deleted) devices associated with this client so their
         //  associated addresses are loaded onto local key storage
-        Catenis.db.collection.Device.find({client_id: this.doc_id, status: {$ne: Catenis.module.Device.status.deleted.name}}).forEach((doc) => {
+        Catenis.db.collection.Device.find({client_id: this.doc_id, status: {$ne: Device.status.deleted.name}}).forEach((doc) => {
             // Instantiate Device object
             Catenis.logger.TRACE('About to initialize device', {deviceId: doc.deviceId});
-            new Catenis.module.Device(doc, this);
+            new Device(doc, this);
         });
     }
 }
@@ -210,7 +216,7 @@ Client.prototype.delete = function (deletedDate) {
         // Iteratively deletes all devices associated with this client
         Catenis.db.collection.Device.find({
             client_id: this.doc_id,
-            status: {$ne: Catenis.module.Device.status.deleted.name}
+            status: {$ne: Device.status.deleted.name}
         }, {fields: {'index.deviceId': 1}}).forEach(doc => {
             this.getDeviceByIndex(doc.index.deviceIndex).delete(deletedDate);
         });
@@ -291,7 +297,7 @@ Client.prototype.getDeviceByIndex = function (deviceIndex) {
         throw new Meteor.Error('ctn_device_not_found', util.format('Could not find device with given index (%s) for this client (clientId: %s)', deviceIndex, this.clientId));
     }
 
-    return new Catenis.module.Device(docDevice, this);
+    return new Device(docDevice, this);
 };
 
 // Create new device for this client
@@ -349,7 +355,7 @@ Client.prototype.createDevice = function (props, ownApiAccessKey = false) {
             },
             props: typeof props === 'object' ? props : (typeof props === 'string' ? {name: props} : {}),
             apiAccessGenKey: ownApiAccessKey ? Random.secret() : null,
-            status: Catenis.module.Device.status.new.name,
+            status: Device.status.new.name,
             createdDate: new Date(Date.now())
         };
 
@@ -378,7 +384,7 @@ Client.prototype.createDevice = function (props, ownApiAccessKey = false) {
 
     try {
         // Instantiate Device object to fund recently created device
-        (new Catenis.module.Device(docDevice, this)).fundAddresses();
+        (new Device(docDevice, this)).fundAddresses();
     }
     catch (err) {
         // Error trying to fund addresses of newly created device. Log error condition
@@ -433,15 +439,15 @@ function addServiceCredit(srvCreditType, count) {
 
     try {
         // Execute code in critical section to avoid UTXOs concurrency
-        Catenis.module.FundSource.utxoCS.execute(() => {
+        FundSource.utxoCS.execute(() => {
             // Allocate service credit addresses...
-            let distribFund = Catenis.module.Service.distributeClientServiceCreditFund(count);
+            let distribFund = Service.distributeClientServiceCreditFund(count);
 
             // ...and try to fund them
             fundSrvCreditTxid = fundClientServiceCreditAddresses.call(this, srvCreditType, distribFund.amountPerAddress);
 
             // Allocate system pay tx expense addresses...
-            distribFund = (srvCreditType == Client.serviceCreditType.message ? Catenis.module.Service.distributePayMessageTxExpenseFund : Catenis.module.Service.distributePayAssetTxExpenseFund)(count, cfgSettings.fundPayTxExpenseSafetyFactor);
+            distribFund = (srvCreditType == Client.serviceCreditType.message ? Service.distributePayMessageTxExpenseFund : Service.distributePayAssetTxExpenseFund)(count, cfgSettings.fundPayTxExpenseSafetyFactor);
 
             // ...and try to fund them
             this.ctnNode.fundPayTxExpenseAddresses(distribFund.amountPerAddress);
@@ -593,7 +599,7 @@ function fundClientServiceCreditAddresses(srvCreditType, amountPerAddress) {
 
     try {
         // Prepare transaction to fund client service credit addresses
-        fundTransact = new Catenis.module.FundTransaction(Catenis.module.FundTransaction.fundingEvent.provision_client_srv_credit, this.clientId);
+        fundTransact = new FundTransaction(FundTransaction.fundingEvent.provision_client_srv_credit, this.clientId);
 
         fundTransact.addPayees(srvCreditType == Client.serviceCreditType.message ? this.messageCreditAddr : this.assetCreditAddr, amountPerAddress);
 
@@ -664,7 +670,7 @@ Client.getClientByClientId = function (clientId) {
         throw new Meteor.Error('ctn_client_not_found', util.format('Could not find client with given client ID (%s)', clientId));
     }
 
-    return new Client(docClient, Catenis.module.CatenisNode.getCatenisNodeByIndex(docClient.index.ctnNodeIndex));
+    return new Client(docClient, CatenisNode.getCatenisNodeByIndex(docClient.index.ctnNodeIndex));
 };
 
 Client.getClientByUserId = function (user_id) {
@@ -677,7 +683,7 @@ Client.getClientByUserId = function (user_id) {
         throw new Meteor.Error('ctn_client_not_found', util.format('Could not find client associated with given user id (%s)', user_id));
     }
 
-    return new Client(docClient, Catenis.module.CatenisNode.getCatenisNodeByIndex(docClient.index.ctnNodeIndex));
+    return new Client(docClient, CatenisNode.getCatenisNodeByIndex(docClient.index.ctnNodeIndex));
 };
 
 
@@ -758,5 +764,5 @@ Object.defineProperty(Client, 'totalRemainingCredits', {
     }
 });
 
-// Save module function class reference
-Catenis.module.Client = Object.freeze(Client);
+// Lock function class
+Object.freeze(Client);

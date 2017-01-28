@@ -21,6 +21,8 @@ const util = require('util');
 
 // References code in other (Catenis) modules
 import { Catenis } from './Catenis';
+import { FundSource } from './FundSource';
+import { Transaction } from './Transaction';
 
 
 // Definition of function classes
@@ -29,14 +31,14 @@ import { Catenis } from './Catenis';
 // FundTransaction function class
 //
 //  Constructor arguments:
-//    fundingEvent: [Object] // Object of type Catenis.module.FundTransaction.fundingEvent identifying the funding event
+//    fundingEvent: [Object] // Object of type FundTransaction.fundingEvent identifying the funding event
 //    entityId: [string] (optional) // Should be specified only for 'provision_client_srv_credit' and 'provision_client_device'
 //                                      funding events. For the first case, it must match a valid client Id, and, for the
 //                                      second case, it must match a valid device Id
 //
 // NOTE: make sure that objects of this function class are instantiated and used (their methods
 //  called) from code executed from the FundSource.utxoCS critical section object
-function FundTransaction(fundingEvent, entityId) {
+export function FundTransaction(fundingEvent, entityId) {
     // Validate funding event argument
     if (!isValidFundingEvent(fundingEvent)) {
         Catenis.logger.ERROR('FundTransaction function class constructor called with invalid argument', {fundingEvent: fundingEvent});
@@ -70,7 +72,7 @@ function FundTransaction(fundingEvent, entityId) {
         }
     }
 
-    this.transact = new Catenis.module.Transaction();
+    this.transact = new Transaction();
     this.fundingEvent = fundingEvent;
     this.entityId = entityId;
     this.payees = [];
@@ -104,7 +106,7 @@ FundTransaction.prototype.addPayingSource = function () {
     let result = false;
 
     if (!this.fundsAllocated) {
-        const fundSrc = new Catenis.module.FundSource(Catenis.ctnHubNode.listFundingAddressesInUse(), {});
+        const fundSrc = new FundSource(Catenis.ctnHubNode.listFundingAddressesInUse(), {});
 
         // Try to allocate UTXOs to pay for tx expense using optimum fee rate and default
         //  payment resolution
@@ -155,7 +157,7 @@ FundTransaction.prototype.sendTransaction = function () {
         this.transact.sendTransaction();
 
         // Save sent transaction onto local database
-        this.transact.saveSentTransaction(Catenis.module.Transaction.type.funding, {
+        this.transact.saveSentTransaction(Transaction.type.funding, {
             event: {
                 name: this.fundingEvent.name,
                 entityId: this.entityId
@@ -229,5 +231,5 @@ function isValidFundingEvent(event) {
 // Module code
 //
 
-// Save module function class reference
-Catenis.module.FundTransaction = Object.freeze(FundTransaction);
+// Lock function class
+Object.freeze(FundTransaction);

@@ -46,7 +46,7 @@ let retrieveFeesIntervalHandle,
 //
 
 // BitcoinFees function class
-function BitcoinFees(apiUrl) {
+export function BitcoinFees(apiUrl) {
     this.apiUrl = apiUrl;
 }
 
@@ -231,5 +231,5 @@ Object.defineProperties(BitcoinFees, {
     }
 });
 
-// Save module function class reference
-Catenis.module.BitcoinFees = Object.freeze(BitcoinFees);
+// Lock function class
+Object.freeze(BitcoinFees);

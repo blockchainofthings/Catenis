@@ -34,7 +34,7 @@ const iv = [128,54,254,30,235,181,211,89,160,214,109,196,40,175,106,102];
 //
 
 // CrytoKeys function class
-function CryptoKeys(keyPair) {
+export function CryptoKeys(keyPair) {
     this.keyPair = keyPair;
 }
 
@@ -206,5 +206,5 @@ function calcMacEncData(privKey, encResult) {
 // Module code
 //
 
-// Save module function class reference
-Catenis.module.CryptoKeys = Object.freeze(CryptoKeys);
+// Lock function class
+Object.freeze(CryptoKeys);

@@ -21,6 +21,17 @@ import { Meteor } from 'meteor/meteor';
 
 // References code in other (Catenis) modules
 import { Catenis } from './Catenis';
+import { Application } from './Application';
+import { BitcoinCore } from './BitcoinCore';
+import { BitcoinFees } from './BitcoinFees';
+import { BlockchainAddress } from './BlockchainAddress';
+import { CatenisNode } from './CatenisNode';
+import { Client } from './Client';
+//import { ColoredCoins } from './ColoredCoins';
+import { Database } from './Database';
+import { Device } from './Device';
+import { KeyStore } from './KeyStore';
+import { TransactionMonitor } from './TransactionMonitor';
 // DEBUG - begin
 //import { resetBitcoinCore } from './Test/FundSourceTest';
 // DEBUG - end
@@ -49,21 +60,21 @@ Meteor.startup(function () {
     else {
         // Normal processing
         Catenis.logger.INFO('Starting initialization...');
-        Catenis.module.DB.initialize();
-        Catenis.module.Application.initialize();
-        Catenis.module.BitcoinFees.initialize();
-        Catenis.module.KeyStore.initialize();
-        Catenis.module.BitcoinCore.initialize();
-        //Catenis.module.ColoredCoins.initialize();
-        Catenis.module.CatenisNode.initialize();
+        Database.initialize();
+        Application.initialize();
+        BitcoinFees.initialize();
+        KeyStore.initialize();
+        BitcoinCore.initialize();
+        //ColoredCoins.initialize();
+        CatenisNode.initialize();
 
         // Make sure that all addresses are currently imported onto Bitcoin Core
         CheckImportAddresses(cfgSettings.fixMissingAddresses);
 
-        Catenis.module.BlockchainAddress.BlockchainAddress.initialize();
-        Catenis.module.Client.initialize();
-        Catenis.module.Device.initialize();
-        Catenis.module.TransactionMonitor.initialize();
+        BlockchainAddress.initialize();
+        Client.initialize();
+        Device.initialize();
+        TransactionMonitor.initialize();
         Catenis.logger.INFO('Initialization ended.');
 
         Catenis.application.startProcessing();

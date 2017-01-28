@@ -25,6 +25,8 @@ import { Meteor } from 'meteor/meteor';
 
 // References code in other (Catenis) modules
 import { Catenis } from './Catenis';
+import { BitcoinCore } from './BitcoinCore';
+import { BlockchainAddress } from './BlockchainAddress';
 
 // Config entries
 const configTransact = config.get('transaction');
@@ -35,7 +37,6 @@ const cfgSettings = {
     txOutputSize: configTransact.get('txOutputSize')
 };
 
-export { Transaction };
 
 // Definition of function classes
 //
@@ -77,7 +78,7 @@ export { Transaction };
 //    data: [Buffer object] // Should only exist for 'nullData' output type
 //  }
 
-function Transaction() {
+export function Transaction() {
     this.inputs = [];
     this.outputs = [];
     this.hasNullDataOutput = false;
@@ -375,7 +376,7 @@ Transaction.prototype.sendTransaction = function (resend = false) {
 //  info: [Object]  // One of the following, according to the specified type (previous argument)
 //    funding: {
 //      event: {
-//          name: [string],  // Identifies the event that triggered the funding action (from Catenis.module.FundTransaction.fundingEvent).
+//          name: [string],  // Identifies the event that triggered the funding action (from FundTransaction.fundingEvent).
 //                               Valid values: 'provision_system_device', 'provision_client_srv_credit', 'provision_client_device',
 //                               'add_extra_tx_pay_funds'
 //          entityId: [string]  // Id of the entity associated with the event. Should only exist for 'provision_client_srv_credit'
@@ -383,7 +384,7 @@ Transaction.prototype.sendTransaction = function (resend = false) {
 //                                  clientId; for 'provision_client_device' events, it refers to the deviceId
 //      },
 //      payees: [Array(string)] // Identifies the type of blockchain addresses that receive the funds. Valid values (from
-//                                  Catenis.module.KeyStore.extKeyType): 'sys_dev_main_addr', 'sys_node_fund_pay_addr',
+//                                  KeyStore.extKeyType): 'sys_dev_main_addr', 'sys_node_fund_pay_addr',
 //                                  'sys_pay_tx_exp_addr', 'cln_msg_crd_addr', 'cln_asst_crd_addr', 'dev_read_conf_addr',
 //                                  'dev_main_addr', 'dev_asst_issu_addr'
 //    }
@@ -485,7 +486,7 @@ Transaction.prototype.matches = function (transactFuncClass) {
 
 Transaction.prototype.revertOutputAddresses = function () {
     if (this.outputs.length > 0) {
-        Catenis.module.BlockchainAddress.BlockchainAddress.revertAddressList(this.listOutputAddresses());
+        BlockchainAddress.revertAddressList(this.listOutputAddresses());
     }
 };
 
@@ -735,7 +736,7 @@ Transaction.fromHex = function (hexTx) {
     }
     catch (err) {
         if (!((err instanceof Meteor.Error) && err.details != undefined && typeof err.details.code === 'number'
-                && err.details.code == Catenis.module.BitcoinCore.rpcErrorCode.RPC_DESERIALIZATION_ERROR)) {
+                && err.details.code == BitcoinCore.rpcErrorCode.RPC_DESERIALIZATION_ERROR)) {
             // An error other than failure to deserialize transaction.
             //  Just re-throws it
             throw err;
@@ -880,7 +881,7 @@ function isValidSentTransactionType(type) {
 
 // addrType: [string]  //  undefined: null data output
 //                     //  null: pay to unknown address
-//                     //  address type from Catenis.module.KeyStore.extKeyType.name: pay to that type of address
+//                     //  address type from KeyStore.extKeyType.name: pay to that type of address
 function getIOTokenFromAddrType(addrType) {
     const ioTokenName = addrType === undefined ? Transaction.ioToken.null_data.name :
             (addrType === null ? Transaction.ioToken.p2_unknown_addr.name : 'p2_' + addrType);
@@ -922,5 +923,5 @@ Object.defineProperties(Transaction, {
     }
 });
 
-// Save module function class reference
-Catenis.module.Transaction = Object.freeze(Transaction);
+// Lock function class
+Object.freeze(Transaction);

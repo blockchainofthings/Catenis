@@ -25,7 +25,8 @@ import { Meteor } from 'meteor/meteor';
 // References code in other (Catenis) modules
 import { Catenis } from './Catenis';
 import { TransactionMonitor } from './TransactionMonitor';
-
+import { Device } from './Device';
+import { Transaction } from './Transaction';
 
 // Config entries
 const appConfig = config.get('application');
@@ -53,7 +54,7 @@ const statusRegEx = {
 //
 
 // Application function class
-function Application() {
+export function Application() {
     // Save Catenis node index used by application
     Object.defineProperty(this, 'ctnHubNodeIndex', {
         get: function () {
@@ -125,7 +126,7 @@ Application.prototype.startProcessing = function () {
         Catenis.txMonitor.startMonitoring();
 
         // Check if any devices still need to have their addresses funded
-        Catenis.module.Device.checkDevicesToFund();
+        Device.checkDevicesToFund();
     }
     catch (err) {
         if ((err instanceof Meteor.Error) && err.error === 'ctn_sys_no_fund') {
@@ -224,14 +225,14 @@ function sysFundingTxConfirmed(data) {
     if (this.status === Application.processingStatus.paused_no_funds) {
         // Parse confirmed transaction to make sure that funding address is loaded
         //  onto local key storage
-        Catenis.module.Transaction.fromTxid(data.txid);
+        Transaction.fromTxid(data.txid);
 
         // And try to start the system again
         this.startProcessing();
     }
     else {
         // Assume system already started. Check if there are devices to provision
-        Catenis.module.Device.checkDevicesToFund();
+        Device.checkDevicesToFund();
     }
 }
 
@@ -330,5 +331,5 @@ function shutdown() {
 // Module code
 //
 
-// Save module function class reference
-Catenis.module.Application = Object.freeze(Application);
+// Lock function class
+Object.freeze(Application);

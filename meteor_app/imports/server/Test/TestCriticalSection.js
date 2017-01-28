@@ -2,17 +2,28 @@
  * Created by claudio on 24/07/16.
  */
 
-//var Future = Npm.require('fibers/future');
-var util = Npm.require('util');
+// References to external code
+//
+// Internal node modules
+//  NOTE: the reference of these modules are done sing 'require()' instead of 'import' to
+//      to avoid annoying WebStorm warning message: 'default export is not defined in
+//      imported module'
+const util = require('util');
+// Third-party node modules
+//import config from 'config';
+// Meteor packages
+import { Meteor } from 'meteor/meteor';
 
+// References code in other (Catenis) modules
+import { Catenis } from '../Catenis';
 import { CriticalSection } from '../CriticalSection.js';
 
 // Instantiate critical section object
-var tstCS = new CriticalSection();
+const tstCS = new CriticalSection();
 
-var hd;
+let hd;
 
-function TestCriticalSection () {
+export function TestCriticalSection () {
 }
 
 TestCriticalSection.initTest = function () {
@@ -73,11 +84,5 @@ function intervalTask() {
     });
 }
 
-// Save module function class reference
-if (typeof Catenis === 'undefined')
-    Catenis = {};
-
-if (typeof Catenis.module === 'undefined')
-    Catenis.module = {};
-
-Catenis.module.TestCriticalSection = Object.freeze(TestCriticalSection);
+// Lock function class
+Object.freeze(TestCriticalSection);

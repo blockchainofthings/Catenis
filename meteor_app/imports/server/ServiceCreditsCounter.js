@@ -16,6 +16,9 @@
 // Meteor packages
 //import { Meteor } from 'meteor/meteor';
 
+// References code in other (Catenis) modules
+import { Catenis } from './Catenis';
+
 
 // Definition of class
 //
@@ -61,3 +64,10 @@ export class ServiceCreditsCounter {
         this.addUnconfirmed(compDiffCount.unconfirmed);
     }
 }
+
+
+// Module code
+//
+
+// Lock function class
+Object.freeze(ServiceCreditsCounter);

@@ -193,14 +193,13 @@
   // Parameters pertaining to CatenisMessage module
   "catenisMessage": {
     "nullDataMaxSize": 80,  // Maximum size, in bytes, of data that fits in null data output
-    "defaultStorageProvider": "ipfs"
-  },
-  // Parameters pertaining to MessageStorage module
-  "messageStorage": {
-    "ipfs": {
-      "apiHost": "127.0.0.1",
-      "apiPort": 5001,
-      "apiProtocol": "http"
+    "defaultStorageProvider": "ipfs",
+    "msgStorage": {
+      "ipfs": {
+        "apiHost": "127.0.0.1",
+        "apiPort": 5001,
+        "apiProtocol": "http"
+      }
     }
   },
   // Parameters pertaining to RestApi module

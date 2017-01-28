@@ -2,16 +2,10 @@
  * Created by claudio on 26/11/15.
  */
 
-// NOTE: the name of this javascript source code module purposefully
-//  starts with a question-mark character so it is guaranteed that
-//  this piece of code will be loaded before any other server code
-//console.log('[!Logging.js]: This code just ran.');
+//console.log('[Logging.js]: This code just ran.');
 
 // Module variables
 //
-
-// Make sure that environment is properly configured before anything else
-import './ConfigEnv';
 
 // References to external code
 //

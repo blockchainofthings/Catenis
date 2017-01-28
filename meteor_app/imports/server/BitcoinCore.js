@@ -42,7 +42,7 @@ const cfgSettings = {
 //
 
 // BitcoinCore function class
-function BitcoinCore(network, host, username, password, timeout) {
+export function BitcoinCore(network, host, username, password, timeout) {
     const opts = {
         host: host,
         port: network === 'testnet' ? cfgSettings.testnetRpcPort : cfgSettings.mainRpcPort,
@@ -817,5 +817,5 @@ function lockWallet() {
 // Module code
 //
 
-// Save module function class reference
-Catenis.module.BitcoinCore = Object.freeze(BitcoinCore);
+// Lock function class
+Object.freeze(BitcoinCore);

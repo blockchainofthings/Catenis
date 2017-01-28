@@ -22,6 +22,12 @@ import { Meteor } from 'meteor/meteor';
 // References code in other (Catenis) modules
 import { Catenis } from './Catenis';
 import { cfgSettings as deviceCfgSettings } from './Device';
+import { CatenisMessage } from './CatenisMessage';
+import { CatenisNode } from './CatenisNode';
+import { Device } from './Device';
+import { FundSource } from './FundSource';
+import { KeyStore } from './KeyStore';
+import { Service } from './Service';
 import { Transaction } from './Transaction';
 
 
@@ -31,23 +37,23 @@ import { Transaction } from './Transaction';
 // LogMessageTransaction function class
 //
 //  Constructor arguments:
-//    device: [Object] // Object of type Catenis.module.Device identifying the device that is logging the message
+//    device: [Object] // Object of type Device identifying the device that is logging the message
 //    message: [Object] // Object of type Buffer containing the message to be logged
 //    options: {
 //      encrypted: [Boolean], // Indicates whether message should be encrypted before storing it
-//      storageScheme: [String], // A field of the Catenis.module.CatenisMessage.storageScheme property identifying how the message should be stored
-//      storageProvider: [Object] // (optional, default: defaultStorageProvider) A field of the Catenis.module.CatenisMessage.storageProvider property
+//      storageScheme: [String], // A field of the CatenisMessage.storageScheme property identifying how the message should be stored
+//      storageProvider: [Object] // (optional, default: defaultStorageProvider) A field of the CatenisMessage.storageProvider property
 //                                //    identifying the type of external storage to be used to store the message that should not be embedded
 //    }
 //
 // NOTE: make sure that objects of this function class are instantiated and used (their methods
 //  called) from code executed from the FundSource.utxoCS critical section object
-function LogMessageTransaction(device, message, options) {
+export function LogMessageTransaction(device, message, options) {
     if (device != undefined) {
         // Validate arguments
         const errArg = {};
 
-        if (!(device instanceof Catenis.module.Device)) {
+        if (!(device instanceof Device)) {
             errArg.device = device;
         }
 
@@ -55,8 +61,8 @@ function LogMessageTransaction(device, message, options) {
             errArg.message = message;
         }
 
-        if (typeof options !== 'object' || options == null || !('encrypted' in options) || !('storageScheme' in options) || !Catenis.module.CatenisMessage.isValidStorageScheme(options.storageScheme)
-            || (('storageProvider' in options) && options.storageProvider != undefined && !Catenis.module.CatenisMessage.isValidStorageProvider(options.storageProvider))) {
+        if (typeof options !== 'object' || options == null || !('encrypted' in options) || !('storageScheme' in options) || !CatenisMessage.isValidStorageScheme(options.storageScheme)
+            || (('storageProvider' in options) && options.storageProvider != undefined && !CatenisMessage.isValidStorageProvider(options.storageProvider))) {
             errArg.options = options;
         }
 
@@ -68,7 +74,7 @@ function LogMessageTransaction(device, message, options) {
         }
 
         // Just initialize instance variables for now
-        this.transact = new Catenis.module.Transaction();
+        this.transact = new Transaction();
         this.txBuilt = false;
         this.device = device;
         this.message = message;
@@ -85,9 +91,9 @@ LogMessageTransaction.prototype.buildTransaction = function () {
         // Add transaction inputs
 
         // Prepare to add device main address input
-        const devMainAddrFundSource = new Catenis.module.FundSource(this.device.mainAddr.listAddressesInUse(), {});
+        const devMainAddrFundSource = new FundSource(this.device.mainAddr.listAddressesInUse(), {});
         const devMainAddrBalance = devMainAddrFundSource.getBalance();
-        const devMainAddrAllocResult = devMainAddrFundSource.allocateFund(Catenis.module.Service.devMainAddrAmount);
+        const devMainAddrAllocResult = devMainAddrFundSource.allocateFund(Service.devMainAddrAmount);
 
         // Make sure that UTXOs have been correctly allocated
         if (devMainAddrAllocResult == null) {
@@ -116,8 +122,8 @@ LogMessageTransaction.prototype.buildTransaction = function () {
         this.transact.addInput(devMainAddrAllocUtxo.txout, devMainAddrAllocUtxo.address, devMainAddrInfo);
 
         // Prepare to add client message credit input
-        const clntMsgCreditAddrFundSource = new Catenis.module.FundSource(this.device.client.messageCreditAddr.listAddressesInUse(), {});
-        const clntMsgCreditAddrAllocResult = clntMsgCreditAddrFundSource.allocateFund(Catenis.module.Service.clientServiceCreditAmount);
+        const clntMsgCreditAddrFundSource = new FundSource(this.device.client.messageCreditAddr.listAddressesInUse(), {});
+        const clntMsgCreditAddrAllocResult = clntMsgCreditAddrFundSource.allocateFund(Service.clientServiceCreditAmount);
 
         // Make sure that UTXOs have been correctly allocated
         if (clntMsgCreditAddrAllocResult == null) {
@@ -156,17 +162,17 @@ LogMessageTransaction.prototype.buildTransaction = function () {
         }
 
         // Prepare message to log
-        const ctnMessage = new Catenis.module.CatenisMessage(msgToLog, Catenis.module.CatenisMessage.functionByte.logMessage, this.options);
+        const ctnMessage = new CatenisMessage(msgToLog, CatenisMessage.functionByte.logMessage, this.options);
 
         // Add null data output
         this.transact.addNullDataOutput(ctnMessage.getData());
 
         // Prepare to add device main address refund output if necessary
-        if (devMainAddrBalance <= Catenis.module.Service.devMainAddrMinBalance) {
+        if (devMainAddrBalance <= Service.devMainAddrMinBalance) {
             const devMainAddrRefundKeys = this.device.mainAddr.newAddressKeys();
 
             // Add device main address refund output
-            this.transact.addP2PKHOutput(devMainAddrRefundKeys.getAddress(), Catenis.module.Service.devMainAddrAmount);
+            this.transact.addP2PKHOutput(devMainAddrRefundKeys.getAddress(), Service.devMainAddrAmount);
         }
 
         if (devMainAddrAllocResult.changeAmount > 0) {
@@ -180,7 +186,7 @@ LogMessageTransaction.prototype.buildTransaction = function () {
         }
 
         // Now, allocate UTXOs to pay for tx expense
-        const payTxFundSource = new Catenis.module.FundSource(Catenis.ctnHubNode.payTxExpenseAddr.listAddressesInUse(), {});
+        const payTxFundSource = new FundSource(Catenis.ctnHubNode.payTxExpenseAddr.listAddressesInUse(), {});
         const payTxAllocResult = payTxFundSource.allocateFundForTxExpense({
             txSize: this.transact.estimateSize(),
             inputAmount: this.transact.totalInputsAmount(),
@@ -220,7 +226,7 @@ LogMessageTransaction.prototype.sendTransaction = function () {
         this.transact.sendTransaction();
 
         // Save sent transaction onto local database
-        this.transact.saveSentTransaction(Catenis.module.Transaction.type.log_message, {
+        this.transact.saveSentTransaction(Transaction.type.log_message, {
             deviceId: this.device.deviceId
         });
 
@@ -258,7 +264,7 @@ LogMessageTransaction.prototype.revertOutputAddresses = function () {
 // Determines if transaction is a valid Catenis Log Message transaction
 //
 //  Arguments:
-//    transact: [Object] // Object of type Catenis.module.Transaction identifying the transaction to be checked
+//    transact: [Object] // Object of type Transaction identifying the transaction to be checked
 //
 //  Return:
 //    - If transaction is not valid: undefined
@@ -281,7 +287,7 @@ LogMessageTransaction.checkTransaction = function (transact) {
             const output = transact.getOutputAt(1);
             if (output != undefined) {
                 const outputAddr = getAddrAndAddrInfo(output.payInfo);
-                if (outputAddr.addrInfo.type === Catenis.module.KeyStore.extKeyType.dev_main_addr.name) {
+                if (outputAddr.addrInfo.type === KeyStore.extKeyType.dev_main_addr.name) {
                     if (devMainRefundChangeAddr1 == undefined) {
                         devMainRefundChangeAddr1 = outputAddr;
                     }
@@ -289,7 +295,7 @@ LogMessageTransaction.checkTransaction = function (transact) {
                         devMainRefundChangeAddr2 = outputAddr;
                     }
                 }
-                else if (outputAddr.addrInfo.type === Catenis.module.KeyStore.extKeyType.cln_msg_crd_addr.name) {
+                else if (outputAddr.addrInfo.type === KeyStore.extKeyType.cln_msg_crd_addr.name) {
                     clntMsgCreditChangeAddr = outputAddr;
                 }
             }
@@ -302,7 +308,7 @@ LogMessageTransaction.checkTransaction = function (transact) {
             let ctnMessage = undefined;
 
             try {
-                ctnMessage = Catenis.module.CatenisMessage.fromData(transact.getNullDataOutput().data, false);
+                ctnMessage = CatenisMessage.fromData(transact.getNullDataOutput().data, false);
             }
             catch(err) {
                 if (!(err instanceof Meteor.Error) || err.error !== 'ctn_msg_data_parse_error') {
@@ -312,7 +318,7 @@ LogMessageTransaction.checkTransaction = function (transact) {
                 }
             }
 
-            if (ctnMessage !== undefined && ctnMessage.funcByte == Catenis.module.CatenisMessage.functionByte.logMessage) {
+            if (ctnMessage !== undefined && ctnMessage.funcByte == CatenisMessage.functionByte.logMessage) {
                 let message = undefined;
 
                 if (ctnMessage.options.encrypted) {
@@ -331,12 +337,12 @@ LogMessageTransaction.checkTransaction = function (transact) {
                     logMsgTransact = new LogMessageTransaction();
 
                     logMsgTransact.transact = transact;
-                    logMsgTransact.device = Catenis.module.CatenisNode.getCatenisNodeByIndex(devMainAddr.addrInfo.pathParts.ctnNodeIndex).getClientByIndex(devMainAddr.addrInfo.pathParts.clientIndex).getDeviceByIndex(devMainAddr.addrInfo.pathParts.deviceIndex);
+                    logMsgTransact.device = CatenisNode.getCatenisNodeByIndex(devMainAddr.addrInfo.pathParts.ctnNodeIndex).getClientByIndex(devMainAddr.addrInfo.pathParts.clientIndex).getDeviceByIndex(devMainAddr.addrInfo.pathParts.deviceIndex);
                     logMsgTransact.deviceMainAddrKeys = devMainAddr.addrInfo.cryptoKeys;
                     logMsgTransact.message = message;
                     logMsgTransact.options = {
                         encrypted: ctnMessage.options.encrypted,
-                        storageScheme: ctnMessage.options.embedded ? Catenis.module.CatenisMessage.storageScheme.embedded : Catenis.module.CatenisMessage.storageScheme.externalStorage
+                        storageScheme: ctnMessage.options.embedded ? CatenisMessage.storageScheme.embedded : CatenisMessage.storageScheme.externalStorage
                     };
 
                     if (ctnMessage.options.storageProvider != undefined) {
@@ -381,5 +387,5 @@ function getAddrAndAddrInfo(obj) {
 // Module code
 //
 
-// Save module function class reference
-Catenis.module.LogMessageTransaction = Object.freeze(LogMessageTransaction);
+// Lock function class
+Object.freeze(LogMessageTransaction);

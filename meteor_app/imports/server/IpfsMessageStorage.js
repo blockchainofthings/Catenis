@@ -33,7 +33,7 @@ import { MessageStorage } from './MessageStorage';
 //
 
 // IpfsMessageStorage class
-class IpfsMessageStorage extends MessageStorage {
+export class IpfsMessageStorage extends MessageStorage {
     constructor (host, port, protocol) {
         super();
 
@@ -214,5 +214,5 @@ function hashRipemd160(data) {
 // Module code
 //
 
-// Save module function class reference
-Catenis.module.IpfsMessageStorage = Object.freeze(IpfsMessageStorage);
+// Lock function class
+Object.freeze(IpfsMessageStorage);

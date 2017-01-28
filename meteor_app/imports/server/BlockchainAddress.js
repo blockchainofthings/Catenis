@@ -23,6 +23,7 @@ import { Meteor } from 'meteor/meteor';
 // References code in other (Catenis) modules
 import { Catenis } from './Catenis';
 import { CriticalSection } from './CriticalSection';
+import { KeyStore } from './KeyStore';
 
 // Config entries
 const configBcAddress = config.get('blockchainAddress'),
@@ -58,11 +59,11 @@ let updtIssuedAddrsIntervalHandle,
 //
 
 // SystemDeviceMainAddress derived class
-class SystemDeviceMainAddress extends BlockchainAddress {
+export class SystemDeviceMainAddress extends BlockchainAddress {
     constructor (ctnNodeIndex) {
         super();
-        this.type = Catenis.module.KeyStore.extKeyType.sys_dev_main_addr.name;
-        this.parentPath = Catenis.module.KeyStore.systemDeviceMainAddressRootPath(ctnNodeIndex);
+        this.type = KeyStore.extKeyType.sys_dev_main_addr.name;
+        this.parentPath = KeyStore.systemDeviceMainAddressRootPath(ctnNodeIndex);
 
         // Make sure that an object of this class has not been instantiated yet
         if (hasInstantiatedObject(this.parentPath)) {
@@ -98,7 +99,7 @@ class SystemDeviceMainAddress extends BlockchainAddress {
         }
 
         // Check if an instance of this class has already been instantiated
-        const parentPath = Catenis.module.KeyStore.systemDeviceMainAddressRootPath(ctnNodeIndex);
+        const parentPath = KeyStore.systemDeviceMainAddressRootPath(ctnNodeIndex);
 
         return hasInstantiatedObject(parentPath) ? getInstantiatedObject(parentPath)
             : new SystemDeviceMainAddress(ctnNodeIndex);
@@ -106,11 +107,11 @@ class SystemDeviceMainAddress extends BlockchainAddress {
 }
 
 // SystemFundingPaymentAddress derived class
-class SystemFundingPaymentAddress extends BlockchainAddress {
+export class SystemFundingPaymentAddress extends BlockchainAddress {
     constructor (ctnNodeIndex) {
         super();
-        this.type = Catenis.module.KeyStore.extKeyType.sys_fund_pay_addr.name;
-        this.parentPath = Catenis.module.KeyStore.systemFundingPaymentRootPath(ctnNodeIndex);
+        this.type = KeyStore.extKeyType.sys_fund_pay_addr.name;
+        this.parentPath = KeyStore.systemFundingPaymentRootPath(ctnNodeIndex);
 
         // Make sure that an object of this class has not been instantiated yet
         if (hasInstantiatedObject(this.parentPath)) {
@@ -146,7 +147,7 @@ class SystemFundingPaymentAddress extends BlockchainAddress {
         }
 
         // Check if an instance of this class has already been instantiated
-        const parentPath = Catenis.module.KeyStore.systemFundingPaymentRootPath(ctnNodeIndex);
+        const parentPath = KeyStore.systemFundingPaymentRootPath(ctnNodeIndex);
 
         return hasInstantiatedObject(parentPath) ? getInstantiatedObject(parentPath)
                 : new SystemFundingPaymentAddress(ctnNodeIndex);
@@ -154,11 +155,11 @@ class SystemFundingPaymentAddress extends BlockchainAddress {
 }
 
 // SystemFundingChangeAddress derived class
-class SystemFundingChangeAddress extends BlockchainAddress {
+export class SystemFundingChangeAddress extends BlockchainAddress {
     constructor (ctnNodeIndex) {
         super();
-        this.type = Catenis.module.KeyStore.extKeyType.sys_fund_chg_addr.name;
-        this.parentPath = Catenis.module.KeyStore.systemFundingChangeRootPath(ctnNodeIndex);
+        this.type = KeyStore.extKeyType.sys_fund_chg_addr.name;
+        this.parentPath = KeyStore.systemFundingChangeRootPath(ctnNodeIndex);
 
         // Make sure that an object of this class has not been instantiated yet
         if (hasInstantiatedObject(this.parentPath)) {
@@ -194,7 +195,7 @@ class SystemFundingChangeAddress extends BlockchainAddress {
         }
 
         // Check if an instance of this class has already been instantiated
-        const parentPath = Catenis.module.KeyStore.systemFundingChangeRootPath(ctnNodeIndex);
+        const parentPath = KeyStore.systemFundingChangeRootPath(ctnNodeIndex);
 
         return hasInstantiatedObject(parentPath) ? getInstantiatedObject(parentPath)
             : new SystemFundingChangeAddress(ctnNodeIndex);
@@ -202,11 +203,11 @@ class SystemFundingChangeAddress extends BlockchainAddress {
 }
 
 // SystemPayTxExpenseAddress derived class
-class SystemPayTxExpenseAddress extends BlockchainAddress {
+export class SystemPayTxExpenseAddress extends BlockchainAddress {
     constructor (ctnNodeIndex) {
         super();
-        this.type = Catenis.module.KeyStore.extKeyType.sys_pay_tx_exp_addr.name;
-        this.parentPath = Catenis.module.KeyStore.systemPayTxExpenseRootPath(ctnNodeIndex);
+        this.type = KeyStore.extKeyType.sys_pay_tx_exp_addr.name;
+        this.parentPath = KeyStore.systemPayTxExpenseRootPath(ctnNodeIndex);
 
         // Make sure that an object of this class has not been instantiated yet
         if (hasInstantiatedObject(this.parentPath)) {
@@ -242,7 +243,7 @@ class SystemPayTxExpenseAddress extends BlockchainAddress {
         }
 
         // Check if an instance of this class has already been instantiated
-        const parentPath = Catenis.module.KeyStore.systemPayTxExpenseRootPath(ctnNodeIndex);
+        const parentPath = KeyStore.systemPayTxExpenseRootPath(ctnNodeIndex);
 
         return hasInstantiatedObject(parentPath) ? getInstantiatedObject(parentPath)
             : new SystemPayTxExpenseAddress(ctnNodeIndex);
@@ -250,11 +251,11 @@ class SystemPayTxExpenseAddress extends BlockchainAddress {
 }
 
 // ClientMessageCreditAddress derived class
-class ClientMessageCreditAddress extends BlockchainAddress {
+export class ClientMessageCreditAddress extends BlockchainAddress {
     constructor (ctnNodeIndex, clientIndex) {
         super();
-        this.type = Catenis.module.KeyStore.extKeyType.cln_msg_crd_addr.name;
-        this.parentPath = Catenis.module.KeyStore.clientMessageCreditAddressRootPath(ctnNodeIndex, clientIndex);
+        this.type = KeyStore.extKeyType.cln_msg_crd_addr.name;
+        this.parentPath = KeyStore.clientMessageCreditAddressRootPath(ctnNodeIndex, clientIndex);
 
         // Make sure that an object of this class has not been instantiated yet
         if (hasInstantiatedObject(this.parentPath)) {
@@ -293,7 +294,7 @@ class ClientMessageCreditAddress extends BlockchainAddress {
         }
 
         // Check if an instance of this class has already been instantiated
-        const parentPath = Catenis.module.KeyStore.clientMessageCreditAddressRootPath(ctnNodeIndex, clientIndex);
+        const parentPath = KeyStore.clientMessageCreditAddressRootPath(ctnNodeIndex, clientIndex);
 
         return hasInstantiatedObject(parentPath) ? getInstantiatedObject(parentPath)
             : new ClientMessageCreditAddress(ctnNodeIndex, clientIndex);
@@ -301,11 +302,11 @@ class ClientMessageCreditAddress extends BlockchainAddress {
 }
 
 // ClientAssetCreditAddress derived class
-class ClientAssetCreditAddress extends BlockchainAddress {
+export class ClientAssetCreditAddress extends BlockchainAddress {
     constructor (ctnNodeIndex, clientIndex) {
         super();
-        this.type = Catenis.module.KeyStore.extKeyType.cln_asst_crd_addr.name;
-        this.parentPath = Catenis.module.KeyStore.clientAssetCreditAddressRootPath(ctnNodeIndex, clientIndex);
+        this.type = KeyStore.extKeyType.cln_asst_crd_addr.name;
+        this.parentPath = KeyStore.clientAssetCreditAddressRootPath(ctnNodeIndex, clientIndex);
 
         // Make sure that an object of this class has not been instantiated yet
         if (hasInstantiatedObject(this.parentPath)) {
@@ -344,7 +345,7 @@ class ClientAssetCreditAddress extends BlockchainAddress {
         }
 
         // Check if an instance of this class has already been instantiated
-        const parentPath = Catenis.module.KeyStore.clientAssetCreditAddressRootPath(ctnNodeIndex, clientIndex);
+        const parentPath = KeyStore.clientAssetCreditAddressRootPath(ctnNodeIndex, clientIndex);
 
         return hasInstantiatedObject(parentPath) ? getInstantiatedObject(parentPath)
             : new ClientAssetCreditAddress(ctnNodeIndex, clientIndex);
@@ -352,11 +353,11 @@ class ClientAssetCreditAddress extends BlockchainAddress {
 }
 
 // DeviceReadConfirmAddress derived class
-class DeviceReadConfirmAddress extends BlockchainAddress {
+export class DeviceReadConfirmAddress extends BlockchainAddress {
     constructor (ctnNodeIndex, clientIndex, deviceIndex) {
         super();
-        this.type = Catenis.module.KeyStore.extKeyType.dev_read_conf_addr.name;
-        this.parentPath = Catenis.module.KeyStore.deviceReadConfirmAddressRootPath(ctnNodeIndex, clientIndex, deviceIndex);
+        this.type = KeyStore.extKeyType.dev_read_conf_addr.name;
+        this.parentPath = KeyStore.deviceReadConfirmAddressRootPath(ctnNodeIndex, clientIndex, deviceIndex);
 
         // Make sure that an object of this class has not been instantiated yet
         if (hasInstantiatedObject(this.parentPath)) {
@@ -398,7 +399,7 @@ class DeviceReadConfirmAddress extends BlockchainAddress {
         }
 
         // Check if an instance of this class has already been instantiated
-        const parentPath = Catenis.module.KeyStore.deviceReadConfirmAddressRootPath(ctnNodeIndex, clientIndex, deviceIndex);
+        const parentPath = KeyStore.deviceReadConfirmAddressRootPath(ctnNodeIndex, clientIndex, deviceIndex);
 
         return hasInstantiatedObject(parentPath) ? getInstantiatedObject(parentPath)
             : new DeviceReadConfirmAddress(ctnNodeIndex, clientIndex, deviceIndex);
@@ -406,11 +407,11 @@ class DeviceReadConfirmAddress extends BlockchainAddress {
 }
 
 // DeviceMainAddress derived class
-class DeviceMainAddress extends BlockchainAddress {
+export class DeviceMainAddress extends BlockchainAddress {
     constructor (ctnNodeIndex, clientIndex, deviceIndex) {
         super();
-        this.type = Catenis.module.KeyStore.extKeyType.dev_main_addr.name;
-        this.parentPath = Catenis.module.KeyStore.deviceMainAddressRootPath(ctnNodeIndex, clientIndex, deviceIndex);
+        this.type = KeyStore.extKeyType.dev_main_addr.name;
+        this.parentPath = KeyStore.deviceMainAddressRootPath(ctnNodeIndex, clientIndex, deviceIndex);
 
         // Make sure that an object of this class has not been instantiated yet
         if (hasInstantiatedObject(this.parentPath)) {
@@ -452,7 +453,7 @@ class DeviceMainAddress extends BlockchainAddress {
         }
 
         // Check if an instance of this class has already been instantiated
-        const parentPath = Catenis.module.KeyStore.deviceMainAddressRootPath(ctnNodeIndex, clientIndex, deviceIndex);
+        const parentPath = KeyStore.deviceMainAddressRootPath(ctnNodeIndex, clientIndex, deviceIndex);
 
         return hasInstantiatedObject(parentPath) ? getInstantiatedObject(parentPath)
             : new DeviceMainAddress(ctnNodeIndex, clientIndex, deviceIndex);
@@ -460,11 +461,11 @@ class DeviceMainAddress extends BlockchainAddress {
 }
 
 // DeviceAssetAddress derived class
-class DeviceAssetAddress extends BlockchainAddress {
+export class DeviceAssetAddress extends BlockchainAddress {
     constructor (ctnNodeIndex, clientIndex, deviceIndex) {
         super();
-        this.type = Catenis.module.KeyStore.extKeyType.dev_asst_addr.name;
-        this.parentPath = Catenis.module.KeyStore.deviceAssetAddressRootPath(ctnNodeIndex, clientIndex, deviceIndex);
+        this.type = KeyStore.extKeyType.dev_asst_addr.name;
+        this.parentPath = KeyStore.deviceAssetAddressRootPath(ctnNodeIndex, clientIndex, deviceIndex);
 
         // Make sure that an object of this class has not been instantiated yet
         if (hasInstantiatedObject(this.parentPath)) {
@@ -506,7 +507,7 @@ class DeviceAssetAddress extends BlockchainAddress {
         }
 
         // Check if an instance of this class has already been instantiated
-        const parentPath = Catenis.module.KeyStore.deviceAssetAddressRootPath(ctnNodeIndex, clientIndex, deviceIndex);
+        const parentPath = KeyStore.deviceAssetAddressRootPath(ctnNodeIndex, clientIndex, deviceIndex);
 
         return hasInstantiatedObject(parentPath) ? getInstantiatedObject(parentPath)
             : new DeviceAssetAddress(ctnNodeIndex, clientIndex, deviceIndex);
@@ -514,11 +515,11 @@ class DeviceAssetAddress extends BlockchainAddress {
 }
 
 // DeviceAssetIssuanceAddress derived class
-class DeviceAssetIssuanceAddress extends BlockchainAddress {
+export class DeviceAssetIssuanceAddress extends BlockchainAddress {
     constructor (ctnNodeIndex, clientIndex, deviceIndex) {
         super();
-        this.type = Catenis.module.KeyStore.extKeyType.dev_asst_issu_addr.name;
-        this.parentPath = Catenis.module.KeyStore.deviceAssetIssuanceAddressRootPath(ctnNodeIndex, clientIndex, deviceIndex);
+        this.type = KeyStore.extKeyType.dev_asst_issu_addr.name;
+        this.parentPath = KeyStore.deviceAssetIssuanceAddressRootPath(ctnNodeIndex, clientIndex, deviceIndex);
 
         // Make sure that an object of this class has not been instantiated yet
         if (hasInstantiatedObject(this.parentPath)) {
@@ -561,7 +562,7 @@ class DeviceAssetIssuanceAddress extends BlockchainAddress {
         }
 
         // Check if an instance of this class has already been instantiated
-        const parentPath = Catenis.module.KeyStore.deviceAssetIssuanceAddressRootPath(ctnNodeIndex, clientIndex, deviceIndex);
+        const parentPath = KeyStore.deviceAssetIssuanceAddressRootPath(ctnNodeIndex, clientIndex, deviceIndex);
 
         return hasInstantiatedObject(parentPath) ? getInstantiatedObject(parentPath)
             : new DeviceAssetIssuanceAddress(ctnNodeIndex, clientIndex, deviceIndex);
@@ -569,7 +570,7 @@ class DeviceAssetIssuanceAddress extends BlockchainAddress {
 }
 
 // BlockchainAddress function class
-function BlockchainAddress() {
+export function BlockchainAddress() {
     this.type = undefined;
     this.parentPath = undefined;
     this.addressValidity = undefined;
@@ -946,7 +947,7 @@ BlockchainAddress.getAddressOfIssuedBlockchainAddress = function (docIssuedAddr)
     if (addrKeys == null) {
         // Crypto keys of issued address is not yet in local storage.
         //  Bring it up
-        const classInstance = BlockchainAddress.getInstance({type: docIssuedAddr.type, pathParts: Catenis.module.KeyStore.getPathParts(docIssuedAddr)});
+        const classInstance = BlockchainAddress.getInstance({type: docIssuedAddr.type, pathParts: KeyStore.getPathParts(docIssuedAddr)});
 
         if (classInstance != null) {
             // Store address in local key storage setting it as obsolete accordingly,
@@ -972,7 +973,7 @@ BlockchainAddress.retrieveObsoleteAddress = function (addr) {
 
             // Make sure that address is not yet in local key storage
             if (addrKeys == null) {
-                let classInstance = BlockchainAddress.getInstance({type: docIssuedAddr.type, pathParts: Catenis.module.KeyStore.getPathParts(docIssuedAddr)});
+                let classInstance = BlockchainAddress.getInstance({type: docIssuedAddr.type, pathParts: KeyStore.getPathParts(docIssuedAddr)});
 
                 if (classInstance != null) {
                     // Store address in local key storage making sure that it is set as obsolete,
@@ -1008,7 +1009,7 @@ BlockchainAddress.retrieveObsoleteAddress = function (addr) {
 
                     // Make sure that address is not yet in local key storage
                     if (addrKeys == null) {
-                        let classInstance = BlockchainAddress.getInstance({type: docIssuedAddr.type, pathParts: Catenis.module.KeyStore.getPathParts(docIssuedAddr)}),
+                        let classInstance = BlockchainAddress.getInstance({type: docIssuedAddr.type, pathParts: KeyStore.getPathParts(docIssuedAddr)}),
                             found = false;
 
                         if (classInstance != null) {
@@ -1051,7 +1052,7 @@ BlockchainAddress.revertAddress = function (addr) {
     let result = false;
 
     if (addrTypeAndPath != null) {
-        let addrPathParts = Catenis.module.KeyStore.getPathParts(addrTypeAndPath),
+        let addrPathParts = KeyStore.getPathParts(addrTypeAndPath),
             classInstance = BlockchainAddress.getInstance({type: addrTypeAndPath.type, pathParts: addrPathParts});
 
         if (classInstance != null) {
@@ -1072,7 +1073,7 @@ BlockchainAddress.checkObsoleteAddress = function (addr) {
         let docIssuedAddr = Catenis.db.collection.IssuedBlockchainAddress.findOne({path: addrTypeAndPath.path});
 
         if (docIssuedAddr != undefined && docIssuedAddr.status === 'obsolete' && BlockchainAddress.isAddressWithBalance(addr)) {
-            let addrPathParts = Catenis.module.KeyStore.getPathParts(addrTypeAndPath),
+            let addrPathParts = KeyStore.getPathParts(addrTypeAndPath),
                 classInstance = BlockchainAddress.getInstance({type: addrTypeAndPath.type, pathParts: addrPathParts});
 
             resetObsoleteAddress.call(classInstance, addr, docIssuedAddr);
@@ -1094,7 +1095,7 @@ BlockchainAddress.revertAddressList = function (addrList) {
             let addrTypeAndPath = Catenis.keyStore.getTypeAndPathByAddress(addr);
 
             if (addrTypeAndPath != null) {
-                let addrPathParts = Catenis.module.KeyStore.getPathParts(addrTypeAndPath),
+                let addrPathParts = KeyStore.getPathParts(addrTypeAndPath),
                     classInstance = BlockchainAddress.getInstance({type: addrTypeAndPath.type, pathParts: addrPathParts});
 
                 if (classInstance != null) {
@@ -1327,17 +1328,15 @@ Object.defineProperties(BlockchainAddress, {
     }
 });
 
-// Save module function class reference
-Catenis.module.BlockchainAddress = {
-    BlockchainAddress: Object.freeze(BlockchainAddress),
-    SystemDeviceMainAddress: Object.freeze(SystemDeviceMainAddress),
-    SystemFundingPaymentAddress: Object.freeze(SystemFundingPaymentAddress),
-    SystemFundingChangeAddress: Object.freeze(SystemFundingChangeAddress),
-    SystemPayTxExpenseAddress: Object.freeze(SystemPayTxExpenseAddress),
-    ClientMessageCreditAddress: Object.freeze(ClientMessageCreditAddress),
-    ClientAssetCreditAddress: Object.freeze(ClientAssetCreditAddress),
-    DeviceReadConfirmAddress: Object.freeze(DeviceReadConfirmAddress),
-    DeviceMainAddress: Object.freeze(DeviceMainAddress),
-    DeviceAssetAddress: Object.freeze(DeviceAssetAddress),
-    DeviceAssetIssuanceAddress: Object.freeze(DeviceAssetIssuanceAddress)
-};
+// Lock function classes
+Object.freeze(BlockchainAddress);
+Object.freeze(SystemDeviceMainAddress);
+Object.freeze(SystemFundingPaymentAddress);
+Object.freeze(SystemFundingChangeAddress);
+Object.freeze(SystemPayTxExpenseAddress);
+Object.freeze(ClientMessageCreditAddress);
+Object.freeze(ClientAssetCreditAddress);
+Object.freeze(DeviceReadConfirmAddress);
+Object.freeze(DeviceMainAddress);
+Object.freeze(DeviceAssetAddress);
+Object.freeze(DeviceAssetIssuanceAddress);

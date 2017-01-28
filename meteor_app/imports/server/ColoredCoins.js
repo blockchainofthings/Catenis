@@ -33,7 +33,7 @@ import { Catenis } from './Catenis';
 //
 
 // ColoredCoins function class
-function ColoredCoins(network) {
+export function ColoredCoins(network) {
     this.coloredcoinsd = new ColoredcoinsdWrapper({network: network});
 
     this.coloredcoinsApi = {
@@ -289,5 +289,5 @@ ColoredCoins.test = function () {
 // Module code
 //
 
-// Save module function class reference
-Catenis.module.ColoredCoins = Object.freeze(ColoredCoins);
+// Lock function class
+Object.freeze(ColoredCoins);

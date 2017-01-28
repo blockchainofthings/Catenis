@@ -23,13 +23,14 @@ import { Mongo } from 'meteor/mongo';
 // References code in other (Catenis) modules
 import { Catenis } from './Catenis';
 import { ctnHubNodeIndex } from './Application';
+import { CatenisNode } from './CatenisNode';
 
 
 // Definition of function classes
 //
 
 // Database function class
-function Database(collections) {
+export function Database(collections) {
     this.collection = {};
     this.mongoCollection = {};
 
@@ -632,18 +633,18 @@ function initApplication() {
 
 function initCatenisNode() {
     // Make sure that Catenis Hub doc/rec is already created
-    const docCtnNodes = this.collection.CatenisNode.find({type: Catenis.module.CatenisNode.nodeType.hub.name}, {fields: {_id: 1, ctnNodeIndex: 1}}).fetch();
+    const docCtnNodes = this.collection.CatenisNode.find({type: CatenisNode.nodeType.hub.name}, {fields: {_id: 1, ctnNodeIndex: 1}}).fetch();
 
     if (docCtnNodes.length == 0) {
         // No doc/rec defined yet. Create new doc/rec with default settings
         this.collection.CatenisNode.insert({
-            type: Catenis.module.CatenisNode.nodeType.hub.name,
+            type: CatenisNode.nodeType.hub.name,
             ctnNodeIndex: ctnHubNodeIndex,
             props: {
                 name: 'Catenis Hub',
                 description: 'Central Catenis node used to house clients that access the system through the Internet'
             },
-            status: Catenis.module.CatenisNode.status.active.name,
+            status: CatenisNode.status.active.name,
             createdDate: new Date()
         })
     }
@@ -668,5 +669,5 @@ function initCatenisNode() {
 // Module code
 //
 
-// Save module function class reference
-Catenis.module.DB = Object.freeze(Database);
+// Lock function class
+Object.freeze(Database);

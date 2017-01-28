@@ -24,6 +24,8 @@ import BigNumber from 'bignumber.js';
 // References code in other (Catenis) modules
 import { Catenis } from './Catenis';
 import { CriticalSection } from './CriticalSection';
+import { Service } from './Service';
+import { Transaction } from './Transaction';
 
 // Config entries
 const fundSourceConfig = config.get('fundSource');
@@ -69,7 +71,7 @@ const cfgSettings = {
 //
 // NOTE: make sure that objects of this function class are instantiated and used (their methods
 //  called) from code executed from the FundSource.utxoCS critical section object
-function FundSource(addresses, unconfUtxoInfo) {
+export function FundSource(addresses, unconfUtxoInfo) {
     this.addresses = Array.isArray(addresses) ? addresses : [addresses];
 
     this.useUnconfirmedUtxo = unconfUtxoInfo != undefined;
@@ -289,7 +291,7 @@ FundSource.prototype.allocateFundForTxExpense = function (txInfo, isFixedFeed, f
         }
     }
 
-    amountResolution = amountResolution || Catenis.module.Service.paymentResolution;
+    amountResolution = amountResolution || Service.paymentResolution;
 
     // Calculate amount to be allocated (to pay for transaction expense)
     const txDiffAmount = txInfo.inputAmount - txInfo.outputAmount;
@@ -318,8 +320,8 @@ FundSource.prototype.allocateFundForTxExpense = function (txInfo, isFixedFeed, f
         }
         else {
             // Prepare values to be used when adjusting tx expense later on
-            deltaFeePerInput = Catenis.module.Transaction.txInputSize * fee;  // Increment in tx fee due to adding a new input to the tx
-            deltaFeePerOuput = Catenis.module.Transaction.txOutputSize * fee; // Increment in tx fee due to adding a new output to the tx
+            deltaFeePerInput = Transaction.txInputSize * fee;  // Increment in tx fee due to adding a new input to the tx
+            deltaFeePerOuput = Transaction.txOutputSize * fee; // Increment in tx fee due to adding a new output to the tx
         }
     }
 
@@ -781,5 +783,5 @@ function allocateUtxos(amount, utxoResultSets, numWorkUtxos, work) {
 // Module code
 //
 
-// Save module function class reference
-Catenis.module.FundSource = Object.freeze(FundSource);
+// Lock function class
+Object.freeze(FundSource);

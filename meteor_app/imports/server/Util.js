@@ -21,13 +21,14 @@ import BigNumber from 'bignumber.js';
 
 // References code in other (Catenis) modules
 import { Catenis } from './Catenis';
+import { Transaction } from './Transaction';
 
 
 // Definition of function classes
 //
 
 // Util function class
-function Util() {
+export function Util() {
 }
 
 
@@ -53,7 +54,7 @@ Util.spendUtxo = function (txout, origAddress, destAddress, fee) {
     fee = fee != undefined && fee >= 1000 ? fee : 1000;
 
     if (txout.amount != undefined && txout.amount >= fee + 600) {
-        let tx = new Catenis.module.Transaction();
+        let tx = new Transaction();
 
         tx.addInput(txout, origAddress, Catenis.keyStore.getAddressInfo(origAddress, true));
         tx.addP2PKHOutput(destAddress, txout.amount - fee);
@@ -97,7 +98,7 @@ Util.spendAddresses = function (origAddresses, destAddress, fee) {
     fee = fee != undefined && fee >= 1000 ? fee : 1000;
 
     if (totalAmount >= fee + 600) {
-        const tx = new Catenis.module.Transaction();
+        const tx = new Transaction();
 
         tx.addInputs(inputs);
         tx.addP2PKHOutput(destAddress, totalAmount - fee);
@@ -121,5 +122,5 @@ Util.spendAddresses = function (origAddresses, destAddress, fee) {
 // Module code
 //
 
-// Save module function class reference
-Catenis.module.Util = Object.freeze(Util);
+// Lock function class
+Object.freeze(Util);

@@ -125,6 +125,8 @@ import { Meteor } from 'meteor/meteor';
 
 // References code in other (Catenis) modules
 import { Catenis } from './Catenis';
+import { BlockchainAddress } from './BlockchainAddress';
+import { CryptoKeys } from './CryptoKeys';
 
 // Config entries
 const configKeyStore = config.get('keyStore');
@@ -161,7 +163,7 @@ let purgeUnusedExtKeyInternalHandle;
 //      isReserved: [boolean],
 //      isObsolete: [boolean]
 //  }
-function KeyStore(ctnHubNodeIndex, seed, cryptoNetwork) {
+export function KeyStore(ctnHubNodeIndex, seed, cryptoNetwork) {
     this.ctnHubNodeIndex = ctnHubNodeIndex;
     this.cryptoNetwork = cryptoNetwork;
 
@@ -198,13 +200,13 @@ KeyStore.prototype.removeExtKeysByParentPath = function (parentPath) {
 KeyStore.prototype.getCryptoKeysByPath = function (path) {
     const docExtKey = this.collExtKey.by('path', path);
 
-    return docExtKey != undefined ? new Catenis.module.CryptoKeys(bitcoinLib.HDNode.fromBase58(docExtKey.strHDNode, this.cryptoNetwork).keyPair) : null;
+    return docExtKey != undefined ? new CryptoKeys(bitcoinLib.HDNode.fromBase58(docExtKey.strHDNode, this.cryptoNetwork).keyPair) : null;
 };
 
 KeyStore.prototype.getCryptoKeysByAddress = function (addr) {
     const docExtKey = this.collExtKey.by('address', addr);
 
-    return docExtKey != undefined ? new Catenis.module.CryptoKeys(bitcoinLib.HDNode.fromBase58(docExtKey.strHDNode, this.cryptoNetwork).keyPair) : null;
+    return docExtKey != undefined ? new CryptoKeys(bitcoinLib.HDNode.fromBase58(docExtKey.strHDNode, this.cryptoNetwork).keyPair) : null;
 };
 
 KeyStore.prototype.getTypeAndPathByAddress = function (addr) {
@@ -225,14 +227,14 @@ KeyStore.prototype.getAddressInfo = function (addr, retrieveObsolete = false) {
         if (docExtKey != undefined) {
             if (retrieveObsolete && docExtKey.isObsolete) {
                 // Check if address marked as obsolete is in use and reset its status if so
-                if (Catenis.module.BlockchainAddress.BlockchainAddress.checkObsoleteAddress(addr)) {
+                if (BlockchainAddress.checkObsoleteAddress(addr)) {
                     // Address status has been reset (address is not obsolete anymore)
                     docExtKey.isObsolete = false;
                 }
             }
 
             addrInfo = {
-                cryptoKeys: new Catenis.module.CryptoKeys(bitcoinLib.HDNode.fromBase58(docExtKey.strHDNode, this.cryptoNetwork).keyPair),
+                cryptoKeys: new CryptoKeys(bitcoinLib.HDNode.fromBase58(docExtKey.strHDNode, this.cryptoNetwork).keyPair),
                 type: docExtKey.type,
                 path: docExtKey.path,
                 isObsolete: docExtKey.isObsolete
@@ -244,7 +246,7 @@ KeyStore.prototype.getAddressInfo = function (addr, retrieveObsolete = false) {
                 addrInfo.pathParts = pathParts;
             }
         }
-        else if (retrieveObsolete && Catenis.module.BlockchainAddress.BlockchainAddress.retrieveObsoleteAddress(addr)) {
+        else if (retrieveObsolete && BlockchainAddress.retrieveObsoleteAddress(addr)) {
             tryAgain = true;
         }
     }
@@ -499,7 +501,7 @@ KeyStore.prototype.getSystemFundingPaymentAddressKeys = function (ctnNodeIndex, 
     }
 
     if (sysFundingPaymentAddrHDNode != null) {
-        sysFundingPaymentAddrKeys = new Catenis.module.CryptoKeys(sysFundingPaymentAddrHDNode.keyPair);
+        sysFundingPaymentAddrKeys = new CryptoKeys(sysFundingPaymentAddrHDNode.keyPair);
     }
 
     return sysFundingPaymentAddrKeys;
@@ -624,7 +626,7 @@ KeyStore.prototype.getSystemFundingChangeAddressKeys = function (ctnNodeIndex, a
     }
 
     if (sysFundingChangeAddrHDNode != null) {
-        sysFundingChangeAddrKeys = new Catenis.module.CryptoKeys(sysFundingChangeAddrHDNode.keyPair);
+        sysFundingChangeAddrKeys = new CryptoKeys(sysFundingChangeAddrHDNode.keyPair);
     }
 
     return sysFundingChangeAddrKeys;
@@ -749,7 +751,7 @@ KeyStore.prototype.getSystemPayTxExpenseAddressKeys = function (ctnNodeIndex, ad
     }
 
     if (sysPayTxExpenseAddrHDNode != null) {
-        sysPayTxExpenseAddrKeys = new Catenis.module.CryptoKeys(sysPayTxExpenseAddrHDNode.keyPair);
+        sysPayTxExpenseAddrKeys = new CryptoKeys(sysPayTxExpenseAddrHDNode.keyPair);
     }
 
     return sysPayTxExpenseAddrKeys;
@@ -878,7 +880,7 @@ KeyStore.prototype.getSystemDeviceAddressKeys = function (ctnNodeIndex, addrRoot
     }
 
     if (sysDeviceAddrHDNode != null) {
-        sysDeviceAddrKeys = new Catenis.module.CryptoKeys(sysDeviceAddrHDNode.keyPair);
+        sysDeviceAddrKeys = new CryptoKeys(sysDeviceAddrHDNode.keyPair);
     }
 
     return sysDeviceAddrKeys;
@@ -1170,7 +1172,7 @@ KeyStore.prototype.getClientServiceCreditAddressKeys = function (ctnNodeIndex, c
     }
 
     if (clientSrvCreditAddrHDNode != null) {
-        clientSrvCreditAddrKeys = new Catenis.module.CryptoKeys(clientSrvCreditAddrHDNode.keyPair);
+        clientSrvCreditAddrKeys = new CryptoKeys(clientSrvCreditAddrHDNode.keyPair);
     }
 
     return clientSrvCreditAddrKeys;
@@ -1476,7 +1478,7 @@ KeyStore.prototype.getDeviceInternalAddressKeys = function (ctnNodeIndex, client
     }
 
     if (deviceIntAddrHDNode != null) {
-        deviceIntAddrKeys = new Catenis.module.CryptoKeys(deviceIntAddrHDNode.keyPair);
+        deviceIntAddrKeys = new CryptoKeys(deviceIntAddrHDNode.keyPair);
     }
 
     return deviceIntAddrKeys;
@@ -1625,7 +1627,7 @@ KeyStore.prototype.getDevicePublicAddressKeys = function (ctnNodeIndex, clientIn
     }
 
     if (devicePubAddrHDNode != null) {
-        devicePubAddrKeys = new Catenis.module.CryptoKeys(devicePubAddrHDNode.keyPair);
+        devicePubAddrKeys = new CryptoKeys(devicePubAddrHDNode.keyPair);
     }
 
     return devicePubAddrKeys;
@@ -1844,7 +1846,7 @@ function storeHDNode(type, path, hdNode, isLeaf, isReserved, isObsolete) {
         isObsolete = false;
     }
 
-    const docExtKey = {type: type, path: path, parentPath: parentPath(path), depth: hdNode.depth, index: hdNode.index, strHDNode: hdNode.toBase58(), address: (new Catenis.module.CryptoKeys(hdNode.keyPair)).getAddress(), isLeaf: isLeaf, isReserved: isReserved, isObsolete: isObsolete};
+    const docExtKey = {type: type, path: path, parentPath: parentPath(path), depth: hdNode.depth, index: hdNode.index, strHDNode: hdNode.toBase58(), address: (new CryptoKeys(hdNode.keyPair)).getAddress(), isLeaf: isLeaf, isReserved: isReserved, isObsolete: isObsolete};
 
     this.collExtKey.insert(docExtKey);
 }
@@ -2515,5 +2517,5 @@ Object.defineProperty(KeyStore, 'purgeUnusedExtKeyInternalHandle', {
     enumerable: true
 });
 
-// Save module function class reference
-Catenis.module.KeyStore = Object.freeze(KeyStore);
+// Lock function class
+Object.freeze(KeyStore);
