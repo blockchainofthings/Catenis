@@ -19,6 +19,7 @@ const crypto = require('crypto');
 import config from 'config';
 // Meteor packages
 import { Meteor } from 'meteor/meteor';
+import { Random } from 'meteor/random';
 
 // References code in other (Catenis) modules
 import { Catenis } from './Catenis';
@@ -193,16 +194,49 @@ Client.prototype.activate = function () {
     return result;
 };
 
-Client.prototype.renewApiAccessGenKey = function () {
+Client.prototype.renewApiAccessGenKey = function (resetAllDevicesToClientDefaultKey = false) {
+    // Make sure that client is not deleted
+    if (this.status !== Client.status.deleted.name &&
+            Catenis.db.collection.Client.findOne({_id: this.doc_id, status: Client.status.deleted.name}, {fields:{_id:1}}) != undefined) {
+        // Client has been deleted. Update its status
+        this.status = Client.status.deleted.name;
+    }
+
+    if (this.status === Client.status.deleted.name) {
+        // Cannot renew default API access generator key for deleted client. Log error and throw exception
+        Catenis.logger.ERROR('Cannot renew default API access generator key for deleted client', {clientId: this.clientId});
+        throw new Meteor.Error('ctn_client_deleted', util.format('Cannot renew default API access generator key for deleted client (clientId: %s)', this.clientId));
+    }
+
     // Generate new key
     const key = Random.secret();
+    const now = new Date(Date.now());
 
     try {
-        Catenis.db.collection.Client.update({_id: this.doc_id}, {$set: {'apiAccessGenKey': key, 'lastApiAccessGenKeyModifiedDate': new Date(Date.now())}});
+        Catenis.db.collection.Client.update({_id: this.doc_id}, {$set: {apiAccessGenKey: key, lastApiAccessGenKeyModifiedDate: now}});
     }
     catch (err) {
         Catenis.logger.ERROR('Error updating client default API access generator key', err);
         throw new Meteor.Error('ctn_client_update_error', 'Error updating client default API access generator key', err.stack);
+    }
+
+    if (resetAllDevicesToClientDefaultKey) {
+        try {
+            Catenis.db.collection.Device.update({
+                client_id: this.doc_id,
+                status: {$ne: Device.status.deleted.name},
+                apiAccessGenKey: {$ne: null}
+            }, {
+                $set: {
+                    apiAccessGenKey: null,
+                    lastApiAccessGenKeyModifiedDate: now
+                }
+            }, {multi: true});
+        }
+        catch (err) {
+            Catenis.logger.ERROR('Error resetting client\'s devices to use client default API access generator key', err);
+            throw new Meteor.Error('ctn_device_update_error', 'Error resetting client\'s devices to use client default API access generator key', err.stack);
+        }
     }
 
     // Update key locally
@@ -282,14 +316,19 @@ Client.prototype.availableAssetCredits = function () {
     return availableServiceCredits.call(this, Client.serviceCreditType.asset);
 };
 
-Client.prototype.getDeviceByIndex = function (deviceIndex) {
+Client.prototype.getDeviceByIndex = function (deviceIndex, includeDeleted = true) {
     // Retrieve Device doc/rec
-    const docDevice = Catenis.db.collection.Device.findOne({
+    const query = {
         'index.ctnNodeIndex': this.ctnNode.ctnNodeIndex,
         'index.clientIndex': this.clientIndex,
-        'index.deviceIndex': deviceIndex,
-        status: {$ne: Client.status.deleted.name}
-    });
+        'index.deviceIndex': deviceIndex
+    };
+
+    if (!includeDeleted) {
+        query.status = {$ne: Client.status.deleted.name};
+    }
+
+    const docDevice = Catenis.db.collection.Device.findOne(query);
 
     if (docDevice == undefined) {
         // No device available with the given index. Log error and throw exception
@@ -660,9 +699,17 @@ Client.initialize = function () {
     TransactionMonitor.addEventHandler(TransactionMonitor.notifyEvent.funding_provision_client_srv_credit_tx_conf.name, serviceCreditsConfirmed);
 };
 
-Client.getClientByClientId = function (clientId) {
+Client.getClientByClientId = function (clientId, includeDeleted = true) {
     // Retrieve Client doc/rec
-    const docClient = Catenis.db.collection.Client.findOne({clientId: clientId, status: {$ne: Client.status.deleted.name}});
+    const query = {
+        clientId: clientId
+    };
+
+    if (!includeDeleted) {
+        query.status = {$ne: Client.status.deleted.name};
+    }
+
+    const docClient = Catenis.db.collection.Client.findOne(query);
 
     if (docClient == undefined) {
         // No client available with the given client ID. Log error and throw exception
@@ -673,9 +720,17 @@ Client.getClientByClientId = function (clientId) {
     return new Client(docClient, CatenisNode.getCatenisNodeByIndex(docClient.index.ctnNodeIndex));
 };
 
-Client.getClientByUserId = function (user_id) {
+Client.getClientByUserId = function (user_id, includeDeleted = true) {
     // Retrieve Client doc/rec
-    const docClient = Catenis.db.collection.Client.findOne({user_id: user_id, status: {$ne: Client.status.deleted.name}});
+    const query = {
+        user_id: user_id
+    };
+
+    if (!includeDeleted) {
+        query.status = {$ne: Client.status.deleted.name};
+    }
+
+    const docClient = Catenis.db.collection.Client.findOne(query);
 
     if (docClient == undefined) {
         // No client available associated with given user id. Log error and throw exception

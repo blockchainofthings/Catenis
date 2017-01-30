@@ -18,6 +18,7 @@ const util = require('util');
 import config from 'config';
 // Meteor packages
 import { Meteor } from 'meteor/meteor';
+import { Random } from 'meteor/random';
 
 // References code in other (Catenis) modules
 import { Catenis } from './Catenis';
@@ -76,7 +77,7 @@ export function Device(docDevice, client) {
             // Use API access secret from client is an API access generator key is not defined
             //  for the device
             //noinspection JSPotentiallyInvalidUsageOfThis
-            return docDevice.apiAccessGenKey != null ? crypto.createHmac('sha512', docDevice.apiAccessGenKey).update('And here it is: the Catenis API key for device' + this.clientId).digest('hex')
+            return this.apiAccessGenKey != null ? crypto.createHmac('sha512', this.apiAccessGenKey).update('And here it is: the Catenis API key for device' + this.clientId).digest('hex')
                     : this.client.apiAccessSecret;
         }
     });
@@ -133,7 +134,35 @@ Device.prototype.enable = function () {
 
     activateDevice.call(this);
 };
-// TODO: add method renewApiAccessGenKey (same as we have for Client)
+
+Device.prototype.renewApiAccessGenKey = function (useClientDefaultKey = false) {
+    // Make sure that device is not deleted
+    if (this.status !== Device.status.deleted.name &&
+        Catenis.db.collection.Device.findOne({_id: this.doc_id, status: Device.status.deleted.name}, {fields:{_id:1}}) != undefined) {
+        // Device has been deleted. Update its status
+        this.status = Device.status.deleted.name;
+    }
+
+    if (this.status === Device.status.deleted.name) {
+        // Cannot renew API access generator key for deleted device. Log error and throw exception
+        Catenis.logger.ERROR('Cannot renew API access generator key for deleted device', {deviceId: this.deviceId});
+        throw new Meteor.Error('ctn_device_deleted', util.format('Cannot renew API access generator key for deleted device (deviceId: %s)', this.deviceId));
+    }
+
+    // Generate new key
+    const key = !useClientDefaultKey ? Random.secret() : null;
+
+    try {
+        Catenis.db.collection.Device.update({_id: this.doc_id}, {$set: {apiAccessGenKey: key, lastApiAccessGenKeyModifiedDate: new Date(Date.now())}});
+    }
+    catch (err) {
+        Catenis.logger.ERROR('Error updating device API access generator key', err);
+        throw new Meteor.Error('ctn_device_update_error', 'Error updating device API access generator key', err.stack);
+    }
+
+    // Update key locally
+    this.apiAccessGenKey = key;
+};
 
 Device.prototype.delete = function (deletedDate) {
     if (this.status !== Device.status.deleted.name) {
@@ -633,9 +662,17 @@ Device.initialize = function () {
     TransactionMonitor.addEventHandler(TransactionMonitor.notifyEvent.funding_provision_client_device_tx_conf.name, fundingOfAddressesConfirmed);
 };
 
-Device.getDeviceByDeviceId = function (deviceId) {
+Device.getDeviceByDeviceId = function (deviceId, includeDeleted = true) {
     // Retrieve Device doc/rec
-    const docDevice = Catenis.db.collection.Device.findOne({deviceId: deviceId, status: {$ne: Device.status.deleted.name}});
+    const query = {
+        deviceId: deviceId
+    };
+
+    if (!includeDeleted) {
+        query.status = {$ne: Device.status.deleted.name};
+    }
+
+    const docDevice = Catenis.db.collection.Device.findOne(query);
 
     if (docDevice == undefined) {
         // No device available with the given device ID. Log error and throw exception
@@ -646,9 +683,17 @@ Device.getDeviceByDeviceId = function (deviceId) {
     return new Device(docDevice, CatenisNode.getCatenisNodeByIndex(docDevice.index.ctnNodeIndex).getClientByIndex(docDevice.index.clientIndex));
 };
 
-Device.getDeviceByProductUniqueId = function (prodUniqueId) {
+Device.getDeviceByProductUniqueId = function (prodUniqueId, includeDeleted = true) {
     // Retrieve Device doc/rec
-    const docDevice = Catenis.db.collection.Device.findOne({'props.prodUniqueId': prodUniqueId, status: {$ne: Device.status.deleted.name}});
+    const query = {
+        'props.prodUniqueId': prodUniqueId
+    };
+
+    if (!includeDeleted) {
+        query.status = {$ne: Device.status.deleted.name};
+    }
+
+    const docDevice = Catenis.db.collection.Device.findOne(query);
 
     if (docDevice == undefined) {
         // No device available with the given product unique ID. Log error and throw exception

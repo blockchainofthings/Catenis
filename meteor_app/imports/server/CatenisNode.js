@@ -16,6 +16,7 @@
 const util = require('util');
 // Meteor packages
 import { Meteor } from 'meteor/meteor';
+import { Random } from 'meteor/random';
 
 // References code in other (Catenis) modules
 import { Catenis } from './Catenis';
@@ -182,13 +183,18 @@ CatenisNode.prototype.checkPayTxExpenseFundingBalance = function () {
     return checkResult;
 };
 
-CatenisNode.prototype.getClientByIndex = function (clientIndex) {
+CatenisNode.prototype.getClientByIndex = function (clientIndex, includeDeleted = true) {
     // Retrieve Client doc/rec
-    const docClient = Catenis.db.collection.Client.findOne({
+    const query = {
         'index.ctnNodeIndex': this.ctnNodeIndex,
-        'index.clientIndex': clientIndex,
-        status: {$ne: Client.status.deleted.name}
-    });
+        'index.clientIndex': clientIndex
+    };
+
+    if (!includeDeleted) {
+        query.status = {$ne: Client.status.deleted.name};
+    }
+
+    const docClient = Catenis.db.collection.Client.findOne(query);
 
     if (docClient == undefined) {
         // No client available with the given index. Log error and throw exception
@@ -505,17 +511,22 @@ CatenisNode.createCatenisNode = function (props) {
     return docCtnNode.ctnNodeIndex;
 };
 
-CatenisNode.getCatenisNodeByIndex = function (ctnNodeIndex) {
+CatenisNode.getCatenisNodeByIndex = function (ctnNodeIndex, includeDeleted = true) {
     if (ctnNodeIndex == Catenis.application.ctnHubNodeIndex) {
         return Catenis.ctnHubNode;
     }
     else {
         // Retrieve Catenis node doc/rec
-        const docCtnNode = Catenis.db.collection.CatenisNode.findOne({
+        const query = {
             type: CatenisNode.nodeType.gateway.name,
-            ctnNodeIndex: ctnNodeIndex,
-            status: {$ne: CatenisNode.status.deleted.name}
-        });
+            ctnNodeIndex: ctnNodeIndex
+        };
+
+        if (!includeDeleted) {
+            query.status = {$ne: CatenisNode.status.deleted.name};
+        }
+
+        const docCtnNode = Catenis.db.collection.CatenisNode.findOne(query);
 
         if (docCtnNode == undefined) {
             // No Catenis node available with the given index. Log error and throw exception

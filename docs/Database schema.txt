@@ -108,7 +108,7 @@ Device {
     prodUniqueId: [string],  // Proprietary ID that uniquely identifies the client's physical device/product that is associated to this logical device
     lastModifiedDate: [date/time]  // Date and time when one of the device's properties had been last modified
   },
-  apiAccessGenKey: [string],  // Key used to generate secret key used for accessing the Catenis API. If not defined, should use Client's default API access key
+  apiAccessGenKey: [string],  // Key used to generate secret key used for accessing the Catenis API. If set to null, should use Client's default API access key
   status: [string],  // Valid values: 'new' (newly created device awaiting activation - funding of device's main/asset addresses have not started (due to lack of system funds)); 'pending' (awaiting confirmation of funding of device's main/asset addresses); 'active' (device in normal use mode - after device's main/asset addresses have been funded); 'inactive' (disabled device - device has been put temporarily out of use); 'deleted' (device has been logically deleted)
   createdDate: [date/time],  // Date and time when doc/rec was created
   lastStatusChangedDate: [date/time], // Date and time when status has been last changed
