@@ -33,6 +33,7 @@ const events = require('events');
 import config from 'config';
 // Meteor packages
 import { Meteor } from 'meteor/meteor';
+import { _ } from 'meteor/underscore';
 
 // References code in other (Catenis) modules
 import { Catenis } from './Catenis';

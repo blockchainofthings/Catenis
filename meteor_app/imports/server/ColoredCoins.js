@@ -22,6 +22,7 @@ import ColoredcoinsdWrapper from 'coloredcoinsd-wraper';
 //import ccAssetIdEncoder from 'cc-assetid-encoder';
 // Meteor packages
 import { Meteor } from 'meteor/meteor';
+import { HTTP } from 'meteor/http';
 
 // References code in other (Catenis) modules
 import { Catenis } from './Catenis';

@@ -18,6 +18,8 @@ const util = require('util');
 import config from 'config';
 // Meteor packages
 import { Meteor } from 'meteor/meteor';
+import { _ } from 'meteor/underscore';
+import {HTTP} from 'meteor/http';
 
 // References code in other (Catenis) modules
 import { Catenis } from './Catenis';
@@ -82,13 +84,13 @@ BitcoinFees.prototype.getOptimumFeeRate = function () {
 function recommendedFees() {
     const endpointUrl = this.apiUrl + cfgSettings.recommendedFeesEndPoint;
 
-    return Meteor.http.get(endpointUrl, {json: true});
+    return HTTP.get(endpointUrl, {json: true});
 }
 
 function listFees() {
     const endpointUrl = this.apiUrl + cfgSettings.listFeesEndPoint;
 
-    return Meteor.http.get(endpointUrl, {json: true});
+    return HTTP.get(endpointUrl, {json: true});
 }
 
 function retrieveFees() {
