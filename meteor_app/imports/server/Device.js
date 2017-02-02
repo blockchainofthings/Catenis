@@ -14,6 +14,8 @@
 //      to avoid annoying WebStorm warning message: 'default export is not defined in
 //      imported module'
 const util = require('util');
+const _und = require('underscore');     // NOTE: we dot not use the underscore library provided by Meteor because we need
+                                        //        a feature (_und.omit(obj,predicate)) that is not available in that version
 // Third-party node modules
 import config from 'config';
 // Meteor packages
@@ -68,8 +70,8 @@ export function Device(docDevice, client) {
     this.doc_id = docDevice._id;
     this.deviceId = docDevice.deviceId;
     this.deviceIndex = docDevice.index.deviceIndex;
+    this.props = docDevice.props;
     this.apiAccessGenKey = docDevice.apiAccessGenKey;
-    this.prodUniqueId = docDevice.props != undefined ? docDevice.props.prodUniqueId : undefined;
     this.status = docDevice.status;
 
     Object.defineProperty(this, 'apiAccessSecret', {
@@ -196,7 +198,7 @@ Device.prototype.delete = function (deletedDate) {
         }
 
         // Update local variables
-        this.prodUniqueId = undefined;
+        this.props.prodUniqueId = undefined;
         this.status = Device.status.deleted.name;
     }
     else {
@@ -535,6 +537,79 @@ Device.prototype.readMessage = function (txid) {
     }
 };
 
+// Update device properties
+//
+// Arguments:
+//  props: [string] - new name of device
+//         or
+//         [object] - object containing properties that should be updated and their corresponding new values.
+//                     To delete a property, set it as undefined.
+//
+Device.prototype.updateProperties = function (newProps) {
+    newProps = typeof newProps === 'string' ? {name: newProps} : (typeof newProps === 'object' && newProps !== null ? newProps : {});
+
+    if ('prodUniqueId' in newProps) {
+        // Avoid that product unique ID of device be changed
+        delete newProps.prodUniqueId;
+    }
+
+    if (Object.keys(newProps).length > 0) {
+        // Validate (pre-defined) properties
+        const errProp = {};
+
+        // Allow this property to be undefined so it can be deleted
+        if ('name' in newProps && (typeof newProps.name !== 'string' && typeof newProps.name !== 'undefined')) {
+            errProp.name = newProps.name;
+        }
+
+        // Allow this property to be undefined so it can be deleted
+        if ('public' in newProps && (typeof newProps.public !== 'boolean' && typeof newProps.public !== 'undefined')) {
+            errProp.public = newProps.public;
+        }
+
+        if (Object.keys(errProp).length > 0) {
+            const errProps = Object.keys(errProp);
+
+            Catenis.logger.ERROR(util.format('Device.updateProperties method called with invalid propert%s', errProps.length > 1 ? 'ies' : 'y'), errProp);
+            throw Error(util.format('Invalid %s propert%s', errProps.join(', '), errProps.length > 1 ? 'ies' : 'y'));
+        }
+
+        // Make sure that device is not deleted
+        if (this.status === Device.status.deleted.name) {
+            // Cannot update properties of a deleted device. Log error and throw exception
+            Catenis.logger.ERROR('Cannot update properties of a deleted device', {deviceId: this.deviceId});
+            throw new Meteor.Error('ctn_device_deleted', util.format('Cannot update properties of a deleted device (deviceId: %s)', this.deviceId));
+        }
+
+        // Retrieve current device properties
+        const currProps = Catenis.db.collection.Device.findOne({_id: this.doc_id}, {fields: {props: 1}}).props;
+        let props = _und.clone(currProps);
+
+        // Merge properties to update
+        _und.extend(props, newProps);
+
+        // Extract properties that are undefined
+        props = _und.omit(props, (value) => {
+            return _und.isUndefined(value);
+        });
+
+        if (!_und.isEqual(props, currProps)) {
+            try {
+                // Update Device doc/rec setting the new properties
+                Catenis.db.collection.Device.update({_id: this.doc_id}, {$set: {props: props}});
+            }
+            catch (err) {
+                // Error updating Device doc/rec. Log error and throw exception
+                Catenis.logger.ERROR(util.format('Error trying to update device properties (doc_id: %s).', this.doc_id), err);
+                throw new Meteor.Error('ctn_device_update_error', util.format('Error trying to update device properties (doc_id: %s)', this.doc_id), err.stack);
+            }
+
+            // Update properties locally too
+            this.props = props;
+        }
+    }
+};
+
 // TODO: add methods to: issue asset (both locked and unlocked), register/import asset issued elsewhere, transfer asset, etc.
 
 
@@ -718,6 +793,118 @@ Device.checkDevicesToFund = function () {
     });
 };
 
+// Get Catenis message proof or origin
+//
+// Arguments:
+//  txid: [string] - Internal blockchain ID of Catenis transaction to prove
+//  deviceId: [string] - Catenis ID of device that supposedly issued the message (the origin device)
+//  textToSign: [string] - A text to be signed
+//
+Device.getMessageProofOfOrigin = function (txid, deviceId, textToSign) {
+    let transact = undefined;
+
+    try {
+        transact = Transaction.fromTxid(txid);
+    }
+    catch (err) {
+        if ((err instanceof Meteor.Error) && err.details != undefined && typeof err.details.code === 'number'
+            && err.details.code == BitcoinCore.rpcErrorCode.RPC_INVALID_ADDRESS_OR_KEY) {
+            // Error indicating that transaction id is not valid.
+            //  Throws local error
+            throw new Meteor.Error('ctn_msg_poof_invalid_txid', util.format('This is not a valid transaction id: %s', txid));
+        }
+        else {
+            // An error other than invalid transaction id.
+            //  Just re-throws it
+            throw err;
+        }
+    }
+
+    // First, check if this is a send message transaction
+    const sendMsgTransact = SendMessageTransaction.checkTransaction(transact);
+    let result = undefined;
+
+    if (sendMsgTransact != undefined) {
+        // Make sure that designated origin device matches the actual origin device
+        if (sendMsgTransact.originDevice.deviceId === deviceId) {
+            result = {
+                tx: {
+                    txid: txid,
+                    input1: {
+                        address: sendMsgTransact.originDeviceMainAddrKeys.getAddress()
+                    }
+                },
+                Text: {
+                    original: textToSign,
+                    signed: sendMsgTransact.originDeviceMainAddrKeys.signText(textToSign).toString('base64')
+                },
+                originDevice: {
+                    deviceId: deviceId
+                }
+            };
+
+            if (sendMsgTransact.originDevice.props.public) {
+                if (sendMsgTransact.originDevice.props.name != undefined) {
+                    result.originDevice.name = sendMsgTransact.originDevice.props.name;
+                }
+
+                if (sendMsgTransact.originDevice.props.prodUniqueId != undefined) {
+                    result.originDevice.prodUniqueId = sendMsgTransact.originDevice.props.prodUniqueId;
+                }
+            }
+        }
+        else {
+            // Throw exception indicating generic error condition (no Catenis tx ou device mismatch)
+            Catenis.logger.DEBUG('Specified device for getting message proof of origin does not match actual message origin device', {txid: txid, deviceId: deviceId, actualOriginDeviceId: sendMsgTransact.originDevice.deviceId});
+            throw new Meteor.Error('ctn_msg_proof_invalid_tx_device_mismatch', 'Not a Catenis message transaction or specified device does not match actual message origin device');
+        }
+    }
+    else {
+        // If not, then check if this is a log message transaction
+        const logMsgTransact = LogMessageTransaction.checkTransaction(transact);
+
+        if (logMsgTransact == undefined) {
+            // Throw exception indicating generic error condition (no Catenis tx ou device mismatch)
+            Catenis.logger.DEBUG('Specified transaction for getting message proof of origin  is not a valid Catenis message transaction', {txid: txid});
+            throw new Meteor.Error('ctn_msg_proof_invalid_tx_device_mismatch', 'Not a Catenis message transaction or specified device does not match actual message origin device');
+        }
+        // Make sure that designated origin device matches the actual origin device
+        else if (logMsgTransact.device.deviceId === deviceId) {
+            result = {
+                tx: {
+                    txid: txid,
+                    input1: {
+                        address: logMsgTransact.deviceMainAddrKeys.getAddress()
+                    }
+                },
+                Text: {
+                    original: textToSign,
+                    signed: logMsgTransact.deviceMainAddrKeys.signText(textToSign).toString('base64')
+                },
+                originDevice: {
+                    deviceId: deviceId
+                }
+            };
+
+            if (logMsgTransact.device.props.public) {
+                if (logMsgTransact.device.props.name != undefined) {
+                    result.originDevice.name = logMsgTransact.device.props.name;
+                }
+
+                if (logMsgTransact.device.props.prodUniqueId != undefined) {
+                    result.originDevice.prodUniqueId = logMsgTransact.device.props.prodUniqueId;
+                }
+            }
+        }
+        else {
+            // Throw exception indicating generic error condition (no Catenis tx ou device mismatch)
+            Catenis.logger.DEBUG('Specified device for getting message proof of origin does not match actual message origin device', {txid: txid, deviceId: deviceId, actualOriginDeviceId: logMsgTransact.device.deviceId});
+            throw new Meteor.Error('ctn_msg_proof_invalid_tx_device_mismatch', 'Not a Catenis message transaction or specified device does not match actual message origin device');
+        }
+    }
+
+    return result;
+};
 
 // Device function class (public) properties
 //

@@ -15,6 +15,8 @@
 //      imported module'
 const util = require('util');
 const crypto = require('crypto');
+const _und = require('underscore');     // NOTE: we dot not use the underscore library provided by Meteor because we need
+                                        //        a feature (_und.omit(obj,predicate)) that is not available in that version
 // Third-party node modules
 import config from 'config';
 // Meteor packages
@@ -69,6 +71,7 @@ export function Client(docClient, ctnNode, initializeDevices) {
     this.catenisNode_id = docClient.catenisNode_id;
     this.clientId = docClient.clientId;
     this.clientIndex = docClient.index.clientIndex;
+    this.props = docClient.props;
     this.apiAccessGenKey = docClient.apiAccessGenKey;
     this.status = docClient.status;
 
@@ -166,7 +169,7 @@ Client.prototype.assignUser = function (user_id) {
 Client.prototype.activate = function () {
     let result = false;
 
-    if (!this.active) {
+    if (this.status !== Client.status.active.name) {
         if (this.user_id != undefined) {
             // Check if associated user can log in
             const docUser = Meteor.users.findOne({_id: this.user_id}, {fields: {_id: 1, 'services.password': 1}});
@@ -347,11 +350,36 @@ Client.prototype.getDeviceByIndex = function (deviceIndex, includeDeleted = true
 //           {
 //      name: [string], - (optional)
 //      prodUniqueId: [string], - (optional)
+//      public: [boolean] - (optional)
 //      (any additional property)
 //    }
 //    ownApiAccessKey: [boolean]
 //
 Client.prototype.createDevice = function (props, ownApiAccessKey = false) {
+    props = typeof props === 'string' ? {name: props} : (typeof props === 'object' && props !== null ? props : {});
+
+    // Validate (pre-defined) properties
+    const errProp = {};
+
+    if ('name' in props && typeof props.name !== 'string') {
+        errProp.name = props.name;
+    }
+
+    if ('prodUniqueId' in props && typeof props.prodUniqueId !== 'string') {
+        errProp.prodUniqueId = props.prodUniqueId;
+    }
+
+    if ('public' in props && typeof props.public !== 'boolean') {
+        errProp.public = props.public;
+    }
+
+    if (Object.keys(errProp).length > 0) {
+        const errProps = Object.keys(errProp);
+
+        Catenis.logger.ERROR(util.format('Client.createDevice method called with invalid propert%s', errProps.length > 1 ? 'ies' : 'y'), errProp);
+        throw Error(util.format('Invalid %s propert%s', errProps.join(', '), errProps.length > 1 ? 'ies' : 'y'));
+    }
+
     // Make sure that client is not deleted
     if (this.status === Client.status.deleted.name) {
         // Cannot create device for deleted client. Log error and throw exception
@@ -392,7 +420,7 @@ Client.prototype.createDevice = function (props, ownApiAccessKey = false) {
                 clientIndex: this.clientIndex,
                 deviceIndex: deviceIndex
             },
-            props: typeof props === 'object' ? props : (typeof props === 'string' ? {name: props} : {}),
+            props: props,
             apiAccessGenKey: ownApiAccessKey ? Random.secret() : null,
             status: Device.status.new.name,
             createdDate: new Date(Date.now())
@@ -432,6 +460,69 @@ Client.prototype.createDevice = function (props, ownApiAccessKey = false) {
 
     // Now, return device Id
     return docDevice.deviceId;
+};
+
+// Update client properties
+//
+// Arguments:
+//  props: [string] - new name of client
+//         or
+//         [object] - object containing properties that should be updated and their corresponding new values
+//                     To delete a property, set it as undefined.
+//
+Client.prototype.updateProperties = function (newProps) {
+    newProps = typeof newProps === 'string' ? {name: newProps} : (typeof newProps === 'object' && newProps !== null ? newProps : {});
+
+    if (Object.keys(newProps).length > 0) {
+        // Validate (pre-defined) properties
+        const errProp = {};
+
+        // Allow this property to be undefined so it can be deleted
+        if ('name' in newProps && (typeof newProps.name !== 'string' && typeof newProps.name !== 'undefined')) {
+            errProp.name = newProps.name;
+        }
+
+        if (Object.keys(errProp).length > 0) {
+            const errProps = Object.keys(errProp);
+
+            Catenis.logger.ERROR(util.format('Client.updateProperties method called with invalid propert%s', errProps.length > 1 ? 'ies' : 'y'), errProp);
+            throw Error(util.format('Invalid %s propert%s', errProps.join(', '), errProps.length > 1 ? 'ies' : 'y'));
+        }
+
+        // Make sure that client is not deleted
+        if (this.status === Client.status.deleted.name) {
+            // Cannot update properties of a deleted client. Log error and throw exception
+            Catenis.logger.ERROR('Cannot update properties of a deleted client', {clientId: this.clientId});
+            throw new Meteor.Error('ctn_client_deleted', util.format('Cannot update date properties of a deleted client (clientId: %s)', this.clientId));
+        }
+
+        // Retrieve current client properties
+        const currProps = Catenis.db.collection.Client.findOne({_id: this.doc_id}, {fields: {props: 1}}).props;
+        let props = _und.clone(currProps);
+
+        // Merge properties to update
+        _und.extend(props, newProps);
+
+        // Extract properties that are undefined
+        props = _und.omit(props, (value) => {
+            return _und.isUndefined(value);
+        });
+
+        if (!_und.isEqual(props, currProps)) {
+            try {
+                // Update Client doc/rec setting the new properties
+                Catenis.db.collection.Client.update({_id: this.doc_id}, {$set: {props: props}});
+            }
+            catch (err) {
+                // Error updating Client doc/rec. Log error and throw exception
+                Catenis.logger.ERROR(util.format('Error trying to update client properties (doc_id: %s).', this.doc_id), err);
+                throw new Meteor.Error('ctn_client_update_error', util.format('Error trying to update client properties (doc_id: %s)', this.doc_id), err.stack);
+            }
+
+            // Update properties locally too
+            this.props = props;
+        }
+    }
 };
 
 

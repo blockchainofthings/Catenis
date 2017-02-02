@@ -20,6 +20,7 @@ const crypto = require('crypto');
 import eccrypto from 'eccrypto';
 import secp256k1 from 'secp256k1';
 import Future from 'fibers/future';
+import bitcoinMessage from 'bitcoinjs-message';
 // Meteor packages
 //import { Meteor } from 'meteor/meteor';
 
@@ -138,6 +139,14 @@ CryptoKeys.prototype.decryptData = function (sourceKeys, data) {
     fut.wait();
 
     return decData;
+};
+
+CryptoKeys.prototype.signText = function (textToSign) {
+    if (!this.hasPrivateKey()) {
+        throw new Error('Cannot sign message; missing private key');
+    }
+
+    return bitcoinMessage.sign(textToSign, Catenis.application.cryptoNetwork.messagePrefix, this.getPrivateKey(), this.keyPair.compressed);
 };
 
 

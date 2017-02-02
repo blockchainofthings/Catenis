@@ -14,6 +14,8 @@
 //      to avoid annoying WebStorm warning message: 'default export is not defined in
 //      imported module'
 const util = require('util');
+const _und = require('underscore');     // NOTE: we dot not use the underscore library provided by Meteor because we need
+                                        //        a feature (_und.omit(obj,predicate)) that is not available in that version
 // Meteor packages
 import { Meteor } from 'meteor/meteor';
 import { Random } from 'meteor/random';
@@ -44,6 +46,7 @@ export function CatenisNode(docCtnNode, initializeClients) {
     this.doc_id = docCtnNode._id;
     this.type = docCtnNode.type;
     this.ctnNodeIndex = docCtnNode.ctnNodeIndex;
+    this.props = docCtnNode.props;
     this.status = docCtnNode.status;
 
     // Instantiate objects to manage blockchain addresses for Catenis node
@@ -206,6 +209,12 @@ CatenisNode.prototype.getClientByIndex = function (clientIndex, includeDeleted =
 };
 
 CatenisNode.prototype.delete = function () {
+    if (this.type === CatenisNode.nodeType.hub.name) {
+        // Trying to delete Catenis Hub node. Log error and throw exception
+        Catenis.logger.ERROR('Trying to delete Catenis Hub node, which cannot be deleted');
+        throw new Meteor.Error('ctn_node_hub_delete_error', 'Trying to delete Catenis Hub node, which cannot be deleted');
+    }
+
     if (this.status !== CatenisNode.status.deleted.name) {
         const deletedDate = new Date(Date.now());
 
@@ -242,6 +251,85 @@ CatenisNode.prototype.delete = function () {
     }
 };
 
+// Update Catenis node properties
+//
+// Arguments:
+//  props: [string] - new name of Catenis node
+//         or
+//         [object] - object containing properties that should be updated and their corresponding new values.
+//                     To delete a property, set it as undefined.
+//
+CatenisNode.prototype.updateProperties = function (newProps) {
+    newProps = typeof newProps === 'string' ? {name: newProps} : (typeof newProps === 'object' && newProps !== null ? newProps : {});
+
+    if (this.type === CatenisNode.nodeType.hub.name) {
+        // Avoid that name and description of Catenis Hub node be changed
+        if ('name' in newProps) {
+            delete newProps.name;
+        }
+
+        if ('description' in newProps) {
+            delete newProps.description;
+        }
+    }
+
+    if (Object.keys(newProps).length > 0) {
+        // Validate (pre-defined) properties
+        const errProp = {};
+
+        // Do not allow this property to be deleted (thus it cannot be undefined)
+        if ('name' in newProps && typeof newProps.name !== 'string') {
+            errProp.name = newProps.name;
+        }
+
+        // Allow this property to be undefined so it can be deleted
+        if ('description' in newProps && (typeof newProps.description !== 'string' && typeof newProps.description !== 'undefined')) {
+            errProp.description = newProps.description;
+        }
+
+        if (Object.keys(errProp).length > 0) {
+            const errProps = Object.keys(errProp);
+
+            Catenis.logger.ERROR(util.format('CatenisNode.updateProperties method called with invalid propert%s', errProps.length > 1 ? 'ies' : 'y'), errProp);
+            throw Error(util.format('Invalid %s propert%s', errProps.join(', '), errProps.length > 1 ? 'ies' : 'y'));
+        }
+
+        // Make sure that Catenis node is not deleted
+        if (this.status === CatenisNode.status.deleted.name) {
+            // Cannot update properties of a deleted Catenis node. Log error and throw exception
+            Catenis.logger.ERROR('Cannot update properties of a deleted Catenis node', {ctnNodeIndex: this.ctnNodeIndex});
+            throw new Meteor.Error('ctn_node_deleted', util.format('Cannot update properties of a deleted Catenis node (ctnNodeIndex: %d)', this.ctnNodeIndex));
+        }
+
+        // Retrieve current Catenis node properties
+        const currProps = Catenis.db.collection.CatenisNode.findOne({_id: this.doc_id}, {fields: {props: 1}}).props;
+        let props = _und.clone(currProps);
+
+        // Merge properties to update
+        _und.extend(props, newProps);
+
+        // Extract properties that are undefined
+        props = _und.omit(props, (value) => {
+            return _und.isUndefined(value);
+        });
+
+        if (!_und.isEqual(props, currProps)) {
+            try {
+                // Update Catenis node doc/rec setting the new properties
+                Catenis.db.collection.CatenisNode.update({_id: this.doc_id}, {$set: {props: props}});
+            }
+            catch (err) {
+                // Error updating CatenisNode doc/rec. Log error and throw exception
+                Catenis.logger.ERROR(util.format('Error trying to update Catenis node properties (doc_id: %s).', this.doc_id), err);
+                throw new Meteor.Error('ctn_node_update_error', util.format('Error trying to update Catenis node properties (doc_id: %s)', this.doc_id), err.stack);
+            }
+
+            // Update properties locally too
+            this.props = props;
+        }
+    }
+};
+
 // Create new client
 //
 //  Arguments:
@@ -254,6 +342,22 @@ CatenisNode.prototype.delete = function () {
 //    user_id: [string] - (optional)
 //
 CatenisNode.prototype.createClient = function (props, user_id) {
+    props = typeof props === 'string' ? {name: props} : (typeof props === 'object' && props !== null ? props : {});
+
+    // Validate (pre-defined) properties
+    const errProp = {};
+
+    if ('name' in props && typeof props.name !== 'string') {
+        errProp.name = props.name;
+    }
+
+    if (Object.keys(errProp).length > 0) {
+        const errProps = Object.keys(errProp);
+
+        Catenis.logger.ERROR(util.format('CatenisNode.createClient method called with invalid propert%s', errProps.length > 1 ? 'ies' : 'y'), errProp);
+        throw Error(util.format('Invalid %s propert%s', errProps.join(', '), errProps.length > 1 ? 'ies' : 'y'));
+    }
+
     // Make sure that Catenis node is not deleted
     if (this.status === CatenisNode.status.deleted.name) {
         // Cannot create client for deleted Catenis node. Log error and throw exception
@@ -304,7 +408,7 @@ CatenisNode.prototype.createClient = function (props, user_id) {
                 ctnNodeIndex: this.ctnNodeIndex,
                 clientIndex: clientIndex,
             },
-            props: typeof props === 'object' ? props : (typeof props === 'string' ? {name: props} : {}),
+            props: props,
             apiAccessGenKey: Random.secret(),
             status: user_id != undefined && docUser.services != undefined && docUser.services.password != undefined ? Client.status.active.name : Client.status.new.name,
             createdDate: new Date(Date.now())
@@ -456,7 +560,8 @@ CatenisNode.initialize = function () {
 //    props: [string] - Catenis node name
 //           or
 //           {
-//      name: [string] - (optional)
+//      name: [string], - (optional)
+//      description: [string] - (optional)
 //      (any additional property)
 //    }
 //
@@ -466,6 +571,26 @@ CatenisNode.initialize = function () {
 //      since there should be only one Catenis Hub node and it is pre-created
 //
 CatenisNode.createCatenisNode = function (props) {
+    props = typeof props === 'string' ? {name: props} : (typeof props === 'object' && props !== null ? props : {});
+
+    // Validate (pre-defined) properties
+    const errProp = {};
+
+    if ('name' in props && typeof props.name !== 'string') {
+        errProp.name = props.name;
+    }
+
+    if ('description' in props && typeof props.description !== 'string') {
+        errProp.description = props.description;
+    }
+
+    if (Object.keys(errProp).length > 0) {
+        const errProps = Object.keys(errProp);
+
+        Catenis.logger.ERROR(util.format('CatenisNode.createCatenisNode method called with invalid propert%s', errProps.length > 1 ? 'ies' : 'y'), errProp);
+        throw Error(util.format('Invalid %s propert%s', errProps.join(', '), errProps.length > 1 ? 'ies' : 'y'));
+    }
+
     let docCtnNode = undefined;
 
     // Execute code in critical section to avoid DB concurrency
@@ -477,17 +602,15 @@ CatenisNode.createCatenisNode = function (props) {
         while (!Catenis.keyStore.initCatenisNodeHDNodes(++ctnNodeIndex));
 
         // Prepare to create Catenis node doc/rec
-        const ctnNodeProps = typeof props === 'object' ? props : (typeof props === 'string' ? {name: props} : {});
-
-        if (ctnNodeProps.name == undefined) {
+        if (!('name' in props)) {
             // If no name defined, use default naming for Catenis (gateway) node
-            ctnNodeProps.name = util.format('Catenis Gateway #%d', ctnNodeIndex);
+            props.name = util.format('Catenis Gateway #%d', ctnNodeIndex);
         }
 
         docCtnNode = {
             type: CatenisNode.nodeType.gateway.name,
             ctnNodeIndex: ctnNodeIndex,
-            props: ctnNodeProps,
+            props: props,
             status: CatenisNode.status.active.name,
             createdDate: new Date(Date.now())
         };
