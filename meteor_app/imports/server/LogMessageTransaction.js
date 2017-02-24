@@ -326,7 +326,13 @@ LogMessageTransaction.checkTransaction = function (transact) {
                     try {
                         message = devMainAddr.addrInfo.cryptoKeys.decryptData(devMainAddr.addrInfo.cryptoKeys, ctnMessage.message);
                     }
-                    catch (err) {}
+                    catch (err) {
+                        if (!(err instanceof Meteor.Error) || err.error !== 'ctn_crypto_no_priv_key') {
+                            // An exception other than indication that message was not decrypted because
+                            //  device has no private key. Just re-throws it
+                            throw err;
+                        }
+                    }
                 }
                 else {
                     message = ctnMessage.message;
@@ -339,10 +345,13 @@ LogMessageTransaction.checkTransaction = function (transact) {
                     logMsgTransact.transact = transact;
                     logMsgTransact.device = CatenisNode.getCatenisNodeByIndex(devMainAddr.addrInfo.pathParts.ctnNodeIndex).getClientByIndex(devMainAddr.addrInfo.pathParts.clientIndex).getDeviceByIndex(devMainAddr.addrInfo.pathParts.deviceIndex);
                     logMsgTransact.deviceMainAddrKeys = devMainAddr.addrInfo.cryptoKeys;
-                    logMsgTransact.message = message;
+                    logMsgTransact.message = message;       // Original contents of message as provided by device (always unencrypted)
+                                                            //  NOTE: could be undefined if message could not be decrypted due to missing private key
+                                                            //      for device that recorded the message (possibly because it belongs to a different Node)
+                    logMsgTransact.rawMessage = ctnMessage.message;    // Contents of message as it was recorded (encrypted, if encryption was used)
                     logMsgTransact.options = {
                         encrypted: ctnMessage.options.encrypted,
-                        storageScheme: ctnMessage.options.embedded ? CatenisMessage.storageScheme.embedded : CatenisMessage.storageScheme.externalStorage
+                        storageScheme: ctnMessage.options.embedded ? CatenisMessage.storageScheme.embedded : CatenisMessage.storageScheme.external
                     };
 
                     if (ctnMessage.options.storageProvider != undefined) {

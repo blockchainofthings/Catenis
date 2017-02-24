@@ -14,10 +14,11 @@
 //      to avoid annoying WebStorm warning message: 'default export is not defined in
 //      imported module'
 const util = require('util');
-const _und = require('underscore');     // NOTE: we dot not use the underscore library provided by Meteor because we need
-                                        //        a feature (_und.omit(obj,predicate)) that is not available in that version
+const crypto = require('crypto');
 // Third-party node modules
 import config from 'config';
+import _und from 'underscore';      // NOTE: we dot not use the underscore library provided by Meteor because we need
+                                    //        a feature (_und.omit(obj,predicate)) that is not available in that version
 // Meteor packages
 import { Meteor } from 'meteor/meteor';
 import { Random } from 'meteor/random';
@@ -305,9 +306,12 @@ Device.prototype.fundAddresses = function () {
 //    message: [Object] // Object of type Buffer containing the message to be sent
 //    encryptMessage: [Boolean], // (optional, default: true) Indicates whether message should be encrypted before sending it
 //    storageScheme: [String], // (optional, default: 'auto') A field of the CatenisMessage.storageScheme property identifying how the message should be stored
-//      storageProvider: [Object] // (optional, default: defaultStorageProvider) A field of the CatenisMessage.storageProvider property
-//                                //    identifying the type of external storage to be used to store the message that should not be embedded
-//    }
+//    storageProvider: [Object] // (optional, default: defaultStorageProvider) A field of the CatenisMessage.storageProvider property
+//                              //    identifying the type of external storage to be used to store the message that should not be embedded
+//
+//  Return value:
+//    sentTxId: [String]  // ID of blockchain transaction where message was recorded
+//
 Device.prototype.sendMessage = function (targetDeviceId, message, encryptMessage = true, storageScheme = 'auto', storageProvider) {
     // Make sure that device is not deleted
     if (this.status === Device.status.deleted.name) {
@@ -409,9 +413,12 @@ Device.prototype.sendMessage = function (targetDeviceId, message, encryptMessage
 //    message: [Object] // Object of type Buffer containing the message to be logged
 //    encryptMessage: [Boolean], // (optional, default: true) Indicates whether message should be encrypted before logging it
 //    storageScheme: [String], // (optional, default: 'auto') A field of the CatenisMessage.storageScheme property identifying how the message should be stored
-//      storageProvider: [Object] // (optional, default: defaultStorageProvider) A field of the CatenisMessage.storageProvider property
-//                                //    identifying the type of external storage to be used to store the message that should not be embedded
-//    }
+//    storageProvider: [Object] // (optional, default: defaultStorageProvider) A field of the CatenisMessage.storageProvider property
+//                              //    identifying the type of external storage to be used to store the message that should not be embedded
+//
+//  Return value:
+//    sentTxId: [String]  // ID of blockchain transaction where message was recorded
+//
 Device.prototype.logMessage = function (message, encryptMessage = true, storageScheme = 'auto', storageProvider) {
     // Make sure that device is not deleted
     if (this.status === Device.status.deleted.name) {
@@ -473,6 +480,20 @@ Device.prototype.logMessage = function (message, encryptMessage = true, storageS
     return sentTxId;
 };
 
+// Read message previously sent/logged
+//
+//  Arguments:
+//    txid: [String]  // ID of blockchain transaction where message is recorded
+//
+//  Return value:
+//    msgInfo: {
+//      type: [Object],  //  Object of type Transaction.type identifying the type of transaction
+//      device: [Object],  // Device that logged the message (present only for logMessage tx)
+//      originDevice: [Object],  // Device that sent the message (present only for sendMessage tx)
+//      targetDevice: [Object],  // Device to which message was sent (present only for sendMessage tx)
+//      message: [Object] // Buffer containing the read message
+//    }
+//
 Device.prototype.readMessage = function (txid) {
     // Make sure that device is not deleted
     if (this.status === Device.status.deleted.name) {
@@ -512,13 +533,19 @@ Device.prototype.readMessage = function (txid) {
 
     if (sendMsgTransact != undefined) {
         // Make sure that this message was intended to this device
+        // TODO: check if device (if not the original device to which the message was sent) has permission to read message
         if (sendMsgTransact.targetDevice.deviceId === this.deviceId) {
             // TODO: check if message has not yet been read, and issue read confirmation transaction if so
             // Return message
-            return sendMsgTransact.message;
+            return {
+                type: Transaction.type.send_message,
+                originDevice: sendMsgTransact.originDevice,
+                targetDevice: sendMsgTransact.targetDevice,
+                message: sendMsgTransact.message ? sendMsgTransact.message : sendMsgTransact.rawMessage
+            };
         }
         else {
-            // Throw exception indicating that message is not intended to this device
+            // Throw exception indicating that message cannot be accessed by this device
             throw new Meteor.Error('ctn_device_msg_no_access', 'Device has no access rights to read the message contained in this transaction');
         }
     }
@@ -527,8 +554,20 @@ Device.prototype.readMessage = function (txid) {
         const logMsgTransact = LogMessageTransaction.checkTransaction(transact);
 
         if (logMsgTransact != undefined) {
-            // Return message
-            return logMsgTransact.message;
+            // Make sure that this message has been recorded by this device
+            // TODO: check if device (if not the original device that recorded the message) has permission to read message
+            if (logMsgTransact.device.deviceId == this.deviceId) {
+                // Return message
+                return {
+                    type: Transaction.type.log_message,
+                    device: logMsgTransact.device,
+                    message: logMsgTransact.message ? logMsgTransact.message : logMsgTransact.rawMessage
+                }
+            }
+            else {
+                // Throw exception indicating that message cannot be accessed by this device
+                throw new Meteor.Error('ctn_device_msg_no_access', 'Device has no access rights to read the message contained in this transaction');
+            }
         }
         else {
             // Throw exception indicating that this is not a valid Catenis transaction
@@ -608,6 +647,22 @@ Device.prototype.updateProperties = function (newProps) {
             this.props = props;
         }
     }
+};
+
+Device.prototype.getPublicProps = function () {
+    let result = {};
+
+    if (this.props.public) {
+        if (this.props.name != undefined) {
+            result.name = this.props.name;
+        }
+
+        if (this.props.prodUniqueId != undefined) {
+            result.prodUniqueId = this.props.prodUniqueId;
+        }
+    }
+
+    return result;
 };
 
 // TODO: add methods to: issue asset (both locked and unlocked), register/import asset issued elsewhere, transfer asset, etc.
@@ -843,15 +898,8 @@ Device.getMessageProofOfOrigin = function (txid, deviceId, textToSign) {
                 }
             };
 
-            if (sendMsgTransact.originDevice.props.public) {
-                if (sendMsgTransact.originDevice.props.name != undefined) {
-                    result.originDevice.name = sendMsgTransact.originDevice.props.name;
-                }
-
-                if (sendMsgTransact.originDevice.props.prodUniqueId != undefined) {
-                    result.originDevice.prodUniqueId = sendMsgTransact.originDevice.props.prodUniqueId;
-                }
-            }
+            // Add public properties of origin device
+            _und.extend(result.originDevice, sendMsgTransact.originDevice.getPublicProps());
         }
         else {
             // Throw exception indicating generic error condition (no Catenis tx ou device mismatch)
@@ -886,15 +934,8 @@ Device.getMessageProofOfOrigin = function (txid, deviceId, textToSign) {
                 }
             };
 
-            if (logMsgTransact.device.props.public) {
-                if (logMsgTransact.device.props.name != undefined) {
-                    result.originDevice.name = logMsgTransact.device.props.name;
-                }
-
-                if (logMsgTransact.device.props.prodUniqueId != undefined) {
-                    result.originDevice.prodUniqueId = logMsgTransact.device.props.prodUniqueId;
-                }
-            }
+            // Add public properties of origin device
+            _und.extend(result.originDevice, logMsgTransact.device.getPublicProps());
         }
         else {
             // Throw exception indicating generic error condition (no Catenis tx ou device mismatch)
@@ -905,6 +946,7 @@ Device.getMessageProofOfOrigin = function (txid, deviceId, textToSign) {
 
     return result;
 };
+
 
 // Device function class (public) properties
 //

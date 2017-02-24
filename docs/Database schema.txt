@@ -106,6 +106,7 @@ Device {
   props: {
     name: [string],  // Device name
     prodUniqueId: [string],  // Proprietary ID that uniquely identifies the client's physical device/product that is associated to this logical device
+    public: [boolean],  // (optional) Indicates that the main properties of this device (name and prodUniqueId) can be disclosed
     lastModifiedDate: [date/time]  // Date and time when one of the device's properties had been last modified
   },
   apiAccessGenKey: [string],  // Key used to generate secret key used for accessing the Catenis API. If set to null, should use Client's default API access key

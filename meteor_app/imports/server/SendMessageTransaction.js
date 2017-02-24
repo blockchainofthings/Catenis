@@ -337,7 +337,7 @@ SendMessageTransaction.checkTransaction = function (transact) {
             }
             catch(err) {
                 if (!(err instanceof Meteor.Error) || err.error !== 'ctn_msg_data_parse_error') {
-                    // An exception other than an indication that null data is not correctedly formatted.
+                    // An exception other than an indication that null data is not correctly formatted.
                     //  Just re-throws it
                     throw err;
                 }
@@ -351,30 +351,37 @@ SendMessageTransaction.checkTransaction = function (transact) {
                     try {
                         message = trgtDevMainAddr.addrInfo.cryptoKeys.decryptData(origDevMainAddr.addrInfo.cryptoKeys, ctnMessage.message);
                     }
-                    catch (err) {}
+                    catch (err) {
+                        if (!(err instanceof Meteor.Error) || err.error !== 'ctn_crypto_no_priv_key') {
+                            // An exception other than indication that message was not decrypted because
+                            //  target device has no private key. Just re-throws it
+                            throw err;
+                        }
+                    }
                 }
                 else {
                     message = ctnMessage.message;
                 }
 
-                if (message != undefined) {
-                    // Instantiate send message transaction
-                    sendMsgTransact = new SendMessageTransaction();
+                // Instantiate send message transaction
+                sendMsgTransact = new SendMessageTransaction();
 
-                    sendMsgTransact.transact = transact;
-                    sendMsgTransact.originDevice = CatenisNode.getCatenisNodeByIndex(origDevMainAddr.addrInfo.pathParts.ctnNodeIndex).getClientByIndex(origDevMainAddr.addrInfo.pathParts.clientIndex).getDeviceByIndex(origDevMainAddr.addrInfo.pathParts.deviceIndex);
-                    sendMsgTransact.targetDevice = CatenisNode.getCatenisNodeByIndex(trgtDevMainAddr.addrInfo.pathParts.ctnNodeIndex).getClientByIndex(trgtDevMainAddr.addrInfo.pathParts.clientIndex).getDeviceByIndex(trgtDevMainAddr.addrInfo.pathParts.deviceIndex);
-                    sendMsgTransact.originDeviceMainAddrKeys = origDevMainAddr.addrInfo.cryptoKeys;
-                    sendMsgTransact.targetDeviceMainAddrKeys = trgtDevMainAddr.addrInfo.cryptoKeys;
-                    sendMsgTransact.message = message;
-                    sendMsgTransact.options = {
-                        encrypted: ctnMessage.options.encrypted,
-                        storageScheme: ctnMessage.options.embedded ? CatenisMessage.storageScheme.embedded : CatenisMessage.storageScheme.externalStorage
-                    };
+                sendMsgTransact.transact = transact;
+                sendMsgTransact.originDevice = CatenisNode.getCatenisNodeByIndex(origDevMainAddr.addrInfo.pathParts.ctnNodeIndex).getClientByIndex(origDevMainAddr.addrInfo.pathParts.clientIndex).getDeviceByIndex(origDevMainAddr.addrInfo.pathParts.deviceIndex);
+                sendMsgTransact.targetDevice = CatenisNode.getCatenisNodeByIndex(trgtDevMainAddr.addrInfo.pathParts.ctnNodeIndex).getClientByIndex(trgtDevMainAddr.addrInfo.pathParts.clientIndex).getDeviceByIndex(trgtDevMainAddr.addrInfo.pathParts.deviceIndex);
+                sendMsgTransact.originDeviceMainAddrKeys = origDevMainAddr.addrInfo.cryptoKeys;
+                sendMsgTransact.targetDeviceMainAddrKeys = trgtDevMainAddr.addrInfo.cryptoKeys;
+                sendMsgTransact.message = message;      // Original contents of message as provided by origin device (always unencrypted)
+                                                        //  NOTE: could be undefined if message could not be decrypted due to missing private key
+                                                        //      for target device
+                sendMsgTransact.rawMessage = ctnMessage.message;    // Contents of message as it was recorded (encrypted, if encryption was used)
+                sendMsgTransact.options = {
+                    encrypted: ctnMessage.options.encrypted,
+                    storageScheme: ctnMessage.options.embedded ? CatenisMessage.storageScheme.embedded : CatenisMessage.storageScheme.external
+                };
 
-                    if (ctnMessage.options.storageProvider != undefined) {
-                        sendMsgTransact.options.storageProvider = ctnMessage.options.storageProvider;
-                    }
+                if (ctnMessage.options.storageProvider != undefined) {
+                    sendMsgTransact.options.storageProvider = ctnMessage.options.storageProvider;
                 }
             }
         }

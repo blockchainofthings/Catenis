@@ -388,7 +388,7 @@ CatenisMessage.storageProvider = Object.freeze({
 
 CatenisMessage.storageScheme = Object.freeze({
     embedded: 'embedded',     // Message should be stored in the tx's null data output
-    externalStorage: 'externalStorage',     // Message should be stored in the designated external message storage
+    external: 'external',     // Message should be stored in the designated external message storage
     auto: 'auto'    // Depending on the size of the message it will be stored either in the tx's null data output (if it fits) or
                     //  in the designated external message storage
 });

@@ -22,7 +22,7 @@ import secp256k1 from 'secp256k1';
 import Future from 'fibers/future';
 import bitcoinMessage from 'bitcoinjs-message';
 // Meteor packages
-//import { Meteor } from 'meteor/meteor';
+import { Meteor } from 'meteor/meteor';
 
 // References code in other (Catenis) modules
 import { Catenis } from './Catenis';
@@ -49,7 +49,7 @@ CryptoKeys.prototype.hasPrivateKey = function () {
 
 CryptoKeys.prototype.getPrivateKey = function () {
     if (!this.hasPrivateKey()) {
-        throw new Error('Missing private key')
+        throw new Meteor.Error('ctn_crypto_no_priv_key', 'Missing private key');
     }
 
     return this.keyPair.d.toBuffer(32);
@@ -57,7 +57,7 @@ CryptoKeys.prototype.getPrivateKey = function () {
 
 CryptoKeys.prototype.exportPrivateKey = function () {
     if (!this.hasPrivateKey()) {
-        throw new Error('Missing private key')
+        throw new Meteor.Error('ctn_crypto_no_priv_key', 'Missing private key');
     }
 
     return this.keyPair.toWIF();
@@ -91,7 +91,7 @@ CryptoKeys.prototype.getAddress = function () {
 //
 CryptoKeys.prototype.encryptData = function (destKeys, data) {
     if (!this.hasPrivateKey()) {
-        throw new Error('Cannot encrypt data; missing private key')
+        throw new Meteor.Error('ctn_crypto_no_priv_key', 'Cannot encrypt data;  missing private key');
     }
 
     // Future required to synchronize call to eccrypto methods, which are asynchronous in nature (via promises)
@@ -115,7 +115,7 @@ CryptoKeys.prototype.encryptData = function (destKeys, data) {
 
 CryptoKeys.prototype.decryptData = function (sourceKeys, data) {
     if (!this.hasPrivateKey()) {
-        throw new Error('Cannot decrypt data; missing private key')
+        throw new Meteor.Error('ctn_crypto_no_priv_key', 'Cannot decrypt data; missing private key');
     }
 
     // Future required to synchronize call to eccrypto methods, which are asynchronous in nature (via promises)
@@ -143,7 +143,7 @@ CryptoKeys.prototype.decryptData = function (sourceKeys, data) {
 
 CryptoKeys.prototype.signText = function (textToSign) {
     if (!this.hasPrivateKey()) {
-        throw new Error('Cannot sign message; missing private key');
+        throw new Meteor.Error('ctn_crypto_no_priv_key', 'Cannot sign message; missing private key');
     }
 
     return bitcoinMessage.sign(textToSign, Catenis.application.cryptoNetwork.messagePrefix, this.getPrivateKey(), this.keyPair.compressed);

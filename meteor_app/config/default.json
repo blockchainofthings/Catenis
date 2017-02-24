@@ -205,6 +205,16 @@
   // Parameters pertaining to RestApi module
   "restApi": {
     "rootPath": "api",
-    "version": "0.1"
+    "version": "0.1",
+    "requestSignature": {
+      "signVersionId": "CTN1",
+      "signMethodId": "CTN1-HMAC-SHA256",
+      "scopeRequest": "ctn1_request",
+      "timestampHdr": "x-bcot-timestamp",
+      "allowedTimestampOffset": 300,   // Time, in seconds, representing the allowed variation (+/-) of timestamp in regards to current time
+                                       //  for request to be considered valid
+      "authRegexPattern": "^<signMethodId> +(?:C|c)redential *= *(\\w{20})/(\\d{8})/<scopeRequest> *, *(?:S|s)ignature *= *([0-9a-fA-F]{64}) *$",
+      "signValidDays": 7  // Number of days from specified signature date after which signature is not considered valid anymore
+    }
   }
 }

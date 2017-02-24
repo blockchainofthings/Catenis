@@ -174,60 +174,62 @@ Catenis.logger = new (winston.Logger)({
 // Filter to append prefix with source code information
 Catenis.logger.filters.push(function (level, msg, meta, inst) {
     // Check whether a stack trace is passed in the meta
-    if (typeof meta.stackTrace !== 'undefined') {
-        // Prepare prefix with filename, linenumber and function name
-        //  from trace info
-        const trace = meta.stackTrace[0];
-        let prefix = util.format('[%s, %d', trace.getFileName(), trace.getLineNumber());
-        const functionName = trace.getFunctionName();
+    if (typeof meta === 'object' && meta !== null) {
+        if (typeof meta.stackTrace !== 'undefined') {
+            // Prepare prefix with filename, linenumber and function name
+            //  from trace info
+            const trace = meta.stackTrace[0];
+            let prefix = util.format('[%s, %d', trace.getFileName(), trace.getLineNumber());
+            const functionName = trace.getFunctionName();
 
-        if (functionName != null) {
-            prefix = util.format('%s (%s)]', prefix, functionName);
-        }
-        else {
-            prefix += ']';
-        }
-
-        if (msg != undefined && msg != null && msg.length > 0) {
-            // Get white spaces from beginning of message
-            let spaces = '';
-            const match = msg.match(/^\s*/);
-
-            if (match != null && match.length > 0) {
-                spaces = match[0];
+            if (functionName != null) {
+                prefix = util.format('%s (%s)]', prefix, functionName);
+            }
+            else {
+                prefix += ']';
             }
 
-            if (spaces.length > 0) {
-                // Add white spaces to beginning of prefix
-                //  and remove them from beginning of message
-                prefix = spaces + prefix;
-                msg = msg.substr(spaces.length);
-            }
+            if (msg != undefined && msg != null && msg.length > 0) {
+                // Get white spaces from beginning of message
+                let spaces = '';
+                const match = msg.match(/^\s*/);
 
-            if (msg.length > 0 && msg !== 'null') {
-                // Append prefix to message
-                msg = util.format('%s - %s', prefix, msg);
+                if (match != null && match.length > 0) {
+                    spaces = match[0];
+                }
+
+                if (spaces.length > 0) {
+                    // Add white spaces to beginning of prefix
+                    //  and remove them from beginning of message
+                    prefix = spaces + prefix;
+                    msg = msg.substr(spaces.length);
+                }
+
+                if (msg.length > 0 && msg !== 'null') {
+                    // Append prefix to message
+                    msg = util.format('%s - %s', prefix, msg);
+                }
+                else {
+                    // Set message to be only the prefix
+                    msg = prefix;
+                }
             }
             else {
                 // Set message to be only the prefix
                 msg = prefix;
             }
-        }
-        else {
-            // Set message to be only the prefix
-            msg = prefix;
-        }
 
-        // Make sure that stack trace is not printed
-        delete meta.stackTrace;
-    }
-    else if (Object.keys(meta).length > 0) {
-        // Some meta object has been passed.
-        //  Make sure that null message is not printed
-        const trimMsg = msg.trim();
+            // Make sure that stack trace is not printed
+            delete meta.stackTrace;
+        }
+        else if (Object.keys(meta).length > 0) {
+            // Some meta object has been passed.
+            //  Make sure that null message is not printed
+            const trimMsg = msg.trim();
 
-        if (trimMsg === 'null') {
-            msg = msg.replace('null', '');
+            if (trimMsg === 'null') {
+                msg = msg.replace('null', '');
+            }
         }
     }
 
