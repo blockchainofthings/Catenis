@@ -196,7 +196,7 @@
     "defaultStorageProvider": "ipfs",
     "msgStorage": {
       "ipfs": {
-        "apiHost": "127.0.0.1",
+        "apiHost": "catenis-ipfs",
         "apiPort": 5001,
         "apiProtocol": "http"
       }

@@ -49,9 +49,19 @@
   },
   // Parameters pertaining to BitcoinCore module
   "bitcoinCore": {
-    "serverHost": "10.8.0.1", // Bitcoin Core server host name/IP address (access via VPN)
-    //"serverHost": "catenis-btccore", // Bitcoin Core server host name/IP address
+    //"serverHost": "10.8.0.1", // Bitcoin Core server host name/IP address (access via VPN)
+    "serverHost": "catenis-dev", // Bitcoin Core server host name/IP address
     "rpcConnectionTimeout": 30000,  // Timeout, in miliseconds, for RPC connection with the bitcoin server.
     "rescanTimeout": 900000 // Timeout, in miniseconds, for waiting on Bitcoin Core to finish rescanning the blockchain after importing private key
+  },
+  // Parameters pertaining to CatenisMessage module
+  "catenisMessage": {
+    "msgStorage": {
+      "ipfs": {
+        "apiHost": "127.0.0.1",
+        "apiPort": 5001,
+        "apiProtocol": "http"
+      }
+    }
   }
 }
