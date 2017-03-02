@@ -52,7 +52,10 @@ import { isValidMsgEncoding, isValidMsgStorage } from './ApiLogMessage';
 //  }
 //
 //  Success data returned: {
-//    "txid": [String]              // ID of blockchain transaction where message is recorded
+//    "txid": [String],       // ID of blockchain transaction where message was recorded
+//    "extStorage": {         // (only returned if message stored in external storage)
+//      "<storage_provider_name>": [String]  // Key: storage provider name. Value: reference to message in external storage
+//    }
 //  }
 export function sendMessage() {
     try {
@@ -200,10 +203,10 @@ export function sendMessage() {
         }
 
         // Execute method to send message
-        let txid;
+        let sendMsgResult;
 
         try {
-            txid = this.user.device.sendMessage(targetDeviceId, msg, optEncrypt, optStorage);
+            sendMsgResult = this.user.device.sendMessage(targetDeviceId, msg, optEncrypt, optStorage);
         }
         catch (err) {
             let error;
@@ -244,9 +247,7 @@ export function sendMessage() {
         }
 
         // Return success
-        return successResponse.call(this, {
-            txid: txid
-        });
+        return successResponse.call(this, sendMsgResult);
     }
     catch (err) {
         Catenis.logger.ERROR('Error processing \'message/send\' API request.', err);

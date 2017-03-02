@@ -309,9 +309,10 @@ Device.prototype.fundAddresses = function () {
 //    storageProvider: [Object] // (optional, default: defaultStorageProvider) A field of the CatenisMessage.storageProvider property
 //                              //    identifying the type of external storage to be used to store the message that should not be embedded
 //
-//  Return value:
-//    sentTxId: [String]  // ID of blockchain transaction where message was recorded
-//
+//  Return value: {
+//    txid: [String],       // ID of blockchain transaction where message was recorded
+//    extMsgRef: [String]   // Reference to message in external storage (only provided if message stored in external storage)
+//  }
 Device.prototype.sendMessage = function (targetDeviceId, message, encryptMessage = true, storageScheme = 'auto', storageProvider) {
     // Make sure that device is not deleted
     if (this.status === Device.status.deleted.name) {
@@ -370,7 +371,7 @@ Device.prototype.sendMessage = function (targetDeviceId, message, encryptMessage
         }
     }
 
-    let sentTxId = undefined;
+    let sendTxResult = undefined;
 
     // Execute code in critical section to avoid UTXOs concurrency
     FundSource.utxoCS.execute(() => {
@@ -387,7 +388,7 @@ Device.prototype.sendMessage = function (targetDeviceId, message, encryptMessage
             // Build and send transaction
             sendMsgTransact.buildTransaction();
 
-            sentTxId = sendMsgTransact.sendTransaction();
+            sendTxResult = sendMsgTransact.sendTransaction();
         }
         catch (err) {
             // Error sending message to another device.
@@ -404,7 +405,7 @@ Device.prototype.sendMessage = function (targetDeviceId, message, encryptMessage
         }
     });
 
-    return sentTxId;
+    return sendTxResult;
 };
 
 // Log message on the blockchain
@@ -417,8 +418,9 @@ Device.prototype.sendMessage = function (targetDeviceId, message, encryptMessage
 //                              //    identifying the type of external storage to be used to store the message that should not be embedded
 //
 //  Return value:
-//    sentTxId: [String]  // ID of blockchain transaction where message was recorded
-//
+//    txid: [String],       // ID of blockchain transaction where message was recorded
+//    extMsgRef: [String]   // Reference to message in external storage (only provided if message stored in external storage)
+//  }
 Device.prototype.logMessage = function (message, encryptMessage = true, storageScheme = 'auto', storageProvider) {
     // Make sure that device is not deleted
     if (this.status === Device.status.deleted.name) {
@@ -443,7 +445,7 @@ Device.prototype.logMessage = function (message, encryptMessage = true, storageS
         throw new Meteor.Error('ctn_device_no_credits', util.format('Not enough credits to log message (clientId: %s, confirmedMsgCredits: %d, creditsToLogMessage: %d)', this.client.clientId, confirmedMsgCredits, cfgSettings.creditsToLogMessage));
     }
 
-    let sentTxId = undefined;
+    let sendTxResult = undefined;
 
     // Execute code in critical section to avoid UTXOs concurrency
     FundSource.utxoCS.execute(() => {
@@ -460,7 +462,7 @@ Device.prototype.logMessage = function (message, encryptMessage = true, storageS
             // Build and send transaction
             logMsgTransact.buildTransaction();
 
-            sentTxId = logMsgTransact.sendTransaction();
+            sendTxResult = logMsgTransact.sendTransaction();
         }
         catch (err) {
             // Error logging message
@@ -477,7 +479,7 @@ Device.prototype.logMessage = function (message, encryptMessage = true, storageS
         }
     });
 
-    return sentTxId;
+    return sendTxResult;
 };
 
 // Read message previously sent/logged

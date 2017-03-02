@@ -164,6 +164,10 @@ LogMessageTransaction.prototype.buildTransaction = function () {
         // Prepare message to log
         const ctnMessage = new CatenisMessage(msgToLog, CatenisMessage.functionByte.logMessage, this.options);
 
+        if (!ctnMessage.isEmbedded()) {
+            this.extMsgRef = ctnMessage.getExternalMessageReference();
+        }
+
         // Add null data output
         this.transact.addNullDataOutput(ctnMessage.getData());
 
@@ -220,6 +224,11 @@ LogMessageTransaction.prototype.buildTransaction = function () {
     }
 };
 
+//  Return value: {
+//    txid: [String],       // ID of blockchain transaction where message was recorded
+//    extStorage: {         // (only returned if message stored in external storage)
+//      <storage_provider_name>: [String]  // Key: storage provider name. Value: reference to message in external storage
+//  }
 LogMessageTransaction.prototype.sendTransaction = function () {
     // Check if transaction has not yet been created and sent
     if (this.transact.txid == undefined) {
@@ -237,8 +246,18 @@ LogMessageTransaction.prototype.sendTransaction = function () {
         Catenis.ctnHubNode.checkPayTxExpenseFundingBalance();
     }
 
-    // Return transaction id
-    return this.transact.txid;
+    const result = {
+        txid: this.transact.txid
+    };
+
+    if (this.extMsgRef) {
+        const storageProvider = this.options.storageProvider != undefined ? this.options.storageProvider : CatenisMessage.defaultStorageProvider;
+
+        result.extStorage = {};
+        result.extStorage[storageProvider.name] = CatenisMessage.getMessageStorageClass(storageProvider).getNativeMsgRef(this.extMsgRef);
+    }
+
+    return result;
 };
 
 LogMessageTransaction.prototype.revertOutputAddresses = function () {
@@ -318,13 +337,13 @@ LogMessageTransaction.checkTransaction = function (transact) {
                 }
             }
 
-            if (ctnMessage !== undefined && ctnMessage.funcByte == CatenisMessage.functionByte.logMessage) {
+            if (ctnMessage !== undefined && ctnMessage.isLogMessage()) {
                 let message = undefined;
 
-                if (ctnMessage.options.encrypted) {
+                if (ctnMessage.isEncrypted()) {
                     // Try to decrypt message
                     try {
-                        message = devMainAddr.addrInfo.cryptoKeys.decryptData(devMainAddr.addrInfo.cryptoKeys, ctnMessage.message);
+                        message = devMainAddr.addrInfo.cryptoKeys.decryptData(devMainAddr.addrInfo.cryptoKeys, ctnMessage.getMessage());
                     }
                     catch (err) {
                         if (!(err instanceof Meteor.Error) || err.error !== 'ctn_crypto_no_priv_key') {
@@ -335,7 +354,7 @@ LogMessageTransaction.checkTransaction = function (transact) {
                     }
                 }
                 else {
-                    message = ctnMessage.message;
+                    message = ctnMessage.getMessage();
                 }
 
                 if (message != undefined) {
@@ -348,14 +367,15 @@ LogMessageTransaction.checkTransaction = function (transact) {
                     logMsgTransact.message = message;       // Original contents of message as provided by device (always unencrypted)
                                                             //  NOTE: could be undefined if message could not be decrypted due to missing private key
                                                             //      for device that recorded the message (possibly because it belongs to a different Node)
-                    logMsgTransact.rawMessage = ctnMessage.message;    // Contents of message as it was recorded (encrypted, if encryption was used)
+                    logMsgTransact.rawMessage = ctnMessage.getMessage();    // Contents of message as it was recorded (encrypted, if encryption was used)
                     logMsgTransact.options = {
-                        encrypted: ctnMessage.options.encrypted,
-                        storageScheme: ctnMessage.options.embedded ? CatenisMessage.storageScheme.embedded : CatenisMessage.storageScheme.external
+                        encrypted: ctnMessage.isEncrypted(),
+                        storageScheme: ctnMessage.isEmbedded() ? CatenisMessage.storageScheme.embedded : CatenisMessage.storageScheme.external
                     };
 
-                    if (ctnMessage.options.storageProvider != undefined) {
-                        logMsgTransact.options.storageProvider = ctnMessage.options.storageProvider;
+                    if (!ctnMessage.isEmbedded()) {
+                        logMsgTransact.options.storageProvider = ctnMessage.getStorageProvider();
+                        logMsgTransact.extMsgRef = ctnMessage.getExternalMessageReference();
                     }
                 }
             }

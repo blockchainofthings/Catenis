@@ -46,7 +46,10 @@ const cfgSettings = {
 //  }
 //
 //  Success data returned: {
-//    "txid": [String]          // ID of blockchain transaction where message is recorded
+//    "txid": [String],       // ID of blockchain transaction where message was recorded
+//    "extStorage": {         // (only returned if message stored in external storage)
+//      "<storage_provider_name>": [String]  // Key: storage provider name. Value: reference to message in external storage
+//    }
 //  }
 export function logMessage() {
     try {
@@ -142,10 +145,10 @@ export function logMessage() {
         }
 
         // Execute method to log message
-        let txid;
+        let logMsgResult;
 
         try {
-            txid = this.user.device.logMessage(msg, optEncrypt, optStorage);
+            logMsgResult = this.user.device.logMessage(msg, optEncrypt, optStorage);
         }
         catch (err) {
             let error;
@@ -182,9 +185,7 @@ export function logMessage() {
         }
 
         // Return success
-        return successResponse.call(this, {
-            txid: txid
-        });
+        return successResponse.call(this, logMsgResult);
     }
     catch (err) {
         Catenis.logger.ERROR('Error processing \'message/log\' API request.', err);

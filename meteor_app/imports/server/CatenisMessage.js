@@ -106,12 +106,12 @@ export function CatenisMessage(message, funcByte, options) {
         else {
             this.options.storageProvider = options.storageProvider != undefined ? options.storageProvider : CatenisMessage.defaultStorageProvider;
             const msgStorage = CatenisMessage.getMessageStorageInstance(this.options.storageProvider);
-            const msgRef = msgStorage.store(message);
+            this.extMsgRef = msgStorage.store(message);
 
-            this.msgPayload = new Buffer(msgRef.length + 1);
+            this.msgPayload = new Buffer(this.extMsgRef.length + 1);
 
             this.msgPayload.writeUInt8(this.options.storageProvider.byteCode);
-            msgRef.copy(this.msgPayload, 1);
+            this.extMsgRef.copy(this.msgPayload, 1);
         }
 
         // Just write the data making sure that it will fit
@@ -147,6 +147,14 @@ CatenisMessage.prototype.getData = function () {
 
 CatenisMessage.prototype.getMessage = function () {
     return this.message;
+};
+
+CatenisMessage.prototype.getExternalMessageReference = function () {
+    return this.extMsgRef;
+};
+
+CatenisMessage.prototype.getStorageProvider = function () {
+    return this.options.storageProvider;
 };
 
 CatenisMessage.prototype.isEncrypted = function () {
@@ -187,7 +195,7 @@ CatenisMessage.prototype.isLogMessage = function () {
 //
 //  Arguments:
 //    storageProvided: [Object] // (optional, default: defaultStorageProvider) A field of the CatenisMessage.storageProvider property identifying the type of external storage to be used to store the message that should not be embedded
-CatenisMessage.getMessageStorageInstance = function(storageProvider) {
+CatenisMessage.getMessageStorageInstance = function (storageProvider) {
     let instance;
 
     if (CatenisMessage.msgStoInstances.has(storageProvider.byteCode)) {
@@ -207,6 +215,13 @@ CatenisMessage.getMessageStorageInstance = function(storageProvider) {
     }
 
     return instance;
+};
+
+CatenisMessage.getMessageStorageClass = function (storageProvider) {
+    switch(storageProvider.byteCode) {
+        case CatenisMessage.storageProvider.ipfs.byteCode:
+            return IpfsMessageStorage;
+    }
 };
 
 CatenisMessage.getStorageProviderByName = function (spName) {
@@ -317,7 +332,8 @@ CatenisMessage.fromData = function (data, logError = true) {
         data.copy(msgPayload, 0, bytesRead);
 
         // Extract message from payload
-        let message;
+        let message,
+            extMsgRef;
 
         if (options.embedded) {
             message = msgPayload;
@@ -332,14 +348,17 @@ CatenisMessage.fromData = function (data, logError = true) {
                 throw new Error('Invalid message storage provided byte code');
             }
 
-            // Read message reference
-            const msgRef = new Buffer(msgPayload.length - 1);
+            // Save storage provider
+            options.storageProvider = storageProvider;
 
-            msgPayload.copy(msgRef, 0, 1);
+            // Read message reference
+            extMsgRef = new Buffer(msgPayload.length - 1);
+
+            msgPayload.copy(extMsgRef, 0, 1);
 
             const msgStorage = CatenisMessage.getMessageStorageInstance(storageProvider);
 
-            message = msgStorage.retrieve(msgRef);
+            message = msgStorage.retrieve(extMsgRef);
         }
 
         const ctnMessage = new CatenisMessage();
@@ -350,6 +369,10 @@ CatenisMessage.fromData = function (data, logError = true) {
         ctnMessage.options = options;
         ctnMessage.msgPayload = msgPayload;
         ctnMessage.message = message;
+
+        if (!options.embedded) {
+            ctnMessage.extMsgRef = extMsgRef;
+        }
 
         return ctnMessage;
     }

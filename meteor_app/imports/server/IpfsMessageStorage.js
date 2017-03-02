@@ -90,6 +90,10 @@ export class IpfsMessageStorage extends MessageStorage {
 
     // Method used to retrieve the message contents stored on the external storage
     //
+    //  Arguments:
+    //    msgRef: [Object] // Object of type Buffer containing tthe reference (a unique ID) to the stored message
+    //                     //  (as returned by the 'store' method)
+    //
     //  Return: [Object] // Object of type Buffer containing the retrieved message
     retrieve(msgRef) {
         try {
@@ -173,6 +177,31 @@ export class IpfsMessageStorage extends MessageStorage {
         }
     }
 
+    // Method used to get the native reference of the external storage to where the message
+    //  is actually stored from the message reference (returned from the 'store' method)
+    //
+    //  Arguments:
+    //    msgRef: [Object] // Object of type Buffer containing tthe reference (a unique ID) to the stored message
+    //                     //  (as returned by the 'store' method)
+    //
+    //  Return: [String]  // Serialized version of native storage reference
+    static getNativeMsgRef(msgRef) {
+        // Parse message reference
+
+        // Read size of IPFS hash
+        let ipfsHashLength = msgRef.readUInt8(0);
+        let bytesRead = 1;
+
+        // Read IPFS hash itself
+        let ipfsHash = msgRef.toString(undefined, bytesRead, bytesRead + ipfsHashLength);
+
+        if (ipfsHash.length != ipfsHashLength) {
+            //noinspection ExceptionCaughtLocallyJS
+            throw new Error('Inconsistent IPFS hash size');
+        }
+
+        return ipfsHash;
+    }
 }
 
 

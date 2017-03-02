@@ -42,12 +42,32 @@ export class MessageStorage {
 
     // Method used to retrieve the message contents stored on the external storage
     //
+    //  Arguments:
+    //    msgRef: [Object] // Object of type Buffer containing tthe reference (a unique ID) to the stored message
+    //                     //  (as returned by the 'store' method)
+    //
     //  Return: [Object] // Object of type Buffer containing the retrieved message
     //
     //  NOTE: this method should be implemented in the derived class
     retrieve(msgRef) {
         Catenis.logger.WARN('Method not implemented');
     }
+
+    // Method used to get the native reference of the external storage to where the message
+    //  is actually stored from the message reference (returned from the 'store' method)
+    //
+    //  Arguments:
+    //    msgRef: [Object] // Object of type Buffer containing tthe reference (a unique ID) to the stored message
+    //                     //  (as returned by the 'store' method)
+    //
+    //  Return: [String]  // Serialized version of native storage reference
+    //
+    //  NOTE: this static method should be implemented in the derived class. It is commented out here because
+    //      if it was defined in the base class, it would always be called instead of the corresponding
+    //      method in the desired derived class (that because it is a static method instead of an instance method)
+    /*static getNativeMsgRef(msgRef) {
+        Catenis.logger.WARN('Method not implemented');
+    }*/
 }
 
 // Module code
