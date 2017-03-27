@@ -47,6 +47,13 @@ import { isValidMsgEncoding } from './ApiLogMessage';
 //    encoding [String]         // (default: utf8) - One of the following values identifying the encoding that should be used for the returned message: utf8|base64|hex
 //
 //  Success data returned: {
+//    "from" : {            // Note: only returned if origin device different than device that issued the request
+//      deviceId: [String]      // Catenis ID of the origin device (device that had sent/logged the message)
+//    },
+//    "to" : {              // Note: only returned if target device different than device that issued the request.
+//                          //  Never returned for version 0.1 that does not have permission control.
+//      deviceId: [String]      // Catenis ID of target device (device to which the message had been sent)
+//    },
 //    "message": [String]       // ID of blockchain transaction where message is recorded
 //  }
 export function readMessage() {

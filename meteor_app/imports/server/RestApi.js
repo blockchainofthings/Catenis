@@ -94,7 +94,7 @@ export function RestApi() {
         //
         //  Success data returned: {
         //    "txid": [String],       // ID of blockchain transaction where message was recorded
-        //    "extStorage": {         // (only returned if message stored in external storage)
+        //    "extStorage": {         // Note: only returned if message stored in external storage
         //      "<storage_provider_name>": [String]  // Key: storage provider name. Value: reference to message in external storage
         //    }
         //  }
@@ -120,7 +120,7 @@ export function RestApi() {
         //
         //  Success data returned: {
         //    "txid": [String],       // ID of blockchain transaction where message was recorded
-        //    "extStorage": {         // (only returned if message stored in external storage)
+        //    "extStorage": {         // Note: only returned if message stored in external storage
         //      "<storage_provider_name>": [String]  // Key: storage provider name. Value: reference to message in external storage
         //    }
         //  }
@@ -139,6 +139,13 @@ export function RestApi() {
         //    encoding [String]         // (default: utf8) - One of the following values identifying the encoding that should be used for the returned message: utf8|base64|hex
         //
         //  Success data returned: {
+        //    "from" : {            // Note: only returned if origin device different than device that issued the request
+        //      deviceId: [String]      // Catenis ID of the origin device (device that had sent/logged the message)
+        //    },
+        //    "to" : {              // Note: only returned if target device different than device that issued the request.
+        //                          //  Never returned for version 0.1 that does not have permission control.
+        //      deviceId: [String]      // Catenis ID of target device (device to which the message had been sent)
+        //    },
         //    "message": [String]       // ID of blockchain transaction where message is recorded
         //  }
         get: {

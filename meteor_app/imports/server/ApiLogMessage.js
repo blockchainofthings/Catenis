@@ -47,7 +47,7 @@ const cfgSettings = {
 //
 //  Success data returned: {
 //    "txid": [String],       // ID of blockchain transaction where message was recorded
-//    "extStorage": {         // (only returned if message stored in external storage)
+//    "extStorage": {         // Note: only returned if message stored in external storage
 //      "<storage_provider_name>": [String]  // Key: storage provider name. Value: reference to message in external storage
 //    }
 //  }
