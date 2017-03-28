@@ -349,7 +349,7 @@ function optionsResponseHeaders() {
         'Access-Control-Allow-Credentials': 'true',
         'Access-Control-Allow-Origin': reqHdrOrigin != undefined ? reqHdrOrigin : '*',
         'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-        'Access-Control-Allow-Headers': 'DNT, X-CustomHeader, Keep-Alive, User-Agent, X-Requested-With, If-Modified-Since, Cache-Control, Accept, Origin, Content-Type, X-Auth-Token'
+        'Access-Control-Allow-Headers': 'DNT, X-CustomHeader, Keep-Alive, User-Agent, X-Requested-With, If-Modified-Since, Cache-Control, Accept, Origin, Content-Type, X-Bcot-Timestamp, Authorization'
     };
 }
 
