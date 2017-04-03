@@ -63,9 +63,7 @@ export function readMessage() {
         // txid param
         if (!(typeof this.urlParams.txid === 'string' && this.urlParams.txid.length > 0)) {
             Catenis.logger.DEBUG('Invalid \'txid\' parameter for \'message/read\' API request', this.urlParams);
-            return {
-                error: errorResponse.call(this, 400, 'Invalid parameters')
-            };
+            return errorResponse.call(this, 400, 'Invalid parameters');
         }
 
         let optEncoding = 'utf8';
@@ -73,9 +71,7 @@ export function readMessage() {
         // encoding param
         if (!(typeof this.queryParams.encoding === 'undefined' || (typeof this.queryParams.encoding === 'string' && isValidMsgEncoding(this.queryParams.encoding)))) {
             Catenis.logger.DEBUG('Invalid \'encoding\' parameter for \'message/read\' API request', this.queryParams);
-            return {
-                error: errorResponse.call(this, 400, 'Invalid parameters')
-            };
+            return errorResponse.call(this, 400, 'Invalid parameters');
         }
 
         if (typeof this.queryParams.encoding !== 'undefined') {
@@ -120,9 +116,7 @@ export function readMessage() {
                 Catenis.logger.ERROR('Error processing \'message/read\' API request.', err);
             }
 
-            return {
-                error: error
-            }
+            return error;
         }
 
         // Prepare result
@@ -165,9 +159,7 @@ export function readMessage() {
     }
     catch (err) {
         Catenis.logger.ERROR('Error processing \'message/read\' API request.', err);
-        return {
-            error: errorResponse.call(this, 500, 'Internal server error')
-        };
+        return errorResponse.call(this, 500, 'Internal server error');
     }
 }
 
