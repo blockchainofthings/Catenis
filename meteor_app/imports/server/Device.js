@@ -517,8 +517,8 @@ Device.prototype.readMessage = function (txid) {
         transact = Transaction.fromTxid(txid);
     }
     catch (err) {
-        if ((err instanceof Meteor.Error) && err.details != undefined && typeof err.details.code === 'number'
-            && err.details.code == BitcoinCore.rpcErrorCode.RPC_INVALID_ADDRESS_OR_KEY) {
+        if ((err instanceof Meteor.Error) && err.error === 'ctn_btcore_rpc_error' && err.details != undefined && typeof err.details.code === 'number'
+                && (err.details.code == BitcoinCore.rpcErrorCode.RPC_INVALID_ADDRESS_OR_KEY || err.details.code == BitcoinCore.rpcErrorCode.RPC_INVALID_PARAMETER)) {
             // Error indicating that transaction id is not valid.
             //  Throws local error
             throw new Meteor.Error('ctn_device_invalid_txid', util.format('This is not a valid transaction id: %s', txid));
@@ -864,8 +864,8 @@ Device.getMessageProofOfOrigin = function (txid, deviceId, textToSign) {
         transact = Transaction.fromTxid(txid);
     }
     catch (err) {
-        if ((err instanceof Meteor.Error) && err.details != undefined && typeof err.details.code === 'number'
-            && err.details.code == BitcoinCore.rpcErrorCode.RPC_INVALID_ADDRESS_OR_KEY) {
+        if ((err instanceof Meteor.Error) && err.error === 'ctn_btcore_rpc_error' && err.details != undefined && typeof err.details.code === 'number'
+                && (err.details.code == BitcoinCore.rpcErrorCode.RPC_INVALID_PARAMETER || err.details.code == BitcoinCore.rpcErrorCode.RPC_INVALID_ADDRESS_OR_KEY)) {
             // Error indicating that transaction id is not valid.
             //  Throws local error
             throw new Meteor.Error('ctn_msg_poof_invalid_txid', util.format('This is not a valid transaction id: %s', txid));
