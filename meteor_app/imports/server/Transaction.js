@@ -735,7 +735,7 @@ Transaction.fromHex = function (hexTx) {
         }
     }
     catch (err) {
-        if (!((err instanceof Meteor.Error) && err.details != undefined && typeof err.details.code === 'number'
+        if (!((err instanceof Meteor.Error) && err.error === 'ctn_btcore_rpc_error' && err.details != undefined && typeof err.details.code === 'number'
                 && err.details.code == BitcoinCore.rpcErrorCode.RPC_DESERIALIZATION_ERROR)) {
             // An error other than failure to deserialize transaction.
             //  Just re-throws it

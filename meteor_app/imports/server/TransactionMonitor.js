@@ -163,8 +163,8 @@ function pollBlockchain() {
                             result[txid] = Catenis.bitcoinCore.getTransaction(txid, false);
                         }
                         catch (err) {
-                            if (!(err instanceof Meteor.Error) || err.details == undefined || typeof err.details.code !== 'number'
-                                || err.details.code != BitcoinCore.rpcErrorCode.RPC_INVALID_ADDRESS_OR_KEY) {
+                            if (!((err instanceof Meteor.Error) && err.error === 'ctn_btcore_rpc_error' && err.details != undefined && typeof err.details.code === 'number'
+                                    && err.details.code == BitcoinCore.rpcErrorCode.RPC_INVALID_ADDRESS_OR_KEY)) {
                                 // An error other than indication that it is a non-wallet tx id.
                                 //  Just re-throws it
                                 throw err;
@@ -229,8 +229,8 @@ function pollBlockchain() {
                                     ctnTxsInBlock.push(txid);
                                 }
                                 catch (err) {
-                                    if (!(err instanceof Meteor.Error) || err.details == undefined || typeof err.details.code !== 'number'
-                                        || err.details.code != BitcoinCore.rpcErrorCode.RPC_INVALID_ADDRESS_OR_KEY) {
+                                    if (!((err instanceof Meteor.Error) && err.error === 'ctn_btcore_rpc_error' && err.details != undefined && typeof err.details.code === 'number'
+                                            && err.details.code == BitcoinCore.rpcErrorCode.RPC_INVALID_ADDRESS_OR_KEY)) {
                                         // An error other than indication that it is a non-wallet tx id.
                                         //  Just re-throws it
                                         throw err;
