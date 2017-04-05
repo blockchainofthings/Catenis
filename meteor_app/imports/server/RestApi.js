@@ -133,7 +133,7 @@ export function RestApi() {
         // Retrieve message from blockchain
         //
         //  URL parameters:
-        //    txid [String]             // ID of blockchain transaction where message is written
+        //    txid [String]             // ID of blockchain transaction where message is recorded
         //
         //  Query string (optional) parameters:
         //    encoding [String]         // (default: utf8) - One of the following values identifying the encoding that should be used for the returned message: utf8|base64|hex
@@ -146,7 +146,7 @@ export function RestApi() {
         //                          //  Never returned for version 0.1 that does not have permission control.
         //      deviceId: [String]      // Catenis ID of target device (device to which the message had been sent)
         //    },
-        //    "message": [String]       // ID of blockchain transaction where message is recorded
+        //    "message": [String]       // The read message formatted using the specified encoding
         //  }
         get: {
             action: readMessage
