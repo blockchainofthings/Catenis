@@ -35,7 +35,7 @@ const cfgSettings = {
 // Definition of module (private) functions
 //
 
-// Method used to process 'message/log' endpoint of Rest API
+// Method used to process 'messages/log' endpoint of Rest API
 //
 //  JSON payload: {
 //    "message": [String],      // The message to record
@@ -46,10 +46,7 @@ const cfgSettings = {
 //  }
 //
 //  Success data returned: {
-//    "txid": [String],       // ID of blockchain transaction where message was recorded
-//    "extStorage": {         // Note: only returned if message stored in external storage
-//      "<storage_provider_name>": [String]  // Key: storage provider name. Value: reference to message in external storage
-//    }
+//    "messageId": [String]       // ID of logged message
 //  }
 export function logMessage() {
     try {
@@ -57,7 +54,7 @@ export function logMessage() {
 
         // message param
         if (!(typeof this.bodyParams.message === 'string' && this.bodyParams.message.length > 0)) {
-            Catenis.logger.DEBUG('Invalid \'message\' parameter for \'message/log\' API request', this.bodyParams);
+            Catenis.logger.DEBUG('Invalid \'message\' parameter for \'messages/log\' API request', this.bodyParams);
             return errorResponse.call(this, 400, 'Invalid parameters');
         }
 
@@ -67,14 +64,14 @@ export function logMessage() {
 
         // options param
         if (!(typeof this.bodyParams.options === 'undefined' || (typeof this.bodyParams.options === 'object' && this.bodyParams.options !== null))) {
-            Catenis.logger.DEBUG('Invalid \'options\' parameter for \'message/log\' API request', this.bodyParams);
+            Catenis.logger.DEBUG('Invalid \'options\' parameter for \'messages/log\' API request', this.bodyParams);
             return errorResponse.call(this, 400, 'Invalid parameters');
         }
 
         if (typeof this.bodyParams.options !== 'undefined') {
             // options.encoding
             if (!(typeof this.bodyParams.options.encoding === 'undefined' || (typeof this.bodyParams.options.encoding === 'string' && isValidMsgEncoding(this.bodyParams.options.encoding)))) {
-                Catenis.logger.DEBUG('Invalid \'options.encoding\' parameter for \'message/log\' API request', this.bodyParams);
+                Catenis.logger.DEBUG('Invalid \'options.encoding\' parameter for \'messages/log\' API request', this.bodyParams);
                 return errorResponse.call(this, 400, 'Invalid parameters');
             }
 
@@ -84,7 +81,7 @@ export function logMessage() {
 
             // options.encrypt
             if (!(typeof this.bodyParams.options.encrypt === 'undefined' || typeof this.bodyParams.options.encrypt === 'boolean')) {
-                Catenis.logger.DEBUG('Invalid \'options.encrypt\' parameter for \'message/log\' API request', this.bodyParams);
+                Catenis.logger.DEBUG('Invalid \'options.encrypt\' parameter for \'messages/log\' API request', this.bodyParams);
                 return errorResponse.call(this, 400, 'Invalid parameters');
             }
 
@@ -94,7 +91,7 @@ export function logMessage() {
 
             // options.storage
             if (!(typeof this.bodyParams.options.storage === 'undefined' || (typeof this.bodyParams.options.storage === 'string' && isValidMsgStorage(this.bodyParams.options.storage)))) {
-                Catenis.logger.DEBUG('Invalid \'options.storage\' parameter for \'message/log\' API request', this.bodyParams);
+                Catenis.logger.DEBUG('Invalid \'options.storage\' parameter for \'messages/log\' API request', this.bodyParams);
                 return errorResponse.call(this, 400, 'Invalid parameters');
             }
 
@@ -114,11 +111,11 @@ export function logMessage() {
 
             if (err.name === 'TypeError') {
                 error = errorResponse.call(this, 400, 'Invalid parameters');
-                Catenis.logger.DEBUG('Incompatible encoding for \'message\' parameter of \'message/log\' API request', this.bodyParams);
+                Catenis.logger.DEBUG('Incompatible encoding for \'message\' parameter of \'messages/log\' API request', this.bodyParams);
             }
             else {
                 error = errorResponse.call(this, 500, 'Internal server error');
-                Catenis.logger.ERROR('Error processing \'message/log\' API request.', err);
+                Catenis.logger.ERROR('Error processing \'messages/log\' API request.', err);
             }
 
             return error;
@@ -126,15 +123,15 @@ export function logMessage() {
 
         // Make sure that buffer's contents match the original message
         if (msg.toString(optEncoding) !== this.bodyParams.message) {
-            Catenis.logger.DEBUG('Incompatible encoding for \'message\' parameter of \'message/log\' API request', this.bodyParams);
+            Catenis.logger.DEBUG('Incompatible encoding for \'message\' parameter of \'messages/log\' API request', this.bodyParams);
             return errorResponse.call(this, 400, 'Invalid parameters');
         }
 
         // Execute method to log message
-        let logMsgResult;
+        let messageId;
 
         try {
-            logMsgResult = this.user.device.logMessage(msg, optEncrypt, optStorage);
+            messageId = this.user.device.logMessage(msg, optEncrypt, optStorage);
         }
         catch (err) {
             let error;
@@ -161,28 +158,30 @@ export function logMessage() {
                 error = errorResponse.call(this, 500, 'Internal server error');
             }
 
-            if (error.statusCode == 500) {
-                Catenis.logger.ERROR('Error processing \'message/log\' API request.', err);
+            if (error.statusCode === 500) {
+                Catenis.logger.ERROR('Error processing \'messages/log\' API request.', err);
             }
 
             return error;
         }
 
         // Return success
-        return successResponse.call(this, logMsgResult);
+        return successResponse.call(this, {
+            messageId: messageId
+        });
     }
     catch (err) {
-        Catenis.logger.ERROR('Error processing \'message/log\' API request.', err);
+        Catenis.logger.ERROR('Error processing \'messages/log\' API request.', err);
         return errorResponse.call(this, 500, 'Internal server error');
     }
 }
 
 export function isValidMsgEncoding(val) {
-    return val === 'utf8' || val === 'base64' || val == 'hex';
+    return val === 'utf8' || val === 'base64' || val === 'hex';
 }
 
 export function isValidMsgStorage(val) {
-    return val === 'embedded' || val === 'external' || val == 'auto';
+    return val === 'embedded' || val === 'external' || val === 'auto';
 }
 
 

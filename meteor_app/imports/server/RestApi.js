@@ -27,6 +27,7 @@ import { Device } from './Device';
 import { logMessage } from './ApiLogMessage';
 import { sendMessage } from './ApiSendMessage';
 import { readMessage } from './ApiReadMessage';
+import { retrieveMessageContainer } from './ApiMessageContainer';
 
 // Config entries
 const restApiConfig = config.get('restApi');
@@ -81,8 +82,8 @@ export function RestApi() {
         version: cfgSettings.version
     });
 
-    this.api.addRoute('message/log', {authRequired: true}, {
-        // Record message to blockchain
+    this.api.addRoute('messages/log', {authRequired: true}, {
+        // Record a message to blockchain
         //
         //  JSON payload: {
         //    "message": [String],      // The message to record
@@ -103,8 +104,8 @@ export function RestApi() {
         }
     });
 
-    this.api.addRoute('message/send', {authRequired: true}, {
-        // Record message to blockchain directing it to another device
+    this.api.addRoute('messages/send', {authRequired: true}, {
+        // Record a message to blockchain directing it to another device
         //
         //  JSON payload: {
         //    targetDevice: {
@@ -129,27 +130,49 @@ export function RestApi() {
         }
     });
 
-    this.api.addRoute('message/read/:txid', {authRequired: true}, {
-        // Retrieve message from blockchain
+    this.api.addRoute('messages/:messageId', {authRequired: true}, {
+        // Retrieve a given message from blockchain
         //
         //  URL parameters:
-        //    txid [String]             // ID of blockchain transaction where message is recorded
+        //    messageId [String]        // ID of message to read
         //
         //  Query string (optional) parameters:
         //    encoding [String]         // (default: utf8) - One of the following values identifying the encoding that should be used for the returned message: utf8|base64|hex
         //
         //  Success data returned: {
         //    "from" : {            // Note: only returned if origin device different than device that issued the request
-        //      deviceId: [String]      // Catenis ID of the origin device (device that had sent/logged the message)
+        //      "deviceId": [String]      // Catenis ID of the origin device (device that had sent/logged the message)
         //    },
         //    "to" : {              // Note: only returned if target device different than device that issued the request.
         //                          //  Never returned for version 0.1 that does not have permission control.
-        //      deviceId: [String]      // Catenis ID of target device (device to which the message had been sent)
+        //      "deviceId": [String]      // Catenis ID of target device (device to which the message had been sent)
         //    },
         //    "message": [String]       // The read message formatted using the specified encoding
         //  }
         get: {
             action: readMessage
+        }
+    });
+
+    this.api.addRoute('messages/:messageId/container', {authRequired: true}, {
+        // Retrieve information about where a given message is recorded
+        //
+        //  URL parameters:
+        //    messageId [String]        // ID of message to get container info
+        //
+        //  Success data returned: {
+        //    "blockchain" : {
+        //      "txid": [String],         // ID of blockchain transaction where message is recorded
+        //                                //  NOTE: due to malleability, the ID of the transaction might change
+        //                                //    until the it is finally confirmed
+        //      "isConfirmed": [Boolean]  // Indicates whether the returned txid is confirmed
+        //    },
+        //    "externalStorage" : {     // Note: only returned if message is stored in an external storage
+        //      "<storage_provider_name>": [String]  // Key: storage provider name. Value: reference to message in external storage
+        //    }
+        //  }
+        get: {
+            action: retrieveMessageContainer
         }
     });
 }

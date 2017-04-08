@@ -37,6 +37,7 @@ import { SendMessageTransaction } from './SendMessageTransaction';
 import { Service } from './Service';
 import { Transaction } from './Transaction';
 import { Util } from './Util';
+import { Message } from './Message';
 
 // Config entries
 const deviceConfig = config.get('device');
@@ -310,9 +311,7 @@ Device.prototype.fundAddresses = function () {
 //                              //    identifying the type of external storage to be used to store the message that should not be embedded
 //
 //  Return value: {
-//    txid: [String],       // ID of blockchain transaction where message was recorded
-//    extMsgRef: [String]   // Reference to message in external storage (only provided if message stored in external storage)
-//  }
+//    messageId: [String]       // ID of sent message
 Device.prototype.sendMessage = function (targetDeviceId, message, encryptMessage = true, storageScheme = 'auto', storageProvider) {
     // Make sure that device is not deleted
     if (this.status === Device.status.deleted.name) {
@@ -371,11 +370,12 @@ Device.prototype.sendMessage = function (targetDeviceId, message, encryptMessage
         }
     }
 
-    let sendTxResult = undefined;
+    let messageId;
 
     // Execute code in critical section to avoid UTXOs concurrency
     FundSource.utxoCS.execute(() => {
-        let sendMsgTransact = undefined;
+        let sendMsgTransact;
+        let txid;
 
         try {
             // Prepare transaction to send message to a device
@@ -388,14 +388,17 @@ Device.prototype.sendMessage = function (targetDeviceId, message, encryptMessage
             // Build and send transaction
             sendMsgTransact.buildTransaction();
 
-            sendTxResult = sendMsgTransact.sendTransaction();
+            txid = sendMsgTransact.sendTransaction();
+
+            // Create message and save it to local database
+            messageId = Message.createMessage(sendMsgTransact);
         }
         catch (err) {
             // Error sending message to another device.
             //  Log error condition
             Catenis.logger.ERROR('Error sending message to another device.', err);
 
-            if (sendMsgTransact != undefined) {
+            if (sendMsgTransact && !txid) {
                 // Revert output addresses added to transaction
                 sendMsgTransact.revertOutputAddresses();
             }
@@ -405,7 +408,7 @@ Device.prototype.sendMessage = function (targetDeviceId, message, encryptMessage
         }
     });
 
-    return sendTxResult;
+    return messageId;
 };
 
 // Log message on the blockchain
@@ -418,9 +421,7 @@ Device.prototype.sendMessage = function (targetDeviceId, message, encryptMessage
 //                              //    identifying the type of external storage to be used to store the message that should not be embedded
 //
 //  Return value:
-//    txid: [String],       // ID of blockchain transaction where message was recorded
-//    extMsgRef: [String]   // Reference to message in external storage (only provided if message stored in external storage)
-//  }
+//    messageId: [String]       // ID of logged message
 Device.prototype.logMessage = function (message, encryptMessage = true, storageScheme = 'auto', storageProvider) {
     // Make sure that device is not deleted
     if (this.status === Device.status.deleted.name) {
@@ -445,11 +446,12 @@ Device.prototype.logMessage = function (message, encryptMessage = true, storageS
         throw new Meteor.Error('ctn_device_no_credits', util.format('Not enough credits to log message (clientId: %s, confirmedMsgCredits: %d, creditsToLogMessage: %d)', this.client.clientId, confirmedMsgCredits, cfgSettings.creditsToLogMessage));
     }
 
-    let sendTxResult = undefined;
+    let messageId ;
 
     // Execute code in critical section to avoid UTXOs concurrency
     FundSource.utxoCS.execute(() => {
-        let logMsgTransact = undefined;
+        let logMsgTransact;
+        let txid;
 
         try {
             // Prepare transaction to log message
@@ -462,14 +464,17 @@ Device.prototype.logMessage = function (message, encryptMessage = true, storageS
             // Build and send transaction
             logMsgTransact.buildTransaction();
 
-            sendTxResult = logMsgTransact.sendTransaction();
+            txid = logMsgTransact.sendTransaction();
+
+            // Create message and save it to local database
+            messageId = Message.createMessage(logMsgTransact);
         }
         catch (err) {
             // Error logging message
             //  Log error condition
             Catenis.logger.ERROR('Error logging message.', err);
 
-            if (logMsgTransact != undefined) {
+            if (logMsgTransact && !txid) {
                 // Revert output addresses added to transaction
                 logMsgTransact.revertOutputAddresses();
             }
@@ -479,24 +484,23 @@ Device.prototype.logMessage = function (message, encryptMessage = true, storageS
         }
     });
 
-    return sendTxResult;
+    return messageId;
 };
 
 // Read message previously sent/logged
 //
 //  Arguments:
-//    txid: [String]  // ID of blockchain transaction where message is recorded
+//    messageId: [String]  // ID of message to read
 //
 //  Return value:
 //    msgInfo: {
-//      type: [Object],  //  Object of type Transaction.type identifying the type of transaction
-//      device: [Object],  // Device that logged the message (present only for logMessage tx)
-//      originDevice: [Object],  // Device that sent the message (present only for sendMessage tx)
-//      targetDevice: [Object],  // Device to which message was sent (present only for sendMessage tx)
+//      action: [String],  // The action performed on the message. Valid values: 'log', 'send' (from Message.action)
+//      originDevice: [Object],  // Device that logged/sent the message
+//      targetDevice: [Object],  // Device to which message was sent (present only action = 'send')
 //      message: [Object] // Buffer containing the read message
 //    }
 //
-Device.prototype.readMessage = function (txid) {
+Device.prototype.readMessage = function (messageId) {
     // Make sure that device is not deleted
     if (this.status === Device.status.deleted.name) {
         // Cannot read message for a deleted device. Log error and throw exception
@@ -511,6 +515,20 @@ Device.prototype.readMessage = function (txid) {
         throw new Meteor.Error('ctn_device_not_active', util.format('Cannot read message for a device that is not active (deviceId: %s)', this.deviceId));
     }
 
+    // Get message database doc/rec
+    const docMessage = Message.getMessageByMessageId(messageId);
+
+    // Make sure that device can read the message. For now, just make sure that
+    //  device is the one that either logged or to which the message has been sent
+    // TODO: check if the device has (extended) permission to read the message
+    if (!((docMessage.action === Message.action.log && docMessage.originDeviceId === this.deviceId)
+            || (docMessage.action === Message.action.send && docMessage.targetDeviceId === this.deviceId))) {
+        // Throw exception indicating that message cannot be accessed by this device
+        throw new Meteor.Error('ctn_device_msg_no_access', 'Device has no access rights to read the message');
+    }
+
+    // Get transaction associated with message
+    const txid = docMessage.confirmedTxid ? docMessage.confirmedTxid : docMessage.txid;
     let transact = undefined;
 
     try {
@@ -520,8 +538,9 @@ Device.prototype.readMessage = function (txid) {
         if ((err instanceof Meteor.Error) && err.error === 'ctn_btcore_rpc_error' && err.details != undefined && typeof err.details.code === 'number'
                 && (err.details.code == BitcoinCore.rpcErrorCode.RPC_INVALID_ADDRESS_OR_KEY || err.details.code == BitcoinCore.rpcErrorCode.RPC_INVALID_PARAMETER)) {
             // Error indicating that transaction id is not valid.
-            //  Throws local error
-            throw new Meteor.Error('ctn_device_invalid_txid', util.format('This is not a valid transaction id: %s', txid));
+            //  Log Error and throws exception
+            Catenis.logger.ERROR('Message has an invalid transaction id', {messageId: messageId, txid: txid});
+            throw new Meteor.Error('ctn_msg_invalid_txid', util.format('Message (messageId: %s) has an invalid transaction id: %s', messageId, txid));
         }
         else {
             // An error other than invalid transaction id.
@@ -530,52 +549,105 @@ Device.prototype.readMessage = function (txid) {
         }
     }
 
-    // First, check if this is a send message transaction
-    const sendMsgTransact = SendMessageTransaction.checkTransaction(transact);
+    // Parse transaction to read its contents
+    const msgTransact = docMessage.action === Message.action.log ? LogMessageTransaction.checkTransaction(transact) :
+            (docMessage.action === Message.action.send ? SendMessageTransaction.checkTransaction(transact) : undefined);
 
-    if (sendMsgTransact != undefined) {
-        // Make sure that this message was intended to this device
-        // TODO: check if device (if not the original device to which the message was sent) has permission to read message
-        if (sendMsgTransact.targetDevice.deviceId === this.deviceId) {
-            // TODO: check if message has not yet been read, and issue read confirmation transaction if so
-            // Return message
-            return {
-                type: Transaction.type.send_message,
-                originDevice: sendMsgTransact.originDevice,
-                targetDevice: sendMsgTransact.targetDevice,
-                message: sendMsgTransact.message ? sendMsgTransact.message : sendMsgTransact.rawMessage
-            };
+    if (msgTransact !== undefined) {
+        // Indicates that message has been read
+        if (docMessage.readNow()) {
+            // This was the first time that message has been read
+            // TODO: Issue read confirmation transaction
         }
-        else {
-            // Throw exception indicating that message cannot be accessed by this device
-            throw new Meteor.Error('ctn_device_msg_no_access', 'Device has no access rights to read the message contained in this transaction');
+
+        // And returns message info
+        const msgInfo = {
+            action: docMessage.action
+        };
+
+        if (docMessage.action === Message.action.log) {
+            msgInfo.originDevice = msgTransact.device;
         }
+        else {  // docMessage.action === Message.action.send
+            msgInfo.originDevice = msgTransact.originDevice;
+            msgInfo.targetDevice = msgTransact.targetDevice;
+        }
+
+        msgInfo.message = msgTransact.message ? msgTransact.message : msgTransact.rawMessage;
+
+        return msgInfo;
     }
     else {
-        // If not, then check if this is a log message transaction
-        const logMsgTransact = LogMessageTransaction.checkTransaction(transact);
-
-        if (logMsgTransact != undefined) {
-            // Make sure that this message has been recorded by this device
-            // TODO: check if device (if not the original device that recorded the message) has permission to read message
-            if (logMsgTransact.device.deviceId == this.deviceId) {
-                // Return message
-                return {
-                    type: Transaction.type.log_message,
-                    device: logMsgTransact.device,
-                    message: logMsgTransact.message ? logMsgTransact.message : logMsgTransact.rawMessage
-                }
-            }
-            else {
-                // Throw exception indicating that message cannot be accessed by this device
-                throw new Meteor.Error('ctn_device_msg_no_access', 'Device has no access rights to read the message contained in this transaction');
-            }
-        }
-        else {
-            // Throw exception indicating that this is not a valid Catenis transaction
-            throw new Meteor.Error('ctn_device_invalid_tx', 'This is not a valid Catenis message transaction');
-        }
+        // Not a valid Catenis transaction (this should never happen). Log error and throws exception
+        Catenis.logger.ERROR('Message is associated with a non-Catenis transaction', {messageId: messageId, txid: txid});
+        throw new Meteor.Error('ctn_msg_invalid_tx', util.format('Message (messageId: %s) is associated with a non-Catenis transaction id: %s', messageId, txid));
     }
+};
+
+// Retrieve info about where a message previously sent/logged is recorded
+//
+//  Arguments:
+//    messageId: [String]  // ID of message to get container info
+//
+//  Return value:
+//    containerInfo: {
+//      blockchain: {
+//        txid: [String],         // ID of blockchain transaction where message is recorded
+//                                //  NOTE: due to malleability, the ID of the transaction might change
+//                                //    until the it is finally confirmed
+//        isConfirmed: [Boolean]  // Indicates whether the returned txid is confirmed
+//    },
+//    externalStorage: {     // Note: only returned if message is stored in an external storage
+//      <storage_provider_name>: [String]  // Key: storage provider name. Value: reference to message in external storage
+//    }
+//  }
+//
+Device.prototype.retrieveMessageContainer = function (messageId) {
+    // Make sure that device is not deleted
+    if (this.status === Device.status.deleted.name) {
+        // Cannot retrieve message container for a deleted device. Log error and throw exception
+        Catenis.logger.ERROR('Cannot retrieve message container for a deleted device', {deviceId: this.deviceId});
+        throw new Meteor.Error('ctn_device_deleted', util.format('Cannot retrieve message container for a deleted device (deviceId: %s)', this.deviceId));
+    }
+
+    // Make sure that device is active
+    if (this.status !== Device.status.active.name) {
+        // Cannot retrieve message container for a device that is not active. Log error and throw exception
+        Catenis.logger.ERROR('Cannot retrieve message container for a device that is not active', {deviceId: this.deviceId});
+        throw new Meteor.Error('ctn_device_not_active', util.format('Cannot retrieve message container for a device that is not active (deviceId: %s)', this.deviceId));
+    }
+
+    // Get message database doc/rec
+    const docMessage = Message.getMessageByMessageId(messageId);
+
+    // Make sure that device can read the message. Only the device that logged/sent
+    //  the message can retrieve its container
+    if (docMessage.originDeviceId !== this.deviceId) {
+        // Throw exception indicating that message container cannot be retrieved by this device
+        throw new Meteor.Error('ctn_device_msg_no_access', 'Device has no access rights to retrieve message container');
+    }
+
+    // Returns message container info
+    const containerInfo = {
+        blockchain: {}
+    };
+
+    if (docMessage.confirmedTxid) {
+        containerInfo.blockchain.txid = docMessage.confirmedTxid;
+        containerInfo.blockchain.isConfirmed = true;
+    }
+    else {
+        containerInfo.blockchain.txid = docMessage.txid;
+        containerInfo.blockchain.isConfirmed = false;
+    }
+
+    if (docMessage.storageProviderName && docMessage.externalStorageRef) {
+        containerInfo.externalStorage = {};
+
+        containerInfo.externalStorage[docMessage.storageProviderName] = docMessage.externalStorageRef;
+    }
+
+    return containerInfo;
 };
 
 // Update device properties

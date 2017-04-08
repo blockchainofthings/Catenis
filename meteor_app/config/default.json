@@ -205,7 +205,7 @@
   // Parameters pertaining to RestApi module
   "restApi": {
     "rootPath": "api",
-    "version": "0.1",
+    "version": "0.2",
     "requestSignature": {
       "signVersionId": "CTN1",
       "signMethodId": "CTN1-HMAC-SHA256",

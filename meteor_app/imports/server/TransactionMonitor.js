@@ -421,6 +421,16 @@ function handleNewBlocks(data) {
                     }, {multi: true});
                 }
 
+                // Find Message database docs/recs associated with (Catenis) transactions in
+                //  the current block that have not had their txid confirmed yet
+                Catenis.db.collection.Message.find({
+                    'blockchain.txid': {$in: blockInfo.ctnTx},
+                    'blockchain.confirmedTxid': {$exists: false}
+                }, {fileds: {_id: 1, 'blockchain.txid': 1}}).forEach((doc) => {
+                    // Update Message doc/rec setting its confirmed txid
+                    Catenis.db.collection.Message.update({_id: doc._id}, {$set: {'blockchain.confirmedTxid': doc.blockchain.txid}});
+                });
+
                 // Retrieve received transactions found in block that are not yet confirmed
                 //  Note: only transactions received that have not been sent by this Catenis node
                 //      should have been considered
