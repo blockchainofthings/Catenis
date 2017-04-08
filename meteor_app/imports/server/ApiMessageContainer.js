@@ -78,6 +78,9 @@ export function retrieveMessageContainer() {
                 else if (err.error === 'ctn_device_not_active') {
                     error = errorResponse.call(this, 400, 'Device is not active');
                 }
+                else if (err.error === 'ctn_msg_not_found') {
+                    error = errorResponse.call(this, 400, 'Invalid message ID');
+                }
                 else if (err.error === 'ctn_device_msg_no_access') {
                     error = errorResponse.call(this, 403, 'No permission to retrieve message container');
                 }
