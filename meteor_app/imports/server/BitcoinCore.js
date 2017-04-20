@@ -90,6 +90,7 @@ export function BitcoinCore(network, host, username, password, timeout) {
 // Public BitcoinCore object methods
 //
 
+// TODO: the getinfo RPC command is deprecated in Bitcoin Core ver. 0.14.0. It should be replaced by either getblockchaininfo, getnetworkinfo or getwalletinfo depending on the needed info
 BitcoinCore.prototype.getInfo = function () {
     try {
         return this.rpcApi.getinfo();
@@ -606,6 +607,7 @@ BitcoinCore.prototype.getRawTransaction = function (txid, verbose, logError = tr
     const args = [txid];
 
     if (verbose != undefined) {
+        // TODO: this might have to be changed for Bitcoin Core 0.14.0. According to ver. 0.14.0's release note, getrawtransaction now take a boolean for its verbose argument
         args.push(verbose ? 1 : 0);
     }
 

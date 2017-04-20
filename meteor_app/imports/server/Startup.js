@@ -101,6 +101,8 @@ function CheckImportAddresses(fixMissingAddresses) {
 
             const lastAddressToImport = notImportedAddresses.pop();
 
+            // TODO: replace this loop with a call to the new (as of Bitcoin Core ver. 0.14.0) importmulti RPC command, which takes an array of objects to import
+            // TODO: when replacing this with importmulti, make sure that this new RPC command support control of rescanning, like importpublickey does
             notImportedAddresses.forEach((addr) => {
                 // Get public key associated with address and import it onto Bitcoin Core
                 //  without rescanning the blockchain
