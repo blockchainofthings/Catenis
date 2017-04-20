@@ -80,41 +80,65 @@ export function readMessage() {
 
         // Execute method to read message
         let msgInfo;
+        let retry,
+            alreadyRetried = false;
 
-        try {
-            msgInfo = this.user.device.readMessage(this.urlParams.messageId);
-        }
-        catch (err) {
-            let error;
+        do {
+            try {
+                retry = false;
+                msgInfo = this.user.device.readMessage(this.urlParams.messageId);
+            }
+            catch (err) {
+                let error;
 
-            if (err instanceof Meteor.Error) {
-                if (err.error === 'ctn_device_deleted') {
-                    // This should never happen
-                    error = errorResponse.call(this, 400, 'Device is deleted');
-                }
-                else if (err.error === 'ctn_device_not_active') {
-                    error = errorResponse.call(this, 400, 'Device is not active');
-                }
-                else if (err.error === 'ctn_msg_not_found') {
-                    error = errorResponse.call(this, 400, 'Invalid message ID');
-                }
-                else if (err.error === 'ctn_device_msg_no_access') {
-                    error = errorResponse.call(this, 403, 'No permission to read message');
+                if (err instanceof Meteor.Error) {
+                    if (err.error === 'ctn_device_deleted') {
+                        // This should never happen
+                        error = errorResponse.call(this, 400, 'Device is deleted');
+                    }
+                    else if (err.error === 'ctn_device_not_active') {
+                        error = errorResponse.call(this, 400, 'Device is not active');
+                    }
+                    else if (err.error === 'ctn_msg_not_found') {
+                        error = errorResponse.call(this, 400, 'Invalid message ID');
+                    }
+                    else if (err.error === 'ctn_device_msg_no_access') {
+                        error = errorResponse.call(this, 403, 'No permission to read message');
+                    }
+                    else if (err.error === 'ctn_msg_invalid_txid') {
+                        // Transaction ID associated with message is not valid
+                        if (!alreadyRetried) {
+                            // It might be that the original ID of the transaction has been modified
+                            //  due to malleability and we have not fixed it yet because last blochchain
+                            //  block received has not yet been processed. So force blockchain poll
+                            //  to process it now, and try to read message again
+                            Catenis.txMonitor.forceBlockchainPoll();
+                            retry = true;
+                            alreadyRetried = true;
+                        }
+                        else {
+                            // Have already retried but error persists. Just return error
+                            error = errorResponse.call(this, 500, 'Internal server error');
+                        }
+                    }
+                    else {
+                        error = errorResponse.call(this, 500, 'Internal server error');
+                    }
                 }
                 else {
                     error = errorResponse.call(this, 500, 'Internal server error');
                 }
-            }
-            else {
-                error = errorResponse.call(this, 500, 'Internal server error');
-            }
 
-            if (error.statusCode === 500) {
-                Catenis.logger.ERROR('Error processing \'messages/:messageId\' API request.', err);
-            }
+                if (error) {
+                    if (error.statusCode === 500) {
+                        Catenis.logger.ERROR('Error processing \'messages/:messageId\' API request.', err);
+                    }
 
-            return error;
+                    return error;
+                }
+            }
         }
+        while (retry);
 
         // Prepare result
         const result = {};

@@ -31,6 +31,7 @@ const util = require('util');
 const events = require('events');
 // Third-party node modules
 import config from 'config';
+import Future from 'fibers/future';
 // Meteor packages
 import { Meteor } from 'meteor/meteor';
 import { _ } from 'meteor/underscore';
@@ -80,22 +81,69 @@ export class TransactionMonitor extends events.EventEmitter {
             this.on(eventHandler.event, eventHandler.handler);
         });
 
-        this.on('new_blocks', handleNewBlocks.bind(this));
-        this.on('new_transactions', handleNewTransactions.bind(this));
+        this.on(TransactionMonitor.internalEvent.new_blocks, handleNewBlocks.bind(this));
+        this.on(TransactionMonitor.internalEvent.new_transactions, handleNewTransactions.bind(this));
     }
 
     startMonitoring() {
-        if (this.idPollBcInterval == undefined) {
+        if (this.idPollBcInterval === undefined) {
             Catenis.logger.TRACE('Setting recurring timer to poll blockchain');
             this.idPollBcInterval = Meteor.setInterval(pollBlockchain.bind(this), this.bcPollingInterval);
         }
     }
 
     stopMonitoring() {
-        if (this.idPollBcInterval != undefined) {
+        if (this.idPollBcInterval !== undefined) {
             Catenis.logger.TRACE('Stop polling blockchain');
             Meteor.clearInterval(this.idPollBcInterval);
             this.idPollBcInterval = undefined;
+        }
+    }
+
+    forceBlockchainPoll() {
+        Catenis.logger.TRACE('Method forceBlockchainPoll() called');
+        if (!this.doingBlockchainPoll) {
+            // Blockchain polling is not under way. So just call the method
+            //  to handle it (note that this will block until the polling is done)
+            Catenis.logger.TRACE('Forcing execution of method to poll blockchain (and process received blocks)');
+            pollBlockchain.call(this);
+        }
+        else {
+            // Blockchain polling is already under way. We need to wait for
+            //  it to finish before returning
+            Catenis.logger.TRACE('Method to poll blockchain already being executed. Wait for it to finish');
+
+            // Make sure that the following code is executed in its own fiber
+            Future.task(() => {
+                const fut = new Future();
+
+                // Waits for blockchain poll done event
+                const pollEndCallback = () => {
+                    fut.return();
+                };
+
+                this.on(TransactionMonitor.internalEvent.blockchain_poll_done, pollEndCallback);
+
+                // And set a timeout as a precaution
+                const idTmo = setTimeout(() => {
+                    fut.return();
+                }, this.bcPollingInterval);
+
+                fut.wait();
+
+                // Polling is done
+                this.removeListener(TransactionMonitor.internalEvent.blockchain_poll_done, pollEndCallback);
+                clearTimeout(idTmo);
+
+                // Make sure that all received blocks have been processed
+                const blockCount = Catenis.bitcoinCore.getBlockCount();
+
+                if (blockCount > (this.lastBlockHeight !== undefined ? this.lastBlockHeight : 0)) {
+                    // Go process received blocks
+                    Catenis.logger.TRACE('There are still received blocks that have not been processed yet. Forcing execution of method to poll blockchain to process them');
+                    pollBlockchain.call(this);
+                }
+            }).wait();
         }
     }
 
@@ -143,7 +191,7 @@ function pollBlockchain() {
 
                 // Identify those tx ids that are new (were not in the previously saved
                 //  mempool tx ids)
-                const newTxids = this.memPoolTxids == undefined ? currMempoolTxids : currMempoolTxids.filter((currTxid) => {
+                const newTxids = this.memPoolTxids === undefined ? currMempoolTxids : currMempoolTxids.filter((currTxid) => {
                     return !this.memPoolTxids.some((txid) => {
                         return txid === currTxid;
                     });
@@ -163,8 +211,8 @@ function pollBlockchain() {
                             result[txid] = Catenis.bitcoinCore.getTransaction(txid, false);
                         }
                         catch (err) {
-                            if (!((err instanceof Meteor.Error) && err.error === 'ctn_btcore_rpc_error' && err.details != undefined && typeof err.details.code === 'number'
-                                    && err.details.code == BitcoinCore.rpcErrorCode.RPC_INVALID_ADDRESS_OR_KEY)) {
+                            if (!((err instanceof Meteor.Error) && err.error === 'ctn_btcore_rpc_error' && err.details !== undefined && typeof err.details.code === 'number'
+                                    && err.details.code === BitcoinCore.rpcErrorCode.RPC_INVALID_ADDRESS_OR_KEY)) {
                                 // An error other than indication that it is a non-wallet tx id.
                                 //  Just re-throws it
                                 throw err;
@@ -188,11 +236,11 @@ function pollBlockchain() {
 
                 const newBlocks = {};
 
-                if (this.lastBlockHeight == undefined || blockCount > this.lastBlockHeight) {
+                if (this.lastBlockHeight === undefined || blockCount > this.lastBlockHeight) {
                     // New blocks have arrived. Identify them and get their block info
 
                     // Process blocks not yet processed until next blockchain poll tick
-                    currBlockHeight = this.lastBlockHeight != undefined ? this.lastBlockHeight + 1 : blockCount;
+                    currBlockHeight = this.lastBlockHeight !== undefined ? this.lastBlockHeight + 1 : blockCount;
 
                     if (blockCount > currBlockHeight) {
                         this.syncingBlocks = true;
@@ -229,8 +277,8 @@ function pollBlockchain() {
                                     ctnTxsInBlock.push(txid);
                                 }
                                 catch (err) {
-                                    if (!((err instanceof Meteor.Error) && err.error === 'ctn_btcore_rpc_error' && err.details != undefined && typeof err.details.code === 'number'
-                                            && err.details.code == BitcoinCore.rpcErrorCode.RPC_INVALID_ADDRESS_OR_KEY)) {
+                                    if (!((err instanceof Meteor.Error) && err.error === 'ctn_btcore_rpc_error' && err.details !== undefined && typeof err.details.code === 'number'
+                                            && err.details.code === BitcoinCore.rpcErrorCode.RPC_INVALID_ADDRESS_OR_KEY)) {
                                         // An error other than indication that it is a non-wallet tx id.
                                         //  Just re-throws it
                                         throw err;
@@ -242,7 +290,7 @@ function pollBlockchain() {
                                 }
                                 else {
                                     // New transactions have arrived
-                                    if (txInfo != undefined) {
+                                    if (txInfo !== undefined) {
                                         // Transaction info is available, which means that it is
                                         //  a Catenis transaction. So save it
                                         result[txid] = txInfo;
@@ -292,14 +340,14 @@ function pollBlockchain() {
                     });
 
                     if (!filtered || Object.keys(newCtnTxids).length > 0) {
-                        // Emit event notifying that new transactions have arrived
-                        this.emit('new_transactions', newCtnTxids);
+                        // Emit (internal) event notifying that new transactions have arrived
+                        this.emit(TransactionMonitor.internalEvent.new_transactions, newCtnTxids);
                     }
                 }
 
                 if (Object.keys(newBlocks).length > 0) {
-                    // Emit event notifying that new blocks have arrived
-                    this.emit('new_blocks', newBlocks);
+                    // Emit (internal) event notifying that new blocks have arrived
+                    this.emit(TransactionMonitor.internalEvent.new_blocks, newBlocks);
                 }
 
                 // Purge old tx ids from list of processed tx ids
@@ -313,10 +361,13 @@ function pollBlockchain() {
                         }
                     }
                 }
+
+                // Refresh block count
+                blockCount = Catenis.bitcoinCore.getBlockCount();
             }
             // Continue processing if a new blockchain pool tick has happened and
             //  there are still more blocks to be processed
-            while (this.newBlockchainPollTick && currBlockHeight != undefined && currBlockHeight <= blockCount);
+            while (this.newBlockchainPollTick && currBlockHeight !== undefined && currBlockHeight <= blockCount);
         }
         catch (err) {
             // Error polling blockchain. Log error condition
@@ -326,6 +377,9 @@ function pollBlockchain() {
             this.doingBlockchainPoll = false;
             this.syncingBlocks = false;
             Catenis.application.setSyncingBlocks(false);
+
+            // Emit (internal) event notifying that polling is done
+            this.emit(TransactionMonitor.internalEvent.blockchain_poll_done);
         }
     }
     else {
@@ -348,7 +402,7 @@ function handleNewBlocks(data) {
             //noinspection JSUnfilteredForInLoop
             const blockInfo = data[blockHeight];
 
-            if (blockInfo.ctnTx != undefined) {
+            if (blockInfo.ctnTx !== undefined) {
                 // Block has Catenis transactions.
                 const idCtnTxsToConfirm = new Set();
 
@@ -539,7 +593,7 @@ function handleNewBlocks(data) {
                     // Prepare to emit event notifying of confirmation of funding transaction
                     const notifyEvent = getTxConfNotifyEventFromFundingEvent(doc.info.funding.event.name);
 
-                    if (notifyEvent != undefined) {
+                    if (notifyEvent !== undefined) {
                         eventsToEmit.push({
                             name: notifyEvent.name,
                             data: {
@@ -558,7 +612,7 @@ function handleNewBlocks(data) {
                     // Prepare to emit event notifying of confirmation of asset issuance transaction
                     const notifyEvent = getTxConfNotifyEventFromTxType(doc.type);
 
-                    if (notifyEvent != undefined) {
+                    if (notifyEvent !== undefined) {
                         const txInfo = doc.info[Transaction.type[doc.type].dbInfoEntryName];
 
                         eventsToEmit.push({
@@ -685,7 +739,7 @@ function handleNewTransactions(data) {
             // Prepare to emit event notifying of new transaction received
             const notifyEvent = getTxRcvdNotifyEventFromTxType(doc.type);
 
-            if (notifyEvent != undefined) {
+            if (notifyEvent !== undefined) {
                 const eventData = {
                     txid: doc.txid
                 };
@@ -793,6 +847,12 @@ function handleNewTransactions(data) {
 
 // TransactionMonitor class (public) properties
 //
+
+TransactionMonitor.internalEvent = Object.freeze({
+    new_blocks: 'new_blocks',
+    new_transactions: 'new_transactions',
+    blockchain_poll_done: 'blockchain_poll_done'
+});
 
 TransactionMonitor.notifyEvent = Object.freeze({
     // Events used to notify when a transaction of a given type is confirmed
@@ -939,14 +999,14 @@ function parseTxVouts(txDetails) {
             if ('address' in detail) {
                 const addrInfo = Catenis.keyStore.getAddressInfo(detail.address, true);
 
-                if (addrInfo != null) {
+                if (addrInfo !== null) {
                     voutInfo.set(detail.vout, {
                         isNullData: false,
                         addrInfo: addrInfo
                     });
                 }
             }
-            else if (detail.amount == 0) {
+            else if (detail.amount === 0) {
                 // Assume its a null data output
                 voutInfo.set(detail.vout, {isNullData: true});
             }
@@ -977,8 +1037,8 @@ function isSendMessageTxVouts(voutInfo) {
             value1 = voutInfo.get(1),
             value2 = voutInfo.get(2);
 
-        if (!value0.isNullData && value0.addrInfo.type == KeyStore.extKeyType.dev_main_addr.name &&
-                !value1.isNullData && value1.addrInfo.type == KeyStore.extKeyType.dev_read_conf_addr.name &&
+        if (!value0.isNullData && value0.addrInfo.type === KeyStore.extKeyType.dev_main_addr.name &&
+                !value1.isNullData && value1.addrInfo.type === KeyStore.extKeyType.dev_read_conf_addr.name &&
                 value2.isNullData) {
             isTxVouts = true;
         }
