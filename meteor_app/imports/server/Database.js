@@ -342,7 +342,6 @@ Database.initialize = function() {
                     'fundingTx.txid': 1
                 },
                 opts: {
-                    unique: true,
                     background: true,
                     safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
                 }
@@ -524,11 +523,9 @@ Database.initialize = function() {
             },
             {
                 fields: {
-                    'blockchain.confirmedTxid': 1
+                    'blockchain.confirmed': 1
                 },
                 opts: {
-                    unique: true,
-                    sparse: true,
                     background: true,
                     safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
                 }
@@ -587,6 +584,25 @@ Database.initialize = function() {
             },
             {
                 fields: {
+                    'inputs.txid': 1
+                },
+                opts: {
+                    background: true,
+                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                }
+            },
+            {
+                fields: {
+                    'inputs.str': 1
+                },
+                opts: {
+                    //unique: true,
+                    background: true,
+                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                }
+            },
+            {
+                fields: {
                     sentDate: 1
                 },
                 opts: {
@@ -622,6 +638,16 @@ Database.initialize = function() {
                     background: true,
                     safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
                 }
+            },
+            {
+                fields: {
+                    'info.readConfirmation.txouts.txid': 1
+                },
+                opts: {
+                    sparse: true,
+                    background: true,
+                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                }
             }]
         },
         ReceivedTransaction: {
@@ -640,6 +666,27 @@ Database.initialize = function() {
                 },
                 opts: {
                     unique: true,
+                    background: true,
+                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                }
+            },
+            {
+                fields: {
+                    'inputs.txid': 1
+                },
+                opts: {
+                    sparse: true,
+                    background: true,
+                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                }
+            },
+            {
+                fields: {
+                    'inputs.str': 1
+                },
+                opts: {
+                    //unique: true,
+                    sparse: true,
                     background: true,
                     safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
                 }
@@ -693,13 +740,98 @@ Database.initialize = function() {
                     safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
                 }
             },
-            ]
+            {
+                fields: {
+                    'info.readConfirmation.txouts.txid': 1
+                },
+                opts: {
+                    sparse: true,
+                    background: true,
+                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                }
+            }]
+        },
+        Malleability: {
+            indices: [{
+                fields: {
+                    source: 1
+                },
+                opts: {
+                    background: true,
+                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                }
+            },
+            {
+                fields: {
+                    originalTxid: 1
+                },
+                opts: {
+                    unique: true,
+                    background: true,
+                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                }
+            },
+            {
+                fields: {
+                    modifiedTxid: 1
+                },
+                opts: {
+                    unique: true,
+                    background: true,
+                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                }
+            }]
         }
     };
 
     Catenis.db = new Database(collections);
 };
 
+// TODO: To run the two methods below, do the following:
+// TODO: a) After upgrading the Catenis application, restart it in ProcessBypass mode.
+// TODO: b) Then, from meteor shell, import {Database} and execute the Database.initialize() method.
+// TODO: c) Execute the two methods below in sequence.
+// TODO: d) Read todo entries below for things to do after these methods are executed.
+
+// This method is only needed to make changes to the database for the malleability fix.
+//  It can (should) be removed after it is used
+Database.fixSentTransactionInputs = function () {
+    Catenis.db.collection.SentTransaction.find({'inputs.str': {$exists: false}}, {fields: {_id:1, inputs:1}}).forEach((doc) => {
+        doc.inputs = doc.inputs.map((input) => {
+            input.str = input.txid + ':' + input.vout;
+            return input;
+        });
+
+        Catenis.db.collection.SentTransaction.update({_id: doc._id}, {$set: {inputs: doc.inputs}});
+    })
+};
+
+// This method is only needed to make changes to the database for the malleability fix.
+//  It can (should) be removed after it is used
+Database.fixMessageConfirmedTxid = function () {
+    Catenis.db.collection.Message.find({'blockchain.confirmed': {$exists: false}}, {field: {_id:1, blockchain: 1}}).forEach((doc) => {
+        doc.blockchain = doc.blockchain.confirmedTxid ? {
+            txid: doc.blockchain.confirmedTxid,
+            confirmed: true
+        } : {
+            txid: doc.blockchain.txid,
+            confirmed: false
+        };
+
+        Catenis.db.collection.Message.update({_id: doc._id}, {$set: {blockchain: doc.blockchain}});
+    });
+};
+
+// TODO: Things to do after the above methods are successfully executed:
+// TODO: a) Leave meteor shell and enter meteor's mongo shell (meteor mongo). Switch to meteor DB (user meteor) and execute commands to:
+// TODO:  a.1) drop index 'blockchain.confirmedTxid_1' from Message collection;
+// TODO:  a.2) drop index 'fundingTx.txid_1' from ServiceCredit collection (it shall be created later; see step e below);
+// TODO:  a.3) drop index 'inputs.str_1' from both SentTransaction and ReceivedTransaction collections (it shall be created later; see step e below).
+// TODO: b) Leave mongo shell and stop the Catenis application.
+// TODO: c) Edit this file and uncomment the 'unique' entry for index 'inputs.str' of collections SentTransaction and ReceivedTransaction.
+// TODO: d) Restart the Catenis application in ProcessBypass mode.
+// TODO: e) Then, from meteor shell, import {Database} and execute the Database.initialize() method. This will recreate the indices that needed to be update (and that had been deleted in steps a.2 and a.3 above).
+// TODO: E) Stop the Catenis application and restart it normally
 
 // Module functions used to simulate private Database object methods
 //  NOTE: these functions need to be bound to a Database object reference (this) before

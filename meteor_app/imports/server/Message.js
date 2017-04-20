@@ -48,7 +48,7 @@ export function Message(docMessage) {
     this.targetDeviceId = docMessage.targetDeviceId;
     this.isEncrypted = docMessage.isEncrypted;
     this.txid = docMessage.blockchain.txid;
-    this.confirmedTxid = docMessage.blockchain.confirmedTxid;
+    this.isTxConfirmed = docMessage.blockchain.confirmed;
 
     if (docMessage.externalStorage) {
         this.storageProviderName = docMessage.externalStorage.provider;
@@ -136,7 +136,8 @@ Message.createMessage = function (msgTx) {
 
     docMessage.isEncrypted = msgTx.options.encrypted;
     docMessage.blockchain = {
-        txid: msgTx.transact.txid
+        txid: msgTx.transact.txid,
+        confirmed: false
     };
 
     if (msgTx.extMsgRef) {
@@ -178,15 +179,10 @@ Message.getMessageByMessageId = function (messageId) {
 
 Message.getMessageByTxid = function (txid) {
     // Retrieve Message doc/rec
-    const docMessage = Catenis.db.collection.Message.findOne({
-        $or: [
-            {txid: txid},
-            {confirmedTxid: txid}
-        ]
-    });
+    const docMessage = Catenis.db.collection.Message.findOne({txid: txid});
 
     if (!docMessage) {
-        // No message available with the given client ID. Log error and throw exception
+        // No message available with the given transaction ID. Log error and throw exception
         Catenis.logger.ERROR('Could not find message with given transaction ID', {txid: txid});
         throw new Meteor.Error('ctn_msg_not_found', util.format('Could not find message with given transaction ID (%s)', txid));
     }

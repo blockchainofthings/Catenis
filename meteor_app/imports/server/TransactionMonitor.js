@@ -145,7 +145,7 @@ function pollBlockchain() {
                 //  mempool tx ids)
                 const newTxids = this.memPoolTxids == undefined ? currMempoolTxids : currMempoolTxids.filter((currTxid) => {
                     return !this.memPoolTxids.some((txid) => {
-                        return txid == currTxid;
+                        return txid === currTxid;
                     });
                 });
 
@@ -350,65 +350,139 @@ function handleNewBlocks(data) {
 
             if (blockInfo.ctnTx != undefined) {
                 // Block has Catenis transactions.
+                const idCtnTxsToConfirm = new Set();
+
                 //  Retrieve sent transactions found in block that are not yet confirmed
                 const idSentTxDocsToUpdate = Catenis.db.collection.SentTransaction.find({
                     txid: {$in: blockInfo.ctnTx},
                     'confirmation.confirmed': false
                 }, {fields: {_id: 1, type: 1, txid: 1, replacedByTxid: 1, info: 1}}).map((doc) => {
-                    if (doc.type === Transaction.type.funding.name) {
-                        // Prepare to emit event notifying of confirmation of funding transaction
-                        const notifyEvent = getTxConfNotifyEventFromFundingEvent(doc.info.funding.event.name);
+                    processConfirmedSentTransactions(doc, eventsToEmit);
 
-                        if (notifyEvent != undefined) {
-                            eventsToEmit.push({
-                                name: notifyEvent.name,
-                                data: {
-                                    txid: doc.txid,
-                                    entityId: doc.info.funding.event.entityId
-                                }
-                            });
-                        }
-                        else {
-                            // Could not get notification event from funding event.
-                            //  Log error condition
-                            Catenis.logger.ERROR('Could not get notification event from funding transaction event', {fundingEvent: doc.info.funding.event.name});
-                        }
-                    }
-                    else if (doc.type === Transaction.type.issue_locked_asset.name || doc.type === Transaction.type.issue_unlocked_asset.name) {
-                        // Prepare to emit event notifying of confirmation of asset issuance transaction
-                        const notifyEvent = getTxConfNotifyEventFromTxType(doc.type);
-
-                        if (notifyEvent != undefined) {
-                            const txInfo = doc.info[Transaction.type[doc.type].dbInfoEntryName];
-
-                            eventsToEmit.push({
-                                name: notifyEvent.name,
-                                data: {
-                                    txid: doc.txid,
-                                    assetId: txInfo.assetId,
-                                    deviceId: txInfo.deviceId
-                                }
-                            });
-                        }
-                        else {
-                            // Could not get notification event from transaction type.
-                            //  Log error condition
-                            Catenis.logger.ERROR('Could not get notification event from transaction type', {txType: doc.type});
-                        }
-                    }
-
-                    if (doc.replacedByTxid != undefined) {
-                        // A transaction that had been replaced by another transaction is being confirmed.
-                        //  Just log warning condition only for now
-                        // TODO: in the future, emit event so this condition can be treated by module responsible for sending read confirmation transactions
-                        Catenis.logger.WARN('Transaction that had been replaced by another transaction is being confirmed.', {
-                            txid: doc.txid,
-                            replacedByTxid: doc.replacedByTxid
-                        });
-                    }
+                    // Save ID of transaction that is set to be confirmed
+                    idCtnTxsToConfirm.add(doc.txid);
 
                     return doc._id;
                 });
+
+                // Retrieve received transactions found in block that are not yet confirmed
+                //  Note: only transactions received that have not been sent by this Catenis node
+                //      should have been considered
+                const idRcvdTxDocsToUpdate = Catenis.db.collection.ReceivedTransaction.find({
+                    txid: {$in: blockInfo.ctnTx},
+                    sentTransaction_id: {$exists: false},
+                    'confirmation.confirmed': false
+                }, {fields: {_id: 1, type: 1, txid: 1}}).map((doc) => {
+                    processConfirmedReceivedTransactions(doc, eventsToEmit);
+
+                    // Save ID of transaction that is set to be confirmed
+                    idCtnTxsToConfirm.add(doc.txid);
+
+                    return doc._id;
+                });
+
+                if (blockInfo.ctnTx.length > idCtnTxsToConfirm.size) {
+                    // Some Catenis transactions did not match any transaction in the local database
+                    //  (SentTransaction and ReceivedTransaction collections) that are awaiting confirmation
+                    blockInfo.ctnTx.forEach((ctnTxid) => {
+                        if (!idCtnTxsToConfirm.has(ctnTxid)) {
+                            // Checks if it is a transaction the tx id of which was modified due to
+                            //  malleability
+                            let txInfo;
+
+                            try {
+                                // Get transaction info
+                                txInfo = Catenis.bitcoinCore.getRawTransaction(ctnTxid, true);
+                            }
+                            catch (err) {
+                                Catenis.logger.ERROR(util.format('Error retrieving information about transaction (txid: %s) to check for malleability', ctnTxid), err);
+                            }
+
+                            if (txInfo) {
+                                const strInputTxids = txInfo.vin.map((input) => {
+                                    return input.txid + ':' + input.vout;
+                                });
+
+                                // Check if there is a match in the sent transactions
+                                const matchFound = Catenis.db.collection.SentTransaction.find({
+                                    'inputs.str': {$in: strInputTxids},
+                                    'confirmation.confirmed': false
+                                }, {
+                                    fields: {
+                                        _id: 1,
+                                        type: 1,
+                                        txid: 1,
+                                        inputs: 1,
+                                        replacedByTxid: 1,
+                                        info: 1
+                                    }
+                                }).fetch().some((doc) => {
+                                    // Checks if all inputs of both transactions are the same
+                                    if (doc.inputs.length === strInputTxids.length) {
+                                        const sameInputs = !doc.inputs.some((input, idx) => {
+                                            return input.str !== strInputTxids[idx];
+                                        });
+
+                                        if (sameInputs) {
+                                            // The two transactions have the same inputs. Assume that transactions
+                                            //  are the same and that its tx id had been modified (due to malleability)
+
+                                            // Fix malleability and process confirmed tx
+                                            Transaction.fixMalleability(Transaction.malleabilitySource.sent_tx, doc.txid, ctnTxid);
+
+                                            processConfirmedSentTransactions(doc, eventsToEmit);
+
+                                            idSentTxDocsToUpdate.push(doc._id);
+
+                                            return true;
+                                        }
+
+                                        return false;
+                                    }
+                                });
+
+                                if (!matchFound) {
+                                    // Check if there is a match in the received transactions
+                                    Catenis.db.collection.ReceivedTransaction.find({
+                                        'inputs.str': {$in: strInputTxids},
+                                        sentTransaction_id: {$exists: false},
+                                        'confirmation.confirmed': false
+                                    }, {
+                                        fields: {
+                                            _id: 1,
+                                            type: 1,
+                                            txid: 1,
+                                            inputs: 1
+                                        }
+                                    }).fetch().some((doc) => {
+                                        // Checks if all inputs of both transactions are the same
+                                        if (doc.inputs.length === strInputTxids.length) {
+                                            const sameInputs = !doc.inputs.some((input, idx) => {
+                                                return input.str !== strInputTxids[idx];
+                                            });
+
+                                            if (sameInputs) {
+                                                // The two transactions have the same inputs. Assume that transactions
+                                                //  are the same and that its tx id had been modified (due to malleability)
+
+                                                // Fix malleability and process confirmed tx
+                                                Transaction.fixMalleability(Transaction.malleabilitySource.received_tx, doc.txid, ctnTxid);
+
+                                                processConfirmedReceivedTransactions(doc, eventsToEmit);
+
+                                                idRcvdTxDocsToUpdate.push(doc._id);
+
+                                                return true;
+                                            }
+
+                                            return false;
+                                        }
+                                    });
+                                }
+                            }
+                        }
+                    })
+                }
 
                 if (idSentTxDocsToUpdate.length > 0) {
                     // Update sent transaction doc/rec to confirm them
@@ -421,37 +495,6 @@ function handleNewBlocks(data) {
                     }, {multi: true});
                 }
 
-                // Find Message database docs/recs associated with (Catenis) transactions in
-                //  the current block that have not had their txid confirmed yet
-                Catenis.db.collection.Message.find({
-                    'blockchain.txid': {$in: blockInfo.ctnTx},
-                    'blockchain.confirmedTxid': {$exists: false}
-                }, {fileds: {_id: 1, 'blockchain.txid': 1}}).forEach((doc) => {
-                    // Update Message doc/rec setting its confirmed txid
-                    Catenis.db.collection.Message.update({_id: doc._id}, {$set: {'blockchain.confirmedTxid': doc.blockchain.txid}});
-                });
-
-                // Retrieve received transactions found in block that are not yet confirmed
-                //  Note: only transactions received that have not been sent by this Catenis node
-                //      should have been considered
-                const idRcvdTxDocsToUpdate = Catenis.db.collection.ReceivedTransaction.find({
-                    txid: {$in: blockInfo.ctnTx},
-                    sentTransaction_id: {$exists: false},
-                    'confirmation.confirmed': false
-                }, {fields: {_id: 1, type: 1, txid: 1}}).map((doc) => {
-                    if (doc.type === Transaction.type.sys_funding.name) {
-                        // Prepare to emit event notifying of confirmation of system funding transaction
-                        eventsToEmit.push({
-                            name: TransactionMonitor.notifyEvent.sys_funding_tx_conf.name,
-                            data: {
-                                txid: doc.txid
-                            }
-                        });
-                    }
-
-                    return doc._id;
-                });
-
                 if (idRcvdTxDocsToUpdate.length > 0) {
                     // Update received transaction doc/rec to confirm them
                     Catenis.db.collection.ReceivedTransaction.update({_id: {$in: idRcvdTxDocsToUpdate}}, {
@@ -462,6 +505,18 @@ function handleNewBlocks(data) {
                         }
                     }, {multi: true});
                 }
+
+                // Find Message database docs/recs associated with (Catenis) transactions in
+                //  the current block that have not had their tx id confirmed yet and update
+                //  its confirmed status
+                Catenis.db.collection.Message.update({
+                    'blockchain.txid': {$in: blockInfo.ctnTx},
+                    'blockchain.confirmed': false
+                }, {
+                    $set: {
+                        'blockchain.confirmed': true
+                    }
+                }, {multi: true});
             }
         }
 
@@ -715,6 +770,7 @@ function handleNewTransactions(data) {
                     });
                 }
                 // TODO: parse transaction (using Transaction.fromHex()) and try to identify Catenis transactions (using tx.matches())
+                // TODO: when adding a new received send message Catenis transaction, a new Message doc/rec needs to be created so the message (from another Catenis node) can be referenced by its message id
             }
         }
 
@@ -790,6 +846,72 @@ TransactionMonitor.notifyEvent = Object.freeze({
 
 // Definition of module (private) functions
 //
+
+function processConfirmedSentTransactions(doc, eventsToEmit) {
+    if (doc.type === Transaction.type.funding.name) {
+        // Prepare to emit event notifying of confirmation of funding transaction
+        const notifyEvent = getTxConfNotifyEventFromFundingEvent(doc.info.funding.event.name);
+
+        if (notifyEvent) {
+            eventsToEmit.push({
+                name: notifyEvent.name,
+                data: {
+                    txid: doc.txid,
+                    entityId: doc.info.funding.event.entityId
+                }
+            });
+        }
+        else {
+            // Could not get notification event from funding event.
+            //  Log error condition
+            Catenis.logger.ERROR('Could not get notification event from funding transaction event', {fundingEvent: doc.info.funding.event.name});
+        }
+    }
+    else if (doc.type === Transaction.type.issue_locked_asset.name || doc.type === Transaction.type.issue_unlocked_asset.name) {
+        // Prepare to emit event notifying of confirmation of asset issuance transaction
+        const notifyEvent = getTxConfNotifyEventFromTxType(doc.type);
+
+        if (notifyEvent) {
+            const txInfo = doc.info[Transaction.type[doc.type].dbInfoEntryName];
+
+            eventsToEmit.push({
+                name: notifyEvent.name,
+                data: {
+                    txid: doc.txid,
+                    assetId: txInfo.assetId,
+                    deviceId: txInfo.deviceId
+                }
+            });
+        }
+        else {
+            // Could not get notification event from transaction type.
+            //  Log error condition
+            Catenis.logger.ERROR('Could not get notification event from transaction type', {txType: doc.type});
+        }
+    }
+
+    if (doc.replacedByTxid !== undefined) {
+        // A transaction that had been replaced by another transaction is being confirmed.
+        //  Just log warning condition only for now
+        // TODO: in the future, emit event so this condition can be treated by module responsible for sending read confirmation transactions
+        Catenis.logger.WARN('Transaction that had been replaced by another transaction is being confirmed.', {
+            txid: doc.txid,
+            replacedByTxid: doc.replacedByTxid
+        });
+    }
+}
+
+function processConfirmedReceivedTransactions(doc, eventsToEmit) {
+    if (doc.type === Transaction.type.sys_funding.name) {
+        // Prepare to emit event notifying of confirmation of system funding transaction
+        eventsToEmit.push({
+            name: TransactionMonitor.notifyEvent.sys_funding_tx_conf.name,
+            data: {
+                txid: doc.txid
+            }
+        });
+    }
+}
 
 function getTxConfNotifyEventFromFundingEvent(fundingEventName) {
     const notifyEventName = 'funding_' + fundingEventName + '_tx_conf';

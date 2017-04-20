@@ -528,7 +528,7 @@ Device.prototype.readMessage = function (messageId) {
     }
 
     // Get transaction associated with message
-    const txid = docMessage.confirmedTxid ? docMessage.confirmedTxid : docMessage.txid;
+    const txid = docMessage.txid;
     let transact = undefined;
 
     try {
@@ -629,17 +629,11 @@ Device.prototype.retrieveMessageContainer = function (messageId) {
 
     // Returns message container info
     const containerInfo = {
-        blockchain: {}
+        blockchain: {
+            txid: docMessage.txid,
+            isConfirmed: docMessage.isTxConfirmed
+        }
     };
-
-    if (docMessage.confirmedTxid) {
-        containerInfo.blockchain.txid = docMessage.confirmedTxid;
-        containerInfo.blockchain.isConfirmed = true;
-    }
-    else {
-        containerInfo.blockchain.txid = docMessage.txid;
-        containerInfo.blockchain.isConfirmed = false;
-    }
 
     if (docMessage.storageProviderName && docMessage.externalStorageRef) {
         containerInfo.externalStorage = {};

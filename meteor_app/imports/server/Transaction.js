@@ -434,7 +434,8 @@ Transaction.prototype.saveSentTransaction = function (type, info) {
         const inputs = this.inputs.map((input) => {
             return {
                 txid: input.txout.txid,
-                vout: input.txout.vout
+                vout: input.txout.vout,
+                str: input.txout.txid + ':' + input.txout.vout
             };
         });
 
@@ -744,6 +745,128 @@ Transaction.fromHex = function (hexTx) {
     }
 };
 
+// Method used to fix references to transaction ID that had been modified due to
+//  transaction malleability in local database
+Transaction.fixMalleability = function (source, originalTxid, modifiedTxid) {
+    Catenis.logger.DEBUG('About to create new Malleability record', {source: source, originalTxid: originalTxid, modifiedTxid: modifiedTxid});
+    try {
+        Catenis.db.collection.Malleability.insert({
+            source: source,
+            originalTxid: originalTxid,
+            modifiedTxid: modifiedTxid
+        });
+    }
+    catch (err) {
+        Catenis.logger.ERROR(util.format('Error creating new Malleability record: source: %s, originalTxid: %s, modifiedTxid: %s', source, originalTxid, modifiedTxid), err);
+        throw new Meteor.Error('ctn_malleability_fix', util.format('Error creating new Malleability record: source: %s, originalTxid: %s, modifiedTxid: %s', source, originalTxid, modifiedTxid), err.stack);
+    }
+
+    try {
+        // Replace transaction id in all places withing the local database
+
+        if (source === Transaction.malleabilitySource.sent_tx) {
+            Catenis.db.collection.ServiceCredit.update({'fundingTx.txid': originalTxid}, {
+                $set: {
+                    'fundingTx.txid': modifiedTxid
+                }
+            }, {multi: true});
+
+            Catenis.db.collection.SentTransaction.update({txid: originalTxid}, {
+                $set: {
+                    txid: modifiedTxid,
+                    originalTxid: originalTxid
+                }
+            });
+
+            Catenis.db.collection.SentTransaction.find({'inputs.txid': originalTxid}, {
+                fields: {
+                    _id: 1,
+                    inputs: 1
+                }
+            }).forEach((doc) => {
+                const setVal = doc.inputs.reduce((setVal, input, idx) => {
+                    if (input.txid === originalTxid) {
+                        setVal['inputs.' + idx] = {
+                            txid: modifiedTxid,
+                            vout: input.vout,
+                            str: modifiedTxid + ':' + input.vout
+                        };
+                    }
+                }, {});
+
+                Catenis.db.collection.SentTransaction.update({_id: doc._id}, {
+                    $set: setVal
+                });
+            });
+
+            Catenis.db.collection.SentTransaction.update({replacedByTxid: originalTxid}, {
+                $set: {
+                    replacedByTxid: modifiedTxid
+                }
+            });
+
+            // NOTE: different than the case of the update of the 'inputs.txid' field above, we can
+            //  do it with a single update call for the 'info.readConfirmation.txouts.txid' field
+            //  due to the fact that it is guaranteed that, for a given doc/rec, the txouts (array)
+            //  field will have only unique values for the txid field
+            Catenis.db.collection.SentTransaction.update({'info.readConfirmation.txouts.txid': originalTxid}, {
+                $set: {
+                    'info.readConfirmation.txouts.$.txid': modifiedTxid
+                }
+            });
+        }
+
+        Catenis.db.collection.Message.update({'blockchain.txid': originalTxid}, {
+            $set: {
+                'blockchain.txid': modifiedTxid
+            }
+        });
+
+        Catenis.db.collection.ReceivedTransaction.update({txid: originalTxid}, {
+            $set: {
+                txid: modifiedTxid,
+                originalTxid: originalTxid
+            }
+        });
+
+        Catenis.db.collection.ReceivedTransaction.find({'inputs.txid': originalTxid}, {
+            fields: {
+                _id: 1,
+                inputs: 1
+            }
+        }).forEach((doc) => {
+            const setVal = doc.inputs.reduce((setVal, input, idx) => {
+                if (input.txid === originalTxid) {
+                    setVal['inputs.' + idx] = {
+                        txid: modifiedTxid,
+                        vout: input.vout,
+                        str: modifiedTxid + ':' + input.vout
+                    };
+                }
+            }, {});
+
+            Catenis.db.collection.ReceivedTransaction.update({_id: doc._id}, {
+                $set: setVal
+            });
+        });
+
+        // NOTE: different than the case of the update of the 'inputs.txid' field above, we can
+        //  do it with a single update call for the 'info.readConfirmation.txouts.txid' field
+        //  due to the fact that it is guaranteed that, for a given doc/rec, the txouts (array)
+        //  field will have only unique values for the txid field
+        Catenis.db.collection.ReceivedTransaction.update({'info.readConfirmation.txouts.txid': originalTxid}, {
+            $set: {
+                'info.readConfirmation.txouts.$.txid': modifiedTxid
+            }
+        });
+    }
+    catch (err) {
+        Catenis.logger.ERROR(util.format('Error updating collections to replace transaction ID modified due to malleability: originalTxid: %s, modifiedTxid: %s', originalTxid, modifiedTxid), err);
+        throw new Meteor.Error('ctn_malleability_fix', util.format('Error updating collections to replace transaction ID modified due to malleability: originalTxid: %s, modifiedTxid: %s', originalTxid, modifiedTxid), err.stack);
+    }
+};
+
+
 // Transaction function class (public) properties
 //
 
@@ -861,6 +984,11 @@ Transaction.ioToken = Object.freeze({
         token: '<p2_dev_pub_rsrv_addr>',
         description: 'Output (or input spending such output) paying to a device public reserved address'
     })
+});
+
+Transaction.malleabilitySource = Object.freeze({
+    sent_tx: 'sent_tx',
+    received_tx: 'received_tx'
 });
 
 
