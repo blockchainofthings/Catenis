@@ -866,6 +866,34 @@ Transaction.fixMalleability = function (source, originalTxid, modifiedTxid) {
     }
 };
 
+// Method is used to fix message transactions affected by malleability that
+//  have been created prior to the malleability fix
+// TODO: this method should be deleted after the fix has been applied
+Transaction.fixUnconfirmedMessageTxids = function () {
+    const wltInfo = Catenis.bitcoinCore.getWalletInfo();
+
+    const modifiedTxs = new Map();
+
+    Catenis.bitcoinCore.listTransactions(wltInfo.txcount * 6).forEach((txout) => {
+        if (txout.walletconflicts.length > 0 && !modifiedTxs.has(txout.walletconflicts[0])) {
+            modifiedTxs.set(txout.walletconflicts[0], txout.txid);
+        }
+    });
+
+    if (modifiedTxs.size > 0) {
+        Catenis.db.collection.Message.find({'blockchain.confirmed': false}, {fields: {_id: 1, blockchain: 1}}).forEach((doc) => {
+            if (modifiedTxs.has(doc.blockchain.txid)) {
+                const source = Catenis.db.collection.SentTransaction.findOne({txid: doc.blockchain.txid}, {fields: {_id: 1}}) ? Transaction.malleabilitySource.sent_tx
+                        : (Catenis.db.collection.ReceivedTransaction.findOne({txid: doc.blockchain.txid}, {fields: {_id: 1}}) ? Transaction.malleabilitySource.received_tx : undefined);
+
+                if (source) {
+                    Transaction.fixMalleability(source, doc.blockchain.txid, modifiedTxs.get(doc.blockchain.txid));
+                    Catenis.db.collection.Message.update({_id: doc._id}, {$set: {'blockchain.confirmed': true}});
+                }
+            }
+        });
+    }
+};
 
 // Transaction function class (public) properties
 //
