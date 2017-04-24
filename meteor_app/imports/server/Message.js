@@ -44,6 +44,7 @@ export function Message(docMessage) {
     this.doc_id = docMessage._id;
     this.messageId = docMessage.messageId;
     this.action = docMessage.action;
+    this.source = docMessage.source;
     this.originDeviceId = docMessage.originDeviceId;
     this.targetDeviceId = docMessage.targetDeviceId;
     this.isEncrypted = docMessage.isEncrypted;
@@ -96,11 +97,11 @@ Message.prototype.readNow = function () {
 // Message function class (public) methods
 //
 
-// Create a new Message and returns its messageId
+// Create a new Message sent by this Catenis node and returns its messageId
 //
 //  Arguments:
 //    msgTx: [Object] - instance of either LogMessageTransaction or SendMessageTransaction
-Message.createMessage = function (msgTx) {
+Message.createSentMessage = function (msgTx) {
     let action;
 
     if (msgTx instanceof LogMessageTransaction) {
@@ -123,7 +124,8 @@ Message.createMessage = function (msgTx) {
 
     let docMessage = {
         messageId: newMessageId(msgTx.transact),
-        action: action
+        action: action,
+        source: Message.source.sent_msg
     };
 
     if (action === Message.action.log) {
@@ -141,7 +143,7 @@ Message.createMessage = function (msgTx) {
     };
 
     if (msgTx.extMsgRef) {
-        const storageProvider = msgTx.options.storageProvider != undefined ? msgTx.options.storageProvider : CatenisMessage.defaultStorageProvider;
+        const storageProvider = msgTx.options.storageProvider !== undefined ? msgTx.options.storageProvider : CatenisMessage.defaultStorageProvider;
 
         docMessage.externalStorage = {
             provider: storageProvider.name,
@@ -198,6 +200,10 @@ Message.action = Object.freeze({
     send: 'send'
 });
 
+Message.source = Object.freeze({
+    sent_msg: 'sent_msg',
+    received_msg: 'received_msg'
+});
 
 // Definition of module (private) functions
 //

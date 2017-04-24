@@ -125,6 +125,8 @@ Message {
   _id: [string],  // MongoDB internal document ID provided by Meteor
   messageId: [string],  // External ID used to uniquely identify this message
   action: [string],   // Identifies the action performed on the message. Valid values (from Message.action): 'log', 'send'
+  source: [string],  // Identifies if this a message that had been sent by this Catenis node (value = 'sent_msg') or a message
+                     //  received from another Catenis node (value = 'received_msg')
   originDeviceId: [string],  // External ID of the device that logged/sent the message
   targetDeviceId: [string],  // External ID of the device to which message had been sent
   isEncrypted: [boolean],   // Indicates whether stored message is encrypted
@@ -243,5 +245,6 @@ Malleability {
   _id: [string], // MongoDB internal document ID provided by Meteor
   source: [string],  // Source (from Catenis node's point of view) of transaction the txid of which got changed due to malleability. Valid values: 'sent_tx', 'received_tx'
   originalTxid: [string],  // Original blockchain attributed ID (hash) of the transaction
-  modifiedTxid: [string]  // New blockchain attributed ID (hash) of transaction due to malleability
+  modifiedTxid: [string],  // New blockchain attributed ID (hash) of transaction due to malleability
+  createdDate: [date/time]  // Date and time when record has been created
 }

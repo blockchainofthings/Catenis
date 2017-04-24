@@ -27,6 +27,7 @@ import { Meteor } from 'meteor/meteor';
 import { Catenis } from './Catenis';
 import { BitcoinCore } from './BitcoinCore';
 import { BlockchainAddress } from './BlockchainAddress';
+import { CriticalSection } from './CriticalSection';
 
 // Config entries
 const configTransact = config.get('transaction');
@@ -36,6 +37,10 @@ const cfgSettings = {
     txInputSize: configTransact.get('txInputSize'),
     txOutputSize: configTransact.get('txOutputSize')
 };
+
+// Critical section object to avoid concurrent access to database when
+//  fixing transaction malleability
+const dbMalleabilityCS = new CriticalSection();
 
 
 // Definition of function classes
@@ -107,11 +112,11 @@ Transaction.prototype.addInputs = function (inputs, pos) {
         inputs = [inputs];
     }
 
-    if (pos != undefined && pos < 0) {
+    if (pos !== undefined && pos < 0) {
         pos = 0;
     }
 
-    if (pos == undefined) {
+    if (pos === undefined) {
         // If no specific position has been given, add new
         //  input to the end of list of inputs
         Array.prototype.push.apply(this.inputs, inputs);
@@ -119,7 +124,7 @@ Transaction.prototype.addInputs = function (inputs, pos) {
     else {
         // A specific position has been given
         inputs.forEach((input, idx) => {
-            if (this.inputs[pos + idx] != undefined) {
+            if (this.inputs[pos + idx] !== undefined) {
                 // The postion is not yet taken. Just add new
                 //  input to that positon
                 this.inputs[pos + idx] = input;
@@ -142,7 +147,7 @@ Transaction.prototype.addInput = function (txout, address, addrInfo, pos) {
         address: address
     };
 
-    if (addrInfo != undefined) {
+    if (addrInfo) {
         input.addrInfo = addrInfo;
     }
 
@@ -160,11 +165,11 @@ Transaction.prototype.getInputAt = function (pos) {
 Transaction.prototype.removeInputAt = function (pos) {
     let input = undefined;
 
-    if (this.inputs[pos] != undefined) {
+    if (this.inputs[pos] !== undefined) {
         input = this.inputs.splice(pos, 1)[0];
     }
 
-    if (input != undefined) {
+    if (input !== undefined) {
         invalidateTx.call(this);
     }
 
@@ -176,7 +181,7 @@ Transaction.prototype.addP2PKHOutputs = function (payInfos, pos) {
         payInfos = [payInfos];
     }
 
-    if (pos != undefined && pos < 0) {
+    if (pos !== undefined && pos < 0) {
         pos = 0;
     }
 
@@ -228,16 +233,16 @@ Transaction.prototype.getOutputAt = function (pos) {
 Transaction.prototype.removeOutputAt = function (pos) {
     let output = undefined;
 
-    if (this.outputs[pos] != undefined) {
+    if (this.outputs[pos] !== undefined) {
         output = this.outputs.splice(pos, 1)[0];
 
-        if (output.type == Transaction.outputType.nullData) {
+        if (output.type === Transaction.outputType.nullData) {
             this.hasNullDataOutput = false;
             this.nullDataPayloadSize = 0;
         }
     }
 
-    if (output != undefined) {
+    if (output !== undefined) {
         invalidateTx.call(this);
     }
 
@@ -249,7 +254,7 @@ Transaction.prototype.getNullDataOutputPosition = function () {
 
     if (this.hasNullDataOutput) {
         pos = this.outputs.findIndex((output) => {
-            return output.type == Transaction.outputType.nullData;
+            return output.type === Transaction.outputType.nullData;
         });
 
         if (pos < 0) {
@@ -271,7 +276,7 @@ Transaction.prototype.getNullDataOutput = function () {
             return output.type === Transaction.outputType.nullData;
         });
 
-        if (output == undefined) {
+        if (output === undefined) {
             // Could not find null data output. Fix control variables
             this.hasNullDataOutput = false;
             this.nullDataPayloadSize = 0;
@@ -285,7 +290,7 @@ Transaction.prototype.listOutputAddresses = function () {
     const addrList = [];
 
     this.outputs.forEach((output) => {
-        if (output.type == Transaction.outputType.P2PKH) {
+        if (output.type === Transaction.outputType.P2PKH) {
             addrList.push(output.payInfo.address);
         }
     });
@@ -301,7 +306,7 @@ Transaction.prototype.totalInputsAmount = function () {
 
 Transaction.prototype.totalOutputsAmount = function () {
     return this.outputs.reduce((sum, output) => {
-        return sum + (output.type == Transaction.outputType.P2PKH ? output.payInfo.amount : 0);
+        return sum + (output.type === Transaction.outputType.P2PKH ? output.payInfo.amount : 0);
     }, 0);
 };
 
@@ -319,7 +324,7 @@ Transaction.prototype.countOutputs = function () {
 
 Transaction.prototype.countP2PKHOutputs = function () {
     return this.outputs.reduce((count, output) => {
-        return output.type == Transaction.outputType.P2PKH ? count + 1 : count;
+        return output.type === Transaction.outputType.P2PKH ? count + 1 : count;
     }, 0);
 };
 
@@ -329,7 +334,7 @@ Transaction.prototype.estimateSize = function () {
 
 // Returns signed raw transaction in hex format
 Transaction.prototype.getTransaction = function () {
-    if (this.rawTransaction == undefined) {
+    if (this.rawTransaction === undefined) {
         // Build transaction adding all inputs and outputs in sequence
         const txBuilder = new bitcoinLib.TransactionBuilder(Catenis.application.cryptoNetwork),
             vins = [];
@@ -339,10 +344,10 @@ Transaction.prototype.getTransaction = function () {
         });
 
         this.outputs.forEach((output) => {
-            if (output.type == Transaction.outputType.P2PKH) {
+            if (output.type === Transaction.outputType.P2PKH) {
                 txBuilder.addOutput(output.payInfo.address, output.payInfo.amount);
             }
-            else if (output.type == Transaction.outputType.nullData) {
+            else if (output.type === Transaction.outputType.nullData) {
                 txBuilder.addOutput(bitcoinLib.script.nullDataOutput(output.data), 1000);
             }
         });
@@ -351,7 +356,7 @@ Transaction.prototype.getTransaction = function () {
         let vinIdx = 0;
 
         this.inputs.forEach((input) => {
-            if (input.addrInfo != null) {
+            if (input.addrInfo) {
                 txBuilder.sign(vins[vinIdx++], input.addrInfo.cryptoKeys.keyPair);
             }
         });
@@ -364,7 +369,7 @@ Transaction.prototype.getTransaction = function () {
 
 // Sends transaction to blockchain network and returns its id
 Transaction.prototype.sendTransaction = function (resend = false) {
-    if (this.txid == undefined || resend) {
+    if (this.txid === undefined || resend) {
         this.txid = Catenis.bitcoinCore.sendRawTransaction(this.getTransaction());
     }
 
@@ -429,7 +434,7 @@ Transaction.prototype.saveSentTransaction = function (type, info) {
 
     let docId = undefined;
 
-    if (this.txid != undefined && !this.txSaved) {
+    if (this.txid !== undefined && !this.txSaved) {
         // Prepare to save transaction information
         const inputs = this.inputs.map((input) => {
             return {
@@ -474,15 +479,15 @@ Transaction.prototype.matches = function (transactFuncClass) {
         throw Error('Invalid transactFuncClass argument');
     }
 
-    if (this.inTokenSequence == undefined) {
+    if (this.inTokenSequence === undefined) {
         initInputTokenSequence.call(this);
     }
 
-    if (this.outTokenSequence == undefined) {
+    if (this.outTokenSequence === undefined) {
         initOutputTokenSequence.call(this);
     }
 
-    return (transactFuncClass.matchingPattern.input != undefined ? (new RegExp(transactFuncClass.matchingPattern.input)).test(this.inTokenSequence) : true) && (transactFuncClass.matchingPattern.output != undefined ? (new RegExp(transactFuncClass.matchingPattern.output)).test(this.outTokenSequence) : true);
+    return (transactFuncClass.matchingPattern.input !== undefined ? (new RegExp(transactFuncClass.matchingPattern.input)).test(this.inTokenSequence) : true) && (transactFuncClass.matchingPattern.output !== undefined ? (new RegExp(transactFuncClass.matchingPattern.output)).test(this.outTokenSequence) : true);
 };
 
 Transaction.prototype.revertOutputAddresses = function () {
@@ -508,11 +513,11 @@ function addOutputs(outputs, pos) {
         outputs = [outputs];
     }
 
-    if (pos != undefined && pos < 0) {
+    if (pos !== undefined && pos < 0) {
         pos = 0;
     }
 
-    if (pos == undefined) {
+    if (pos === undefined) {
         // If no specific position has been given, add new
         //  output to the end of list of outputs
         Array.prototype.push.apply(this.outputs, outputs);
@@ -520,7 +525,7 @@ function addOutputs(outputs, pos) {
     else {
         // A specific position has been given
         outputs.forEach((output, idx) => {
-            if (this.outputs[pos + idx] != undefined) {
+            if (this.outputs[pos + idx] !== undefined) {
                 // The postion is not yet taken. Just add new
                 //  output to that positon
                 this.outputs[pos + idx] = output;
@@ -542,7 +547,7 @@ function initInputTokenSequence() {
         const addrType = ('addrInfo' in input) ? input.addrInfo.type : null;
         const ioToken = getIOTokenFromAddrType(addrType);
 
-        if (ioToken != undefined) {
+        if (ioToken !== undefined) {
             seq += ioToken;
         }
         else {
@@ -568,7 +573,7 @@ function initOutputTokenSequence() {
 
         const ioToken = getIOTokenFromAddrType(addrType);
 
-        if (ioToken != undefined) {
+        if (ioToken !== undefined) {
             seq += ioToken;
         }
         else {
@@ -604,7 +609,7 @@ Transaction.fromHex = function (hexTx) {
     try {
         const decodedTx = Catenis.bitcoinCore.decodeRawTransaction(hexTx, false);
 
-        if (decodedTx != undefined) {
+        if (decodedTx !== undefined) {
             const tx = new Transaction();
 
             // Save basic transaction info
@@ -663,7 +668,7 @@ Transaction.fromHex = function (hexTx) {
                                 //  spent output
                                 const addrInfo = Catenis.keyStore.getAddressInfo(output.scriptPubKey.addresses[0], true);
 
-                                if (addrInfo != null) {
+                                if (addrInfo !== null) {
                                     input.addrInfo = addrInfo;
                                 }
                             }
@@ -691,7 +696,7 @@ Transaction.fromHex = function (hexTx) {
                     // Try to get information about address associated with output
                     const addrInfo = Catenis.keyStore.getAddressInfo(txOutput.payInfo.address, true);
 
-                    if (addrInfo != null) {
+                    if (addrInfo !== null) {
                         txOutput.payInfo.addrInfo = addrInfo;
                     }
                 }
@@ -705,7 +710,7 @@ Transaction.fromHex = function (hexTx) {
                     // Try to get information about address associated with output
                     const addrInfo = Catenis.keyStore.getAddressInfo(txOutput.payInfo.address, true);
 
-                    if (addrInfo != null) {
+                    if (addrInfo !== null) {
                         txOutput.payInfo.addrInfo = addrInfo;
                     }
                 }
@@ -736,8 +741,8 @@ Transaction.fromHex = function (hexTx) {
         }
     }
     catch (err) {
-        if (!((err instanceof Meteor.Error) && err.error === 'ctn_btcore_rpc_error' && err.details != undefined && typeof err.details.code === 'number'
-                && err.details.code == BitcoinCore.rpcErrorCode.RPC_DESERIALIZATION_ERROR)) {
+        if (!((err instanceof Meteor.Error) && err.error === 'ctn_btcore_rpc_error' && err.details !== undefined && typeof err.details.code === 'number'
+                && err.details.code === BitcoinCore.rpcErrorCode.RPC_DESERIALIZATION_ERROR)) {
             // An error other than failure to deserialize transaction.
             //  Just re-throws it
             throw err;
@@ -745,155 +750,249 @@ Transaction.fromHex = function (hexTx) {
     }
 };
 
+// Method used to check if two conflicting transactions make exactly the same payments
+//
+//  Arguments:
+//    tx1Info: [Object]  // Result from Bitcoin Core's gettransaction JSON-RPC method for first conflicting transaction
+//    tx2Info: [Object]  // Result from Bitcoin Core's gettransaction JSON-RPC method for second conflicting transaction
+//
+Transaction.checkConflictingTxsMakeSamePayment = function (tx1Info, tx2Info) {
+    let makeSamePayment = false;
+
+    if (tx1Info.amount === tx2Info.amount && tx1Info.fee === tx2Info.fee) {
+        const maxDetailsLength = tx1Info.details.length > tx2Info.details.length ? tx1Info.details.length : tx2Info.details.length;
+
+        if (maxDetailsLength > 0) {
+            makeSamePayment = true;
+
+            for (let idx = 0; idx < maxDetailsLength; idx++) {
+                const tx1Output = idx < tx1Info.details.length ? tx1Info.details[idx] : undefined;
+                const tx2Output = idx < tx2Info.details.length ? tx2Info.details[idx] : undefined;
+
+                if (tx1Output && tx2Output) {
+                    if (tx1Output.category !== 'send' && tx2Output.category !== 'send') {
+                        break;
+                    }
+                    else {
+                        if (tx1Output.category !== tx2Output.category || tx1Output.address !== tx2Output.address
+                                && tx1Output.amount !== tx2Output.amount) {
+                            makeSamePayment = false;
+                            break;
+                        }
+                    }
+                }
+                else {
+                    if ((tx1Output && tx1Output.category === 'send') || (tx2Output && tx2Output.category === 'send')) {
+                        makeSamePayment = false;
+                    }
+
+                    break;
+                }
+            }
+        }
+    }
+
+    return makeSamePayment;
+};
+
+// Method used to check if transaction had been replaced due to malleability
+//  and take the proper action to fix it is requested
+//
+//  Arguments:
+//    docCnfltTx: [Object]  // Databse SentTransacton or ReceivedTransaction doc/rec of conflicting (original) transaction.
+//                         //  This objet must have at least the following properties: txid, inputs
+//    confirmedTxid: [String]  // ID of transaction that had been confirmed and replaced the original transaction
+//    doFix: [Boolean],  // Indicates that transaction malleability should be fixed if identified
+//    source: [String]  // Identifies the source of the transaction to check malleability. Should be one of the
+//                      //  properties of Transaction.malleabilitySource
+//
+//  Return: [Boolean]  // True if malleability was identified; false otherwise
+//
+Transaction.checkTxMalleability = function (docCnfltTx, confirmedTxid, doFix = false, source) {
+    // Check if the two transactions have the same inputs
+    let confirmedTxInfo;
+    let result = false;
+
+    try {
+        // Get transaction info
+        confirmedTxInfo = Catenis.bitcoinCore.getRawTransaction(confirmedTxid, true);
+    }
+    catch (err) {
+        Catenis.logger.ERROR(util.format('Error retrieving information about transaction (txid: %s) to check for malleability', confirmedTxid), err);
+    }
+
+    if (confirmedTxInfo) {
+        const confTxStrInputs = confirmedTxInfo.vin.map((input) => {
+            return input.txid + ':' + input.vout;
+        });
+
+        if (docCnfltTx.inputs.length === confTxStrInputs.length) {
+            const sameInputs = !docCnfltTx.inputs.some((input, idx) => {
+                return input.str !== confTxStrInputs[idx];
+            });
+
+            if (sameInputs) {
+                // The two transactions have the same inputs. Assume that transactions
+                //  are the same and that its tx id had been modified (due to malleability)
+                result = true;
+
+                if (doFix) {
+                    // Fix malleability, and replace tx id with ID of confirmed tx
+                    Transaction.fixMalleability(source, docCnfltTx.txid, confirmedTxid);
+
+                    docCnfltTx.txid = confirmedTxid;
+                }
+            }
+        }
+    }
+
+    return result;
+};
+
 // Method used to fix references to transaction ID that had been modified due to
 //  transaction malleability in local database
+//
+//  Arguments:
+//    source: [String]  // Identifies the source of the transaction to check malleability. Should be one of the
+//                      //  properties of Transaction.malleabilitySource
+//    originalTxid: [String]  // ID of original (conflicting) transaction
+//    modifiedTxid: [String]  // ID of modified transaction due to malleability
+//
 Transaction.fixMalleability = function (source, originalTxid, modifiedTxid) {
-    Catenis.logger.DEBUG('About to create new Malleability record', {source: source, originalTxid: originalTxid, modifiedTxid: modifiedTxid});
-    try {
-        Catenis.db.collection.Malleability.insert({
-            source: source,
-            originalTxid: originalTxid,
-            modifiedTxid: modifiedTxid
-        });
-    }
-    catch (err) {
-        Catenis.logger.ERROR(util.format('Error creating new Malleability record: source: %s, originalTxid: %s, modifiedTxid: %s', source, originalTxid, modifiedTxid), err);
-        throw new Meteor.Error('ctn_malleability_fix', util.format('Error creating new Malleability record: source: %s, originalTxid: %s, modifiedTxid: %s', source, originalTxid, modifiedTxid), err.stack);
-    }
+    // Execute code in critical section to avoid DB concurrency
+    dbMalleabilityCS.execute(() => {
+        Catenis.logger.DEBUG('About to create new Malleability record', {source: source, originalTxid: originalTxid, modifiedTxid: modifiedTxid});
+        let duplicateRecord = false;
 
-    try {
-        // Replace transaction id in all places withing the local database
-
-        if (source === Transaction.malleabilitySource.sent_tx) {
-            Catenis.db.collection.ServiceCredit.update({'fundingTx.txid': originalTxid}, {
-                $set: {
-                    'fundingTx.txid': modifiedTxid
-                }
-            }, {multi: true});
-
-            Catenis.db.collection.SentTransaction.update({txid: originalTxid}, {
-                $set: {
-                    txid: modifiedTxid,
-                    originalTxid: originalTxid
-                }
-            });
-
-            Catenis.db.collection.SentTransaction.find({'inputs.txid': originalTxid}, {
-                fields: {
-                    _id: 1,
-                    inputs: 1
-                }
-            }).forEach((doc) => {
-                const setVal = doc.inputs.reduce((setVal, input, idx) => {
-                    if (input.txid === originalTxid) {
-                        setVal['inputs.' + idx] = {
-                            txid: modifiedTxid,
-                            vout: input.vout,
-                            str: modifiedTxid + ':' + input.vout
-                        };
-                    }
-                }, {});
-
-                Catenis.db.collection.SentTransaction.update({_id: doc._id}, {
-                    $set: setVal
-                });
-            });
-
-            Catenis.db.collection.SentTransaction.update({replacedByTxid: originalTxid}, {
-                $set: {
-                    replacedByTxid: modifiedTxid
-                }
-            });
-
-            // NOTE: different than the case of the update of the 'inputs.txid' field above, we can
-            //  do it with a single update call for the 'info.readConfirmation.txouts.txid' field
-            //  due to the fact that it is guaranteed that, for a given doc/rec, the txouts (array)
-            //  field will have only unique values for the txid field
-            Catenis.db.collection.SentTransaction.update({'info.readConfirmation.txouts.txid': originalTxid}, {
-                $set: {
-                    'info.readConfirmation.txouts.$.txid': modifiedTxid
-                }
+        try {
+            Catenis.db.collection.Malleability.insert({
+                source: source,
+                originalTxid: originalTxid,
+                modifiedTxid: modifiedTxid,
+                createdDate: new Date()
             });
         }
-
-        Catenis.db.collection.Message.update({'blockchain.txid': originalTxid}, {
-            $set: {
-                'blockchain.txid': modifiedTxid
+        catch (err) {
+            if (err.name === 'MongoError' && err.code === 11000 && err.errmsg.search(/index:\s+originalTxid/) >= 0) {
+                // Duplicate original tx ID error.
+                Catenis.logger.WARN('Trying to create a new Malleability record with an original transaction ID for which there is already a Malleability record', {originalTxid: originalTxid});
+                duplicateRecord = true;
             }
-        });
-
-        Catenis.db.collection.ReceivedTransaction.update({txid: originalTxid}, {
-            $set: {
-                txid: modifiedTxid,
-                originalTxid: originalTxid
+            else {
+                // Any other error inserting doc/rec
+                Catenis.logger.ERROR(util.format('Error creating new Malleability record: source: %s, originalTxid: %s, modifiedTxid: %s', source, originalTxid, modifiedTxid), err);
+                throw new Meteor.Error('ctn_malleability_fix', util.format('Error creating new Malleability record: source: %s, originalTxid: %s, modifiedTxid: %s', source, originalTxid, modifiedTxid), err.stack);
             }
-        });
+        }
 
-        Catenis.db.collection.ReceivedTransaction.find({'inputs.txid': originalTxid}, {
-            fields: {
-                _id: 1,
-                inputs: 1
-            }
-        }).forEach((doc) => {
-            const setVal = doc.inputs.reduce((setVal, input, idx) => {
-                if (input.txid === originalTxid) {
-                    setVal['inputs.' + idx] = {
-                        txid: modifiedTxid,
-                        vout: input.vout,
-                        str: modifiedTxid + ':' + input.vout
-                    };
+        if (!duplicateRecord) {
+            try {
+                // Replace transaction id in all places withing the local database
+
+                if (source === Transaction.malleabilitySource.sent_tx) {
+                    Catenis.db.collection.ServiceCredit.update({'fundingTx.txid': originalTxid}, {
+                        $set: {
+                            'fundingTx.txid': modifiedTxid
+                        }
+                    }, {multi: true});
+
+                    Catenis.db.collection.SentTransaction.update({txid: originalTxid}, {
+                        $set: {
+                            txid: modifiedTxid,
+                            originalTxid: originalTxid
+                        }
+                    });
+
+                    Catenis.db.collection.SentTransaction.find({'inputs.txid': originalTxid}, {
+                        fields: {
+                            _id: 1,
+                            inputs: 1
+                        }
+                    }).forEach((doc) => {
+                        const setVal = doc.inputs.reduce((setVal, input, idx) => {
+                            if (input.txid === originalTxid) {
+                                setVal['inputs.' + idx] = {
+                                    txid: modifiedTxid,
+                                    vout: input.vout,
+                                    str: modifiedTxid + ':' + input.vout
+                                };
+                            }
+                        }, {});
+
+                        Catenis.db.collection.SentTransaction.update({_id: doc._id}, {
+                            $set: setVal
+                        });
+                    });
+
+                    Catenis.db.collection.SentTransaction.update({replacedByTxid: originalTxid}, {
+                        $set: {
+                            replacedByTxid: modifiedTxid
+                        }
+                    });
+
+                    // NOTE: different than the case of the update of the 'inputs.txid' field above, we can
+                    //  do it with a single update call for the 'info.readConfirmation.txouts.txid' field
+                    //  due to the fact that it is guaranteed that, for a given doc/rec, the txouts (array)
+                    //  field will have only unique values for the txid field
+                    Catenis.db.collection.SentTransaction.update({'info.readConfirmation.txouts.txid': originalTxid}, {
+                        $set: {
+                            'info.readConfirmation.txouts.$.txid': modifiedTxid
+                        }
+                    });
                 }
-            }, {});
 
-            Catenis.db.collection.ReceivedTransaction.update({_id: doc._id}, {
-                $set: setVal
-            });
-        });
+                Catenis.db.collection.Message.update({'blockchain.txid': originalTxid}, {
+                    $set: {
+                        'blockchain.txid': modifiedTxid
+                    }
+                });
 
-        // NOTE: different than the case of the update of the 'inputs.txid' field above, we can
-        //  do it with a single update call for the 'info.readConfirmation.txouts.txid' field
-        //  due to the fact that it is guaranteed that, for a given doc/rec, the txouts (array)
-        //  field will have only unique values for the txid field
-        Catenis.db.collection.ReceivedTransaction.update({'info.readConfirmation.txouts.txid': originalTxid}, {
-            $set: {
-                'info.readConfirmation.txouts.$.txid': modifiedTxid
+                Catenis.db.collection.ReceivedTransaction.update({txid: originalTxid}, {
+                    $set: {
+                        txid: modifiedTxid,
+                        originalTxid: originalTxid
+                    }
+                });
+
+                Catenis.db.collection.ReceivedTransaction.find({'inputs.txid': originalTxid}, {
+                    fields: {
+                        _id: 1,
+                        inputs: 1
+                    }
+                }).forEach((doc) => {
+                    const setVal = doc.inputs.reduce((setVal, input, idx) => {
+                        if (input.txid === originalTxid) {
+                            setVal['inputs.' + idx] = {
+                                txid: modifiedTxid,
+                                vout: input.vout,
+                                str: modifiedTxid + ':' + input.vout
+                            };
+                        }
+                    }, {});
+
+                    Catenis.db.collection.ReceivedTransaction.update({_id: doc._id}, {
+                        $set: setVal
+                    });
+                });
+
+                // NOTE: different than the case of the update of the 'inputs.txid' field above, we can
+                //  do it with a single update call for the 'info.readConfirmation.txouts.txid' field
+                //  due to the fact that it is guaranteed that, for a given doc/rec, the txouts (array)
+                //  field will have only unique values for the txid field
+                Catenis.db.collection.ReceivedTransaction.update({'info.readConfirmation.txouts.txid': originalTxid}, {
+                    $set: {
+                        'info.readConfirmation.txouts.$.txid': modifiedTxid
+                    }
+                });
             }
-        });
-    }
-    catch (err) {
-        Catenis.logger.ERROR(util.format('Error updating collections to replace transaction ID modified due to malleability: originalTxid: %s, modifiedTxid: %s', originalTxid, modifiedTxid), err);
-        throw new Meteor.Error('ctn_malleability_fix', util.format('Error updating collections to replace transaction ID modified due to malleability: originalTxid: %s, modifiedTxid: %s', originalTxid, modifiedTxid), err.stack);
-    }
-};
-
-// Method is used to fix message transactions affected by malleability that
-//  have been created prior to the malleability fix
-// TODO: this method should be deleted after the fix has been applied
-Transaction.fixUnconfirmedMessageTxids = function () {
-    const wltInfo = Catenis.bitcoinCore.getWalletInfo();
-
-    const modifiedTxs = new Map();
-
-    Catenis.bitcoinCore.listTransactions(wltInfo.txcount * 6).forEach((txout) => {
-        if (txout.walletconflicts.length > 0 && !modifiedTxs.has(txout.walletconflicts[0])) {
-            modifiedTxs.set(txout.walletconflicts[0], txout.txid);
+            catch (err) {
+                Catenis.logger.ERROR(util.format('Error updating collections to replace transaction ID modified due to malleability: originalTxid: %s, modifiedTxid: %s', originalTxid, modifiedTxid), err);
+                throw new Meteor.Error('ctn_malleability_fix', util.format('Error updating collections to replace transaction ID modified due to malleability: originalTxid: %s, modifiedTxid: %s', originalTxid, modifiedTxid), err.stack);
+            }
         }
     });
-
-    if (modifiedTxs.size > 0) {
-        Catenis.db.collection.Message.find({'blockchain.confirmed': false}, {fields: {_id: 1, blockchain: 1}}).forEach((doc) => {
-            if (modifiedTxs.has(doc.blockchain.txid)) {
-                const source = Catenis.db.collection.SentTransaction.findOne({txid: doc.blockchain.txid}, {fields: {_id: 1}}) ? Transaction.malleabilitySource.sent_tx
-                        : (Catenis.db.collection.ReceivedTransaction.findOne({txid: doc.blockchain.txid}, {fields: {_id: 1}}) ? Transaction.malleabilitySource.received_tx : undefined);
-
-                if (source) {
-                    Transaction.fixMalleability(source, doc.blockchain.txid, modifiedTxs.get(doc.blockchain.txid));
-                    Catenis.db.collection.Message.update({_id: doc._id}, {$set: {'blockchain.confirmed': true}});
-                }
-            }
-        });
-    }
 };
+
 
 // Transaction function class (public) properties
 //
@@ -1026,7 +1125,7 @@ Transaction.malleabilitySource = Object.freeze({
 function isValidSentTransactionType(type) {
     let isValid = false;
 
-    if (typeof type === 'object' && type != null && typeof type.name === 'string') {
+    if (typeof type === 'object' && type !== null && typeof type.name === 'string') {
         isValid = Object.keys(Transaction.type).some((key) => {
             return Transaction.type[key].name !== Transaction.type.sys_funding.name && Transaction.type[key].name === type.name;
         });
@@ -1041,8 +1140,9 @@ function isValidSentTransactionType(type) {
 function getIOTokenFromAddrType(addrType) {
     const ioTokenName = addrType === undefined ? Transaction.ioToken.null_data.name :
             (addrType === null ? Transaction.ioToken.p2_unknown_addr.name : 'p2_' + addrType);
+    const ioToken = Transaction.ioToken[ioTokenName];
 
-    return Transaction.ioToken[ioTokenName].token;
+    return ioToken ? ioToken.token : undefined;
 }
 
 function isTransactFuncClassToMatch(transactFuncClass) {
