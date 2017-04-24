@@ -484,6 +484,10 @@ function handleNewBlocks(data) {
                                             // Fix malleability and process confirmed tx
                                             Transaction.fixMalleability(Transaction.malleabilitySource.sent_tx, doc.txid, ctnTxid);
 
+                                            // Replace tx id (with actual confirmed tx id) in SentTransaction doc/rec
+                                            //  reference before continuing with the processing
+                                            doc.txid = ctnTxid;
+
                                             processConfirmedSentTransactions(doc, eventsToEmit);
 
                                             idSentTxDocsToUpdate.push(doc._id);
@@ -521,6 +525,10 @@ function handleNewBlocks(data) {
 
                                                 // Fix malleability and process confirmed tx
                                                 Transaction.fixMalleability(Transaction.malleabilitySource.received_tx, doc.txid, ctnTxid);
+
+                                                // Replace tx id (with actual confirmed tx id) in ReceivedTransaction doc/rec
+                                                //  reference before continuing with the processing
+                                                doc.txid = ctnTxid;
 
                                                 processConfirmedReceivedTransactions(doc, eventsToEmit);
 
