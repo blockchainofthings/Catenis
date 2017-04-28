@@ -804,7 +804,7 @@ Transaction.checkConflictingTxsMakeSamePayment = function (tx1Info, tx2Info) {
 //    confirmedTxid: [String]  // ID of transaction that had been confirmed and replaced the original transaction
 //    doFix: [Boolean],  // Indicates that transaction malleability should be fixed if identified
 //    source: [String]  // Identifies the source of the transaction to check malleability. Should be one of the
-//                      //  properties of Transaction.malleabilitySource
+//                      //  properties of Transaction.source
 //
 //  Return: [Boolean]  // True if malleability was identified; false otherwise
 //
@@ -854,7 +854,7 @@ Transaction.checkTxMalleability = function (docCnfltTx, confirmedTxid, doFix = f
 //
 //  Arguments:
 //    source: [String]  // Identifies the source of the transaction to check malleability. Should be one of the
-//                      //  properties of Transaction.malleabilitySource
+//                      //  properties of Transaction.source
 //    originalTxid: [String]  // ID of original (conflicting) transaction
 //    modifiedTxid: [String]  // ID of modified transaction due to malleability
 //
@@ -889,7 +889,7 @@ Transaction.fixMalleability = function (source, originalTxid, modifiedTxid) {
             try {
                 // Replace transaction id in all places withing the local database
 
-                if (source === Transaction.malleabilitySource.sent_tx) {
+                if (source === Transaction.source.sent_tx) {
                     Catenis.db.collection.ServiceCredit.update({'fundingTx.txid': originalTxid}, {
                         $set: {
                             'fundingTx.txid': modifiedTxid
@@ -1113,7 +1113,7 @@ Transaction.ioToken = Object.freeze({
     })
 });
 
-Transaction.malleabilitySource = Object.freeze({
+Transaction.source = Object.freeze({
     sent_tx: 'sent_tx',
     received_tx: 'received_tx'
 });

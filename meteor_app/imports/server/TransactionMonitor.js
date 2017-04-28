@@ -531,8 +531,8 @@ function handleNewBlocks(data) {
                             if (confTxid) {
                                 // Sent transaction had been replaced with another (confirmed) transaction
                                 //  possibly due to malleability. Check if it is the case and take the
-                                //  appropriate measures
-                                Transaction.checkTxMalleability(doc, confTxid, true, Transaction.malleabilitySource.sent_tx);
+                                //  appropriate measures to fix it
+                                Transaction.checkTxMalleability(doc, confTxid, true, Transaction.source.sent_tx);
                             }
 
                             processConfirmedSentTransactions(doc, eventsToEmit);
@@ -564,8 +564,8 @@ function handleNewBlocks(data) {
                             if (confTxid) {
                                 // Received transaction had been replaced with another (confirmed) transaction
                                 //  possibly due to malleability. Check if it is the case and take the
-                                //  appropriate measures
-                                Transaction.checkTxMalleability(doc, confTxid, true, Transaction.malleabilitySource.received_tx);
+                                //  appropriate measures to fix it
+                                Transaction.checkTxMalleability(doc, confTxid, true, Transaction.source.received_tx);
                             }
 
                             processConfirmedReceivedTransactions(doc, eventsToEmit);
@@ -950,43 +950,144 @@ function checkOldUnconfirmedTxs() {
 
     // Look for old sent transactions that have not been confirmed yet, and
     //  check if they have already been confirmed
-    const oldUnconfSentTxs = [];
+    const docOldUnconfSentTxs = [];
 
     Catenis.db.collection.SentTransaction.find({
         'confirmation.confirmed': false,
         sentDate: {$lt: limitDate},
         replacedByTxid: {$exists: false}
-    }, {fields: {_id: 1, type:1, txid: 1, sentDate: 1, info: 1}}).forEach(doc => {
-        oldUnconfSentTxs.push(doc);
+    }, {fields: {_id: 1, type:1, txid: 1, inputs: 1, sentDate: 1, info: 1}}).forEach(doc => {
+        docOldUnconfSentTxs.push(doc);
     });
 
     // Look for old received transactions that have not been confirmed yet, and
     //  check if they have already been confirmed
     //  Note: only transactions received that have not been sent by this Catenis node
     //      should have been considered
-    const oldUnconfRcvdTxs = [];
+    const docOldUnconfRcvdTxs = [];
 
     Catenis.db.collection.ReceivedTransaction.find({
         sentTransaction_id: {$exists: false},
         'confirmation.confirmed': false,
         receivedDate: {$lt: limitDate}
-    }, {fields: {_id: 1, type:1, txid: 1, receivedDate: 1, info: 1}}).forEach(doc => {
-        oldUnconfRcvdTxs.push(doc);
+    }, {fields: {_id: 1, type:1, txid: 1, inputs: 1, receivedDate: 1, info: 1}}).forEach(doc => {
+        docOldUnconfRcvdTxs.push(doc);
     });
 
-    if (oldUnconfSentTxs.length > 0 || oldUnconfRcvdTxs.length > 0) {
+    if (docOldUnconfSentTxs.length > 0 || docOldUnconfRcvdTxs.length > 0) {
         const oldUnconfTxs = {};
 
-        if (oldUnconfSentTxs.length > 0) {
-            oldUnconfTxs['sentTransactions'] = oldUnconfSentTxs;
+        if (docOldUnconfSentTxs.length > 0) {
+            oldUnconfTxs['sentTransactions'] = docOldUnconfSentTxs;
         }
 
-        if (oldUnconfRcvdTxs.length > 0) {
-            oldUnconfTxs['receivedTransactions'] = oldUnconfRcvdTxs;
+        if (docOldUnconfRcvdTxs.length > 0) {
+            oldUnconfTxs['receivedTransactions'] = docOldUnconfRcvdTxs;
         }
 
         // Issue a warning alert about old unconfirmed transactions
         Catenis.logger.WARN('Found old unconfirmed transactions', oldUnconfTxs);
+
+        // Fix old unconfirmed transactions
+        Catenis.logger.TRACE('Fixing old unconfirmed transactions');
+        if (docOldUnconfSentTxs.length > 0) {
+            fixOldUnconfirmedTxs(docOldUnconfSentTxs, Transaction.source.sent_tx);
+        }
+
+        if (docOldUnconfRcvdTxs.length > 0) {
+            fixOldUnconfirmedTxs(docOldUnconfRcvdTxs, Transaction.source.received_tx);
+        }
+    }
+}
+
+function fixOldUnconfirmedTxs(docTxs, source) {
+    try {
+        const eventsToEmit = [];
+        const blocksWithTxsToConfirm = new Map();
+
+        docTxs.forEach((docTx) => {
+            // Retrieve info about transaction and check if tx is confirmed
+            const txInfo = Catenis.bitcoinCore.getTransaction(docTx.txid, false);
+            let isConfirmed = false;
+            let blockInfo;
+
+            if (txInfo.confirmations > 0) {
+                // Indicate that transaction is confirmed and save info about block that
+                //  includes this tx
+                isConfirmed = true;
+
+                blockInfo = {
+                    hash: txInfo.blockhash,
+                    time: txInfo.blocktime
+                };
+            }
+            else if (txInfo.confirmations < 0 && txInfo.walletconflicts.length > 0) {
+                // Transaction has confirmed conflicting transactions. Checks if this conflict
+                //  is due to transaction malleability
+                txInfo.walletconflicts.some((cnfltTxid) => {
+                    const cnfltTxInfo = Catenis.bitcoinCore.getTransaction(cnfltTxid);
+
+                    if (cnfltTxInfo.confirmations > 0 && Transaction.checkConflictingTxsMakeSamePayment(cnfltTxInfo, txInfo)) {
+                        // Conflicting (confirmed) tx pays the same amount to the exact same outputs as
+                        //  the original tx. So, it is likely that this is a tx the ID of which
+                        //  had been replaced due to malleability. Checks if that is the case and take
+                        //  the proper measures to fix it
+                        if (Transaction.checkTxMalleability(docTx, cnfltTxid, true, source)) {
+                            // Indicate that transaction is confirmed and save info about block that
+                            //  includes this tx
+                            isConfirmed = true;
+
+                            blockInfo = {
+                                hash: cnfltTxInfo.blockhash,
+                                time: cnfltTxInfo.blocktime
+                            };
+
+                            // Stop loop (walletconflicts.some)
+                            return true;
+                        }
+                    }
+
+                    return false;
+                });
+            }
+
+            if (isConfirmed) {
+                // Process confirmed transactions
+                (source === Transaction.source.sent_tx ? processConfirmedSentTransactions : processConfirmedReceivedTransactions)(docTx, eventsToEmit);
+
+                // Save transactions to update confirmation state in local database by block
+                if (!blocksWithTxsToConfirm.has(blockInfo.hash)) {
+                    blocksWithTxsToConfirm.set(blockInfo.hash, {
+                        info: blockInfo,
+                        idTxDocs: [docTx._id]
+                    });
+                }
+                else {
+                    blocksWithTxsToConfirm.get(blockInfo.hash).idTxDocs.push(docTx._id);
+                }
+            }
+        });
+
+        for (let block of blocksWithTxsToConfirm.values()) {
+            // Update sent transaction doc/rec to confirm them
+            Catenis.db.collection[source === Transaction.source.sent_tx ? 'SentTransaction' : 'ReceivedTransaction'].update({
+                _id: {$in: block.idTxDocs}
+            }, {
+                $set: {
+                    'confirmation.confirmed': true,
+                    'confirmation.blockHash': block.info.hash,
+                    'confirmation.confirmationDate': new Date(block.info.time * 1000)
+                }
+            }, {multi: true});
+        }
+
+        // Emit notification events
+        eventsToEmit.forEach(event => {
+            this.emit(event.name, event.data);
+        });
+    }
+    catch (err) {
+        Catenis.logger.ERROR(util.format('Error trying to fix old unconfirmed %s transactions.', source === Transaction.source.sent_tx ? 'sent' : 'received'), err);
     }
 }
 
