@@ -750,111 +750,52 @@ Transaction.fromHex = function (hexTx) {
     }
 };
 
-// Method used to check if two conflicting transactions make exactly the same payments
+// Checks whether two different transactions are essentially the same (spend the same
+//  tx outputs, and pays the same amount to exactly the same addresses), possibly
+//  due to transaction malleability
 //
 //  Arguments:
-//    tx1Info: [Object]  // Result from Bitcoin Core's gettransaction JSON-RPC method for first conflicting transaction
-//    tx2Info: [Object]  // Result from Bitcoin Core's gettransaction JSON-RPC method for second conflicting transaction
+//    tx1: [String|Object]  // Either the tx id, the raw tx in hex, or the tx info (result from Bitcoin Core's JSON-RPC
+//                          //  gettransaction method) of the first transaction
+//    tx2: [String|Object]  // Either the tx id, the raw tx in hex, or the tx info (result from Bitcoin Core's JSON-RPC
+//                          //  gettransaction method) of the second transaction
 //
-Transaction.checkConflictingTxsMakeSamePayment = function (tx1Info, tx2Info) {
-    let makeSamePayment = false;
+//  Result:
+//    [Boolean|undefined]  // true: transactions are different but identical
+//                         // false: transactions are different and not identical
+//                         // undefined: the two transactions are the same (identical txid)
+Transaction.areTxsIdentical = function(tx1, tx2) {
+    const hexTx1 = typeof tx1 === 'string' ? (tx1.length > 64 ? tx1 : Catenis.bitcoinCore.getTransaction(tx1).hex ) : (typeof tx1 === 'object' ? tx1.hex : undefined);
+    const hexTx2 = typeof tx2 === 'string' ? (tx2.length > 64 ? tx2 : Catenis.bitcoinCore.getTransaction(tx2).hex ) : (typeof tx2 === 'object' ? tx2.hex : undefined);
 
-    if (tx1Info.amount === tx2Info.amount && tx1Info.fee === tx2Info.fee) {
-        const maxDetailsLength = tx1Info.details.length > tx2Info.details.length ? tx1Info.details.length : tx2Info.details.length;
+    if (hexTx1 !== hexTx2) {
+        const decTx1 = Catenis.bitcoinCore.decodeRawTransaction(hexTx1);
+        const decTx2 = Catenis.bitcoinCore.decodeRawTransaction(hexTx2);
 
-        if (maxDetailsLength > 0) {
-            makeSamePayment = true;
-
-            for (let idx = 0; idx < maxDetailsLength; idx++) {
-                const tx1Output = idx < tx1Info.details.length ? tx1Info.details[idx] : undefined;
-                const tx2Output = idx < tx2Info.details.length ? tx2Info.details[idx] : undefined;
-
-                if (tx1Output && tx2Output) {
-                    if (tx1Output.category !== 'send' && tx2Output.category !== 'send') {
-                        break;
-                    }
-                    else {
-                        if (tx1Output.category !== tx2Output.category || tx1Output.address !== tx2Output.address
-                                && tx1Output.amount !== tx2Output.amount) {
-                            makeSamePayment = false;
-                            break;
-                        }
-                    }
-                }
-                else {
-                    if ((tx1Output && tx1Output.category === 'send') || (tx2Output && tx2Output.category === 'send')) {
-                        makeSamePayment = false;
-                    }
-
-                    break;
-                }
-            }
-        }
-    }
-
-    return makeSamePayment;
-};
-
-// Method used to check if transaction had been replaced due to malleability
-//  and take the proper action to fix it is requested
-//
-//  Arguments:
-//    docCnfltTx: [Object]  // Databse SentTransacton or ReceivedTransaction doc/rec of conflicting (original) transaction.
-//                         //  This objet must have at least the following properties: txid, inputs
-//    confirmedTxid: [String]  // ID of transaction that had been confirmed and replaced the original transaction
-//    doFix: [Boolean],  // Indicates that transaction malleability should be fixed if identified
-//    source: [String]  // Identifies the source of the transaction to check malleability. Should be one of the
-//                      //  properties of Transaction.source
-//
-//  Return: [Boolean]  // True if malleability was identified; false otherwise
-//
-Transaction.checkTxMalleability = function (docCnfltTx, confirmedTxid, doFix = false, source) {
-    // Check if the two transactions have the same inputs
-    let confirmedTxInfo;
-    let result = false;
-
-    try {
-        // Get transaction info
-        confirmedTxInfo = Catenis.bitcoinCore.getRawTransaction(confirmedTxid, true);
-    }
-    catch (err) {
-        Catenis.logger.ERROR(util.format('Error retrieving information about transaction (txid: %s) to check for malleability', confirmedTxid), err);
-    }
-
-    if (confirmedTxInfo) {
-        const confTxStrInputs = confirmedTxInfo.vin.map((input) => {
-            return input.txid + ':' + input.vout;
-        });
-
-        if (docCnfltTx.inputs.length === confTxStrInputs.length) {
-            const sameInputs = !docCnfltTx.inputs.some((input, idx) => {
-                return input.str !== confTxStrInputs[idx];
+        if (decTx1.vin.length === decTx2.vin.length && decTx1.vout.length === decTx2.vout.length) {
+            let result = !decTx1.vin.some((input1, idx) => {
+                return input1.txid !== decTx2.vin[idx].txid || input1.vout !== decTx2.vin[idx].vout;
             });
 
-            if (sameInputs) {
-                // The two transactions have the same inputs. Assume that transactions
-                //  are the same and that its tx id had been modified (due to malleability)
-                result = true;
-
-                if (doFix) {
-                    // Fix malleability, and replace tx id with ID of confirmed tx
-                    Transaction.fixMalleability(source, docCnfltTx.txid, confirmedTxid);
-
-                    docCnfltTx.txid = confirmedTxid;
-                }
+            if (result) {
+                return !decTx1.vout.some((output1, idx) => {
+                    return output1.value !== decTx2.vout[idx].value || output1.scriptPubKey.hex !== decTx2.vout[idx].scriptPubKey.hex;
+                });
             }
         }
+
+        return false;
     }
 
-    return result;
+    return undefined;
 };
 
 // Method used to fix references to transaction ID that had been modified due to
 //  transaction malleability in local database
 //
 //  Arguments:
-//    source: [String]  // Identifies the source of the transaction to check malleability. Should be one of the
-//                      //  properties of Transaction.source
+//    source: [String]  // Identifies the source of the transaction the ID of which had been changed due malleability.
+//                      //  Should be one of the properties of Transaction.source
 //    originalTxid: [String]  // ID of original (conflicting) transaction
 //    modifiedTxid: [String]  // ID of modified transaction due to malleability
 //

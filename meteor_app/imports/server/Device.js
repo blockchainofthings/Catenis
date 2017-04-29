@@ -571,57 +571,17 @@ Device.prototype.readMessage = function (messageId) {
                             txInfo.walletconflicts.some((cnfltTxid) => {
                                 const cnfltTxInfo = Catenis.bitcoinCore.getTransaction(cnfltTxid);
 
-                                if (cnfltTxInfo.confirmations > 0 && Transaction.checkConflictingTxsMakeSamePayment(cnfltTxInfo, txInfo)) {
-                                    // Conflicting (confirmed) tx pays the same amount to the exact same outputs as
-                                    //  the original tx. So, it is likely that this is a tx the ID of which
-                                    //  had been replaced due to malleability
+                                if (cnfltTxInfo.confirmations > 0 && Transaction.areTxsIdentical(cnfltTxInfo, txInfo)) {
+                                    // Conflicting (confirmed) tx is identical to original tx. Assume that original tx
+                                    //  had its ID replaced due to malleability
 
-                                    // Let's check the inputs of both txs to make sure
-                                    let docOrigTx;
+                                    // Replace tx id and try to get transaction associated with message again
+                                    txid = cnfltTxid;
+                                    tryAgain = true;
+                                    alreadyRetried = true;
 
-                                    if (message.source === Message.source.sent_msg) {
-                                        docOrigTx = Catenis.db.collection.SentTransaction.findOne({$or: [{txid: txid}, {originalTxid: txid}]}, {
-                                            fields: {
-                                                _id: 1,
-                                                txid: 1,
-                                                originalTxid: 1
-                                            }
-                                        });
-                                    }
-                                    else if (message.source === Message.source.received_msg) {
-                                        docOrigTx = Catenis.db.collection.ReceivedTransaction.findOne({$or: [{txid: txid}, {originalTxid: txid}]}, {
-                                            fields: {
-                                                _id: 1,
-                                                txid: 1,
-                                                originalTxid: 1
-                                            }
-                                        });
-                                    }
-
-                                    if (docOrigTx) {
-                                        if (docOrigTx.txid === txid) {
-                                            if (Transaction.checkTxMalleability(docOrigTx, cnfltTxid)) {
-                                                // Original transaction had been changed due to malleability.
-                                                //  Replace tx id and try to get transaction associated with message again
-                                                txid = cnfltTxid;
-                                                tryAgain = true;
-                                                alreadyRetried = true;
-
-                                                // Stop loop (walletconflicts.some)
-                                                return true;
-                                            }
-                                        }
-                                        else if (docOrigTx.originalTxid === txid) {
-                                            // Transaction malleability had already been fixed.
-                                            //  Replace tx it and try to get transaction associated with message again
-                                            txid = docOrigTx.txid;
-                                            tryAgain = true;
-                                            alreadyRetried = true;
-
-                                            // Stop loop (walletconflicts.some)
-                                            return true;
-                                        }
-                                    }
+                                    // Stop loop (walletconflicts.some)
+                                    return true;
                                 }
 
                                 return false;

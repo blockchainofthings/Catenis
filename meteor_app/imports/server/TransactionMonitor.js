@@ -330,9 +330,8 @@ function pollBlockchain() {
                                         txInfo.walletconflicts.some((cnfltTxid) => {
                                             const cnfltTxInfo = Catenis.bitcoinCore.getTransaction(cnfltTxid);
 
-                                            if (cnfltTxInfo.confirmations < 0 && Transaction.checkConflictingTxsMakeSamePayment(cnfltTxInfo, txInfo)) {
-                                                // Conflicting tx pays the same amount to the exact same outputs as
-                                                //  the confirmed tx. So, it is likely that this is a tx the ID of which
+                                            if (cnfltTxInfo.confirmations < 0 && Transaction.areTxsIdentical(cnfltTxInfo, txInfo)) {
+                                                // Conflicting tx is identical to confirmed tx. Assume it is a tx the ID of which
                                                 //  had been replaced due to malleability
 
                                                 // Replace ID of confirmed tx with ID of conflicting (original) tx
@@ -521,18 +520,36 @@ function handleNewBlocks(data) {
                             Catenis.logger.TRACE(util.format('Continuing processing of block (height: %s)', blockHeight));
                         }
 
+                        // Find Message database docs/recs associated with (Catenis) transactions in
+                        //  the current block that have not had their tx id confirmed yet and update
+                        //  their confirmed status
+                        //
+                        // NOTE: this must be done before sent/received transactions are processed to
+                        //      avoid that the tx id be replaced in the Message doc/rec before we
+                        //      confirm it
+                        Catenis.db.collection.Message.update({
+                            'blockchain.txid': {$in: blockInfo.ctnTxids},
+                            'blockchain.confirmed': false
+                        }, {
+                            $set: {
+                                'blockchain.confirmed': true
+                            }
+                        }, {multi: true});
+
                         //  Retrieve sent transactions found in block that are not yet confirmed
                         const idSentTxDocsToUpdate = Catenis.db.collection.SentTransaction.find({
                             txid: {$in: blockInfo.ctnTxids},
                             'confirmation.confirmed': false
-                        }, {fields: {_id: 1, type: 1, txid: 1, inputs: 1, replacedByTxid: 1, info: 1}}).map((doc) => {
+                        }, {fields: {_id: 1, type: 1, txid: 1, replacedByTxid: 1, info: 1}}).map((doc) => {
                             const confTxid = blockInfo.replacedTxids[doc.txid];
 
                             if (confTxid) {
                                 // Sent transaction had been replaced with another (confirmed) transaction
-                                //  possibly due to malleability. Check if it is the case and take the
-                                //  appropriate measures to fix it
-                                Transaction.checkTxMalleability(doc, confTxid, true, Transaction.source.sent_tx);
+                                //  due to malleability
+
+                                // Fix malleability in local database and replace tx id in current database doc
+                                Transaction.fixMalleability(Transaction.source.sent_tx, doc.txid, confTxid);
+                                doc.txid = confTxid;
                             }
 
                             processConfirmedSentTransactions(doc, eventsToEmit);
@@ -558,14 +575,16 @@ function handleNewBlocks(data) {
                             txid: {$in: blockInfo.ctnTxids},
                             sentTransaction_id: {$exists: false},
                             'confirmation.confirmed': false
-                        }, {fields: {_id: 1, type: 1, txid: 1, inputs: 1}}).map((doc) => {
+                        }, {fields: {_id: 1, type: 1, txid: 1}}).map((doc) => {
                             const confTxid = blockInfo.replacedTxids[doc.txid];
 
                             if (confTxid) {
                                 // Received transaction had been replaced with another (confirmed) transaction
-                                //  possibly due to malleability. Check if it is the case and take the
-                                //  appropriate measures to fix it
-                                Transaction.checkTxMalleability(doc, confTxid, true, Transaction.source.received_tx);
+                                //  due to malleability
+
+                                // Fix malleability in local database and replace tx id in current database doc
+                                Transaction.fixMalleability(Transaction.source.received_tx, doc.txid, confTxid);
+                                doc.txid = confTxid;
                             }
 
                             processConfirmedReceivedTransactions(doc, eventsToEmit);
@@ -583,18 +602,6 @@ function handleNewBlocks(data) {
                                 }
                             }, {multi: true});
                         }
-
-                        // Find Message database docs/recs associated with (Catenis) transactions in
-                        //  the current block that have not had their tx id confirmed yet and update
-                        //  its confirmed status
-                        Catenis.db.collection.Message.update({
-                            'blockchain.txid': {$in: blockInfo.ctnTxids},
-                            'blockchain.confirmed': false
-                        }, {
-                            $set: {
-                                'blockchain.confirmed': true
-                            }
-                        }, {multi: true});
 
                         // Emit notification events
                         eventsToEmit.forEach(event => {
@@ -892,7 +899,7 @@ function checkOldUnconfirmedTxs() {
         'confirmation.confirmed': false,
         sentDate: {$lt: limitDate},
         replacedByTxid: {$exists: false}
-    }, {fields: {_id: 1, type:1, txid: 1, inputs: 1, sentDate: 1, info: 1}}).forEach(doc => {
+    }, {fields: {_id: 1, type:1, txid: 1, sentDate: 1, info: 1}}).forEach(doc => {
         docOldUnconfSentTxs.push(doc);
     });
 
@@ -906,7 +913,7 @@ function checkOldUnconfirmedTxs() {
         sentTransaction_id: {$exists: false},
         'confirmation.confirmed': false,
         receivedDate: {$lt: limitDate}
-    }, {fields: {_id: 1, type:1, txid: 1, inputs: 1, receivedDate: 1, info: 1}}).forEach(doc => {
+    }, {fields: {_id: 1, type:1, txid: 1, receivedDate: 1, info: 1}}).forEach(doc => {
         docOldUnconfRcvdTxs.push(doc);
     });
 
@@ -963,24 +970,25 @@ function fixOldUnconfirmedTxs(docTxs, source) {
                 txInfo.walletconflicts.some((cnfltTxid) => {
                     const cnfltTxInfo = Catenis.bitcoinCore.getTransaction(cnfltTxid);
 
-                    if (cnfltTxInfo.confirmations > 0 && Transaction.checkConflictingTxsMakeSamePayment(cnfltTxInfo, txInfo)) {
-                        // Conflicting (confirmed) tx pays the same amount to the exact same outputs as
-                        //  the original tx. So, it is likely that this is a tx the ID of which
-                        //  had been replaced due to malleability. Checks if that is the case and take
-                        //  the proper measures to fix it
-                        if (Transaction.checkTxMalleability(docTx, cnfltTxid, true, source)) {
-                            // Indicate that transaction is confirmed and save info about block that
-                            //  includes this tx
-                            isConfirmed = true;
+                    if (cnfltTxInfo.confirmations > 0 && Transaction.areTxsIdentical(cnfltTxInfo, txInfo)) {
+                        // Conflicting (confirmed) tx is identical to original tx. Assume that original tx
+                        //  had its ID replaced due to malleability
 
-                            blockInfo = {
-                                hash: cnfltTxInfo.blockhash,
-                                time: cnfltTxInfo.blocktime
-                            };
+                        // Fix malleability in local database and replace tx id in current database doc
+                        Transaction.fixMalleability(source, docTx, cnfltTxid);
+                        docTx.txid = cnfltTxid;
 
-                            // Stop loop (walletconflicts.some)
-                            return true;
-                        }
+                        // Indicate that transaction is confirmed and save info about block that
+                        //  includes this tx
+                        isConfirmed = true;
+
+                        blockInfo = {
+                            hash: cnfltTxInfo.blockhash,
+                            time: cnfltTxInfo.blocktime
+                        };
+
+                        // Stop loop (walletconflicts.some)
+                        return true;
                     }
 
                     return false;
