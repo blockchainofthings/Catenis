@@ -107,10 +107,10 @@ export class TransactionMonitor extends events.EventEmitter {
 
         if (this.idCheckUnconfTxsInterval === undefined) {
             Catenis.logger.TRACE('Setting recurring timer to check for old unconfirmed transactions');
-            this.idCheckUnconfTxsInterval = Meteor.setInterval(checkOldUnconfirmedTxs, cfgSettings.checkOldUnconfTxsInterval);
+            this.idCheckUnconfTxsInterval = Meteor.setInterval(checkOldUnconfirmedTxs.bind(this), cfgSettings.checkOldUnconfTxsInterval);
 
             // Check for old unconfirmed transactions
-            Meteor.defer(checkOldUnconfirmedTxs);
+            Meteor.defer(checkOldUnconfirmedTxs.bind(this));
         }
 
         this.monitoringOn = true;
@@ -879,70 +879,6 @@ function saveNewTxsProcResult(newBatchNumber, error) {
     });
 }
 
-
-// TransactionMonitor class (public) properties
-//
-
-TransactionMonitor.internalEvent = Object.freeze({
-    new_blocks: 'new_blocks',
-    new_transactions: 'new_transactions',
-    blockchain_polling_done: 'blockchain_polling_done',
-    new_txs_batch_processing_done: 'new_txs_batch_processing_done'
-});
-
-TransactionMonitor.notifyEvent = Object.freeze({
-    // Events used to notify when a transaction of a given type is confirmed
-    sys_funding_tx_conf: Object.freeze({
-        name: 'sys_funding_tx_conf',
-        description: 'Transaction used to fund the system has been confirmed'
-    }),
-    funding_provision_system_device_tx_conf: Object.freeze({
-        name: 'funding_provision_system_device_tx_conf',
-        description: 'Funding transaction sent for provisioning Catenis Hub device has been confirmed'
-    }),
-    funding_provision_client_srv_credit_tx_conf: Object.freeze({
-        name: 'funding_provision_client_srv_credit_tx_conf',
-        description: 'Funding transaction sent for provisioning service credit for a client has been confirmed'
-    }),
-    funding_provision_client_device_tx_conf: Object.freeze({
-        name: 'funding_provision_client_device_tx_conf',
-        description: 'Funding transaction sent for provisioning a device for a client has been confirmed'
-    }),
-    funding_add_extra_tx_pay_funds_tx_conf: Object.freeze({
-        name: 'funding_add_extra_tx_pay_funds_tx_conf',
-        description: 'Funding transaction sent for adding funds to pay for transaction expenses has been confirmed'
-    }),
-    issue_locked_asset_tx_conf: Object.freeze({
-        name: 'issue_locked_asset_tx_conf',
-        description: 'Transaction sent for issuing (Colored Coins) assets (of a given type) that cannot be reissued has been confirmed'
-    }),
-    issue_unlocked_asset_tx_conf: Object.freeze({
-        name: 'issue_unlocked_asset_tx_conf',
-        description: 'Transaction sent for issuing or reissuing (Colored Coins) assets (of a given type) has been confirmed'
-    }),
-    // Events used to notify when a transaction of a given type is received
-    sys_funding_tx_rcvd: Object.freeze({
-        name: 'sys_funding_tx_rcvd',
-        description: 'Transaction used to fund the system has been received'
-    }),
-    send_message_tx_rcvd: Object.freeze({
-        name: 'send_message_tx_rcvd',
-        description: 'Transaction used to send data message between devices has been received'
-    }),
-    read_confirmation_tx_rcvd: Object.freeze({
-        name: 'read_confirmation_tx_rcvd',
-        description: 'Transaction used to confirm that messages have been read by receiving devices has been received'
-    }),
-    transfer_asset_tx_rcvd: Object.freeze({
-        name: 'transfer_asset_tx_rcvd',
-        description: 'Transaction used to transfer (Colored Coins) assets between devices has been received'
-    })
-});
-
-
-// Definition of module (private) functions
-//
-
 function checkOldUnconfirmedTxs() {
     Catenis.logger.TRACE('Checking for old unconfirmed transactions');
     const limitDate = new Date();
@@ -991,11 +927,11 @@ function checkOldUnconfirmedTxs() {
         // Fix old unconfirmed transactions
         Catenis.logger.TRACE('Fixing old unconfirmed transactions');
         if (docOldUnconfSentTxs.length > 0) {
-            fixOldUnconfirmedTxs(docOldUnconfSentTxs, Transaction.source.sent_tx);
+            fixOldUnconfirmedTxs.call(this, docOldUnconfSentTxs, Transaction.source.sent_tx);
         }
 
         if (docOldUnconfRcvdTxs.length > 0) {
-            fixOldUnconfirmedTxs(docOldUnconfRcvdTxs, Transaction.source.received_tx);
+            fixOldUnconfirmedTxs.call(this, docOldUnconfRcvdTxs, Transaction.source.received_tx);
         }
     }
 }
@@ -1090,6 +1026,70 @@ function fixOldUnconfirmedTxs(docTxs, source) {
         Catenis.logger.ERROR(util.format('Error trying to fix old unconfirmed %s transactions.', source === Transaction.source.sent_tx ? 'sent' : 'received'), err);
     }
 }
+
+
+// TransactionMonitor class (public) properties
+//
+
+TransactionMonitor.internalEvent = Object.freeze({
+    new_blocks: 'new_blocks',
+    new_transactions: 'new_transactions',
+    blockchain_polling_done: 'blockchain_polling_done',
+    new_txs_batch_processing_done: 'new_txs_batch_processing_done'
+});
+
+TransactionMonitor.notifyEvent = Object.freeze({
+    // Events used to notify when a transaction of a given type is confirmed
+    sys_funding_tx_conf: Object.freeze({
+        name: 'sys_funding_tx_conf',
+        description: 'Transaction used to fund the system has been confirmed'
+    }),
+    funding_provision_system_device_tx_conf: Object.freeze({
+        name: 'funding_provision_system_device_tx_conf',
+        description: 'Funding transaction sent for provisioning Catenis Hub device has been confirmed'
+    }),
+    funding_provision_client_srv_credit_tx_conf: Object.freeze({
+        name: 'funding_provision_client_srv_credit_tx_conf',
+        description: 'Funding transaction sent for provisioning service credit for a client has been confirmed'
+    }),
+    funding_provision_client_device_tx_conf: Object.freeze({
+        name: 'funding_provision_client_device_tx_conf',
+        description: 'Funding transaction sent for provisioning a device for a client has been confirmed'
+    }),
+    funding_add_extra_tx_pay_funds_tx_conf: Object.freeze({
+        name: 'funding_add_extra_tx_pay_funds_tx_conf',
+        description: 'Funding transaction sent for adding funds to pay for transaction expenses has been confirmed'
+    }),
+    issue_locked_asset_tx_conf: Object.freeze({
+        name: 'issue_locked_asset_tx_conf',
+        description: 'Transaction sent for issuing (Colored Coins) assets (of a given type) that cannot be reissued has been confirmed'
+    }),
+    issue_unlocked_asset_tx_conf: Object.freeze({
+        name: 'issue_unlocked_asset_tx_conf',
+        description: 'Transaction sent for issuing or reissuing (Colored Coins) assets (of a given type) has been confirmed'
+    }),
+    // Events used to notify when a transaction of a given type is received
+    sys_funding_tx_rcvd: Object.freeze({
+        name: 'sys_funding_tx_rcvd',
+        description: 'Transaction used to fund the system has been received'
+    }),
+    send_message_tx_rcvd: Object.freeze({
+        name: 'send_message_tx_rcvd',
+        description: 'Transaction used to send data message between devices has been received'
+    }),
+    read_confirmation_tx_rcvd: Object.freeze({
+        name: 'read_confirmation_tx_rcvd',
+        description: 'Transaction used to confirm that messages have been read by receiving devices has been received'
+    }),
+    transfer_asset_tx_rcvd: Object.freeze({
+        name: 'transfer_asset_tx_rcvd',
+        description: 'Transaction used to transfer (Colored Coins) assets between devices has been received'
+    })
+});
+
+
+// Definition of module (private) functions
+//
 
 function processConfirmedSentTransactions(doc, eventsToEmit) {
     if (doc.type === Transaction.type.funding.name) {
