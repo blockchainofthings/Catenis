@@ -584,25 +584,6 @@ Database.initialize = function() {
             },
             {
                 fields: {
-                    'inputs.txid': 1
-                },
-                opts: {
-                    background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
-                }
-            },
-            {
-                fields: {
-                    'inputs.str': 1
-                },
-                opts: {
-                    unique: true,
-                    background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
-                }
-            },
-            {
-                fields: {
                     sentDate: 1
                 },
                 opts: {
@@ -666,27 +647,6 @@ Database.initialize = function() {
                 },
                 opts: {
                     unique: true,
-                    background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
-                }
-            },
-            {
-                fields: {
-                    'inputs.txid': 1
-                },
-                opts: {
-                    sparse: true,
-                    background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
-                }
-            },
-            {
-                fields: {
-                    'inputs.str': 1
-                },
-                opts: {
-                    unique: true,
-                    sparse: true,
                     background: true,
                     safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
                 }

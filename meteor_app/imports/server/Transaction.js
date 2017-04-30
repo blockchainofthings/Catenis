@@ -436,21 +436,12 @@ Transaction.prototype.saveSentTransaction = function (type, info) {
 
     if (this.txid !== undefined && !this.txSaved) {
         // Prepare to save transaction information
-        const inputs = this.inputs.map((input) => {
-            return {
-                txid: input.txout.txid,
-                vout: input.txout.vout,
-                str: input.txout.txid + ':' + input.txout.vout
-            };
-        });
-
         const txInfo = {};
         txInfo[type.dbInfoEntryName] = info;
 
         docId = Catenis.db.collection.SentTransaction.insert({
             type: type.name,
             txid: this.txid,
-            inputs: inputs,
             sentDate: new Date(Date.now()),
             confirmation: {
                 confirmed: false
@@ -844,35 +835,13 @@ Transaction.fixMalleability = function (source, originalTxid, modifiedTxid) {
                         }
                     });
 
-                    Catenis.db.collection.SentTransaction.find({'inputs.txid': originalTxid}, {
-                        fields: {
-                            _id: 1,
-                            inputs: 1
-                        }
-                    }).forEach((doc) => {
-                        const setVal = doc.inputs.reduce((setVal, input, idx) => {
-                            if (input.txid === originalTxid) {
-                                setVal['inputs.' + idx] = {
-                                    txid: modifiedTxid,
-                                    vout: input.vout,
-                                    str: modifiedTxid + ':' + input.vout
-                                };
-                            }
-                        }, {});
-
-                        Catenis.db.collection.SentTransaction.update({_id: doc._id}, {
-                            $set: setVal
-                        });
-                    });
-
                     Catenis.db.collection.SentTransaction.update({replacedByTxid: originalTxid}, {
                         $set: {
                             replacedByTxid: modifiedTxid
                         }
                     });
 
-                    // NOTE: different than the case of the update of the 'inputs.txid' field above, we can
-                    //  do it with a single update call for the 'info.readConfirmation.txouts.txid' field
+                    // NOTE: we can update the 'info.readConfirmation.txouts.txid' field with a single update call
                     //  due to the fact that it is guaranteed that, for a given doc/rec, the txouts (array)
                     //  field will have only unique values for the txid field
                     Catenis.db.collection.SentTransaction.update({'info.readConfirmation.txouts.txid': originalTxid}, {
@@ -895,29 +864,7 @@ Transaction.fixMalleability = function (source, originalTxid, modifiedTxid) {
                     }
                 });
 
-                Catenis.db.collection.ReceivedTransaction.find({'inputs.txid': originalTxid}, {
-                    fields: {
-                        _id: 1,
-                        inputs: 1
-                    }
-                }).forEach((doc) => {
-                    const setVal = doc.inputs.reduce((setVal, input, idx) => {
-                        if (input.txid === originalTxid) {
-                            setVal['inputs.' + idx] = {
-                                txid: modifiedTxid,
-                                vout: input.vout,
-                                str: modifiedTxid + ':' + input.vout
-                            };
-                        }
-                    }, {});
-
-                    Catenis.db.collection.ReceivedTransaction.update({_id: doc._id}, {
-                        $set: setVal
-                    });
-                });
-
-                // NOTE: different than the case of the update of the 'inputs.txid' field above, we can
-                //  do it with a single update call for the 'info.readConfirmation.txouts.txid' field
+                // NOTE: we can update the 'info.readConfirmation.txouts.txid' field with a single update call
                 //  due to the fact that it is guaranteed that, for a given doc/rec, the txouts (array)
                 //  field will have only unique values for the txid field
                 Catenis.db.collection.ReceivedTransaction.update({'info.readConfirmation.txouts.txid': originalTxid}, {

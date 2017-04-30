@@ -146,11 +146,6 @@ SentTransaction {
   _id: [string], // MongoDB internal document ID provided by Meteor
   type: [string], // Identifies the type of transaction that was sent. Valid values (from Catenis.Transaction.type): 'funding', 'send_message', 'log_message', 'read_confirmation', 'issue_locked_asset', 'issue_unlocked_asset', 'transfer_asset'
   txid: [string], // Blockchain attributed ID (hash) of the sent transaction
-  inputs: [{ // Identifies the UTXOs that are spent by this transaction (recorded for the purpose of working around txid's malleability issue)
-    txid: [string], // Blockchain attributed ID of the transaction containing the UTXO that is spent
-    vout: [integer], // The index of the output within the transaction that is spent
-    str: [string]   // Serialization of tx input as a string using the format "txid:vout"
-  }],
   sentDate: [date/time], // Date and time when transaction was sent to the blockchain network
   confirmation: {
     confirmed: [boolean], // Indicates whether this transaction has already been confirmed within the blockchain
@@ -205,11 +200,6 @@ ReceivedTransaction {
   _id: [string], // MongoDB internal document ID provided by Meteor
   type: [string], // Identifies the type of transaction that was received. Valid values (from Catenis.Transaction.type): 'sys_funding', 'send_message', 'read_confirmation', 'transfer_asset'
   txid: [string], // Blockchain attributed ID (hash) of the received transaction
-  inputs: [{ // Identifies the UTXOs that are spent by this transaction (recorded for the purpose of working around txid's malleability issue). Note that this field should be filled (exist) only for received transactions that have NOT been sent by this Catenis node (no sentTransaction_id field)
-    txid: [string], // Blockchain attributed ID of the transaction containing the UTXO that is spent
-    vout: [integer], // The index of the output within the transaction that is spent
-    str: [string]   // Serialization of tx input as a string using the format "txid:vout"
-  }],
   receivedDate: [date/time], // Date and time when transaction was received. This is derived from timereceived property returned by gettransaction RPC method
   sentTransaction_id: [string], // MongoDB internal ID of SentTransaction doc/rec which corresponds to this transaction. This field should be filled (exist) for all received transactions that have been sent by this Catenis node. Note that for transactions of the 'sys_funding' type this field must never be filled (exist) since those types of transactions are not sent by the system
   confirmation: {   // This field should only exist for received transaction that are not associated with a sent transaction (field sentTransaction_id non-existent)
