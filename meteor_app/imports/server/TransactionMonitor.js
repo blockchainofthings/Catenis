@@ -975,7 +975,7 @@ function fixOldUnconfirmedTxs(docTxs, source) {
                         //  had its ID replaced due to malleability
 
                         // Fix malleability in local database and replace tx id in current database doc
-                        Transaction.fixMalleability(source, docTx, cnfltTxid);
+                        Transaction.fixMalleability(source, docTx.txid, cnfltTxid);
                         docTx.txid = cnfltTxid;
 
                         // Indicate that transaction is confirmed and save info about block that
