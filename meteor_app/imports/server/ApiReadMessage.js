@@ -15,16 +15,16 @@
 //      imported module'
 //const util = require('util');
 // Third-party node modules
-import _und from 'underscore';      // NOTE: we dot not use the underscore library provided by Meteor because we need
+import _und from 'underscore';      // NOTE: we do not use the underscore library provided by Meteor because we need
                                     //        a feature (_und.omit(obj,predicate)) that is not available in that version
 // Meteor packages
 import { Meteor } from 'meteor/meteor';
 
 // References code in other (Catenis) modules
 import { Catenis } from './Catenis';
-import { Transaction } from './Transaction';
 import { successResponse, errorResponse } from './RestApi';
 import { isValidMsgEncoding } from './ApiLogMessage';
+import { Message } from './Message';
 
 // Config entries
 /*const config_entryConfig = config.get('config_entry');
@@ -38,10 +38,10 @@ import { isValidMsgEncoding } from './ApiLogMessage';
 // Definition of module (private) functions
 //
 
-// Method used to process 'message/read' endpoint of Rest API
+// Method used to process 'messages/:messageId' endpoint of Rest API
 //
 //  URL parameters:
-//    txid [String]             // ID of blockchain transaction where message is recorded
+//    messageId [String]        // ID of message to read
 //
 //  Query string (optional) parameters:
 //    encoding [String]         // (default: utf8) - One of the following values identifying the encoding that should be used for the returned message: utf8|base64|hex
@@ -60,9 +60,9 @@ export function readMessage() {
     try {
         // Process request parameters
 
-        // txid param
-        if (!(typeof this.urlParams.txid === 'string' && this.urlParams.txid.length > 0)) {
-            Catenis.logger.DEBUG('Invalid \'txid\' parameter for \'message/read\' API request', this.urlParams);
+        // messageId param
+        if (!(typeof this.urlParams.messageId === 'string' && this.urlParams.messageId.length > 0)) {
+            Catenis.logger.DEBUG('Invalid \'messageId\' parameter for \'messages/:messageId\' API request', this.urlParams);
             return errorResponse.call(this, 400, 'Invalid parameters');
         }
 
@@ -70,7 +70,7 @@ export function readMessage() {
 
         // encoding param
         if (!(typeof this.queryParams.encoding === 'undefined' || (typeof this.queryParams.encoding === 'string' && isValidMsgEncoding(this.queryParams.encoding)))) {
-            Catenis.logger.DEBUG('Invalid \'encoding\' parameter for \'message/read\' API request', this.queryParams);
+            Catenis.logger.DEBUG('Invalid \'encoding\' parameter for \'messages/:messageId\' API request', this.queryParams);
             return errorResponse.call(this, 400, 'Invalid parameters');
         }
 
@@ -82,7 +82,7 @@ export function readMessage() {
         let msgInfo;
 
         try {
-            msgInfo = this.user.device.readMessage(this.urlParams.txid);
+            msgInfo = this.user.device.readMessage(this.urlParams.messageId);
         }
         catch (err) {
             let error;
@@ -95,14 +95,11 @@ export function readMessage() {
                 else if (err.error === 'ctn_device_not_active') {
                     error = errorResponse.call(this, 400, 'Device is not active');
                 }
-                else if (err.error === 'ctn_device_invalid_txid') {
-                    error = errorResponse.call(this, 400, 'Invalid transaction ID');
+                else if (err.error === 'ctn_msg_not_found') {
+                    error = errorResponse.call(this, 400, 'Invalid message ID');
                 }
                 else if (err.error === 'ctn_device_msg_no_access') {
-                    error = errorResponse.call(this, 400, 'No permission to read message');
-                }
-                else if (err.error === 'ctn_device_invalid_tx') {
-                    error = errorResponse.call(this, 400, 'Not a valid Catenis transaction');
+                    error = errorResponse.call(this, 403, 'No permission to read message');
                 }
                 else {
                     error = errorResponse.call(this, 500, 'Internal server error');
@@ -112,8 +109,8 @@ export function readMessage() {
                 error = errorResponse.call(this, 500, 'Internal server error');
             }
 
-            if (error.statusCode == 500) {
-                Catenis.logger.ERROR('Error processing \'message/read\' API request.', err);
+            if (error.statusCode === 500) {
+                Catenis.logger.ERROR('Error processing \'messages/:messageId\' API request.', err);
             }
 
             return error;
@@ -122,34 +119,22 @@ export function readMessage() {
         // Prepare result
         const result = {};
 
-        if (msgInfo.type == Transaction.type.log_message) {
-            if (msgInfo.device.deviceId != this.user.device.deviceId) {
-                result.from = {
-                    deviceId: msgInfo.device.deviceId
-                };
+        if (msgInfo.originDevice.deviceId !== this.user.device.deviceId) {
+            result.from = {
+                deviceId: msgInfo.originDevice.deviceId
+            };
 
-                // Add device public properties
-                _und.extend(result.from, msgInfo.device.getPublicProps());
-            }
+            // Add origin device public properties
+            _und.extend(result.from, msgInfo.originDevice.getPublicProps());
         }
-        else if (msgInfo.type == Transaction.type.send_message) {
-            if (msgInfo.originDevice.deviceId != this.user.device.deviceId) {
-                result.from = {
-                    deviceId: msgInfo.originDevice.deviceId
-                };
 
-                // Add origin device public properties
-                _und.extend(result.from, msgInfo.originDevice.getPublicProps());
-            }
+        if (msgInfo.action === Message.action.send && msgInfo.targetDevice.deviceId !== this.user.device.deviceId) {
+            result.to = {
+                deviceId: msgInfo.targetDevice.deviceId
+            };
 
-            if (msgInfo.targetDevice.deviceId != this.user.device.deviceId) {
-                result.to = {
-                    deviceId: msgInfo.targetDevice.deviceId
-                };
-
-                // Add target device public properties
-                _und.extend(result.to, msgInfo.targetDevice.getPublicProps());
-            }
+            // Add target device public properties
+            _und.extend(result.to, msgInfo.targetDevice.getPublicProps());
         }
 
         result.message = msgInfo.message.toString(optEncoding);
@@ -158,7 +143,7 @@ export function readMessage() {
         return successResponse.call(this, result);
     }
     catch (err) {
-        Catenis.logger.ERROR('Error processing \'message/read\' API request.', err);
+        Catenis.logger.ERROR('Error processing \'messages/:messageId\' API request.', err);
         return errorResponse.call(this, 500, 'Internal server error');
     }
 }

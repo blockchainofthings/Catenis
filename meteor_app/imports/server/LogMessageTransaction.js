@@ -224,11 +224,8 @@ LogMessageTransaction.prototype.buildTransaction = function () {
     }
 };
 
-//  Return value: {
-//    txid: [String],       // ID of blockchain transaction where message was recorded
-//    extStorage: {         // (only returned if message stored in external storage)
-//      <storage_provider_name>: [String]  // Key: storage provider name. Value: reference to message in external storage
-//  }
+//  Return value:
+//    txid: [String]     // ID of blockchain transaction where message was recorded
 LogMessageTransaction.prototype.sendTransaction = function () {
     // Check if transaction has not yet been created and sent
     if (this.transact.txid == undefined) {
@@ -246,18 +243,7 @@ LogMessageTransaction.prototype.sendTransaction = function () {
         Catenis.ctnHubNode.checkPayTxExpenseFundingBalance();
     }
 
-    const result = {
-        txid: this.transact.txid
-    };
-
-    if (this.extMsgRef) {
-        const storageProvider = this.options.storageProvider != undefined ? this.options.storageProvider : CatenisMessage.defaultStorageProvider;
-
-        result.extStorage = {};
-        result.extStorage[storageProvider.name] = CatenisMessage.getMessageStorageClass(storageProvider).getNativeMsgRef(this.extMsgRef);
-    }
-
-    return result;
+    return this.transact.txid;
 };
 
 LogMessageTransaction.prototype.revertOutputAddresses = function () {

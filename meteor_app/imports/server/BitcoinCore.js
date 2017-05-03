@@ -82,7 +82,9 @@ export function BitcoinCore(network, host, username, password, timeout) {
         getrawtransaction: Meteor.wrapAsync(this.btcClient.getRawTransaction, this.btcClient), // TWO VARIANTS: VERBOSE SET AND NOT
         decoderawtransaction: Meteor.wrapAsync(this.btcClient.decodeRawTransaction, this.btcClient),
         decodescript: Meteor.wrapAsync(this.btcClient.decodeScript, this.btcClient),
-        getaddressesbyaccount: Meteor.wrapAsync(this.btcClient.getAddressesByAccount, this.btcClient)  // USE IT AS JUST GET_ADDRESSES (ACCOUNT = "")
+        getaddressesbyaccount: Meteor.wrapAsync(this.btcClient.getAddressesByAccount, this.btcClient),  // USE IT AS JUST GET_ADDRESSES (ACCOUNT = "")
+        getwalletinfo: Meteor.wrapAsync(this.btcClient.getWalletInfo, this.btcClient),
+        listtransactions: Meteor.wrapAsync(this.btcClient.listTransactions, this.btcClient)
     };
 }
 
@@ -90,6 +92,7 @@ export function BitcoinCore(network, host, username, password, timeout) {
 // Public BitcoinCore object methods
 //
 
+// TODO: the getinfo RPC command is deprecated in Bitcoin Core ver. 0.14.0. It should be replaced by either getblockchaininfo, getnetworkinfo or getwalletinfo depending on the needed info
 BitcoinCore.prototype.getInfo = function () {
     try {
         return this.rpcApi.getinfo();
@@ -606,6 +609,7 @@ BitcoinCore.prototype.getRawTransaction = function (txid, verbose, logError = tr
     const args = [txid];
 
     if (verbose != undefined) {
+        // TODO: this might have to be changed for Bitcoin Core 0.14.0. According to ver. 0.14.0's release note, getrawtransaction now take a boolean for its verbose argument
         args.push(verbose ? 1 : 0);
     }
 
@@ -641,6 +645,27 @@ BitcoinCore.prototype.getAddresses = function () {
     }
     catch (err) {
         handleError('getaddressesbyaccount', err);
+    }
+};
+
+BitcoinCore.prototype.getWalletInfo = function () {
+    try {
+        return this.rpcApi.getwalletinfo();
+    }
+    catch (err) {
+        handleError('getwalletinfo', err);
+    }
+};
+
+BitcoinCore.prototype.listTransactions = function (count, from) {
+    count = count ? count : 10;
+    from = from ? from : 0;
+
+    try {
+        return this.rpcApi.listtransactions('*', count, from, true);
+    }
+    catch (err) {
+        handleError('listtransactions', err);
     }
 };
 
