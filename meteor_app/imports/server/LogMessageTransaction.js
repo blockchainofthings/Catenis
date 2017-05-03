@@ -195,9 +195,9 @@ LogMessageTransaction.prototype.buildTransaction = function () {
             txSize: this.transact.estimateSize(),
             inputAmount: this.transact.totalInputsAmount(),
             outputAmount: this.transact.totalOutputsAmount()
-        }, false);
+        }, false, Catenis.bitcoinFees.getFeeRateByTime(Service.minutesToConfirmMessage));
 
-        if (payTxAllocResult == null) {
+        if (payTxAllocResult === null) {
             // Unable to allocate UTXOs. Log error condition and throw exception
             Catenis.logger.ERROR('No UTXO available to be allocated to pay for transaction expense');
             throw new Meteor.Error('ctn_log_msg_no_utxo_pay_tx_expense', 'No UTXO available to be allocated to pay for transaction expense');

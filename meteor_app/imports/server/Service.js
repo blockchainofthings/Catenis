@@ -396,6 +396,18 @@ function splitMessageCredits(credits) {
 
 // Definition of properties
 Object.defineProperties(Service, {
+    minutesToConfirmMessage: {
+        get: function () {
+            return cfgSettings.message.minutesToConfirm;
+        },
+        enumerable: true
+    },
+    minutesToConfirmAsset: {
+        get: function () {
+            return cfgSettings.asset.minutesToConfirm;
+        },
+        enumerable: true
+    },
     paymentResolution: {
         get: function () {
             return cfgSettings.paymentResolution;
