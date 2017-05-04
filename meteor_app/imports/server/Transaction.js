@@ -348,7 +348,7 @@ Transaction.prototype.getTransaction = function () {
                 txBuilder.addOutput(output.payInfo.address, output.payInfo.amount);
             }
             else if (output.type === Transaction.outputType.nullData) {
-                txBuilder.addOutput(bitcoinLib.script.nullDataOutput(output.data), 1000);
+                txBuilder.addOutput(bitcoinLib.script.nullDataOutput(output.data), 0);
             }
         });
 
