@@ -167,9 +167,40 @@ BitcoinFees.initialize = function () {
 //
 
 function fixListFees(list) {
+    const feeSpreadCount = new Map();
+
     list.fees = list.fees.map((entry) => {
+        // Compute fee spread count
+        const feeSpread = entry.maxFee - entry.minFee + 1;
+
+        if (feeSpreadCount.has(feeSpread)) {
+            feeSpreadCount.set(feeSpread, feeSpreadCount.get(feeSpread) + 1);
+        }
+        else {
+            feeSpreadCount.set(feeSpread, 1);
+        }
+
+        // Remove unnecessary properties
         return _.omit(entry, ['dayCount', 'memCount']);
     });
+
+    // Identify most frequent fee spread
+    let maxCount = 0,
+        freqFeeSpread;
+
+    for (let [feeSpread, count] of feeSpreadCount) {
+        if (count > maxCount) {
+            maxCount = count;
+            freqFeeSpread = feeSpread;
+        }
+    }
+
+    // Now fix last entry fee spread
+    const lastEntry = list.fees[list.fees.length - 1];
+
+    if (lastEntry.maxFee - lastEntry.minFee + 1 > freqFeeSpread) {
+        lastEntry.maxFee = lastEntry.minFee + freqFeeSpread - 1;
+    }
 
     return list;
 }
