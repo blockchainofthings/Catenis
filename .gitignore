@@ -1,10 +1,8 @@
 .idea
-meteor_app/.meteor
 meteor_app/log
 meteor_app/node_modules
 meteor_build
 *.tar.gz
-READ THIS - WebStorm bug.txt
 seed*.dat
 local.json
 Debug.js
