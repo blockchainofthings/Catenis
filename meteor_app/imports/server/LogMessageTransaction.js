@@ -70,7 +70,7 @@ export function LogMessageTransaction(device, message, options) {
             const errArgs = Object.keys(errArg);
 
             Catenis.logger.ERROR(util.format('LogMessageTransaction constructor called with invalid argument%s', errArgs.length > 1 ? 's' : ''), errArg);
-            throw Error(util.format('Invalid %s argument%s', errArgs.join(', '), errArgs.length > 1 ? 's' : ''));
+            throw new Error(util.format('Invalid %s argument%s', errArgs.join(', '), errArgs.length > 1 ? 's' : ''));
         }
 
         // Just initialize instance variables for now

@@ -207,7 +207,12 @@ ReceivedTransaction {
     blockHash: [string], // Hash (ID) of blockchain block that contains this transaction
     confirmationDate: [date/time] // Date and time when transaction has been confirmed. This is derived from the block time
   },
-  info: {  // Specific information about the transaction according to its type. This does not apply for transactions of the 'sys_funding' type
+  info: {  // Specific information about the transaction according to its type.
+    sysFunding: {
+      fundAddresses: [{ // List identifying the Catenis system funding addresses through which funds have been received
+        path: [string],     // HD node path of the address
+        amount: [number]    // Amount, in satoshis, of funds paid to the specified address
+    }],
     sendMessage: { // Information for send message transactions
       originDeviceId: [string], // External ID of the device that sent the message
       targetDeviceId: [string], // External ID of the device that receives the message

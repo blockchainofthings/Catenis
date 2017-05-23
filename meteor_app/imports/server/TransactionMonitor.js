@@ -32,6 +32,7 @@ const events = require('events');
 // Third-party node modules
 import config from 'config';
 import Future from 'fibers/future';
+import BigNumber from 'bignumber.js';
 // Meteor packages
 import { Meteor } from 'meteor/meteor';
 import { _ } from 'meteor/underscore';
@@ -736,8 +737,9 @@ function handleNewTransactions(data) {
                         //  of transaction
                         //noinspection JSUnfilteredForInLoop
                         const voutInfo = parseTxVouts(data.ctnTxids[txid].details);
+                        let payments;
 
-                        if (isSysFundingTxVouts(voutInfo)) {
+                        if ((payments = sysFundingPayments(voutInfo)).length > 0) {
                             // Transaction used to fund the system has been received
 
                             // Prepare to emit event notifying of new transaction received
@@ -745,7 +747,8 @@ function handleNewTransactions(data) {
                             eventsToEmit.push({
                                 name: TransactionMonitor.notifyEvent.sys_funding_tx_rcvd.name,
                                 data: {
-                                    txid: txid
+                                    txid: txid,
+                                    addresses: payments.map((payment) => payment.address)
                                 }
                             });
 
@@ -757,6 +760,16 @@ function handleNewTransactions(data) {
                                 receivedDate: new Date(data.ctnTxids[txid].timereceived * 1000),
                                 confirmation: {
                                     confirmed: false
+                                },
+                                info: {
+                                    sysFunding: {
+                                        fundAddresses: payments.map((payment) => {
+                                            return {
+                                                path: payment.path,
+                                                amount: payment.amount
+                                            };
+                                        })
+                                    }
                                 }
                             });
                         }
@@ -1194,7 +1207,9 @@ function parseTxVouts(txDetails) {
                 if (addrInfo !== null) {
                     voutInfo.set(detail.vout, {
                         isNullData: false,
-                        addrInfo: addrInfo
+                        address: detail.address,
+                        addrInfo: addrInfo,
+                        amount: new BigNumber(detail.amount).times(100000000).toNumber()
                     });
                 }
             }
@@ -1208,17 +1223,20 @@ function parseTxVouts(txDetails) {
     return voutInfo;
 }
 
-function isSysFundingTxVouts(voutInfo) {
-    let isTxVouts = false;
+function sysFundingPayments(voutInfo) {
+    let sysFundPayments = [];
 
     for (let value of voutInfo.values()) {
         if (!value.isNullData && value.addrInfo.type === KeyStore.extKeyType.sys_fund_pay_addr.name) {
-            isTxVouts = true;
-            break;
+            sysFundPayments.push({
+                address: value.address,
+                path: value.addrInfo.path,
+                amount: value.amount
+            });
         }
     }
 
-    return isTxVouts;
+    return sysFundPayments;
 }
 
 function isSendMessageTxVouts(voutInfo) {

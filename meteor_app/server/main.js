@@ -5,4 +5,5 @@
 // Load startup modules
 import '/imports/server/ConfigEnv';
 import '/imports/server/Logging';
+import '/imports/both/ConfigLoginForm';
 import '/imports/server/Startup';

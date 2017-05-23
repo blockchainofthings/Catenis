@@ -13,7 +13,7 @@
 //  NOTE: the reference of these modules are done sing 'require()' instead of 'import' to
 //      to avoid annoying WebStorm warning message: 'default export is not defined in
 //      imported module'
-const util = require('util');
+const events = require('events');
 // Third-party node modules
 import config from 'config';
 // Meteor packages
@@ -48,8 +48,12 @@ let retrieveFeesIntervalHandle,
 //
 
 // BitcoinFees function class
-export function BitcoinFees(apiUrl) {
-    this.apiUrl = apiUrl;
+export class BitcoinFees extends events.EventEmitter {
+    constructor(apiUrl) {
+        super();
+
+        this.apiUrl = apiUrl;
+    }
 }
 
 
@@ -60,14 +64,14 @@ BitcoinFees.prototype.getFeeRateByTime = function (confirmTime) {
     let firstEntryLowestTime = undefined;
 
     const foundEntry = this.list.fees.find((entry) => {
-        if (firstEntryLowestTime == undefined || entry.maxMinutes < firstEntryLowestTime.maxMinutes) {
+        if (firstEntryLowestTime === undefined || entry.maxMinutes < firstEntryLowestTime.maxMinutes) {
             firstEntryLowestTime = entry;
         }
 
         return entry.maxMinutes <= confirmTime;
     });
 
-    return foundEntry != undefined ? foundEntry.maxFee : firstEntryLowestTime.maxFee;
+    return foundEntry !== undefined ? foundEntry.maxFee : firstEntryLowestTime.maxFee;
 };
 
 BitcoinFees.prototype.getOptimumFeeRate = function () {
@@ -102,12 +106,18 @@ function retrieveFees() {
         // Get latest recorded fees
         const docBtcFees = Catenis.db.collection.BitcoinFees.findOne({}, {sort: {createdDate: -1}});
 
-        if (docBtcFees == undefined || !_.isEqual(this.recommended, docBtcFees.recommended) || !_.isEqual(this.list, docBtcFees.list)) {
+        if (docBtcFees === undefined || !_.isEqual(this.recommended, docBtcFees.recommended) || !_.isEqual(this.list, docBtcFees.list)) {
             // Record newly retrieved fees
             Catenis.db.collection.BitcoinFees.insert({
                 recommended: this.recommended,
                 list: this.list,
                 createdDate: new Date(Date.now())
+            });
+
+            // Emit event notifying that bitcoin fee rates have changed
+            this.emit(BitcoinFees.notifyEvent.bitcoin_fees_changed.name, {
+                recommended: this.recommended,
+                list: this.list
             });
         }
     }
@@ -128,11 +138,11 @@ BitcoinFees.initialize = function () {
     // Execute process to retrieve current bitcoin fees now
     retrieveFees.call(Catenis.bitcoinFees);
 
-    if (Catenis.bitcoinFees.recommended == undefined || Catenis.bitcoinFees.list == undefined) {
+    if (Catenis.bitcoinFees.recommended === undefined || Catenis.bitcoinFees.list === undefined) {
         // Current fees could not be retrieved. Try getting the latest recorded ones
         const docBtcFees = Catenis.db.collection.BitcoinFees.findOne({}, {sort: {createdDate: -1}});
 
-        if (docBtcFees != undefined) {
+        if (docBtcFees !== undefined) {
             Catenis.bitcoinFees.recommended = docBtcFees.recommended;
             Catenis.bitcoinFees.list = docBtcFees.list;
         }
@@ -161,6 +171,13 @@ BitcoinFees.initialize = function () {
 
 // BitcoinFees function class (public) properties
 //
+
+BitcoinFees.notifyEvent = Object.freeze({
+    bitcoin_fees_changed: Object.freeze({
+        name: 'bitcoin_fees_changed',
+        description: 'Predicting bitcoin fee rates for transactions have changed'
+    })
+});
 
 
 // Definition of module (private) functions
@@ -232,7 +249,7 @@ function purgeDatabase() {
 
     const firstOldestFees = Catenis.db.collection.BitcoinFees.findOne({}, {fields: {createdDate: 1}, sort: {createdDate: -1}, skip: cfgSettings.numDbRecsToMaintain});
 
-    if (firstOldestFees != undefined) {
+    if (firstOldestFees !== undefined) {
         try {
             // Delete all oldest docs/recs from database
             Catenis.db.collection.BitcoinFees.remove({createdDate: {$lte: firstOldestFees.createdDate}});

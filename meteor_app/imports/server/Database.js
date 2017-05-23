@@ -692,6 +692,16 @@ Database.initialize = function() {
             },
             {
                 fields: {
+                    'info.sysFunding.fundAddresses.path': 1
+                },
+                opts: {
+                    sparse: true,
+                    background: true,
+                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                }
+            },
+            {
+                fields: {
                     'info.sendMessage.readConfirmation.spent': 1
                 },
                 opts: {

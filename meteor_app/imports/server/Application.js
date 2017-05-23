@@ -27,6 +27,7 @@ import { Catenis } from './Catenis';
 import { TransactionMonitor } from './TransactionMonitor';
 import { Device } from './Device';
 import { Transaction } from './Transaction';
+import { FundSource } from './FundSource';
 
 // Config entries
 const appConfig = config.get('application');
@@ -231,6 +232,12 @@ function sysFundingTxConfirmed(data) {
         this.startProcessing();
     }
     else {
+        // Execute code in critical section to avoid UTXOs concurrency
+        FundSource.utxoCS.execute(() => {
+            // Make sure that funding balance info is updated
+            Catenis.ctnHubNode.checkFundingBalance();
+        });
+
         // Assume system already started. Check if there are devices to provision
         Device.checkDevicesToFund();
     }

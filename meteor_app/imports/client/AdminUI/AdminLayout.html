@@ -1,0 +1,29 @@
+<template name="adminLayout">
+    <div style="text-align:center">
+        <h1>Catenis Enterprise Admin</h1>
+    </div>
+    {{#unless currentUser}}
+        {{> login}}
+    {{else}}
+        <p>User {{currentUser.username}} (<a id="lnkLogout" href="#">logout</a>)</p>
+        {{#if isInRole 'sys-admin'}}
+            <nav>
+                <ul>
+                    <li>
+                        <a id="lnkSysFunding" href="#">System Funding</a>
+                    </li>
+                    <li>
+                        <a id="lnkClients" href="#">Clients</a>
+                    </li>
+                </ul>
+            </nav>
+            <article style="text-align:center">
+                {{#if page}}
+                    {{> Template.dynamic template=page}}
+                {{/if}}
+            </article>
+        {{else}}
+            <p style="color:red">User does not have the necessary permission.</p>
+        {{/if}}
+    {{/unless}}
+</template>
