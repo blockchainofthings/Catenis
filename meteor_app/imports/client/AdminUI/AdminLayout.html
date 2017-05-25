@@ -5,21 +5,21 @@
     {{#unless currentUser}}
         {{> login}}
     {{else}}
-        <p>User {{currentUser.username}} (<a id="lnkLogout" href="#">logout</a>)</p>
+        <p>User {{currentUser.username}} (<a id="lnkLogout" href="#" role="button">logout</a>)</p>
         {{#if isInRole 'sys-admin'}}
             <nav>
                 <ul>
                     <li>
-                        <a id="lnkSysFunding" href="#">System Funding</a>
+                        <a href="/admin/sysfunding">System Funding</a>
                     </li>
                     <li>
-                        <a id="lnkClients" href="#">Clients</a>
+                        <a href="/admin/clients">Clients</a>
                     </li>
                 </ul>
             </nav>
             <article style="text-align:center">
                 {{#if page}}
-                    {{> Template.dynamic template=page}}
+                    {{> Template.dynamic template=page data=dataContext}}
                 {{/if}}
             </article>
         {{else}}

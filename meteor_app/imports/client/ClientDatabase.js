@@ -32,6 +32,8 @@ import { Catenis } from './ClientCatenis';
 Catenis.db = {
     collection: {
         FundingBalanceInfo: new Mongo.Collection('FundingBalanceInfo'),
-        ReceivedAmount: new Mongo.Collection('ReceivedAmount')
+        ReceivedAmount: new Mongo.Collection('ReceivedAmount'),
+        Client: new Mongo.Collection('Client'),
+        MessageCredits: new Mongo.Collection('MessageCredits')
     }
 };

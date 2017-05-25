@@ -1,13 +1,13 @@
 <template name="systemFunding">
     <h2>System Funding</h2>
-    <label>Current system funding balance:</label>&nbsp;<scan style="color:{{#if lowBalance}}red{{else}}black{{/if}}">{{balanceInfo.currentBalance}}</scan><br>
+    <label>Current system funding balance:</label>&nbsp;<scan style="color:{{#if (lowBalance balanceInfo)}}red{{else}}black{{/if}}">{{balanceInfo.currentBalance}}</scan><br>
     <label>Minimum funding balance:</label>&nbsp;{{balanceInfo.minimumBalance}}
     <div style="margin-top:1em">
         {{#unless fundAddress}}
-            <a id="lnkNewAddressToFund" href="#">Get address to fund system</a>
+            <a id="lnkNewAddressToFund" href="#" role="button">Get address to fund system</a>
         {{else}}
             <div>
-                (<a id="lnkDiscardAddr" href="#">discard address</a>)
+                (<a id="lnkDiscardAddr" href="#" role="button">discard address</a>)
             </div>
             {{> fundingAddress fundAddress=fundAddress}}
         {{/unless}}

@@ -1,4 +1,23 @@
 <template name="clients">
     <h2>Clients</h2>
-    <p>To be defined</p>
+    <table cellpadding="5" style="margin-left:auto; margin-right:auto">
+        <tr>
+            <th style="text-align:left">Name</th>
+            <th style="text-align:left">Client ID</th>
+            <th>Status</th>
+        </tr>
+        {{#each client in listClients}}
+            <tr>
+                <td style="text-align:left">
+                    {{#if (isClientActive client)}}
+                        <a href="/admin/clients/{{client._id}}">{{client.props.name}}</a>
+                    {{else}}
+                        {{client.props.name}}
+                    {{/if}}
+                </td>
+                <td style="text-align:left">{{client.clientId}}</td>
+                <td>{{client.status}}</td>
+            </tr>
+        {{/each}}
+    </table>
 </template>

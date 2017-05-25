@@ -17,9 +17,8 @@
 // Third-party node modules
 //import config from 'config';
 // Meteor packages
-import { Meteor } from 'meteor/meteor';
+//import { Meteor } from 'meteor/meteor';
 import { Template } from 'meteor/templating';
-import { ReactiveDict } from 'meteor/reactive-dict';
 
 // References code in other (Catenis) modules on the client
 import { Catenis } from '../ClientCatenis';
@@ -38,7 +37,6 @@ Template.fundingAddress.onCreated(function () {
 
 Template.fundingAddress.onRendered(function () {
     const cnvCtrl = document.getElementById('cnvQRCode');
-    console.log('>>>>>> Canvas control: ' + cnvCtrl);
 
     qrcodelib.toCanvas(cnvCtrl, 'bitcoin:' + this.data.fundAddress, function (error) {
         if (error) {

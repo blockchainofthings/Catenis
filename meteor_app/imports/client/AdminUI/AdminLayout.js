@@ -19,7 +19,6 @@
 // Meteor packages
 import { Meteor } from 'meteor/meteor';
 import { Template } from 'meteor/templating';
-import { ReactiveDict } from 'meteor/reactive-dict';
 
 // Import template UI
 import './AdminLayout.html';
@@ -34,24 +33,15 @@ import './ClientsTemplate.js';
 //
 
 Template.adminLayout.onCreated(function () {
-    this.state = new ReactiveDict();
 });
 
 Template.adminLayout.events({
     'click #lnkLogout'(event, template) {
         Meteor.logout();
-    },
-    'click #lnkSysFunding'(event, template) {
-        template.state.set('page', 'systemFunding');
-    },
-    'click #lnkClients'(event, template) {
-        template.state.set('page', 'clients');
+
+        return false;
     }
 });
 
 Template.adminLayout.helpers({
-    page() {
-        return Template.instance().state.get('page');
-    },
-
 });

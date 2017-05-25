@@ -9,3 +9,5 @@
 
 // Variable used to reference all Catenis 'global' objects on the client
 export const Catenis = {};
+
+Catenis.ctnHubNodeIndex = 0;

@@ -57,11 +57,15 @@ Template.systemFunding.events({
                 template.state.set('fundAddress', addr);
             }
         });
+
+        return false;
     },
     'click #lnkDiscardAddr'(event, template) {
         if (confirm('Are you sure you want to discard this address?')) {
             template.state.set('fundAddress', undefined);
         }
+
+        return false;
     }
 });
 
@@ -72,9 +76,7 @@ Template.systemFunding.helpers({
     fundAddress() {
         return Template.instance().state.get('fundAddress');
     },
-    lowBalance() {
-        const balanceInfo = Catenis.db.collection.FundingBalanceInfo.findOne(1);
-
-        return balanceInfo.currentBalance < balanceInfo.minimumBalance;
+    lowBalance(balanceInfo) {
+        return balanceInfo && balanceInfo.currentBalance < balanceInfo.minimumBalance;
     }
 });

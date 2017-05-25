@@ -2,7 +2,7 @@
  * Created by claudio on 15/05/17.
  */
 
-//console.log('[SystemFunding.js]: This code just ran.');
+//console.log('[SystemFundingUI.js]: This code just ran.');
 
 // Module variables
 //
@@ -28,20 +28,20 @@ import { Util } from '../Util';
 // Definition of function classes
 //
 
-// SystemFunding function class
-export function SystemFunding() {
+// SystemFundingUI function class
+export function SystemFundingUI() {
 }
 
 
-// Public SystemFunding object methods
+// Public SystemFundingUI object methods
 //
 
-/*SystemFunding.prototype.pub_func = function () {
+/*SystemFundingUI.prototype.pub_func = function () {
 };*/
 
 
-// Module functions used to simulate private SystemFunding object methods
-//  NOTE: these functions need to be bound to a SystemFunding object reference (this) before
+// Module functions used to simulate private SystemFundingUI object methods
+//  NOTE: these functions need to be bound to a SystemFundingUI object reference (this) before
 //      they are called, by means of one of the predefined function methods .call(), .apply()
 //      or .bind().
 //
@@ -50,10 +50,10 @@ export function SystemFunding() {
 }*/
 
 
-// SystemFunding function class (public) methods
+// SystemFundingUI function class (public) methods
 //
 
-SystemFunding.initialize = function () {
+SystemFundingUI.initialize = function () {
     // Declaration of RPC methods to be called from client
     Meteor.methods({
         newSysFundingAddress: newSysFundingAddress
@@ -87,8 +87,8 @@ SystemFunding.initialize = function () {
 
         if (typeAndPath === null) {
             // Subscription made with an invalid address. Log error and throw exception
-            Catenis.logger.ERROR('Subscription to method \'addressPayment\' made with an invalid address', {fundAddress: fundAddress})
-            throw new Error('Subscription to method \'addressPayment\' made with an invalid address');
+            Catenis.logger.ERROR('Subscription to method \'addressPayment\' made with an invalid address', {fundAddress: fundAddress});
+            throw new Meteor.Error('sys-funding.subscribe.address-payment.invalid-param', 'Subscription to method \'addressPayment\' made with an invalid address');
         }
 
         const receivedAmount = {
@@ -167,10 +167,10 @@ SystemFunding.initialize = function () {
 };
 
 
-// SystemFunding function class (public) properties
+// SystemFundingUI function class (public) properties
 //
 
-/*SystemFunding.prop = {};*/
+/*SystemFundingUI.prop = {};*/
 
 
 // Definition of module (private) functions
@@ -185,4 +185,4 @@ function newSysFundingAddress() {
 //
 
 // Lock function class
-Object.freeze(SystemFunding);
+Object.freeze(SystemFundingUI);

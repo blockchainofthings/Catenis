@@ -31,7 +31,34 @@ import './AdminUI/AdminLayout.js';
 BlazeLayout.setRoot('body');
 
 FlowRouter.route('/admin', {
-    action: function() {
-        BlazeLayout.render("adminLayout");
+    action: function () {
+        BlazeLayout.render('adminLayout');
+    }
+});
+
+FlowRouter.route('/admin/sysfunding', {
+    action: function () {
+        BlazeLayout.render('adminLayout', {
+            page: 'systemFunding'
+        });
+    }
+});
+
+FlowRouter.route('/admin/clients', {
+    action: function () {
+        BlazeLayout.render('adminLayout', {
+            page: 'clients'
+        });
+    }
+});
+
+FlowRouter.route('/admin/clients/:client_id', {
+    action: function (params) {
+        BlazeLayout.render('adminLayout', {
+            page: 'clientDetails',
+            dataContext: {
+                client_id: params.client_id
+            }
+        });
     }
 });

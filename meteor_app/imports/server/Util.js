@@ -36,7 +36,7 @@ export function Util() {
 //
 
 Util.formatCoins = function (amountInSatoshis) {
-    return (new BigNumber(amountInSatoshis)).dividedBy(100000000).toFixed(8);
+    return (new BigNumber(amountInSatoshis)).dividedBy(100000000).toFormat(8);
 };
 
 // Spend UTXO
