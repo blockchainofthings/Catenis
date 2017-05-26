@@ -378,14 +378,14 @@ CatenisNode.prototype.createClient = function (props, user_id) {
 
     if (user_id !== undefined) {
         // Make sure that user ID is valid
-        docUser = Meteor.users.findOne({_id: user_id}, {fields: {_id: 1, 'services.password': 1, 'profile.client_id': 1}});
+        docUser = Meteor.users.findOne({_id: user_id}, {fields: {_id: 1, 'services.password': 1, 'catenis.client_id': 1}});
 
         if (docUser === undefined) {
             // ID passed is not from a valid user. Log error and throw exception
             Catenis.logger.ERROR('Invalid user ID for creating client', {userId: user_id});
             throw new Meteor.Error('ctn_client_invalid_user_id', util.format('Invalid user ID (%s) for creating client', user_id));
         }
-        else if (docUser.profile !== undefined && docUser.profile.client_id !== undefined) {
+        else if (docUser.catenis !== undefined && docUser.catenis.client_id !== undefined) {
             // User already assigned to a client. Log error and throw exception
             Catenis.logger.ERROR('User already assigned to a client', {userId: user_id});
             throw new Meteor.Error('ctn_client_user_already_assigned', util.format('User (Id: %s) already assigned to a client', user_id));
@@ -439,7 +439,7 @@ CatenisNode.prototype.createClient = function (props, user_id) {
         if (user_id !== undefined) {
             try {
                 // Update User doc/rec saving the ID of the client associated with it
-                Meteor.users.update({_id: user_id}, {$set: {'profile.client_id': docClient._id}});
+                Meteor.users.update({_id: user_id}, {$set: {'catenis.client_id': docClient._id}});
             }
             catch (err) {
                 Catenis.logger.ERROR(util.format('Error updating user (Id: %s) associated with new client (doc Id: %s).', user_id, docClient._id), err);

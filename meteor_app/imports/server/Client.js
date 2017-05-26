@@ -115,14 +115,14 @@ Client.prototype.assignUser = function (user_id) {
     // Make sure that there is no user currently assigned to this client
     if (this.user_id == undefined) {
         // Make sure that user ID is valid
-        const docUser = Meteor.users.findOne({_id: user_id}, {fields: {_id: 1, 'services.password': 1, 'profile.client_id': 1}});
+        const docUser = Meteor.users.findOne({_id: user_id}, {fields: {_id: 1, 'services.password': 1, 'catenis.client_id': 1}});
 
         if (docUser == undefined) {
             // ID passed is not from a valid user. Log error and throw exception
             Catenis.logger.ERROR('Invalid user ID for assigning to client', {userId: user_id});
             throw new Meteor.Error('ctn_client_invalid_user_id', util.format('Invalid user ID (%s) for assigning to client', user_id));
         }
-        else if (docUser.profile != undefined && docUser.profile.client_id != undefined) {
+        else if (docUser.catenis != undefined && docUser.catenis.client_id != undefined) {
             // User already assigned to a client. Log error and throw exception
             Catenis.logger.ERROR('User already assigned to a client', {userId: user_id});
             throw new Meteor.Error('ctn_client_user_already_assigned', util.format('User (Id: %s) already assigned to a client', user_id));
@@ -147,7 +147,7 @@ Client.prototype.assignUser = function (user_id) {
         if (userCanLogin) {
             try {
                 // Update User doc/rec saving the ID of the client associated with it
-                Meteor.users.update({_id: user_id}, {$set: {'profile.client_id': this.doc_id}});
+                Meteor.users.update({_id: user_id}, {$set: {'catenis.client_id': this.doc_id}});
             }
             catch (err) {
                 Catenis.logger.ERROR(util.format('Error updating user (Id: %s) associated with client (clientId: %s).', user_id, this.clientId), err);
