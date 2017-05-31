@@ -1,0 +1,29 @@
+<template name="deviceDetails">
+    <h2>Device #{{device.index.deviceIndex}}</h2>
+    <a href="/admin/clients/{{device.client_id}}?showDevices=1">Back to client {{client.props.name}}</a>
+    <table cellpadding="2" style="margin-left:auto; margin-right:auto; margin-top:1em; margin-bottom:1em; max-width: 70%">
+        <tr>
+            <td style="text-align:right; font-weight:bold"><label>Device&nbsp;ID:&nbsp;</label></td>
+            <td style="text-align:left">{{device.deviceId}}</td>
+        </tr>
+        {{#if (hasName device)}}
+            <tr>
+                <td style="text-align:right; font-weight:bold"><label>Device&nbsp;Name:&nbsp;</label></td>
+                <td style="text-align:left">{{device.props.name}}</td>
+            </tr>
+        {{/if}}
+        {{#if (hasProdUniqueId device)}}
+            <tr>
+                <td style="text-align:right; font-weight:bold"><label>Product Unique ID:&nbsp;</label></td>
+                <td style="text-align:left">{{device.props.prodUniqueId}}</td>
+            </tr>
+        {{/if}}
+        {{#if (hasPublic device)}}
+            <tr>
+                <td style="text-align:right; font-weight:bold"><label>Public:&nbsp;</label></td>
+                <td style="text-align:left">{{publicStatus device}}</td>
+            </tr>
+        {{/if}}
+    </table>
+    <a id="lnkShowAPIAccessSecret" href="#">Show API access secret</a>
+</template>

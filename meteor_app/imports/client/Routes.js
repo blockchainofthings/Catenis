@@ -53,9 +53,46 @@ FlowRouter.route('/admin/clients', {
 });
 
 FlowRouter.route('/admin/clients/:client_id', {
-    action: function (params) {
+    action: function (params, queryParams) {
+        const dataContext = {
+            client_id: params.client_id
+        };
+
+        if (queryParams.showDevices) {
+            dataContext.showDevices = true;
+        }
+
         BlazeLayout.render('adminLayout', {
             page: 'clientDetails',
+            dataContext: dataContext
+        });
+    }
+});
+
+FlowRouter.route('/admin/clients/:client_id/devices/:device_id', {
+    action: function (params) {
+        BlazeLayout.render('adminLayout', {
+            page: 'deviceDetails',
+            dataContext: {
+                client_id: params.client_id,
+                device_id: params.device_id
+            }
+        });
+    }
+});
+
+FlowRouter.route('/admin/newclient', {
+    action: function (params, queryParams) {
+        BlazeLayout.render('adminLayout', {
+            page: 'newClient'
+        });
+    }
+});
+
+FlowRouter.route('/admin/clients/:client_id/newdevice', {
+    action: function (params, queryParams) {
+        BlazeLayout.render('adminLayout', {
+            page: 'newDevice',
             dataContext: {
                 client_id: params.client_id
             }

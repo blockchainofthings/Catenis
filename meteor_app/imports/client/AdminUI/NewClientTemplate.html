@@ -1,0 +1,48 @@
+<template name="newClient">
+    <h2>Add New Client</h2>
+    <a href="/admin/clients">Back to clients</a>
+    {{#if newClientId}}
+        <p style="color:blue">New client {{newClientId}} successfully created</p>
+    {{else}}
+        {{#if hasError}}
+            <p style="color:red">{{{errorMessage}}}</p>
+        {{/if}}
+        <form id="frmNewClient">
+            <table cellpadding="2" style="margin-left:auto; margin-right:auto; margin-top:1em; margin-bottom:0.5em">
+                <tr>
+                    <td style="text-align:right; font-weight:bold">
+                        <label for="txtClientName">Name</label>
+                    </td>
+                    <td style="text-align:right">
+                        <input id="txtClientName" name="clientName" type="text" maxlength="80"/>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="text-align:right; font-weight:bold">
+                        <label for="txtUsername">Username</label>
+                    </td>
+                    <td style="text-align:right">
+                        <input id="txtUsername" name="username" type="text" maxlength="40"/>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="text-align:right; font-weight:bold">
+                        <label for="pswPassword">Password</label>
+                    </td>
+                    <td style="text-align:right">
+                        <input id="pswPassword" name="password" type="password" maxlength="40"/>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="text-align:right; font-weight:bold">
+                        <label for="pswConfirmPassword">Confirm Password</label>
+                    </td>
+                    <td style="text-align:right">
+                        <input id="pswConfirmPassword" name="confirmPassword" type="password" maxlength="40"/>
+                    </td>
+                </tr>
+            </table>
+            <input type="submit" value="Add Client"/>
+        </form>
+    {{/if}}
+</template>

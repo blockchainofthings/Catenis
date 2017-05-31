@@ -13,11 +13,12 @@
 //  NOTE: the reference of these modules are done sing 'require()' instead of 'import' to
 //      to avoid annoying WebStorm warning message: 'default export is not defined in
 //      imported module'
-const util = require('util');
+//const util = require('util');
 // Third-party node modules
 //import config from 'config';
 // Meteor packages
 //import { Meteor } from 'meteor/meteor';
+import { Template } from 'meteor/templating';
 
 // References code in other (Catenis) modules on the client
 import { Catenis } from '../ClientCatenis';
@@ -48,7 +49,7 @@ Template.clients.events({
 
 Template.clients.helpers({
     listClients: function () {
-        return Catenis.db.collection.Client.find({}).fetch();
+        return Catenis.db.collection.Client.find({}, {sort:{'props.name': 1}}).fetch();
     },
     isClientActive: function (client) {
         return client.status === 'active';

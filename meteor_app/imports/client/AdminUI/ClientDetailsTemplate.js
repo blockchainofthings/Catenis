@@ -27,6 +27,9 @@ import { Catenis } from '../ClientCatenis';
 // Import template UI
 import './ClientDetailsTemplate.html';
 
+// Import dependent templates
+import './DevicesTemplate.js';
+
 
 // Module code
 //
@@ -34,16 +37,17 @@ import './ClientDetailsTemplate.html';
 Template.clientDetails.onCreated(function () {
     this.state = new ReactiveDict();
     this.state.set('addMsgCreditsStatus', 'idle');  // Valid statuses: 'idle', 'data-enter', 'processing', 'error', 'success'
+    this.state.set('showDevices', !!this.data.showDevices);
 
     // Subscribe to receive fund balance updates
-    this.catenisClientsSubs = this.subscribe('catenisClients', Catenis.ctnHubNodeIndex);
+    this.clientRecordSubs = this.subscribe('clientRecord', this.data.client_id);
     this.clientUserSubs = this.subscribe('clientUser', this.data.client_id);
     this.clientMessageCreditsSubs = this.subscribe('clientMessageCredits', this.data.client_id);
 });
 
 Template.clientDetails.onDestroyed(function () {
-    if (this.catenisClientsSubs) {
-        this.catenisClientsSubs.stop();
+    if (this.clientRecordSubs) {
+        this.clientRecordSubs.stop();
     }
 
     if (this.clientUserSubs) {
@@ -87,6 +91,16 @@ Template.clientDetails.events({
     },
     'click #lnkCancelAddMsgCredits'(event, template) {
         template.state.set('addMsgCreditsStatus', 'idle');
+
+        return false;
+    },
+    'click #lnkShowDevices'(events, template) {
+        template.state.set('showDevices', true);
+
+        return false;
+    },
+    'click #lnkHideDevices'(events, template) {
+        template.state.set('showDevices', false);
 
         return false;
     }
@@ -134,5 +148,8 @@ Template.clientDetails.helpers({
     },
     addMsgCreditsError: function () {
         return Template.instance().state.get('addMsgCreditsError');
+    },
+    showDevices: function () {
+        return Template.instance().state.get('showDevices');
     }
 });

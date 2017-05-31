@@ -36,6 +36,7 @@ import './ParseRequestBody';
 import { RestApi } from './RestApi';
 import { SystemFundingUI } from './AdminUI/SystemFundingUI';
 import { ClientsUI } from './AdminUI/ClientsUI';
+import { DevicesUI } from './AdminUI/DevicesUI';
 // DEBUG - begin
 //import { resetBitcoinCore } from './Test/FundSourceTest';
 // DEBUG - end
@@ -84,6 +85,7 @@ Meteor.startup(function () {
         // UI support initialization
         SystemFundingUI.initialize();
         ClientsUI.initialize();
+        DevicesUI.initialize();
 
         Catenis.logger.INFO('Initialization ended.');
 

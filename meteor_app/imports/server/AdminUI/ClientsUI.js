@@ -18,10 +18,12 @@ const util = require('util');
 //import config from 'config';
 // Meteor packages
 import { Meteor } from 'meteor/meteor';
+import { Accounts } from 'meteor/accounts-base'
 
 // References code in other (Catenis) modules
 import { Catenis } from '../Catenis';
 import { Client } from '../Client';
+import { CatenisNode } from '../CatenisNode';
 
 
 const maxMsgCreditsCount = 100;
@@ -65,6 +67,41 @@ ClientsUI.initialize = function () {
             }
 
             Client.getClientByClientId(clientId).addMessageCredit(count);
+        },
+        createClient: function (ctnNodeIndex, clientInfo) {
+            // Try to create meteor client user
+            let user_id;
+
+            try {
+                const opts = {
+                    username: clientInfo.username,
+                    password: clientInfo.psw,
+                    profile: {
+                        name: 'User for Catenis client ' + clientInfo.name
+                    }
+                };
+
+                user_id = Accounts.createUser(opts);
+            }
+            catch (err) {
+                // Error trying to create meteor user for client. Log error and throw exception
+                Catenis.logger.ERROR('Failure trying to create new user for client.', err);
+                throw new Meteor.Error('client.create-user.failure', 'Failure trying to create new user for client: ' + err.toString());
+            }
+
+            // Try to create Catenis client
+            let clientId;
+
+            try {
+                clientId = CatenisNode.getCatenisNodeByIndex(ctnNodeIndex).createClient(clientInfo.name, user_id);
+            }
+            catch (err) {
+                // Error trying to create Catenis client. Log error and throw exception
+                Catenis.logger.ERROR('Failure trying to create new Catenis client.', err);
+                throw new Meteor.Error('client.create.failure', 'Failure trying to create new Catenis client: ' + err.toString());
+            }
+
+            return clientId;
         }
     });
 
@@ -83,6 +120,21 @@ ClientsUI.initialize = function () {
         return Catenis.db.collection.Client.find({
             catenisNode_id: docCtnNode._id,
             status: {$ne: 'deleted'}
+        }, {
+            fields: {
+                _id: 1,
+                user_id: 1,
+                clientId: 1,
+                index: 1,
+                props: 1,
+                status: 1
+            }
+        });
+    });
+
+    Meteor.publish('clientRecord', function (client_id) {
+        return Catenis.db.collection.Client.find({
+            _id: client_id
         }, {
             fields: {
                 _id: 1,

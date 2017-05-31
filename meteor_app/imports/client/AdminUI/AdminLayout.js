@@ -27,6 +27,9 @@ import './AdminLayout.html';
 import './LoginTemplate.js';
 import './SystemFundingTemplate.js';
 import './ClientsTemplate.js';
+import './DeviceDetailsTemplate.js';
+import './NewClientTemplate.js';
+import './NewDeviceTemplate.js';
 
 
 // Module code
