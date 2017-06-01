@@ -1,48 +1,52 @@
 <template name="newDevice">
     <h2>Add New Device</h2>
-    <a href="/admin/clients/{{docClientId}}?showDevices=1">Back to client {{client.props.name}}</a>
-    {{#if newDeviceId}}
-        <p style="color:blue">New device {{newDeviceId}} successfully created</p>
+    {{#unless Template.subscriptionsReady}}
+        <p style="color:lightgray; margin-top:1em">Loading...</p>
     {{else}}
-        {{#if hasError}}
-            <p style="color:red">{{{errorMessage}}}</p>
+        <a href="/admin/clients/{{docClientId}}?showDevices=1">Back to client {{client.props.name}}</a>
+        {{#if newDeviceId}}
+            <p style="color:blue">New device {{newDeviceId}} successfully created</p>
+        {{else}}
+            {{#if hasError}}
+                <p style="color:red">{{{errorMessage}}}</p>
+            {{/if}}
+            <form id="frmNewDevice">
+                <table cellpadding="2" style="margin-left:auto; margin-right:auto; margin-top:1em; margin-bottom:0.5em">
+                    <tr>
+                        <td style="text-align:right; font-weight:bold">
+                            <label for="txtDeviceName">Name</label>
+                        </td>
+                        <td style="text-align:right">
+                            <input id="txtDeviceName" name="clientName" type="text" maxlength="80"/>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="text-align:right; font-weight:bold">
+                            <label for="txtProdUniqueId">Product Unique ID</label>
+                        </td>
+                        <td style="text-align:right">
+                            <input id="txtProdUniqueId" name="prodUniqueId" type="text" maxlength="40"/>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="text-align:right; font-weight:bold">
+                            <label for="cbxPublic">Public</label>
+                        </td>
+                        <td style="text-align:left">
+                            <input id="cbxPublic" name="public" type="checkbox"/>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="text-align:right; font-weight:bold">
+                            <label for="cbxOwnAPIAccessKey">Own API Access Key</label>
+                        </td>
+                        <td style="text-align:left">
+                            <input id="cbxOwnAPIAccessKey" name="ownAPIAccessKey" type="checkbox"/>
+                        </td>
+                    </tr>
+                </table>
+                <input type="submit" value="Add Device"/>
+            </form>
         {{/if}}
-        <form id="frmNewDevice">
-            <table cellpadding="2" style="margin-left:auto; margin-right:auto; margin-top:1em; margin-bottom:0.5em">
-                <tr>
-                    <td style="text-align:right; font-weight:bold">
-                        <label for="txtDeviceName">Name</label>
-                    </td>
-                    <td style="text-align:right">
-                        <input id="txtDeviceName" name="clientName" type="text" maxlength="80"/>
-                    </td>
-                </tr>
-                <tr>
-                    <td style="text-align:right; font-weight:bold">
-                        <label for="txtProdUniqueId">Product Unique ID</label>
-                    </td>
-                    <td style="text-align:right">
-                        <input id="txtProdUniqueId" name="prodUniqueId" type="text" maxlength="40"/>
-                    </td>
-                </tr>
-                <tr>
-                    <td style="text-align:right; font-weight:bold">
-                        <label for="cbxPublic">Public</label>
-                    </td>
-                    <td style="text-align:left">
-                        <input id="cbxPublic" name="public" type="checkbox"/>
-                    </td>
-                </tr>
-                <tr>
-                    <td style="text-align:right; font-weight:bold">
-                        <label for="cbxOwnAPIAccessKey">Own API Access Key</label>
-                    </td>
-                    <td style="text-align:left">
-                        <input id="cbxOwnAPIAccessKey" name="ownAPIAccessKey" type="checkbox"/>
-                    </td>
-                </tr>
-            </table>
-            <input type="submit" value="Add Device"/>
-        </form>
-    {{/if}}
+    {{/unless}}
 </template>

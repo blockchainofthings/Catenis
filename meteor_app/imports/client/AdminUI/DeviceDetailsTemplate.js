@@ -53,7 +53,7 @@ Template.deviceDetails.events({
                 console.log('Error calling \'getAPIAccessSecret\' remote method: ' + error);
             }
             else {
-                alert('Device API Access Key: ' + key);
+                alert('Device API access secret: ' + key);
             }
         });
     }

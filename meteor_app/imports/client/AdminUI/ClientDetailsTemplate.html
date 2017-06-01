@@ -1,51 +1,55 @@
 <template name="clientDetails">
     <h2>{{client.props.name}}</h2>
-    <a href="/admin/clients">Back to clients</a>
-    <table cellpadding="2" style="margin-left:auto; margin-right:auto; margin-top:1em; max-width: 70%">
-        <tr>
-            <td style="text-align:right; font-weight:bold"><label>Client&nbsp;ID:&nbsp;</label></td>
-            <td style="text-align:left">{{client.clientId}}</td>
-        </tr>
-        <tr>
-            <td style="text-align:right; font-weight:bold"><label>Client&nbsp;Index:&nbsp;</label></td>
-            <td style="text-align:left">{{client.index.clientIndex}}</td>
-        </tr>
-        <tr>
-            <td style="text-align:right; font-weight:bold"><label>Username:&nbsp;</label></td>
-            <td style="text-align:left">{{clientUsername client.user_id}}</td>
-        </tr>
-        <tr>
-            <td style="text-align:right; vertical-align:top; font-weight:bold"><label>Message&nbsp;Credits:&nbsp;</label></td>
-            <td style="text-align:left; vertical-align:top">
-                {{messageCredits.confirmed}}{{#if (hasUnconfirmedMessageCredits messageCredits)}}&nbsp;(<span style="color:red">{{messageCredits.unconfirmed}}</span>){{/if}}
-                <div style="margin-top:5px">
-                    {{#if (checkAddMsgCreditsStatus 'idle')}}
-                        <a id="lnkAddMsgCredits" href="#" role="button">Add more credits</a>
-                    {{else if (checkAddMsgCreditsStatus 'data-enter')}}
-                        <input id="txiMsgCreditAmount" type="text"/>
-                        <br><button id="butAddMsgCredits" style="margin-top:0.5em">Add credits</button>
-                        &nbsp;&nbsp;<a id="lnkCancelAddMsgCredits" href="#" role="button">Cancel</a>
-                    {{else if (checkAddMsgCreditsStatus 'processing')}}
-                        <span style="color:blue">Processing. Please wait...</span>
-                    {{else if (checkAddMsgCreditsStatus 'success')}}
-                        <span>Done</span>
-                        &nbsp;&nbsp;<a id="lnkCancelAddMsgCredits" href="#" role="button">Close</a>
-                    {{else if (checkAddMsgCreditsStatus 'error')}}
-                        <span style="color:red">{{addMsgCreditsError}}</span>
-                        &nbsp;&nbsp;<a id="lnkCancelAddMsgCredits" href="#" role="button">Close</a>
-                    {{/if}}
-                </div>
-            </td>
-        </tr>
-    </table>
-    <div style="margin-top:1em">
-        {{#unless showDevices}}
-            <a id="lnkShowDevices" href="#">Show devices</a>
-        {{else}}
-            <a id="lnkHideDevices" href="#">Hide devices</a>
-            {{#if client._id}}
-                {{> devices client_id=client._id}}
-            {{/if}}
-        {{/unless}}
-    </div>
+    {{#unless Template.subscriptionsReady}}
+        <p style="color:lightgray; margin-top:1em">Loading...</p>
+    {{else}}
+        <a href="/admin/clients">Back to clients</a>
+        <table cellpadding="2" style="margin-left:auto; margin-right:auto; margin-top:1em; max-width: 70%">
+            <tr>
+                <td style="text-align:right; font-weight:bold"><label>Client&nbsp;ID:&nbsp;</label></td>
+                <td style="text-align:left">{{client.clientId}}</td>
+            </tr>
+            <tr>
+                <td style="text-align:right; font-weight:bold"><label>Client&nbsp;Index:&nbsp;</label></td>
+                <td style="text-align:left">{{client.index.clientIndex}}</td>
+            </tr>
+            <tr>
+                <td style="text-align:right; font-weight:bold"><label>Username:&nbsp;</label></td>
+                <td style="text-align:left">{{clientUsername client.user_id}}</td>
+            </tr>
+            <tr>
+                <td style="text-align:right; vertical-align:top; font-weight:bold"><label>Message&nbsp;Credits:&nbsp;</label></td>
+                <td style="text-align:left; vertical-align:top">
+                    {{messageCredits.confirmed}}{{#if (hasUnconfirmedMessageCredits messageCredits)}}&nbsp;(<span style="color:red">{{messageCredits.unconfirmed}}</span>){{/if}}
+                    <div style="margin-top:5px">
+                        {{#if (checkAddMsgCreditsStatus 'idle')}}
+                            <a id="lnkAddMsgCredits" href="#" role="button">Add more credits</a>
+                        {{else if (checkAddMsgCreditsStatus 'data-enter')}}
+                            <input id="txiMsgCreditAmount" type="text"/>
+                            <br><button id="butAddMsgCredits" style="margin-top:0.5em">Add credits</button>
+                            &nbsp;&nbsp;<a id="lnkCancelAddMsgCredits" href="#" role="button">Cancel</a>
+                        {{else if (checkAddMsgCreditsStatus 'processing')}}
+                            <span style="color:blue">Processing. Please wait...</span>
+                        {{else if (checkAddMsgCreditsStatus 'success')}}
+                            <span>Done</span>
+                            &nbsp;&nbsp;<a id="lnkCancelAddMsgCredits" href="#" role="button">Close</a>
+                        {{else if (checkAddMsgCreditsStatus 'error')}}
+                            <span style="color:red">{{addMsgCreditsError}}</span>
+                            &nbsp;&nbsp;<a id="lnkCancelAddMsgCredits" href="#" role="button">Close</a>
+                        {{/if}}
+                    </div>
+                </td>
+            </tr>
+        </table>
+        <div style="margin-top:1em">
+            {{#unless showDevices}}
+                <a id="lnkShowDevices" href="#">Show devices</a>
+            {{else}}
+                <a id="lnkHideDevices" href="#">Hide devices</a>
+                {{#if client._id}}
+                    {{> devices client_id=client._id}}
+                {{/if}}
+            {{/unless}}
+        </div>
+    {{/unless}}
 </template>
