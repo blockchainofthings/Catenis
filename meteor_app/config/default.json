@@ -204,10 +204,13 @@
       }
     }
   },
+  // Parameters pertaining to Message module
+  "message": {
+    "maxQueryCount": 500  // Maximum number of messages entries that can be returned when querying for messages
+  },
   // Parameters pertaining to RestApi module
   "restApi": {
     "rootPath": "api",
-    "version": "0.2",
     "requestSignature": {
       "signVersionId": "CTN1",
       "signMethodId": "CTN1-HMAC-SHA256",

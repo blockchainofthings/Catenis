@@ -138,7 +138,9 @@ Message {
     provider: [string],  // Name of external storage provider that was used to store message
     reference: [string]  // Reference to message in the external storage
   },
-  createdDate: [date/time],  // Date and time when messsage has been created
+  createdDate: [date/time],  // Date and time when doc/rec has been created
+  sentDate: [date/time],  // Date and time when message has been sent
+  receivedDate: [date/time],  // Date and time when message has been received
   lastReadDate: [date/time]  // Date and time when message has last been read
 }
 

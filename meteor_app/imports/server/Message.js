@@ -15,7 +15,7 @@
 //      imported module'
 const util = require('util');
 // Third-party node modules
-//import config from 'config';
+import config from 'config';
 // Meteor packages
 import { Meteor } from 'meteor/meteor';
 
@@ -26,11 +26,12 @@ import { SendMessageTransaction } from './SendMessageTransaction';
 import { CatenisMessage } from './CatenisMessage';
 
 // Config entries
-/*const config_entryConfig = config.get('config_entry');
+const messageConfig = config.get('message');
 
-// Configuration settingsconst cfgSettings = {
-    property: config_entryConfig.get('property_name')
-};*/
+// Configuration settings
+const cfgSettings = {
+    maxQueryCount: messageConfig.get('maxQueryCount')
+};
 
 
 // Definition of function classes
@@ -57,6 +58,8 @@ export function Message(docMessage) {
     }
 
     this.createdDate = docMessage.createdDate;
+    this.sentDate = docMessage.sentDate;
+    this.receivedDate = docMessage.receivedDate;
     this.lastReadDate = docMessage.lastReadDate;
 }
 
@@ -151,7 +154,8 @@ Message.createSentMessage = function (msgTx) {
         };
     }
 
-    docMessage.createDate = new Date();
+    docMessage.createdDate = new Date();
+    docMessage.sentDate = msgTx.transact.sentDate;
 
     try {
         docMessage._id = Catenis.db.collection.Message.insert(docMessage);
@@ -192,6 +196,294 @@ Message.getMessageByTxid = function (txid) {
     return new Message(docMessage);
 };
 
+// Query for messages for a given device adhering to the specified filtering criteria
+//
+//  Arguments:
+//    issuerDeviceId: [String]  // Catenis device ID of device that is issuing the query request
+//    filter: {
+//      action: [String],   // The action originally performed on the message. One of the properties of the Message.action object
+//      direction: [String],  // Direction of the sent message in reference to the issuer device. One of the properties of the Message.direction object
+//      fromDeviceId: [String|Array(String)], // Single Catenis device ID or list of Catenis device IDs specifying the device(s) that have sent the messages to the issuer device
+//      toDeviceId: [Arraty(String)],  // Single Catenis device ID or list of Catenis device IDs specifying the device(s) to which the messages sent from the issuer device have been sent
+//      readState: [String],  // The read state (either read or unread) of the message. One of the properties of the Message.readState object
+//      startDate: [Date],  // Date and time specifying the lower bound of the time frame within which the message had been sent/reaceived
+//      endDate: [Date]  // Date and time specifying the upper bound of the time frame within which the message had been sent/reaceived
+//    }
+//
+//  Result: {
+//    messages: [Array(Object)],  // List of Message objects that satisfied the query criteria
+//    countExceeded: [Boolean]    // Indicates whether the number of messages that satisfied the query criteria was greater than the maximum
+//                                //  number of messages that can be returned, and for that reason the returned list had been truncated
+//  }
+Message.query = function (issuerDeviceId, filter) {
+    const hasFilter = typeof filter === 'object' && filter !== null;
+    let selector = undefined,
+        logSelector = undefined,
+        sendSelector = undefined;
+
+    if (hasFilter && filter.action === Message.action.log) {
+        // Log message action
+        logSelector = {
+            action: Message.action.log
+        };
+
+        logSelector.originDeviceId = issuerDeviceId;
+
+        // Date filter
+        if (filter.startDate instanceof Date) {
+            logSelector.sentDate = {$gte: filter.startDate}
+        }
+
+        if (filter.endDate instanceof Date) {
+            if (logSelector.sentDate !== undefined) {
+                logSelector.$and = [
+                    {sentDate: logSelector.sentDate},
+                    {sentDate: {$lte: filter.endDate}}
+                ];
+
+                delete logSelector.sentDate;
+            }
+            else {
+                logSelector.sentDate = {$lte: filter.endDate};
+            }
+        }
+
+        // Read state filter
+        if (filter.readState === Message.readState.read) {
+            logSelector.lastReadDate = {$exists: true};
+        }
+        else if (filter.readState === Message.readState.unread) {
+            logSelector.lastReadDate = {$exists: false};
+        }
+    }
+
+    if (hasFilter && filter.action === Message.action.send) {
+        // Send message action
+        sendSelector = {
+            action: Message.action.send
+        };
+
+        let directionSelector = undefined,
+            inboundSelector = undefined,
+            outboundSelector = undefined;
+
+        if (filter.direction === undefined || filter.direction === Message.direction.inbound || !isValidMsgDirection(filter.direction)) {
+            // Inbound message direction
+            inboundSelector = {
+                targetDeviceId: issuerDeviceId
+            };
+
+            // From devide ID filter
+            if (filter.fromDeviceId !== undefined) {
+                filter.fromDeviceId = !Array.isArray(filter.fromDeviceId) ? [filter.fromDeviceId] : filter.fromDeviceId;
+
+                inboundSelector.originDeviceId = {$in: filter.fromDeviceId};
+            }
+
+            // Date filter
+            if (filter.startDate instanceof Date) {
+                inboundSelector.receivedDate = {$gte: filter.startDate}
+            }
+
+            if (filter.endDate instanceof Date) {
+                if (inboundSelector.receivedDate !== undefined) {
+                    inboundSelector.$and = [
+                        {receivedDate: inboundSelector.receivedDate},
+                        {receivedDate: {$lte: filter.endDate}}
+                    ];
+
+                    delete inboundSelector.receivedDate;
+                }
+                else {
+                    inboundSelector.receivedDate = {$lte: filter.endDate};
+                }
+            }
+        }
+
+        if (filter.direction === undefined || filter.direction === Message.direction.outbound || !isValidMsgDirection(filter.direction)) {
+            // Outbound message direction
+            outboundSelector = {
+                originDeviceId: issuerDeviceId
+            };
+
+            // To device ID filter
+            if (filter.toDeviceId !== undefined) {
+                filter.toDeviceId = !Array.isArray(filter.toDeviceId) ? [filter.toDeviceId] : filter.toDeviceId;
+
+                outboundSelector.targetDeviceId = {$in: filter.toDeviceId};
+            }
+
+            // Date filter
+            if (filter.startDate instanceof Date) {
+                outboundSelector.sentDate = {$gte: filter.startDate}
+            }
+
+            if (filter.endDate instanceof Date) {
+                if (outboundSelector.sentDate !== undefined) {
+                    outboundSelector.$and = [
+                        {sentDate: outboundSelector.sentDate},
+                        {sentDate: {$lte: filter.endDate}}
+                    ];
+
+                    delete outboundSelector.sentDate;
+                }
+                else {
+                    outboundSelector.sentDate = {$lte: filter.endDate};
+                }
+            }
+        }
+
+        // Message direction filter
+        if (inboundSelector !== undefined) {
+            directionSelector = inboundSelector;
+        }
+
+        if (outboundSelector !== undefined) {
+            if (directionSelector !== undefined) {
+                directionSelector = {
+                    $or: [
+                        directionSelector,
+                        outboundSelector
+                    ]
+                };
+            }
+            else {
+                directionSelector = outboundSelector;
+            }
+        }
+
+        // Read state filter
+        let readStateSelector = undefined;
+
+        if (filter.readState === Message.readState.read) {
+            readStateSelector = {lastReadDate: {$exists: true}}
+        }
+        else if (filter.readState === Message.readState.unread) {
+            readStateSelector = {lastReadDate: {$exists: false}}
+        }
+
+        if (directionSelector !== undefined || readStateSelector !== undefined) {
+            sendSelector = {
+                $and: [
+                    sendSelector
+                ]
+            };
+
+            if (directionSelector !== undefined) {
+                sendSelector.$and.push(directionSelector);
+            }
+
+            if (readStateSelector !== undefined) {
+                sendSelector.$and.push(readStateSelector);
+            }
+        }
+    }
+
+    // Message action filter
+    if (logSelector !== undefined) {
+        selector = logSelector;
+    }
+
+    if (sendSelector !== undefined) {
+        if (selector !== undefined) {
+            selector = {
+                $or: [
+                    selector,
+                    sendSelector
+                ]
+            };
+        }
+        else {
+            selector = sendSelector;
+        }
+    }
+
+    if (selector === undefined) {
+        // Any message action
+
+        const sentSelector = {
+            originDeviceId: issuerDeviceId
+        }, receivedSelector = {
+            targetDeviceId: issuerDeviceId
+        };
+
+        // Date filter
+        if (filter.startDate instanceof Date) {
+            sentSelector.sentDate = {
+                $gte: filter.startDate
+            };
+            receivedSelector.receivedDate = {
+                $gte: filter.startDate
+            };
+        }
+
+        if (filter.endDate instanceof Date) {
+            if (sentSelector.sentDate !== undefined) {
+                sentSelector.$and = [
+                    {sentDate: sentSelector.sentDate},
+                    {sentDate: {$lte: filter.endDate}}
+                ];
+                receivedSelector.$and = [
+                    {receivedDate: receivedSelector.receivedDate},
+                    {receivedDate: {$lte: filter.endDate}}
+                ];
+
+                delete sentSelector.sentDate;
+                delete receivedSelector.receivedDate
+            }
+            else {
+                sentSelector.sentDate = {
+                    $lte: filter.endDate
+                };
+                receivedSelector.receivedDate = {
+                    $lte: filter.endDate
+                };
+            }
+        }
+
+        selector = {
+            $or: [
+                sentSelector,
+                receivedSelector
+            ]
+        };
+
+        // Read state filter
+        if (filter.readState === Message.readState.read) {
+            selector.lastReadDate = {$exists: true};
+        }
+        else if (filter.readState === Message.readState.unread) {
+            selector.lastReadDate = {$exists: false};
+        }
+    }
+
+    Catenis.logger.DEBUG('Query selector computed for Message.query() method:', selector);
+
+    let countExceeded = false;
+
+    const messages = Catenis.db.collection.Message.find(selector, {
+        sort: {createdDate: 1},
+        limit: cfgSettings.maxQueryCount + 1
+    }).fetch().filter((doc, idx) => {
+        let returnDoc = true;
+
+        if (idx >= cfgSettings.maxQueryCount) {
+            countExceeded = true;
+            returnDoc = false;
+        }
+
+        return returnDoc;
+    }).map((doc) => {
+        return new Message(doc);
+    });
+
+    return {
+        messages: messages,
+        countExceeded: countExceeded
+    }
+};
+
+
 // Message function class (public) properties
 //
 
@@ -204,6 +496,17 @@ Message.source = Object.freeze({
     sent_msg: 'sent_msg',
     received_msg: 'received_msg'
 });
+
+Message.direction = Object.freeze({
+    inbound: 'inbound',
+    outbound: 'outbound'
+});
+
+Message.readState = Object.freeze({
+    read: 'read',
+    unread: 'unread'
+});
+
 
 // Definition of module (private) functions
 //
@@ -222,6 +525,12 @@ function newMessageId(tx) {
     }, '');
 
     return 'm' + Random.createWithSeeds(seed).id(19);
+}
+
+function isValidMsgDirection(value) {
+    return Object.keys(Message.direction).some((key) => {
+        return Message.direction[key] === value;
+    });
 }
 
 

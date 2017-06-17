@@ -494,7 +494,7 @@ Device.prototype.logMessage = function (message, encryptMessage = true, storageS
 //
 //  Return value:
 //    msgInfo: {
-//      action: [String],  // The action performed on the message. Valid values: 'log', 'send' (from Message.action)
+//      action: [String],  // The action performed on the message; either 'log' or 'send' (from Message.action)
 //      originDevice: [Object],  // Device that logged/sent the message
 //      targetDevice: [Object],  // Device to which message was sent (present only action = 'send')
 //      message: [Object] // Buffer containing the read message
@@ -652,11 +652,11 @@ Device.prototype.readMessage = function (messageId) {
 //                                //  NOTE: due to malleability, the ID of the transaction might change
 //                                //    until the it is finally confirmed
 //        isConfirmed: [Boolean]  // Indicates whether the returned txid is confirmed
-//    },
-//    externalStorage: {     // Note: only returned if message is stored in an external storage
-//      <storage_provider_name>: [String]  // Key: storage provider name. Value: reference to message in external storage
+//      },
+//      externalStorage: {     // Note: only returned if message is stored in an external storage
+//        <storage_provider_name>: [String]  // Key: storage provider name. Value: reference to message in external storage
+//      }
 //    }
-//  }
 //
 Device.prototype.retrieveMessageContainer = function (messageId) {
     // Make sure that device is not deleted
@@ -698,6 +698,93 @@ Device.prototype.retrieveMessageContainer = function (messageId) {
     }
 
     return containerInfo;
+};
+
+// Retrieve a list of messages logged/sent/received by device that adhere to the specified filtering criteria
+//
+//  Arguments:
+//    filter: [Object]  // Object containing properties that specify the filtering criteria. Please refer to Message.query method for details about those properties
+//
+//  Result:
+//    listResult: {
+//      msgEntries: [{
+//        messageId: [String],  // ID of message
+//        action: [String],     // Action originally performed on the message. Valid values: log|send
+//        direction: [String],  // (only returned for action = 'send') Direction of the sent message. Valid values: inbound|outbound
+//        fromDevice: [Object],  // Device that had sent the message. (only returned for messages sent to the current device)
+//        toDevice: [Object],     // Device to which message had been sent. (only returned for messages sent from the current device)
+//        read: [Boolean],  // Indicates whether the message had already been read
+//        date: [Date],     // Date and time when the message had been logged/sent/received
+//      }],
+//      countExceeded: [Boolean]  // Indicates whether the number of messages that satisfied the query criteria was greater than the maximum
+//                                //  number of messages that can be returned, and for that reason the returned list had been truncated
+//    }
+//
+Device.prototype.listMessages = function(filter) {
+    // Make sure that device is not deleted
+    if (this.status === Device.status.deleted.name) {
+        // Cannot list messages for a deleted device. Log error and throw exception
+        Catenis.logger.ERROR('Cannot list messages for a deleted device', {deviceId: this.deviceId});
+        throw new Meteor.Error('ctn_device_deleted', util.format('Cannot list messages for a deleted device (deviceId: %s)', this.deviceId));
+    }
+
+    // Make sure that device is active
+    if (this.status !== Device.status.active.name) {
+        // Cannot list messages for a device that is not active. Log error and throw exception
+        Catenis.logger.ERROR('Cannot list messages for a device that is not active', {deviceId: this.deviceId});
+        throw new Meteor.Error('ctn_device_not_active', util.format('Cannot list messages for a device that is not active (deviceId: %s)', this.deviceId));
+    }
+
+    // Query messages for this device
+    const queryResult = Message.query(this.deviceId, filter);
+
+    const listResult = {
+        msgEntries: [],
+        countExceeded: queryResult.countExceeded
+    };
+
+    queryResult.messages.forEach((message) => {
+        let msgEntry = {
+            messageId: message.messageId,
+            action: message.action
+        };
+
+        if (message.action === Message.action.log) {
+            msgEntry.read = message.lastReadDate !== undefined;
+            msgEntry.date = message.sentDate;
+        }
+        else if (message.action === Message.action.send) {
+            if (message.originDeviceId === this.deviceId) {
+                msgEntry.direction = Message.direction.outbound;
+                msgEntry.toDevice = Device.getDeviceByDeviceId(message.targetDeviceId);
+                msgEntry.read = message.lastReadDate !== undefined;
+                msgEntry.date = message.sentDate;
+            }
+
+            if (message.targetDeviceId === this.deviceId) {
+                if (msgEntry.direction !== undefined) {
+                    // Special case of a message sent to the same device.
+                    //  In this case, split the message into two entries: one with inboud direction
+                    //  and the other with outbound direction
+                    listResult.msgEntries.push(msgEntry);
+
+                    msgEntry = {
+                        messageId: message.messageId,
+                        action: message.action
+                    };
+                }
+
+                msgEntry.direction = Message.direction.inbound;
+                msgEntry.fromDevice = Device.getDeviceByDeviceId(message.originDeviceId);
+                msgEntry.read = message.lastReadDate !== undefined;
+                msgEntry.date = message.receivedDate;
+            }
+        }
+
+        listResult.msgEntries.push(msgEntry);
+    });
+
+    return listResult;
 };
 
 // Update device properties

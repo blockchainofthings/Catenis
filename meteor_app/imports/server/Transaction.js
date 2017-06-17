@@ -90,6 +90,7 @@ export function Transaction() {
     this.nullDataPayloadSize = 0;
     this.rawTransaction = undefined;
     this.txid = undefined;
+    this.sentDate = undefined;
     this.txSaved = false;
 
     // Input and output sequence of tokens. Each token corresponds to an input/output
@@ -371,6 +372,7 @@ Transaction.prototype.getTransaction = function () {
 Transaction.prototype.sendTransaction = function (resend = false) {
     if (this.txid === undefined || resend) {
         this.txid = Catenis.bitcoinCore.sendRawTransaction(this.getTransaction());
+        this.sentDate = new Date();
     }
 
     return this.txid;
@@ -442,7 +444,7 @@ Transaction.prototype.saveSentTransaction = function (type, info) {
         docId = Catenis.db.collection.SentTransaction.insert({
             type: type.name,
             txid: this.txid,
-            sentDate: new Date(Date.now()),
+            sentDate: this.sentDate,
             confirmation: {
                 confirmed: false
             },

@@ -27,7 +27,9 @@ import { Device } from './Device';
 import { logMessage } from './ApiLogMessage';
 import { sendMessage } from './ApiSendMessage';
 import { readMessage } from './ApiReadMessage';
+import { readMessage2 } from './ApiReadMessage2';
 import { retrieveMessageContainer } from './ApiMessageContainer';
+import { listMessages } from './ApiListMessages';
 
 // Config entries
 const restApiConfig = config.get('restApi');
@@ -36,7 +38,6 @@ const apiReqSignConfig = restApiConfig.get('requestSignature');
 // Configuration settings
 const cfgSettings = {
     rootPath: restApiConfig.get('rootPath'),
-    version: restApiConfig.get('version'),
     requestSignature: {
         signVersionId: apiReqSignConfig.get('signVersionId'),
         signMethodId: apiReqSignConfig.get('signMethodId'),
@@ -53,11 +54,12 @@ const authRegex = new RegExp(cfgSettings.requestSignature.authRegexPattern.repla
 
 export const restApiRootPath = cfgSettings.rootPath;
 
+
 // Definition of function classes
 //
 
 // RestApi function class
-export function RestApi() {
+export function RestApi(apiVersion) {
     this.api = new Restivus({
         apiPath: cfgSettings.rootPath,
         auth: {
@@ -79,102 +81,59 @@ export function RestApi() {
                 return '';
             }
         },
-        version: cfgSettings.version
+        version: apiVersion
     });
 
-    this.api.addRoute('messages/log', {authRequired: true}, {
-        // Record a message to blockchain
-        //
-        //  JSON payload: {
-        //    "message": [String],      // The message to record
-        //    "options": {
-        //      "encoding": [String],   // (optional, default: "utf8") - One of the following values identifying the encoding of the message: "utf8"|"base64"|"hex"
-        //      "encrypt":  [Boolean],  // (optional, default: true) - Indicates whether message should be encrypted before storing
-        //      "storage": [String]     // (optional, default: "auto") - One of the following values identifying where the message should be stored: "auto"|"embedded"|"external"
-        //  }
-        //
-        //  Success data returned: {
-        //    "txid": [String],       // ID of blockchain transaction where message was recorded
-        //    "extStorage": {         // Note: only returned if message stored in external storage
-        //      "<storage_provider_name>": [String]  // Key: storage provider name. Value: reference to message in external storage
-        //    }
-        //  }
-        post: {
-            action: logMessage
-        }
-    });
+    if (apiVersion === '0.2' || apiVersion === '0.3') {
+        this.api.addRoute('messages/log', {authRequired: true}, {
+            // Record a message to blockchain
+            //
+            //  Refer to the source file where the action function is defined for a detailed description of the endpoint
+            post: {
+                action: logMessage
+            }
+        });
 
-    this.api.addRoute('messages/send', {authRequired: true}, {
-        // Record a message to blockchain directing it to another device
-        //
-        //  JSON payload: {
-        //    targetDevice: {
-        //      id: [String],               // ID of target device. Should be Catenis device ID unless isProdUniqueId is true
-        //      isProdUniqueId: [Boolean]   // (optional, default: false) Indicate whether supply ID is a product unique ID (otherwise, if should be a Catenis device Id)
-        //    },
-        //    message: [String],            // The message to send
-        //    "options": {
-        //      "encoding": [String],       // (optional, default: "utf8") - One of the following values identifying the encoding of the message: "utf8"|"base64"|"hex"
-        //      "encrypt":  [Boolean],      // (optional, default: true) - Indicates whether message should be encrypted before storing
-        //      "storage": [String]         // (optional, default: "auto") - One of the following values identifying where the message should be stored: "auto"|"embedded"|"external"
-        //  }
-        //
-        //  Success data returned: {
-        //    "txid": [String],       // ID of blockchain transaction where message was recorded
-        //    "extStorage": {         // Note: only returned if message stored in external storage
-        //      "<storage_provider_name>": [String]  // Key: storage provider name. Value: reference to message in external storage
-        //    }
-        //  }
-        post: {
-            action: sendMessage
-        }
-    });
+        this.api.addRoute('messages/send', {authRequired: true}, {
+            // Record a message to blockchain directing it to another device
+            //
+            //  Refer to the source file where the action function is defined for a detailed description of the endpoint
+            post: {
+                action: sendMessage
+            }
+        });
 
-    this.api.addRoute('messages/:messageId', {authRequired: true}, {
-        // Retrieve a given message from blockchain
-        //
-        //  URL parameters:
-        //    messageId [String]        // ID of message to read
-        //
-        //  Query string (optional) parameters:
-        //    encoding [String]         // (default: utf8) - One of the following values identifying the encoding that should be used for the returned message: utf8|base64|hex
-        //
-        //  Success data returned: {
-        //    "from" : {            // Note: only returned if origin device different than device that issued the request
-        //      "deviceId": [String]      // Catenis ID of the origin device (device that had sent/logged the message)
-        //    },
-        //    "to" : {              // Note: only returned if target device different than device that issued the request.
-        //                          //  Never returned for version 0.1 that does not have permission control.
-        //      "deviceId": [String]      // Catenis ID of target device (device to which the message had been sent)
-        //    },
-        //    "message": [String]       // The read message formatted using the specified encoding
-        //  }
-        get: {
-            action: readMessage
-        }
-    });
+        this.api.addRoute('messages/:messageId', {authRequired: true}, {
+            // Retrieve a given message from blockchain
+            //
+            //  Refer to the source file where the action function is defined for a detailed description of the endpoint
+            get: {
+                // Different implementations depending on the version of the API
+                action: apiVersion === '0.2' ? readMessage :
+                        apiVersion === '0.3' ? readMessage2 : undefined
+            }
+        });
 
-    this.api.addRoute('messages/:messageId/container', {authRequired: true}, {
-        // Retrieve information about where a given message is recorded
-        //
-        //  URL parameters:
-        //    messageId [String]        // ID of message to get container info
-        //
-        //  Success data returned: {
-        //    "blockchain" : {
-        //      "txid": [String],         // ID of blockchain transaction where message is recorded
-        //                                //  NOTE: due to malleability, the ID of the transaction might change
-        //                                //    until the it is finally confirmed
-        //      "isConfirmed": [Boolean]  // Indicates whether the returned txid is confirmed
-        //    },
-        //    "externalStorage" : {     // Note: only returned if message is stored in an external storage
-        //      "<storage_provider_name>": [String]  // Key: storage provider name. Value: reference to message in external storage
-        //    }
-        //  }
-        get: {
-            action: retrieveMessageContainer
-        }
-    });
+        this.api.addRoute('messages/:messageId/container', {authRequired: true}, {
+            // Retrieve information about where a given message is recorded
+            //
+            //  Refer to the source file where the action function is defined for a detailed description of the endpoint
+            get: {
+                action: retrieveMessageContainer
+            }
+        });
+    }
+
+    if (apiVersion === '0.3') {
+        this.api.addRoute('messages', {authRequired: true}, {
+            // Retrieve a list of message entries filtered by a given criteria
+            //
+            //  Refer to the source file where the action function is defined for a detailed description of the endpoint
+            get: {
+                action: listMessages
+            }
+        });
+    }
 }
 
 
@@ -201,7 +160,10 @@ export function RestApi() {
 RestApi.initialize = function () {
     Catenis.logger.TRACE('RestApi initialization');
     // Instantiate RestApi object
-    Catenis.restApi = new RestApi();
+    Catenis.restApi = {
+        'ver0.2': new RestApi('0.2'),
+        'ver0.3': new RestApi('0.3')
+    };
 };
 
 
@@ -277,7 +239,7 @@ function authenticateDevice() {
             }
         }
 
-        if (device != undefined) {
+        if (device !== undefined) {
             // Sign request and validate signature
             const reqSignature = signRequest.call(this, {
                 timestamp: strTmstmp,
@@ -352,7 +314,7 @@ function optionsResponseHeaders() {
 
     return {
         'Access-Control-Allow-Credentials': 'true',
-        'Access-Control-Allow-Origin': reqHdrOrigin != undefined ? reqHdrOrigin : '*',
+        'Access-Control-Allow-Origin': reqHdrOrigin !== undefined ? reqHdrOrigin : '*',
         'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
         'Access-Control-Allow-Headers': 'DNT, X-CustomHeader, Keep-Alive, User-Agent, X-Requested-With, If-Modified-Since, Cache-Control, Accept, Origin, Content-Type, X-Bcot-Timestamp, Authorization'
     };
@@ -370,7 +332,7 @@ function addCorsResponseHeaders(respHeaders) {
     //  Restivus directly to work properly with CORS (Cross-Origin
     //  Resource Sharing).
 
-    if (reqHdrOrigin != undefined) {
+    if (reqHdrOrigin !== undefined) {
         respHeaders['Access-Control-Allow-Origin'] = reqHdrOrigin;
         respHeaders['Vary'] = 'Origin';
     }

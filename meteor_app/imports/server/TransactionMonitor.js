@@ -660,6 +660,7 @@ function handleNewTransactions(data) {
                 // Identify received transactions that had been sent by this Catenis node
                 const sentTxids = new Set();
                 const rcvdTxDocsToCreate = [];
+                const txTimeRcvdSentTxids = new Map();
 
                 Catenis.db.collection.SentTransaction.find({
                     txid: {$in: Object.keys(data.ctnTxids)}
@@ -717,13 +718,23 @@ function handleNewTransactions(data) {
                         }
 
                         //  Prepared to save received tx to the local database
+                        const txTimeReceived = data.ctnTxids[doc.txid].timereceived;
+
                         rcvdTxDocsToCreate.push({
                             type: doc.type,
                             txid: doc.txid,
-                            receivedDate: new Date(data.ctnTxids[doc.txid].timereceived * 1000),
+                            receivedDate: new Date(txTimeReceived * 1000),
                             sentTransaction_id: doc._id,
                             info: docInfo
                         });
+
+                        // Save txid associated with its time received
+                        if (txTimeRcvdSentTxids.has(txTimeReceived)) {
+                            txTimeRcvdSentTxids.get(txTimeReceived).push(doc.txid);
+                        }
+                        else {
+                            txTimeRcvdSentTxids.set(txTimeReceived, [doc.txid]);
+                        }
                     }
                 });
 
@@ -782,6 +793,17 @@ function handleNewTransactions(data) {
                 rcvdTxDocsToCreate.forEach((docRcvdTx) => {
                     docRcvdTx._id = Catenis.db.collection.ReceivedTransaction.insert(docRcvdTx);
                 });
+
+                // Update existing Message docs with time tx has been received
+                for (let [txTimeReceived, txids] of txTimeRcvdSentTxids) {
+                    Catenis.db.Message.upate({
+                        'blockchain.txid': {$in: txids}
+                    }, {
+                        $set: {receivedDate: new Date(txTimeReceived * 100)}
+                    }, {
+                        multi: true
+                    });
+                }
 
                 // Emit notification events
                 eventsToEmit.forEach(event => {

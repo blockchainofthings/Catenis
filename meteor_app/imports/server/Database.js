@@ -553,6 +553,26 @@ Database.initialize = function() {
             },
             {
                 fields: {
+                    sentDate: 1
+                },
+                opts: {
+                    sparse: true,
+                    background: true,
+                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                }
+            },
+            {
+                fields: {
+                    receivedDate: 1
+                },
+                opts: {
+                    sparse: true,
+                    background: true,
+                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                }
+            },
+            {
+                fields: {
                     lastReadDate: 1
                 },
                 opts: {
@@ -623,6 +643,36 @@ Database.initialize = function() {
             {
                 fields: {
                     'info.readConfirmation.txouts.txid': 1
+                },
+                opts: {
+                    sparse: true,
+                    background: true,
+                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                }
+            },
+            {
+                fields: {
+                    'info.sendMessage.originDeviceId': 1
+                },
+                opts: {
+                    sparse: true,
+                    background: true,
+                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                }
+            },
+            {
+                fields: {
+                    'info.sendMessage.targetDeviceId': 1
+                },
+                opts: {
+                    sparse: true,
+                    background: true,
+                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                }
+            },
+            {
+                fields: {
+                    'info.logMessage.deviceId': 1
                 },
                 opts: {
                     sparse: true,
@@ -719,6 +769,26 @@ Database.initialize = function() {
                     background: true,
                     safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
                 }
+            },
+            {
+                fields: {
+                    'info.sendMessage.originDeviceId': 1
+                },
+                opts: {
+                    sparse: true,
+                    background: true,
+                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                }
+            },
+            {
+                fields: {
+                    'info.sendMessage.targetDeviceId': 1
+                },
+                opts: {
+                    sparse: true,
+                    background: true,
+                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                }
             }]
         },
         Malleability: {
@@ -755,6 +825,55 @@ Database.initialize = function() {
     };
 
     Catenis.db = new Database(collections);
+};
+
+// Temporary method used to adjust the Message collection
+Database.fixMessageCollection = function () {
+    // Update sentDate field on Message documents as necessary
+    let docsUpdated = 0;
+
+    Catenis.db.collection.SentTransaction.find({
+        type: {$in: ['send_message', 'log_message']}
+    }, {
+        fields: {
+            txid: 1,
+            sentDate: 1
+        }
+    }).forEach((doc) => {
+        docsUpdated += Catenis.db.collection.Message.update({
+            'blockchain.txid': doc.txid,
+            sentDate: {$ne: doc.sentDate}
+        }, {
+            $set: {
+                sentDate: doc.sentDate
+            }
+        })
+    });
+
+    console.log('Message docs that had their sentDate field update: ' + docsUpdated);
+
+    // Update receivedDate field on Message documents as necessary
+    docsUpdated = 0;
+
+    Catenis.db.collection.ReceivedTransaction.find({
+        type: 'send_message'
+    }, {
+        fields: {
+            txid: 1,
+            receivedDate: 1
+        }
+    }).forEach((doc) => {
+        docsUpdated += Catenis.db.collection.Message.update({
+            'blockchain.txid': doc.txid,
+            receivedDate: {$ne: doc.receivedDate}
+        }, {
+            $set: {
+                receivedDate: doc.receivedDate
+            }
+        })
+    });
+
+    console.log('Message docs that had their receivedDate field update: ' + docsUpdated);
 };
 
 
