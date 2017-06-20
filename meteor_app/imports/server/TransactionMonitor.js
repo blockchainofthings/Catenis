@@ -420,7 +420,7 @@ function pollBlockchain() {
 
                     Catenis.db.collection.ReceivedTransaction.find({txid: {$in: newCtnTxidKeys}}, {fields: {txid: 1}}).forEach(doc => {
                         Catenis.logger.TRACE('Transaction identified as new Catenis transaction had already been received', {txid: doc.txid});
-                        newCtnTxids.delete(doc.txid);
+                        delete newCtnTxids[doc.txid];
                         filtered = true;
                     });
 
@@ -796,7 +796,7 @@ function handleNewTransactions(data) {
 
                 // Update existing Message docs with time tx has been received
                 for (let [txTimeReceived, txids] of txTimeRcvdSentTxids) {
-                    Catenis.db.Message.upate({
+                    Catenis.db.Message.update({
                         'blockchain.txid': {$in: txids}
                     }, {
                         $set: {receivedDate: new Date(txTimeReceived * 100)}
