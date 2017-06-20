@@ -754,17 +754,17 @@ Device.prototype.listMessages = function(filter) {
             msgEntry.date = message.sentDate;
         }
         else if (message.action === Message.action.send) {
-            if (message.originDeviceId === this.deviceId) {
+            if ((filter.direction === undefined || filter.direction === Message.direction.outbound) && message.originDeviceId === this.deviceId) {
                 msgEntry.direction = Message.direction.outbound;
                 msgEntry.toDevice = Device.getDeviceByDeviceId(message.targetDeviceId);
                 msgEntry.read = message.lastReadDate !== undefined;
                 msgEntry.date = message.sentDate;
             }
 
-            if (message.targetDeviceId === this.deviceId) {
+            if ((filter.direction === undefined || filter.direction === Message.direction.inbound) && message.targetDeviceId === this.deviceId) {
                 if (msgEntry.direction !== undefined) {
-                    // Special case of a message sent to the same device.
-                    //  In this case, split the message into two entries: one with inboud direction
+                    // Special case of a message sent to the same device and no filtering on message direction.
+                    //  In this case, split the message into two entries: one with inbound direction
                     //  and the other with outbound direction
                     listResult.msgEntries.push(msgEntry);
 
