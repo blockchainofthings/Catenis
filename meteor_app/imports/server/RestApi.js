@@ -183,7 +183,10 @@ function authenticateDevice() {
         // Make sure that required headers are present
         if (!(cfgSettings.requestSignature.timestampHdr in this.request.headers) || !('authorization' in this.request.headers)) {
             // Missing required HTTP headers. Return error
-            return errorResponse.call(this, 401, 'Authorization failed; missing required HTTP header');
+            Catenis.logger.DEBUG('Error authenticating API request: missing required HTTP header', this.request);
+            return {
+                error: errorResponse.call(this, 401, 'Authorization failed; missing required HTTP header')
+            };
         }
 
         // Make sure that timestamp is valid
@@ -193,12 +196,18 @@ function authenticateDevice() {
 
         if (!tmstmp.isValid()) {
             // Timestamp not well formed. Return error
-            return errorResponse.call(this, 401, 'Authorization failed; timestamp not well formed');
+            Catenis.logger.DEBUG('Error authenticating API request: timestamp not well formed', this.request);
+            return {
+                error: errorResponse.call(this, 401, 'Authorization failed; timestamp not well formed')
+            };
         }
 
         if (!tmstmp.isBetween(now.clone().subtract(cfgSettings.requestSignature.allowedTimestampOffset, 'seconds'), now.clone().add(cfgSettings.requestSignature.allowedTimestampOffset, 'seconds'), null, '[]')) {
             // Timestamp not within acceptable time variation. Return error
-            return errorResponse.call(this, 401, 'Authorization failed; timestamp not within acceptable time variation');
+            Catenis.logger.DEBUG('Error authenticating API request: timestamp not within acceptable time variation', this.request);
+            return {
+                error: errorResponse.call(this, 401, 'Authorization failed; timestamp not within acceptable time variation')
+            };
         }
 
         // Try to parse Authorization header
@@ -206,7 +215,10 @@ function authenticateDevice() {
 
         if (!(matchResult = this.request.headers.authorization.match(authRegex))) {
             // Authorization HTTP header value not well formed. Return error
-            return errorResponse.call(this, 401, 'Authorization failed; authorization value not well formed');
+            Catenis.logger.DEBUG('Error authenticating API request: authorization value not well formed', this.request);
+            return {
+                error: errorResponse.call(this, 401, 'Authorization failed; authorization value not well formed')
+            };
         }
 
         const deviceId = matchResult[1],
@@ -218,12 +230,18 @@ function authenticateDevice() {
 
         if (!signDate.isValid()) {
             // Signature date not well formed. Return error
-            return errorResponse.call(this, 401, 'Authorization failed; signature date not well formed');
+            Catenis.logger.DEBUG('Error authenticating API request: signature date not well formed', this.request);
+            return {
+                error: errorResponse.call(this, 401, 'Authorization failed; signature date not well formed')
+            };
         }
 
         if (!moment(now).isBetween(signDate, signDate.clone().add(cfgSettings.requestSignature.signValidDays, 'days'), 'day', '[)')) {
             // Signature date out of bounds. Return error
-            return errorResponse.call(this, 401, 'Authorization failed; signature date out of bounds');
+            Catenis.logger.DEBUG('Error authenticating API request: signature date out of bounds', this.request);
+            return {
+                error: errorResponse.call(this, 401, 'Authorization failed; signature date out of bounds')
+            };
         }
 
         // Make sure that device ID is valid
@@ -235,7 +253,9 @@ function authenticateDevice() {
         catch (err) {
             if (!(err instanceof Meteor.Error) || err.error !== 'ctn_device_not_found') {
                 Catenis.logger.ERROR('Error authenticating API request.', err);
-                return errorResponse.call(this, 500, 'Internal server error');
+                return {
+                    error: errorResponse.call(this, 500, 'Internal server error')
+                };
             }
         }
 
@@ -258,11 +278,16 @@ function authenticateDevice() {
         }
 
         // Device ID or signature not valid. Return generic error
-        return errorResponse.call(this, 401, 'Authorization failed; invalid device or signature');
+        Catenis.logger.DEBUG('Error authenticating API request: invalid device or signature', this.request);
+        return {
+            error: errorResponse.call(this, 401, 'Authorization failed; invalid device or signature')
+        };
     }
     catch (err) {
         Catenis.logger.ERROR('Error authenticating API request.', err);
-        return errorResponse.call(this, 500, 'Internal server error');
+        return {
+            error: errorResponse.call(this, 500, 'Internal server error')
+        };
     }
 }
 
