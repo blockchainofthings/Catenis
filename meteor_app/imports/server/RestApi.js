@@ -14,6 +14,7 @@
 //      to avoid annoying WebStorm warning message: 'default export is not defined in
 //      imported module'
 const crypto = require('crypto');
+const util = require('util');
 // Third-party node modules
 import config from 'config';
 import moment from 'moment';
@@ -275,10 +276,15 @@ function authenticateDevice() {
                     }
                 }
             }
+            else {
+                Catenis.logger.DEBUG(util.format('Error authenticating API request: invalid signature (expected signature: %s)', reqSignature), this.request);
+            }
+        }
+        else {
+            Catenis.logger.DEBUG('Error authenticating API request: invalid device', this.request);
         }
 
         // Device ID or signature not valid. Return generic error
-        Catenis.logger.DEBUG('Error authenticating API request: invalid device or signature', this.request);
         return {
             error: errorResponse.call(this, 401, 'Authorization failed; invalid device or signature')
         };
