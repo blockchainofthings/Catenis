@@ -54,7 +54,7 @@ export function FundTransaction(fundingEvent, entityId) {
         else {
             // Make sure that entity ID is a valid reference to the right entity
             if (fundingEvent.name === FundTransaction.fundingEvent.provision_client_srv_credit) {
-                const docClient = Catenis.db.Client.find({clientId: entityId}, {fields: {_id: 1}}).fetch();
+                const docClient = Catenis.db.collection.Client.find({clientId: entityId}, {fields: {_id: 1}}).fetch();
 
                 if (docClient == undefined) {
                     Catenis.logger.ERROR('FundTransaction function class constructor called with invalid argument; entity ID not a valid client Id', {entityId: entityId});
@@ -62,7 +62,7 @@ export function FundTransaction(fundingEvent, entityId) {
                 }
             }
             else {
-                const docDevice = Catenis.db.Client.find({deviceId: entityId}, {fields: {_id: 1}}).fetch();
+                const docDevice = Catenis.db.collection.Client.find({deviceId: entityId}, {fields: {_id: 1}}).fetch();
 
                 if (docDevice == undefined) {
                     Catenis.logger.ERROR('FundTransaction function class constructor called with invalid argument; entity ID not a valid client Id', {entityId: entityId});

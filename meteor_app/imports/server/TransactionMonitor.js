@@ -796,7 +796,7 @@ function handleNewTransactions(data) {
 
                 // Update existing Message docs with time tx has been received
                 for (let [txTimeReceived, txids] of txTimeRcvdSentTxids) {
-                    Catenis.db.Message.update({
+                    Catenis.db.collection.Message.update({
                         'blockchain.txid': {$in: txids}
                     }, {
                         $set: {receivedDate: new Date(txTimeReceived * 100)}
