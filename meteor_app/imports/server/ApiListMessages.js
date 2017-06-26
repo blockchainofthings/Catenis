@@ -128,6 +128,8 @@ export function listMessages() {
         if (this.queryParams.fromDeviceIds !== undefined) {
             // Parse list of IDs
             this.queryParams.fromDeviceIds.split(',').forEach((id) => {
+                id = id.trim();
+
                 if (id.length > 0) {
                     fromDeviceIds.add(id);
                 }
@@ -140,6 +142,8 @@ export function listMessages() {
         if (this.queryParams.toDeviceIds !== undefined) {
             // Parse list of IDS
             this.queryParams.toDeviceIds.split(',').forEach((id) => {
+                id = id.trim();
+
                 if (id.length > 0) {
                     toDeviceIds.add(id);
                 }
@@ -152,6 +156,8 @@ export function listMessages() {
         if (this.queryParams.fromDeviceProdUniqueIds !== undefined) {
             // Parse list of IDs
             this.queryParams.fromDeviceProdUniqueIds.split(',').forEach((id) => {
+                id = id.trim();
+
                 if (id.length > 0) {
                     fromDeviceProdUniqueIds.add(id);
                 }
@@ -177,6 +183,8 @@ export function listMessages() {
         if (this.queryParams.toDeviceProdUniqueIds !== undefined) {
             // Parse list of IDs
             this.queryParams.toDeviceProdUniqueIds.split(',').forEach((id) => {
+                id = id.trim();
+
                 if (id.length > 0) {
                     toDeviceProdUniqueIds.add(id);
                 }
