@@ -167,6 +167,32 @@ RestApi.initialize = function () {
     };
 };
 
+// NOTE: this method is only provided for debugging purpose
+RestApi.genReqSignature = function (apiAccessSecret, timestamp, signDate, host = 'beta.catenis.io', method = 'GET', url = '/api/0.3/messages/mdQP57eQjwmsciBwTssw?encoding=utf8', rawBody = new Buffer('')) {
+    if (signDate === undefined) {
+        signDate = moment(timestamp).utc().format('YYYYMMDD');
+    }
+
+    const context = {
+        request: {
+            method: method,
+            url: url,
+            headers: {
+                host: host,
+                'x-bcot-timestamp': timestamp
+            },
+            rawBody: rawBody
+        }
+    };
+
+    const info = {
+        timestamp: timestamp,
+        signDate: signDate,
+        apiAccessSecret: apiAccessSecret
+    };
+
+    return signRequest.call(context, info);
+};
 
 // RestApi function class (public) properties
 //
@@ -227,7 +253,7 @@ function authenticateDevice() {
             signature = matchResult[3];
 
         // Make sure that date of signature is valid
-        const signDate = moment(strSignDate, 'YYYYMMDD', true);
+        const signDate = moment.utc(strSignDate, 'YYYYMMDD', true);
 
         if (!signDate.isValid()) {
             // Signature date not well formed. Return error
@@ -237,7 +263,7 @@ function authenticateDevice() {
             };
         }
 
-        if (!moment(now).isBetween(signDate, signDate.clone().add(cfgSettings.requestSignature.signValidDays, 'days'), 'day', '[)')) {
+        if (!now.clone().utc().isBetween(signDate, signDate.clone().add(cfgSettings.requestSignature.signValidDays, 'days'), 'day', '[)')) {
             // Signature date out of bounds. Return error
             Catenis.logger.DEBUG('Error authenticating API request: signature date out of bounds', this.request);
             return {
@@ -306,6 +332,7 @@ function authenticateDevice() {
 //    apiAccessSecret: [string]
 //  }
 function signRequest(info) {
+    Catenis.logger.DEBUG('>>>>>> Sign date: ' + info.signDate);
     // First step: compute conformed request
     let confReq = this.request.method + '\n';
     confReq += this.request.url + '\n';
@@ -315,6 +342,7 @@ function signRequest(info) {
 
     confReq += essentialHeaders + '\n';
     confReq += hashData(this.request.rawBody) + '\n';
+    Catenis.logger.DEBUG('>>>>>> Conformed request: ' + confReq);
 
     // Second step: assemble string to sign
     let strToSign = cfgSettings.requestSignature.signMethodId +'\n';
@@ -324,12 +352,18 @@ function signRequest(info) {
 
     strToSign += scope + '\n';
     strToSign += hashData(confReq) + '\n';
+    Catenis.logger.DEBUG('>>>>>> String to sign: ' + strToSign);
 
     // Third step: generate the signature
     const dateKey = signData(info.signDate, cfgSettings.requestSignature.signVersionId + info.apiAccessSecret),
         signKey = signData(cfgSettings.requestSignature.scopeRequest, dateKey);
+    Catenis.logger.DEBUG('>>>>>> Date key (hex): ' + dateKey.toString('hex'));
+    Catenis.logger.DEBUG('>>>>>> Sign key (hex): ' + signKey.toString('hex'));
 
-    return signData(strToSign, signKey, true);
+    //return signData(strToSign, signKey, true);
+    const signature = signData(strToSign, signKey, true);
+    Catenis.logger.DEBUG('>>>>>> Request signature: ' + signature);
+    return signature;
 }
 
 function hashData(data) {
