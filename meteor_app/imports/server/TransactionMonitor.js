@@ -52,7 +52,8 @@ const cfgSettings = {
     mempoolExpiryHours: txMonitorConfig.get('mempoolExpiryHours'),
     limitTxConfirmTime: txMonitorConfig.get('limitTxConfirmTime'),
     checkOldUnconfTxsInterval: txMonitorConfig.get('checkOldUnconfTxsInterval'),
-    newTxsBatchProcDoneTimeout: txMonitorConfig.get('newTxsBatchProcDoneTimeout')
+    newTxsBatchProcDoneTimeout: txMonitorConfig.get('newTxsBatchProcDoneTimeout'),
+    noCtnTxInInitMempool: process.env.NODE_ENV === 'development' ? txMonitorConfig.get('noCtnTxInInitMempool') : false
 };
 
 const externalEventHandlers = [];
@@ -233,27 +234,30 @@ function pollBlockchain() {
                 let newCtnTxids = {};
 
                 if (newTxids.length > 0) {
-                    // New transactions have arrived. Filter those that are associated with
-                    //  Catenis addresses (addresses imported onto BitcoinCore)
-                    newCtnTxids = newTxids.reduce((result, txid) => {
-                        try {
-                            // Make sure that error thrown by getTransaction() is not logged.
-                            //  This is necessary because any transaction that are not associated
-                            //  with a wallet address will make getTransaction() to throw an error
-                            //  (with code = RPC_INVALID_ADDRESS_OR_KEY)
-                            result[txid] = Catenis.bitcoinCore.getTransaction(txid, false);
-                        }
-                        catch (err) {
-                            if (!((err instanceof Meteor.Error) && err.error === 'ctn_btcore_rpc_error' && err.details !== undefined && typeof err.details.code === 'number'
-                                    && err.details.code === BitcoinCore.rpcErrorCode.RPC_INVALID_ADDRESS_OR_KEY)) {
-                                // An error other than indication that it is a non-wallet tx id.
-                                //  Just re-throws it
-                                throw err;
-                            }
-                        }
+                    // New transactions have arrived
 
-                        return result;
-                    }, newCtnTxids);
+                    if (this.memPoolTxids.size > 0 || !cfgSettings.noCtnTxInInitMempool) {
+                        // Filter those that are associated with Catenis addresses (addresses imported onto BitcoinCore)
+                        newCtnTxids = newTxids.reduce((result, txid) => {
+                            try {
+                                // Make sure that error thrown by getTransaction() is not logged.
+                                //  This is necessary because any transaction that are not associated
+                                //  with a wallet address will make getTransaction() to throw an error
+                                //  (with code = RPC_INVALID_ADDRESS_OR_KEY)
+                                result[txid] = Catenis.bitcoinCore.getTransaction(txid, false);
+                            }
+                            catch (err) {
+                                if (!((err instanceof Meteor.Error) && err.error === 'ctn_btcore_rpc_error' && err.details !== undefined && typeof err.details.code === 'number'
+                                    && err.details.code === BitcoinCore.rpcErrorCode.RPC_INVALID_ADDRESS_OR_KEY)) {
+                                    // An error other than indication that it is a non-wallet tx id.
+                                    //  Just re-throws it
+                                    throw err;
+                                }
+                            }
+
+                            return result;
+                        }, newCtnTxids);
+                    }
 
                     // Save new tx ids as processed
                     newTxids.forEach((txid) => {
