@@ -672,6 +672,15 @@ BitcoinCore.prototype.listTransactions = function (count, from) {
     }
 };
 
+BitcoinCore.prototype.getMempoolEntry = function (txid) {
+    try {
+        return this.rpcApi.command('getmempoolentry', txid);
+    }
+    catch (err) {
+        handleError('getmempoolentry', err);
+    }
+};
+
 
 // BitcoinCore function class (public) methods
 //

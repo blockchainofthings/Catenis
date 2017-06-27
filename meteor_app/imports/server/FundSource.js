@@ -74,13 +74,13 @@ const cfgSettings = {
 export function FundSource(addresses, unconfUtxoInfo) {
     this.addresses = Array.isArray(addresses) ? addresses : [addresses];
 
-    this.useUnconfirmedUtxo = unconfUtxoInfo != undefined;
+    this.useUnconfirmedUtxo = unconfUtxoInfo !== undefined;
 
     if (this.useUnconfirmedUtxo) {
-        this.ancestorsCountUpperLimit = unconfUtxoInfo.ancestorsCountDiff == undefined ? cfgSettings.maxAncestorsCount - 1 : (unconfUtxoInfo.ancestorsCountDiff >= 0 ? cfgSettings.maxAncestorsCount - unconfUtxoInfo.ancestorsCountDiff : undefined);
-        this.ancestorsSizeUpperLimit = unconfUtxoInfo.ancestorsSizeDiff == undefined ? cfgSettings.maxAncestorsSize - 1000 : (unconfUtxoInfo.ancestorsSizeDiff >= 0 ? cfgSettings.maxAncestorsSize - unconfUtxoInfo.ancestorsSizeDiff : undefined);
-        this.descendantsCountUpperLimit = unconfUtxoInfo.descendantsCountDiff == undefined ? cfgSettings.maxDescendantsCount - 1 : (unconfUtxoInfo.descendantsCountDiff >= 0 ? cfgSettings.maxDescendantsCount - unconfUtxoInfo.descendantsCountDiff : undefined);
-        this.descendantsSizeUpperLimit = unconfUtxoInfo.descendantsSizeDiff == undefined ? cfgSettings.maxDescendantsSize - 1000 : (unconfUtxoInfo.descendantsSizeDiff >= 0 ? cfgSettings.maxDescendantsSize - unconfUtxoInfo.descendantsSizeDiff : undefined);
+        this.ancestorsCountUpperLimit = unconfUtxoInfo.ancestorsCountDiff === undefined ? cfgSettings.maxAncestorsCount - 1 : (unconfUtxoInfo.ancestorsCountDiff >= 0 ? cfgSettings.maxAncestorsCount - unconfUtxoInfo.ancestorsCountDiff : undefined);
+        this.ancestorsSizeUpperLimit = unconfUtxoInfo.ancestorsSizeDiff === undefined ? cfgSettings.maxAncestorsSize - 1000 : (unconfUtxoInfo.ancestorsSizeDiff >= 0 ? cfgSettings.maxAncestorsSize - unconfUtxoInfo.ancestorsSizeDiff : undefined);
+        this.descendantsCountUpperLimit = unconfUtxoInfo.descendantsCountDiff === undefined ? cfgSettings.maxDescendantsCount - 1 : (unconfUtxoInfo.descendantsCountDiff >= 0 ? cfgSettings.maxDescendantsCount - unconfUtxoInfo.descendantsCountDiff : undefined);
+        this.descendantsSizeUpperLimit = unconfUtxoInfo.descendantsSizeDiff === undefined ? cfgSettings.maxDescendantsSize - 1000 : (unconfUtxoInfo.descendantsSizeDiff >= 0 ? cfgSettings.maxDescendantsSize - unconfUtxoInfo.descendantsSizeDiff : undefined);
     }
 
     // Initialize in-memory database to hold UTXOs
@@ -114,19 +114,19 @@ FundSource.prototype.getBalance = function (includeUnconfirmed = true, includeAl
     const conditions = [];
 
     if (includeUnconfirmed && this.useUnconfirmedUtxo) {
-        if (this.ancestorsCountUpperLimit != undefined) {
+        if (this.ancestorsCountUpperLimit !== undefined) {
             conditions.push({ancestorsCount: {$lte: this.ancestorsCountUpperLimit}});
         }
 
-        if (this.ancestorsSizeUpperLimit != undefined) {
+        if (this.ancestorsSizeUpperLimit !== undefined) {
             conditions.push({ancestorsSize: {$lte: this.ancestorsSizeUpperLimit}});
         }
 
-        if (this.descendantsCountUpperLimit != undefined) {
+        if (this.descendantsCountUpperLimit !== undefined) {
             conditions.push({descendantsCount: {$lte: this.descendantsCountUpperLimit}});
         }
 
-        if (this.descendantsSizeUpperLimit != undefined) {
+        if (this.descendantsSizeUpperLimit !== undefined) {
             conditions.push({descendantsSize: {$lte: this.descendantsSizeUpperLimit}});
         }
     }
@@ -179,19 +179,19 @@ FundSource.prototype.allocateFund = function (amount) {
             //  lower descendants count (for unconfirmed UTXOs), lower descendants size (for unconfirmed UTXOs)
             const conditions = [{allocated: false}];
 
-            if (this.ancestorsCountUpperLimit != undefined) {
+            if (this.ancestorsCountUpperLimit !== undefined) {
                 conditions.push({ancestorsCount: {$lte: this.ancestorsCountUpperLimit}});
             }
 
-            if (this.ancestorsSizeUpperLimit != undefined) {
+            if (this.ancestorsSizeUpperLimit !== undefined) {
                 conditions.push({ancestorsSize: {$lte: this.ancestorsSizeUpperLimit}});
             }
 
-            if (this.descendantsCountUpperLimit != undefined) {
+            if (this.descendantsCountUpperLimit !== undefined) {
                 conditions.push({descendantsCount: {$lte: this.descendantsCountUpperLimit}});
             }
 
-            if (this.descendantsSizeUpperLimit != undefined) {
+            if (this.descendantsSizeUpperLimit !== undefined) {
                 conditions.push({descendantsSize: {$lte: this.descendantsSizeUpperLimit}});
             }
 
@@ -210,13 +210,13 @@ FundSource.prototype.allocateFund = function (amount) {
             // Try to allocate as little UTXOs as possible to fulfill requested amount, starting
             //  with one UTXO, and going up to the number of UTXOs returned in result sets
             for (let numWorkUtxos = 1; numWorkUtxos <= maxUtxoResultSetLength; numWorkUtxos++) {
-                if ((allocatedUtxos = allocateUtxos(amount, utxoResultSets, numWorkUtxos)) != undefined) {
+                if ((allocatedUtxos = allocateUtxos(amount, utxoResultSets, numWorkUtxos)) !== undefined) {
                     // UTXOs successfully allocated. Stop trying
                     break;
                 }
             }
 
-            if (allocatedUtxos != undefined) {
+            if (allocatedUtxos !== undefined) {
                 // UTXOs have been allocated. Prepare to return result
                 let allocatedAmount = 0;
                 result = {utxos: []};
@@ -279,7 +279,7 @@ FundSource.prototype.allocateFund = function (amount) {
 //
 FundSource.prototype.allocateFundForTxExpense = function (txInfo, isFixedFeed, fee, amountResolution) {
     // Check arguments
-    if (fee == undefined) {
+    if (fee === undefined) {
         if (!isFixedFeed) {
             // Use default fee rate
             fee = Catenis.bitcoinFees.getOptimumFeeRate();
@@ -327,7 +327,7 @@ FundSource.prototype.allocateFundForTxExpense = function (txInfo, isFixedFeed, f
 
     let result = null;
 
-    if (amount == undefined || amount > 0) {
+    if (amount === undefined || amount > 0) {
         const utxoResultSets = [];
         let maxUtxoResultSetLength = 0;
     
@@ -345,19 +345,19 @@ FundSource.prototype.allocateFundForTxExpense = function (txInfo, isFixedFeed, f
             //  lower descendants count (for unconfirmed UTXOs), lower descendants size (for unconfirmed UTXOs)
             const conditions = [{allocated: false}];
 
-            if (this.ancestorsCountUpperLimit != undefined) {
+            if (this.ancestorsCountUpperLimit !== undefined) {
                 conditions.push({ancestorsCount: {$lte: this.ancestorsCountUpperLimit}});
             }
 
-            if (this.ancestorsSizeUpperLimit != undefined) {
+            if (this.ancestorsSizeUpperLimit !== undefined) {
                 conditions.push({ancestorsSize: {$lte: this.ancestorsSizeUpperLimit}});
             }
 
-            if (this.descendantsCountUpperLimit != undefined) {
+            if (this.descendantsCountUpperLimit !== undefined) {
                 conditions.push({descendantsCount: {$lte: this.descendantsCountUpperLimit}});
             }
 
-            if (this.descendantsSizeUpperLimit != undefined) {
+            if (this.descendantsSizeUpperLimit !== undefined) {
                 conditions.push({descendantsSize: {$lte: this.descendantsSizeUpperLimit}});
             }
 
@@ -389,7 +389,7 @@ FundSource.prototype.allocateFundForTxExpense = function (txInfo, isFixedFeed, f
 
                 const work = {};
     
-                if ((allocatedUtxos = allocateUtxos(amount, utxoResultSets, numWorkUtxos, work)) != undefined) {
+                if ((allocatedUtxos = allocateUtxos(amount, utxoResultSets, numWorkUtxos, work)) !== undefined) {
                     // UTXOs successfully allocated
                     if (isFixedFeed || allocatedUtxos.exactAmountAllocated) {
                         // Stop trying
@@ -405,7 +405,7 @@ FundSource.prototype.allocateFundForTxExpense = function (txInfo, isFixedFeed, f
                             //  and try to allocated UTXOs again
                             amount = newAmount;
 
-                            if ((allocatedUtxos = allocateUtxos(amount, utxoResultSets, numWorkUtxos, work)) != undefined) {
+                            if ((allocatedUtxos = allocateUtxos(amount, utxoResultSets, numWorkUtxos, work)) !== undefined) {
                                 // UTXOs successfully allocated. Stop trying
                                 break;
                             }
@@ -446,7 +446,7 @@ FundSource.prototype.allocateFundForTxExpense = function (txInfo, isFixedFeed, f
                 }
             }
     
-            if (allocatedUtxos != undefined) {
+            if (allocatedUtxos !== undefined) {
                 // UTXOs allocated. Prepared to return result
                 let allocatedAmount = 0;
                 result = {utxos: []};
@@ -501,28 +501,14 @@ FundSource.prototype.clearAllocatedUtxos = function () {
 //
 
 function loadUtxos() {
-    let utxos;
-    // NOTE: the following variables only apply to condition where this.useUnconfirmedUtxo is true
-    let mempool;
-    const unconfTxids = new Set();
-
-    if (this.useUnconfirmedUtxo) {
-        // Retrieve UTXOs associated with given addresses, including
-        //  unconfirmed ones
-        utxos = Catenis.bitcoinCore.listUnspent(0, this.addresses);
-
-        // Retrieve transactions that are in Bitcoin Core's mempool
-        mempool = Catenis.bitcoinCore.getRawMempool(true);
-    }
-    else {
-        // Retrieve UTXOs associated with given addresses,
-        //  NOT including unconfirmed ones
-        utxos = Catenis.bitcoinCore.listUnspent(1, this.addresses);
-    }
+    // Retrieve UTXOs associated with given addresses, including unconfirmed ones if requested
+    const utxos = Catenis.bitcoinCore.listUnspent(this.useUnconfirmedUtxo ? 0 : 1, this.addresses);
 
     // Store retrieved UTXOs onto local DB making sure that only spendable UTXOs
     //  (the ones associated with addresses the private key of which is held by
     //  Bitcoin Core) are included, and converting amount from bitcoins to satoshis
+    const unconfTxids = new Set();
+
     utxos.forEach((utxo) => {
         this.collUtxo.insert({
             address: utxo.address,
@@ -534,55 +520,39 @@ function loadUtxos() {
             allocated: false
         });
 
-        if (utxo.confirmations == 0) {
+        if (utxo.confirmations === 0) {
             // Store uncofirmed transaction ID
             unconfTxids.add(utxo.txid);
         }
     });
 
     if (this.useUnconfirmedUtxo && unconfTxids.size > 0) {
-        // Compute ancestors information (count and size) for
-        //  all linked transactions in mempool
-        for (let txid in mempool) {
-            //noinspection JSUnfilteredForInLoop
-            let tx = mempool[txid];
-
-            if (tx.descendantcount == 1) {
-                //noinspection JSUnfilteredForInLoop
-                computeAncestorsInfo(txid, mempool);
-            }
-        }
-
-        // Now, update descendants and ancestors info for all unconfirmed UTXO
+        // Update descendants and ancestors info for all unconfirmed UTXO
         //  onto local DB
         for (let txid of unconfTxids) {
             this.collUtxo.find({txid: txid}).forEach((doc) => {
-                if (txid in mempool) {
-                    let tx = mempool[txid];
+                // Retrieve memory pool entry for given unconfirmed transaction
+                try {
+                   const mempoolTx = Catenis.bitcoinCore.getMempoolEntry(txid);
 
-                    // Add descendants info
-                    doc.descendantsCount = tx.descendantcount;
-                    doc.descendantsSize = tx.descendantsize;
-
-                    if ('ancestors' in tx) {
-                        // Add ancestors info
-                        doc.ancestorsCount = tx.ancestors.count;
-                        doc.ancestorsSize = tx.ancestors.size;
+                    doc.descendantsCount = mempoolTx.descendantcount;
+                    doc.descendantsSize = mempoolTx.descendantsize;
+                    doc.ancestorsCount = mempoolTx.ancestorcount;
+                    doc.ancestorsSize = mempoolTx.ancestorsize;
+                }
+                catch (err) {
+                    if ((err instanceof Meteor.Error) && err.error === 'ctn_btcore_rpc_error' && err.details !== undefined && typeof err.details.code === 'number'
+                            && err.details.code === BitcoinCore.rpcErrorCode.RPC_INVALID_ADDRESS_OR_KEY) {
+                        // Transaction of UTXO not in mempool; it must have been already confirmed
+                        //  (in the meantime between the calls to 'bitcoinCore.listUnspent()'
+                        //  and 'bitcoinCore.getRawMempool()'). So update UTXO's confirmations to 1
+                        Catenis.logger.WARN('Transaction of UTXO not in mempool', {txid: txid, vout: doc.vout});
+                        doc.confirmations = 1;
                     }
                     else {
-                        // Ancestors info not computed for unconfirmed tx in mempool.
-                        //  Report error condition
-                        let errData = {};
-                        errData[txid] = tx;
-                        Catenis.logger.ERROR('Ancestors info not computed for unconfirmed tx in mempool', errData);
+                        // Any other error; just rethrows it
+                        throw err;
                     }
-                }
-                else {
-                    // Transaction of UTXO not in mempool; it must have been already confirmed
-                    //  (in the meantime between the calls to 'bitcoinCore.listUnspent()'
-                    //  and 'bitcoinCore.getRawMempool()'). So update UTXO's confirmations to 1
-                    Catenis.logger.WARN('Transaction of UTXO not in mempool', {txid: txid, vout: doc.vout});
-                    doc.confirmations = 1;
                 }
 
                 this.collUtxo.update(doc);
@@ -604,34 +574,6 @@ FundSource.utxoCS = new CriticalSection();
 
 // Definition of module (private) functions
 //
-
-function computeAncestorsInfo(txid, mempool) {
-    const tx = mempool[txid];
-
-    if (tx.ancestors == undefined) {
-        tx.ancestors = {
-            txids: new Set([txid]),
-            count: 1,
-            size: tx.size
-        };
-
-        if (tx.depends.length > 0) {
-            tx.depends.forEach((dependTxid) => {
-                let dependAncestors = computeAncestorsInfo(dependTxid, mempool);
-
-                for (let ancestorTxid of dependAncestors.txids) {
-                    if (!tx.ancestors.txids.has(ancestorTxid)) {
-                        tx.ancestors.txids.add(ancestorTxid);
-                        tx.ancestors.count++;
-                        tx.ancestors.size += mempool[ancestorTxid].size;
-                    }
-                }
-            });
-        }
-    }
-
-    return tx.ancestors;
-}
 
 function allocateUtxos(amount, utxoResultSets, numWorkUtxos, work) {
     let docAllocatedUtxos = undefined,
@@ -682,7 +624,7 @@ function allocateUtxos(amount, utxoResultSets, numWorkUtxos, work) {
                 // Total amount of working entries is enough to fulfill requested amount, but
                 //  does not match it exactly. Pre-allocate corresponding UTXOs if not yet
                 //  pre-allocated, but...
-                if (docAllocatedUtxos == undefined) {
+                if (docAllocatedUtxos === undefined) {
                     docAllocatedUtxos = workUtxos.map((workUtxo) => {
                         return docUtxos[workUtxo.utxoIdx];
                     });
@@ -762,22 +704,22 @@ function allocateUtxos(amount, utxoResultSets, numWorkUtxos, work) {
         }
         while (!exactAmountAllocated && prevEntriesAdjusted);
 
-        if (docAllocatedUtxos != undefined) {
+        if (docAllocatedUtxos !== undefined) {
             // UTXOs have been allocated. Stop processing
-            if (work != undefined) {
+            if (work !== undefined) {
                 // Make sure that work info only returned in case of failure
                 delete work.largestTriedDeltaAmount;
             }
 
             break;
         }
-        else if (work != undefined) {
+        else if (work !== undefined) {
             // Save largest delta amount tried to match (or surpass) the requested amount to be allocated
-            work.largestTriedDeltaAmount = work.largestTriedDeltaAmount == undefined || work.largestTriedDeltaAmount < workUtxos[lastWorkIdx].amount ? workUtxos[lastWorkIdx].amount : work.largestTriedDeltaAmount;
+            work.largestTriedDeltaAmount = work.largestTriedDeltaAmount === undefined || work.largestTriedDeltaAmount < workUtxos[lastWorkIdx].amount ? workUtxos[lastWorkIdx].amount : work.largestTriedDeltaAmount;
         }
     }
 
-    return docAllocatedUtxos != undefined ? {docUtxos: docAllocatedUtxos, exactAmountAllocated: exactAmountAllocated} : undefined;
+    return docAllocatedUtxos !== undefined ? {docUtxos: docAllocatedUtxos, exactAmountAllocated: exactAmountAllocated} : undefined;
 }
 
 // Module code
