@@ -131,7 +131,9 @@ export function logMessage() {
         let messageId;
 
         try {
+            console.time('>>>>>> logMessage: call Device#logMessage');
             messageId = this.user.device.logMessage(msg, optEncrypt, optStorage);
+            console.timeEnd('>>>>>> logMessage: call Device#logMessage');
         }
         catch (err) {
             let error;
