@@ -332,7 +332,7 @@ function authenticateDevice() {
 //    apiAccessSecret: [string]
 //  }
 function signRequest(info) {
-    Catenis.logger.DEBUG('>>>>>> Sign date: ' + info.signDate);
+    //Catenis.logger.DEBUG('>>>>>> Sign date: ' + info.signDate);
     // First step: compute conformed request
     let confReq = this.request.method + '\n';
     confReq += this.request.url + '\n';
@@ -342,7 +342,7 @@ function signRequest(info) {
 
     confReq += essentialHeaders + '\n';
     confReq += hashData(this.request.rawBody) + '\n';
-    Catenis.logger.DEBUG('>>>>>> Conformed request: ' + confReq);
+    //Catenis.logger.DEBUG('>>>>>> Conformed request: ' + confReq);
 
     // Second step: assemble string to sign
     let strToSign = cfgSettings.requestSignature.signMethodId +'\n';
@@ -352,17 +352,17 @@ function signRequest(info) {
 
     strToSign += scope + '\n';
     strToSign += hashData(confReq) + '\n';
-    Catenis.logger.DEBUG('>>>>>> String to sign: ' + strToSign);
+    //Catenis.logger.DEBUG('>>>>>> String to sign: ' + strToSign);
 
     // Third step: generate the signature
     const dateKey = signData(info.signDate, cfgSettings.requestSignature.signVersionId + info.apiAccessSecret),
         signKey = signData(cfgSettings.requestSignature.scopeRequest, dateKey);
-    Catenis.logger.DEBUG('>>>>>> Date key (hex): ' + dateKey.toString('hex'));
-    Catenis.logger.DEBUG('>>>>>> Sign key (hex): ' + signKey.toString('hex'));
+    //Catenis.logger.DEBUG('>>>>>> Date key (hex): ' + dateKey.toString('hex'));
+    //Catenis.logger.DEBUG('>>>>>> Sign key (hex): ' + signKey.toString('hex'));
 
     //return signData(strToSign, signKey, true);
     const signature = signData(strToSign, signKey, true);
-    Catenis.logger.DEBUG('>>>>>> Request signature: ' + signature);
+    //Catenis.logger.DEBUG('>>>>>> Request signature: ' + signature);
     return signature;
 }
 
