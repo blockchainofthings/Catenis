@@ -28,7 +28,7 @@
       "smtpHost": "smtp.netzero.com",
       "secureProto": "ssl", // Valid options: none, ssl or tls
       "username": "csdecastro", // To be set only if required by SMTP host
-      "password": "castro63", // To be set only if required by SMTP host
+      "password": "???????", // To be set only if required by SMTP host
       "toAddresses": "claudiosdc@gmail.com", // Can be set to a comma separated list of e-mail addresses
       "fromAddress": "Catenis <csdecastro@netzero.com>"
     }
