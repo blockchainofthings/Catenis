@@ -2,7 +2,7 @@
 {
   // Parameters pertaining to the Catenis application
   "application": {
-    "seedFilename": "seed.test2.dat",
+    "seedFilename": "seed.test3.dat",
     "cryptoNetwork": "testnet",  // Available values: 'bitcoin' (for Bitcoin's production blockchain), 'testnet' (for Bitcoin's test blockchain)
     "shutdownTimeout": 30000   // Time, in miliseconds, that the application should wait after it receives a terminate request before it actually terminates
   },
@@ -25,12 +25,12 @@
     "email": {
       "active": false,
       "logLevel": "ACTION",
-      "smtpHost": "smtp.netzero.com",
+      "smtpHost": "smtphostname",
       "secureProto": "ssl", // Valid options: none, ssl or tls
-      "username": "csdecastro", // To be set only if required by SMTP host
-      "password": "castro63", // To be set only if required by SMTP host
-      "toAddresses": "claudiosdc@gmail.com", // Can be set to a comma separated list of e-mail addresses
-      "fromAddress": "Catenis <csdecastro@netzero.com>"
+      "username": "username", // To be set only if required by SMTP host
+      "password": "password", // To be set only if required by SMTP host
+      "toAddresses": "noone@nothing.com", // Can be set to a comma separated list of e-mail addresses
+      "fromAddress": "Catenis <noone@nothing.com>"
     }
   },
   // Parameters pertaining to BitcoinFees module
@@ -48,12 +48,19 @@
     "purgeUnusedExtKeyInternal": 1800000  // Time interval, in miliseconds, for executing method to purge unused HD extended keys form local key storage
   },
   // Parameters pertaining to BitcoinCore module
+
+
   "bitcoinCore": {
     "serverHost": "10.8.0.1", // Bitcoin Core server host name/IP address (access via VPN)
     //"serverHost": "catenis-dev", // Bitcoin Core server host name/IP address
     "rpcConnectionTimeout": 30000,  // Timeout, in miliseconds, for RPC connection with the bitcoin server.
     "rescanTimeout": 900000 // Timeout, in miniseconds, for waiting on Bitcoin Core to finish rescanning the blockchain after importing private key
   },
+
+
+
+
+
   // Parameters pertaining to TransactionMonitor module
   "transactionMonitor": {
     "noCtnTxInInitMempool": true  // Indicates that it should be assumed that there are no Catenis transactions in the initial list of txs retrieved from the memory pool
@@ -68,5 +75,12 @@
         "apiProtocol": "http"
       }
     }
-  }
+  },
+
+  // Parameters pertaining to TransactionMonitor module
+  "transactionMonitor": {
+  "noCtnTxInInitMempool": true  // Indicates that it should be assumed that there are no Catenis transactions in the initial list of txs retrieved from the memory pool
+// NOTE: this entry is defined ONLY for the development environment
+}
+
 }

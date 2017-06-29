@@ -1,9 +1,14 @@
 <template name="adminLayout">
+
     <div style="text-align:center">
         <h1>Catenis Enterprise Admin</h1>
     </div>
+
     {{#unless currentUser}}
-        {{> login}}
+
+            {{> login}}
+            <br>
+            <br>
     {{else}}
         <p>User {{currentUser.username}} (<a id="lnkLogout" href="#" role="button">logout</a>)</p>
         {{#if isInRole 'sys-admin'}}
