@@ -1,0 +1,194 @@
+html, body{
+    height: 100%;
+}
+
+
+/*simple Sidebar Nav stuff*/
+body {
+    overflow-x: hidden;
+    overflow-y: hidden;
+}
+
+/* Toggle Styles */
+#wrapper {
+    padding-left: 0;
+    -webkit-transition: all 0.5s ease;
+    -moz-transition: all 0.5s ease;
+    -o-transition: all 0.5s ease;
+    transition: all 0.5s ease;
+}
+
+#wrapper.toggled {
+    padding-left: 250px;
+}
+
+#sidebar-wrapper {
+    z-index: 1000;
+    position: fixed;
+    top:100px;
+    /*above should change according to the size of the header.*/
+    left: 250px;
+    width: 0;
+    height: 100%;
+    margin-left: -250px;
+    overflow-y: auto;
+    background: #000;
+    -webkit-transition: all 0.5s ease;
+    -moz-transition: all 0.5s ease;
+    -o-transition: all 0.5s ease;
+    transition: all 0.5s ease;
+}
+
+#wrapper.toggled #sidebar-wrapper {
+    width: 250px;
+}
+
+#page-content-wrapper {
+    margin-top:100px;
+    /*above should change according to the size of the header.*/
+    width: 100%;
+    position: absolute;
+    padding: 15px;
+}
+
+#wrapper.toggled #page-content-wrapper {
+    position: absolute;
+    margin-right: -250px;
+}
+
+/* Sidebar Styles */
+.sidebar-nav {
+    position: absolute;
+    top: 0;
+    width: 250px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.sidebar-nav li {
+    text-indent: 20px;
+    line-height: 40px;
+}
+
+.sidebar-nav li a {
+    display: block;
+    text-decoration: none;
+    color: #999999;
+}
+
+.sidebar-nav li a:hover {
+    text-decoration: none;
+    color: #fff;
+    background: rgba(255,255,255,0.2);
+}
+
+.sidebar-nav li a:active,
+.sidebar-nav li a:focus {
+    text-decoration: none;
+}
+
+.sidebar-nav > .sidebar-brand {
+    height: 65px;
+    font-size: 18px;
+    line-height: 60px;
+    font-style: italic;
+}
+
+.sidebar-nav > .sidebar-brand a {
+    color: #999999;
+}
+
+.sidebar-nav > .sidebar-brand a:hover {
+    color: #fff;
+    background: none;
+}
+
+@media(min-width:768px) {
+    #wrapper {
+        padding-left: 0;
+    }
+
+    #wrapper.toggled {
+        padding-left: 250px;
+    }
+
+    #sidebar-wrapper {
+        width: 0;
+    }
+
+    #wrapper.toggled #sidebar-wrapper {
+        width: 250px;
+    }
+
+    #page-content-wrapper {
+        padding: 20px;
+        position: relative;
+    }
+
+    #wrapper.toggled #page-content-wrapper {
+        position: relative;
+        margin-right: 0;
+    }
+}
+
+
+/*top Navbar and others*/
+
+
+.navbar-menus{
+    text-align: left;
+    font-size: 16px;
+}
+
+.wrapper{
+    margin-top:100px;
+}
+
+.dropdown-full{
+    position:relative;
+    width: 100%;
+}
+.page-sidebar{
+    padding-top: 150px;
+    /*size of topNavIcon is 70 at the moment, we can give it some more space in the future*/
+    float: left;
+}
+
+.whiteBg{
+    margin-top: 150px;
+    background-color: #ffffff;
+    box-shadow: 5px 5px 3px #888888;
+}
+
+.login{
+    background-color:#333399;
+
+}
+
+#header-right{
+    overflow: hidden;
+    position: absolute;
+    top: 15px;
+    right: 35px;
+    /*padding-right:40px;*/
+    /*float: right;*/
+}
+#header-logo{
+    padding-left: 30px;
+}
+.top-navBar{
+    margin-top:0px;
+    padding-top: 10px;
+    padding-bottom:10px;
+    background-color: #333399;
+    position: fixed;
+    top:0;
+    left:0;
+    width: 100%;
+}
+
+.page-wrapper {
+    overflow-x: hidden;
+    overflow-y: hidden;
+}
