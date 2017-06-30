@@ -1,3 +1,77 @@
+.whole{
+    margin-top:100px;
+    width:100%;
+    margin-right:0px;
+    margin-left:0px
+}
+.blueCont{
+    height: 100%;
+    width:100%;
+    background-color: #333399;
+    position: absolute;
+    top: 0px;
+    left:0;
+}
+
+
+.loginFormBox{
+border-color: gainsboro; border-style: solid; border-width: 5px; background-color: white; position: absolute; min-width: 600px;
+    top: 100px;
+}
+
+.at-form{
+    border-color: darkgrey;
+    border-style: solid;
+    border-width: 3px;
+    text-align: left;
+    padding: 10px;
+}
+#at-pwd-form{
+    margin-top:15px;
+}
+
+
+#at-btn{
+    background-color: #4CAF50;
+    color: white;
+    padding: 14px 20px;
+    margin: 8px 0;
+    border: none;
+    cursor: pointer;
+    width: 100%;
+    /*padding-bottom: 10px;*/
+}
+
+#at-btn:hover {
+    background-color: #3c8e0c;
+    color: white;
+}
+
+
+#at-field-username{
+
+    border-color: grey;
+    border-style: solid;
+    border-width: 2px;
+    width: 100%;
+    height: 5px;
+    margin-top: 5px;
+    margin-bottom: 10px;
+    padding: 20px 15px;
+}
+
+#at-field-password{
+    border-color: grey;
+    border-style: solid;
+    border-width: 2px;
+    width: 100%;
+    height: 5px;
+    margin-top: 5px;
+    margin-bottom: 10px;
+    padding: 20px 15px;
+}
+
+
 html, body{
     height: 100%;
 }
@@ -186,8 +260,12 @@ body {
     top:0;
     left:0;
     width: 100%;
+    display: block; height: 100px;
 }
 
+.white{
+    color:white;
+}
 .page-wrapper {
     overflow-x: hidden;
     overflow-y: hidden;

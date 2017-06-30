@@ -40,6 +40,11 @@ Template.adminLayout.onCreated(function () {
 
 });
 
+Template.adminLayout.onRendered(function(){
+
+});
+
+
 Template.adminLayout.events({
     'click #lnkLogout'(event, template) {
         Meteor.logout();
@@ -47,7 +52,7 @@ Template.adminLayout.events({
     },
     'click #menu-toggle'(event, template){
         $("#menu-toggle").click(function(e) {
-            e.preventDefault();
+            // e.preventDefault();
             e.stopPropagation()
             $("#wrapper").toggleClass("toggled");
         });
