@@ -559,7 +559,7 @@ Device.prototype.readMessage = function (messageId) {
                         //  This is necessary because any transaction that are not associated
                         //  with a wallet address will make getTransaction() to throw an error
                         //  (with code = RPC_INVALID_ADDRESS_OR_KEY)
-                        txInfo = Catenis.bitcoinCore.getTransaction(txid, false);
+                        txInfo = Catenis.bitcoinCore.getTransaction(txid, false, false);
                     }
                     catch (err) {
                         if (!((err instanceof Meteor.Error) && err.error === 'ctn_btcore_rpc_error' && err.details !== undefined && typeof err.details.code === 'number'

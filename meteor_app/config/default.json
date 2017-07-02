@@ -187,7 +187,8 @@
   // Parameters pertaining to TransactionMonitor module
   "transactionMonitor": {
     "blockchainPollingInterval": 15000, // Time interval, in miliseconds, for polling the blockchain for newly arrived transactions and blocks
-    "mempoolExpiryHours": 72,  // Time, in hours, after which transactions are evicted from Bitcoin Core' mempool
+    "mempoolExpiryHours": 336,  // Time, in hours, after which transactions are evicted from Bitcoin Core' mempool
+    "purgeFoundNewCtnTxsInterval": 3600000,  // Time interval, in miliseconds, for executing method to purge transactions from list of found new Catenis transactions
     "limitTxConfirmTime": 60,  // Time, in minutes, after which it is expected for any Catenis issued transaction to have already been confirmed
     "checkOldUnconfTxsInterval": 1800000,  // Time interval, in miliseconds, for checking if there are old transactions that have not yet been confirmed
     "newTxsBatchProcDoneTimeout": 60000  // Timeout, in miliseconds, for waiting for a given new transactions batch to finish processing

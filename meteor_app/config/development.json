@@ -54,11 +54,6 @@
     "rpcConnectionTimeout": 30000,  // Timeout, in miliseconds, for RPC connection with the bitcoin server.
     "rescanTimeout": 900000 // Timeout, in miniseconds, for waiting on Bitcoin Core to finish rescanning the blockchain after importing private key
   },
-  // Parameters pertaining to TransactionMonitor module
-  "transactionMonitor": {
-    "noCtnTxInInitMempool": true  // Indicates that it should be assumed that there are no Catenis transactions in the initial list of txs retrieved from the memory pool
-                                   // NOTE: this entry is defined ONLY for the development environment
-  },
   // Parameters pertaining to CatenisMessage module
   "catenisMessage": {
     "msgStorage": {

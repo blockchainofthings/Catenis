@@ -78,13 +78,14 @@ export function BitcoinCore(network, host, username, password, timeout) {
         getblockcount: Meteor.wrapAsync(this.btcClient.getBlockCount, this.btcClient),
         getblockhash: Meteor.wrapAsync(this.btcClient.getBlockHash, this.btcClient),
         gettxout: Meteor.wrapAsync(this.btcClient.getTxOut, this.btcClient),
-        gettransaction: Meteor.wrapAsync(this.btcClient.getTransaction, this.btcClient), // INCLUDE_WATCH_ONLY ALWAYS SET
+        gettransaction: Meteor.wrapAsync(this.btcClient.getTransaction, this.btcClient),
         getrawtransaction: Meteor.wrapAsync(this.btcClient.getRawTransaction, this.btcClient), // TWO VARIANTS: VERBOSE SET AND NOT
         decoderawtransaction: Meteor.wrapAsync(this.btcClient.decodeRawTransaction, this.btcClient),
         decodescript: Meteor.wrapAsync(this.btcClient.decodeScript, this.btcClient),
         getaddressesbyaccount: Meteor.wrapAsync(this.btcClient.getAddressesByAccount, this.btcClient),  // USE IT AS JUST GET_ADDRESSES (ACCOUNT = "")
         getwalletinfo: Meteor.wrapAsync(this.btcClient.getWalletInfo, this.btcClient),
-        listtransactions: Meteor.wrapAsync(this.btcClient.listTransactions, this.btcClient)
+        listtransactions: Meteor.wrapAsync(this.btcClient.listTransactions, this.btcClient),
+        listsinceblock: Meteor.wrapAsync(this.btcClient.listSinceBlock, this.btcClient)
     };
 }
 
@@ -591,12 +592,15 @@ BitcoinCore.prototype.getTxOut = function (txid, vout) {
     }
 };
 
-// Note: this Bitcoin Core JSON RPC method only returns information
-//  for transactions associated with the addresses currently added
-//  onto the wallet
-BitcoinCore.prototype.getTransaction = function (txid, logError = true) {
+// Note: if the includeDetails parameter is set to false, the gettransaction RPC
+//  method will be called specifying NOT to include watch-only addresses. When
+//  that is done, the method will not fail for watch-only addresses imported onto
+//  wallet, but only suppress the details portion of the transaction info returned.
+//  So, this can be useful if one only needs to retrieve, say, the raw hex data
+//  representation of the transaction.
+BitcoinCore.prototype.getTransaction = function (txid, includeDetails = false, logError = true) {
     try {
-        return this.rpcApi.gettransaction(txid, true);
+        return this.rpcApi.gettransaction(txid, includeDetails);
     }
     catch (err) {
         handleError('gettransaction', err, logError);
@@ -678,6 +682,36 @@ BitcoinCore.prototype.getMempoolEntry = function (txid) {
     }
     catch (err) {
         handleError('getmempoolentry', err);
+    }
+};
+
+BitcoinCore.prototype.listSinceBlock = function (blockHash, targetConfirmations) {
+    targetConfirmations = targetConfirmations !== undefined ? targetConfirmations : 1;
+
+    try {
+        return this.rpcApi.listsinceblock(blockHash, targetConfirmations, true);
+    }
+    catch (err) {
+        handleError('listsinceblock', err);
+    }
+};
+
+// Note: by default the verbose arg is set to true what makes
+//  the method return an object. Otherwise (verbose specifically
+//  set as false), the method returns a hex encoded string, which
+//  represents the block header contents
+BitcoinCore.prototype.getBlockHeader = function (blockHash, verbose) {
+    const args = ['getblockheader', blockHash];
+
+    if (verbose != undefined) {
+        args.push(verbose);
+    }
+
+    try {
+        return this.rpcApi.command.apply(this.btcClient, args);
+    }
+    catch (err) {
+        handleError('getblockheader', err);
     }
 };
 
