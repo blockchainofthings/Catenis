@@ -91,13 +91,13 @@ LogMessageTransaction.prototype.buildTransaction = function () {
         // Add transaction inputs
 
         // Prepare to add device main address input
-        console.time('>>>>>> logMessage#buildTransaction: instantiate FundSource to get UTXOs for device main address');
+        //console.time('>>>>>> logMessage#buildTransaction: instantiate FundSource to get UTXOs for device main address');
         const devMainAddrFundSource = new FundSource(this.device.mainAddr.listAddressesInUse(), {});
-        console.timeEnd('>>>>>> logMessage#buildTransaction: instantiate FundSource to get UTXOs for device main address');
+        //console.timeEnd('>>>>>> logMessage#buildTransaction: instantiate FundSource to get UTXOs for device main address');
         const devMainAddrBalance = devMainAddrFundSource.getBalance();
-        console.time('>>>>>> logMessage#buildTransaction: FundSource#allocateFund for device main address');
+        //console.time('>>>>>> logMessage#buildTransaction: FundSource#allocateFund for device main address');
         const devMainAddrAllocResult = devMainAddrFundSource.allocateFund(Service.devMainAddrAmount);
-        console.timeEnd('>>>>>> logMessage#buildTransaction: FundSource#allocateFund for device main address');
+        //console.timeEnd('>>>>>> logMessage#buildTransaction: FundSource#allocateFund for device main address');
 
         // Make sure that UTXOs have been correctly allocated
         if (devMainAddrAllocResult == null) {
@@ -126,12 +126,12 @@ LogMessageTransaction.prototype.buildTransaction = function () {
         this.transact.addInput(devMainAddrAllocUtxo.txout, devMainAddrAllocUtxo.address, devMainAddrInfo);
 
         // Prepare to add client message credit input
-        console.time('>>>>>> logMessage#buildTransaction: instantiate FundSource to get UTXOs for client credit address');
+        //console.time('>>>>>> logMessage#buildTransaction: instantiate FundSource to get UTXOs for client credit address');
         const clntMsgCreditAddrFundSource = new FundSource(this.device.client.messageCreditAddr.listAddressesInUse(), {});
-        console.timeEnd('>>>>>> logMessage#buildTransaction: instantiate FundSource to get UTXOs for client credit address');
-        console.time('>>>>>> logMessage#buildTransaction: FundSource#allocateFund for client credit address');
+        //console.timeEnd('>>>>>> logMessage#buildTransaction: instantiate FundSource to get UTXOs for client credit address');
+        //console.time('>>>>>> logMessage#buildTransaction: FundSource#allocateFund for client credit address');
         const clntMsgCreditAddrAllocResult = clntMsgCreditAddrFundSource.allocateFund(Service.clientServiceCreditAmount);
-        console.timeEnd('>>>>>> logMessage#buildTransaction: FundSource#allocateFund for client credit address');
+        //console.timeEnd('>>>>>> logMessage#buildTransaction: FundSource#allocateFund for client credit address');
 
         // Make sure that UTXOs have been correctly allocated
         if (clntMsgCreditAddrAllocResult == null) {
@@ -198,16 +198,16 @@ LogMessageTransaction.prototype.buildTransaction = function () {
         }
 
         // Now, allocate UTXOs to pay for tx expense
-        console.time('>>>>>> logMessage#buildTransaction: instantiate FundSource to get UTXOs for pay tx expense address');
+        //console.time('>>>>>> logMessage#buildTransaction: instantiate FundSource to get UTXOs for pay tx expense address');
         const payTxFundSource = new FundSource(Catenis.ctnHubNode.payTxExpenseAddr.listAddressesInUse(), {});
-        console.timeEnd('>>>>>> logMessage#buildTransaction: instantiate FundSource to get UTXOs for pay tx expense address');
-        console.time('>>>>>> logMessage#buildTransaction: FundSource#allocateFundForTxExpense for pay tx expense address');
+        //console.timeEnd('>>>>>> logMessage#buildTransaction: instantiate FundSource to get UTXOs for pay tx expense address');
+        //console.time('>>>>>> logMessage#buildTransaction: FundSource#allocateFundForTxExpense for pay tx expense address');
         const payTxAllocResult = payTxFundSource.allocateFundForTxExpense({
             txSize: this.transact.estimateSize(),
             inputAmount: this.transact.totalInputsAmount(),
             outputAmount: this.transact.totalOutputsAmount()
         }, false, Catenis.bitcoinFees.getFeeRateByTime(Service.minutesToConfirmMessage));
-        console.timeEnd('>>>>>> logMessage#buildTransaction: FundSource#allocateFundForTxExpense for pay tx expense address');
+        //console.timeEnd('>>>>>> logMessage#buildTransaction: FundSource#allocateFundForTxExpense for pay tx expense address');
 
         if (payTxAllocResult === null) {
             // Unable to allocate UTXOs. Log error condition and throw exception

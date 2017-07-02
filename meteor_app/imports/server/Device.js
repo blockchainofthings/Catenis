@@ -462,18 +462,18 @@ Device.prototype.logMessage = function (message, encryptMessage = true, storageS
             });
 
             // Build and send transaction
-            console.time('>>>>>> Device#logMessage: call LogMessage#buildTransaction');
+            //console.time('>>>>>> Device#logMessage: call LogMessage#buildTransaction');
             logMsgTransact.buildTransaction();
-            console.timeEnd('>>>>>> Device#logMessage: call LogMessage#buildTransaction');
+            //console.timeEnd('>>>>>> Device#logMessage: call LogMessage#buildTransaction');
 
-            console.time('>>>>>> Device#logMessage: call LogMessage#sendTransaction');
+            //console.time('>>>>>> Device#logMessage: call LogMessage#sendTransaction');
             txid = logMsgTransact.sendTransaction();
-            console.timeEnd('>>>>>> Device#logMessage: call LogMessage#sendTransaction');
+            //console.timeEnd('>>>>>> Device#logMessage: call LogMessage#sendTransaction');
 
             // Create message and save it to local database
-            console.time('>>>>>> Device#logMessage: call Message.createSentMessage');
+            //console.time('>>>>>> Device#logMessage: call Message.createSentMessage');
             messageId = Message.createSentMessage(logMsgTransact);
-            console.timeEnd('>>>>>> Device#logMessage: call Message.createSentMessage');
+            //console.timeEnd('>>>>>> Device#logMessage: call Message.createSentMessage');
         }
         catch (err) {
             // Error logging message
