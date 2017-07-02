@@ -536,7 +536,6 @@ Database.initialize = function() {
                     'externalStorage.reference': 1
                 },
                 opts: {
-                    unique: true,
                     sparse: true,
                     background: true,
                     safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
