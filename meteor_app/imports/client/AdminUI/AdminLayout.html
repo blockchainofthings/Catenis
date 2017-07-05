@@ -1,34 +1,76 @@
 <template name="adminLayout">
-
-    <div style="text-align:center">
-        <h1>Catenis Enterprise Admin</h1>
-    </div>
-
-    {{#unless currentUser}}
-
-            {{> login}}
-            <br>
-            <br>
-    {{else}}
-        <p>User {{currentUser.username}} (<a id="lnkLogout" href="#" role="button">logout</a>)</p>
-        {{#if isInRole 'sys-admin'}}
-            <nav>
-                <ul>
-                    <li>
-                        <a href="/admin/sysfunding">System Funding</a>
-                    </li>
-                    <li>
-                        <a href="/admin/clients">Clients</a>
-                    </li>
-                </ul>
-            </nav>
-            <article style="text-align:center">
-                {{#if page}}
-                    {{> Template.dynamic template=page data=dataContext}}
-                {{/if}}
-            </article>
+    <div class="pageWrapper">
+        <div class="container whole">
+        {{#unless currentUser}}
+            <div class="container blueCont">
+                <div class="row">
+                    <div class="col-md-4 col-md-offset-4">
+                        <div class="loginFormBox text-center">
+                            <h1>Catenis Enterprise Admin Login</h1>
+                            <blockquote> Go forth and do great things</blockquote>
+                        {{> login}}
+                        <br>
+                        <br>
+                        </div>
+                    </div>
+                </div>
+            </div>
         {{else}}
-            <p style="color:red">User does not have the necessary permission.</p>
-        {{/if}}
-    {{/unless}}
+                <div id="wrapper">
+                    <!--top navigation bar-->
+                    <div class="top-navBar" role="navigation">
+                        <div id="header-logo">
+                            <span href="#top">
+                                <a href="#menu-toggle" class="btn btn-default" id="menu-toggle"><i class="glyphicon glyphicon-th-list"></i></a>
+                            </span>
+                        </div>
+                        <div id="header-right">
+                            <div class="user-profile dropdown">
+                                <h3 class="white">Welcome, {{currentUser.username}}</h3>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Sidebar -->
+                    <div id="sidebar-wrapper">
+                        <ul class="sidebar-nav">
+                            <li class="sidebar-brand">
+                                <a href="#">
+                                    Manage Catenis
+                                </a>
+                            </li>
+                            {{#if isInRole 'sys-admin'}}
+                                <li>
+                                    <a href="/admin/sysfunding">System Funding</a>
+                                </li>
+                                <li>
+                                    <a href="/admin/clients">Clients</a>
+                                </li>
+                            {{/if}}
+                            <li>
+                                <a id="lnkLogout" href="#" role="button">Log out</a>
+                            </li>
+                        </ul>
+                    </div>
+                    <!-- /#sidebar-wrapper -->
+                    <div id="page-content-wrapper">
+                        <div class="container-fluid">
+                            <div class="row">
+                                <div class="col-lg-8 col-lg-offset-2">
+                                    {{#if isInRole 'sys-admin'}}
+                                       <article class="text-center">
+                                       {{#if page}}
+                                           {{> Template.dynamic template=page data=dataContext}}
+                                       {{/if}}
+                                       </article>
+                                    {{else}}
+                                        <p style="color:red">User does not have the necessary permission.</p>
+                                    {{/if}}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+        {{/unless}}
+        </div>
+    </div>
 </template>

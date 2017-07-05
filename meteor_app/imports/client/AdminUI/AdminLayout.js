@@ -36,13 +36,26 @@ import './NewDeviceTemplate.js';
 //
 
 Template.adminLayout.onCreated(function () {
+
+
 });
+
+Template.adminLayout.onRendered(function(){
+
+});
+
 
 Template.adminLayout.events({
     'click #lnkLogout'(event, template) {
         Meteor.logout();
-
         return false;
+    },
+    'click #menu-toggle'(event, template){
+        $("#menu-toggle").click(function(e) {
+            // e.preventDefault();
+            e.stopPropagation()
+            $("#wrapper").toggleClass("toggled");
+        });
     }
 });
 
