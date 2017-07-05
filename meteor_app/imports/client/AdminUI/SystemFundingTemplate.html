@@ -2,18 +2,20 @@
     <h2>System Funding</h2>
     {{#unless Template.subscriptionsReady}}
         <p style="color:lightgray; margin-top:1em">Loading...</p>
-    {{else}}
-        <label>Current system funding balance:</label>&nbsp;<scan style="color:{{#if (lowBalance balanceInfo)}}red{{else}}black{{/if}}">{{balanceInfo.currentBalance}}</scan><br>
-        <label>Minimum funding balance:</label>&nbsp;{{balanceInfo.minimumBalance}}
-        <div style="margin-top:1em">
-            {{#unless fundAddress}}
-                <a id="lnkNewAddressToFund" href="#" role="button">Get address to fund system</a>
-            {{else}}
-                <div>
-                    (<a id="lnkDiscardAddr" href="#" role="button">discard address</a>)
-                </div>
-                {{> fundingAddress fundAddress=fundAddress}}
-            {{/unless}}
+        {{else}}
+        <div>
+            <label>Current system funding balance:</label>&nbsp;<scan style="color:{{#if (lowBalance balanceInfo)}}red{{else}}black{{/if}}">{{balanceInfo.currentBalance}}</scan><br>
+            <label>Minimum funding balance:</label>&nbsp;{{balanceInfo.minimumBalance}}
+            <div style="margin-top:1em">
+                {{#unless fundAddress}}
+                    <a id="lnkNewAddressToFund" href="#" role="button">Get address to fund system</a>
+                {{else}}
+                    <div>
+                        (<a id="lnkDiscardAddr" href="#" role="button">discard address</a>)
+                    </div>
+                    {{> fundingAddress fundAddress=fundAddress}}
+                {{/unless}}
+            </div>
         </div>
     {{/unless}}
 </template>

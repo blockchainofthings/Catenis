@@ -52,7 +52,7 @@ Template.adminLayout.events({
     },
     'click #menu-toggle'(event, template){
         $("#menu-toggle").click(function(e) {
-            // e.preventDefault();
+            e.preventDefault();
             e.stopPropagation()
             $("#wrapper").toggleClass("toggled");
         });

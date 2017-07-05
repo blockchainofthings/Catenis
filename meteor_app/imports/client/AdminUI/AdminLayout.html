@@ -1,8 +1,9 @@
 <template name="adminLayout">
-    <div class="pageWrapper">
-        <div class="container whole">
+    <!--this is the template that is first rendered at /admin call-->
+    <div class="page-wrapper">
         {{#unless currentUser}}
-            <div class="container blueCont">
+            <!--the user is not signed in, render login form-->
+            <div class="container-fluid blueBG fill">
                 <div class="row">
                     <div class="col-md-4 col-md-offset-4">
                         <div class="loginFormBox text-center">
@@ -16,6 +17,7 @@
                 </div>
             </div>
         {{else}}
+            <!--the user is signed in-->
                 <div id="wrapper">
                     <!--top navigation bar-->
                     <div class="top-navBar" role="navigation">
@@ -30,11 +32,13 @@
                             </div>
                         </div>
                     </div>
+                    <!--end of top navigation bar-->
+
                     <!-- Sidebar -->
                     <div id="sidebar-wrapper">
                         <ul class="sidebar-nav">
                             <li class="sidebar-brand">
-                                <a href="#">
+                                <a href="/admin/">
                                     Manage Catenis
                                 </a>
                             </li>
@@ -51,7 +55,9 @@
                             </li>
                         </ul>
                     </div>
-                    <!-- /#sidebar-wrapper -->
+                    <!-- end of sidebar -->
+
+                    <!--start of content-wrapper-->
                     <div id="page-content-wrapper">
                         <div class="container-fluid">
                             <div class="row">
@@ -59,18 +65,19 @@
                                     {{#if isInRole 'sys-admin'}}
                                        <article class="text-center">
                                        {{#if page}}
-                                           {{> Template.dynamic template=page data=dataContext}}
+                                               {{> Template.dynamic template=page data=dataContext}}
                                        {{/if}}
                                        </article>
                                     {{else}}
-                                        <p style="color:red">User does not have the necessary permission.</p>
+                                        <p>User does not have the necessary permission.</p>
                                     {{/if}}
                                 </div>
                             </div>
                         </div>
                     </div>
+                    <!--end of content-wrapper-->
                 </div>
+            <!--end of wrapper -->
         {{/unless}}
-        </div>
     </div>
 </template>

@@ -1,35 +1,84 @@
-.whole{
-    margin-top:100px;
-    width:100%;
-    margin-right:0px;
-    margin-left:0px
-}
-.blueCont{
+/*Misc*/
+
+html, body{
     height: 100%;
-    width:100%;
-    background-color: #333399;
-    position: absolute;
-    top: 0px;
-    left:0;
+    overflow-x: hidden;
+    overflow-y: hidden;
 }
 
+.page-wrapper {
+    top: 0;
+    width: 100%;
+    height:100%;
+    overflow-x: hidden;
+    overflow-y: hidden;
+}
+.fill{
+    height:100%;
+    width:100%;
+}
+
+.white{
+    color:white;
+}
+.blue{
+    color:#333399;
+}
+
+.blueBG{
+    background-color: #333399;
+}
+
+.greenBG{
+    background-color:green;
+}
+
+/*
+Login Form Box
+currently using useraccounts:unstyled
+-> refer to https://github.com/meteor-useraccounts/core/blob/master/Guide.md#css-rules to see relevant classes & ids
+*/
 
 .loginFormBox{
-border-color: gainsboro; border-style: solid; border-width: 5px; background-color: white; position: absolute; min-width: 600px;
-    top: 100px;
+    border-color: gainsboro;
+    border-style: solid;
+    border-width: 5px;
+    border-radius: 5px;
+    background-color: white;
+    position: relative;
+    margin-top: 100px;
 }
 
 .at-form{
+    border-radius: 5px;
     border-color: darkgrey;
     border-style: solid;
     border-width: 3px;
-    text-align: left;
     padding: 10px;
 }
-#at-pwd-form{
-    margin-top:15px;
+
+.at-title{
+    text-align: center;
 }
 
+.at-error{
+    color: red;
+    text-emphasis: black;
+    font-size: 20px;
+    background-color: yellow;
+    border-style: solid;
+    border-width:1px;
+    border-color: transparent;
+    border-radius: 3px;
+}
+.at-error>p{
+    margin-bottom:0;
+}
+
+#at-pwd-form{
+    margin-top:15px;
+    text-align: left;
+}
 
 #at-btn{
     background-color: #4CAF50;
@@ -37,9 +86,7 @@ border-color: gainsboro; border-style: solid; border-width: 5px; background-colo
     padding: 14px 20px;
     margin: 8px 0;
     border: none;
-    cursor: pointer;
     width: 100%;
-    /*padding-bottom: 10px;*/
 }
 
 #at-btn:hover {
@@ -72,39 +119,28 @@ border-color: gainsboro; border-style: solid; border-width: 5px; background-colo
 }
 
 
-html, body{
-    height: 100%;
-}
 
 
-/*simple Sidebar Nav stuff*/
-body {
-    overflow-x: hidden;
-    overflow-y: hidden;
-}
 
-/* Toggle Styles */
+/* Side Navigation Toggle Styles */
 #wrapper {
-    padding-left: 0;
+    padding-left: 0px;
     -webkit-transition: all 0.5s ease;
     -moz-transition: all 0.5s ease;
     -o-transition: all 0.5s ease;
     transition: all 0.5s ease;
 }
 
-#wrapper.toggled {
-    padding-left: 250px;
-}
 
 #sidebar-wrapper {
     z-index: 1000;
     position: fixed;
-    top:100px;
+    top: 100px;
     /*above should change according to the size of the header.*/
-    left: 250px;
-    width: 0;
+    left: 0px;
+    width: 250px;
     height: 100%;
-    margin-left: -250px;
+    margin-left: 0px;
     overflow-y: auto;
     background: #000;
     -webkit-transition: all 0.5s ease;
@@ -114,25 +150,26 @@ body {
 }
 
 #wrapper.toggled #sidebar-wrapper {
-    width: 250px;
+    width: 0px;
 }
 
 #page-content-wrapper {
     margin-top:100px;
     /*above should change according to the size of the header.*/
-    width: 100%;
-    position: absolute;
-    padding: 15px;
+    width: auto;
+    position: relative;
+    padding: 0px;
 }
 
 #wrapper.toggled #page-content-wrapper {
-    position: absolute;
-    margin-right: -250px;
+    position: relative;
+    /*margin-right: -250px;*/
 }
+
 
 /* Sidebar Styles */
 .sidebar-nav {
-    position: absolute;
+    position: relative;
     top: 0;
     width: 250px;
     margin: 0;
@@ -183,33 +220,31 @@ body {
         padding-left: 0;
     }
 
-    #wrapper.toggled {
-        padding-left: 250px;
-    }
-
     #sidebar-wrapper {
-        width: 0;
-    }
-
-    #wrapper.toggled #sidebar-wrapper {
         width: 250px;
     }
 
+    #wrapper.toggled #sidebar-wrapper {
+        width: 0px;
+    }
+
     #page-content-wrapper {
-        padding: 20px;
+        margin-left: 250px;
+        padding: 0px;
         position: relative;
     }
 
     #wrapper.toggled #page-content-wrapper {
         position: relative;
-        margin-right: 0;
+        margin-left: 0px;
+        /*margin-right: 0;*/
     }
 }
 
 
-/*top Navbar and others*/
 
 
+/*top Navbar*/
 .navbar-menus{
     text-align: left;
     font-size: 16px;
@@ -245,9 +280,8 @@ body {
     position: absolute;
     top: 15px;
     right: 35px;
-    /*padding-right:40px;*/
-    /*float: right;*/
 }
+
 #header-logo{
     padding-left: 30px;
 }
@@ -260,13 +294,7 @@ body {
     top:0;
     left:0;
     width: 100%;
-    display: block; height: 100px;
-}
-
-.white{
-    color:white;
-}
-.page-wrapper {
-    overflow-x: hidden;
-    overflow-y: hidden;
+    display: block;
+    height: 100px;
+    /*if you change the height, also change the height element in page-content-wrapper*/
 }

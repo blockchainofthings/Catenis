@@ -9,7 +9,7 @@
   // Parameters pertaining to the Startup module
   "startup": {
     "fixMissingAddresses": false, // Indicate if issued blockchain addresses are missing from BitcoinCore wallet they should be automaically included
-    "bypassProcessing": true     // NOTE: this option is for DEBUG ONLY. Bypass all processing, so the app starts but does not do anything. This allows
+    "bypassProcessing": false     // NOTE: this option is for DEBUG ONLY. Bypass all processing, so the app starts but does not do anything. This allows
                                   //  for debuging via 'meteor shell' or 'meteor mongo'
   },
   // Parameters pertaining to logging mechanism
