@@ -2,10 +2,10 @@
     <h2>System Funding</h2>
     {{#unless Template.subscriptionsReady}}
         <p style="color:lightgray; margin-top:1em">Loading...</p>
-        {{else}}
-        <div>
-            <label>Current system funding balance:</label>&nbsp;<scan style="color:{{#if (lowBalance balanceInfo)}}red{{else}}black{{/if}}">{{balanceInfo.currentBalance}}</scan><br>
-            <label>Minimum funding balance:</label>&nbsp;{{balanceInfo.minimumBalance}}
+    {{else}}
+            <label>Minimum funding balance:</label>&nbsp;<span> {{balanceInfo.minimumBalance}} </span><br>
+            <label>Current system funding balance:</label>&nbsp;<span style="color:{{#if (lowBalance balanceInfo)}}red{{else}}black{{/if}}">{{balanceInfo.currentBalance}}</span>
+
             <div style="margin-top:1em">
                 {{#unless fundAddress}}
                     <a id="lnkNewAddressToFund" href="#" role="button">Get address to fund system</a>
@@ -16,6 +16,5 @@
                     {{> fundingAddress fundAddress=fundAddress}}
                 {{/unless}}
             </div>
-        </div>
     {{/unless}}
 </template>

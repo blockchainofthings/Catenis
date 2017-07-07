@@ -18,6 +18,12 @@ html, body{
     width:100%;
 }
 
+.noPadding{
+    padding:0;
+}
+
+/*word colors*/
+
 .white{
     color:white;
 }
@@ -25,19 +31,44 @@ html, body{
     color:#333399;
 }
 
+.gray{
+    color: rgb(144, 144, 144);
+}
+
+.green{
+    color: rgb(102, 204, 51);
+}
+
+/*bg colors*/
 .blueBG{
     background-color: #333399;
 }
 
 .greenBG{
-    background-color:green;
+    background-color:rgb(102, 204, 51);
 }
+
+.whiteBg{
+    margin-top: 150px;
+    background-color: #ffffff;
+    box-shadow: 5px 5px 3px #888888;
+}
+
+
+
+
+
+
 
 /*
 Login Form Box
 currently using useraccounts:unstyled
 -> refer to https://github.com/meteor-useraccounts/core/blob/master/Guide.md#css-rules to see relevant classes & ids
 */
+
+.login{
+    background-color:#333399;
+}
 
 .loginFormBox{
     border-color: gainsboro;
@@ -121,8 +152,8 @@ currently using useraccounts:unstyled
 
 
 
-
 /* Side Navigation Toggle Styles */
+
 #wrapper {
     padding-left: 0px;
     -webkit-transition: all 0.5s ease;
@@ -134,27 +165,33 @@ currently using useraccounts:unstyled
 
 #sidebar-wrapper {
     z-index: 1000;
-    position: fixed;
-    top: 100px;
-    /*above should change according to the size of the header.*/
+    position: absolute;
+    top: 0px;
     left: 0px;
     width: 250px;
     height: 100%;
     margin-left: 0px;
     overflow-y: auto;
+    overflow-x: hidden;
     background: #000;
     -webkit-transition: all 0.5s ease;
     -moz-transition: all 0.5s ease;
     -o-transition: all 0.5s ease;
     transition: all 0.5s ease;
 }
+#sidebar-wrapper>ul{
+    position: absolute;
+    top: 80px;
+    /*this value should change depending on the navbar height setting.*/
+
+}
 
 #wrapper.toggled #sidebar-wrapper {
-    width: 0px;
+    width: 80px;
 }
 
 #page-content-wrapper {
-    margin-top:100px;
+    margin-top:50px;
     /*above should change according to the size of the header.*/
     width: auto;
     position: relative;
@@ -167,8 +204,20 @@ currently using useraccounts:unstyled
 }
 
 
-/* Sidebar Styles */
+/*                   */
+/* Sidebar Styles   */
+/*                 */
+.logoImage{
+    margin-top:15px;
+    margin-left: 15px;
+    max-width: 100%;
+    max-height: 100%;
+}
+
 .sidebar-nav {
+    border-top: solid;
+    border-top-color: #999;
+    border-top-width: 2px;
     position: relative;
     top: 0;
     width: 250px;
@@ -197,7 +246,9 @@ currently using useraccounts:unstyled
 .sidebar-nav li a:active,
 .sidebar-nav li a:focus {
     text-decoration: none;
+    outline:0;
 }
+
 
 .sidebar-nav > .sidebar-brand {
     height: 65px;
@@ -215,6 +266,26 @@ currently using useraccounts:unstyled
     background: none;
 }
 
+/*change the words on sidebar to icon when collapsed*/
+/*note that we are overriding some qualities from twbs*/
+#wrapper>#sidebar-wrapper>.sidebar-nav>li>.show{
+    display: block!important;
+}
+
+#wrapper>#sidebar-wrapper>.sidebar-nav>li>.notshow{
+    display: none!important;
+}
+
+#wrapper.toggled>#sidebar-wrapper>.sidebar-nav>li>.show{
+    display: none!important;
+}
+
+#wrapper.toggled>#sidebar-wrapper>.sidebar-nav>li>.notshow{
+    display: block!important;
+}
+
+
+
 @media(min-width:768px) {
     #wrapper {
         padding-left: 0;
@@ -222,10 +293,12 @@ currently using useraccounts:unstyled
 
     #sidebar-wrapper {
         width: 250px;
+
     }
 
     #wrapper.toggled #sidebar-wrapper {
-        width: 0px;
+        width: 80px;
+
     }
 
     #page-content-wrapper {
@@ -250,51 +323,70 @@ currently using useraccounts:unstyled
     font-size: 16px;
 }
 
-.wrapper{
-    margin-top:100px;
-}
 
-.dropdown-full{
-    position:relative;
-    width: 100%;
-}
-.page-sidebar{
-    padding-top: 150px;
-    /*size of topNavIcon is 70 at the moment, we can give it some more space in the future*/
-    float: left;
-}
-
-.whiteBg{
-    margin-top: 150px;
-    background-color: #ffffff;
-    box-shadow: 5px 5px 3px #888888;
-}
-
-.login{
-    background-color:#333399;
-
-}
-
-#header-right{
-    overflow: hidden;
-    position: absolute;
-    top: 15px;
-    right: 35px;
-}
-
-#header-logo{
-    padding-left: 30px;
-}
 .top-navBar{
-    margin-top:0px;
-    padding-top: 10px;
-    padding-bottom:10px;
     background-color: #333399;
-    position: fixed;
-    top:0;
-    left:0;
-    width: 100%;
-    display: block;
-    height: 100px;
+    height: 80px;
+    /*position: relative;*/
+    /*color: white;*/
+    /*height: 100px;*/
     /*if you change the height, also change the height element in page-content-wrapper*/
+}
+
+
+
+/*overwriting some bootstrap defaults for dropdown menu*/
+.navbar{
+    border: 0px;
+}
+.navbar-default .navbar-nav>li>a{
+    color: #fff;
+    /*font-weight: bolder;*/
+}
+.navbar-default .navbar-nav>.open>a,
+.navbar-default .navbar-nav>.open>a:focus,
+.navbar-default .navbar-nav>.open>a:hover{
+    background-color: #999;
+    color: #333399;
+}
+.navbar-default .navbar-nav>li>a:focus,
+.navbar-default .navbar-nav>li>a:hover{
+    color: #fff;
+}
+.navbar-nav>li>.dropdown-menu{
+    border-width: 2px;
+    border-color: rgb(102, 204,51);
+}
+.dropdown-menu>li>a{
+    padding-top: 5px;
+    padding-bottom: 5px;
+    padding-left: 25px;
+    padding-right: 15px;
+}
+
+@media (max-width: 767px){
+    .navbar-nav .open .dropdown-menu
+    {
+        background-color: white;
+        position:absolute;
+        border-width: 2px;
+        border-color: rgb(102, 204,51);
+        border-style: solid;
+        left:auto;
+        right:0;
+    }
+    .navbar-nav>li>a{
+        padding-top:15px;
+        padding-bottom:15px;
+    }
+    /*above single one is for the menu size discrepancy in smaller sizes*/
+    .navbar-default .navbar-nav .open .dropdown-menu>li>a{
+       color: black;
+    }
+
+}
+
+.navbar-nav{
+    margin-top:0;
+    margin-bottom:0;
 }

@@ -17,66 +17,84 @@
                 </div>
             </div>
         {{else}}
-            <!--the user is signed in-->
-                <div id="wrapper">
-                    <!--top navigation bar-->
-                    <div class="top-navBar" role="navigation">
-                        <div id="header-logo">
-                            <span href="#top">
-                                <a href="#menu-toggle" class="btn btn-default" id="menu-toggle"><i class="glyphicon glyphicon-th-list"></i></a>
-                            </span>
-                        </div>
-                        <div id="header-right">
-                            <div class="user-profile dropdown">
-                                <h3 class="white">Welcome, {{currentUser.username}}</h3>
+             <div id="wrapper">
+                <!--top navigation bar-->
+                <nav class="navbar navbar-default top-navBar">
+                    <div class="container-fluid">
+                            <div class="pull-right" id="userAccount">
+                                <ul class="nav navbar-nav navbar-right">
+                                    <li class="dropdown">
+                                        <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false"><i class="glyphicon glyphicon-user"></i> Your Account <span class="caret"></span></a>
+                                        <ul class="dropdown-menu">
+                                            <li><a>{{currentUser.username}}</a></li>
+                                            <li role="separator" class="divider"></li>
+                                            <li><a href="#">Manage Account</a></li>
+                                            <li>
+                                                <a id="lnkLogout" href="#" role="button">Log Out</a>
+                                            </li>
+                                        </ul>
+                                    </li>
+                                </ul>
                             </div>
-                        </div>
-                    </div>
-                    <!--end of top navigation bar-->
+                    </div><!-- /.container-fluid -->
+                </nav>
+                <!--end of top nav bar-->
 
-                    <!-- Sidebar -->
-                    <div id="sidebar-wrapper">
-                        <ul class="sidebar-nav">
-                            <li class="sidebar-brand">
-                                <a href="/admin/">
-                                    Manage Catenis
-                                </a>
-                            </li>
-                            {{#if isInRole 'sys-admin'}}
-                                <li>
-                                    <a href="/admin/sysfunding">System Funding</a>
-                                </li>
-                                <li>
-                                    <a href="/admin/clients">Clients</a>
-                                </li>
-                            {{/if}}
-                            <li>
-                                <a id="lnkLogout" href="#" role="button">Log out</a>
-                            </li>
-                        </ul>
+                <!-- Sidebar -->
+                <div id="sidebar-wrapper">
+                    <div>
+                        <a class="navbar-brand noPadding" href="/admin/">
+                            <img src="/images/CompanyElement_SM_Darkbackgrounds.png" class="logoImage" alt="logo">
+                        </a>
                     </div>
-                    <!-- end of sidebar -->
 
-                    <!--start of content-wrapper-->
-                    <div id="page-content-wrapper">
-                        <div class="container-fluid">
-                            <div class="row">
-                                <div class="col-lg-8 col-lg-offset-2">
-                                    {{#if isInRole 'sys-admin'}}
-                                       <article class="text-center">
-                                       {{#if page}}
-                                               {{> Template.dynamic template=page data=dataContext}}
-                                       {{/if}}
-                                       </article>
-                                    {{else}}
-                                        <p>User does not have the necessary permission.</p>
-                                    {{/if}}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <!--end of content-wrapper-->
+
+                    <ul class="sidebar-nav">
+                        <li>
+                            <a href="#menu-toggle" class="menu-toggle show"><i class="glyphicon glyphicon-menu-left"></i>  Toggle Sidebar</a>
+                            <a href="#menu-toggle" class="menu-toggle notshow"><i class="glyphicon glyphicon-menu-right"></i></a>
+                        </li>
+
+                        {{#if isInRole 'sys-admin'}}
+                        <li>
+                            <a href="/admin/sysfunding" class="show"><i class="glyphicon glyphicon-bitcoin"></i>  System Funding</a>
+                            <a href="/admin/sysfunding" class="notshow"><i class="glyphicon glyphicon-bitcoin"></i></a>
+
+                        </li>
+                        <li>
+                            <a href="/admin/clients" class="show"><i class="glyphicon glyphicon-knight"></i>  Clients</a>
+                            <a href="/admin/clients" id="menu-toggle" class="notshow"><i class="glyphicon glyphicon-knight"></i></a>
+                        </li>
+                        {{/if}}
+                        <li>
+                            <a id="lnkLogout" href="#" role="button" class="show"><i class="glyphicon glyphicon-thumbs-down"></i>  Log out</a>
+                            <a href="menu-toggle" id="menu-toggle" class="notshow"><i class="glyphicon glyphicon-thumbs-down"></i></a>
+
+                        </li>
+                    </ul>
                 </div>
+                <!-- end of sidebar -->
+
+                <!--start of content-wrapper-->
+                <div id="page-content-wrapper">
+                    <div class="container-fluid">
+                        <div class="row">
+                            <div class="col-lg-8 col-lg-offset-2">
+                                {{#if isInRole 'sys-admin'}}
+                                    <article class="text-center">
+                                        {{#if page}}
+                                            {{> Template.dynamic template=page data=dataContext}}
+                                        {{/if}}
+                                    </article>
+                                {{else}}
+                                    <p>User does not have the necessary permission.</p>
+                                {{/if}}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!--end of content-wrapper-->
+             </div>
             <!--end of wrapper -->
         {{/unless}}
     </div>

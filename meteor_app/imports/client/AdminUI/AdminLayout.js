@@ -50,13 +50,9 @@ Template.adminLayout.events({
         Meteor.logout();
         return false;
     },
-    'click #menu-toggle'(event, template){
-        $("#menu-toggle").click(function(e) {
-            e.preventDefault();
-            e.stopPropagation()
-            $("#wrapper").toggleClass("toggled");
-        });
-    }
+    'click .menu-toggle'(event, template){
+        $("#wrapper").toggleClass("toggled");
+    },
 });
 
 Template.adminLayout.helpers({
