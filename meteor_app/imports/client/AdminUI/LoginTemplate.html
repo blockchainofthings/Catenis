@@ -1,3 +1,57 @@
 <template name="login">
-            {{> atForm}}
+    <div class="container">
+        <div class="row paddingTop90px">
+            <div class="col-md-6 col-md-offset-3">
+                <div class="panel panel-login">
+                    <div class="panel-body">
+                        <div class="row">
+                            <div class="col-lg-12">
+                                <!--this is where the page title goes-->
+                                <h2>{{atFormTitle}}</h2>
+                                {{>atForm}}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="panel-heading">
+                        <div class="row">
+                            <!--these are the bottom buttons-->
+                            <!--these should serve as the button to tab between the two.-->
+
+                            <!--1. Login page-->
+                            {{#if (equals atFormTitle "LOGIN")}}
+                                <div class="col-xs-6 tabs">
+                                    <a href="#" class="active" id="forgotPwd-form-link"><div class="login">FORGOT PASSWORD?</div></a>
+                                </div>
+                                <div class="col-xs-6 tabs">
+                                    <a href="#" id="register-form-link"><div class="register">REGISTER</div></a>
+                                </div>
+                            {{/if}}
+
+                            <!--2. Register Page-->
+                            {{#if (equals atFormTitle "REGISTER")}}
+                                <div class="col-xs-6 tabs">
+                                    <a href="#" class="active" id="login-form-link"><div class="login">LOGIN</div></a>
+                                </div>
+                                <div class="col-xs-6 tabs">
+                                    <a href="#" id="clear-form-link"><div class="register">CLEAR</div></a>
+                                </div>
+                            {{/if}}
+
+                            <!--3. Forgot Password Page-->
+                            {{#if (equals atFormTitle "RESET PASSWORD")}}
+                                <div class="col-xs-6 tabs">
+                                    <a href="#" class="active" id="login-form-link"><div class="login">LOGIN</div></a>
+                                </div>
+                                <div class="col-xs-6 tabs">
+                                    <a href="#" id="register-form-link"><div class="register">REGISTER</div></a>
+                                </div>
+                            {{/if}}
+                            <!--here to add more pages-->
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </template>

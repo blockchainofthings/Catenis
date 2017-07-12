@@ -25,5 +25,19 @@ import { AccountsTemplates } from 'meteor/useraccounts:core';
 //
 
 AccountsTemplates.configure({
-    forbidClientAccountCreation: true
+    //this below all was changed by peter just to incorporate Andre's design.
+    // forbidClientAccountCreation: true;
+    showLabels: false,
+    hideSignInLink: true,
+    hideSignUpLink: true,
+    texts: {
+        title: {
+            //get rid of their titles
+            signIn: "",
+            signUp: "",
+            forgotPwd:"",
+        }
+    }
+
+
 });

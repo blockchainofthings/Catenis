@@ -66,31 +66,34 @@ currently using useraccounts:unstyled
 -> refer to https://github.com/meteor-useraccounts/core/blob/master/Guide.md#css-rules to see relevant classes & ids
 */
 
-.login{
-    background-color:#333399;
+.form-group>.at-input>input{
+    width:100%;
 }
+/*.login{*/
+    /*background-color:#333399;*/
+/*}*/
 
-.loginFormBox{
-    border-color: gainsboro;
-    border-style: solid;
-    border-width: 5px;
-    border-radius: 5px;
-    background-color: white;
-    position: relative;
-    margin-top: 100px;
-}
+/*.loginFormBox{*/
+    /*border-color: gainsboro;*/
+    /*border-style: solid;*/
+    /*border-width: 5px;*/
+    /*border-radius: 5px;*/
+    /*background-color: white;*/
+    /*position: relative;*/
+    /*margin-top: 100px;*/
+/*}*/
 
-.at-form{
-    border-radius: 5px;
-    border-color: darkgrey;
-    border-style: solid;
-    border-width: 3px;
-    padding: 10px;
-}
+/*.at-form{*/
+    /*border-radius: 5px;*/
+    /*border-color: darkgrey;*/
+    /*border-style: solid;*/
+    /*border-width: 3px;*/
+    /*padding: 10px;*/
+/*}*/
 
-.at-title{
-    text-align: center;
-}
+/*.at-title{*/
+    /*text-align: center;*/
+/*}*/
 
 .at-error{
     color: red;
@@ -106,48 +109,48 @@ currently using useraccounts:unstyled
     margin-bottom:0;
 }
 
-#at-pwd-form{
-    margin-top:15px;
-    text-align: left;
-}
+/*#at-pwd-form{*/
+    /*margin-top:15px;*/
+    /*text-align: left;*/
+/*}*/
 
-#at-btn{
-    background-color: #4CAF50;
-    color: white;
-    padding: 14px 20px;
-    margin: 8px 0;
-    border: none;
-    width: 100%;
-}
+/*#at-btn{*/
+    /*background-color: #4CAF50;*/
+    /*color: white;*/
+    /*padding: 14px 20px;*/
+    /*margin: 8px 0;*/
+    /*border: none;*/
+    /*width: 100%;*/
+/*}*/
 
-#at-btn:hover {
-    background-color: #3c8e0c;
-    color: white;
-}
+/*#at-btn:hover {*/
+    /*background-color: #3c8e0c;*/
+    /*color: white;*/
+/*}*/
 
 
-#at-field-username{
+/*#at-field-username{*/
 
-    border-color: grey;
-    border-style: solid;
-    border-width: 2px;
-    width: 100%;
-    height: 5px;
-    margin-top: 5px;
-    margin-bottom: 10px;
-    padding: 20px 15px;
-}
+    /*border-color: grey;*/
+    /*border-style: solid;*/
+    /*border-width: 2px;*/
+    /*width: 100%;*/
+    /*height: 5px;*/
+    /*margin-top: 5px;*/
+    /*margin-bottom: 10px;*/
+    /*padding: 20px 15px;*/
+/*}*/
 
-#at-field-password{
-    border-color: grey;
-    border-style: solid;
-    border-width: 2px;
-    width: 100%;
-    height: 5px;
-    margin-top: 5px;
-    margin-bottom: 10px;
-    padding: 20px 15px;
-}
+/*#at-field-password{*/
+    /*border-color: grey;*/
+    /*border-style: solid;*/
+    /*border-width: 2px;*/
+    /*width: 100%;*/
+    /*height: 5px;*/
+    /*margin-top: 5px;*/
+    /*margin-bottom: 10px;*/
+    /*padding: 20px 15px;*/
+/*}*/
 
 
 

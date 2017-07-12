@@ -25,3 +25,37 @@ import './LoginTemplate.html';
 
 // Module code
 //
+//
+// Template.login.events({
+//     'click #login-form-link'(event, template) {
+//         AccountsTemplates.setState('signIn');
+//     },
+//     'click #register-form-link'(event, template){
+//         AccountsTemplates.setState('signUp');
+//     },
+//     'click #forgotPwd-form-link'(event, template){
+//         AccountsTemplates.setState('forgotPwd');
+//     },
+//     'click #clear-form-link'(event, template){
+//         //figure out how to do this properly.
+//
+//     },
+// });
+//
+// Template.login.helpers({
+//     atFormTitle: function () {
+//         if( AccountsTemplates.getState() === 'signIn' ){
+//             return "LOGIN";
+//         }else if(AccountsTemplates.getState() === 'signUp'){
+//             return "REGISTER";
+//
+//         }else if(AccountsTemplates.getState() === 'forgotPwd'){
+//             return "RESET PASSWORD";
+//         }else{
+//             return "";
+//         }
+//     },
+//     equals: function(v1, v2){
+//         return (v1===v2);
+//     }
+// });

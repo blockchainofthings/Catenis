@@ -2,20 +2,7 @@
     <!--this is the template that is first rendered at /admin call-->
     <div class="page-wrapper">
         {{#unless currentUser}}
-            <!--the user is not signed in, render login form-->
-            <div class="container-fluid blueBG fill">
-                <div class="row">
-                    <div class="col-md-4 col-md-offset-4">
-                        <div class="loginFormBox text-center">
-                            <h1>Catenis Enterprise Admin Login</h1>
-                            <blockquote> Go forth and do great things</blockquote>
-                        {{> login}}
-                        <br>
-                        <br>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            {{> login}}
         {{else}}
              <div id="wrapper">
                 <!--top navigation bar-->

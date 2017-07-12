@@ -30,6 +30,9 @@ import './ClientsTemplate.js';
 import './DeviceDetailsTemplate.js';
 import './NewClientTemplate.js';
 import './NewDeviceTemplate.js';
+//below two were added by Peter to incorporate bootstrap styling of useraccounts
+import './peterLoginForm.js';
+Template.atForm.helpers(AccountsTemplates.atFormHelpers);
 
 
 // Module code
@@ -37,13 +40,12 @@ import './NewDeviceTemplate.js';
 
 Template.adminLayout.onCreated(function () {
 
-
 });
 
 Template.adminLayout.onRendered(function(){
-
+    //added by peter to set default state for form.
+    // console.log( AccountsTemplates.getState() );
 });
-
 
 Template.adminLayout.events({
     'click #lnkLogout'(event, template) {
@@ -57,3 +59,53 @@ Template.adminLayout.events({
 
 Template.adminLayout.helpers({
 });
+
+
+
+
+
+
+
+//overriding the atForm from useraccounts module to custom style it with bootstrap.
+Template.peterLoginForm.replaces("atPwdForm");
+
+
+
+Template.login.events({
+    'click #login-form-link'(event, template) {
+        AccountsTemplates.setState('signIn');
+    },
+    'click #register-form-link'(event, template){
+        AccountsTemplates.setState('signUp');
+    },
+    'click #forgotPwd-form-link'(event, template){
+        AccountsTemplates.setState('forgotPwd');
+    },
+    'click #clear-form-link'(event, template){
+        //figure out how to do this properly.
+
+    },
+});
+
+
+//shared helper
+var determineState=  {
+    atFormTitle: function () {
+        if( AccountsTemplates.getState() === 'signIn' ){
+            return "LOGIN";
+        }else if(AccountsTemplates.getState() === 'signUp'){
+            return "REGISTER";
+
+        }else if(AccountsTemplates.getState() === 'forgotPwd'){
+            return "RESET PASSWORD";
+        }else{
+            return "";
+        }
+    },
+    equals: function(v1, v2){
+        return (v1===v2);
+    }
+};
+
+Template.login.helpers(determineState);
+Template.peterLoginForm.helpers(determineState);
