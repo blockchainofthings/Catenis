@@ -1,55 +1,107 @@
 <template name="clientDetails">
-    <h2>{{client.props.name}}</h2>
-    {{#unless Template.subscriptionsReady}}
-        <p style="color:lightgray; margin-top:1em">Loading...</p>
-    {{else}}
-        <a href="/admin/clients">Back to clients</a>
-        <table cellpadding="2" style="margin-left:auto; margin-right:auto; margin-top:1em; max-width: 70%">
-            <tr>
-                <td style="text-align:right; font-weight:bold"><label>Client&nbsp;ID:&nbsp;</label></td>
-                <td style="text-align:left">{{client.clientId}}</td>
-            </tr>
-            <tr>
-                <td style="text-align:right; font-weight:bold"><label>Client&nbsp;Index:&nbsp;</label></td>
-                <td style="text-align:left">{{client.index.clientIndex}}</td>
-            </tr>
-            <tr>
-                <td style="text-align:right; font-weight:bold"><label>Username:&nbsp;</label></td>
-                <td style="text-align:left">{{clientUsername client.user_id}}</td>
-            </tr>
-            <tr>
-                <td style="text-align:right; vertical-align:top; font-weight:bold"><label>Message&nbsp;Credits:&nbsp;</label></td>
-                <td style="text-align:left; vertical-align:top">
-                    {{messageCredits.confirmed}}{{#if (hasUnconfirmedMessageCredits messageCredits)}}&nbsp;(<span style="color:red">{{messageCredits.unconfirmed}}</span>){{/if}}
-                    <div style="margin-top:5px">
-                        {{#if (checkAddMsgCreditsStatus 'idle')}}
-                            <a id="lnkAddMsgCredits" href="#" role="button">Add more credits</a>
-                        {{else if (checkAddMsgCreditsStatus 'data-enter')}}
-                            <input id="txiMsgCreditAmount" type="text"/>
-                            <br><button id="butAddMsgCredits" style="margin-top:0.5em">Add credits</button>
-                            &nbsp;&nbsp;<a id="lnkCancelAddMsgCredits" href="#" role="button">Cancel</a>
-                        {{else if (checkAddMsgCreditsStatus 'processing')}}
-                            <span style="color:blue">Processing. Please wait...</span>
-                        {{else if (checkAddMsgCreditsStatus 'success')}}
-                            <span>Done</span>
-                            &nbsp;&nbsp;<a id="lnkCancelAddMsgCredits" href="#" role="button">Close</a>
-                        {{else if (checkAddMsgCreditsStatus 'error')}}
-                            <span style="color:red">{{addMsgCreditsError}}</span>
-                            &nbsp;&nbsp;<a id="lnkCancelAddMsgCredits" href="#" role="button">Close</a>
-                        {{/if}}
+    <div>
+        <div class="panel panel-login scrollBox650">
+            <div class="panel-body">
+                <div class="row">
+                    <div class="col-lg-12">
+                        {{#unless Template.subscriptionsReady}}
+                            <p style="color:lightgray; margin-top:1em">Loading...</p>
+                        {{else}}
+                            <h2> {{client.props.name}} </h2>
+                            <br>
+                            <div class="row">
+
+                                <div class="col-md-12">
+                                    <div class="pull-right">
+                                        {{#if (checkAddMsgCreditsStatus 'idle')}}
+                                            <a id="lnkAddMsgCredits" href="#" role="button" class="btn-login btn paddedBtn fullWidth">Add more credits</a>
+                                        {{else if (checkAddMsgCreditsStatus 'data-enter')}}
+                                            <input id="txiMsgCreditAmount" type="text" placeholder="Credit Amount"/>
+                                            <div class="row">
+                                                <div class="col-md-6">
+                                                    <button id="butAddMsgCredits" class="btn-login btn fullWidth topMargin05">Add credit</button>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <button id="lnkCancelAddMsgCredits" href="#" class="btn-login btn fullWidth topMargin05">Cancel</button>
+                                                </div>
+                                            </div>
+                                        {{else if (checkAddMsgCreditsStatus 'processing')}}
+                                            <span style="color:blue">Processing. Please wait...</span>
+                                        {{else if (checkAddMsgCreditsStatus 'success')}}
+                                            <span>Transaction complete, please wait for Confirmation</span>
+                                            <br>
+                                            <a id="lnkCancelAddMsgCredits" href="#" role="button" class="btn-login btn paddedBtn">Close</a>
+                                        {{else if (checkAddMsgCreditsStatus 'error')}}
+                                            <span style="color:red">{{addMsgCreditsError}}</span>
+                                              <a id="lnkCancelAddMsgCredits" href="#" role="button" class="btn-login btn paddedBtn">Close</a>
+                                        {{/if}}
+                                    </div>
+                                </div>
+                            </div>
+                            <br>
+
+
+                            <div class="row">
+                                <div class="col-lg-12">
+                                    <!--<h2> Client Info </h2>-->
+                                    <table class="table table-striped">
+                                        <tbody>
+                                        <tr>
+                                            <td><label>Client&nbsp;ID:&nbsp;</label></td>
+                                            <td>{{client.clientId}}</td>
+                                        </tr>
+                                        <tr>
+                                            <td><label>Client&nbsp;Index:&nbsp;</label></td>
+                                            <td>{{client.index.clientIndex}}</td>
+                                        </tr>
+                                        <tr>
+                                            <td><label>Username:&nbsp;</label></td>
+                                            <td>{{clientUsername client.user_id}}</td>
+                                        </tr>
+                                        <tr>
+                                            <td><label>Message&nbsp;Credits:&nbsp;</label></td>
+                                            <td>
+                                                {{messageCredits.confirmed}}{{#if (hasUnconfirmedMessageCredits messageCredits)}}&nbsp;( + unconfirmed: <span style="color:red">{{messageCredits.unconfirmed}}</span>){{/if}}
+                                            </td>
+                                        </tr>
+                                        </tbody>
+                                    </table>
+
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-4 col-md-offset-4">
+                                    {{#unless showDevices}}
+                                            <a href="#" id="lnkShowDevices" role="button" class="btn-login btn paddedBtn fullWidth "> Show devices</a>
+                                    {{else}}
+                                            <a id="lnkHideDevices" href="#" role="button" class="btn-login btn paddedBtn fullWidth">Hide devices</a>
+                                    {{/unless}}
+                                </div>
+                            </div>
+                            <hr>
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <div>
+                                        {{#if showDevices}}
+                                            {{#if client._id}}
+                                                {{> devices client_id=client._id}}
+                                            {{/if}}
+                                        {{/if}}
+                                    </div>
+                                </div>
+                            </div>
+                        {{/unless}}
+                        <div class="row">
+                            <div class="col-md-6">
+                                <a href="/admin/clients" role="button" class="btn-login btn paddedBtn fullWidth">Back to clients</a>
+                            </div>
+                            <div class="col-md-6">
+                                <a href="/admin/newclient" role="button" class="btn-login btn paddedBtn fullWidth">Add another client</a>
+                            </div>
+                        </div>
                     </div>
-                </td>
-            </tr>
-        </table>
-        <div style="margin-top:1em">
-            {{#unless showDevices}}
-                <a id="lnkShowDevices" href="#">Show devices</a>
-            {{else}}
-                <a id="lnkHideDevices" href="#">Hide devices</a>
-                {{#if client._id}}
-                    {{> devices client_id=client._id}}
-                {{/if}}
-            {{/unless}}
+                </div>
+            </div>
         </div>
-    {{/unless}}
+    </div>
 </template>

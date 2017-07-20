@@ -1,47 +1,44 @@
 <template name="adminLayout">
     <!--this is the template that is first rendered at /admin call-->
-    <div class="page-wrapper">
         {{#unless currentUser}}
             {{> login}}
         {{else}}
              <div id="wrapper">
                 <!--top navigation bar-->
-                <nav class="navbar navbar-default top-navBar">
-                    <div class="container-fluid">
-                            <div class="pull-right" id="userAccount">
-                                <ul class="nav navbar-nav navbar-right">
-                                    <li class="dropdown">
-                                        <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false"><i class="glyphicon glyphicon-user"></i> Your Account <span class="caret"></span></a>
-                                        <ul class="dropdown-menu">
-                                            <li><a>{{currentUser.username}}</a></li>
-                                            <li role="separator" class="divider"></li>
-                                            <li><a href="#">Manage Account</a></li>
-                                            <li>
-                                                <a id="lnkLogout" href="#" role="button">Log Out</a>
-                                            </li>
-                                        </ul>
-                                    </li>
-                                </ul>
-                            </div>
-                    </div><!-- /.container-fluid -->
-                </nav>
+                 <nav class="navbar navbar-default top-navBar">
+                     <div class="container-fluid">
+                         <div class="navbar-header">
+                             <a class="navbar-brand" href="#">
+                                 <p> Catenis<span class="gray">Enterprise</span></p>
+                             </a>
+                             <div class="pull-right" id="userAccount">
+                                 <ul class="nav navbar-nav navbar-right">
+                                     <li class="dropdown">
+                                         <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false"><i class="glyphicon glyphicon-user"></i> Account <span class="caret"></span></a>
+                                         <ul class="dropdown-menu">
+                                             <li><a>{{currentUser.username}}</a></li>
+                                             <li role="separator" class="divider"></li>
+                                             <li><a href="#">Manage Account</a></li>
+                                             <li><a id="lnkLogout" href="#" role="button">Log Out</a></li>
+                                         </ul>
+                                     </li>
+                                 </ul>
+                             </div>
+                         </div>
+                         <!-- Brand and toggle get grouped for better mobile display -->
+                         <!--<a href="#menu-toggle" class="btn btn-default" id="menu-toggle"><a class="navbar-brand noPadding" href="#"><img src="images/CompanyElement_SM_Darkbackgrounds.png" class="logoImage" alt="logo"></a></a>-->
+
+                     </div><!-- /.container-fluid -->
+                 </nav>
                 <!--end of top nav bar-->
 
                 <!-- Sidebar -->
                 <div id="sidebar-wrapper">
-                    <div>
-                        <a class="navbar-brand noPadding" href="/admin/">
-                            <img src="/images/CompanyElement_SM_Darkbackgrounds.png" class="logoImage" alt="logo">
-                        </a>
-                    </div>
-
-
                     <ul class="sidebar-nav">
                         <li>
-                            <a href="#menu-toggle" class="menu-toggle show"><i class="glyphicon glyphicon-menu-left"></i>  Toggle Sidebar</a>
-                            <a href="#menu-toggle" class="menu-toggle notshow"><i class="glyphicon glyphicon-menu-right"></i></a>
+                            <a href="#" class="menu-toggle show"><i class="glyphicon glyphicon-menu-left"></i>  Toggle Sidebar</a>
+                            <a href="#" class="menu-toggle notshow"><i class="glyphicon glyphicon-menu-right"></i></a>
                         </li>
-
                         {{#if isInRole 'sys-admin'}}
                         <li>
                             <a href="/admin/sysfunding" class="show"><i class="glyphicon glyphicon-bitcoin"></i>  System Funding</a>
@@ -56,7 +53,6 @@
                         <li>
                             <a id="lnkLogout" href="#" role="button" class="show"><i class="glyphicon glyphicon-thumbs-down"></i>  Log out</a>
                             <a href="menu-toggle" id="menu-toggle" class="notshow"><i class="glyphicon glyphicon-thumbs-down"></i></a>
-
                         </li>
                     </ul>
                 </div>
@@ -84,5 +80,4 @@
              </div>
             <!--end of wrapper -->
         {{/unless}}
-    </div>
 </template>

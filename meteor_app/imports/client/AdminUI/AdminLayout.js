@@ -30,8 +30,9 @@ import './ClientsTemplate.js';
 import './DeviceDetailsTemplate.js';
 import './NewClientTemplate.js';
 import './NewDeviceTemplate.js';
-//below two were added by Peter to incorporate bootstrap styling of useraccounts
-import './peterLoginForm.js';
+//below was added by Peter to incorporate bootstrap styling of useraccounts
+import './LoginForm.js';
+
 Template.atForm.helpers(AccountsTemplates.atFormHelpers);
 
 
@@ -67,9 +68,7 @@ Template.adminLayout.helpers({
 
 
 //overriding the atForm from useraccounts module to custom style it with bootstrap.
-Template.peterLoginForm.replaces("atPwdForm");
-
-
+Template.LoginForm.replaces("atPwdForm");
 
 Template.login.events({
     'click #login-form-link'(event, template) {
@@ -81,15 +80,11 @@ Template.login.events({
     'click #forgotPwd-form-link'(event, template){
         AccountsTemplates.setState('forgotPwd');
     },
-    'click #clear-form-link'(event, template){
-        //figure out how to do this properly.
-
-    },
 });
 
 
 //shared helper
-var determineState=  {
+var determineState= {
     atFormTitle: function () {
         if( AccountsTemplates.getState() === 'signIn' ){
             return "LOGIN";
@@ -108,4 +103,6 @@ var determineState=  {
 };
 
 Template.login.helpers(determineState);
-Template.peterLoginForm.helpers(determineState);
+Template.LoginForm.helpers(determineState);
+
+

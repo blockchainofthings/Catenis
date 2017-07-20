@@ -27,7 +27,6 @@ import { Catenis } from '../ClientCatenis';
 // Import template UI
 import './NewClientTemplate.html';
 
-
 // Definition of module (private) functions
 //
 
@@ -78,9 +77,17 @@ function validateFormData(form, errMsgs) {
 Template.newClient.onCreated(function () {
     this.state = new ReactiveDict();
     this.state.set('errMsgs', []);
+
+//    below added to make the table on this page possible.
+    // Subscribe to receive fund balance updates
+    this.catenisClientsSubs = this.subscribe('catenisClients', Catenis.ctnHubNodeIndex);
 });
 
 Template.newClient.onDestroyed(function () {
+//    below added to make the table possible
+    if (this.catenisClientsSubs) {
+        this.catenisClientsSubs.stop();
+    }
 });
 
 Template.newClient.events({
@@ -119,6 +126,10 @@ Template.newClient.events({
         else {
             template.state.set('errMsgs', errMsgs);
         }
+    },
+    //to allow for Adding more, we refresh the page. this is inefficient but works
+    'click #reset':function(){
+        document.location.reload(true);
     }
 });
 
@@ -137,5 +148,13 @@ Template.newClient.helpers({
     },
     newClientId: function () {
         return Template.instance().state.get('newClientId');
+    },
+
+//    below added to make table display possible
+    listClients: function () {
+        return Catenis.db.collection.Client.find({}, {sort:{'props.name': 1}}).fetch();
+    },
+    isClientActive: function (client) {
+        return client.status === 'active';
     }
 });

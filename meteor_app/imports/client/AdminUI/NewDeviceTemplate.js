@@ -56,11 +56,20 @@ Template.newDevice.onCreated(function () {
 
     // Subscribe to receive client updates
     this.clientRecordSubs = this.subscribe('clientRecord', this.data.client_id);
+
+    //this is here to allow for the table
+    // Subscribe to receive device updates
+    this.clientDevicesSubs = this.subscribe('clientDevices', this.data.client_id);
 });
 
 Template.newDevice.onDestroyed(function () {
     if (this.clientRecordSubs) {
         this.clientRecordSubs.stop();
+    }
+
+//    this is here for the table
+    if (this.clientDevicesSubs) {
+        this.clientDevicesSubs.stop();
     }
 });
 
@@ -92,6 +101,10 @@ Template.newDevice.events({
         else {
             template.state.set('errMsgs', errMsgs);
         }
+    },
+    //to allow for Adding more, we refresh the page. this is inefficient but works
+    'click #reset':function(){
+        document.location.reload(true);
     }
 });
 
@@ -116,5 +129,18 @@ Template.newDevice.helpers({
     },
     newDeviceId: function () {
         return Template.instance().state.get('newDeviceId');
+    },
+
+
+
+//    below are here for the table
+    listDevices: function () {
+        return Catenis.db.collection.Device.find({}, {sort:{'index.deviceIndex': 1}}).fetch();
+    },
+    isDeviceActive: function (device) {
+        return device.status === 'active';
+    },
+    docClientId: function () {
+        return Template.instance().data.client_id;
     }
 });

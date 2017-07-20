@@ -22,7 +22,11 @@
 // Import template UI
 import './LoginTemplate.html';
 
-
+Template.login.events({
+    'click #reset':function(){
+        document.location.reload(true);
+    }
+});
 // Module code
 //
 //
