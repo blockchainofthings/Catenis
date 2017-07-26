@@ -993,7 +993,7 @@ function handleNewTransactions(data) {
                     Catenis.db.collection.Message.update({
                         'blockchain.txid': {$in: txids}
                     }, {
-                        $set: {receivedDate: new Date(txTimeReceived * 100)}
+                        $set: {receivedDate: new Date(txTimeReceived * 1000)}
                     }, {
                         multi: true
                     });
