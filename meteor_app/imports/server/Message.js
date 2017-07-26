@@ -206,8 +206,8 @@ Message.getMessageByTxid = function (txid) {
 //      fromDeviceId: [String|Array(String)], // Single Catenis device ID or list of Catenis device IDs specifying the device(s) that have sent the messages to the issuer device
 //      toDeviceId: [Arraty(String)],  // Single Catenis device ID or list of Catenis device IDs specifying the device(s) to which the messages sent from the issuer device have been sent
 //      readState: [String],  // The read state (either read or unread) of the message. One of the properties of the Message.readState object
-//      startDate: [Date],  // Date and time specifying the lower bound of the time frame within which the message had been sent/reaceived
-//      endDate: [Date]  // Date and time specifying the upper bound of the time frame within which the message had been sent/reaceived
+//      startDate: [Date],  // Date and time specifying the lower bound of the time frame within which the message had been sent/received
+//      endDate: [Date]  // Date and time specifying the upper bound of the time frame within which the message had been sent/received
 //    }
 //
 //  Result: {
@@ -216,12 +216,17 @@ Message.getMessageByTxid = function (txid) {
 //                                //  number of messages that can be returned, and for that reason the returned list had been truncated
 //  }
 Message.query = function (issuerDeviceId, filter) {
-    const hasFilter = typeof filter === 'object' && filter !== null;
+    const hasFilter = typeof filter === 'object' && filter !== null && Object.keys(filter).length > 0;
     let selector = undefined,
         logSelector = undefined,
         sendSelector = undefined;
 
-    if (hasFilter && filter.action === Message.action.log) {
+    if (hasFilter && filter.direction !== undefined && !isValidMsgDirection(filter.direction)) {
+        // Fix direction
+        filter.direction = undefined;
+    }
+
+    if (hasFilter && (filter.action === Message.action.log || filter.action === undefined)) {
         // Log message action
         logSelector = {
             action: Message.action.log
@@ -257,7 +262,7 @@ Message.query = function (issuerDeviceId, filter) {
         }
     }
 
-    if (hasFilter && filter.action === Message.action.send) {
+    if (hasFilter && (filter.action === Message.action.send || filter.action === undefined)) {
         // Send message action
         sendSelector = {
             action: Message.action.send
@@ -267,7 +272,7 @@ Message.query = function (issuerDeviceId, filter) {
             inboundSelector = undefined,
             outboundSelector = undefined;
 
-        if (filter.direction === undefined || filter.direction === Message.direction.inbound || !isValidMsgDirection(filter.direction)) {
+        if (filter.direction === undefined || filter.direction === Message.direction.inbound) {
             // Inbound message direction
             inboundSelector = {
                 targetDeviceId: issuerDeviceId
@@ -300,7 +305,7 @@ Message.query = function (issuerDeviceId, filter) {
             }
         }
 
-        if (filter.direction === undefined || filter.direction === Message.direction.outbound || !isValidMsgDirection(filter.direction)) {
+        if (filter.direction === undefined || filter.direction === Message.direction.outbound) {
             // Outbound message direction
             outboundSelector = {
                 originDeviceId: issuerDeviceId
