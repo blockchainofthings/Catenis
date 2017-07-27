@@ -293,6 +293,8 @@ LogMessageTransaction.checkTransaction = function (transact) {
     // First, check if pattern of transaction's inputs and outputs is consistent
     if (transact.matches(LogMessageTransaction)) {
         // Validate and identify input and output addresses
+        //  NOTE: no need to check if the variables below are non-null because the transact.matches()
+        //      result above already guarantees it
         const devMainAddr = getAddrAndAddrInfo(transact.getInputAt(0));
         const clntMsgCreditAddr = getAddrAndAddrInfo(transact.getInputAt(1));
 
@@ -300,12 +302,12 @@ LogMessageTransaction.checkTransaction = function (transact) {
         let devMainRefundChangeAddr2 = undefined;
         let clntMsgCreditChangeAddr = undefined;
 
-        for (let pos = 2; pos <= 4; pos++) {
+        for (let pos = 1; pos <= 3; pos++) {
             const output = transact.getOutputAt(1);
-            if (output != undefined) {
+            if (output !== undefined) {
                 const outputAddr = getAddrAndAddrInfo(output.payInfo);
                 if (outputAddr.addrInfo.type === KeyStore.extKeyType.dev_main_addr.name) {
-                    if (devMainRefundChangeAddr1 == undefined) {
+                    if (devMainRefundChangeAddr1 === undefined) {
                         devMainRefundChangeAddr1 = outputAddr;
                     }
                     else {
@@ -318,9 +320,9 @@ LogMessageTransaction.checkTransaction = function (transact) {
             }
         }
 
-        if ((devMainRefundChangeAddr1 != undefined && devMainRefundChangeAddr1.address != devMainAddr.address) ||
-                (devMainRefundChangeAddr2 != undefined && devMainRefundChangeAddr2.address != devMainAddr.address) ||
-                (clntMsgCreditChangeAddr != undefined && clntMsgCreditChangeAddr.address != clntMsgCreditAddr.address)) {
+        if ((devMainRefundChangeAddr1 === undefined || devMainRefundChangeAddr1.address !== devMainAddr.address) &&
+                (devMainRefundChangeAddr2 === undefined || devMainRefundChangeAddr2.address !== devMainAddr.address) &&
+                (clntMsgCreditChangeAddr === undefined || clntMsgCreditChangeAddr.address !== clntMsgCreditAddr.address)) {
             // Now, check if data in null data output is correctly formatted
             let ctnMessage = undefined;
 
