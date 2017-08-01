@@ -68,21 +68,80 @@ ClientsUI.initialize = function () {
 
             Client.getClientByClientId(clientId).addMessageCredit(count);
         },
+
+
+        //added by peter to allow for resending enrollment email.
+        resendEnrollmentEmail: function(clientId){
+            try {
+                Accounts.sendEnrollmentEmail(clientId);
+            }catch(err){
+                Catenis.logger.ERROR('Failure trying to resend enrollment Email to client.', err);
+                throw new Meteor.Error('client.resendEnrollmentEmail.failure', 'Failure trying to resend enrollment Email: ' + err.toString());
+            }
+
+        },
+
+        //added by peter to allow Meteor account activation on enrollment. called from ../both/ConfigLoginForm.js
+        activateCurrentUser: function(){
+            try{
+
+                Meteor.users.update(Meteor.userId(), {$set: {'profile.status': "Activated"}});
+
+            }catch(err){
+
+                Catenis.logger.ERROR('Failure trying to activate Meteor user.', err);
+                throw new Meteor.Error('client.activateCurrentUser.failure', 'Failure trying to activate current user: ' + err.toString());
+
+            }
+
+        },
+
+        //added by peter to allow Meteor account deactivation and activation. called from ClientDetailsTemplate
+        changeUserStatus: function(user_id, newStatus){
+            let user;
+
+            try{
+                user=Meteor.users.findOne({_id: user_id});
+                //Ensure that the new status passed is different than the current status.
+
+                // if(newStatus!== user.profile.status){
+                    Meteor.users.update( user, {$set: {'profile.status': newStatus}});
+                // }else{
+                //     Catenis.logger.ERROR("Failure trying to change User Status. Attempted to reset the same status");
+                //     throw new Meteor.Error("client.changeUserStatus.failure Failure trying to deactivate User")
+                // }
+
+            }catch(err){
+                Catenis.logger.ERROR('Failure trying to change user Status Meteor user.', err);
+                throw new Meteor.Error('client.changeUserStatus.failure', 'Failure trying to change user active status: ' + err.toString());
+            }
+        },
+
+
         createClient: function (ctnNodeIndex, clientInfo) {
             // Try to create meteor client user
             let user_id;
 
             try {
+
                 const opts = {
                     username: clientInfo.username,
+                    //we should probably get rid of this password field later, given that we're allowing users to set their own
                     password: clientInfo.psw,
+                    // below email and status were added by peter
+                    //added this field to send emails.
+                    email: clientInfo.email,
                     profile: {
-                        name: 'User for Catenis client ' + clientInfo.name
+                        name: 'User for Catenis client ' + clientInfo.name,
+                        status: "Pending",
                     }
                 };
 
                 user_id = Accounts.createUser(opts);
+             // peter:  adding this to allow for enrollment email when meteor account is created.
+                Accounts.sendEnrollmentEmail(user_id);
             }
+
             catch (err) {
                 // Error trying to create meteor user for client. Log error and throw exception
                 Catenis.logger.ERROR('Failure trying to create new user for client.', err);
@@ -104,6 +163,7 @@ ClientsUI.initialize = function () {
             return clientId;
         }
     });
+
 
     // Declaration of publications
     Meteor.publish('catenisClients', function (ctnNodeIndex) {
@@ -154,7 +214,9 @@ ClientsUI.initialize = function () {
             return Meteor.users.find({_id: client.user_id}, {
                 fields: {
                     _id: 1,
-                    username: 1
+                    username: 1,
+                    //below added to allow user activation status access.
+                    profile:1,
                 }
             });
         }
@@ -247,6 +309,7 @@ ClientsUI.initialize = function () {
 
         this.onStop(() => observeHandle.stop());
     });
+
 };
 
 

@@ -15,7 +15,6 @@
                     <div class="panel-heading">
                         <div class="row">
                             <!--these are the bottom buttons-->
-                            <!--these should serve as the button to tab between the two.-->
 
                             <!--1. Login page-->
                             {{#if (equals atFormTitle "LOGIN")}}
@@ -23,24 +22,26 @@
                                     <a href="#" class="active" id="forgotPwd-form-link"><div class="login">FORGOT PASSWORD?</div></a>
                                 </div>
                                 <div class="col-xs-6 tabs">
+                                    <!--in reality this link does not cause the app to send info to useraccounts, but rather to BCoT crm-->
                                     <a href="#" id="register-form-link"><div class="register">REGISTER</div></a>
                                 </div>
                             {{/if}}
 
-                            <!--2. Register Page-->
-                            {{#if (equals atFormTitle "REGISTER")}}
-                                <div class="col-xs-6 tabs">
-                                    <a href="#" class="active" id="login-form-link"><div class="login">LOGIN</div></a>
-                                </div>
-                                <div class="col-xs-6 tabs">
-                                    <a href="#" id="reset"><div class="register">CLEAR</div></a>
-                                </div>
-                            {{/if}}
 
-                            <!--3. Forgot Password Page-->
+                            <!--2. Forgot Password Page-->
                             {{#if (equals atFormTitle "RESET PASSWORD")}}
                                 <div class="col-xs-6 tabs">
                                     <a href="#" class="active" id="login-form-link"><div class="login">LOGIN</div></a>
+                                </div>
+                                <div class="col-xs-6 tabs">
+                                    <a href="#" id="register-form-link"><div class="register">REGISTER</div></a>
+                                </div>
+                            {{/if}}
+
+                            <!--4. enroll Account Page-->
+                            {{#if (equals atFormTitle "ENROLL ACCOUNT")}}
+                                <div class="col-xs-6 tabs">
+                                    <a href="/admin" class="active" id="login-form-link"><div class="login">LOGIN</div></a>
                                 </div>
                                 <div class="col-xs-6 tabs">
                                     <a href="#" id="register-form-link"><div class="register">REGISTER</div></a>

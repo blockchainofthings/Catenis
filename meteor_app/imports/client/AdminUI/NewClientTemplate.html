@@ -1,44 +1,11 @@
 <template name="newClient">
     <div>
-        <div class="panel panel-login">
+        <div class="panel panel-login noBoxShadow">
             <div class="panel-body">
                 <div class="row">
                     <h2>ADD NEW CLIENT</h2>
                     <br>
-                    <div class="col-lg-6">
-                        {{#unless Template.subscriptionsReady}}
-                            <p style="color:lightgray; margin-top:1em">Loading...</p>
-                        {{else}}
-                            <div class="scrollBox400">
-                                <table  class="table table-striped table-responsive">
-                                    <thead>
-                                    <tr>
-                                        <th>Name</th>
-                                        <th>Client ID</th>
-                                        <th>Status</th>
-                                    </tr>
-                                    </thead>
-                                    <tbody>
-                                    {{#each client in listClients}}
-                                        <tr>
-                                            <td>
-                                                {{#if (isClientActive client)}}
-                                                    <a href="/admin/clients/{{client._id}}">{{client.props.name}}</a>
-                                                {{else}}
-                                                    {{client.props.name}}
-                                                {{/if}}
-                                            </td>
-                                            <td>{{client.clientId}}</td>
-                                            <td>{{client.status}}</td>
-                                        </tr>
-                                    {{/each}}
-                                    <!--limit the amount of clients displayed, allow a toggle view-->
-                                    </tbody>
-                                </table>
-                            </div>
-                        {{/unless}}
-                    </div>
-                    <div class="col-lg-6">
+                    <div class="col-lg-12">
                         <br>
                         {{#if newClientId}}
                             <p style="color:blue">New client "{{newClientId}}" successfully created</p>
@@ -60,6 +27,12 @@
                                 </div>
                                 <div class="form-group">
                                     <input type="text" maxlength="40" id="txtUsername" name="username" placeholder="Username" autocapitalize="none" autocorrect="off">
+                                </div>
+                                <div class="form-group">
+                                    <input type="email" maxlength="40" id="txtEmail" name="email" placeholder="Email" autocapitalize="none" autocorrect="off">
+                                </div>
+                                <div class="form-group">
+                                    <input type="email" maxlength="40" id="txtConfirmEmail" name="confirmEmail" placeholder="Confirm Email" autocapitalize="none" autocorrect="off">
                                 </div>
                                 <div class="form-group">
                                     <input type="password" maxlength="40" id="pswPassword" name="password" placeholder="Password" autocapitalize="none" autocorrect="off">

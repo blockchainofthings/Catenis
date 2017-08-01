@@ -362,7 +362,6 @@ CatenisNode.prototype.createClient = function (props, user_id) {
 
     if (Object.keys(errProp).length > 0) {
         const errProps = Object.keys(errProp);
-
         Catenis.logger.ERROR(util.format('CatenisNode.createClient method called with invalid propert%s', errProps.length > 1 ? 'ies' : 'y'), errProp);
         throw Error(util.format('Invalid %s propert%s', errProps.join(', '), errProps.length > 1 ? 'ies' : 'y'));
     }
@@ -453,7 +452,7 @@ CatenisNode.prototype.createClient = function (props, user_id) {
 
     // If we hit this point, a new Client doc (rec) has been successfully created
 
-    // Return ID of newly creadted client
+    // Return ID of newly created client
     return docClient.clientId;
 };
 

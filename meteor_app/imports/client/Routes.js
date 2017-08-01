@@ -23,8 +23,8 @@ import { BlazeLayout } from 'meteor/kadira:blaze-layout';
 
 // Import templates
 import './AdminUI/AdminLayout.js';
-
-
+import './AdminUI/resetPwd.html';
+import './AdminUI/enrollAccount.html';
 // Module code
 //
 
@@ -43,6 +43,8 @@ FlowRouter.route('/admin/sysfunding', {
         });
     }
 });
+
+
 
 FlowRouter.route('/admin/clients', {
     action: function () {
@@ -97,5 +99,31 @@ FlowRouter.route('/admin/clients/:client_id/newdevice', {
                 client_id: params.client_id
             }
         });
+    }
+});
+
+
+FlowRouter.route('/enroll-account/:token',{
+
+    action: function(params){
+        BlazeLayout.render('enrollAccount',{
+            dataContext:{
+                token: params.token
+            }
+        });
+
+        AccountsTemplates.paramToken= params.token;
+        AccountsTemplates.setState('enrollAccount');
+    }
+});
+
+FlowRouter.route('/reset-password/:token', {
+    action: function(params){
+        BlazeLayout.render('resetPwd',{
+            dataContext:{
+                token: params.token
+            }
+        });
+        AccountsTemplates.paramToken= params.token;
     }
 });

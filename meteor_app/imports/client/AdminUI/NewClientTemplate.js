@@ -50,6 +50,25 @@ function validateFormData(form, errMsgs) {
         hasError = true;
     }
 
+    clientInfo.email = form.email.value ? form.email.value.trim() : '';
+
+    if (clientInfo.email.length === 0) {
+        // Email not supplied. Report error
+        errMsgs.push('Please enter an email address');
+        hasError = true;
+    }
+    else {
+        const confEmail = form.confirmEmail.value ? form.confirmEmail.value.trim() : '';
+
+        if (clientInfo.email !== confEmail) {
+            // Confirmation email does not match. Report error
+            errMsgs.push('Confirmation email does not match');
+            hasError = true;
+        }
+    }
+
+
+
     clientInfo.psw = form.password.value ? form.password.value.trim() : '';
 
     if (clientInfo.psw.length === 0) {
@@ -66,7 +85,6 @@ function validateFormData(form, errMsgs) {
             hasError = true;
         }
     }
-
     return !hasError ? clientInfo : undefined;
 }
 
@@ -77,17 +95,9 @@ function validateFormData(form, errMsgs) {
 Template.newClient.onCreated(function () {
     this.state = new ReactiveDict();
     this.state.set('errMsgs', []);
-
-//    below added to make the table on this page possible.
-    // Subscribe to receive fund balance updates
-    this.catenisClientsSubs = this.subscribe('catenisClients', Catenis.ctnHubNodeIndex);
 });
 
 Template.newClient.onDestroyed(function () {
-//    below added to make the table possible
-    if (this.catenisClientsSubs) {
-        this.catenisClientsSubs.stop();
-    }
 });
 
 Template.newClient.events({
@@ -118,6 +128,7 @@ Template.newClient.events({
                     ]);
                 }
                 else {
+
                     // Catenis client successfully created
                     template.state.set('newClientId', clientId);
                 }
@@ -150,11 +161,4 @@ Template.newClient.helpers({
         return Template.instance().state.get('newClientId');
     },
 
-//    below added to make table display possible
-    listClients: function () {
-        return Catenis.db.collection.Client.find({}, {sort:{'props.name': 1}}).fetch();
-    },
-    isClientActive: function (client) {
-        return client.status === 'active';
-    }
 });

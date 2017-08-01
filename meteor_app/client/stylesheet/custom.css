@@ -86,6 +86,14 @@ currently using useraccounts:unstyled
     margin-bottom:0;
 }
 
+.at-result{
+
+    text-align: center;
+    font-size: 20px;
+    margin-bottom: 5px;
+    color: #333399
+
+}
 
 
 /* Side Navigation Toggle Styles */
@@ -344,6 +352,9 @@ currently using useraccounts:unstyled
 .paddingTop90px{
     padding-top: 90px;
 }
+.paddingTop40px{
+    padding-top: 40px;
+}
 .panel {
     border-radius: 5px;
 }
@@ -589,7 +600,9 @@ btn:active{
     height: 400px;
 }
 
-
+.noBoxShadow{
+    box-shadow: none;
+}
 
 
 
@@ -600,3 +613,4 @@ btn:active{
 .table> tbody> tr> th{
     text-align:center;
 }
+
