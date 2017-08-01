@@ -49,7 +49,7 @@ import { Transaction } from './Transaction';
 // NOTE: make sure that objects of this function class are instantiated and used (their methods
 //  called) from code executed from the FundSource.utxoCS critical section object
 export function LogMessageTransaction(device, message, options) {
-    if (device != undefined) {
+    if (device !== undefined) {
         // Validate arguments
         const errArg = {};
 
@@ -61,8 +61,8 @@ export function LogMessageTransaction(device, message, options) {
             errArg.message = message;
         }
 
-        if (typeof options !== 'object' || options == null || !('encrypted' in options) || !('storageScheme' in options) || !CatenisMessage.isValidStorageScheme(options.storageScheme)
-            || (('storageProvider' in options) && options.storageProvider != undefined && !CatenisMessage.isValidStorageProvider(options.storageProvider))) {
+        if (typeof options !== 'object' || options === null || !('encrypted' in options) || !('storageScheme' in options) || !CatenisMessage.isValidStorageScheme(options.storageScheme)
+            || (('storageProvider' in options) && options.storageProvider !== undefined && !CatenisMessage.isValidStorageProvider(options.storageProvider))) {
             errArg.options = options;
         }
 
@@ -91,22 +91,18 @@ LogMessageTransaction.prototype.buildTransaction = function () {
         // Add transaction inputs
 
         // Prepare to add device main address input
-        //console.time('>>>>>> logMessage#buildTransaction: instantiate FundSource to get UTXOs for device main address');
         const devMainAddrFundSource = new FundSource(this.device.mainAddr.listAddressesInUse(), {});
-        //console.timeEnd('>>>>>> logMessage#buildTransaction: instantiate FundSource to get UTXOs for device main address');
         const devMainAddrBalance = devMainAddrFundSource.getBalance();
-        //console.time('>>>>>> logMessage#buildTransaction: FundSource#allocateFund for device main address');
         const devMainAddrAllocResult = devMainAddrFundSource.allocateFund(Service.devMainAddrAmount);
-        //console.timeEnd('>>>>>> logMessage#buildTransaction: FundSource#allocateFund for device main address');
 
         // Make sure that UTXOs have been correctly allocated
-        if (devMainAddrAllocResult == null) {
+        if (devMainAddrAllocResult === null) {
             // Unable to allocate UTXOs. Log error condition and throw exception
             Catenis.logger.ERROR(util.format('Unable to allocate UTXOs for device (Id: %s) main addresses', this.device.deviceId));
             throw new Meteor.Error('ctn_log_msg_utxo_alloc_error', util.format('Unable to allocate UTXOs for device (Id: %s) main addresses', this.device.deviceId));
         }
 
-        if (devMainAddrAllocResult.utxos.length != 1) {
+        if (devMainAddrAllocResult.utxos.length !== 1) {
             // An unexpected number of UTXOs have been allocated.
             // Log error condition and throw exception
             Catenis.logger.ERROR(util.format('An unexpected number of UTXOs have been allocated for device (Id: %s) main addresses', this.device.deviceId), {
@@ -126,21 +122,17 @@ LogMessageTransaction.prototype.buildTransaction = function () {
         this.transact.addInput(devMainAddrAllocUtxo.txout, devMainAddrAllocUtxo.address, devMainAddrInfo);
 
         // Prepare to add client message credit input
-        //console.time('>>>>>> logMessage#buildTransaction: instantiate FundSource to get UTXOs for client credit address');
         const clntMsgCreditAddrFundSource = new FundSource(this.device.client.messageCreditAddr.listAddressesInUse(), {});
-        //console.timeEnd('>>>>>> logMessage#buildTransaction: instantiate FundSource to get UTXOs for client credit address');
-        //console.time('>>>>>> logMessage#buildTransaction: FundSource#allocateFund for client credit address');
         const clntMsgCreditAddrAllocResult = clntMsgCreditAddrFundSource.allocateFund(Service.clientServiceCreditAmount);
-        //console.timeEnd('>>>>>> logMessage#buildTransaction: FundSource#allocateFund for client credit address');
 
         // Make sure that UTXOs have been correctly allocated
-        if (clntMsgCreditAddrAllocResult == null) {
+        if (clntMsgCreditAddrAllocResult === null) {
             // No UTXO available to be allocated. Log error condition and throw exception
             Catenis.logger.ERROR(util.format('No UTXO available to be allocated for client (Id: %s) message credit addresses', this.device.client.clientId));
             throw new Meteor.Error('ctn_log_msg_no_utxo_msg_credit', util.format('No UTXO available to be allocated for client (Id: %s) message credit addresses', this.device.client.clientId));
         }
 
-        if (clntMsgCreditAddrAllocResult.utxos.length != 1) {
+        if (clntMsgCreditAddrAllocResult.utxos.length !== 1) {
             // An unexpected number of UTXOs have been allocated.
             // Log error condition and throw exception
             Catenis.logger.ERROR(util.format('An unexpected number of UTXOs have been allocated for client (Id: %s) message credit addresses', this.device.client.clientId), {
@@ -187,27 +179,29 @@ LogMessageTransaction.prototype.buildTransaction = function () {
             this.transact.addP2PKHOutput(devMainAddrRefundKeys.getAddress(), Service.devMainAddrAmount);
         }
 
+        // NOTE: we do not care to check if change is not below dust amount because it is guaranteed
+        //      that the change amount be a multiple of the basic amount that is allocated to device
+        //      main addresses which in turn is guaranteed to not be below dust
         if (devMainAddrAllocResult.changeAmount > 0) {
             // Add device main address change output
             this.transact.addP2PKHOutput(this.device.mainAddr.newAddressKeys().getAddress(), devMainAddrAllocResult.changeAmount);
         }
 
+        // NOTE: we do not care to check if change is not below dust amount because it is guaranteed
+        //      that the change amount be a multiple of the basic amount that is allocated to client
+        //      message credit addresses which in turn is guaranteed to not be below dust
         if (clntMsgCreditAddrAllocResult.changeAmount > 0) {
             // Add client message credit address change output
             this.transact.addP2PKHOutput(this.device.client.messageCreditAddr.newAddressKeys().getAddress(), clntMsgCreditAddrAllocResult.changeAmount);
         }
 
         // Now, allocate UTXOs to pay for tx expense
-        //console.time('>>>>>> logMessage#buildTransaction: instantiate FundSource to get UTXOs for pay tx expense address');
         const payTxFundSource = new FundSource(Catenis.ctnHubNode.payTxExpenseAddr.listAddressesInUse(), {});
-        //console.timeEnd('>>>>>> logMessage#buildTransaction: instantiate FundSource to get UTXOs for pay tx expense address');
-        //console.time('>>>>>> logMessage#buildTransaction: FundSource#allocateFundForTxExpense for pay tx expense address');
         const payTxAllocResult = payTxFundSource.allocateFundForTxExpense({
             txSize: this.transact.estimateSize(),
             inputAmount: this.transact.totalInputsAmount(),
             outputAmount: this.transact.totalOutputsAmount()
         }, false, Catenis.bitcoinFees.getFeeRateByTime(Service.minutesToConfirmMessage));
-        //console.timeEnd('>>>>>> logMessage#buildTransaction: FundSource#allocateFundForTxExpense for pay tx expense address');
 
         if (payTxAllocResult === null) {
             // Unable to allocate UTXOs. Log error condition and throw exception
@@ -226,7 +220,7 @@ LogMessageTransaction.prototype.buildTransaction = function () {
 
         this.transact.addInputs(inputs);
 
-        if (payTxAllocResult.changeAmount > 0) {
+        if (payTxAllocResult.changeAmount >= Transaction.txOutputDustAmount) {
             // Add new output to receive change
             this.transact.addP2PKHOutput(Catenis.ctnHubNode.payTxExpenseAddr.newAddressKeys().getAddress(), payTxAllocResult.changeAmount);
         }
@@ -240,7 +234,7 @@ LogMessageTransaction.prototype.buildTransaction = function () {
 //    txid: [String]     // ID of blockchain transaction where message was recorded
 LogMessageTransaction.prototype.sendTransaction = function () {
     // Check if transaction has not yet been created and sent
-    if (this.transact.txid == undefined) {
+    if (this.transact.txid === undefined) {
         this.transact.sendTransaction();
 
         // Save sent transaction onto local database
@@ -357,7 +351,7 @@ LogMessageTransaction.checkTransaction = function (transact) {
                     message = ctnMessage.getMessage();
                 }
 
-                if (message != undefined) {
+                if (message !== undefined) {
                     // Instantiate send message transaction
                     logMsgTransact = new LogMessageTransaction();
 
@@ -406,7 +400,7 @@ LogMessageTransaction.matchingPattern = Object.freeze({
 //
 
 function getAddrAndAddrInfo(obj) {
-    return obj != undefined ? {
+    return obj !== undefined ? {
             address: obj.address,
             addrInfo: obj.addrInfo
         } : undefined;

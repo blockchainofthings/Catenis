@@ -150,6 +150,12 @@ export function sendMessage() {
             }
         }
 
+        // Make sure that system is running and accepting API calls
+        if (!Catenis.application.isRunning()) {
+            Catenis.logger.DEBUG('System currently not available for fulfilling \'messages/send\' API request', {applicationStatus: Catenis.application.status});
+            return errorResponse.call(this, 503, 'System currently not available; please try again at a later time');
+        }
+
         // Prepare message
         let msg;
 

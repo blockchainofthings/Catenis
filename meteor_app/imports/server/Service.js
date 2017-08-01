@@ -18,10 +18,13 @@
 import config from 'config';
 // Meteor packages
 //import { Meteor } from 'meteor/meteor';
+import { _ } from 'meteor/underscore';
+
 
 // References code in other (Catenis) modules
 import { Catenis } from './Catenis';
 import { Transaction } from './Transaction';
+import { RbfTransactionInfo } from './RbfTransactionInfo';
 
 // Config entries
 const serviceConfig = config.get('service');
@@ -30,7 +33,7 @@ const srvMsgTypTxCfgConfig = srvMessageConfig.get('typicalTxConfig');
 const srvMsgTypTxCfgSysMsgConfig = srvMsgTypTxCfgConfig.get('sysMessage');
 const srvMsgTypTxCfgSendMsgConfig = srvMsgTypTxCfgConfig.get('sendMessage');
 const srvMsgTypTxCfgLogMsgConfig = srvMsgTypTxCfgConfig.get('logMessage');
-const srvMsgTypTxCfgReadConfirm = srvMsgTypTxCfgConfig.get('readConfirmation');
+const srvReadConfirmConfig = serviceConfig.get('readConfirmation');
 const srvAssetConfig = serviceConfig.get('asset');
 const srvAssetTxWeights = srvAssetConfig.get('txWeights');
 const srvAstTypTxCfgConfig = srvAssetConfig.get('typicalTxConfig');
@@ -47,10 +50,11 @@ const cfgSettings = {
     minFundDevicesProvision: serviceConfig.get('minFundDevicesProvision'),
     minFundMessageCreditsProvision: serviceConfig.get('minFundMessageCreditsProvision'),
     minFundAssetCreditsProvision: serviceConfig.get('minFundAssetCreditsProvision'),
+    fundPayTxSafetyFactor: serviceConfig.get('fundPayTxSafetyFactor'),
     percSendMessageCredit: serviceConfig.get('percSendMessageCredit'),
     percLogMessageCredit: serviceConfig.get('percLogMessageCredit'),
     systemMessageCredits: serviceConfig.get('systemMessageCredits'),
-    fundPayTxResolution: serviceConfig.get('fundPayTxResolution'),
+    fundPayTxResolutionSafetyFactor: serviceConfig.get('fundPayTxResolutionSafetyFactor'),
     fundPayTxMultiplyFactor: serviceConfig.get('fundPayTxMultiplyFactor'),
     minFundPayTxAmountMultiplyFactor: serviceConfig.get('minFundPayTxAmountMultiplyFactor'),
     message: {
@@ -64,24 +68,33 @@ const cfgSettings = {
             sysMessage: {
                 numInputs: srvMsgTypTxCfgSysMsgConfig.get('numInputs'),
                 numOutputs: srvMsgTypTxCfgSysMsgConfig.get('numOutputs'),
-                nullDataPlayloadSize: srvMsgTypTxCfgSysMsgConfig.get('nullDataPlayloadSize')
+                nullDataPayloadSize: srvMsgTypTxCfgSysMsgConfig.get('nullDataPayloadSize')
             },
             sendMessage: {
                 numInputs: srvMsgTypTxCfgSendMsgConfig.get('numInputs'),
                 numOutputs: srvMsgTypTxCfgSendMsgConfig.get('numOutputs'),
-                nullDataPlayloadSize: srvMsgTypTxCfgSendMsgConfig.get('nullDataPlayloadSize')
+                nullDataPayloadSize: srvMsgTypTxCfgSendMsgConfig.get('nullDataPayloadSize')
             },
             logMessage: {
                 numInputs: srvMsgTypTxCfgLogMsgConfig.get('numInputs'),
                 numOutputs: srvMsgTypTxCfgLogMsgConfig.get('numOutputs'),
-                nullDataPlayloadSize: srvMsgTypTxCfgLogMsgConfig.get('nullDataPlayloadSize')
-            },
-            readConfirmation: {
-                numInputs: srvMsgTypTxCfgReadConfirm.get('numInputs'),
-                numOutputs: srvMsgTypTxCfgReadConfirm.get('numOutputs'),
-                nullDataPlayloadSize: srvMsgTypTxCfgReadConfirm.get('nullDataPlayloadSize')
+                nullDataPayloadSize: srvMsgTypTxCfgLogMsgConfig.get('nullDataPayloadSize')
             }
         }
+    },
+    readConfirmation: {
+        paymentResolution: srvReadConfirmConfig.get('paymentResolution'),
+        fundPayTxResolutionSafetyFactor: srvReadConfirmConfig.get('fundPayTxResolutionSafetyFactor'),
+        fundPayTxMultiplyFactor: srvReadConfirmConfig.get('fundPayTxMultiplyFactor'),
+        minFundPayTxAmountMultiplyFactor: srvReadConfirmConfig.get('minFundPayTxAmountMultiplyFactor'),
+        fundPayTxSafetyFactor: srvReadConfirmConfig.get('fundPayTxSafetyFactor'),
+        initNumTxInputs: srvReadConfirmConfig.get('initNumTxInputs'),
+        initNumTxOutputs: srvReadConfirmConfig.get('initNumTxOutputs'),
+        txNullDataPayloadSize: srvReadConfirmConfig.get('txNullDataPayloadSize'),
+        txInputOutputGrowthRatio: srvReadConfirmConfig.get('txInputOutputGrowthRatio'),
+        initTxFeeRate: srvReadConfirmConfig.get('initTxFeeRate'),
+        txFeeRateIncrement: srvReadConfirmConfig.get('txFeeRateIncrement'),
+        numReadConfirmTxsMinFundBalance: srvReadConfirmConfig.get('numReadConfirmTxsMinFundBalance')
     },
     asset: {
         unlockedAssetsPerMinute: srvAssetConfig.get('unlockedAssetsPerMinute'),
@@ -98,17 +111,17 @@ const cfgSettings = {
             issueLockedAsset: {
                 numInputs: srvAstTypTxCfgIssueLockedAsset.get('numInputs'),
                 numOutputs: srvAstTypTxCfgIssueLockedAsset.get('numOutputs'),
-                nullDataPlayloadSize: srvAstTypTxCfgIssueLockedAsset.get('nullDataPlayloadSize')
+                nullDataPayloadSize: srvAstTypTxCfgIssueLockedAsset.get('nullDataPayloadSize')
             },
             issueUnlockedAsset: {
                 numInputs: srvAstTypTxCfgIssueUnlockedAsset.get('numInputs'),
                 numOutputs: srvAstTypTxCfgIssueUnlockedAsset.get('numOutputs'),
-                nullDataPlayloadSize: srvAstTypTxCfgIssueUnlockedAsset.get('nullDataPlayloadSize')
+                nullDataPayloadSize: srvAstTypTxCfgIssueUnlockedAsset.get('nullDataPayloadSize')
             },
             transferAsset: {
                 numInputs: srvAstTypTxCfgTransferAsset.get('numInputs'),
                 numOutputs: srvAstTypTxCfgTransferAsset.get('numOutputs'),
-                nullDataPlayloadSize: srvAstTypTxCfgTransferAsset.get('nullDataPlayloadSize')
+                nullDataPayloadSize: srvAstTypTxCfgTransferAsset.get('nullDataPayloadSize')
             }
         }
     }
@@ -136,26 +149,34 @@ Service.testFunctions = function () {
         deviceProvisionCost: deviceProvisionCost(),
         deviceMessageProvisionCost: deviceMessageProvisionCost(),
         numActiveDeviceMainAddresses: numActiveDeviceMainAddresses(),
-        estimatedSendMessageTotalTxCost: estimatedSendMessageTotalTxCost(),
+        estimatedHighestTxCost: estimatedHighestTxCost(),
         estimatedSendMessageTxCost: estimatedSendMessageTxCost(),
         typicalSendMessageTxSize: typicalSendMessageTxSize(),
         estimatedLogMessageTxCost: estimatedLogMessageTxCost(),
         typicalLogMessageTxSize: typicalLogMessageTxSize(),
-        typicalReadConfirmationTxPayAmount: typicalReadConfirmationTxPayAmount(),
+        estimatedHighestMessageTxCost: estimatedHighestMessageTxCost(),
+        typicalHighestMessageTxSize: typicalHighestMessageTxSize(),
+        averageReadConfirmTxCostPerMessage: averageReadConfirmTxCostPerMessage(),
         deviceAssetProvisionCost: deviceAssetProvisionCost(),
         numActiveDeviceAssetIssuanceAddresses: numActiveDeviceAssetIssuanceAddresses(),
         estimatedAssetTxCost: estimatedAssetTxCost(),
         typicalIssueLockedAssetTxSize: typicalIssueLockedAssetTxSize(),
         typicalIssueUnlockedAssetTxSize: typicalIssueUnlockedAssetTxSize(),
         typicalTransferAssetTxSize: typicalTransferAssetTxSize(),
-        typicalAverageAssetTxSize: typicalAverageAssetTxSize()
+        typicalAverageAssetTxSize: typicalAverageAssetTxSize(),
+        estimatedHighestAssetTxCost: estimatedHighestAssetTxCost(),
+        typicalHighestAssetTxSize: typicalHighestAssetTxSize()
     };
 };
 
-Service.getExpectedPayTxExpenseBalance = function (messageCredits, unreadMessages, assetCredits) {
+Service.getExpectedPayTxExpenseBalance = function (messageCredits, assetCredits) {
     const splitMsgCredits = splitMessageCredits(messageCredits);
 
-    return splitMsgCredits.logMsgCredits * estimatedLogMessageTxCost() + splitMsgCredits.sendMsgCredits * estimatedSendMessageTxCost() + unreadMessages * typicalReadConfirmationTxPayAmount() + assetCredits * estimatedAssetTxCost();
+    return splitMsgCredits.logMsgCredits * estimatedLogMessageTxCost() + splitMsgCredits.sendMsgCredits * estimatedSendMessageTxCost() + assetCredits * estimatedAssetTxCost();
+};
+
+Service.getExpectedReadConfirmPayTxExpenseBalance = function (unreadMessages) {
+    return (unreadMessages + cfgSettings.readConfirmation.numReadConfirmTxsMinFundBalance) * averageReadConfirmTxCostPerMessage();
 };
 
 Service.distributeSystemDeviceMainAddressFund = function () {
@@ -194,33 +215,58 @@ Service.distributeDeviceAssetIssuanceAddressFund = function () {
     };
 };
 
-Service.distributePayMessageTxExpenseFund = function (credits, safetyFactor = 0) {
+Service.getPayMessageTxExpenseFundAmount = function (credits) {
     const splitMsgCredits = splitMessageCredits(credits);
 
-    return Service.distributePayTxExpenseFund((splitMsgCredits.sendMsgCredits * estimatedSendMessageTotalTxCost() + splitMsgCredits.logMsgCredits * estimatedLogMessageTxCost()) * (1 + safetyFactor));
+    return splitMsgCredits.sendMsgCredits * estimatedSendMessageTxCost() + splitMsgCredits.logMsgCredits * estimatedLogMessageTxCost();
 };
 
-Service.distributePayAssetTxExpenseFund = function (credits, safetyFactor = 0) {
-    return Service.distributePayTxExpenseFund(credits * estimatedAssetTxCost() * (1 + safetyFactor));
+Service.getPayAssetTxExpenseFundAmount = function (credits) {
+    return credits * estimatedAssetTxCost();
 };
 
 Service.distributePayTxExpenseFund = function (amount) {
-    let totalAmount = Math.ceil(amount / cfgSettings.paymentResolution) * cfgSettings.paymentResolution;
+    const fundPayTxResolution = Service.fundPayTxResolution;
+    let totalAmount = Math.ceil(amount / fundPayTxResolution) * fundPayTxResolution;
 
     // Make sure that amount to fund is not below minimum
-    if (totalAmount < cfgSettings.minFundPayTxAmountMultiplyFactor * cfgSettings.paymentResolution) {
-        totalAmount = cfgSettings.minFundPayTxAmountMultiplyFactor * cfgSettings.paymentResolution;
+    const minFundAmount = cfgSettings.minFundPayTxAmountMultiplyFactor * fundPayTxResolution;
+
+    if (totalAmount < minFundAmount) {
+        totalAmount = minFundAmount;
     }
 
     return {
         totalAmount: totalAmount,
-        amountPerAddress: distributePayment(totalAmount, cfgSettings.fundPayTxResolution, cfgSettings.fundPayTxMultiplyFactor, cfgSettings.fundPayTxMultiplyFactor)
+        amountPerAddress: distributePayment(totalAmount, fundPayTxResolution, cfgSettings.fundPayTxMultiplyFactor, cfgSettings.fundPayTxMultiplyFactor)
+    };
+};
+
+Service.distributeReadConfirmPayTxExpenseFund = function (amount) {
+    const fundReadConfirmPayTxResolution = Service.fundReadConfirmPayTxResolution;
+    let totalAmount = Math.ceil(amount / fundReadConfirmPayTxResolution) * fundReadConfirmPayTxResolution;
+
+    // Make sure that amount to fund is not below minimum
+    const minFundAmount = cfgSettings.readConfirmation.minFundPayTxAmountMultiplyFactor * fundReadConfirmPayTxResolution;
+
+    if (totalAmount < minFundAmount) {
+        totalAmount = minFundAmount;
+    }
+
+    return {
+        totalAmount: totalAmount,
+        amountPerAddress: distributePayment(totalAmount, fundReadConfirmPayTxResolution, 1, cfgSettings.readConfirmation.fundPayTxMultiplyFactor)
     };
 };
 
 
 // Service function class (public) properties
 //
+
+Service.avrgReadConfirmTxCostPerMsgCtrl = {
+    lastOptimumRate: undefined,
+    lastCostPerMsg: undefined
+};
 
 
 // Definition of module (private) functions
@@ -240,14 +286,14 @@ function estimatedSystemMessageTxCost() {
 }
 
 function typicalSystemMessageTxSize() {
-    return Transaction.computeTransactionSize(cfgSettings.message.typicalTxConfig.sysMessage.numInputs, cfgSettings.message.typicalTxConfig.sysMessage.numOutputs, cfgSettings.message.typicalTxConfig.sysMessage.nullDataPlayloadSize);
+    return Transaction.computeTransactionSize(cfgSettings.message.typicalTxConfig.sysMessage.numInputs, cfgSettings.message.typicalTxConfig.sysMessage.numOutputs, cfgSettings.message.typicalTxConfig.sysMessage.nullDataPayloadSize);
 }
 
 function clientProvisionCost(messageCredits = cfgSettings.minFundMessageCreditsProvision, assetCredits = cfgSettings.minFundAssetCreditsProvision) {
     // Includes cost to pay for expense of txs issued by client's devices + cost to fund client service credit addresses
     const splitMsgCredits = splitMessageCredits(messageCredits);
 
-    return splitMsgCredits.sendMsgCredits * estimatedSendMessageTotalTxCost() + splitMsgCredits.logMsgCredits * estimatedLogMessageTxCost() + assetCredits * estimatedAssetTxCost() + (messageCredits + assetCredits) * cfgSettings.serviceCreditAmount;
+    return splitMsgCredits.sendMsgCredits * estimatedSendMessageTxCost() + splitMsgCredits.logMsgCredits * estimatedLogMessageTxCost() + assetCredits * estimatedAssetTxCost() + (messageCredits + assetCredits) * cfgSettings.serviceCreditAmount;
 }
 
 function deviceProvisionCost() {
@@ -263,9 +309,11 @@ function numActiveDeviceMainAddresses() {
     return Math.ceil((cfgSettings.message.messagesPerMinute * cfgSettings.message.minutesToConfirm) / cfgSettings.message.unconfMainAddrReuses);
 }
 
-function estimatedSendMessageTotalTxCost() {
-    // Send message tx cost + read confirmation tx cost
-    return Math.ceil((typicalSendMessageTxSize() * Catenis.bitcoinFees.getFeeRateByTime(cfgSettings.message.minutesToConfirm) + typicalReadConfirmationTxPayAmount()) / cfgSettings.paymentResolution) * cfgSettings.paymentResolution;
+function estimatedHighestTxCost() {
+    return _.max([
+        estimatedHighestMessageTxCost(),
+        estimatedHighestAssetTxCost()
+    ]);
 }
 
 function estimatedSendMessageTxCost() {
@@ -273,7 +321,7 @@ function estimatedSendMessageTxCost() {
 }
 
 function typicalSendMessageTxSize() {
-    return Transaction.computeTransactionSize(cfgSettings.message.typicalTxConfig.sendMessage.numInputs, cfgSettings.message.typicalTxConfig.sendMessage.numOutputs, cfgSettings.message.typicalTxConfig.sendMessage.nullDataPlayloadSize);
+    return Transaction.computeTransactionSize(cfgSettings.message.typicalTxConfig.sendMessage.numInputs, cfgSettings.message.typicalTxConfig.sendMessage.numOutputs, cfgSettings.message.typicalTxConfig.sendMessage.nullDataPayloadSize);
 }
 
 function estimatedLogMessageTxCost() {
@@ -281,43 +329,79 @@ function estimatedLogMessageTxCost() {
 }
 
 function typicalLogMessageTxSize() {
-    return Transaction.computeTransactionSize(cfgSettings.message.typicalTxConfig.logMessage.numInputs, cfgSettings.message.typicalTxConfig.logMessage.numOutputs, cfgSettings.message.typicalTxConfig.logMessage.nullDataPlayloadSize);
+    return Transaction.computeTransactionSize(cfgSettings.message.typicalTxConfig.logMessage.numInputs, cfgSettings.message.typicalTxConfig.logMessage.numOutputs, cfgSettings.message.typicalTxConfig.logMessage.nullDataPayloadSize);
 }
 
-function typicalReadConfirmationTxPayAmount() {
-    // Since a single transaction could be used to spend one or more
-    //  read confirmation outputs (by using the RBF - Replace By Fee
-    //  feature), we need to compute an average fee (paid amount) per
-    //  message (read confirmation output)
-    let lastFee = 0,
-        lastFeeRate = 0,
-        sumFeePerMsg = 0,
-        numMsgs,
-        txInputs = cfgSettings.message.typicalTxConfig.readConfirmation.numInputs,
-        txOutputs = cfgSettings.message.typicalTxConfig.readConfirmation.numOutputs;
+function estimatedHighestMessageTxCost() {
+    return Math.ceil((typicalHighestMessageTxSize() * Catenis.bitcoinFees.getFeeRateByTime(cfgSettings.message.minutesToConfirm)) / cfgSettings.paymentResolution) * cfgSettings.paymentResolution;
+}
 
-    for (numMsgs = 1; numMsgs <= 10; numMsgs++, txInputs++, txOutputs++) {
-        // Compute transaction size
-        const txSize = Transaction.computeTransactionSize(txInputs, txOutputs, cfgSettings.message.typicalTxConfig.readConfirmation.nullDataPlayloadSize);
+function typicalHighestMessageTxSize() {
+    return _.max([
+        typicalSendMessageTxSize(),
+        typicalLogMessageTxSize()
+    ]);
+}
 
-        // Calculate fee
-        const feeRate = lastFeeRate + 1;
-        let fee = Math.ceil((txSize * feeRate) / cfgSettings.paymentResolution) * cfgSettings.paymentResolution;
+// Calculate average cost (fee paid) of Read Confirmation tx per message
+//
+//  NOTE: the reason for that is because we use the Replace By Fee (RBF) feature
+//   to replace the original transaction every time we need to confirm that a new
+//   message was read, and every time we do that, a higher fee and fee rate must be used
+//
+function averageReadConfirmTxCostPerMessage() {
+    const optimumFeeRate = Catenis.bitcoinFees.getOptimumFeeRate();
 
-        // Make sure that new fee is larger than latest fee
-        if (fee < lastFee) {
-            fee = lastFee + cfgSettings.paymentResolution;
+    if (Service.avrgReadConfirmTxCostPerMsgCtrl.lastOptimumRate !== optimumFeeRate) {
+        Service.avrgReadConfirmTxCostPerMsgCtrl.lastOptimumRate = optimumFeeRate;
+
+        let lastTxFee;
+        let numMsgs = 0;
+        let sumFeePerMsg = 0;
+        const readConfirmTxInfo = new RbfTransactionInfo({
+            initNumTxInputs: cfgSettings.readConfirmation.initNumTxInputs,
+            initNumTxOutputs: cfgSettings.readConfirmation.initNumTxOutputs,
+            txNullDataPayloadSize: cfgSettings.readConfirmation.txNullDataPayloadSize,
+            txFeeRateIncrement: cfgSettings.readConfirmation.txFeeRateIncrement,
+            initTxFeeRate: cfgSettings.readConfirmation.initTxFeeRate
+        });
+
+        do {
+            numMsgs++;
+
+            if (numMsgs > 1) {
+                // Add one more tx input to spend a new read confirmation output
+                readConfirmTxInfo.incrementNumTxInputs(1);
+
+                if (numMsgs % cfgSettings.readConfirmation.fundPayTxMultiplyFactor === 0) {
+                    // Add one more tx input to pay for tx fee
+                    readConfirmTxInfo.incrementNumTxInputs(1);
+                }
+
+                if (numMsgs <= 3) {
+                    // Add one more tx output for paying spent read confirmation outputs to both
+                    //  system read confirmation spend only and system read confirmation spend null addresses
+                    readConfirmTxInfo.incrementNumTxOutputs(1);
+                }
+
+                if (numMsgs % cfgSettings.readConfirmation.txInputOutputGrowthRatio === 0) {
+                    // Add one more tx output for paying spent read confirmation outputs to
+                    //  system read confirmation spend notify address of a different Catenis node
+                    readConfirmTxInfo.incrementNumTxOutputs(1);
+                }
+            }
+
+            lastTxFee = readConfirmTxInfo.getNewTxFee();
+            readConfirmTxInfo.confirmTxFee();
+
+            sumFeePerMsg += Math.ceil((lastTxFee.fee / numMsgs) / cfgSettings.readConfirmation.paymentResolution) * cfgSettings.readConfirmation.paymentResolution;
         }
+        while (lastTxFee.feeRate < optimumFeeRate);
 
-        // Accumulate current fee per message ratio
-        sumFeePerMsg += Math.ceil((fee / numMsgs) / cfgSettings.paymentResolution) * cfgSettings.paymentResolution;
-
-        // Reset latest fee and fee rate
-        lastFee = fee;
-        lastFeeRate = Math.ceil(fee / txSize);
+        Service.avrgReadConfirmTxCostPerMsgCtrl.lastCostPerMsg = Math.ceil((sumFeePerMsg / numMsgs) / cfgSettings.readConfirmation.paymentResolution) * cfgSettings.readConfirmation.paymentResolution;
     }
 
-    return Math.ceil((sumFeePerMsg / (numMsgs - 1)) / cfgSettings.paymentResolution) * cfgSettings.paymentResolution;
+    return Service.avrgReadConfirmTxCostPerMsgCtrl.lastCostPerMsg;
 }
 
 function deviceAssetProvisionCost() {
@@ -333,21 +417,33 @@ function estimatedAssetTxCost() {
 }
 
 function typicalIssueLockedAssetTxSize() {
-    return Transaction.computeTransactionSize(cfgSettings.asset.typicalTxConfig.issueLockedAsset.numInputs, cfgSettings.asset.typicalTxConfig.issueLockedAsset.numOutputs, cfgSettings.asset.typicalTxConfig.issueLockedAsset.nullDataPlayloadSize);
+    return Transaction.computeTransactionSize(cfgSettings.asset.typicalTxConfig.issueLockedAsset.numInputs, cfgSettings.asset.typicalTxConfig.issueLockedAsset.numOutputs, cfgSettings.asset.typicalTxConfig.issueLockedAsset.nullDataPayloadSize);
 }
 
 function typicalIssueUnlockedAssetTxSize() {
-    return Transaction.computeTransactionSize(cfgSettings.asset.typicalTxConfig.issueUnlockedAsset.numInputs, cfgSettings.asset.typicalTxConfig.issueUnlockedAsset.numOutputs, cfgSettings.asset.typicalTxConfig.issueUnlockedAsset.nullDataPlayloadSize);
+    return Transaction.computeTransactionSize(cfgSettings.asset.typicalTxConfig.issueUnlockedAsset.numInputs, cfgSettings.asset.typicalTxConfig.issueUnlockedAsset.numOutputs, cfgSettings.asset.typicalTxConfig.issueUnlockedAsset.nullDataPayloadSize);
 }
 
 function typicalTransferAssetTxSize() {
-    return Transaction.computeTransactionSize(cfgSettings.asset.typicalTxConfig.transferAsset.numInputs, cfgSettings.asset.typicalTxConfig.transferAsset.numOutputs, cfgSettings.asset.typicalTxConfig.transferAsset.nullDataPlayloadSize);
+    return Transaction.computeTransactionSize(cfgSettings.asset.typicalTxConfig.transferAsset.numInputs, cfgSettings.asset.typicalTxConfig.transferAsset.numOutputs, cfgSettings.asset.typicalTxConfig.transferAsset.nullDataPayloadSize);
 }
 
 function typicalAverageAssetTxSize() {
     const totalWeights = cfgSettings.asset.txWeights.issueLockedAsset + cfgSettings.asset.txWeights.issueUnlockedAsset + cfgSettings.asset.txWeights.transferAsset;
 
     return Math.ceil((typicalIssueLockedAssetTxSize() * cfgSettings.asset.txWeights.issueLockedAsset + typicalIssueUnlockedAssetTxSize() * cfgSettings.asset.txWeights.issueUnlockedAsset + typicalTransferAssetTxSize() * cfgSettings.asset.txWeights.transferAsset) / totalWeights);
+}
+
+function estimatedHighestAssetTxCost() {
+    return Math.ceil((typicalHighestAssetTxSize() * Catenis.bitcoinFees.getFeeRateByTime(cfgSettings.asset.minutesToConfirm)) / cfgSettings.paymentResolution) * cfgSettings.paymentResolution;
+}
+
+function typicalHighestAssetTxSize() {
+    return _.max([
+        typicalIssueUnlockedAssetTxSize(),
+        typicalIssueUnlockedAssetTxSize(),
+        typicalTransferAssetTxSize()
+    ]);
 }
 
 // NOTE: totalAmount should be a multiple of payAmount
@@ -371,7 +467,7 @@ function distributePayment(totalAmount, payAmount, addressesPerBatch, paysPerAdd
 
         if (extraPays > 0) {
             for (let idx = 0; idx < extraPays; idx++) {
-                payments[payIdxOffset + idx] = (payments[payIdxOffset + idx] != undefined ? payments[payIdxOffset + idx] : 0) + payAmount;
+                payments[payIdxOffset + idx] = (payments[payIdxOffset + idx] !== undefined ? payments[payIdxOffset + idx] : 0) + payAmount;
             }
         }
 
@@ -414,6 +510,36 @@ Object.defineProperties(Service, {
         },
         enumerable: true
     },
+    fundPayTxResolution: {
+        get: function () {
+            return Math.ceil((estimatedHighestTxCost() * (1 + cfgSettings.fundPayTxResolutionSafetyFactor)) / cfgSettings.paymentResolution) * cfgSettings.paymentResolution;
+        },
+        enumerable: true
+    },
+    fundPayTxSafetyFactor: {
+        get: function () {
+            return cfgSettings.fundPayTxSafetyFactor;
+        },
+        enumerable: true
+    },
+    readConfirmPaymentResolution: {
+        get: function () {
+            return cfgSettings.readConfirmation.paymentResolution;
+        },
+        enumerable: true
+    },
+    fundReadConfirmPayTxResolution: {
+        get: function () {
+            return Math.ceil((averageReadConfirmTxCostPerMessage() * (1 + cfgSettings.readConfirmation.fundPayTxResolutionSafetyFactor)) / cfgSettings.paymentResolution) * cfgSettings.paymentResolution;
+        },
+        enumerable: true
+    },
+    fundReadConfirmPayTxSafetyFactor: {
+        get: function () {
+            return cfgSettings.readConfirmation.fundPayTxSafetyFactor;
+        },
+        enumerable: true
+    },
     minimumFundingBalance: {
         get: function () {
             return systemProvisionCost() + cfgSettings.minFundClientsProvision * clientProvisionCost() + cfgSettings.minFundClientsProvision * cfgSettings.minFundDevicesProvision * deviceProvisionCost();
@@ -447,6 +573,36 @@ Object.defineProperties(Service, {
     devAssetIssuanceAddrAmount: {
         get: function () {
             return cfgSettings.asset.fundAssetIssueAddrAmount;
+        },
+        enumerable: true
+    },
+    readConfirmInitNumTxInputs: {
+        get: function () {
+            return cfgSettings.readConfirmation.initNumTxInputs;
+        },
+        enumerable: true
+    },
+    readConfirmInitNumTxOutputs: {
+        get: function () {
+            return cfgSettings.readConfirmation.initNumTxOutputs;
+        },
+        enumerable: true
+    },
+    readConfirmTxNullDataPayloadSize: {
+        get: function () {
+            return cfgSettings.readConfirmation.txNullDataPayloadSize;
+        },
+        enumerable: true
+    },
+    readConfirmInitTxFeeRate: {
+        get: function () {
+            return cfgSettings.readConfirmation.initTxFeeRate;
+        },
+        enumerable: true
+    },
+    readConfirmTxFeeRateIncrement: {
+        get: function () {
+            return cfgSettings.readConfirmation.txFeeRateIncrement;
         },
         enumerable: true
     }

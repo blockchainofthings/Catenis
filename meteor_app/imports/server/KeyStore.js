@@ -22,6 +22,8 @@
 //
 //      m/k/0/2 -> System pay tx expense root HD extended key
 //
+//      m/k/0/3 -> System read confirmation root HD extended key
+//
 //      m/k/0/0/0 -> System device main addresses root HD extended key
 //      m/k/0/0/1 -> System device (reserved) addresses #2 root HD extended key
 //      m/k/0/0/2 -> System device (reserved) addresses #3 root HD extended key
@@ -43,7 +45,25 @@
 //
 //      m/k/0/1/1/* -> System funding change addresses HD extended keys (used to hold change from funds)
 //
-//      m/k/0/2/* -> System pay tx expense addresses HD extended keys (used to pay for transaction fees)
+//      m/k/0/2/* -> System pay tx expense addresses HD extended keys (used to pay for transaction fees, except for read confirmation txs)
+//
+//      m/k/0/3/0 -> System read confirmation spend root HD extended key
+//
+//      m/k/0/3/1 -> System read confirmation pay tx expense root HD extended key
+//
+//      m/k/0/3/0/0 -> System read confirmation spend notify root HD extended key
+//
+//      m/k/0/3/0/1 -> System read confirmation spend only root HD extended key
+//
+//      m/k/0/3/0/2 -> System read confirmation spend null root HD extended key
+//
+//      m/k/0/3/0/0/* -> System read confirmation spend notify addresses HD extended keys (used to collect payment from spent read confirmation outputs from send message txs and notify origin device)
+//
+//      m/k/0/3/0/1/* -> System read confirmation spend only addresses HD extended keys (used to collect payment from spent read confirmation outputs from send message txs without notification)
+//
+//      m/k/0/3/0/2/* -> System read confirmation spend null addresses HD extended keys (used to collect payment from spent read confirmation outputs from send messages txs to mark message as invalid, in case of messages sent to devices that do not wish to receive messages from origin device)
+//
+//      m/k/0/3/1/* -> System read confirmation pay tx expense addresses HD extended keys (used to pay for read confirmation transaction fees)
 //
 //      m/k/i (i>=1) -> client #i root HD extended key
 //
@@ -54,10 +74,28 @@
 //      m/k/i/0/0 (i>=1) -> client #i internal root HD extended key
 //
 //      m/k/i/0/0/0 (i>=1) -> client #i service credit root HD extended key
+// TODO: create a new root for standby service credits
+/*  NOTE: standby service credits addresses shall hold service credits that are in excess, above a predefined threshold
+     (a given number of credits). Less than 2 x threshold credits are initially provisioned (funds added to service credit
+     addresses), the remainder (a even multiple of threshold credits) are added to the standby service credit addresses).
+     When the provisioned service credit balance drops to threshold credits, an additional threshold credits are transferred
+     from the standby service credit addresses to the service credit addresses (provided that there are any left standby credits).
+     It is important to note that the necessary funds to the system pay tx expense addresses to support newly added service
+     credits shall only be added when services credits are actually provisioned.
+     This scheme will lower the resources when a large amount of service credits is added at once, and will also higher the
+     probability of the funds used to pay for tx fees to the more accurate (due to a fee rate fluctuation).
+     Example: threshold = 50, adding 130 credits (count)
+       initial_provisioned_credits = (count % threshold) + (count - (count % threshold) > 0 ? threshold : 0)
+       standby_credits = count - initial_provisioned_credits
+       thus: initial_provisioned_credits: 80, standby_credits: 50
+  */
 //
 //      m/k/i/0/0/0/0 (i>=1) -> client #i message credit addresses root HD extended key
 //      m/k/i/0/0/0/1 (i>=1) -> client #i asset credit addresses root HD extended key
 //      m/k/i/0/0/0/2 (i>=1) -> client #i service credit (reserved) address #3 root HD extended key
+// TODO: message credit addresses root shall be replaced with log message credit addresses root
+// TODO: asset credit addresses root shall be replaced with send message credit addresses root
+// TODO: service credit (reserved) address #3 root shall be replaced with asset credit addresses root
 //      m/k/i/0/0/0/3 (i>=1) -> client #i service credit (reserved) address #4 root HD extended key
 //      m/k/i/0/0/0/4 (i>=1) -> client #i service credit (reserved) address #5 root HD extended key
 //      m/k/i/0/0/0/5 (i>=1) -> client #i service credit (reserved) address #6 root HD extended key
@@ -68,6 +106,11 @@
 //
 //      m/k/i/0/0/0/0/* (i>=1) -> client #i message credit addresses HD extended key
 //      m/k/i/0/0/0/1/* (i>=1) -> client #i asset credit addresses HD extended key
+// TODO: message credit addresses shall be replaced with log message credit addresses
+// TODO: asset credit addresses shall be replaced with send message credit addresses
+// TODO: add assert credit addresses as m/k/i/0/0/0/2/*
+//
+// TODO: create same structure for standby service credit HHD extended keys as there is for service credit HD extended keys
 //
 //      m/k/i/0/j (i,j>=1) -> device #j of client #i internal root HD extended key
 //
@@ -112,7 +155,7 @@
 // References to external code
 //
 // Internal node modules
-//  NOTE: the reference of these modules are done sing 'require()' instead of 'import' to
+//  NOTE: the reference of these modules are done using 'require()' instead of 'import' to
 //      to avoid annoying WebStorm warning message: 'default export is not defined in
 //      imported module'
 const util = require('util');
@@ -200,19 +243,19 @@ KeyStore.prototype.removeExtKeysByParentPath = function (parentPath) {
 KeyStore.prototype.getCryptoKeysByPath = function (path) {
     const docExtKey = this.collExtKey.by('path', path);
 
-    return docExtKey != undefined ? new CryptoKeys(bitcoinLib.HDNode.fromBase58(docExtKey.strHDNode, this.cryptoNetwork).keyPair) : null;
+    return docExtKey !== undefined ? new CryptoKeys(bitcoinLib.HDNode.fromBase58(docExtKey.strHDNode, this.cryptoNetwork).keyPair) : null;
 };
 
 KeyStore.prototype.getCryptoKeysByAddress = function (addr) {
     const docExtKey = this.collExtKey.by('address', addr);
 
-    return docExtKey != undefined ? new CryptoKeys(bitcoinLib.HDNode.fromBase58(docExtKey.strHDNode, this.cryptoNetwork).keyPair) : null;
+    return docExtKey !== undefined ? new CryptoKeys(bitcoinLib.HDNode.fromBase58(docExtKey.strHDNode, this.cryptoNetwork).keyPair) : null;
 };
 
 KeyStore.prototype.getTypeAndPathByAddress = function (addr) {
     const docExtKey = this.collExtKey.by('address', addr);
 
-    return docExtKey != undefined ? {type: docExtKey.type, path: docExtKey.path} : null;
+    return docExtKey !== undefined ? {type: docExtKey.type, path: docExtKey.path} : null;
 };
 
 KeyStore.prototype.getAddressInfo = function (addr, retrieveObsolete = false) {
@@ -224,7 +267,7 @@ KeyStore.prototype.getAddressInfo = function (addr, retrieveObsolete = false) {
 
         const docExtKey = this.collExtKey.by('address', addr);
 
-        if (docExtKey != undefined) {
+        if (docExtKey !== undefined) {
             if (retrieveObsolete && docExtKey.isObsolete) {
                 // Check if address marked as obsolete is in use and reset its status if so
                 if (BlockchainAddress.checkObsoleteAddress(addr)) {
@@ -237,12 +280,13 @@ KeyStore.prototype.getAddressInfo = function (addr, retrieveObsolete = false) {
                 cryptoKeys: new CryptoKeys(bitcoinLib.HDNode.fromBase58(docExtKey.strHDNode, this.cryptoNetwork).keyPair),
                 type: docExtKey.type,
                 path: docExtKey.path,
+                parentPath: docExtKey.parentPath,
                 isObsolete: docExtKey.isObsolete
             };
 
             const pathParts = KeyStore.getPathParts(docExtKey);
 
-            if (pathParts != null) {
+            if (pathParts !== null) {
                 addrInfo.pathParts = pathParts;
             }
         }
@@ -259,7 +303,7 @@ KeyStore.prototype.listAddressesInfo = function (addrList, retrieveObsolete = fa
     return addrList.reduce((result, addr) => {
         const hdNodeInfo = this.getAddressInfo(addr, retrieveObsolete);
 
-        if (hdNodeInfo != null) {
+        if (hdNodeInfo !== null) {
             result[addr] = hdNodeInfo;
         }
 
@@ -270,11 +314,12 @@ KeyStore.prototype.listAddressesInfo = function (addrList, retrieveObsolete = fa
 KeyStore.prototype.setAddressAsObsolete = function (addr) {
     const docExtKey = this.collExtKey.by('address', addr);
 
-    if (docExtKey != undefined && (docExtKey.type === 'sys_fund_pay_addr' || docExtKey.type === 'sys_fund_chg_addr' || docExtKey.type == 'sys_pay_tx_exp_addr'
+    if (docExtKey !== undefined && (docExtKey.type === 'sys_fund_pay_addr' || docExtKey.type === 'sys_fund_chg_addr' || docExtKey.type === 'sys_pay_tx_exp_addr'
         || docExtKey.type === 'sys_dev_main_addr' || docExtKey.type === 'cln_msg_crd_addr' || docExtKey.type === 'cln_asst_crd_addr'
         || docExtKey.type === 'dev_read_conf_addr' || docExtKey.type === 'dev_main_addr' || docExtKey.type === 'dev_asst_addr' || docExtKey.type === 'dev_asst_issu_addr')
         && !docExtKey.isObsolete) {
         docExtKey.isObsolete = true;
+        //noinspection JSIgnoredPromiseFromCall
         this.collExtKey.update(docExtKey);
     }
 };
@@ -282,8 +327,9 @@ KeyStore.prototype.setAddressAsObsolete = function (addr) {
 KeyStore.prototype.resetObsoleteAddress = function (addr) {
     const docExtKey = this.collExtKey.by('address', addr);
 
-    if (docExtKey != undefined && docExtKey.isObsolete) {
+    if (docExtKey !== undefined && docExtKey.isObsolete) {
         docExtKey.isObsolete = false;
+        //noinspection JSIgnoredPromiseFromCall
         this.collExtKey.update(docExtKey);
     }
 };
@@ -298,7 +344,7 @@ KeyStore.prototype.setAddressListAsObsolete = function (addrList) {
 KeyStore.prototype.isObsoleteAddress = function (addr) {
     const docExtKey = this.collExtKey.by('address', addr);
 
-    return docExtKey != undefined && docExtKey.isObsolete;
+    return docExtKey !== undefined && docExtKey.isObsolete;
 };
 
 KeyStore.prototype.listAddressesInUse = function () {
@@ -314,129 +360,197 @@ KeyStore.prototype.initCatenisNodeHDNodes = function (ctnNodeIndex) {
         throw Error('Invalid ctnNodeIndex argument');
     }
 
-    let success = false;
     const hdNodesToStore = [];
 
     // Try to retrieve root HD extended key for Catenis node with given index
     const ctnNodeRootPath = util.format('m/%d', ctnNodeIndex);
     let ctnNodeRootHDNode = retrieveHDNode.call(this, ctnNodeRootPath);
 
-    if (ctnNodeRootHDNode == null) {
+    if (ctnNodeRootHDNode === null) {
         // Catenis node root HD extended key does not exist yet. Create it
         ctnNodeRootHDNode = this.masterHDNode.derive(ctnNodeIndex);
 
         if (ctnNodeRootHDNode.index !== ctnNodeIndex) {
             Catenis.logger.WARN(util.format('Catenis node root HD extended key (%s) derived with an unexpected index', ctnNodeRootPath), {expectedIndex: ctnNodeIndex, returnedIndex: ctnNodeRootHDNode.index});
+            return false;
         }
-        else {
-            // Save newly created HD extended key to store it later
-            hdNodesToStore.push({type: 'ctnd_root', path: ctnNodeRootPath, hdNode: ctnNodeRootHDNode, isLeaf: false, isReserved: false});
 
-            // Create system root HD extended key
-            const sysRootPath = ctnNodeRootPath + '/0',
-                sysRootHDNode = ctnNodeRootHDNode.derive(0);
+        // Save newly created HD extended key to store it later
+        hdNodesToStore.push({type: 'ctnd_root', path: ctnNodeRootPath, hdNode: ctnNodeRootHDNode, isLeaf: false, isReserved: false});
 
-            if (sysRootHDNode.index !== 0) {
-                Catenis.logger.WARN(util.format('System root HD extended key (%s) derived with an unexpected index', sysRootPath), {expectedIndex: 0, returnedIndex: sysRootHDNode.index});
+        // Create system root HD extended key
+        const sysRootPath = ctnNodeRootPath + '/0',
+            sysRootHDNode = ctnNodeRootHDNode.derive(0);
+
+        if (sysRootHDNode.index !== 0) {
+            Catenis.logger.WARN(util.format('System root HD extended key (%s) derived with an unexpected index', sysRootPath), {expectedIndex: 0, returnedIndex: sysRootHDNode.index});
+            return false;
+        }
+
+        // Save newly created HD extended key to store it later
+        hdNodesToStore.push({type: 'sys_root', path: sysRootPath, hdNode: sysRootHDNode, isLeaf: false, isReserved: false});
+
+        // Create system device root HD extended key
+        let path = sysRootPath + '/0',
+            sysDeviceRootHDNode = sysRootHDNode.derive(0);
+
+        if (sysDeviceRootHDNode.index !== 0) {
+            Catenis.logger.WARN(util.format('System device root HD extended key (%s) derived with an unexpected index', path), {expectedIndex: 0, returnedIndex: sysDeviceRootHDNode.index});
+            return false;
+        }
+
+        // Save newly created HD extended key to store it later
+        hdNodesToStore.push({type: 'sys_dev_root', path: path, hdNode: sysDeviceRootHDNode, isLeaf: false, isReserved: false});
+
+        // Create system funding root HD extended key
+        path = sysRootPath + '/1';
+        const sysFundingRootHDNode = sysRootHDNode.derive(1);
+
+        if (sysFundingRootHDNode.index !== 1) {
+            Catenis.logger.WARN(util.format('System funding root HD extended key (%s) derived with an unexpected index', path), {expectedIndex: 1, returnedIndex: sysFundingRootHDNode.index});
+            return false;
+        }
+
+        // Save newly created HD extended key to store it later
+        hdNodesToStore.push({type: 'sys_fund_root', path: path, hdNode: sysFundingRootHDNode, isLeaf: false, isReserved: false});
+
+        // Create system pay tx expense root HD extended key
+        path = sysRootPath + '/2';
+        const sysPayTxExpenseRootHDNode = sysRootHDNode.derive(2);
+
+        if (sysPayTxExpenseRootHDNode.index !== 2) {
+            Catenis.logger.WARN(util.format('System pay tx expense root HD extended key (%s) derived with an unexpected index', path), {expectedIndex: 2, returnedIndex: sysPayTxExpenseRootHDNode.index});
+            return false;
+        }
+
+        // Save newly created HD extended key to store it later
+        hdNodesToStore.push({type: 'sys_pay_tx_exp_root', path: path, hdNode: sysPayTxExpenseRootHDNode, isLeaf: false, isReserved: false});
+
+        // Create system read confirmation root HD extended key
+        path = sysRootPath + '/3';
+        const sysReadConfRootHDNode = sysRootHDNode.derive(3);
+
+        if (sysReadConfRootHDNode.index !== 3) {
+            Catenis.logger.WARN(util.format('System read confirmation root HD extended key (%s) derived with an unexpected index', path), {expectedIndex: 3, returnedIndex: sysReadConfRootHDNode.index});
+            return false;
+        }
+
+        // Save newly created HD extended key to store it later
+        hdNodesToStore.push({type: 'sys_read_conf_root', path: path, hdNode: sysReadConfRootHDNode, isLeaf: false, isReserved: false});
+
+        // Create all predefined and reserved system device addresses root HD extended keys
+        for (let idx = 0; idx < numDeviceAddrRoots; idx++) {
+            path = util.format('%s/0/%d', sysRootPath, idx);
+            const sysDeviceAddrRootHDNode = sysDeviceRootHDNode.derive(idx);
+
+            if (sysDeviceAddrRootHDNode.index !== idx) {
+                Catenis.logger.WARN(util.format('System device addresses #%d root HD extended key (%s) derived with an unexpected index', idx + 1, path), {expectedIndex: idx, returnedIndex: sysDeviceAddrRootHDNode.index});
+                sysDeviceRootHDNode = null;
+                break;
             }
             else {
                 // Save newly created HD extended key to store it later
-                hdNodesToStore.push({type: 'sys_root', path: sysRootPath, hdNode: sysRootHDNode, isLeaf: false, isReserved: false});
-
-                // Create system device root HD extended key
-                let path = sysRootPath + '/0',
-                    sysDeviceRootHDNode = sysRootHDNode.derive(0);
-
-                if (sysDeviceRootHDNode.index !== 0) {
-                    Catenis.logger.WARN(util.format('System device root HD extended key (%s) derived with an unexpected index', path), {expectedIndex: 0, returnedIndex: sysDeviceRootHDNode.index});
-                }
-                else {
-                    // Save newly created HD extended key to store it later
-                    hdNodesToStore.push({type: 'sys_dev_root', path: path, hdNode: sysDeviceRootHDNode, isLeaf: false, isReserved: false});
-
-                    // Create system funding root HD extended key
-                    path = sysRootPath + '/1';
-                    const sysFundingRootHDNode = sysRootHDNode.derive(1);
-
-                    if (sysFundingRootHDNode.index !== 1) {
-                        Catenis.logger.WARN(util.format('System funding root HD extended key (%s) derived with an unexpected index', path), {expectedIndex: 1, returnedIndex: sysFundingRootHDNode.index});
-                    }
-                    else {
-                        // Save newly created HD extended key to store it later
-                        hdNodesToStore.push({type: 'sys_fund_root', path: path, hdNode: sysFundingRootHDNode, isLeaf: false, isReserved: false});
-
-                        // Create system pay tx expense root HD extended key
-                        path = sysRootPath + '/2';
-                        const sysPayTxExpenseRootHDNode = sysRootHDNode.derive(2);
-
-                        if (sysPayTxExpenseRootHDNode.index !== 2) {
-                            Catenis.logger.WARN(util.format('System pay tx expense root HD extended key (%s) derived with an unexpected index', path), {expectedIndex: 2, returnedIndex: sysPayTxExpenseRootHDNode.index});
-                        }
-                        else {
-                            // Save newly created HD extended key to store it later
-                            hdNodesToStore.push({type: 'sys_pay_tx_exp_root', path: path, hdNode: sysPayTxExpenseRootHDNode, isLeaf: false, isReserved: false});
-
-                            // Create all predefined and reserved system device addresses root HD extended keys
-                            for (let idx = 0; idx < numDeviceAddrRoots; idx++) {
-                                path = util.format('%s/0/%d', sysRootPath, idx);
-                                const sysDeviceAddrRootHDNode = sysDeviceRootHDNode.derive(idx);
-
-                                if (sysDeviceAddrRootHDNode.index !== idx) {
-                                    Catenis.logger.WARN(util.format('System device addresses #%d root HD extended key (%s) derived with an unexpected index', idx + 1, path), {expectedIndex: idx, returnedIndex: sysDeviceAddrRootHDNode.index});
-                                    sysDeviceRootHDNode = null;
-                                    break;
-                                }
-                                else {
-                                    // Save newly created HD extended key to store it later
-                                    hdNodesToStore.push({type: idx == 0 ? 'sys_dev_main_addr_root' : 'sys_dev_rsrv_addr_root', path: path, hdNode: sysDeviceAddrRootHDNode, isLeaf: false, isReserved: idx >= numUsedSysDeviceAddrRoots});
-                                }
-                            }
-
-                            if (sysDeviceRootHDNode != null) {
-                                // Create system funding payment root HD extended key
-                                path = sysRootPath + '/1/0';
-                                const sysFundingPaymentRootHDNode = sysFundingRootHDNode.derive(0);
-
-                                if (sysFundingPaymentRootHDNode.index !== 0) {
-                                    Catenis.logger.WARN(util.format('System funding payment root HD extended key (%s) derived with an unexpected index', path), {expectedIndex: 0, returnedIndex: sysFundingPaymentRootHDNode.index});
-                                }
-                                else {
-                                    // Save newly created HD extended key to store it later
-                                    hdNodesToStore.push({type: 'sys_fund_pay_root', path: path, hdNode: sysFundingPaymentRootHDNode, isLeaf: false, isReserved: false});
-
-                                    // Create system funding change root HD extended key
-                                    path = sysRootPath + '/1/1';
-                                    const sysFundingChangeRootHDNode = sysFundingRootHDNode.derive(1);
-
-                                    if (sysFundingChangeRootHDNode.index !== 1) {
-                                        Catenis.logger.WARN(util.format('System funding change root HD extended key (%s) derived with an unexpected index', path), {expectedIndex: 1, returnedIndex: sysFundingChangeRootHDNode.index});
-                                    }
-                                    else {
-                                        // Save newly created HD extended key to store it later
-                                        hdNodesToStore.push({type: 'sys_fund_chg_root', path: path, hdNode: sysFundingChangeRootHDNode, isLeaf: false, isReserved: false});
-
-                                        // Store all newly created HD extended keys, and indicate success
-                                        hdNodesToStore.forEach((hdNodeToStore) => {
-                                            storeHDNode.call(this, hdNodeToStore.type, hdNodeToStore.path, hdNodeToStore.hdNode, hdNodeToStore.isLeaf, hdNodeToStore.isReserved);
-                                        });
-
-                                        success = true;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
+                hdNodesToStore.push({type: idx === 0 ? 'sys_dev_main_addr_root' : 'sys_dev_rsrv_addr_root', path: path, hdNode: sysDeviceAddrRootHDNode, isLeaf: false, isReserved: idx >= numUsedSysDeviceAddrRoots});
             }
         }
-    }
-    else {
-        // Catenis node HD nodes already initialized. Nothing to do,
-        //  just indicate success
-        success = true;
+
+        if (sysDeviceRootHDNode === null) {
+            // Not all system device addresses root HD extended keys could be created
+            return false;
+        }
+
+        // Create system funding payment root HD extended key
+        path = sysRootPath + '/1/0';
+        const sysFundingPaymentRootHDNode = sysFundingRootHDNode.derive(0);
+
+        if (sysFundingPaymentRootHDNode.index !== 0) {
+            Catenis.logger.WARN(util.format('System funding payment root HD extended key (%s) derived with an unexpected index', path), {expectedIndex: 0, returnedIndex: sysFundingPaymentRootHDNode.index});
+            return false;
+        }
+
+        // Save newly created HD extended key to store it later
+        hdNodesToStore.push({type: 'sys_fund_pay_root', path: path, hdNode: sysFundingPaymentRootHDNode, isLeaf: false, isReserved: false});
+
+        // Create system funding change root HD extended key
+        path = sysRootPath + '/1/1';
+        const sysFundingChangeRootHDNode = sysFundingRootHDNode.derive(1);
+
+        if (sysFundingChangeRootHDNode.index !== 1) {
+            Catenis.logger.WARN(util.format('System funding change root HD extended key (%s) derived with an unexpected index', path), {expectedIndex: 1, returnedIndex: sysFundingChangeRootHDNode.index});
+            return false;
+        }
+
+        // Save newly created HD extended key to store it later
+        hdNodesToStore.push({type: 'sys_fund_chg_root', path: path, hdNode: sysFundingChangeRootHDNode, isLeaf: false, isReserved: false});
+
+        // Create system read confirmation spend root HD extended key
+        path = sysRootPath + '/3/0';
+        const sysReadConfSpendRootHDNode = sysReadConfRootHDNode.derive(0);
+
+        if (sysReadConfSpendRootHDNode.index !== 0) {
+            Catenis.logger.WARN(util.format('System read confirmation spend root HD extended key (%s) derived with an unexpected index', path), {expectedIndex: 1, returnedIndex: sysReadConfSpendRootHDNode.index});
+            return false;
+        }
+
+        // Save newly created HD extended key to store it later
+        hdNodesToStore.push({type: 'sys_read_conf_spnd_root', path: path, hdNode: sysReadConfSpendRootHDNode, isLeaf: false, isReserved: false});
+
+        // Create system read confirmation pay tx expense root HD extended key
+        path = sysRootPath + '/3/1';
+        const sysReadConfPayTxExpRootHDNode = sysReadConfRootHDNode.derive(1);
+
+        if (sysReadConfPayTxExpRootHDNode.index !== 1) {
+            Catenis.logger.WARN(util.format('System read confirmation pay tx expense root HD extended key (%s) derived with an unexpected index', path), {expectedIndex: 1, returnedIndex: sysReadConfPayTxExpRootHDNode.index});
+            return false;
+        }
+
+        // Save newly created HD extended key to store it later
+        hdNodesToStore.push({type: 'sys_read_conf_pay_tx_exp_root', path: path, hdNode: sysReadConfPayTxExpRootHDNode, isLeaf: false, isReserved: false});
+
+        // Create system read confirmation spend notify root HD extended key
+        path = sysRootPath + '/3/0/0';
+        const sysReadConfSpendNotifyRootHDNode = sysReadConfSpendRootHDNode.derive(0);
+
+        if (sysReadConfSpendNotifyRootHDNode.index !== 0) {
+            Catenis.logger.WARN(util.format('System read confirmation spend notify root HD extended key (%s) derived with an unexpected index', path), {expectedIndex: 1, returnedIndex: sysReadConfSpendNotifyRootHDNode.index});
+            return false;
+        }
+
+        // Save newly created HD extended key to store it later
+        hdNodesToStore.push({type: 'sys_read_conf_spnd_ntfy_root', path: path, hdNode: sysReadConfSpendNotifyRootHDNode, isLeaf: false, isReserved: false});
+
+        // Create system read confirmation spend only root HD extended key
+        path = sysRootPath + '/3/0/1';
+        const sysReadConfSpendOnlyRootHDNode = sysReadConfSpendRootHDNode.derive(1);
+
+        if (sysReadConfSpendOnlyRootHDNode.index !== 1) {
+            Catenis.logger.WARN(util.format('System read confirmation spend only root HD extended key (%s) derived with an unexpected index', path), {expectedIndex: 1, returnedIndex: sysReadConfSpendOnlyRootHDNode.index});
+            return false;
+        }
+
+        // Save newly created HD extended key to store it later
+        hdNodesToStore.push({type: 'sys_read_conf_spnd_only_root', path: path, hdNode: sysReadConfSpendOnlyRootHDNode, isLeaf: false, isReserved: false});
+
+        // Create system read confirmation spend null root HD extended key
+        path = sysRootPath + '/3/0/2';
+        const sysReadConfSpendNullRootHDNode = sysReadConfSpendRootHDNode.derive(2);
+
+        if (sysReadConfSpendNullRootHDNode.index !== 2) {
+            Catenis.logger.WARN(util.format('System read confirmation spend null root HD extended key (%s) derived with an unexpected index', path), {expectedIndex: 1, returnedIndex: sysReadConfSpendNullRootHDNode.index});
+            return false;
+        }
+
+        // Save newly created HD extended key to store it later
+        hdNodesToStore.push({type: 'sys_read_conf_spnd_null_root', path: path, hdNode: sysReadConfSpendNullRootHDNode, isLeaf: false, isReserved: false});
+
+        // Store all newly created HD extended keys
+        hdNodesToStore.forEach((hdNodeToStore) => {
+            storeHDNode.call(this, hdNodeToStore.type, hdNodeToStore.path, hdNodeToStore.hdNode, hdNodeToStore.isLeaf, hdNodeToStore.isReserved);
+        });
     }
 
-    return success;
+    // Catenis node HD nodes successfully initialized
+    return true;
 };
 
 KeyStore.prototype.getSystemFundingPaymentAddressKeys = function (ctnNodeIndex, addrIndex, isObsolete = false) {
@@ -463,13 +577,13 @@ KeyStore.prototype.getSystemFundingPaymentAddressKeys = function (ctnNodeIndex, 
     let sysFundingPaymentAddrHDNode = retrieveHDNode.call(this, sysFundingPaymentAddrPath),
         sysFundingPaymentAddrKeys = null;
 
-    if (sysFundingPaymentAddrHDNode == null) {
+    if (sysFundingPaymentAddrHDNode === null) {
         // System funding payment address HD extended key does not exist yet.
         //  Retrieve parent root HD extended key to create it
         const path = parentPath(sysFundingPaymentAddrPath);
         let sysFundingPaymentRootHDNode = retrieveHDNode.call(this, path);
 
-        if (sysFundingPaymentRootHDNode == null) {
+        if (sysFundingPaymentRootHDNode === null) {
             // System funding payment root HD extended key does not exist yet.
             //  Try to initialize Catenis node HD extended keys
             if (! this.initCatenisNodeHDNodes(ctnNodeIndex)) {
@@ -482,7 +596,7 @@ KeyStore.prototype.getSystemFundingPaymentAddressKeys = function (ctnNodeIndex, 
             }
         }
 
-        if (sysFundingPaymentRootHDNode == null) {
+        if (sysFundingPaymentRootHDNode === null) {
             Catenis.logger.ERROR(util.format('System funding payment root HD extended key (%s) for Catenis node with index %d not found', path, ctnNodeIndex));
         }
         else {
@@ -500,7 +614,7 @@ KeyStore.prototype.getSystemFundingPaymentAddressKeys = function (ctnNodeIndex, 
         }
     }
 
-    if (sysFundingPaymentAddrHDNode != null) {
+    if (sysFundingPaymentAddrHDNode !== null) {
         sysFundingPaymentAddrKeys = new CryptoKeys(sysFundingPaymentAddrHDNode.keyPair);
     }
 
@@ -516,7 +630,7 @@ KeyStore.prototype.listSystemFundingPaymentAddresses = function (ctnNodeIndex, f
         errArg.ctnNodeIndex = ctnNodeIndex;
     }
 
-    if (fromAddrIndex != undefined) {
+    if (fromAddrIndex !== undefined) {
         if (!isValidAddressIndex(fromAddrIndex)) {
             errArg.fromAddrIndex = fromAddrIndex;
         }
@@ -525,8 +639,8 @@ KeyStore.prototype.listSystemFundingPaymentAddresses = function (ctnNodeIndex, f
         }
     }
 
-    if (toAddrIndex != undefined) {
-        if (!isValidAddressIndex(toAddrIndex) || (fromAddrIndex != undefined && toAddrIndex < fromAddrIndex)) {
+    if (toAddrIndex !== undefined) {
+        if (!isValidAddressIndex(toAddrIndex) || (fromAddrIndex !== undefined && toAddrIndex < fromAddrIndex)) {
             errArg.toAddrIndex = toAddrIndex;
         }
         else {
@@ -588,13 +702,13 @@ KeyStore.prototype.getSystemFundingChangeAddressKeys = function (ctnNodeIndex, a
     let sysFundingChangeAddrHDNode = retrieveHDNode.call(this, sysFundingChangeAddrPath),
         sysFundingChangeAddrKeys = null;
 
-    if (sysFundingChangeAddrHDNode == null) {
+    if (sysFundingChangeAddrHDNode === null) {
         // System funding change address HD extended key does not exist yet.
         //  Retrieve parent root HD extended key to create it
         const path = parentPath(sysFundingChangeAddrPath);
         let sysFundingChangeRootHDNode = retrieveHDNode.call(this, path);
 
-        if (sysFundingChangeRootHDNode == null) {
+        if (sysFundingChangeRootHDNode === null) {
             // System funding change root HD extended key does not exist yet.
             //  Try to initialize Catenis node HD extended keys
             if (! this.initCatenisNodeHDNodes(ctnNodeIndex)) {
@@ -607,7 +721,7 @@ KeyStore.prototype.getSystemFundingChangeAddressKeys = function (ctnNodeIndex, a
             }
         }
 
-        if (sysFundingChangeRootHDNode == null) {
+        if (sysFundingChangeRootHDNode === null) {
             Catenis.logger.ERROR(util.format('System funding change root HD extended key (%s) for Catenis node with index %d not found', path, ctnNodeIndex));
         }
         else {
@@ -625,7 +739,7 @@ KeyStore.prototype.getSystemFundingChangeAddressKeys = function (ctnNodeIndex, a
         }
     }
 
-    if (sysFundingChangeAddrHDNode != null) {
+    if (sysFundingChangeAddrHDNode !== null) {
         sysFundingChangeAddrKeys = new CryptoKeys(sysFundingChangeAddrHDNode.keyPair);
     }
 
@@ -641,7 +755,7 @@ KeyStore.prototype.listSystemFundingChangeAddresses = function (ctnNodeIndex, fr
         errArg.ctnNodeIndex = ctnNodeIndex;
     }
 
-    if (fromAddrIndex != undefined) {
+    if (fromAddrIndex !== undefined) {
         if (!isValidAddressIndex(fromAddrIndex)) {
             errArg.fromAddrIndex = fromAddrIndex;
         }
@@ -650,8 +764,8 @@ KeyStore.prototype.listSystemFundingChangeAddresses = function (ctnNodeIndex, fr
         }
     }
 
-    if (toAddrIndex != undefined) {
-        if (!isValidAddressIndex(toAddrIndex) || (fromAddrIndex != undefined && toAddrIndex < fromAddrIndex)) {
+    if (toAddrIndex !== undefined) {
+        if (!isValidAddressIndex(toAddrIndex) || (fromAddrIndex !== undefined && toAddrIndex < fromAddrIndex)) {
             errArg.toAddrIndex = toAddrIndex;
         }
         else {
@@ -713,13 +827,13 @@ KeyStore.prototype.getSystemPayTxExpenseAddressKeys = function (ctnNodeIndex, ad
     let sysPayTxExpenseAddrHDNode = retrieveHDNode.call(this, sysPayTxExpenseAddrPath),
         sysPayTxExpenseAddrKeys = null;
 
-    if (sysPayTxExpenseAddrHDNode == null) {
+    if (sysPayTxExpenseAddrHDNode === null) {
         // System pay tx expense address HD extended key does not exist yet.
         //  Retrieve parent root HD extended key to create it
         const path = parentPath(sysPayTxExpenseAddrPath);
         let sysPayTxExpenseRootHDNode = retrieveHDNode.call(this, path);
 
-        if (sysPayTxExpenseRootHDNode == null) {
+        if (sysPayTxExpenseRootHDNode === null) {
             // System pay tx expense root HD extended key does not exist yet.
             //  Try to initialize Catenis node HD extended keys
             if (! this.initCatenisNodeHDNodes(ctnNodeIndex)) {
@@ -732,7 +846,7 @@ KeyStore.prototype.getSystemPayTxExpenseAddressKeys = function (ctnNodeIndex, ad
             }
         }
 
-        if (sysPayTxExpenseRootHDNode == null) {
+        if (sysPayTxExpenseRootHDNode === null) {
             Catenis.logger.ERROR(util.format('System pay tx expense root HD extended key (%s) for Catenis node with index %d not found', path, ctnNodeIndex));
         }
         else {
@@ -750,7 +864,7 @@ KeyStore.prototype.getSystemPayTxExpenseAddressKeys = function (ctnNodeIndex, ad
         }
     }
 
-    if (sysPayTxExpenseAddrHDNode != null) {
+    if (sysPayTxExpenseAddrHDNode !== null) {
         sysPayTxExpenseAddrKeys = new CryptoKeys(sysPayTxExpenseAddrHDNode.keyPair);
     }
 
@@ -766,7 +880,7 @@ KeyStore.prototype.listSystemPayTxExpenseAddresses = function (ctnNodeIndex, fro
         errArg.ctnNodeIndex = ctnNodeIndex;
     }
 
-    if (fromAddrIndex != undefined) {
+    if (fromAddrIndex !== undefined) {
         if (!isValidAddressIndex(fromAddrIndex)) {
             errArg.fromAddrIndex = fromAddrIndex;
         }
@@ -775,8 +889,8 @@ KeyStore.prototype.listSystemPayTxExpenseAddresses = function (ctnNodeIndex, fro
         }
     }
 
-    if (toAddrIndex != undefined) {
-        if (!isValidAddressIndex(toAddrIndex) || (fromAddrIndex != undefined && toAddrIndex < fromAddrIndex)) {
+    if (toAddrIndex !== undefined) {
+        if (!isValidAddressIndex(toAddrIndex) || (fromAddrIndex !== undefined && toAddrIndex < fromAddrIndex)) {
             errArg.toAddrIndex = toAddrIndex;
         }
         else {
@@ -814,6 +928,506 @@ KeyStore.prototype.listSystemPayTxExpenseAddressesInUse = function (ctnNodeIndex
     return this.listSystemPayTxExpenseAddresses(ctnNodeIndex, fromAddrIndex, toAddrIndex);
 };
 
+KeyStore.prototype.getSystemReadConfirmSpendNotifyAddressKeys = function (ctnNodeIndex, addrIndex, isObsolete = false) {
+    // Validate arguments
+    const errArg = {};
+
+    if (!isValidCatenisNodeIndex(ctnNodeIndex)) {
+        errArg.ctnNodeIndex = ctnNodeIndex;
+    }
+
+    if (!isValidAddressIndex(addrIndex)) {
+        errArg.addrIndex = addrIndex;
+    }
+
+    if (Object.keys(errArg).length > 0) {
+        const errArgs = Object.keys(errArg);
+
+        Catenis.logger.ERROR(util.format('KeyStore.getSystemReadConfirmSpendNotifyAddressKeys method called with invalid argument%s', errArgs.length > 1 ? 's' : ''), errArg);
+        throw Error(util.format('Invalid %s argument%s', errArgs.join(', '), errArgs.length > 1 ? 's' : ''));
+    }
+
+    // Try to retrieve system read confirmation spend notify address HD extended key for given Catenis node with the given index
+    const sysReadConfSpendNotifyAddrPath = util.format('m/%d/0/3/0/0/%d', ctnNodeIndex, addrIndex);
+    let sysReadConfSpendNotifyAddrHDNode = retrieveHDNode.call(this, sysReadConfSpendNotifyAddrPath),
+        sysReadConfSpendNotifyAddrKeys = null;
+
+    if (sysReadConfSpendNotifyAddrHDNode === null) {
+        // System read confirmation spend notify address HD extended key does not exist yet.
+        //  Retrieve parent root HD extended key to create it
+        const path = parentPath(sysReadConfSpendNotifyAddrPath);
+        let sysReadConfSpendNotifyRootHDNode = retrieveHDNode.call(this, path);
+
+        if (sysReadConfSpendNotifyRootHDNode === null) {
+            // System read confirmation spend notify root HD extended key does not exist yet.
+            //  Try to initialize Catenis node HD extended keys
+            if (! this.initCatenisNodeHDNodes(ctnNodeIndex)) {
+                Catenis.logger.ERROR(util.format('HD extended keys for Catenis node with index %d could not be initialized', ctnNodeIndex));
+            }
+            else {
+                // Catenis node HD extended keys successfully initialized.
+                //  Try to retrieve system read confirmation spend notify root HD extended key again
+                sysReadConfSpendNotifyRootHDNode = retrieveHDNode.call(this, path);
+            }
+        }
+
+        if (sysReadConfSpendNotifyRootHDNode === null) {
+            Catenis.logger.ERROR(util.format('System read confirmation spend notify root HD extended key (%s) for Catenis node with index %d not found', path, ctnNodeIndex));
+        }
+        else {
+            // Try to create system read confirmation spend notify address HD extended key now
+            sysReadConfSpendNotifyAddrHDNode = sysReadConfSpendNotifyRootHDNode.derive(addrIndex);
+
+            if (sysReadConfSpendNotifyAddrHDNode.index !== addrIndex) {
+                Catenis.logger.WARN(util.format('System read confirmation spend notify address HD extended key (%s) derived with an unexpected index', sysReadConfSpendNotifyAddrPath), {expectedIndex: addrIndex, returnedIndex: sysReadConfSpendNotifyAddrHDNode.index});
+                sysReadConfSpendNotifyAddrHDNode = null;
+            }
+            else {
+                // Store created HD extended key
+                storeHDNode.call(this, 'sys_read_conf_spnd_ntfy_addr', sysReadConfSpendNotifyAddrPath, sysReadConfSpendNotifyAddrHDNode, true, false, isObsolete);
+            }
+        }
+    }
+
+    if (sysReadConfSpendNotifyAddrHDNode !== null) {
+        sysReadConfSpendNotifyAddrKeys = new CryptoKeys(sysReadConfSpendNotifyAddrHDNode.keyPair);
+    }
+
+    return sysReadConfSpendNotifyAddrKeys;
+};
+
+KeyStore.prototype.listSystemReadConfirmSpendNotifyAddresses = function (ctnNodeIndex, fromAddrIndex, toAddrIndex, onlyInUse) {
+    // Validate arguments
+    const errArg = {},
+        queryTerms = [{parentPath: util.format('m/%d/0/3/0/0', ctnNodeIndex)}];
+
+    if (!isValidCatenisNodeIndex(ctnNodeIndex)) {
+        errArg.ctnNodeIndex = ctnNodeIndex;
+    }
+
+    if (fromAddrIndex !== undefined) {
+        if (!isValidAddressIndex(fromAddrIndex)) {
+            errArg.fromAddrIndex = fromAddrIndex;
+        }
+        else {
+            queryTerms.push({index: {$gte: fromAddrIndex}});
+        }
+    }
+
+    if (toAddrIndex !== undefined) {
+        if (!isValidAddressIndex(toAddrIndex) || (fromAddrIndex !== undefined && toAddrIndex < fromAddrIndex)) {
+            errArg.toAddrIndex = toAddrIndex;
+        }
+        else {
+            queryTerms.push({index: {$lte: toAddrIndex}});
+        }
+    }
+
+    if (Object.keys(errArg).length > 0) {
+        const errArgs = Object.keys(errArg);
+
+        Catenis.logger.ERROR(util.format('KeyStore.listSystemReadConfirmSpendNotifyAddresses method called with invalid argument%s', errArgs.length > 1 ? 's' : ''), errArg);
+        throw Error(util.format('Invalid %s argument%s', errArgs.join(', '), errArgs.length > 1 ? 's' : ''));
+    }
+
+    if (onlyInUse) {
+        queryTerms.push({isObsolete: false});
+    }
+
+    // Return existing system read confirmation spend notify addresses within the specified range
+    let query;
+
+    if (queryTerms.length > 1) {
+        query = {$and: queryTerms};
+    }
+    else {
+        query = queryTerms[0];
+    }
+
+    return this.collExtKey.chain().find(query).simplesort('index').data().map((docExtKey) => {
+        return docExtKey.address;
+    });
+};
+
+KeyStore.prototype.listSystemReadConfirmSpendNotifyAddressesInUse = function (ctnNodeIndex, fromAddrIndex, toAddrIndex) {
+    return this.listSystemReadConfirmSpendNotifyAddresses(ctnNodeIndex, fromAddrIndex, toAddrIndex);
+};
+
+KeyStore.prototype.getSystemReadConfirmSpendOnlyAddressKeys = function (ctnNodeIndex, addrIndex, isObsolete = false) {
+    // Validate arguments
+    const errArg = {};
+
+    if (!isValidCatenisNodeIndex(ctnNodeIndex)) {
+        errArg.ctnNodeIndex = ctnNodeIndex;
+    }
+
+    if (!isValidAddressIndex(addrIndex)) {
+        errArg.addrIndex = addrIndex;
+    }
+
+    if (Object.keys(errArg).length > 0) {
+        const errArgs = Object.keys(errArg);
+
+        Catenis.logger.ERROR(util.format('KeyStore.getSystemReadConfirmSpendOnlyAddressKeys method called with invalid argument%s', errArgs.length > 1 ? 's' : ''), errArg);
+        throw Error(util.format('Invalid %s argument%s', errArgs.join(', '), errArgs.length > 1 ? 's' : ''));
+    }
+
+    // Try to retrieve system read confirmation spend only address HD extended key for given Catenis node with the given index
+    const sysReadConfSpendOnlyAddrPath = util.format('m/%d/0/3/0/1/%d', ctnNodeIndex, addrIndex);
+    let sysReadConfSpendOnlyAddrHDNode = retrieveHDNode.call(this, sysReadConfSpendOnlyAddrPath),
+        sysReadConfSpendOnlyAddrKeys = null;
+
+    if (sysReadConfSpendOnlyAddrHDNode === null) {
+        // System read confirmation spend only address HD extended key does not exist yet.
+        //  Retrieve parent root HD extended key to create it
+        const path = parentPath(sysReadConfSpendOnlyAddrPath);
+        let sysReadConfSpendOnlyRootHDNode = retrieveHDNode.call(this, path);
+
+        if (sysReadConfSpendOnlyRootHDNode === null) {
+            // System read confirmation spend only root HD extended key does not exist yet.
+            //  Try to initialize Catenis node HD extended keys
+            if (! this.initCatenisNodeHDNodes(ctnNodeIndex)) {
+                Catenis.logger.ERROR(util.format('HD extended keys for Catenis node with index %d could not be initialized', ctnNodeIndex));
+            }
+            else {
+                // Catenis node HD extended keys successfully initialized.
+                //  Try to retrieve system read confirmation spend only root HD extended key again
+                sysReadConfSpendOnlyRootHDNode = retrieveHDNode.call(this, path);
+            }
+        }
+
+        if (sysReadConfSpendOnlyRootHDNode === null) {
+            Catenis.logger.ERROR(util.format('System read confirmation spend only root HD extended key (%s) for Catenis node with index %d not found', path, ctnNodeIndex));
+        }
+        else {
+            // Try to create system read confirmation spend only address HD extended key now
+            sysReadConfSpendOnlyAddrHDNode = sysReadConfSpendOnlyRootHDNode.derive(addrIndex);
+
+            if (sysReadConfSpendOnlyAddrHDNode.index !== addrIndex) {
+                Catenis.logger.WARN(util.format('System read confirmation spend only address HD extended key (%s) derived with an unexpected index', sysReadConfSpendOnlyAddrPath), {expectedIndex: addrIndex, returnedIndex: sysReadConfSpendOnlyAddrHDNode.index});
+                sysReadConfSpendOnlyAddrHDNode = null;
+            }
+            else {
+                // Store created HD extended key
+                storeHDNode.call(this, 'sys_read_conf_spnd_only_addr', sysReadConfSpendOnlyAddrPath, sysReadConfSpendOnlyAddrHDNode, true, false, isObsolete);
+            }
+        }
+    }
+
+    if (sysReadConfSpendOnlyAddrHDNode !== null) {
+        sysReadConfSpendOnlyAddrKeys = new CryptoKeys(sysReadConfSpendOnlyAddrHDNode.keyPair);
+    }
+
+    return sysReadConfSpendOnlyAddrKeys;
+};
+
+KeyStore.prototype.listSystemReadConfirmSpendOnlyAddresses = function (ctnNodeIndex, fromAddrIndex, toAddrIndex, onlyInUse) {
+    // Validate arguments
+    const errArg = {},
+        queryTerms = [{parentPath: util.format('m/%d/0/3/0/1', ctnNodeIndex)}];
+
+    if (!isValidCatenisNodeIndex(ctnNodeIndex)) {
+        errArg.ctnNodeIndex = ctnNodeIndex;
+    }
+
+    if (fromAddrIndex !== undefined) {
+        if (!isValidAddressIndex(fromAddrIndex)) {
+            errArg.fromAddrIndex = fromAddrIndex;
+        }
+        else {
+            queryTerms.push({index: {$gte: fromAddrIndex}});
+        }
+    }
+
+    if (toAddrIndex !== undefined) {
+        if (!isValidAddressIndex(toAddrIndex) || (fromAddrIndex !== undefined && toAddrIndex < fromAddrIndex)) {
+            errArg.toAddrIndex = toAddrIndex;
+        }
+        else {
+            queryTerms.push({index: {$lte: toAddrIndex}});
+        }
+    }
+
+    if (Object.keys(errArg).length > 0) {
+        const errArgs = Object.keys(errArg);
+
+        Catenis.logger.ERROR(util.format('KeyStore.listSystemReadConfirmSpendOnlyAddresses method called with invalid argument%s', errArgs.length > 1 ? 's' : ''), errArg);
+        throw Error(util.format('Invalid %s argument%s', errArgs.join(', '), errArgs.length > 1 ? 's' : ''));
+    }
+
+    if (onlyInUse) {
+        queryTerms.push({isObsolete: false});
+    }
+
+    // Return existing system read confirmation spend only addresses within the specified range
+    let query;
+
+    if (queryTerms.length > 1) {
+        query = {$and: queryTerms};
+    }
+    else {
+        query = queryTerms[0];
+    }
+
+    return this.collExtKey.chain().find(query).simplesort('index').data().map((docExtKey) => {
+        return docExtKey.address;
+    });
+};
+
+KeyStore.prototype.listSystemReadConfirmSpendOnlyAddressesInUse = function (ctnNodeIndex, fromAddrIndex, toAddrIndex) {
+    return this.listSystemReadConfirmSpendOnlyAddresses(ctnNodeIndex, fromAddrIndex, toAddrIndex);
+};
+
+KeyStore.prototype.getSystemReadConfirmSpendNullAddressKeys = function (ctnNodeIndex, addrIndex, isObsolete = false) {
+    // Validate arguments
+    const errArg = {};
+
+    if (!isValidCatenisNodeIndex(ctnNodeIndex)) {
+        errArg.ctnNodeIndex = ctnNodeIndex;
+    }
+
+    if (!isValidAddressIndex(addrIndex)) {
+        errArg.addrIndex = addrIndex;
+    }
+
+    if (Object.keys(errArg).length > 0) {
+        const errArgs = Object.keys(errArg);
+
+        Catenis.logger.ERROR(util.format('KeyStore.getSystemReadConfirmSpendNullAddressKeys method called with invalid argument%s', errArgs.length > 1 ? 's' : ''), errArg);
+        throw Error(util.format('Invalid %s argument%s', errArgs.join(', '), errArgs.length > 1 ? 's' : ''));
+    }
+
+    // Try to retrieve system read confirmation spend null address HD extended key for given Catenis node with the given index
+    const sysReadConfSpendNullAddrPath = util.format('m/%d/0/3/0/2/%d', ctnNodeIndex, addrIndex);
+    let sysReadConfSpendNullAddrHDNode = retrieveHDNode.call(this, sysReadConfSpendNullAddrPath),
+        sysReadConfSpendNullAddrKeys = null;
+
+    if (sysReadConfSpendNullAddrHDNode === null) {
+        // System read confirmation spend null address HD extended key does not exist yet.
+        //  Retrieve parent root HD extended key to create it
+        const path = parentPath(sysReadConfSpendNullAddrPath);
+        let sysReadConfSpendNullRootHDNode = retrieveHDNode.call(this, path);
+
+        if (sysReadConfSpendNullRootHDNode === null) {
+            // System read confirmation spend null root HD extended key does not exist yet.
+            //  Try to initialize Catenis node HD extended keys
+            if (! this.initCatenisNodeHDNodes(ctnNodeIndex)) {
+                Catenis.logger.ERROR(util.format('HD extended keys for Catenis node with index %d could not be initialized', ctnNodeIndex));
+            }
+            else {
+                // Catenis node HD extended keys successfully initialized.
+                //  Try to retrieve system read confirmation spend null root HD extended key again
+                sysReadConfSpendNullRootHDNode = retrieveHDNode.call(this, path);
+            }
+        }
+
+        if (sysReadConfSpendNullRootHDNode === null) {
+            Catenis.logger.ERROR(util.format('System read confirmation spend null root HD extended key (%s) for Catenis node with index %d not found', path, ctnNodeIndex));
+        }
+        else {
+            // Try to create system read confirmation spend null address HD extended key now
+            sysReadConfSpendNullAddrHDNode = sysReadConfSpendNullRootHDNode.derive(addrIndex);
+
+            if (sysReadConfSpendNullAddrHDNode.index !== addrIndex) {
+                Catenis.logger.WARN(util.format('System read confirmation spend null address HD extended key (%s) derived with an unexpected index', sysReadConfSpendNullAddrPath), {expectedIndex: addrIndex, returnedIndex: sysReadConfSpendNullAddrHDNode.index});
+                sysReadConfSpendNullAddrHDNode = null;
+            }
+            else {
+                // Store created HD extended key
+                storeHDNode.call(this, 'sys_read_conf_spnd_null_addr', sysReadConfSpendNullAddrPath, sysReadConfSpendNullAddrHDNode, true, false, isObsolete);
+            }
+        }
+    }
+
+    if (sysReadConfSpendNullAddrHDNode !== null) {
+        sysReadConfSpendNullAddrKeys = new CryptoKeys(sysReadConfSpendNullAddrHDNode.keyPair);
+    }
+
+    return sysReadConfSpendNullAddrKeys;
+};
+
+KeyStore.prototype.listSystemReadConfirmSpendNullAddresses = function (ctnNodeIndex, fromAddrIndex, toAddrIndex, onlyInUse) {
+    // Validate arguments
+    const errArg = {},
+        queryTerms = [{parentPath: util.format('m/%d/0/3/0/2', ctnNodeIndex)}];
+
+    if (!isValidCatenisNodeIndex(ctnNodeIndex)) {
+        errArg.ctnNodeIndex = ctnNodeIndex;
+    }
+
+    if (fromAddrIndex !== undefined) {
+        if (!isValidAddressIndex(fromAddrIndex)) {
+            errArg.fromAddrIndex = fromAddrIndex;
+        }
+        else {
+            queryTerms.push({index: {$gte: fromAddrIndex}});
+        }
+    }
+
+    if (toAddrIndex !== undefined) {
+        if (!isValidAddressIndex(toAddrIndex) || (fromAddrIndex !== undefined && toAddrIndex < fromAddrIndex)) {
+            errArg.toAddrIndex = toAddrIndex;
+        }
+        else {
+            queryTerms.push({index: {$lte: toAddrIndex}});
+        }
+    }
+
+    if (Object.keys(errArg).length > 0) {
+        const errArgs = Object.keys(errArg);
+
+        Catenis.logger.ERROR(util.format('KeyStore.listSystemReadConfirmSpendNullAddresses method called with invalid argument%s', errArgs.length > 1 ? 's' : ''), errArg);
+        throw Error(util.format('Invalid %s argument%s', errArgs.join(', '), errArgs.length > 1 ? 's' : ''));
+    }
+
+    if (onlyInUse) {
+        queryTerms.push({isObsolete: false});
+    }
+
+    // Return existing system read confirmation spend null addresses within the specified range
+    let query;
+
+    if (queryTerms.length > 1) {
+        query = {$and: queryTerms};
+    }
+    else {
+        query = queryTerms[0];
+    }
+
+    return this.collExtKey.chain().find(query).simplesort('index').data().map((docExtKey) => {
+        return docExtKey.address;
+    });
+};
+
+KeyStore.prototype.listSystemReadConfirmSpendNullAddressesInUse = function (ctnNodeIndex, fromAddrIndex, toAddrIndex) {
+    return this.listSystemReadConfirmSpendNullAddresses(ctnNodeIndex, fromAddrIndex, toAddrIndex);
+};
+
+KeyStore.prototype.getSystemReadConfirmPayTxExpenseAddressKeys = function (ctnNodeIndex, addrIndex, isObsolete = false) {
+    // Validate arguments
+    const errArg = {};
+
+    if (!isValidCatenisNodeIndex(ctnNodeIndex)) {
+        errArg.ctnNodeIndex = ctnNodeIndex;
+    }
+
+    if (!isValidAddressIndex(addrIndex)) {
+        errArg.addrIndex = addrIndex;
+    }
+
+    if (Object.keys(errArg).length > 0) {
+        const errArgs = Object.keys(errArg);
+
+        Catenis.logger.ERROR(util.format('KeyStore.getSystemReadConfirmPayTxExpenseAddressKeys method called with invalid argument%s', errArgs.length > 1 ? 's' : ''), errArg);
+        throw Error(util.format('Invalid %s argument%s', errArgs.join(', '), errArgs.length > 1 ? 's' : ''));
+    }
+
+    // Try to retrieve system read confirmation pay tx expense address HD extended key for given Catenis node with the given index
+    const sysReadConfPayTxExpenseAddrPath = util.format('m/%d/0/3/1/%d', ctnNodeIndex, addrIndex);
+    let sysReadConfPayTxExpenseAddrHDNode = retrieveHDNode.call(this, sysReadConfPayTxExpenseAddrPath),
+        sysReadConfPayTxExpenseAddrKeys = null;
+
+    if (sysReadConfPayTxExpenseAddrHDNode === null) {
+        // System read confirmation pay tx expense address HD extended key does not exist yet.
+        //  Retrieve parent root HD extended key to create it
+        const path = parentPath(sysReadConfPayTxExpenseAddrPath);
+        let sysReadConfPayTxExpenseRootHDNode = retrieveHDNode.call(this, path);
+
+        if (sysReadConfPayTxExpenseRootHDNode === null) {
+            // System read confirmation pay tx expense root HD extended key does not exist yet.
+            //  Try to initialize Catenis node HD extended keys
+            if (! this.initCatenisNodeHDNodes(ctnNodeIndex)) {
+                Catenis.logger.ERROR(util.format('HD extended keys for Catenis node with index %d could not be initialized', ctnNodeIndex));
+            }
+            else {
+                // Catenis node HD extended keys successfully initialized.
+                //  Try to retrieve system read confirmation pay tx expense root HD extended key again
+                sysReadConfPayTxExpenseRootHDNode = retrieveHDNode.call(this, path);
+            }
+        }
+
+        if (sysReadConfPayTxExpenseRootHDNode === null) {
+            Catenis.logger.ERROR(util.format('System read confirmation pay tx expense root HD extended key (%s) for Catenis node with index %d not found', path, ctnNodeIndex));
+        }
+        else {
+            // Try to create system read confirmation pay tx expense address HD extended key now
+            sysReadConfPayTxExpenseAddrHDNode = sysReadConfPayTxExpenseRootHDNode.derive(addrIndex);
+
+            if (sysReadConfPayTxExpenseAddrHDNode.index !== addrIndex) {
+                Catenis.logger.WARN(util.format('System read confirmation pay tx expense address HD extended key (%s) derived with an unexpected index', sysReadConfPayTxExpenseAddrPath), {expectedIndex: addrIndex, returnedIndex: sysReadConfPayTxExpenseAddrHDNode.index});
+                sysReadConfPayTxExpenseAddrHDNode = null;
+            }
+            else {
+                // Store created HD extended key
+                storeHDNode.call(this, 'sys_read_conf_pay_tx_exp_addr', sysReadConfPayTxExpenseAddrPath, sysReadConfPayTxExpenseAddrHDNode, true, false, isObsolete);
+            }
+        }
+    }
+
+    if (sysReadConfPayTxExpenseAddrHDNode !== null) {
+        sysReadConfPayTxExpenseAddrKeys = new CryptoKeys(sysReadConfPayTxExpenseAddrHDNode.keyPair);
+    }
+
+    return sysReadConfPayTxExpenseAddrKeys;
+};
+
+KeyStore.prototype.listSystemReadConfirmPayTxExpenseAddresses = function (ctnNodeIndex, fromAddrIndex, toAddrIndex, onlyInUse) {
+    // Validate arguments
+    const errArg = {},
+        queryTerms = [{parentPath: util.format('m/%d/0/3/1', ctnNodeIndex)}];
+
+    if (!isValidCatenisNodeIndex(ctnNodeIndex)) {
+        errArg.ctnNodeIndex = ctnNodeIndex;
+    }
+
+    if (fromAddrIndex !== undefined) {
+        if (!isValidAddressIndex(fromAddrIndex)) {
+            errArg.fromAddrIndex = fromAddrIndex;
+        }
+        else {
+            queryTerms.push({index: {$gte: fromAddrIndex}});
+        }
+    }
+
+    if (toAddrIndex !== undefined) {
+        if (!isValidAddressIndex(toAddrIndex) || (fromAddrIndex !== undefined && toAddrIndex < fromAddrIndex)) {
+            errArg.toAddrIndex = toAddrIndex;
+        }
+        else {
+            queryTerms.push({index: {$lte: toAddrIndex}});
+        }
+    }
+
+    if (Object.keys(errArg).length > 0) {
+        const errArgs = Object.keys(errArg);
+
+        Catenis.logger.ERROR(util.format('KeyStore.listSystemReadConfirmPayTxExpenseAddresses method called with invalid argument%s', errArgs.length > 1 ? 's' : ''), errArg);
+        throw Error(util.format('Invalid %s argument%s', errArgs.join(', '), errArgs.length > 1 ? 's' : ''));
+    }
+
+    if (onlyInUse) {
+        queryTerms.push({isObsolete: false});
+    }
+
+    // Return existing system read confirmation pay tx expense addresses within the specified range
+    let query;
+
+    if (queryTerms.length > 1) {
+        query = {$and: queryTerms};
+    }
+    else {
+        query = queryTerms[0];
+    }
+
+    return this.collExtKey.chain().find(query).simplesort('index').data().map((docExtKey) => {
+        return docExtKey.address;
+    });
+};
+
+KeyStore.prototype.listSystemReadConfirmPayTxExpenseAddressesInUse = function (ctnNodeIndex, fromAddrIndex, toAddrIndex) {
+    return this.listSystemReadConfirmPayTxExpenseAddresses(ctnNodeIndex, fromAddrIndex, toAddrIndex);
+};
+
 KeyStore.prototype.getSystemDeviceAddressKeys = function (ctnNodeIndex, addrRootIndex, addrIndex, isObsolete = false) {
     // Validate arguments
     const errArg = {};
@@ -842,13 +1456,13 @@ KeyStore.prototype.getSystemDeviceAddressKeys = function (ctnNodeIndex, addrRoot
     let sysDeviceAddrHDNode = retrieveHDNode.call(this, sysDeviceAddrPath),
         sysDeviceAddrKeys = null;
 
-    if (sysDeviceAddrHDNode == null) {
+    if (sysDeviceAddrHDNode === null) {
         // System device address HD extended key does not exist yet.
         //  Retrieve parent root HD extended key to create it
         const path = parentPath(sysDeviceAddrPath);
         let sysDeviceAddrRootHDNode = retrieveHDNode.call(this, path);
 
-        if (sysDeviceAddrRootHDNode == null) {
+        if (sysDeviceAddrRootHDNode === null) {
             // System device addresses root HD extended key does not exist yet.
             //  Try to initialize Catenis node HD extended keys
             if (! this.initCatenisNodeHDNodes(ctnNodeIndex)) {
@@ -861,7 +1475,7 @@ KeyStore.prototype.getSystemDeviceAddressKeys = function (ctnNodeIndex, addrRoot
             }
         }
 
-        if (sysDeviceAddrRootHDNode == null) {
+        if (sysDeviceAddrRootHDNode === null) {
             Catenis.logger.ERROR(util.format('System device address #%d root HD extended key (%s) for Catenis node with index %d not found', addrRootIndex + 1, path, ctnNodeIndex));
         }
         else {
@@ -874,12 +1488,12 @@ KeyStore.prototype.getSystemDeviceAddressKeys = function (ctnNodeIndex, addrRoot
             }
             else {
                 // Store created HD extended key
-                storeHDNode.call(this, addrRootIndex == 0 ? 'sys_dev_main_addr' : 'sys_dev_rsrv_addr', sysDeviceAddrPath, sysDeviceAddrHDNode, true, addrRootIndex >= numUsedSysDeviceAddrRoots, isObsolete);
+                storeHDNode.call(this, addrRootIndex === 0 ? 'sys_dev_main_addr' : 'sys_dev_rsrv_addr', sysDeviceAddrPath, sysDeviceAddrHDNode, true, addrRootIndex >= numUsedSysDeviceAddrRoots, isObsolete);
             }
         }
     }
 
-    if (sysDeviceAddrHDNode != null) {
+    if (sysDeviceAddrHDNode !== null) {
         sysDeviceAddrKeys = new CryptoKeys(sysDeviceAddrHDNode.keyPair);
     }
 
@@ -899,7 +1513,7 @@ KeyStore.prototype.listSystemDeviceAddresses = function (ctnNodeIndex, addrRootI
         errArg.addrRootIndex = addrRootIndex;
     }
 
-    if (fromAddrIndex != undefined) {
+    if (fromAddrIndex !== undefined) {
         if (!isValidAddressIndex(fromAddrIndex)) {
             errArg.fromAddrIndex = fromAddrIndex;
         }
@@ -908,8 +1522,8 @@ KeyStore.prototype.listSystemDeviceAddresses = function (ctnNodeIndex, addrRootI
         }
     }
 
-    if (toAddrIndex != undefined) {
-        if (!isValidAddressIndex(toAddrIndex) || (fromAddrIndex != undefined && toAddrIndex < fromAddrIndex)) {
+    if (toAddrIndex !== undefined) {
+        if (!isValidAddressIndex(toAddrIndex) || (fromAddrIndex !== undefined && toAddrIndex < fromAddrIndex)) {
             errArg.toAddrIndex = toAddrIndex;
         }
         else {
@@ -985,13 +1599,13 @@ KeyStore.prototype.initClientHDNodes = function (ctnNodeIndex, clientIndex) {
     const clientRootPath = util.format('m/%d/%d', ctnNodeIndex, clientIndex);
     let clientRootHDNode = retrieveHDNode.call(this, clientRootPath);
 
-    if (clientRootHDNode == null) {
+    if (clientRootHDNode === null) {
         // Client root HD extended key does not exist yet.
         //  Retrieve parent root HD extended key to create it
         let path = parentPath(clientRootPath),
             ctnNodeRootHDNode = retrieveHDNode.call(this, path);
 
-        if (ctnNodeRootHDNode == null) {
+        if (ctnNodeRootHDNode === null) {
             // Catenis node root HD extended key does not exist yet.
             //  Try to initialize Catenis node HD extended keys
             if (! this.initCatenisNodeHDNodes(ctnNodeIndex)) {
@@ -1004,7 +1618,7 @@ KeyStore.prototype.initClientHDNodes = function (ctnNodeIndex, clientIndex) {
             }
         }
 
-        if (ctnNodeRootHDNode == null) {
+        if (ctnNodeRootHDNode === null) {
             Catenis.logger.ERROR(util.format('Catenis node root HD extended key (%s) not found', path));
         }
         else {
@@ -1074,11 +1688,11 @@ KeyStore.prototype.initClientHDNodes = function (ctnNodeIndex, clientIndex) {
                                     }
                                     else {
                                         // Save newly created HD extended key to store it later
-                                        hdNodesToStore.push({type: idx == 0 ? 'cln_msg_crd_addr_root' : (idx == 1 ? 'cln_asst_crd_addr_root' : 'cln_srv_crd_rsrv_addr_root'), path: clientSrvCreditAddrRootPath, hdNode: clientSrvCreditAddrRootHDNode, isLeaf: false, isReserved: idx >= numUsedServiceCreditAddrRoots});
+                                        hdNodesToStore.push({type: idx === 0 ? 'cln_msg_crd_addr_root' : (idx === 1 ? 'cln_asst_crd_addr_root' : 'cln_srv_crd_rsrv_addr_root'), path: clientSrvCreditAddrRootPath, hdNode: clientSrvCreditAddrRootHDNode, isLeaf: false, isReserved: idx >= numUsedServiceCreditAddrRoots});
                                     }
                                 }
 
-                                if (clientSrvCreditRootHDNode != null) {
+                                if (clientSrvCreditRootHDNode !== null) {
                                     // Store all newly created HD extended keys, and indicate success
                                     hdNodesToStore.forEach((hdNodeToStore) => {
                                         storeHDNode.call(this, hdNodeToStore.type, hdNodeToStore.path, hdNodeToStore.hdNode, hdNodeToStore.isLeaf, hdNodeToStore.isReserved);
@@ -1134,13 +1748,13 @@ KeyStore.prototype.getClientServiceCreditAddressKeys = function (ctnNodeIndex, c
     let clientSrvCreditAddrHDNode = retrieveHDNode.call(this, clientSrvCreditAddrPath),
         clientSrvCreditAddrKeys = null;
 
-    if (clientSrvCreditAddrHDNode == null) {
+    if (clientSrvCreditAddrHDNode === null) {
         // Client service credit address HD extended key does not exist yet.
         //  Retrieve parent root HD extended key to create it
         const path = parentPath(clientSrvCreditAddrPath);
         let clientSrvCreditRootHDNode = retrieveHDNode.call(this, path);
 
-        if (clientSrvCreditRootHDNode == null) {
+        if (clientSrvCreditRootHDNode === null) {
             // Client service credit root HD extended key does not exist yet.
             //  Try to initialize client HD extended keys
             if (! this.initClientHDNodes(ctnNodeIndex, clientIndex)) {
@@ -1153,7 +1767,7 @@ KeyStore.prototype.getClientServiceCreditAddressKeys = function (ctnNodeIndex, c
             }
         }
 
-        if (clientSrvCreditRootHDNode == null) {
+        if (clientSrvCreditRootHDNode === null) {
             Catenis.logger.ERROR(util.format('Service credit #%d root HD extended key (%s) for client with index %d of Catenis node with index %d not found', servCreditIndex + 1, path, clientIndex, ctnNodeIndex));
         }
         else {
@@ -1166,12 +1780,12 @@ KeyStore.prototype.getClientServiceCreditAddressKeys = function (ctnNodeIndex, c
             }
             else {
                 // Store created HD extended key
-                storeHDNode.call(this, servCreditIndex == 0 ? 'cln_msg_crd_addr' : (servCreditIndex == 1 ? 'cln_asst_crd_addr' : 'cln_srv_crd_rsrv_addr'), clientSrvCreditAddrPath, clientSrvCreditAddrHDNode, true, servCreditIndex >= numUsedServiceCreditAddrRoots, isObsolete);
+                storeHDNode.call(this, servCreditIndex === 0 ? 'cln_msg_crd_addr' : (servCreditIndex === 1 ? 'cln_asst_crd_addr' : 'cln_srv_crd_rsrv_addr'), clientSrvCreditAddrPath, clientSrvCreditAddrHDNode, true, servCreditIndex >= numUsedServiceCreditAddrRoots, isObsolete);
             }
         }
     }
 
-    if (clientSrvCreditAddrHDNode != null) {
+    if (clientSrvCreditAddrHDNode !== null) {
         clientSrvCreditAddrKeys = new CryptoKeys(clientSrvCreditAddrHDNode.keyPair);
     }
 
@@ -1195,7 +1809,7 @@ KeyStore.prototype.listClientServiceCreditAddresses = function (ctnNodeIndex, cl
         errArg.srvCreditIndex = servCreditIndex;
     }
 
-    if (fromAddrIndex != undefined) {
+    if (fromAddrIndex !== undefined) {
         if (!isValidAddressIndex(fromAddrIndex)) {
             errArg.fromAddrIndex = fromAddrIndex;
         }
@@ -1204,8 +1818,8 @@ KeyStore.prototype.listClientServiceCreditAddresses = function (ctnNodeIndex, cl
         }
     }
 
-    if (toAddrIndex != undefined) {
-        if (!isValidAddressIndex(toAddrIndex) || (fromAddrIndex != undefined && toAddrIndex < fromAddrIndex)) {
+    if (toAddrIndex !== undefined) {
+        if (!isValidAddressIndex(toAddrIndex) || (fromAddrIndex !== undefined && toAddrIndex < fromAddrIndex)) {
             errArg.toAddrIndex = toAddrIndex;
         }
         else {
@@ -1297,7 +1911,7 @@ KeyStore.prototype.initDeviceHDNodes = function (ctnNodeIndex, clientIndex, devi
     const clientIntHierarchyRootPath = util.format('m/%d/%d/0', ctnNodeIndex, clientIndex);
     let clientIntHierarchyRootHDNode = retrieveHDNode.call(this, clientIntHierarchyRootPath);
 
-    if (clientIntHierarchyRootHDNode == null) {
+    if (clientIntHierarchyRootHDNode === null) {
         // Client internal hierarchy root HD extended key does not exist yet.
         //  Try to initialize client HD extended keys
         if (! this.initClientHDNodes(ctnNodeIndex, clientIndex)) {
@@ -1310,7 +1924,7 @@ KeyStore.prototype.initDeviceHDNodes = function (ctnNodeIndex, clientIndex, devi
         }
     }
 
-    if (clientIntHierarchyRootHDNode == null) {
+    if (clientIntHierarchyRootHDNode === null) {
         Catenis.logger.ERROR(util.format('Internal hierarchy root HD extended key (%s) for client with index %d of Catenis node with index %d not found', clientIntHierarchyRootPath, clientIndex, ctnNodeIndex));
     }
     else {
@@ -1318,7 +1932,7 @@ KeyStore.prototype.initDeviceHDNodes = function (ctnNodeIndex, clientIndex, devi
         const clientPubHierarchyRootPath = util.format('m/%d/%d/1', ctnNodeIndex, clientIndex),
             clientPubHierarchyRootHDNode = retrieveHDNode.call(this, clientPubHierarchyRootPath);
 
-        if (clientPubHierarchyRootHDNode == null) {
+        if (clientPubHierarchyRootHDNode === null) {
             Catenis.logger.ERROR(util.format('Public hierarchy root HD extended key (%s) for client with index %d of Catenis node with index %d not found', clientPubHierarchyRootPath, clientIndex, ctnNodeIndex));
         }
         else {
@@ -1350,11 +1964,11 @@ KeyStore.prototype.initDeviceHDNodes = function (ctnNodeIndex, clientIndex, devi
                     }
                     else {
                         // Save newly created HD extended key to store it later
-                        hdNodesToStore.push({type: idx == 0 ? 'dev_read_conf_addr_root' : 'dev_int_rsrv_addr_root', path: deviceIntAddrRootPath, hdNode: deviceIntAddrRootHDNode, isLeaf: false, isReserved: idx >= numUsedDeviceIntAddrRoots});
+                        hdNodesToStore.push({type: idx === 0 ? 'dev_read_conf_addr_root' : 'dev_int_rsrv_addr_root', path: deviceIntAddrRootPath, hdNode: deviceIntAddrRootHDNode, isLeaf: false, isReserved: idx >= numUsedDeviceIntAddrRoots});
                     }
                 }
 
-                if (deviceIntRootHDNode != null) {
+                if (deviceIntRootHDNode !== null) {
                     // Create client public root HD extended key for device with given index
                     const devicePubRootPath = util.format('%s/%d', clientPubHierarchyRootPath, deviceIndex);
                     let devicePubRootHDNode = clientPubHierarchyRootHDNode.derive(deviceIndex);
@@ -1383,11 +1997,11 @@ KeyStore.prototype.initDeviceHDNodes = function (ctnNodeIndex, clientIndex, devi
                             }
                             else {
                                 // Save newly created HD extended key to store it later
-                                hdNodesToStore.push({type: idx == 0 ? 'dev_main_addr_root' : (idx == 1 ? 'dev_asst_addr_root' : (idx == 2 ? 'dev_asst_issu_addr_root' : 'dev_pub_rsrv_addr_root')), path: devicePubAddrRootPath, hdNode: devicePubAddrRootHDNode, isLeaf: false, isReserved: idx >= numUsedDevicePubAddrRoots});
+                                hdNodesToStore.push({type: idx === 0 ? 'dev_main_addr_root' : (idx === 1 ? 'dev_asst_addr_root' : (idx === 2 ? 'dev_asst_issu_addr_root' : 'dev_pub_rsrv_addr_root')), path: devicePubAddrRootPath, hdNode: devicePubAddrRootHDNode, isLeaf: false, isReserved: idx >= numUsedDevicePubAddrRoots});
                             }
                         }
 
-                        if (devicePubRootHDNode != null) {
+                        if (devicePubRootHDNode !== null) {
                             // Store all newly created HD extended keys, and indicate success
                             hdNodesToStore.forEach((hdNodeToStore) => {
                                 storeHDNode.call(this, hdNodeToStore.type, hdNodeToStore.path, hdNodeToStore.hdNode, hdNodeToStore.isLeaf, hdNodeToStore.isReserved);
@@ -1440,13 +2054,13 @@ KeyStore.prototype.getDeviceInternalAddressKeys = function (ctnNodeIndex, client
     let deviceIntAddrHDNode = retrieveHDNode.call(this, deviceIntAddrPath),
         deviceIntAddrKeys = null;
 
-    if (deviceIntAddrHDNode == null) {
+    if (deviceIntAddrHDNode === null) {
         // Device internal address HD extended key does not exist yet.
         //  Retrieve parent root HD extended key to create it
         const path = parentPath(deviceIntAddrPath);
         let deviceIntAddrRootHDNode = retrieveHDNode.call(this, path);
 
-        if (deviceIntAddrRootHDNode == null) {
+        if (deviceIntAddrRootHDNode === null) {
             // Device internal addresses root HD extended key does not exist yet.
             //  Try to initialize device HD extended keys
             if (!this.initDeviceHDNodes(ctnNodeIndex, clientIndex, deviceIndex)) {
@@ -1459,7 +2073,7 @@ KeyStore.prototype.getDeviceInternalAddressKeys = function (ctnNodeIndex, client
             }
         }
 
-        if (deviceIntAddrRootHDNode == null) {
+        if (deviceIntAddrRootHDNode === null) {
             Catenis.logger.ERROR(util.format('Internal addresses root HD extended key (%s) for device #%d of client with index %d of Catenis node with index %d not found', path, deviceIndex + 1, clientIndex, ctnNodeIndex));
         }
         else {
@@ -1472,12 +2086,12 @@ KeyStore.prototype.getDeviceInternalAddressKeys = function (ctnNodeIndex, client
             }
             else {
                 // Store created HD extended key
-                storeHDNode.call(this, addrRootIndex == 0 ? 'dev_read_conf_addr' : 'dev_int_rsrv_addr', deviceIntAddrPath, deviceIntAddrHDNode, true, addrRootIndex >= numUsedDeviceIntAddrRoots, isObsolete);
+                storeHDNode.call(this, addrRootIndex === 0 ? 'dev_read_conf_addr' : 'dev_int_rsrv_addr', deviceIntAddrPath, deviceIntAddrHDNode, true, addrRootIndex >= numUsedDeviceIntAddrRoots, isObsolete);
             }
         }
     }
 
-    if (deviceIntAddrHDNode != null) {
+    if (deviceIntAddrHDNode !== null) {
         deviceIntAddrKeys = new CryptoKeys(deviceIntAddrHDNode.keyPair);
     }
 
@@ -1505,7 +2119,7 @@ KeyStore.prototype.listDeviceInternalAddresses = function (ctnNodeIndex, clientI
         errArg.addrRootIndex = addrRootIndex;
     }
 
-    if (fromAddrIndex != undefined) {
+    if (fromAddrIndex !== undefined) {
         if (!isValidAddressIndex(fromAddrIndex)) {
             errArg.fromAddrIndex = fromAddrIndex;
         }
@@ -1514,8 +2128,8 @@ KeyStore.prototype.listDeviceInternalAddresses = function (ctnNodeIndex, clientI
         }
     }
 
-    if (toAddrIndex != undefined) {
-        if (!isValidAddressIndex(toAddrIndex) || (fromAddrIndex != undefined && toAddrIndex < fromAddrIndex)) {
+    if (toAddrIndex !== undefined) {
+        if (!isValidAddressIndex(toAddrIndex) || (fromAddrIndex !== undefined && toAddrIndex < fromAddrIndex)) {
             errArg.toAddrIndex = toAddrIndex;
         }
         else {
@@ -1589,13 +2203,13 @@ KeyStore.prototype.getDevicePublicAddressKeys = function (ctnNodeIndex, clientIn
     let devicePubAddrHDNode = retrieveHDNode.call(this, devicePubAddrPath),
         devicePubAddrKeys = null;
 
-    if (devicePubAddrHDNode == null) {
+    if (devicePubAddrHDNode === null) {
         // Device public address HD extended key does not exist yet.
         //  Retrieve parent root HD extended key to create it
         const path = parentPath(devicePubAddrPath);
         let devicePubAddrRootHDNode = retrieveHDNode.call(this, path);
 
-        if (devicePubAddrRootHDNode == null) {
+        if (devicePubAddrRootHDNode === null) {
             // Device public addresses root HD extended key does not exist yet.
             //  Try to initialize device HD extended keys
             if (!this.initDeviceHDNodes(ctnNodeIndex, clientIndex, deviceIndex)) {
@@ -1608,7 +2222,7 @@ KeyStore.prototype.getDevicePublicAddressKeys = function (ctnNodeIndex, clientIn
             }
         }
 
-        if (devicePubAddrRootHDNode == null) {
+        if (devicePubAddrRootHDNode === null) {
             Catenis.logger.ERROR(util.format('Public addresses root HD extended key (%d) for device #%d of client with index %d of Catenis node with index %d not found', path, deviceIndex + 1, clientIndex, ctnNodeIndex));
         }
         else {
@@ -1621,12 +2235,12 @@ KeyStore.prototype.getDevicePublicAddressKeys = function (ctnNodeIndex, clientIn
             }
             else {
                 // Store created HD extended key
-                storeHDNode.call(this, addrRootIndex == 0 ? 'dev_main_addr' : (addrRootIndex == 1 ? 'dev_asst_addr' : (addrRootIndex == 2 ? 'dev_asst_issu_addr' : 'dev_pub_rsrv_addr')), devicePubAddrPath, devicePubAddrHDNode, true, addrRootIndex >= numUsedDevicePubAddrRoots, isObsolete);
+                storeHDNode.call(this, addrRootIndex === 0 ? 'dev_main_addr' : (addrRootIndex === 1 ? 'dev_asst_addr' : (addrRootIndex === 2 ? 'dev_asst_issu_addr' : 'dev_pub_rsrv_addr')), devicePubAddrPath, devicePubAddrHDNode, true, addrRootIndex >= numUsedDevicePubAddrRoots, isObsolete);
             }
         }
     }
 
-    if (devicePubAddrHDNode != null) {
+    if (devicePubAddrHDNode !== null) {
         devicePubAddrKeys = new CryptoKeys(devicePubAddrHDNode.keyPair);
     }
 
@@ -1654,7 +2268,7 @@ KeyStore.prototype.listDevicePublicAddresses = function (ctnNodeIndex, clientInd
         errArg.addrRootIndex = addrRootIndex;
     }
 
-    if (fromAddrIndex != undefined) {
+    if (fromAddrIndex !== undefined) {
         if (!isValidAddressIndex(fromAddrIndex)) {
             errArg.fromAddrIndex = fromAddrIndex;
         }
@@ -1663,8 +2277,8 @@ KeyStore.prototype.listDevicePublicAddresses = function (ctnNodeIndex, clientInd
         }
     }
 
-    if (toAddrIndex != undefined) {
-        if (!isValidAddressIndex(toAddrIndex) || (fromAddrIndex != undefined && toAddrIndex < fromAddrIndex)) {
+    if (toAddrIndex !== undefined) {
+        if (!isValidAddressIndex(toAddrIndex) || (fromAddrIndex !== undefined && toAddrIndex < fromAddrIndex)) {
             errArg.toAddrIndex = toAddrIndex;
         }
         else {
@@ -1834,15 +2448,15 @@ function purgeUnusedExtendedKeys() {
 }
 
 function storeHDNode(type, path, hdNode, isLeaf, isReserved, isObsolete) {
-    if (isLeaf == undefined) {
+    if (isLeaf === undefined) {
         isLeaf = false;
     }
 
-    if (isReserved == undefined) {
+    if (isReserved === undefined) {
         isReserved = false;
     }
 
-    if (!isLeaf || isObsolete == undefined) {
+    if (!isLeaf || isObsolete === undefined) {
         isObsolete = false;
     }
 
@@ -1854,7 +2468,7 @@ function storeHDNode(type, path, hdNode, isLeaf, isReserved, isObsolete) {
 function retrieveHDNode(path) {
     const docExtKey = this.collExtKey.by('path', path);
 
-    return docExtKey != undefined ? bitcoinLib.HDNode.fromBase58(docExtKey.strHDNode, this.cryptoNetwork) : null;
+    return docExtKey !== undefined ? bitcoinLib.HDNode.fromBase58(docExtKey.strHDNode, this.cryptoNetwork) : null;
 }
 
 
@@ -1901,6 +2515,46 @@ KeyStore.systemPayTxExpenseRootPath = function (ctnNodeIndex) {
     }
 
     return util.format('m/%d/0/2', ctnNodeIndex);
+};
+
+KeyStore.systemReadConfirmSpendNotifyRootPath = function (ctnNodeIndex) {
+    // Validate Catenis node index
+    if (!isValidCatenisNodeIndex(ctnNodeIndex)) {
+        Catenis.logger.ERROR('KeyStore.systemReadConfirmSpendNotifyRootPath method called with invalid argument', {ctnNodeIndex: ctnNodeIndex});
+        throw Error('Invalid ctnNodeIndex argument');
+    }
+
+    return util.format('m/%d/0/3/0/0', ctnNodeIndex);
+};
+
+KeyStore.systemReadConfirmSpendOnlyRootPath = function (ctnNodeIndex) {
+    // Validate Catenis node index
+    if (!isValidCatenisNodeIndex(ctnNodeIndex)) {
+        Catenis.logger.ERROR('KeyStore.systemReadConfirmSpendOnlyRootPath method called with invalid argument', {ctnNodeIndex: ctnNodeIndex});
+        throw Error('Invalid ctnNodeIndex argument');
+    }
+
+    return util.format('m/%d/0/3/0/1', ctnNodeIndex);
+};
+
+KeyStore.systemReadConfirmSpendNullRootPath = function (ctnNodeIndex) {
+    // Validate Catenis node index
+    if (!isValidCatenisNodeIndex(ctnNodeIndex)) {
+        Catenis.logger.ERROR('KeyStore.systemReadConfirmSpendNullRootPath method called with invalid argument', {ctnNodeIndex: ctnNodeIndex});
+        throw Error('Invalid ctnNodeIndex argument');
+    }
+
+    return util.format('m/%d/0/3/0/2', ctnNodeIndex);
+};
+
+KeyStore.systemReadConfirmPayTxExpenseRootPath = function (ctnNodeIndex) {
+    // Validate Catenis node index
+    if (!isValidCatenisNodeIndex(ctnNodeIndex)) {
+        Catenis.logger.ERROR('KeyStore.systemReadConfirmPayTxExpenseRootPath method called with invalid argument', {ctnNodeIndex: ctnNodeIndex});
+        throw Error('Invalid ctnNodeIndex argument');
+    }
+
+    return util.format('m/%d/0/3/1', ctnNodeIndex);
 };
 
 KeyStore.systemDeviceMainAddressRootPath = function (ctnNodeIndex) {
@@ -2131,6 +2785,14 @@ KeyStore.extKeyType = Object.freeze({
             1: 'ctnNodeIndex'
         }
     }),
+    sys_read_conf_root: Object.freeze({
+        name: 'sys_read_conf_root',
+        description: 'system read confirmation root',
+        pathRegEx: /^m\/(\d+)\/0\/3$/,
+        pathParts: {
+            1: 'ctnNodeIndex'
+        }
+    }),
     sys_dev_main_addr_root: Object.freeze({
         name: 'sys_dev_main_addr_root',
         description: 'System device main addresses root',
@@ -2205,6 +2867,82 @@ KeyStore.extKeyType = Object.freeze({
         name: 'sys_pay_tx_exp_addr',
         description: 'system pay tx expense address',
         pathRegEx: /^m\/(\d+)\/0\/2\/(\d+)$/,
+        pathParts: {
+            1: 'ctnNodeIndex',
+            2: 'addrIndex'
+        }
+    }),
+    sys_read_conf_spnd_root: Object.freeze({
+        name: 'sys_read_conf_spnd_root',
+        description: 'system read confirmation spend root',
+        pathRegEx: /^m\/(\d+)\/0\/3\/0$/,
+        pathParts: {
+            1: 'ctnNodeIndex'
+        }
+    }),
+    sys_read_conf_pay_tx_exp_root: Object.freeze({
+        name: 'sys_read_conf_pay_tx_exp_root',
+        description: 'system read confirmation pay tx expense root',
+        pathRegEx: /^m\/(\d+)\/0\/3\/1$/,
+        pathParts: {
+            1: 'ctnNodeIndex'
+        }
+    }),
+    sys_read_conf_spnd_ntfy_root: Object.freeze({
+        name: 'sys_read_conf_spnd_ntfy_root',
+        description: 'system read confirmation spend notify root',
+        pathRegEx: /^m\/(\d+)\/0\/3\/0\/0$/,
+        pathParts: {
+            1: 'ctnNodeIndex'
+        }
+    }),
+    sys_read_conf_spnd_only_root: Object.freeze({
+        name: 'sys_read_conf_spnd_only_root',
+        description: 'system read confirmation spend only root',
+        pathRegEx: /^m\/(\d+)\/0\/3\/0\/1$/,
+        pathParts: {
+            1: 'ctnNodeIndex'
+        }
+    }),
+    sys_read_conf_spnd_null_root: Object.freeze({
+        name: 'sys_read_conf_spnd_null_root',
+        description: 'system read confirmation spend null root',
+        pathRegEx: /^m\/(\d+)\/0\/3\/0\/2$/,
+        pathParts: {
+            1: 'ctnNodeIndex'
+        }
+    }),
+    sys_read_conf_spnd_ntfy_addr: Object.freeze({
+        name: 'sys_read_conf_spnd_ntfy_addr',
+        description: 'system read confirmation spend notify address',
+        pathRegEx: /^m\/(\d+)\/0\/3\/0\/0\/(\d+)$/,
+        pathParts: {
+            1: 'ctnNodeIndex',
+            2: 'addrIndex'
+        }
+    }),
+    sys_read_conf_spnd_only_addr: Object.freeze({
+        name: 'sys_read_conf_spnd_only_addr',
+        description: 'system read confirmation spend only address',
+        pathRegEx: /^m\/(\d+)\/0\/3\/0\/1\/(\d+)$/,
+        pathParts: {
+            1: 'ctnNodeIndex',
+            2: 'addrIndex'
+        }
+    }),
+    sys_read_conf_spnd_null_addr: Object.freeze({
+        name: 'sys_read_conf_spnd_null_addr',
+        description: 'system read confirmation spend null address',
+        pathRegEx: /^m\/(\d+)\/0\/3\/0\/2\/(\d+)$/,
+        pathParts: {
+            1: 'ctnNodeIndex',
+            2: 'addrIndex'
+        }
+    }),
+    sys_read_conf_pay_tx_exp_addr: Object.freeze({
+        name: 'sys_read_conf_pay_tx_exp_addr',
+        description: 'system read confirmation pay tx expense address',
+        pathRegEx: /^m\/(\d+)\/0\/3\/1\/(\d+)$/,
         pathParts: {
             1: 'ctnNodeIndex',
             2: 'addrIndex'
@@ -2474,11 +3212,11 @@ function parentPath(path) {
     let parentPath = undefined;
     const pos = path.lastIndexOf('/');
 
-    if (pos != -1) {
+    if (pos !== -1) {
         parentPath = path.slice(0, pos);
     }
 
-    return parentPath != undefined ? parentPath : null;
+    return parentPath !== undefined ? parentPath : null;
 }
 
 function isValidCatenisNodeIndex(index) {

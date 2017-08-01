@@ -73,6 +73,10 @@
       "systemFundingPayment":  14400,
       "systemFundingChange": 900,
       "systemPayTxExpense": 900,
+      "systemReadConfSpendNotify": 900,
+      "systemReadConfSpendOnly": 900,
+      "systemReadConfSpendNull": 900,
+      "systemReadConfPayTxExpense": 900,
       "clientMessageCredit": 900,
       "clientAssetCredit": 900,
       "deviceReadConfirm": 900,
@@ -105,9 +109,11 @@
     "percLogMessageCredit": 40,  // Percentage of client message credit that should be accounted for log message service
                                  //  NOTE: this value and the value above (percSendMessageCredit) must add up to 100
     "systemMessageCredits": 100,  // Credits that should be considered to be pre-allocated to system to send system messages
-    "fundPayTxResolution": 10000,  // Resolution of amount allocated to system pay tx expense addresses
+    // NOTE: fundPayTxResolution (resolution of amount allocated to system pay tx expense addresses) is dynamically calculated
+    "fundPayTxResolutionSafetyFactor": 0.5,   // Safety factor used when calculating fundPayTxResolution (from highest tx cost)
     "fundPayTxMultiplyFactor": 10,  // Maximum number of fund pay tx expense (fundPayTxResolution) that can be pre-allocated to a system pay tx expense addr
     "minFundPayTxAmountMultiplyFactor": 10,  // Multiply factor used to determine mininum amount (x fundPayTxResolution) that should be used to fund system pay tx expense addresses
+    "fundPayTxSafetyFactor": 0.15,   // Safety factor used when funding and checking balance of system pay tx expense addresses
     "message": {
       "messagesPerMinute": 4,  // Number of messages sents per minute that is expected to be sustained
       "minutesToConfirm": 60,  // Time, in minutes, within which send message txs are expected to be confirmed
@@ -119,24 +125,35 @@
         "sysMessage": {     // System message transaction
           "numInputs": 3,         // Number of inputs (that spend P2PKH outputs)
           "numOutputs": 3,        // Number of (P2PKH) outputs
-          "nullDataPlayloadSize": 80  // Size, in bytes, of payload of null data output
+          "nullDataPayloadSize": 80  // Size, in bytes, of payload of null data output
         },
         "sendMessage": {        // Send message transaction
           "numInputs": 4,         // Number of inputs (that spend P2PKH outputs)
           "numOutputs": 4,        // Number of (P2PKH) outputs
-          "nullDataPlayloadSize": 80  // Size, in bytes, of payload of null data output
+          "nullDataPayloadSize": 80  // Size, in bytes, of payload of null data output
         },
         "logMessage": {        // Log message transaction
           "numInputs": 4,         // Number of inputs (that spend P2PKH outputs)
           "numOutputs": 2,        // Number of (P2PKH) outputs
-          "nullDataPlayloadSize": 80  // Size, in bytes, of payload of null data output
-        },
-        "readConfirmation": {   // Read confirmation transaction
-          "numInputs": 3,         // Number of inputs (that spend P2PKH outputs)
-          "numOutputs": 2,        // Number of (P2PKH) outputs
-          "nullDataPlayloadSize": 0  // Size, in bytes, of payload of null data output
+          "nullDataPayloadSize": 80  // Size, in bytes, of payload of null data output
         }
       }
+    },
+    "readConfirmation": {
+      "paymentResolution": 10,  // Resolution of amount that should be allocated to pay for read confirmation tx expenses. In other words, the allocated amount should be a multiple of the amount
+      // NOTE: fundReadConfirmPayTxResolution (resolution of amount allocated to system read confirmation pay tx expense addresses) is dynamically calculated
+      "fundPayTxResolutionSafetyFactor": 0,   // Safety factor used when calculating fundReadConfirmPayTxResolution (from highest tx cost)
+      "fundPayTxMultiplyFactor": 100,  // Maximum number of fund read confirmation pay tx expense (fundReadConfrmPayTxResolution) that can be pre-allocated to a system read confirmation pay tx expense addr
+      "minFundPayTxAmountMultiplyFactor": 100,  // Multiply factor used to determine mininum amount (x fundReadConfirmPayTxResolution) that should be used to fund system pay tx expense addresses
+      "fundPayTxSafetyFactor": 0,   // Safety factor used when funding and checking balance of system read confirmation pay tx expense addresses
+      "initNumTxInputs": 2,         // Initial number of inputs of a read confirmation transaction (1 to spend a read confirmation output, 1 to pay for tx expense)
+      "initNumTxOutputs": 2,        // Initial number of outputs of a read confirmation transaction (1 to receive payment of read confirmation output spent, 1 to receive change)
+      "txNullDataPayloadSize": 0,  // Size, in bytes, of payload of null data output in read confirmation transaction
+      "txInputOutputGrowthRatio": 10, // Number representing how many additional inputs needs to be added to the a read confirmation tx for a new output to be added
+                                      // NOTE: these additional outputs should account for read confirmation outputs spent to notify devices that belong to a different Catenis node
+      "initTxFeeRate": 1,  // Amount, in satoshis/byte, for the initial fee rate for a read confirmation transaction
+      "txFeeRateIncrement": 1,  // Amount, in satoshis/byte, that transaction feed rate should be incremented for the new replacement transaction
+      "numReadConfirmTxsMinFundBalance": 1  // Number of read confirmation txs the cost of which should be covered by the minimum expected balance amount of the system read confirmation pay tx expense addresses
     },
     "asset": {
       "unlockedAssetsPerMinute": 0.33,  // Number of unlocked assets issued per minute that is expected to be sustained
@@ -153,24 +170,24 @@
         "issueLockedAsset": {   // Issue unlocked asset
           "numInputs": 3,           // Number of inputs (that spend P2PKH outputs)
           "numOutputs": 2,          // Number of (P2PKH) outputs
-          "nullDataPlayloadSize": 65    // Size, in bytes, of payload of null data output
+          "nullDataPayloadSize": 65    // Size, in bytes, of payload of null data output
         },
         "issueUnlockedAsset": {   // Issue unlocked asset
           "numInputs": 4,           // Number of inputs (that spend P2PKH outputs)
           "numOutputs": 4,          // Number of (P2PKH) outputs
-          "nullDataPlayloadSize": 65    // Size, in bytes, of payload of null data output
+          "nullDataPayloadSize": 65    // Size, in bytes, of payload of null data output
         },
         "transferAsset": {   // Issue unlocked asset
           "numInputs": 4,           // Number of inputs (that spend P2PKH outputs)
           "numOutputs": 3,          // Number of (P2PKH) outputs
-          "nullDataPlayloadSize": 8     // Size, in bytes, of payload of null data output
+          "nullDataPayloadSize": 8     // Size, in bytes, of payload of null data output
         }
       }
     }
   },
-  // Parameters pertaining to Client module
-  "client": {
-    "fundPayTxExpenseSafetyFactor": 0.3   // Safety factor used when funding system pay tx expense addresses
+  // Parameters pertaining to BalanceInfo module
+  "balanceInfo": {
+    "defaultSafetyFactor": 0.1     // Safety factor used to check whether current balance is enough to cover current expect balance
   },
   // Parameters pertaining to Device module
   "device": {
@@ -179,10 +196,14 @@
   },
   // Parameters pertaining to Transaction module
   "transaction": {
+    "txOutputDustAmount": 600,  // Minimum amount that should be allocated to a transaction output
     "txInputSize": 148, // Size, in bytes, of typical transaction input (spending a P2PKH UTXO)
-                        //  NOTE: this value should be reviewed for segwit transactions
-    "txOutputSize": 34 // Size, in bytes, of a typical (P2PKH) transaction output
+                        //  NOTE 1: IMPORTANT - this is an everage size for such inputs. The actual size can vary from 147 up to 149 (in other workds, the actual size is 148 +/- 1)
+                        //  NOTE 2: this value should be reviewed for segwit transactions
+    "txOutputSize": 34, // Size, in bytes, of a typical (P2PKH) transaction output
                        //  NOTE: this value should be reviewed for segwit transactions
+    "maxTxSize": 100000  // Maximum size, in bytes, of a transaction that is considered valid
+                         //  NOTE: this value should be reviewed for segwit transactions
   },
   // Parameters pertaining to TransactionMonitor module
   "transactionMonitor": {
@@ -208,6 +229,11 @@
   // Parameters pertaining to Message module
   "message": {
     "maxQueryCount": 500  // Maximum number of messages entries that can be returned when querying for messages
+  },
+  // Parameters pertaining to ReadConfirmation module
+  "readConfirmation": {
+    "unconfirmedTxTimeout": 10080,  // Timeout, in minutes, for waiting for latest read confirmation tx to be confirmed
+    "txSizeThresholdRatio": 0.5  // Ratio that should be applied to maximum tx size to calculate theshold for read confirmation tx size. Above that size the tx fee rate should be reset so that is is confirmed as soon as possible
   },
   // Parameters pertaining to RestApi module
   "restApi": {

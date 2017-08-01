@@ -13,7 +13,7 @@
 //  NOTE: the reference of these modules are done sing 'require()' instead of 'import' to
 //      to avoid annoying WebStorm warning message: 'default export is not defined in
 //      imported module'
-//const util = require('util');
+const util = require('util');
 // Third-party node modules
 import BigNumber from 'bignumber.js';
 // Meteor packages
@@ -51,9 +51,9 @@ Util.formatCoins = function (amountInSatoshis) {
 //  destAddress: [string]
 //  fee: [number]
 Util.spendUtxo = function (txout, origAddress, destAddress, fee) {
-    fee = fee != undefined && fee >= 1000 ? fee : 1000;
+    fee = fee !== undefined && fee >= 1000 ? fee : 1000;
 
-    if (txout.amount != undefined && txout.amount >= fee + 600) {
+    if (txout.amount !== undefined && txout.amount >= fee + 600) {
         let tx = new Transaction();
 
         tx.addInput(txout, origAddress, Catenis.keyStore.getAddressInfo(origAddress, true));
@@ -87,7 +87,7 @@ Util.spendAddresses = function (origAddresses, destAddress, fee) {
 
         const addrInfo = Catenis.keyStore.getAddressInfo(utxo.address, true);
 
-        if (addrInfo != null) {
+        if (addrInfo !== null) {
             input.addrInfo = addrInfo;
         }
 
@@ -95,7 +95,7 @@ Util.spendAddresses = function (origAddresses, destAddress, fee) {
         inputs.push(input);
     });
 
-    fee = fee != undefined && fee >= 1000 ? fee : 1000;
+    fee = fee !== undefined && fee >= 1000 ? fee : 1000;
 
     if (totalAmount >= fee + 600) {
         const tx = new Transaction();
@@ -107,6 +107,13 @@ Util.spendAddresses = function (origAddresses, destAddress, fee) {
     }
 };
 
+// Take transaction output (txout) object and return its string representation
+//
+//  Arguments:
+//   txout: [Object] - Object representing a transaction output. Should have two properties: txid, and vout
+Util.txoutToString = function (txout) {
+    return util.format('%s:%d', txout.txid, txout.vout);
+};
 
 // Util function class (public) properties
 //

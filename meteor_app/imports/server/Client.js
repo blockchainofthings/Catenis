@@ -18,7 +18,7 @@ const crypto = require('crypto');
 const _und = require('underscore');     // NOTE: we dot not use the underscore library provided by Meteor because we need
                                         //        a feature (_und.omit(obj,predicate)) that is not available in that version
 // Third-party node modules
-import config from 'config';
+//import config from 'config';
 // Meteor packages
 import { Meteor } from 'meteor/meteor';
 import { Random } from 'meteor/random';
@@ -36,12 +36,12 @@ import { FundTransaction } from './FundTransaction';
 import { Service} from './Service';
 
 // Config entries
-const clientConfig = config.get('client');
+/*const config_entryConfig = config.get('config_entry');
 
 // Configuration settings
 const cfgSettings = {
-    fundPayTxExpenseSafetyFactor: clientConfig.get('fundPayTxExpenseSafetyFactor')
-};
+    property: config_entryConfig.get('property_name')
+};*/
 
 
 // Definition of function classes
@@ -89,7 +89,7 @@ export function Client(docClient, ctnNode, initializeDevices) {
     // Retrieve (HD node) index of last Device doc/rec created for this client
     const docDevice = Catenis.db.collection.Device.findOne({client_id: this.doc_id}, {fields: {'index.deviceIndex': 1}, sort: {'index.deviceIndex': -1}});
 
-    this.lastDeviceIndex = docDevice != undefined ? docDevice.index.deviceIndex : 0;
+    this.lastDeviceIndex = docDevice !== undefined ? docDevice.index.deviceIndex : 0;
 
     // Critical section object to avoid concurrent access to database at the
     //  client object level (when creating new devices for this client and
@@ -113,23 +113,23 @@ export function Client(docClient, ctnNode, initializeDevices) {
 
 Client.prototype.assignUser = function (user_id) {
     // Make sure that there is no user currently assigned to this client
-    if (this.user_id == undefined) {
+    if (this.user_id === undefined) {
         // Make sure that user ID is valid
         const docUser = Meteor.users.findOne({_id: user_id}, {fields: {_id: 1, 'services.password': 1, 'catenis.client_id': 1}});
 
-        if (docUser == undefined) {
+        if (docUser === undefined) {
             // ID passed is not from a valid user. Log error and throw exception
             Catenis.logger.ERROR('Invalid user ID for assigning to client', {userId: user_id});
             throw new Meteor.Error('ctn_client_invalid_user_id', util.format('Invalid user ID (%s) for assigning to client', user_id));
         }
-        else if (docUser.catenis != undefined && docUser.catenis.client_id != undefined) {
+        else if (docUser.catenis !== undefined && docUser.catenis.client_id !== undefined) {
             // User already assigned to a client. Log error and throw exception
             Catenis.logger.ERROR('User already assigned to a client', {userId: user_id});
             throw new Meteor.Error('ctn_client_user_already_assigned', util.format('User (Id: %s) already assigned to a client', user_id));
         }
 
         const updtFields = {user_id: user_id},
-            userCanLogin = docUser.services != undefined && docUser.services.password != undefined;
+            userCanLogin = docUser.services !== undefined && docUser.services.password !== undefined;
 
         if (userCanLogin) {
             updtFields.status = Client.status.active.name;
@@ -170,11 +170,11 @@ Client.prototype.activate = function () {
     let result = false;
 
     if (this.status !== Client.status.active.name) {
-        if (this.user_id != undefined) {
+        if (this.user_id !== undefined) {
             // Check if associated user can log in
             const docUser = Meteor.users.findOne({_id: this.user_id}, {fields: {_id: 1, 'services.password': 1}});
 
-            if (docUser != undefined && docUser.services != undefined && docUser.services.password != undefined) {
+            if (docUser !== undefined && docUser.services !== undefined && docUser.services.password !== undefined) {
                 // Activate client
                 Catenis.db.collection.Client.update({_id: this.doc_id}, {
                     $set: {
@@ -200,7 +200,7 @@ Client.prototype.activate = function () {
 Client.prototype.renewApiAccessGenKey = function (resetAllDevicesToClientDefaultKey = false) {
     // Make sure that client is not deleted
     if (this.status !== Client.status.deleted.name &&
-            Catenis.db.collection.Client.findOne({_id: this.doc_id, status: Client.status.deleted.name}, {fields:{_id:1}}) != undefined) {
+            Catenis.db.collection.Client.findOne({_id: this.doc_id, status: Client.status.deleted.name}, {fields:{_id:1}}) !== undefined) {
         // Client has been deleted. Update its status
         this.status = Client.status.deleted.name;
     }
@@ -248,7 +248,7 @@ Client.prototype.renewApiAccessGenKey = function (resetAllDevicesToClientDefault
 
 Client.prototype.delete = function (deletedDate) {
     if (this.status !== Client.status.deleted.name) {
-        deletedDate = deletedDate != undefined ? deletedDate : new Date(Date.now());
+        deletedDate = deletedDate !== undefined ? deletedDate : new Date(Date.now());
 
         // Iteratively deletes all devices associated with this client
         Catenis.db.collection.Device.find({
@@ -262,7 +262,7 @@ Client.prototype.delete = function (deletedDate) {
         const docClient = Catenis.db.collection.Client.findOne({_id: this.doc_id}, {fields: {'user_id': 1, status: 1}}),
             delField = {};
 
-        if (docClient.user_id != undefined) {
+        if (docClient.user_id !== undefined) {
             del.user_id = docClient.user_id;
         }
 
@@ -333,7 +333,7 @@ Client.prototype.getDeviceByIndex = function (deviceIndex, includeDeleted = true
 
     const docDevice = Catenis.db.collection.Device.findOne(query);
 
-    if (docDevice == undefined) {
+    if (docDevice === undefined) {
         // No device available with the given index. Log error and throw exception
         Catenis.logger.ERROR(util.format('Could not find device with given index for this client (clientId: %s)', this.clientId), {deviceIndex: deviceIndex});
         throw new Meteor.Error('ctn_device_not_found', util.format('Could not find device with given index (%s) for this client (clientId: %s)', deviceIndex, this.clientId));
@@ -565,46 +565,48 @@ function addServiceCredit(srvCreditType, count) {
         throw new Meteor.Error('ctn_client_add_srv_credit_inv_args', util.format('Invalid %s argument%s', errArgs.join(', '), errArgs.length > 1 ? 's' : ''));
     }
 
-    let fundSrvCreditTxid = undefined;
+    let fundTransact;
 
     try {
         // Execute code in critical section to avoid UTXOs concurrency
         FundSource.utxoCS.execute(() => {
-            // Allocate service credit addresses...
+            // Prepare transaction to fund client service credits
+            fundTransact = new FundTransaction(FundTransaction.fundingEvent.provision_client_srv_credit, this.clientId);
+
+            // Allocate service credit addresses
             let distribFund = Service.distributeClientServiceCreditFund(count);
 
-            // ...and try to fund them
-            fundSrvCreditTxid = fundClientServiceCreditAddresses.call(this, srvCreditType, distribFund.amountPerAddress);
+            fundTransact.addPayees(srvCreditType === Client.serviceCreditType.message ? this.messageCreditAddr : this.assetCreditAddr, distribFund.amountPerAddress);
 
-            // Allocate system pay tx expense addresses...
-            distribFund = (srvCreditType == Client.serviceCreditType.message ? Service.distributePayMessageTxExpenseFund : Service.distributePayAssetTxExpenseFund)(count, cfgSettings.fundPayTxExpenseSafetyFactor);
+            // Allocate system pay tx expense addresses if required (that is, if system pay tx expense
+            //  balance is not enough to cover new service credits being added)
+            const fundAmount = (srvCreditType === Client.serviceCreditType.message ? Service.getPayMessageTxExpenseFundAmount() : Service.getPayAssetTxExpenseFundAmount())(count);
+            distribFund = this.ctnNode.checkPayTxExpenseFundingBalance(false, fundAmount);
 
-            // ...and try to fund them
-            this.ctnNode.fundPayTxExpenseAddresses(distribFund.amountPerAddress);
+            if (distribFund !== undefined) {
+                fundTransact.addPayees(this.ctnNode.payTxExpenseAddr, distribFund.amountPerAddress);
+            }
+
+            // Try to fund client service credits
+            fundClientServiceCredits(fundTransact);
 
             // Make sure that system is properly funded
             Catenis.ctnHubNode.checkFundingBalance();
         });
     }
     catch (err) {
-        if (fundSrvCreditTxid == undefined) {
-            Catenis.logger.ERROR('Error funding client service credit addresses.', err);
-            throw new Meteor.Error('ctn_client_srv_credit_fund_error', 'Error funding client service credit addresses', err.stack);
-        }
-        else {
-            Catenis.logger.ERROR('Error funding system pay tx expense addresses.', err);
-            throw new Meteor.Error('ctn_client_srv_credit_fund_error', 'Error funding system pay tx expense addresses', err.stack);
-        }
+        Catenis.logger.ERROR(util.format('Error funding client (Id: %d) service credits (type: %s, count: %d).', this.clientId, srvCreditType, count), err);
+        throw new Meteor.Error('ctn_client_srv_credit_fund_error', util.format('Error funding client (Id: %d) service credits (type: %s, count: %d).', this.clientId, srvCreditType, count), err.stack);
     }
     finally {
-        if (fundSrvCreditTxid != undefined) {
+        if (fundTransact.transact.txid !== undefined) {
             try {
                 // Record new service credit add transaction to database
                 Catenis.db.collection.ServiceCredit.insert({
                     client_id: this.doc_id,
                     srvCreditType: srvCreditType,
                     fundingTx: {
-                        txid: fundSrvCreditTxid,
+                        txid: fundTransact.transact.txid,
                         confirmed: false
                     },
                     initCredits: count,
@@ -672,7 +674,7 @@ function spendServiceCredit(srvCreditType, count) {
                 remainCount = 0;
             }
 
-            return remainCount == 0;
+            return remainCount === 0;
         });
 
         const updateDate = new Date(Date.now());
@@ -687,7 +689,7 @@ function spendServiceCredit(srvCreditType, count) {
             }
         }
 
-        if (docSrvCreditsToUpdate != undefined) {
+        if (docSrvCreditsToUpdate !== undefined) {
             try {
                 Catenis.db.collection.ServiceCredit.update({_id: docSrvCreditsToUpdate._id}, {$set: {remainCredits: docSrvCreditsToUpdate.remainCredits, latestCreditUpdatedDate: updateDate}})
             }
@@ -722,43 +724,6 @@ function availableServiceCredits(srvCreditType) {
     }, new ServiceCreditsCounter());
 }
 
-// NOTE: make sure that this method is called from code executed from the FundSource.utxoCS
-//  critical section object
-function fundClientServiceCreditAddresses(srvCreditType, amountPerAddress) {
-    let fundTransact = undefined;
-
-    try {
-        // Prepare transaction to fund client service credit addresses
-        fundTransact = new FundTransaction(FundTransaction.fundingEvent.provision_client_srv_credit, this.clientId);
-
-        fundTransact.addPayees(srvCreditType == Client.serviceCreditType.message ? this.messageCreditAddr : this.assetCreditAddr, amountPerAddress);
-
-        if (fundTransact.addPayingSource()) {
-            // Now, issue (create and send) the transaction
-            return fundTransact.sendTransaction();
-        }
-        else {
-            // Could not allocated UTXOs to pay for transaction fee.
-            //  Throw exception
-            //noinspection ExceptionCaughtLocallyJS
-            throw new Meteor.Error('ctn_sys_no_fund', 'Could not allocate UTXOs from system funding addresses to pay for tx expense');
-        }
-    }
-    catch (err) {
-        // Error funding client service credit addresses.
-        //  Log error condition
-        Catenis.logger.ERROR(util.format('Error funding client (Id: %s) service credit addresses.', this.clientId), err);
-
-        if (fundTransact != undefined) {
-            // Revert addresses of payees added to transaction
-            fundTransact.revertPayeeAddresses();
-        }
-
-        // Rethrows exception
-        throw err;
-    }
-}
-
 function confirmServiceCredits(txid) {
     // Execute code in critical section to avoid DB concurrency
     this.clnDbCS.execute(() => {
@@ -768,7 +733,7 @@ function confirmServiceCredits(txid) {
             'fundingTx.confirmed': false
         }, {fields: {_id: 1, srvCreditType: 1, remainCredits: 1}});
 
-        if (docSrvCredit != undefined) {
+        if (docSrvCredit !== undefined) {
             // Update service credit doc/rec indicating that it is already confirmed
             Catenis.db.collection.ServiceCredit.update({_id: docSrvCredit._id}, {$set: {'fundingTx.confirmed': true}});
         }
@@ -802,7 +767,7 @@ Client.getClientByClientId = function (clientId, includeDeleted = true) {
 
     const docClient = Catenis.db.collection.Client.findOne(query);
 
-    if (docClient == undefined) {
+    if (docClient === undefined) {
         // No client available with the given client ID. Log error and throw exception
         Catenis.logger.ERROR('Could not find client with given client ID', {clientId: clientId});
         throw new Meteor.Error('ctn_client_not_found', util.format('Could not find client with given client ID (%s)', clientId));
@@ -823,7 +788,7 @@ Client.getClientByUserId = function (user_id, includeDeleted = true) {
 
     const docClient = Catenis.db.collection.Client.findOne(query);
 
-    if (docClient == undefined) {
+    if (docClient === undefined) {
         // No client available associated with given user id. Log error and throw exception
         Catenis.logger.ERROR('Could not find client associated with given user id', {user_id: user_id});
         throw new Meteor.Error('ctn_client_not_found', util.format('Could not find client associated with given user id (%s)', user_id));
@@ -861,6 +826,35 @@ Client.status = Object.freeze({
 
 // Definition of module (private) functions
 //
+
+// NOTE: make sure that this method is called from code executed from the FundSource.utxoCS
+//  critical section object
+function fundClientServiceCredits(fundTransact) {
+    try {
+        // Try to allocate UTXOs to pay for transaction fee
+        if (fundTransact.addPayingSource()) {
+            // Now, issue (create and send) the transaction
+            return fundTransact.sendTransaction();
+        }
+        else {
+            // Could not allocated UTXOs to pay for transaction fee.
+            //  Throw exception
+            //noinspection ExceptionCaughtLocallyJS
+            throw new Meteor.Error('ctn_sys_no_fund', 'Could not allocate UTXOs from system funding addresses to pay for tx expense');
+        }
+    }
+    catch (err) {
+        // Error funding client service credits.
+        //  Log error condition
+        Catenis.logger.ERROR('Error processing transaction to fund client service credits.', err);
+
+        // Revert addresses of payees added to transaction
+        fundTransact.revertPayeeAddresses();
+
+        // Rethrows exception
+        throw err;
+    }
+}
 
 // Create new device ID dependent on Catenis node index, client index and device index
 function newDeviceId(ctnNodeIndex, clientIndex, deviceIndex) {

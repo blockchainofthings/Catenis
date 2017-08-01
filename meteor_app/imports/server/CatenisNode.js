@@ -25,14 +25,24 @@ import { Random } from 'meteor/random';
 import { Catenis } from './Catenis';
 import { CriticalSection } from './CriticalSection';
 import { ServiceCreditsCounter } from './ServiceCreditsCounter';
-import { SystemDeviceMainAddress, SystemFundingPaymentAddress, SystemFundingChangeAddress, SystemPayTxExpenseAddress } from './BlockchainAddress';
+import {
+    SystemDeviceMainAddress,
+    SystemFundingPaymentAddress,
+    SystemFundingChangeAddress,
+    SystemPayTxExpenseAddress,
+    SystemReadConfirmSpendNotifyAddress,
+    SystemReadConfirmSpendOnlyAddress,
+    SystemReadConfirmSpendNullAddress,
+    SystemReadConfirmPayTxExpenseAddress
+} from './BlockchainAddress';
 import { Client } from './Client';
 import { FundSource } from './FundSource';
 import { FundTransaction } from './FundTransaction';
 import { Service } from './Service';
 import { Transaction } from './Transaction';
 import { Util } from './Util';
-import { BitcoinFees } from './BitcoinFees';
+import { BitcoinFees } from './BitcoinFees'
+import { BalanceInfo } from './BalanceInfo';
 
 // Critical section object to avoid concurrent access to database at the
 //  module level (when creating new Catenis nodes basically)
@@ -59,6 +69,10 @@ export class CatenisNode extends events.EventEmitter {
         this.fundingPaymentAddr = SystemFundingPaymentAddress.getInstance(this.ctnNodeIndex);
         this.fundingChangeAddr = SystemFundingChangeAddress.getInstance(this.ctnNodeIndex);
         this.payTxExpenseAddr = SystemPayTxExpenseAddress.getInstance(this.ctnNodeIndex);
+        this.readConfirmSpendNotifyAddr = SystemReadConfirmSpendNotifyAddress.getInstance(this.ctnNodeIndex);
+        this.readConfirmSpendOnlyAddr = SystemReadConfirmSpendOnlyAddress.getInstance(this.ctnNodeIndex);
+        this.readConfirmSpendNullAddr = SystemReadConfirmSpendNullAddress.getInstance(this.ctnNodeIndex);
+        this.readConfirmPayTxExpenseAddr = SystemReadConfirmPayTxExpenseAddress.getInstance(this.ctnNodeIndex);
 
         // Retrieve (HD node) index of last Client doc/rec created for this Catenis node
         const docClient = Catenis.db.collection.Client.findOne({catenisNode_id: this.doc_id}, {
@@ -117,6 +131,9 @@ CatenisNode.prototype.startNode = function () {
             // System device main addresses not funded yet, so fund them now
             fundDeviceMainAddresses.call(this, distribFund.amountPerAddress);
         }
+
+        // Make sure that system read confirmation pay tx expense addresses are properly funded
+        this.checkReadConfirmPayTxExpenseFundingBalance();
     });
 
     // Prepare to receive notification that bitcoin fee rates changed
@@ -131,10 +148,10 @@ CatenisNode.prototype.listFundingAddressesInUse = function () {
 //  critical section object
 CatenisNode.prototype.checkFundingBalance = function () {
     if (updateFundingBalanceInfo.call(this)) {
-        if (!this.fundingBalanceInfo.balanceOK()) {
+        if (this.fundingBalanceInfo.hasLowBalance()) {
             // Funding balance too low. Send notification to refund the system
             Catenis.logger.ACTION('Catenis funding balance too low.', util.format('\nCurrent balance: %s, expected minimum balance: %s\n\nACTION REQUIRED: please refund Catenis immediately.',
-                Util.formatCoins(this.fundingBalanceInfo.currBalance), Util.formatCoins(this.fundingBalanceInfo.minBalance)));
+                Util.formatCoins(this.fundingBalanceInfo.currentBalance), Util.formatCoins(this.fundingBalanceInfo.minimumBalance)));
         }
 
         // Emit event notifying that funding balance info has changed
@@ -173,26 +190,53 @@ CatenisNode.prototype.currentUnreadMessagesCount = function () {
 
 // NOTE: make sure that this method is called from code executed from the FundSource.utxoCS
 //  critical section object
-CatenisNode.prototype.checkPayTxExpenseFundingBalance = function () {
+CatenisNode.prototype.checkPayTxExpenseFundingBalance = function (doFunding = true, extraBalanceAmount = 0) {
     const currServiceCreditsCount = this.currentServiceCreditsCount();
-    const checkResult = {
-        currBalance: (new FundSource(this.listFundingAddressesInUse(), {})).getBalance(),
-        expectedBalance: Service.getExpectedPayTxExpenseBalance(currServiceCreditsCount[Client.serviceCreditType.message].total, this.currentUnreadMessagesCount(), currServiceCreditsCount[Client.serviceCreditType.asset].total),
-        balanceOK: function () {
-            return this.currBalance >= this.expectedBalance;
-        }
-    };
+    const payTxBalanceInfo = new BalanceInfo(Service.getExpectedPayTxExpenseBalance(currServiceCreditsCount[Client.serviceCreditType.message].total, currServiceCreditsCount[Client.serviceCreditType.asset].total) + extraBalanceAmount,
+        this.payTxExpenseAddr.listAddressesInUse(), {
+            safetyFactor: Service.fundPayTxSafetyFactor
+    });
 
-    if (checkResult.currBalance < checkResult.expectedBalance) {
-        // Refund system pay tx expense addresses
+    if (payTxBalanceInfo.hasLowBalance()) {
+        // Prepare to refund system pay tx expense addresses
+
         // Allocate system pay tx expense addresses...
-        const distribFund = Service.distributePayTxExpenseFund(checkResult.expectedBalance - checkResult.currBalance);
+        const distribFund = Service.distributePayTxExpenseFund(payTxBalanceInfo.getBalanceDifference());
 
-        // ...and try to fund them
-        this.fundPayTxExpenseAddresses(distribFund.amountPerAddress);
+        if (doFunding) {
+            // ...and try to fund them
+            this.fundPayTxExpenseAddresses(distribFund.amountPerAddress);
+        }
+        else {
+            // No funding is actually done, but only return allocated addresses
+            return distribFund;
+        }
     }
 
-    return checkResult;
+    if (doFunding) {
+        return payTxBalanceInfo.hasLowBalance();
+    }
+};
+
+// NOTE: make sure that this method is called from code executed from the FundSource.utxoCS
+//  critical section object
+CatenisNode.prototype.checkReadConfirmPayTxExpenseFundingBalance = function () {
+    const readConfirmPayTxBalanceInfo = new BalanceInfo(Service.getExpectedReadConfirmPayTxExpenseBalance(this.currentUnreadMessagesCount()),
+        this.readConfirmPayTxExpenseAddr.listAddressesInUse(), {
+            safetyFactor: Service.fundReadConfirmPayTxSafetyFactor
+        });
+
+    if (readConfirmPayTxBalanceInfo.hasLowBalance()) {
+        // Prepare to refund system read confirmation pay tx expense addresses
+
+        // Allocate system read confirmation pay tx expense addresses...
+        const distribFund = Service.distributeReadConfirmPayTxExpenseFund(readConfirmPayTxBalanceInfo.getBalanceDifference());
+
+        // ...and try to fund them
+        this.fundReadConfirmPayTxExpenseAddresses(distribFund.amountPerAddress);
+    }
+
+    return readConfirmPayTxBalanceInfo.hasLowBalance();
 };
 
 CatenisNode.prototype.getClientByIndex = function (clientIndex, includeDeleted = true) {
@@ -480,9 +524,46 @@ CatenisNode.prototype.fundPayTxExpenseAddresses = function (amountPerAddress) {
         }
     }
     catch (err) {
-        // Error funding client service credit addresses.
+        // Error funding system pay tx expense addresses.
         //  Log error condition
         Catenis.logger.ERROR('Error funding system pay tx expense addresses.', err);
+
+        if (fundTransact !== undefined) {
+            // Revert addresses of payees added to transaction
+            fundTransact.revertPayeeAddresses();
+        }
+
+        // Rethrows exception
+        throw err;
+    }
+};
+
+// NOTE: make sure that this method is called from code executed from the FundSource.utxoCS
+//  critical section object
+CatenisNode.prototype.fundReadConfirmPayTxExpenseAddresses = function (amountPerAddress) {
+    let fundTransact = undefined;
+
+    try {
+        // Prepare transaction to fund system read confirmation pay tx expense addresses
+        fundTransact = new FundTransaction(FundTransaction.fundingEvent.add_extra_read_confirm_tx_pay_funds);
+
+        fundTransact.addPayees(this.readConfirmPayTxExpenseAddr, amountPerAddress);
+
+        if (fundTransact.addPayingSource()) {
+            // Now, issue (create and send) the transaction
+            fundTransact.sendTransaction();
+        }
+        else {
+            // Could not allocated UTXOs to pay for transaction fee.
+            //  Throw exception
+            //noinspection ExceptionCaughtLocallyJS
+            throw new Meteor.Error('ctn_sys_no_fund', 'Could not allocate UTXOs from system funding addresses to pay for tx expense');
+        }
+    }
+    catch (err) {
+        // Error funding system read confirmation pay tx expense addresses.
+        //  Log error condition
+        Catenis.logger.ERROR('Error funding system read confirmation pay tx expense addresses.', err);
 
         if (fundTransact !== undefined) {
             // Revert addresses of payees added to transaction
@@ -514,15 +595,11 @@ function processBitcoinFeesChange() {
 function updateFundingBalanceInfo() {
     let hasChanged = false;
 
-    const currFundingBalanceInfo = {
-        currBalance: (new FundSource(this.listFundingAddressesInUse(), {})).getBalance(),
-        minBalance: Service.minimumFundingBalance,
-        balanceOK: function () {
-            return this.currBalance >= this.minBalance;
-        }
-    };
+    const currFundingBalanceInfo = new BalanceInfo(Service.minimumFundingBalance, this.listFundingAddressesInUse(), {
+        useSafetyFactor: false
+    });
 
-    if (this.fundingBalanceInfo === undefined || this.fundingBalanceInfo.currBalance !== currFundingBalanceInfo.currBalance || this.fundingBalanceInfo.minBalance !== currFundingBalanceInfo.minBalance) {
+    if (this.fundingBalanceInfo === undefined || this.fundingBalanceInfo.currentBalance !== currFundingBalanceInfo.currentBalance || this.fundingBalanceInfo.minimumBalance !== currFundingBalanceInfo.minimumBalance) {
         this.fundingBalanceInfo = currFundingBalanceInfo;
         hasChanged = true;
     }

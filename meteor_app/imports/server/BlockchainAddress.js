@@ -36,6 +36,10 @@ const cfgSettings = {
         systemFundingPayment: configBcAddrValidity.get('systemFundingPayment'),
         systemFundingChange: configBcAddrValidity.get('systemFundingChange'),
         systemPayTxExpense: configBcAddrValidity.get('systemPayTxExpense'),
+        systemReadConfSpendNotify: configBcAddrValidity.get('systemReadConfSpendNotify'),
+        systemReadConfSpendOnly: configBcAddrValidity.get('systemReadConfSpendOnly'),
+        systemReadConfSpendNull: configBcAddrValidity.get('systemReadConfSpendNull'),
+        systemReadConfPayTxExpense: configBcAddrValidity.get('systemReadConfPayTxExpense'),
         clientMessageCredit: configBcAddrValidity.get('clientMessageCredit'),
         clientAssetCredit: configBcAddrValidity.get('clientAssetCredit'),
         deviceReadConfirm: configBcAddrValidity.get('deviceReadConfirm'),
@@ -249,6 +253,200 @@ export class SystemPayTxExpenseAddress extends BlockchainAddress {
             : new SystemPayTxExpenseAddress(ctnNodeIndex);
     }
 }
+
+// SystemReadConfirmSpendNotifyAddress derived class
+export class SystemReadConfirmSpendNotifyAddress extends BlockchainAddress {
+    constructor (ctnNodeIndex) {
+        super();
+        this.type = KeyStore.extKeyType.sys_read_conf_spnd_ntfy_addr.name;
+        this.parentPath = KeyStore.systemReadConfirmSpendNotifyRootPath(ctnNodeIndex);
+
+        // Make sure that an object of this class has not been instantiated yet
+        if (hasInstantiatedObject(this.parentPath)) {
+            Catenis.logger.ERROR(util.format('SystemReadConfirmSpendNotifyAddress object for the given Catenis node index (%d) has already been instantiated', ctnNodeIndex));
+            throw new Error(util.format('SystemReadConfirmSpendNotifyAddress object for the given Catenis node index (%d) has already been instantiated', ctnNodeIndex));
+        }
+
+        this.addressValidity = cfgSettings.addressValidity.systemReadConfSpendNotify;
+
+        // Assign address manipulation functions
+        this._getAddressKeys = Catenis.keyStore.getSystemReadConfirmSpendNotifyAddressKeys.bind(Catenis.keyStore, ctnNodeIndex);
+        this._listAddressesInUse = Catenis.keyStore.listSystemReadConfirmSpendNotifyAddressesInUse.bind(Catenis.keyStore, ctnNodeIndex);
+
+        // Initialize bounding indices
+        setBoundingIndices.call(this);
+
+        // Save this instance
+        setInstantiatedObject(this.parentPath, this);
+    }
+
+    // Get instance of this class
+    //
+    //  ctnNodeIndex: [integer]
+    //                or
+    //                {  // Options object
+    //      ctnNodeIndex: [integer]
+    //  }
+    //
+    static getInstance(ctnNodeIndex) {
+        if (typeof ctnNodeIndex === 'object') {
+            // Options object passed instead of plain arguments
+            ctnNodeIndex = ctnNodeIndex.ctnNodeIndex;
+        }
+
+        // Check if an instance of this class has already been instantiated
+        const parentPath = KeyStore.systemReadConfirmSpendNotifyRootPath(ctnNodeIndex);
+
+        return hasInstantiatedObject(parentPath) ? getInstantiatedObject(parentPath)
+            : new SystemReadConfirmSpendNotifyAddress(ctnNodeIndex);
+    }
+}
+
+// SystemReadConfirmSpendOnlyAddress derived class
+export class SystemReadConfirmSpendOnlyAddress extends BlockchainAddress {
+    constructor (ctnNodeIndex) {
+        super();
+        this.type = KeyStore.extKeyType.sys_read_conf_spnd_only_addr.name;
+        this.parentPath = KeyStore.systemReadConfirmSpendOnlyRootPath(ctnNodeIndex);
+
+        // Make sure that an object of this class has not been instantiated yet
+        if (hasInstantiatedObject(this.parentPath)) {
+            Catenis.logger.ERROR(util.format('SystemReadConfirmSpendOnlyAddress object for the given Catenis node index (%d) has already been instantiated', ctnNodeIndex));
+            throw new Error(util.format('SystemReadConfirmSpendOnlyAddress object for the given Catenis node index (%d) has already been instantiated', ctnNodeIndex));
+        }
+
+        this.addressValidity = cfgSettings.addressValidity.systemReadConfSpendOnly;
+
+        // Assign address manipulation functions
+        this._getAddressKeys = Catenis.keyStore.getSystemReadConfirmSpendOnlyAddressKeys.bind(Catenis.keyStore, ctnNodeIndex);
+        this._listAddressesInUse = Catenis.keyStore.listSystemReadConfirmSpendOnlyAddressesInUse.bind(Catenis.keyStore, ctnNodeIndex);
+
+        // Initialize bounding indices
+        setBoundingIndices.call(this);
+
+        // Save this instance
+        setInstantiatedObject(this.parentPath, this);
+    }
+
+    // Get instance of this class
+    //
+    //  ctnNodeIndex: [integer]
+    //                or
+    //                {  // Options object
+    //      ctnNodeIndex: [integer]
+    //  }
+    //
+    static getInstance(ctnNodeIndex) {
+        if (typeof ctnNodeIndex === 'object') {
+            // Options object passed instead of plain arguments
+            ctnNodeIndex = ctnNodeIndex.ctnNodeIndex;
+        }
+
+        // Check if an instance of this class has already been instantiated
+        const parentPath = KeyStore.systemReadConfirmSpendOnlyRootPath(ctnNodeIndex);
+
+        return hasInstantiatedObject(parentPath) ? getInstantiatedObject(parentPath)
+            : new SystemReadConfirmSpendOnlyAddress(ctnNodeIndex);
+    }
+}
+
+// SystemReadConfirmSpendNullAddress derived class
+export class SystemReadConfirmSpendNullAddress extends BlockchainAddress {
+    constructor (ctnNodeIndex) {
+        super();
+        this.type = KeyStore.extKeyType.sys_read_conf_spnd_null_addr.name;
+        this.parentPath = KeyStore.systemReadConfirmSpendNullRootPath(ctnNodeIndex);
+
+        // Make sure that an object of this class has not been instantiated yet
+        if (hasInstantiatedObject(this.parentPath)) {
+            Catenis.logger.ERROR(util.format('SystemReadConfirmSpendNullAddress object for the given Catenis node index (%d) has already been instantiated', ctnNodeIndex));
+            throw new Error(util.format('SystemReadConfirmSpendNullAddress object for the given Catenis node index (%d) has already been instantiated', ctnNodeIndex));
+        }
+
+        this.addressValidity = cfgSettings.addressValidity.systemReadConfSpendNull;
+
+        // Assign address manipulation functions
+        this._getAddressKeys = Catenis.keyStore.getSystemReadConfirmSpendNullAddressKeys.bind(Catenis.keyStore, ctnNodeIndex);
+        this._listAddressesInUse = Catenis.keyStore.listSystemReadConfirmSpendNullAddressesInUse.bind(Catenis.keyStore, ctnNodeIndex);
+
+        // Initialize bounding indices
+        setBoundingIndices.call(this);
+
+        // Save this instance
+        setInstantiatedObject(this.parentPath, this);
+    }
+
+    // Get instance of this class
+    //
+    //  ctnNodeIndex: [integer]
+    //                or
+    //                {  // Options object
+    //      ctnNodeIndex: [integer]
+    //  }
+    //
+    static getInstance(ctnNodeIndex) {
+        if (typeof ctnNodeIndex === 'object') {
+            // Options object passed instead of plain arguments
+            ctnNodeIndex = ctnNodeIndex.ctnNodeIndex;
+        }
+
+        // Check if an instance of this class has already been instantiated
+        const parentPath = KeyStore.systemReadConfirmSpendNullRootPath(ctnNodeIndex);
+
+        return hasInstantiatedObject(parentPath) ? getInstantiatedObject(parentPath)
+            : new SystemReadConfirmSpendNullAddress(ctnNodeIndex);
+    }
+}
+
+/**Begin**/
+// SystemReadConfirmPayTxExpenseAddress derived class
+export class SystemReadConfirmPayTxExpenseAddress extends BlockchainAddress {
+    constructor (ctnNodeIndex) {
+        super();
+        this.type = KeyStore.extKeyType.sys_read_conf_pay_tx_exp_addr.name;
+        this.parentPath = KeyStore.systemReadConfirmPayTxExpenseRootPath(ctnNodeIndex);
+
+        // Make sure that an object of this class has not been instantiated yet
+        if (hasInstantiatedObject(this.parentPath)) {
+            Catenis.logger.ERROR(util.format('SystemReadConfirmPayTxExpenseAddress object for the given Catenis node index (%d) has already been instantiated', ctnNodeIndex));
+            throw new Error(util.format('SystemReadConfirmPayTxExpenseAddress object for the given Catenis node index (%d) has already been instantiated', ctnNodeIndex));
+        }
+
+        this.addressValidity = cfgSettings.addressValidity.systemReadConfPayTxExpense;
+
+        // Assign address manipulation functions
+        this._getAddressKeys = Catenis.keyStore.getSystemReadConfirmPayTxExpenseAddressKeys.bind(Catenis.keyStore, ctnNodeIndex);
+        this._listAddressesInUse = Catenis.keyStore.listSystemReadConfirmPayTxExpenseAddressesInUse.bind(Catenis.keyStore, ctnNodeIndex);
+
+        // Initialize bounding indices
+        setBoundingIndices.call(this);
+
+        // Save this instance
+        setInstantiatedObject(this.parentPath, this);
+    }
+
+    // Get instance of this class
+    //
+    //  ctnNodeIndex: [integer]
+    //                or
+    //                {  // Options object
+    //      ctnNodeIndex: [integer]
+    //  }
+    //
+    static getInstance(ctnNodeIndex) {
+        if (typeof ctnNodeIndex === 'object') {
+            // Options object passed instead of plain arguments
+            ctnNodeIndex = ctnNodeIndex.ctnNodeIndex;
+        }
+
+        // Check if an instance of this class has already been instantiated
+        const parentPath = KeyStore.systemReadConfirmPayTxExpenseRootPath(ctnNodeIndex);
+
+        return hasInstantiatedObject(parentPath) ? getInstantiatedObject(parentPath)
+            : new SystemReadConfirmPayTxExpenseAddress(ctnNodeIndex);
+    }
+}
+/**End**/
 
 // ClientMessageCreditAddress derived class
 export class ClientMessageCreditAddress extends BlockchainAddress {
@@ -610,11 +808,11 @@ BlockchainAddress.prototype.newAddressKeys = function () {
         const nonexistIndices = [];
 
         do {
-            if ((addrKeys = this._getAddressKeys(++this.lastIssuedAddrIndex)) == null) {
+            if ((addrKeys = this._getAddressKeys(++this.lastIssuedAddrIndex)) === null) {
                 nonexistIndices.push(this.lastIssuedAddrIndex);
             }
         }
-        while (addrKeys == null);
+        while (addrKeys === null);
 
         // Import address public key onto Bitcoin Core
         Catenis.bitcoinCore.importPublicKey(addrKeys.exportPublicKey());
@@ -674,12 +872,12 @@ BlockchainAddress.prototype.listAddressesInUse = function () {
 function setBoundingIndices() {
     let docIssuedAddr = Catenis.db.collection.IssuedBlockchainAddress.findOne({parentPath: this.parentPath}, {fields: {addrIndex: 1}, sort: {addrIndex: -1}});
 
-    if (docIssuedAddr != undefined) {
+    if (docIssuedAddr !== undefined) {
         this.lastIssuedAddrIndex = docIssuedAddr.addrIndex;
 
         docIssuedAddr = Catenis.db.collection.IssuedBlockchainAddress.findOne({parentPath: this.parentPath, status: {$in: ['new', 'expired']}}, {fields: {addrIndex: 1}, sort: {addrIndex: -1}});
 
-        if (docIssuedAddr != undefined) {
+        if (docIssuedAddr !== undefined) {
             this.lastInUseAddrIndex = docIssuedAddr.addrIndex;
 
             this.firstInUseAddrIndex = Catenis.db.collection.IssuedBlockchainAddress.findOne({parentPath: this.parentPath, status: {$in: ['new', 'expired']}}, {fields: {addrIndex: 1}, sort: {addrIndex: 1}}).addrIndex;
@@ -704,7 +902,7 @@ function setBoundingIndices() {
 function updateInUseAddressIndices() {
     const docIssuedAddr = Catenis.db.collection.IssuedBlockchainAddress.findOne({parentPath: this.parentPath, status: {$in: ['new', 'expired']}}, {fields: {addrIndex: 1}, sort: {addrIndex: -1}});
 
-    if (docIssuedAddr != undefined) {
+    if (docIssuedAddr !== undefined) {
         this.lastInUseAddrIndex = docIssuedAddr.addrIndex;
 
         this.firstInUseAddrIndex = Catenis.db.collection.IssuedBlockchainAddress.findOne({parentPath: this.parentPath, status: {$in: ['new', 'expired']}}, {fields: {addrIndex: 1}, sort: {addrIndex: 1}}).addrIndex;
@@ -726,7 +924,7 @@ function revertAddress(address, addrIndex, balanceChecked = false) {
 
     // Make sure that this is the last issued address, it
     //  is not obsolete and not currently in use
-    if (addrIndex >= 0 && addrIndex == this.lastIssuedAddrIndex && addrIndex == this.lastInUseAddrIndex && (balanceChecked || !BlockchainAddress.isAddressWithBalance(address))) {
+    if (addrIndex >= 0 && addrIndex === this.lastIssuedAddrIndex && addrIndex === this.lastInUseAddrIndex && (balanceChecked || !BlockchainAddress.isAddressWithBalance(address))) {
         // Execute code in critical section to avoid DB concurrency
         dbCS.execute(() => {
             // Exclude address from database
@@ -750,7 +948,7 @@ function revertAddress(address, addrIndex, balanceChecked = false) {
                     if (docNonExistAddrs.length > 0) {
                         // Make sure that adjusted index is not nonexistent
                         docNonExistAddrs.some((docNonExistAddr) => {
-                            if (docNonExistAddr.addrIndex == adjustIndex) {
+                            if (docNonExistAddr.addrIndex === adjustIndex) {
                                 adjustIndex--;
 
                                 return adjustIndex < 0;
@@ -806,7 +1004,7 @@ function resetObsoleteAddress(addr, docIssuedAddr) {
         Catenis.keyStore.resetObsoleteAddress(addr);
 
         // Adjust address indices
-        if (this.firstInUseAddrIndex == -1) {
+        if (this.firstInUseAddrIndex === -1) {
             this.firstInUseAddrIndex = this.lastInUseAddrIndex = docIssuedAddr.addrIndex;
         }
         else if (docIssuedAddr.addrIndex < this.firstInUseAddrIndex) {
@@ -816,7 +1014,7 @@ function resetObsoleteAddress(addr, docIssuedAddr) {
             this.lastInUseAddrIndex = docIssuedAddr.addrIndex;
         }
 
-        if (this.lastIssuedAddrIndex == -1 || docIssuedAddr.addrIndex > this.lastIssuedAddrIndex) {
+        if (this.lastIssuedAddrIndex === -1 || docIssuedAddr.addrIndex > this.lastIssuedAddrIndex) {
             // This should never happen; just do it for consistency
             this.lastIssuedAddrIndex = docIssuedAddr.addrIndex;
         }
@@ -850,7 +1048,7 @@ BlockchainAddress.getInstance = function (opts) {
     let drvClass,
         classInstance = null;
 
-    if ((drvClass = classByType[opts.type]) != null) {
+    if ((drvClass = classByType[opts.type]) !== undefined) {
         classInstance = drvClass.getInstance(opts.pathParts);
     }
 
@@ -863,7 +1061,7 @@ BlockchainAddress.isAddressWithBalance = function (addr) {
     const hasLockedTxOuts = Catenis.bitcoinCore.listLockUnspent().some((lockTxOut) => {
         const txOutInfo = Catenis.bitcoinCore.getTxOut(lockTxOut.txid, lockTxOut.vout);
 
-        return txOutInfo != null && 'scriptPubKey' in txOutInfo && 'addresses' in txOutInfo.scriptPubKey
+        return txOutInfo !== null && 'scriptPubKey' in txOutInfo && 'addresses' in txOutInfo.scriptPubKey
             && txOutInfo.scriptPubKey.addresses.some((txOutAddr) => {
                 return txOutAddr === addr;
             });
@@ -893,7 +1091,7 @@ BlockchainAddress.checkAddressesWithBalance = function (addrList) {
     Catenis.bitcoinCore.listLockUnspent().forEach((lockTxOut) => {
         let txOutInfo = Catenis.bitcoinCore.getTxOut(lockTxOut.txid, lockTxOut.vout);
 
-        if (txOutInfo != null && 'scriptPubKey' in txOutInfo && 'addresses' in txOutInfo.scriptPubKey) {
+        if (txOutInfo !== null && 'scriptPubKey' in txOutInfo && 'addresses' in txOutInfo.scriptPubKey) {
             txOutInfo.scriptPubKey.addresses.forEach((txOutAddr) => {
                 lockedAddresses.add(txOutAddr);
             });
@@ -944,19 +1142,19 @@ BlockchainAddress.getAddressOfIssuedBlockchainAddress = function (docIssuedAddr)
     // Try to retrieve address crypto keys from local key storage
     let addrKeys = Catenis.keyStore.getCryptoKeysByPath(docIssuedAddr.path);
 
-    if (addrKeys == null) {
+    if (addrKeys === null) {
         // Crypto keys of issued address is not yet in local storage.
         //  Bring it up
         const classInstance = BlockchainAddress.getInstance({type: docIssuedAddr.type, pathParts: KeyStore.getPathParts(docIssuedAddr)});
 
-        if (classInstance != null) {
+        if (classInstance !== null) {
             // Store address in local key storage setting it as obsolete accordingly,
             //  and get its corresponding crypto keys
-            addrKeys = classInstance._getAddressKeys(docIssuedAddr.addrIndex, docIssuedAddr.status == 'obsolete');
+            addrKeys = classInstance._getAddressKeys(docIssuedAddr.addrIndex, docIssuedAddr.status === 'obsolete');
         }
     }
 
-    return addrKeys != null ? addrKeys.getAddress() : null;
+    return addrKeys !== null ? addrKeys.getAddress() : null;
 };
 
 // Place obsolete address back onto local key storage
@@ -966,21 +1164,21 @@ BlockchainAddress.retrieveObsoleteAddress = function (addr) {
     let result = false;
 
     if (docIssuedAddrs.length > 0) {
-        if (docIssuedAddrs.length == 1) {
+        if (docIssuedAddrs.length === 1) {
             // Only one doc/rec returned
             let docIssuedAddr = docIssuedAddrs[0],
                 addrKeys = Catenis.keyStore.getCryptoKeysByPath(docIssuedAddr.path);
 
             // Make sure that address is not yet in local key storage
-            if (addrKeys == null) {
+            if (addrKeys === null) {
                 let classInstance = BlockchainAddress.getInstance({type: docIssuedAddr.type, pathParts: KeyStore.getPathParts(docIssuedAddr)});
 
-                if (classInstance != null) {
+                if (classInstance !== null) {
                     // Store address in local key storage making sure that it is set as obsolete,
                     //  and get its corresponding crypto keys
                     let addrKeys = classInstance._getAddressKeys(docIssuedAddr.addrIndex, true);
 
-                    if (addrKeys != null) {
+                    if (addrKeys !== null) {
                         // Make sure that this is the correct address (though unlikely, not impossible
                         //  since there could be one or more addresses with the same hash)
                         if (addrKeys.getAddress() === addr) {
@@ -1008,16 +1206,16 @@ BlockchainAddress.retrieveObsoleteAddress = function (addr) {
                     let addrKeys = Catenis.keyStore.getCryptoKeysByPath(docIssuedAddr.path);
 
                     // Make sure that address is not yet in local key storage
-                    if (addrKeys == null) {
+                    if (addrKeys === null) {
                         let classInstance = BlockchainAddress.getInstance({type: docIssuedAddr.type, pathParts: KeyStore.getPathParts(docIssuedAddr)}),
                             found = false;
 
-                        if (classInstance != null) {
+                        if (classInstance !== null) {
                             // Store address in local key storage making sure that it is set as obsolete,
                             //  and get its corresponding crypto keys
                             let addrKeys = classInstance._getAddressKeys(docIssuedAddr.addrIndex, true);
 
-                            if (addrKeys != null) {
+                            if (addrKeys !== null) {
                                 // Make sure that this is the correct address (though unlikely, not impossible
                                 //  since there could be one or more addresses with the same hash)
                                 if (addrKeys.getAddress() === addr) {
@@ -1038,7 +1236,7 @@ BlockchainAddress.retrieveObsoleteAddress = function (addr) {
 
                         return found;
                     }
-                }) != undefined) {
+                }) !== undefined) {
                 result = true;
             }
         }
@@ -1051,11 +1249,11 @@ BlockchainAddress.revertAddress = function (addr) {
     const addrTypeAndPath = Catenis.keyStore.getTypeAndPathByAddress(addr);
     let result = false;
 
-    if (addrTypeAndPath != null) {
+    if (addrTypeAndPath !== null) {
         let addrPathParts = KeyStore.getPathParts(addrTypeAndPath),
             classInstance = BlockchainAddress.getInstance({type: addrTypeAndPath.type, pathParts: addrPathParts});
 
-        if (classInstance != null) {
+        if (classInstance !== null) {
             // Revert address
             result = revertAddress.call(classInstance, addr, addrPathParts.addrIndex);
         }
@@ -1069,10 +1267,10 @@ BlockchainAddress.checkObsoleteAddress = function (addr) {
     let addrTypeAndPath = Catenis.keyStore.getTypeAndPathByAddress(addr),
         result = false;
 
-    if (addrTypeAndPath != null) {
+    if (addrTypeAndPath !== null) {
         let docIssuedAddr = Catenis.db.collection.IssuedBlockchainAddress.findOne({path: addrTypeAndPath.path});
 
-        if (docIssuedAddr != undefined && docIssuedAddr.status === 'obsolete' && BlockchainAddress.isAddressWithBalance(addr)) {
+        if (docIssuedAddr !== undefined && docIssuedAddr.status === 'obsolete' && BlockchainAddress.isAddressWithBalance(addr)) {
             let addrPathParts = KeyStore.getPathParts(addrTypeAndPath),
                 classInstance = BlockchainAddress.getInstance({type: addrTypeAndPath.type, pathParts: addrPathParts});
 
@@ -1094,11 +1292,11 @@ BlockchainAddress.revertAddressList = function (addrList) {
             // Only consider addresses that do not have balance
             let addrTypeAndPath = Catenis.keyStore.getTypeAndPathByAddress(addr);
 
-            if (addrTypeAndPath != null) {
+            if (addrTypeAndPath !== null) {
                 let addrPathParts = KeyStore.getPathParts(addrTypeAndPath),
                     classInstance = BlockchainAddress.getInstance({type: addrTypeAndPath.type, pathParts: addrPathParts});
 
-                if (classInstance != null) {
+                if (classInstance !== null) {
                     // Save address to revert
                     if (addrsToRevertByClassInstance.has(classInstance)) {
                         addrsToRevertByClassInstance.get(classInstance).push({address: addr, addrIndex: addrPathParts.addrIndex});
@@ -1129,7 +1327,7 @@ BlockchainAddress.revertAddressList = function (addrList) {
         }
     }
 
-    return countRevertedAddr == addrList.length ? true : (countRevertedAddr == 0 ? false : undefined);
+    return countRevertedAddr === addrList.length ? true : (countRevertedAddr === 0 ? false : undefined);
 };
 
 
@@ -1174,7 +1372,7 @@ function updateIssuedAddresses() {
             {fields: {_id: 1, type: 1, parentPath: 1, path: 1, addrIndex: 1, status: 1}}).forEach((doc) => {
             let addr = BlockchainAddress.getAddressOfIssuedBlockchainAddress(doc);
 
-            if (addr != null) {
+            if (addr !== null) {
                 docIssuedAddrByExpiredAddr.set(addr, doc);
             }
         });
@@ -1205,7 +1403,7 @@ function updateIssuedAddresses() {
             {fields: {_id: 1, type: 1, path: 1, addrIndex: 1, status: 1}}).forEach((doc) => {
             let addr = BlockchainAddress.getAddressOfIssuedBlockchainAddress(doc);
 
-            if (addr != null) {
+            if (addr !== null) {
                 docIssuedAddrByNewAddrToExpire.set(addr, doc);
             }
         });
@@ -1276,7 +1474,7 @@ function getInstantiatedObject(parentPath) {
     const objEntry = BlockchainAddress.instantiatedObjects.get(parentPath);
     let obj = null;
 
-    if (objEntry != null) {
+    if (objEntry !== undefined) {
         obj = objEntry.obj;
         objEntry.lastAccessTimestamp = Date.now();
     }
@@ -1304,6 +1502,10 @@ const classByType = {
     sys_fund_pay_addr: SystemFundingPaymentAddress,
     sys_fund_chg_addr: SystemFundingChangeAddress,
     sys_pay_tx_exp_addr: SystemPayTxExpenseAddress,
+    sys_read_conf_spnd_ntfy_addr: SystemReadConfirmSpendNotifyAddress,
+    sys_read_conf_spnd_only_addr: SystemReadConfirmSpendOnlyAddress,
+    sys_read_conf_spnd_null_addr: SystemReadConfirmSpendNullAddress,
+    sys_read_conf_pay_tx_exp_addr: SystemReadConfirmPayTxExpenseAddress,
     cln_msg_crd_addr: ClientMessageCreditAddress,
     cln_asst_crd_addr: ClientAssetCreditAddress,
     dev_read_conf_addr: DeviceReadConfirmAddress,
@@ -1334,6 +1536,9 @@ Object.freeze(SystemDeviceMainAddress);
 Object.freeze(SystemFundingPaymentAddress);
 Object.freeze(SystemFundingChangeAddress);
 Object.freeze(SystemPayTxExpenseAddress);
+Object.freeze(SystemReadConfirmSpendNotifyAddress);
+Object.freeze(SystemReadConfirmSpendOnlyAddress);
+Object.freeze(SystemReadConfirmSpendNullAddress);
 Object.freeze(ClientMessageCreditAddress);
 Object.freeze(ClientAssetCreditAddress);
 Object.freeze(DeviceReadConfirmAddress);

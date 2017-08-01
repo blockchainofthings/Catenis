@@ -67,6 +67,7 @@ export function Application() {
     const appSeedPath = path.join(process.env.PWD, cfgSettings.seedFilename),
         encData = fs.readFileSync(appSeedPath, {encoding: 'utf8'});
 
+    // TODO: IMPORTANT: avoid using this seed directly as the base for creating other cryptographically generated data, especially the one that shall be shared with other Catenis nodes. Instead, this seed should be used to generated other specific seeds by hashing it. Then only the specific seed shall be shared and not the base Catenis application see
     Object.defineProperty(this, 'seed', {
         get: function () {
             return decryptSeed(new Buffer(encData, 'base64'));
@@ -82,7 +83,7 @@ export function Application() {
                 psw = new Buffer(pswLength);
 
             for (let idx = 0; idx < pswLength; idx++) {
-                psw[idx] = seed[idx % 2 == 0 ? idx / 2 : seedLength - Math.floor(idx / 2) - 1]
+                psw[idx] = seed[idx % 2 === 0 ? idx / 2 : seedLength - Math.floor(idx / 2) - 1]
             }
 
             return psw;
@@ -97,7 +98,7 @@ export function Application() {
     this.cryptoNetworkName = cfgSettings.cryptoNetwork;
     this.cryptoNetwork = bitcoinLib.networks[this.cryptoNetworkName];
 
-    if (this.cryptoNetwork == undefined) {
+    if (this.cryptoNetwork === undefined) {
         throw new Error('Invalid/unknown crypto network: ' + this.cryptoNetworkName);
     }
 
@@ -120,11 +121,11 @@ Application.prototype.startProcessing = function () {
         // Start Catenis Hub node
         Catenis.ctnHubNode.startNode();
 
-        // Change status to indicate that application has started
-        this.status = Catenis.txMonitor.syncingBlocks ? Application.processingStatus.started_syncing_blocks : Application.processingStatus.started;
-
         // Start monitoring of blockchain transactions
         Catenis.txMonitor.startMonitoring();
+
+        // Change status to indicate that application has started
+        this.status = Catenis.txMonitor.syncingBlocks ? Application.processingStatus.started_syncing_blocks : Application.processingStatus.started;
 
         // Check if any devices still need to have their addresses funded
         Device.checkDevicesToFund();
@@ -144,7 +145,7 @@ Application.prototype.startProcessing = function () {
 };
 
 Application.prototype.setWaitingBitcoinCoreRescan = function (waiting) {
-    if (waiting == undefined) {
+    if (waiting === undefined) {
         waiting = true;
     }
     
@@ -152,17 +153,17 @@ Application.prototype.setWaitingBitcoinCoreRescan = function (waiting) {
 };
 
 Application.prototype.setSyncingBlocks = function (syncing) {
-    if (syncing == undefined) {
+    if (syncing === undefined) {
         syncing = true;
     }
 
     if (syncing) {
-        if (this.status == Application.processingStatus.started) {
+        if (this.status === Application.processingStatus.started) {
             this.status = Application.processingStatus.started_syncing_blocks;
         }
     }
     else {
-        if (this.status == Application.processingStatus.stopped_blockchain_rescan) {
+        if (this.status === Application.processingStatus.stopped_blockchain_rescan) {
             this.status = Application.processingStatus.started;
         }
     }

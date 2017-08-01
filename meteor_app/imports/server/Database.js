@@ -494,6 +494,15 @@ Database.initialize = function() {
             },
             {
                 fields: {
+                    source: 1
+                },
+                opts: {
+                    background: true,
+                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                }
+            },
+            {
+                fields: {
                     originDeviceId: 1
                 },
                 opts: {
@@ -573,6 +582,16 @@ Database.initialize = function() {
             {
                 fields: {
                     lastReadDate: 1
+                },
+                opts: {
+                    sparse: true,
+                    background: true,
+                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                }
+            },
+            {
+                fields: {
+                    readConfirmed: 1
                 },
                 opts: {
                     sparse: true,
@@ -826,53 +845,20 @@ Database.initialize = function() {
     Catenis.db = new Database(collections);
 };
 
-// Temporary method used to adjust the Message collection
-Database.fixMessageCollection = function () {
-    // Update sentDate field on Message documents as necessary
-    let docsUpdated = 0;
-
-    Catenis.db.collection.SentTransaction.find({
-        type: {$in: ['send_message', 'log_message']}
+// Temporary method used to replace Message source field
+Database.replaceMessageSource = function () {
+    // Update source field on Message documents as necessary
+    const docsUpdated = Catenis.db.collection.Message.update({
+        source: 'sent_msg'
     }, {
-        fields: {
-            txid: 1,
-            sentDate: 1
+        $set: {
+            source: 'local'
         }
-    }).forEach((doc) => {
-        docsUpdated += Catenis.db.collection.Message.update({
-            'blockchain.txid': doc.txid,
-            sentDate: {$ne: doc.sentDate}
-        }, {
-            $set: {
-                sentDate: doc.sentDate
-            }
-        })
+    }, {
+        multi: true
     });
 
-    console.log('Message docs that had their sentDate field update: ' + docsUpdated);
-
-    // Update receivedDate field on Message documents as necessary
-    docsUpdated = 0;
-
-    Catenis.db.collection.ReceivedTransaction.find({
-        type: 'send_message'
-    }, {
-        fields: {
-            txid: 1,
-            receivedDate: 1
-        }
-    }).forEach((doc) => {
-        docsUpdated += Catenis.db.collection.Message.update({
-            'blockchain.txid': doc.txid,
-            receivedDate: {$ne: doc.receivedDate}
-        }, {
-            $set: {
-                receivedDate: doc.receivedDate
-            }
-        })
-    });
-
-    console.log('Message docs that had their receivedDate field update: ' + docsUpdated);
+    console.log('Message docs that had their source field update: ' + docsUpdated);
 };
 
 
@@ -886,7 +872,7 @@ function initApplication() {
     // Make sure that Application collection has ONE and only one doc/rec
     const docApps = this.collection.Application.find({}, {fields: {_id: 1}}).fetch();
 
-    if (docApps.length == 0) {
+    if (docApps.length === 0) {
         // No doc/rec defined yet. Create new doc/rec with default settings
         this.collection.Application.insert({
             seedHmac: null   // HMAC used to validate the application seed - not yet defined
@@ -902,7 +888,7 @@ function initCatenisNode() {
     // Make sure that Catenis Hub doc/rec is already created
     const docCtnNodes = this.collection.CatenisNode.find({type: CatenisNode.nodeType.hub.name}, {fields: {_id: 1, ctnNodeIndex: 1}}).fetch();
 
-    if (docCtnNodes.length == 0) {
+    if (docCtnNodes.length === 0) {
         // No doc/rec defined yet. Create new doc/rec with default settings
         this.collection.CatenisNode.insert({
             type: CatenisNode.nodeType.hub.name,
@@ -921,7 +907,7 @@ function initCatenisNode() {
             Catenis.logger.ERROR('More than one Catenis Hub node database doc/rec found');
             throw new Error('More than one Catenis Hub node database doc/rec found');
         }
-        else if (docCtnNodes[0].ctnNodeIndex != ctnHubNodeIndex) {
+        else if (docCtnNodes[0].ctnNodeIndex !== ctnHubNodeIndex) {
             Catenis.logger.ERROR('Catenis Hub node database doc/rec with inconsistent index', {docIndex: docCtnNodes[0].ctnNodeIndex, definedIndex: ctnHubNodeIndex});
             throw new Error('Catenis Hub node database doc/rec with inconsistent index');
         }

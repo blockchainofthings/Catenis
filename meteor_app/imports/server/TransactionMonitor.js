@@ -163,6 +163,9 @@ export class TransactionMonitor extends events.EventEmitter {
         }
 
         this.monitoringOn = true;
+
+        // Emit event signalling that transaction monitoring had just been turned on
+        this.emit(TransactionMonitor.notifyEvent.tx_monitor_on.name);
     }
 
     stopMonitoring() {
@@ -185,6 +188,15 @@ export class TransactionMonitor extends events.EventEmitter {
         }
 
         this.monitoringOn = false;
+
+        // Emit event signalling that transaction monitoring had just been turned on
+        this.emit(TransactionMonitor.notifyEvent.tx_monitor_off.name);
+    }
+
+    pollNow() {
+        if (this.monitoringOn) {
+            Meteor.defer(pollBlockchain.bind(this));
+        }
     }
 
     // Populate collCtnTx in-memory database collection with transactions received/confirmed
@@ -357,16 +369,31 @@ export class TransactionMonitor extends events.EventEmitter {
     }
 
     static addEventHandler(event, handler) {
-        // Save event handler to be set up when object instance is created
-        externalEventHandlers.push({
-            event: event,
-            handler: handler
-        });
+        if (!TransactionMonitor.hasInitialized()) {
+            // Save event handler to be set up when object instance is created
+            externalEventHandlers.push({
+                event: event,
+                handler: handler
+            });
+        }
+        else {
+            // Transaction monitor object already instantiated.
+            //  Just set up event handler
+            this.on(event, handler);
+        }
     }
 
     static initialize() {
         Catenis.logger.TRACE('TransactionMonitor initialization');
         Catenis.txMonitor = new TransactionMonitor(cfgSettings.blockchainPollingInterval);
+    }
+
+    static hasInitialized() {
+        return Catenis.txMonitor !== undefined;
+    }
+
+    static isMonitoringOn() {
+        return TransactionMonitor.hasInitialized() && Catenis.txMonitor.monitoringOn;
     }
 }
 
@@ -854,7 +881,6 @@ function handleNewTransactions(data) {
                 // Identify received transactions that had been sent by this Catenis node
                 const sentTxids = new Set();
                 const rcvdTxDocsToCreate = [];
-                const txTimeRcvdSentTxids = new Map();
 
                 Catenis.db.collection.SentTransaction.find({
                     txid: {$in: Object.keys(data.ctnTxs)}
@@ -866,7 +892,7 @@ function handleNewTransactions(data) {
                     if (doc.type === Transaction.type.send_message.name || doc.type === Transaction.type.read_confirmation.name || doc.type === Transaction.type.transfer_asset.name) {
                         Catenis.logger.TRACE('Processing sent transaction as received transaction', doc);
                         // Prepare to emit event notifying of new transaction received
-                        // TODO: in the future, when other Catenis nodes are active, only send notification event if target device belongs to this node
+                        // TODO: in the future, when other Catenis nodes are active, only send notification event and record received transaction if target device belongs to this node
                         const notifyEvent = getTxRcvdNotifyEventFromTxType(doc.type);
 
                         if (notifyEvent) {
@@ -912,23 +938,13 @@ function handleNewTransactions(data) {
                         }
 
                         //  Prepared to save received tx to the local database
-                        const txTimeReceived = data.ctnTxs[doc.txid].timereceived;
-
                         rcvdTxDocsToCreate.push({
                             type: doc.type,
                             txid: doc.txid,
-                            receivedDate: new Date(txTimeReceived * 1000),
+                            receivedDate: new Date(data.ctnTxs[doc.txid].timereceived * 1000),
                             sentTransaction_id: doc._id,
                             info: docInfo
                         });
-
-                        // Save txid associated with its time received
-                        if (txTimeRcvdSentTxids.has(txTimeReceived)) {
-                            txTimeRcvdSentTxids.get(txTimeReceived).push(doc.txid);
-                        }
-                        else {
-                            txTimeRcvdSentTxids.set(txTimeReceived, [doc.txid]);
-                        }
                     }
                 });
 
@@ -979,7 +995,6 @@ function handleNewTransactions(data) {
                             });
                         }
                         // TODO: parse transaction (using Transaction.fromHex()) and try to identify Catenis transactions (using tx.matches())
-                        // TODO: when adding a new received send message Catenis transaction, a new Message doc/rec needs to be created so the message (from another Catenis node) can be referenced by its message id
                     }
                 }
 
@@ -987,17 +1002,6 @@ function handleNewTransactions(data) {
                 rcvdTxDocsToCreate.forEach((docRcvdTx) => {
                     docRcvdTx._id = Catenis.db.collection.ReceivedTransaction.insert(docRcvdTx);
                 });
-
-                // Update existing Message docs with time tx has been received
-                for (let [txTimeReceived, txids] of txTimeRcvdSentTxids) {
-                    Catenis.db.collection.Message.update({
-                        'blockchain.txid': {$in: txids}
-                    }, {
-                        $set: {receivedDate: new Date(txTimeReceived * 1000)}
-                    }, {
-                        multi: true
-                    });
-                }
 
                 // Emit notification events
                 eventsToEmit.forEach(event => {
@@ -1276,6 +1280,15 @@ TransactionMonitor.internalEvent = Object.freeze({
 });
 
 TransactionMonitor.notifyEvent = Object.freeze({
+    // Events used to signal current status of transaction monitoring
+    tx_monitor_on: Object.freeze({
+        name: 'tx_monitor_on',
+        description: 'Transaction monitoring had just been turned on'
+    }),
+    tx_monitor_off: Object.freeze({
+        name: 'tx_monitor_off',
+        description: 'Transaction monitoring had just been turned off'
+    }),
     // Events used to notify when a transaction of a given type is confirmed
     sys_funding_tx_conf: Object.freeze({
         name: 'sys_funding_tx_conf',
@@ -1296,6 +1309,14 @@ TransactionMonitor.notifyEvent = Object.freeze({
     funding_add_extra_tx_pay_funds_tx_conf: Object.freeze({
         name: 'funding_add_extra_tx_pay_funds_tx_conf',
         description: 'Funding transaction sent for adding funds to pay for transaction expenses has been confirmed'
+    }),
+    funding_add_extra_read_confirm_tx_pay_funds_tx_conf: Object.freeze({
+        name: 'funding_add_extra_read_confirm_tx_pay_funds_tx_conf',
+        description: 'Funding transaction sent for adding funds to pay for read confirmation transaction expenses has been confirmed'
+    }),
+    read_confirmation_tx_conf: Object.freeze({
+        name: 'read_confirmation_tx_conf',
+        description: 'Transaction sent for marking and notifying that send message transactions have already been read'
     }),
     issue_locked_asset_tx_conf: Object.freeze({
         name: 'issue_locked_asset_tx_conf',
@@ -1348,6 +1369,24 @@ function processConfirmedSentTransactions(doc, eventsToEmit) {
             Catenis.logger.ERROR('Could not get notification event from funding transaction event', {fundingEvent: doc.info.funding.event.name});
         }
     }
+    else if (doc.type === Transaction.type.read_confirmation.name) {
+        // Prepare to emit event notifying of confirmation of read confirmation transaction
+        const notifyEvent = getTxConfNotifyEventFromTxType(doc.type);
+
+        if (notifyEvent) {
+            eventsToEmit.push({
+                name: notifyEvent.name,
+                data: {
+                    txid: doc.txid
+                }
+            });
+        }
+        else {
+            // Could not get notification event from funding event.
+            //  Log error condition
+            Catenis.logger.ERROR('Could not get notification event from transaction type', {txType: doc.type});
+        }
+    }
     else if (doc.type === Transaction.type.issue_locked_asset.name || doc.type === Transaction.type.issue_unlocked_asset.name) {
         // Prepare to emit event notifying of confirmation of asset issuance transaction
         const notifyEvent = getTxConfNotifyEventFromTxType(doc.type);
@@ -1369,16 +1408,6 @@ function processConfirmedSentTransactions(doc, eventsToEmit) {
             //  Log error condition
             Catenis.logger.ERROR('Could not get notification event from transaction type', {txType: doc.type});
         }
-    }
-
-    if (doc.replacedByTxid !== undefined) {
-        // A transaction that had been replaced by another transaction is being confirmed.
-        //  Just log warning condition only for now
-        // TODO: in the future, emit event so this condition can be treated by module responsible for sending read confirmation transactions
-        Catenis.logger.WARN('Transaction that had been replaced by another transaction is being confirmed.', {
-            txid: doc.txid,
-            replacedByTxid: doc.replacedByTxid
-        });
     }
 }
 

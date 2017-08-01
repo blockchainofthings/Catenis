@@ -50,7 +50,7 @@ import { Transaction } from './Transaction';
 // NOTE: make sure that objects of this function class are instantiated and used (their methods
 //  called) from code executed from the FundSource.utxoCS critical section object
 export function SendMessageTransaction(originDevice, targetDevice, message, options) {
-    if (originDevice != undefined) {
+    if (originDevice !== undefined) {
         // Validate arguments
         const errArg = {};
 
@@ -66,8 +66,8 @@ export function SendMessageTransaction(originDevice, targetDevice, message, opti
             errArg.message = message;
         }
 
-        if (typeof options !== 'object' || options == null || !('encrypted' in options) || !('storageScheme' in options) || !CatenisMessage.isValidStorageScheme(options.storageScheme)
-            || (('storageProvider' in options) && options.storageProvider != undefined && !CatenisMessage.isValidStorageProvider(options.storageProvider))) {
+        if (typeof options !== 'object' || options === null || !('encrypted' in options) || !('storageScheme' in options) || !CatenisMessage.isValidStorageScheme(options.storageScheme)
+            || (('storageProvider' in options) && options.storageProvider !== undefined && !CatenisMessage.isValidStorageProvider(options.storageProvider))) {
             errArg.options = options;
         }
 
@@ -102,13 +102,13 @@ SendMessageTransaction.prototype.buildTransaction = function () {
         const origDevMainAddrAllocResult = origDevMainAddrFundSource.allocateFund(Service.devMainAddrAmount);
 
         // Make sure that UTXOs have been correctly allocated
-        if (origDevMainAddrAllocResult == null) {
+        if (origDevMainAddrAllocResult === null) {
             // Unable to allocate UTXOs. Log error condition and throw exception
             Catenis.logger.ERROR(util.format('Unable to allocate UTXOs for device (Id: %s) main addresses', this.originDevice.deviceId));
             throw new Meteor.Error('ctn_send_msg_utxo_alloc_error', util.format('Unable to allocate UTXOs for device (Id: %s) main addresses', this.originDevice.deviceId));
         }
 
-        if (origDevMainAddrAllocResult.utxos.length != 1) {
+        if (origDevMainAddrAllocResult.utxos.length !== 1) {
             // An unexpected number of UTXOs have been allocated.
             // Log error condition and throw exception
             Catenis.logger.ERROR(util.format('An unexpected number of UTXOs have been allocated for device (Id: %s) main addresses', this.originDevice.deviceId), {
@@ -132,13 +132,13 @@ SendMessageTransaction.prototype.buildTransaction = function () {
         const clntMsgCreditAddrAllocResult = clntMsgCreditAddrFundSource.allocateFund(Service.clientServiceCreditAmount);
 
         // Make sure that UTXOs have been correctly allocated
-        if (clntMsgCreditAddrAllocResult == null) {
+        if (clntMsgCreditAddrAllocResult === null) {
             // No UTXO available to be allocated. Log error condition and throw exception
             Catenis.logger.ERROR(util.format('No UTXO available to be allocated for client (Id: %s) message credit addresses', this.originDevice.client.clientId));
             throw new Meteor.Error('ctn_send_msg_no_utxo_msg_credit', util.format('No UTXO available to be allocated for client (Id: %s) message credit addresses', this.originDevice.client.clientId));
         }
 
-        if (clntMsgCreditAddrAllocResult.utxos.length != 1) {
+        if (clntMsgCreditAddrAllocResult.utxos.length !== 1) {
             // An unexpected number of UTXOs have been allocated.
             // Log error condition and throw exception
             Catenis.logger.ERROR(util.format('An unexpected number of UTXOs have been allocated for client (Id: %s) message credit addresses', this.originDevice.client.clientId), {
@@ -197,11 +197,17 @@ SendMessageTransaction.prototype.buildTransaction = function () {
             this.transact.addP2PKHOutput(origDevMainAddrRefundKeys.getAddress(), Service.devMainAddrAmount);
         }
 
+        // NOTE: we do not care to check if change is not below dust amount because it is guaranteed
+        //      that the change amount be a multiple of the basic amount that is allocated to device
+        //      main addresses which in turn is guaranteed to not be below dust
         if (origDevMainAddrAllocResult.changeAmount > 0) {
             // Add origin device main address change output
             this.transact.addP2PKHOutput(this.originDevice.mainAddr.newAddressKeys().getAddress(), origDevMainAddrAllocResult.changeAmount);
         }
 
+        // NOTE: we do not care to check if change is not below dust amount because it is guaranteed
+        //      that the change amount be a multiple of the basic amount that is allocated to client
+        //      message credit addresses which in turn is guaranteed to not be below dust
         if (clntMsgCreditAddrAllocResult.changeAmount > 0) {
             // Add client message credit address change output
             this.transact.addP2PKHOutput(this.originDevice.client.messageCreditAddr.newAddressKeys().getAddress(), clntMsgCreditAddrAllocResult.changeAmount);
@@ -232,7 +238,7 @@ SendMessageTransaction.prototype.buildTransaction = function () {
 
         this.transact.addInputs(inputs);
 
-        if (payTxAllocResult.changeAmount > 0) {
+        if (payTxAllocResult.changeAmount >= Transaction.txOutputDustAmount) {
             // Add new output to receive change
             this.transact.addP2PKHOutput(Catenis.ctnHubNode.payTxExpenseAddr.newAddressKeys().getAddress(), payTxAllocResult.changeAmount);
         }
@@ -246,7 +252,7 @@ SendMessageTransaction.prototype.buildTransaction = function () {
 //    txid: [String]       // ID of blockchain transaction where message was recorded
 SendMessageTransaction.prototype.sendTransaction = function () {
     // Check if transaction has not yet been created and sent
-    if (this.transact.txid == undefined) {
+    if (this.transact.txid === undefined) {
         this.transact.sendTransaction();
 
         // Save sent transaction onto local database
@@ -421,7 +427,7 @@ SendMessageTransaction.matchingPattern = Object.freeze({
 //
 
 function getAddrAndAddrInfo(obj) {
-    return obj != undefined ? {
+    return obj !== undefined ? {
         address: obj.address,
         addrInfo: obj.addrInfo
     } : undefined;

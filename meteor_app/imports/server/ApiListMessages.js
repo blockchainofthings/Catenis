@@ -24,7 +24,6 @@ import { Meteor } from 'meteor/meteor';
 // References code in other (Catenis) modules
 import { Catenis } from './Catenis';
 import { successResponse, errorResponse } from './RestApi';
-import { Message } from './Message';
 
 // Config entries
 /*const config_entryConfig = config.get('config_entry');
@@ -238,6 +237,12 @@ export function listMessages() {
             if (mt.isValid()) {
                 filter.endDate = mt.toDate();
             }
+        }
+
+        // Make sure that system is running and accepting API calls
+        if (!Catenis.application.isRunning()) {
+            Catenis.logger.DEBUG('System currently not available for fulfilling \'messages\' API request', {applicationStatus: Catenis.application.status});
+            return errorResponse.call(this, 503, 'System currently not available; please try again at a later time');
         }
 
         // Execute method to read message

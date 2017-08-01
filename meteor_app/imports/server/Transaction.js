@@ -28,14 +28,17 @@ import { Catenis } from './Catenis';
 import { BitcoinCore } from './BitcoinCore';
 import { BlockchainAddress } from './BlockchainAddress';
 import { CriticalSection } from './CriticalSection';
+import { Util } from './Util';
 
 // Config entries
 const configTransact = config.get('transaction');
 
 // Configuration settings
 const cfgSettings = {
+    txOutputDustAmount: configTransact.get('txOutputDustAmount'),
     txInputSize: configTransact.get('txInputSize'),
-    txOutputSize: configTransact.get('txOutputSize')
+    txOutputSize: configTransact.get('txOutputSize'),
+    maxTxSize: configTransact.get('maxTxSize')
 };
 
 // Critical section object to avoid concurrent access to database when
@@ -60,6 +63,7 @@ const dbMalleabilityCS = new CriticalSection();
 //      cryptoKeys: [CryptoKeys object],  // Pair of crypto keys associated with this address
 //      type: [string],  // Type of address from Catenis.KeyStore.extKeyType
 //      path: [string],  // Path of the HD extended key associated with this address
+//      parentPath: [string],  // Path of the root HD extended key associated with this address
 //      isObsolete: [boolean],  // Indicates whether this address is not in used anymore
 //      pathParts: [object]  // Object with components that make up the HD extended key path associated with this address
 //    }
@@ -70,12 +74,13 @@ const dbMalleabilityCS = new CriticalSection();
 //    payInfo: {        // Should only exist for 'P2PKH' or 'P2SH' output types
 //      address: [string],   // Blockchain address to where payment should be sent
 //      amount: [number],    // Amount (in satoshis) to send
-//      addrInfo: {   // Info about blockchain address to where pyment should be sent (as returned by Catenis.keyStore.getAddressInfo())
+//      addrInfo: {   // Info about blockchain address to where payment should be sent (as returned by Catenis.keyStore.getAddressInfo())
 //                    //  (should only exist for deserialized transactions (generated from Transaction.fromHex() for addresses
 //                    //   that belong to this Catenis node)
 //        cryptoKeys: [CryptoKeys object],  // Pair of crypto keys associated with this address
 //        type: [string],  // Type of address from Catenis.KeyStore.extKeyType
 //        path: [string],  // Path of the HD extended key associated with this address
+//        parentPath: [string],  // Path of the root HD extended key associated with this address
 //        isObsolete: [boolean],  // Indicates whether this address is not in used anymore
 //        pathParts: [object]  // Object with components that make up the HD extended key path associated with this address
 //      }
@@ -83,7 +88,7 @@ const dbMalleabilityCS = new CriticalSection();
 //    data: [Buffer object] // Should only exist for 'nullData' output type
 //  }
 
-export function Transaction() {
+export function Transaction(useOptinRBF = false) {
     this.inputs = [];
     this.outputs = [];
     this.hasNullDataOutput = false;
@@ -92,6 +97,7 @@ export function Transaction() {
     this.txid = undefined;
     this.sentDate = undefined;
     this.txSaved = false;
+    this.useOptinRBF = useOptinRBF;     // Indicates whether opt-in Replace By Fee feature should be used when building transaction
 
     // Input and output sequence of tokens. Each token corresponds to an input/output
     //  of the transaction, and basically identifies what type of blockchain address
@@ -102,6 +108,11 @@ export function Transaction() {
     //  They should only exist for deserialized transactions
     this.inTokenSequence = undefined;
     this.outTokenSequence = undefined;
+
+    // Fields used for comparison of transactions. When initialized, these fields contain
+    //  a map of inputs and outputs using a key that uniquely identifies them
+    this.compInputs = undefined;
+    this.compOutputs = undefined;
 }
 
 
@@ -113,33 +124,35 @@ Transaction.prototype.addInputs = function (inputs, pos) {
         inputs = [inputs];
     }
 
-    if (pos !== undefined && pos < 0) {
-        pos = 0;
-    }
+    if (inputs.length > 0) {
+        if (pos !== undefined && pos < 0) {
+            pos = 0;
+        }
 
-    if (pos === undefined) {
-        // If no specific position has been given, add new
-        //  input to the end of list of inputs
-        Array.prototype.push.apply(this.inputs, inputs);
-    }
-    else {
-        // A specific position has been given
-        inputs.forEach((input, idx) => {
-            if (this.inputs[pos + idx] !== undefined) {
-                // The postion is not yet taken. Just add new
-                //  input to that positon
-                this.inputs[pos + idx] = input;
-            }
-            else {
-                // The position is already taken. Push aside input
-                //  that is currently in that position, and add
-                //  new input to that postion
-                this.inputs.splice(pos + idx, 0, input);
-            }
-        });
-    }
+        if (pos === undefined) {
+            // If no specific position has been given, add new
+            //  input to the end of list of inputs
+            Array.prototype.push.apply(this.inputs, inputs);
+        }
+        else {
+            // A specific position has been given
+            inputs.forEach((input, idx) => {
+                if (this.inputs[pos + idx] === undefined) {
+                    // The position is not yet taken. Just add new
+                    //  input to that position
+                    this.inputs[pos + idx] = input;
+                }
+                else {
+                    // The position is already taken. Push aside input
+                    //  that is currently in that position, and add
+                    //  new input to that position
+                    this.inputs.splice(pos + idx, 0, input);
+                }
+            });
+        }
 
-    invalidateTx.call(this);
+        invalidateTx.call(this);
+    }
 };
 
 Transaction.prototype.addInput = function (txout, address, addrInfo, pos) {
@@ -177,6 +190,42 @@ Transaction.prototype.removeInputAt = function (pos) {
     return input;
 };
 
+Transaction.prototype.addOutputs = function (outputs, pos) {
+    if (!Array.isArray(outputs)) {
+        outputs = [outputs];
+    }
+
+    if (outputs.length > 0) {
+        if (pos !== undefined && pos < 0) {
+            pos = 0;
+        }
+
+        if (pos === undefined) {
+            // If no specific position has been given, add new
+            //  output to the end of list of outputs
+            Array.prototype.push.apply(this.outputs, outputs);
+        }
+        else {
+            // A specific position has been given
+            outputs.forEach((output, idx) => {
+                if (this.outputs[pos + idx] === undefined) {
+                    // The position is not yet taken. Just add new
+                    //  output to that position
+                    this.outputs[pos + idx] = output;
+                }
+                else {
+                    // The position is already taken. Push aside output
+                    //  that is currently in that position, and add
+                    //  new output to that position
+                    this.outputs.splice(pos + idx, 0, output);
+                }
+            });
+        }
+
+        invalidateTx.call(this);
+    }
+};
+
 Transaction.prototype.addP2PKHOutputs = function (payInfos, pos) {
     if (!Array.isArray(payInfos)) {
         payInfos = [payInfos];
@@ -193,7 +242,7 @@ Transaction.prototype.addP2PKHOutputs = function (payInfos, pos) {
         }
     });
 
-    addOutputs.call(this, outputs, pos);
+    this.addOutputs(outputs, pos);
 };
 
 Transaction.prototype.addP2PKHOutput = function (address, amount, pos) {
@@ -201,6 +250,26 @@ Transaction.prototype.addP2PKHOutput = function (address, amount, pos) {
         address: address,
         amount: amount
     }, pos);
+};
+
+Transaction.prototype.incrementOutputAmount = function (pos, amount) {
+    const output = this.outputs[pos];
+
+    if (output !== undefined && (output.type === Transaction.outputType.P2PKH || output.type === Transaction.outputType.P2SH)
+            && amount !== 0) {
+        output.payInfo.amount += amount;
+        invalidateTx.call(this);
+    }
+};
+
+Transaction.prototype.resetOutputAmount = function (pos, amount) {
+    const output = this.outputs[pos];
+
+    if (output !== undefined && (output.type === Transaction.outputType.P2PKH || output.type === Transaction.outputType.P2SH)
+            && amount !== output.payInfo.amount) {
+        output.payInfo.amount = amount;
+        invalidateTx.call(this);
+    }
 };
 
 Transaction.prototype.addNullDataOutput = function (data, pos) {
@@ -211,7 +280,7 @@ Transaction.prototype.addNullDataOutput = function (data, pos) {
     let result = false;
 
     if (!this.hasNullDataOutput) {
-        addOutputs.call(this, {
+        this.addOutputs({
             type: Transaction.outputType.nullData,
             data: data
         }, pos);
@@ -287,50 +356,106 @@ Transaction.prototype.getNullDataOutput = function () {
     return output;
 };
 
-Transaction.prototype.listOutputAddresses = function () {
+Transaction.prototype.listInputTxouts = function (startPos = 0, endPos) {
+    const txoutList = [];
+
+    for (let pos = startPos, lastPos = endPos === undefined ? this.inputs.length - 1 : endPos; pos <= lastPos; pos++) {
+        const input = this.inputs[pos];
+
+        if (input !== undefined) {
+            txoutList.push(input.txout);
+        }
+    }
+
+    return txoutList;
+};
+
+Transaction.prototype.listOutputAddresses = function (startPos = 0, endPos) {
     const addrList = [];
 
-    this.outputs.forEach((output) => {
-        if (output.type === Transaction.outputType.P2PKH) {
+    for (let pos = startPos, lastPos = endPos === undefined ? this.outputs.length - 1 : endPos; pos <= lastPos; pos++) {
+        const output = this.outputs[pos];
+
+        if (output !== undefined && (output.type === Transaction.outputType.P2PKH || output.type === Transaction.outputType.P2SH)) {
             addrList.push(output.payInfo.address);
         }
-    });
+    }
 
     return addrList;
 };
 
-Transaction.prototype.totalInputsAmount = function () {
-    return this.inputs.reduce((sum, input) => {
-        return sum + input.txout.amount;
-    }, 0);
+Transaction.prototype.totalInputsAmount = function (startPos = 0, endPos) {
+    let sum = 0;
+    
+    for (let pos = startPos, lastPos = endPos === undefined ? this.inputs.length - 1 : endPos; pos <= lastPos; pos++) {
+        const input = this.inputs[pos];
+        
+        if (input !== undefined) {
+            sum += input.txout.amount;
+        }
+    }
+    
+    return sum;
 };
 
-Transaction.prototype.totalOutputsAmount = function () {
-    return this.outputs.reduce((sum, output) => {
-        return sum + (output.type === Transaction.outputType.P2PKH ? output.payInfo.amount : 0);
-    }, 0);
+Transaction.prototype.totalOutputsAmount = function (startPos = 0, endPos) {
+    let sum = 0;
+    
+    for (let pos = startPos, lastPos = endPos === undefined ? this.outputs.length - 1 : endPos; pos <= lastPos; pos++) {
+        const output = this.outputs[pos];
+
+        if (output !== undefined && (output.type === Transaction.outputType.P2PKH || output.type === Transaction.outputType.P2SH)) {
+            sum += output.payInfo.amount;
+        }
+    }
+    
+    return sum;
 };
 
-Transaction.prototype.countInputs = function () {
-    return this.inputs.reduce((count) => {
-        return count + 1;
-    }, 0);
+Transaction.prototype.countInputs = function (startPos = 0, endPos) {
+    let count = 0;
+
+    for (let pos = startPos, lastPos = endPos === undefined ? this.inputs.length - 1 : endPos; pos <= lastPos; pos++) {
+        if (this.inputs[pos] !== undefined) {
+            count++;
+        }
+    }
+    
+    return count;
 };
 
-Transaction.prototype.countOutputs = function () {
-    return this.outputs.reduce((count) => {
-        return count + 1;
-    }, 0);
+Transaction.prototype.countOutputs = function (startPos = 0, endPos) {
+    let count = 0;
+
+    for (let pos = startPos, lastPos = endPos === undefined ? this.outputs.length - 1 : endPos; pos <= lastPos; pos++) {
+        if (this.outputs[pos] !== undefined) {
+            count++;
+        }
+    }
+    
+    return count;
 };
 
-Transaction.prototype.countP2PKHOutputs = function () {
-    return this.outputs.reduce((count, output) => {
-        return output.type === Transaction.outputType.P2PKH ? count + 1 : count;
-    }, 0);
+Transaction.prototype.countP2PKHOutputs = function (startPos = 0, endPos) {
+    let count = 0;
+
+    for (let pos = startPos, lastPos = endPos === undefined ? this.outputs.length - 1 : endPos; pos <= lastPos; pos++) {
+        const output = this.outputs[pos];
+
+        if (output !== undefined && output.type === Transaction.outputType.P2PKH) {
+            count++;
+        }
+    }
+
+    return count;
 };
 
 Transaction.prototype.estimateSize = function () {
     return Transaction.computeTransactionSize(this.countInputs(), this.countP2PKHOutputs(), this.nullDataPayloadSize);
+};
+
+Transaction.prototype.realSize = function () {
+    return this.rawTransaction !== undefined ? this.rawTransaction.length / 2 : undefined;
 };
 
 // Returns signed raw transaction in hex format
@@ -341,7 +466,7 @@ Transaction.prototype.getTransaction = function () {
             vins = [];
 
         this.inputs.forEach((input) => {
-            vins.push(txBuilder.addInput(input.txout.txid, input.txout.vout));
+            vins.push(txBuilder.addInput(input.txout.txid, input.txout.vout, this.useOptinRBF ? 0xffffffff - 2 : undefined));
         });
 
         this.outputs.forEach((output) => {
@@ -349,7 +474,7 @@ Transaction.prototype.getTransaction = function () {
                 txBuilder.addOutput(output.payInfo.address, output.payInfo.amount);
             }
             else if (output.type === Transaction.outputType.nullData) {
-                txBuilder.addOutput(bitcoinLib.script.nullDataOutput(output.data), 0);
+                txBuilder.addOutput(bitcoinLib.script.nullData.output.encode(output.data), 0);
             }
         });
 
@@ -385,7 +510,7 @@ Transaction.prototype.sendTransaction = function (resend = false) {
 //      event: {
 //          name: [string],  // Identifies the event that triggered the funding action (from FundTransaction.fundingEvent).
 //                               Valid values: 'provision_system_device', 'provision_client_srv_credit', 'provision_client_device',
-//                               'add_extra_tx_pay_funds'
+//                               'add_extra_tx_pay_funds', 'add_extra_read_confirm_tx_pay_funds'
 //          entityId: [string]  // Id of the entity associated with the event. Should only exist for 'provision_client_srv_credit'
 //                                  and 'provision_client_device' events. For 'provision_client_srv_credit' events, it refers to the
 //                                  clientId; for 'provision_client_device' events, it refers to the deviceId
@@ -483,10 +608,164 @@ Transaction.prototype.matches = function (transactFuncClass) {
     return (transactFuncClass.matchingPattern.input !== undefined ? (new RegExp(transactFuncClass.matchingPattern.input)).test(this.inTokenSequence) : true) && (transactFuncClass.matchingPattern.output !== undefined ? (new RegExp(transactFuncClass.matchingPattern.output)).test(this.outTokenSequence) : true);
 };
 
-Transaction.prototype.revertOutputAddresses = function () {
+Transaction.prototype.revertOutputAddresses = function (startPos = 0, endPos) {
     if (this.outputs.length > 0) {
-        BlockchainAddress.revertAddressList(this.listOutputAddresses());
+        BlockchainAddress.revertAddressList(this.listOutputAddresses(startPos, endPos));
     }
+};
+
+Transaction.prototype.initComparison = function () {
+    if (this.compInputs === undefined) {
+        // Set up map used for comparison of inputs
+        this.compInputs = new Map();
+
+        this.inputs.forEach((input) => {
+            // We use a serialization of the txout as the key for inputs
+            this.compInputs.set(Util.txoutToString(input.txout), input);
+        });
+    }
+
+    if (this.compOutputs === undefined) {
+        // Set up map used for comparison of outputs
+        this.compOutputs = new Map();
+
+        this.outputs.forEach((output) => {
+            // The key to use depends on the type of output
+            if (output.type === Transaction.outputType.P2PKH) {
+                // Use both type and address root (parent) path
+                if (output.payInfo.addrInfo === undefined) {
+                    // Address info not yet present, get it
+                    output.payInfo.addrInfo = Catenis.keyStore.getAddressInfo(output.payInfo.address, true);
+                }
+
+                if (output.payInfo.addrInfo) {
+                    this.compOutputs.set(JSON.stringify({
+                        type: output.type,
+                        rootPath: output.payInfo.addrInfo.parentPath
+                    }), output);
+                }
+            }
+            else if (output.type === Transaction.outputType.P2SH) {
+                // Use both type and address as the key
+                this.compOutputs.set(JSON.stringify({
+                    type: output.type,
+                    address: output.address
+                }), output);
+            }
+            else if (output.type === Transaction.outputType.nullData) {
+                // Use the type as the key
+                this.compOutputs.set(output.type, output);
+            }
+        });
+    }
+};
+
+// Method used to compare this transaction with a second transaction and return differences between them
+//
+//  Arguments:
+//   transact [Object] - An instance of the Transaction function class
+//
+//  Return: {
+//   inputs: [{ - [Array(Object)]
+//     diffType: [String], - A property of the Transaction.diffType object identifying the type of difference found
+//     input: [Object]     - One input object that represents a difference between the two transactions
+//   }],
+//   outputs: [{ - [Array(Object)]
+//     diffType: [String], - A property of the Transaction.diffType object identifying the type of difference found
+//     output: [Object],   - One output object that represents a difference between the two transactions
+//     otherOutput: [Object] - The output of the other transaction that is identical to the output in this transaction
+//                           -  NOTE: only present for diffType.update
+//     deltaAmount: [Number] - The amount difference between two identical outputs that exist in both txs but that do not have the same amount
+//                           -  NOTE: only present for diffType.update and Transaction.outputType.P2PKH or Transaction.outputType.P2SH
+//   }]
+// }
+Transaction.prototype.diffTransaction = function (transact) {
+    // Initialize both transactions for comparison
+    this.initComparison();
+    transact.initComparison();
+
+    const diffResult = {
+        inputs: [],
+        outputs: []
+    };
+
+    // Identifies differences in inputs
+    for (let [key, input] of this.compInputs) {
+        if (!transact.compInputs.has(key)) {
+            // Input exists in this tx but not in the other tx
+            diffResult.inputs.push({
+                diffType: Transaction.diffType.delete,
+                input: input
+            });
+        }
+    }
+
+    for (let [key, input] of transact.compInputs) {
+        if (!this.compInputs.has(key)) {
+            // Input exists in the other tx but not in this tx
+            diffResult.inputs.push({
+                diffType: Transaction.diffType.insert,
+                input: input
+            });
+        }
+    }
+
+    // Identifies differences in outputs
+    for (let [key, output] of this.compOutputs) {
+        if (!transact.compOutputs.has(key)) {
+            // Output exists in this tx but not in the other tx
+            diffResult.outputs.push({
+                diffType: Transaction.diffType.delete,
+                output: output
+            });
+        }
+        else {
+            // Outputs are identical. Check if their data are different
+            const otherOutput = transact.compOutputs.get(key);
+
+            if (output.type === Transaction.outputType.P2PKH) {
+                if (output.payInfo.amount !== otherOutput.payInfo.amount) {
+                    diffResult.outputs.push({
+                        diffType: Transaction.diffType.update,
+                        output: output,
+                        otherOutput: otherOutput,
+                        deltaAmount: otherOutput.payInfo.amount - output.payInfo.amount
+                    })
+                }
+            }
+            else if (output.type === Transaction.outputType.P2SH) {
+                if (output.payInfo.amount !== otherOutput.payInfo.amount) {
+                    diffResult.outputs.push({
+                        diffType: Transaction.diffType.update,
+                        output: output,
+                        otherOutput: otherOutput,
+                        deltaAmount: otherOutput.payInfo.amount - output.payInfo.amount
+                    })
+                }
+            }
+            else if (output.type === Transaction.outputType.nullData) {
+                if (output.data.compare(otherOutput.data) !== 0) {
+                    diffResult.outputs.push({
+                        diffType: Transaction.diffType.update,
+                        output: output,
+                        otherOutput: otherOutput
+                    })
+                }
+            }
+        }
+    }
+
+    for (let [key, output] of transact.compOutputs) {
+        if (!this.compOutputs.has(key)) {
+            // Output exists in the other tx but not in this tx
+            diffResult.outputs.push({
+                diffType: Transaction.diffType.insert,
+                output: output
+            });
+        }
+    }
+
+    return diffResult;
 };
 
 
@@ -499,40 +778,7 @@ Transaction.prototype.revertOutputAddresses = function () {
 function invalidateTx() {
     this.rawTransaction = this.txid = undefined;
     this.txSaved = false;
-}
-
-function addOutputs(outputs, pos) {
-    if (!Array.isArray(outputs)) {
-        outputs = [outputs];
-    }
-
-    if (pos !== undefined && pos < 0) {
-        pos = 0;
-    }
-
-    if (pos === undefined) {
-        // If no specific position has been given, add new
-        //  output to the end of list of outputs
-        Array.prototype.push.apply(this.outputs, outputs);
-    }
-    else {
-        // A specific position has been given
-        outputs.forEach((output, idx) => {
-            if (this.outputs[pos + idx] !== undefined) {
-                // The postion is not yet taken. Just add new
-                //  output to that positon
-                this.outputs[pos + idx] = output;
-            }
-            else {
-                // The position is already taken. Push aside output
-                //  that is currently in that position, and add
-                //  new output to that postion
-                this.outputs.splice(pos + idx, 0, output);
-            }
-        });
-    }
-
-    invalidateTx.call(this);
+    this.compInputs = this.compOutputs = undefined;
 }
 
 function initInputTokenSequence() {
@@ -608,6 +854,7 @@ Transaction.fromHex = function (hexTx) {
             // Save basic transaction info
             tx.rawTransaction = hexTx;
             tx.txid = decodedTx.txid;
+            tx.useOptinRBF = false;
 
             // Get inputs
             const txidTxouts = new Map();
@@ -619,6 +866,11 @@ Transaction.fromHex = function (hexTx) {
                         vout: input.vout
                     }
                 });
+
+                // Check if input calls for opt-in RBF
+                if (input.sequence === 0xffffffff - 2) {
+                    tx.useOptinRBF = true;
+                }
 
                 // Save tx out to retrieve further info
                 if (txidTxouts.has(input.txid)) {
@@ -893,6 +1145,12 @@ Transaction.outputType = Object.freeze({
     nullData: 'nullData'    // Null data (OP_RETURN) output
 });
 
+Transaction.diffType = Object.freeze({
+    delete: 'D',        // Identifies an input/output that exists in this tx but not in the other tx
+    update: 'U',        // Identifies an input/output that exists in both txs but with different amount/data
+    insert: 'I'         // Identifies an input/output that exists in the other tx but not in this tx
+});
+
 Transaction.type = Object.freeze({
     sys_funding: Object.freeze({
         name: 'sys_funding',
@@ -949,22 +1207,42 @@ Transaction.ioToken = Object.freeze({
     p2_sys_dev_main_addr: Object.freeze({
         name: 'p2_sys_dev_main_addr',
         token: '<p2_sys_dev_main_addr>',
-        description: 'Output (or input spending such output) paying to a Catenis node devive main address'
+        description: 'Output (or input spending such output) paying to a system device main address'
     }),
     p2_sys_fund_pay_addr: Object.freeze({
         name: 'p2_sys_fund_pay_addr',
         token: '<p2_sys_fund_pay_addr>',
-        description: 'Output (or input spending such output) paying to a Catenis node funding payment address'
+        description: 'Output (or input spending such output) paying to a system funding payment address'
     }),
     p2_sys_fund_chg_addr: Object.freeze({
         name: 'p2_sys_fund_chg_addr',
         token: '<p2_sys_fund_chg_addr>',
-        description: 'Output (or input spending such output) paying to a Catenis node funding change address'
+        description: 'Output (or input spending such output) paying to a system funding change address'
     }),
     p2_sys_pay_tx_exp_addr: Object.freeze({
         name: 'p2_sys_pay_tx_exp_addr',
         token: '<p2_sys_pay_tx_exp_addr>',
-        description: 'Output (or input spending such output) paying to a Catenis node pay tx expense address'
+        description: 'Output (or input spending such output) paying to a system pay tx expense address'
+    }),
+    p2_sys_read_conf_spnd_ntfy_addr: Object.freeze({
+        name: 'p2_sys_read_conf_spnd_ntfy_addr',
+        token: '<p2_sys_read_conf_spnd_ntfy_addr>',
+        description: 'Output paying to a system read confirmation spend notify address'
+    }),
+    p2_sys_read_conf_spnd_only_addr: Object.freeze({
+        name: 'p2_sys_read_conf_spnd_only_addr',
+        token: '<p2_sys_read_conf_spnd_only_addr>',
+        description: 'Output paying to a system read confirmation spend only address'
+    }),
+    p2_sys_read_conf_spnd_null_addr: Object.freeze({
+        name: 'p2_sys_read_conf_spnd_null_addr',
+        token: '<p2_sys_read_conf_spnd_null_addr>',
+        description: 'Output paying to a system read confirmation spend null address'
+    }),
+    p2_sys_read_conf_pay_tx_exp_addr: Object.freeze({
+        name: 'p2_sys_read_conf_pay_tx_exp_addr',
+        token: '<p2_sys_read_conf_pay_tx_exp_addr>',
+        description: 'Output (or input spending such output) paying to a system read confirmation pay tx expense address'
     }),
     p2_cln_msg_crd_addr: Object.freeze({
         name: 'p2_cln_msg_crd_addr',
@@ -1026,7 +1304,7 @@ function isValidSentTransactionType(type) {
 
 // addrType: [string]  //  undefined: null data output
 //                     //  null: pay to unknown address
-//                     //  address type from KeyStore.extKeyType.name: pay to that type of address
+//                     //  address type from KeyStore.extKeyType.<type>.name: pay to that type of address
 function getIOTokenFromAddrType(addrType) {
     const ioTokenName = addrType === undefined ? Transaction.ioToken.null_data.name :
             (addrType === null ? Transaction.ioToken.p2_unknown_addr.name : 'p2_' + addrType);
@@ -1055,6 +1333,12 @@ function isTransactFuncClassToMatch(transactFuncClass) {
 
 // Definition of properties
 Object.defineProperties(Transaction, {
+    txOutputDustAmount: {
+        get: function () {
+            return cfgSettings.txOutputDustAmount;
+        },
+        enumerable: true
+    },
     txInputSize: {
         get: function () {
             return cfgSettings.txInputSize;
@@ -1064,6 +1348,12 @@ Object.defineProperties(Transaction, {
     txOutputSize: {
         get: function () {
             return cfgSettings.txOutputSize;
+        },
+        enumerable: true
+    },
+    maxTxSize: {
+        get: function () {
+            return cfgSettings.maxTxSize;
         },
         enumerable: true
     }

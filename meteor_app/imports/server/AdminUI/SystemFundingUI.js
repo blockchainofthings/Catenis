@@ -64,8 +64,8 @@ SystemFundingUI.initialize = function () {
         const processFundingBalanceChange = (data) => {
             // Get and pass updated funding balance info
             this.changed('FundingBalanceInfo', 1, {
-                currentBalance: Util.formatCoins(data.fundingBalanceInfo.currBalance),
-                minimumBalance: Util.formatCoins(data.fundingBalanceInfo.minBalance)
+                currentBalance: Util.formatCoins(data.fundingBalanceInfo.currentBalance),
+                minimumBalance: Util.formatCoins(data.fundingBalanceInfo.minimumBalance)
             });
         };
 
@@ -74,8 +74,8 @@ SystemFundingUI.initialize = function () {
 
         // Get and pass current funding balance info
         this.added('FundingBalanceInfo', 1, {
-            currentBalance: Util.formatCoins(Catenis.ctnHubNode.fundingBalanceInfo.currBalance),
-            minimumBalance: Util.formatCoins(Catenis.ctnHubNode.fundingBalanceInfo.minBalance)
+            currentBalance: Util.formatCoins(Catenis.ctnHubNode.fundingBalanceInfo.currentBalance),
+            minimumBalance: Util.formatCoins(Catenis.ctnHubNode.fundingBalanceInfo.minimumBalance)
         });
         this.ready();
 

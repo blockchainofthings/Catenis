@@ -60,6 +60,7 @@ export function Message(docMessage) {
     this.createdDate = docMessage.createdDate;
     this.sentDate = docMessage.sentDate;
     this.receivedDate = docMessage.receivedDate;
+    this.blocked = docMessage.blocked !== undefined;
     this.lastReadDate = docMessage.lastReadDate;
 }
 
@@ -86,6 +87,39 @@ Message.prototype.readNow = function () {
     return !prevLastReadDate;
 };
 
+// Set message as received
+//
+//  Arguments:
+//    receivedDate: [Date] - (optional) date and time when send message transaction had been received. If not defined,
+//                            assume that message should be blocked
+Message.prototype.setReceived = function (receivedDate) {
+    // Make sure that message is not yet set as received
+    if (this.receivedDate === undefined && !this.blocked) {
+        // Validate argument
+        if (receivedDate !== undefined && !receivedDate instanceof Date) {
+            // Invalid argument
+            Catenis.logger.ERROR('Message.setReceived method called with invalid argument', {receivedDate: receivedDate});
+            throw Error('Invalid receivedDate argument');
+        }
+
+        const fieldsToUpdate = {};
+
+        if (receivedDate) {
+            fieldsToUpdate.receivedDate = this.receivedDate = receivedDate;
+        }
+        else {
+            fieldsToUpdate.blocked = this.blocked = true;
+        }
+
+        try {
+            Catenis.db.collection.Message.update({_id: this.doc_id}, {$set: fieldsToUpdate});
+        }
+        catch (err) {
+            Catenis.logger.ERROR(util.format('Error trying to update message (doc_id: %s) to set it as received.', this.doc_id), err);
+            throw new Meteor.Error('ctn_msg_update_error', util.format('Error trying to update message (doc_id: %s) to set it as received', this.doc_id), err.stack);
+        }
+    }
+};
 
 // Module functions used to simulate private Message object methods
 //  NOTE: these functions need to be bound to a Message object reference (this) before
@@ -100,79 +134,167 @@ Message.prototype.readNow = function () {
 // Message function class (public) methods
 //
 
-// Create a new Message sent by this Catenis node and returns its messageId
+// Create a new Message issued by this Catenis node and returns its messageId
 //
 //  Arguments:
-//    msgTx: [Object] - instance of either LogMessageTransaction or SendMessageTransaction
-Message.createSentMessage = function (msgTx) {
+//    msgTransact: [Object] - instance of either LogMessageTransaction or SendMessageTransaction
+Message.createLocalMessage = function (msgTransact) {
     let action;
 
-    if (msgTx instanceof LogMessageTransaction) {
+    if (msgTransact instanceof LogMessageTransaction) {
         action = Message.action.log;
     }
-    else if (msgTx instanceof SendMessageTransaction) {
+    else if (msgTransact instanceof SendMessageTransaction) {
         action = Message.action.send;
     }
     else {
         // Invalid argument
-        Catenis.logger.ERROR('Message.createMessage method called with invalid argument', {msgTx: msgTx});
-        throw Error('Invalid msgTx argument');
+        Catenis.logger.ERROR('Message.createLocalMessage method called with invalid argument', {msgTransact: msgTransact});
+        throw Error('Invalid msgTransact argument');
     }
 
     // Make sure that transaction had already been sent and saved
-    if (!msgTx.transact.txSaved) {
-        Catenis.logger.ERROR('Cannot create message for a transaction that had not yet been saved', msgTx.transact);
-        throw Meteor.Error('ctn_msg_tx_unsaved', 'Cannot create message for a transaction that had not yet been saved', msgTx.transact);
+    if (!msgTransact.transact.txSaved) {
+        Catenis.logger.ERROR('Cannot create message for a transaction that had not yet been saved', msgTransact.transact);
+        throw Meteor.Error('ctn_msg_tx_unsaved', 'Cannot create message for a transaction that had not yet been saved', msgTransact.transact);
     }
 
-    let docMessage = {
-        messageId: newMessageId(msgTx.transact),
+    const docMessage = {
+        messageId: newMessageId(msgTransact.transact),
         action: action,
-        source: Message.source.sent_msg
+        source: Message.source.local
     };
 
     if (action === Message.action.log) {
-        docMessage.originDeviceId = msgTx.device.deviceId;
+        docMessage.originDeviceId = msgTransact.device.deviceId;
     }
     else {  // action == Message.action.send
-        docMessage.originDeviceId = msgTx.originDevice.deviceId;
-        docMessage.targetDeviceId = msgTx.targetDevice.deviceId;
+        docMessage.originDeviceId = msgTransact.originDevice.deviceId;
+        docMessage.targetDeviceId = msgTransact.targetDevice.deviceId;
     }
 
-    docMessage.isEncrypted = msgTx.options.encrypted;
+    docMessage.isEncrypted = msgTransact.options.encrypted;
     docMessage.blockchain = {
-        txid: msgTx.transact.txid,
+        txid: msgTransact.transact.txid,
         confirmed: false
     };
 
-    if (msgTx.extMsgRef) {
-        const storageProvider = msgTx.options.storageProvider !== undefined ? msgTx.options.storageProvider : CatenisMessage.defaultStorageProvider;
+    if (msgTransact.extMsgRef) {
+        const storageProvider = msgTransact.options.storageProvider !== undefined ? msgTransact.options.storageProvider : CatenisMessage.defaultStorageProvider;
 
         docMessage.externalStorage = {
             provider: storageProvider.name,
-            reference: CatenisMessage.getMessageStorageClass(storageProvider).getNativeMsgRef(msgTx.extMsgRef)
+            reference: CatenisMessage.getMessageStorageClass(storageProvider).getNativeMsgRef(msgTransact.extMsgRef)
         };
     }
 
     docMessage.createdDate = new Date();
-    docMessage.sentDate = msgTx.transact.sentDate;
+    docMessage.sentDate = msgTransact.transact.sentDate;
 
     try {
         docMessage._id = Catenis.db.collection.Message.insert(docMessage);
     }
     catch (err) {
-        Catenis.logger.ERROR(util.format('Error trying to create new message: %s ', util.inspect(docMessage)), err);
-        throw new Meteor.Error('ctn_msg_insert_error', util.format('Error trying to create new message: %s', util.inspect(docMessage)), err.stack);
+        Catenis.logger.ERROR(util.format('Error trying to create new local message: %s ', util.inspect(docMessage)), err);
+        throw new Meteor.Error('ctn_msg_insert_error', util.format('Error trying to create new local message: %s', util.inspect(docMessage)), err.stack);
     }
 
     return docMessage.messageId;
 };
 
-Message.getMessageByMessageId = function (messageId) {
+// Create a new (send) Message issued by another Catenis node (and received by this one) and returns its messageId
+//
+//  Arguments:
+//    sendMsgTransact: [Object] - instance of SendMessageTransaction
+//    receivedDate: [Date] - (optional) date and time when send message transaction had been received. If not defined,
+//                            assume that message should be blocked
+Message.createRemoteMessage = function (sendMsgTransact, receivedDate) {
+    // Validate arguments
+    const errArg = {};
+
+    if (!sendMsgTransact instanceof SendMessageTransaction) {
+        errArg.sendMsgTransact = sendMsgTransact;
+    }
+
+    if (receivedDate !== undefined && !receivedDate instanceof Date) {
+        errArg.receivedDate = receivedDate;
+    }
+
+    if (Object.keys(errArg).length > 0) {
+        const errArgs = Object.keys(errArg);
+
+        Catenis.logger.ERROR(util.format('Message.createRemoteMessage method called with invalid argument%s', errArgs.length > 1 ? 's' : ''), errArg);
+        throw Error(util.format('Invalid %s argument%s', errArgs.join(', '), errArgs.length > 1 ? 's' : ''));
+    }
+
+    const docMessage = {
+        messageId: newMessageId(sendMsgTransact.transact),
+        action: Message.action.send,
+        source: Message.source.remote,
+        originDeviceId: sendMsgTransact.originDevice.deviceId,
+        targetDeviceId: sendMsgTransact.targetDevice.deviceId,
+        isEncrypted: sendMsgTransact.options.encrypted,
+        blockchain: {
+            txid: sendMsgTransact.transact.txid,
+            confirmed: false
+        }
+    };
+
+    if (sendMsgTransact.extMsgRef) {
+        const storageProvider = sendMsgTransact.options.storageProvider !== undefined ? sendMsgTransact.options.storageProvider : CatenisMessage.defaultStorageProvider;
+
+        docMessage.externalStorage = {
+            provider: storageProvider.name,
+            reference: CatenisMessage.getMessageStorageClass(storageProvider).getNativeMsgRef(sendMsgTransact.extMsgRef)
+        };
+    }
+
+    if (receivedDate) {
+        docMessage.receivedDate = receivedDate;
+    }
+    else {
+        docMessage.blocked = true;
+    }
+
+    try {
+        docMessage._id = Catenis.db.collection.Message.insert(docMessage);
+    }
+    catch (err) {
+        Catenis.logger.ERROR(util.format('Error trying to create new remote message: %s ', util.inspect(docMessage)), err);
+        throw new Meteor.Error('ctn_msg_insert_error', util.format('Error trying to create new remote message: %s', util.inspect(docMessage)), err.stack);
+    }
+
+    return docMessage.messageId;
+};
+
+Message.getMessageByMessageId = function (messageId, requestingDeviceId) {
     // Retrieve Message doc/rec
-    const docMessage = Catenis.db.collection.Message.findOne({
+    const selector = {
         messageId: messageId
-    });
+    };
+
+    if (requestingDeviceId) {
+        // If retrieving message for a specific device, make sure not to return 'send' messages
+        //  for any device other than the device that sent the message (origin device) if the
+        //  message has not been received yet
+        selector.$or = [{
+            action: Message.action.log
+        }, {
+            action: Message.action.send,
+            $or: [{
+                originDeviceId: requestingDeviceId
+            }, {
+                originDeviceId: {
+                    $ne: requestingDeviceId
+                },
+                receivedDate: {
+                    $exists: true
+                }
+            }]
+        }];
+    }
+
+    const docMessage = Catenis.db.collection.Message.findOne(selector);
 
     if (!docMessage) {
         // No message available with the given client ID. Log error and throw exception
@@ -273,9 +395,13 @@ Message.query = function (issuerDeviceId, filter) {
             outboundSelector = undefined;
 
         if (filter.direction === undefined || filter.direction === Message.direction.inbound) {
-            // Inbound message direction
+            // Inbound message direction.
+            //  Make sure that only received messages are included
             inboundSelector = {
-                targetDeviceId: issuerDeviceId
+                targetDeviceId: issuerDeviceId,
+                receivedDate: {
+                    $exists: true
+                }
             };
 
             // From devide ID filter
@@ -408,8 +534,13 @@ Message.query = function (issuerDeviceId, filter) {
 
         const sentSelector = {
             originDeviceId: issuerDeviceId
-        }, receivedSelector = {
-            targetDeviceId: issuerDeviceId
+        };
+        // Make sure that only received messages are included
+        const receivedSelector = {
+            targetDeviceId: issuerDeviceId,
+            receivedDate: {
+                $exists: true
+            }
         };
 
         // Date filter
@@ -498,8 +629,8 @@ Message.action = Object.freeze({
 });
 
 Message.source = Object.freeze({
-    sent_msg: 'sent_msg',
-    received_msg: 'received_msg'
+    local: 'local',
+    remote: 'remote'
 });
 
 Message.direction = Object.freeze({

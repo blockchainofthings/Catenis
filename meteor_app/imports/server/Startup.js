@@ -37,6 +37,9 @@ import { RestApi } from './RestApi';
 import { SystemFundingUI } from './AdminUI/SystemFundingUI';
 import { ClientsUI } from './AdminUI/ClientsUI';
 import { DevicesUI } from './AdminUI/DevicesUI';
+import { ReceiveMessage } from './ReceiveMessage';
+import { ReadConfirmation } from './ReadConfirmation';
+
 // DEBUG - begin
 //import { resetBitcoinCore } from './Test/FundSourceTest';
 // DEBUG - end
@@ -79,7 +82,10 @@ Meteor.startup(function () {
         BlockchainAddress.initialize();
         Client.initialize();
         Device.initialize();
+        ReceiveMessage.initialize();
+        ReadConfirmation.initialize();
         TransactionMonitor.initialize();
+
         RestApi.initialize();
 
         // UI support initialization

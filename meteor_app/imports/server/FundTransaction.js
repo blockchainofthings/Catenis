@@ -47,7 +47,7 @@ export function FundTransaction(fundingEvent, entityId) {
 
     // Validate entity ID argument
     if (fundingEvent.name === FundTransaction.fundingEvent.provision_client_srv_credit || fundingEvent.name === FundTransaction.fundingEvent.provision_client_device) {
-        if (entityId == null) {
+        if (entityId === undefined) {
             Catenis.logger.ERROR('FundTransaction function class constructor called with invalid argument; missing entity ID');
             throw Error('Invalid entityId argument');
         }
@@ -56,7 +56,7 @@ export function FundTransaction(fundingEvent, entityId) {
             if (fundingEvent.name === FundTransaction.fundingEvent.provision_client_srv_credit) {
                 const docClient = Catenis.db.collection.Client.find({clientId: entityId}, {fields: {_id: 1}}).fetch();
 
-                if (docClient == undefined) {
+                if (docClient === undefined) {
                     Catenis.logger.ERROR('FundTransaction function class constructor called with invalid argument; entity ID not a valid client Id', {entityId: entityId});
                     throw Error('Invalid entityId argument');
                 }
@@ -64,7 +64,7 @@ export function FundTransaction(fundingEvent, entityId) {
             else {
                 const docDevice = Catenis.db.collection.Client.find({deviceId: entityId}, {fields: {_id: 1}}).fetch();
 
-                if (docDevice == undefined) {
+                if (docDevice === undefined) {
                     Catenis.logger.ERROR('FundTransaction function class constructor called with invalid argument; entity ID not a valid client Id', {entityId: entityId});
                     throw Error('Invalid entityId argument');
                 }
@@ -116,7 +116,7 @@ FundTransaction.prototype.addPayingSource = function () {
             outputAmount: this.transact.totalOutputsAmount()
         }, false);
 
-        if (fundResult != null) {
+        if (fundResult !== null) {
             // NOTE: we DO NOT care to lock the allocated UTXOs because it is expected that
             //  the code used to call this method and the method to actually send the transaction
             //  be executed from a critical section (FundSource.utxoCS) that avoids other UTXOs
@@ -133,7 +133,7 @@ FundTransaction.prototype.addPayingSource = function () {
 
             this.transact.addInputs(inputs);
 
-            if (fundResult.changeAmount > 0) {
+            if (fundResult.changeAmount >= Transaction.txOutputDustAmount) {
                 // Add new output to receive change
                 this.transact.addP2PKHOutput(Catenis.ctnHubNode.fundingChangeAddr.newAddressKeys().getAddress(), fundResult.changeAmount);
             }
@@ -153,7 +153,7 @@ FundTransaction.prototype.addPayingSource = function () {
 
 FundTransaction.prototype.sendTransaction = function () {
     // Check if transaction has not yet been created and sent
-    if (this.transact.txid == undefined) {
+    if (this.transact.txid === undefined) {
         this.transact.sendTransaction();
 
         // Save sent transaction onto local database
@@ -208,6 +208,10 @@ FundTransaction.fundingEvent = Object.freeze({
     add_extra_tx_pay_funds: Object.freeze({
         name: 'add_extra_tx_pay_funds',
         description: 'Add extra fund for pay tx expense'
+    }),
+    add_extra_read_confirm_tx_pay_funds: Object.freeze({
+        name: 'add_extra_read_confirm_tx_pay_funds',
+        description: 'Add extra fund for read confirmation pay tx expense'
     })
 });
 
@@ -218,7 +222,7 @@ FundTransaction.fundingEvent = Object.freeze({
 function isValidFundingEvent(event) {
     let isValid = false;
 
-    if (typeof event === 'object' && event != null && typeof event.name === 'string') {
+    if (typeof event === 'object' && event !== null && typeof event.name === 'string') {
         isValid = Object.keys(FundTransaction.fundingEvent).some((key) => {
             return FundTransaction.fundingEvent[key].name === event.name;
         });

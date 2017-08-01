@@ -24,5 +24,6 @@ nimble:restivus
 useraccounts:unstyled
 kadira:flow-router
 kadira:blaze-layout
-reactive-dict
+reactive-dict@1.1.8
 alanning:roles
+dynamic-import

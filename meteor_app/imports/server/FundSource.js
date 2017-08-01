@@ -26,6 +26,7 @@ import { Catenis } from './Catenis';
 import { CriticalSection } from './CriticalSection';
 import { Service } from './Service';
 import { Transaction } from './Transaction';
+import { Util } from './Util';
 
 // Config entries
 const fundSourceConfig = config.get('fundSource');
@@ -68,10 +69,13 @@ const cfgSettings = {
 //                                     //   - if a non-negative value is passed, the upper limit is set to (maxSize-value)
 //                                     //   - if a negative value is passed, no upper limit is set (all UTXOs are used)
 //    }
+//    excludeUtxos: [string|Array{string)],  // List of UTXOs that should not be taken into account when allocating new UTXOs
+//                                           //  (because those UTXOs are associated with txs that use opt-in RBF (Replace By Fee)
+//                                           //  and as such can be replaced by other txs and have their own outputs invalidated)
 //
 // NOTE: make sure that objects of this function class are instantiated and used (their methods
 //  called) from code executed from the FundSource.utxoCS critical section object
-export function FundSource(addresses, unconfUtxoInfo) {
+export function FundSource(addresses, unconfUtxoInfo, excludeUtxos) {
     this.addresses = Array.isArray(addresses) ? addresses : [addresses];
 
     this.useUnconfirmedUtxo = unconfUtxoInfo !== undefined;
@@ -81,6 +85,10 @@ export function FundSource(addresses, unconfUtxoInfo) {
         this.ancestorsSizeUpperLimit = unconfUtxoInfo.ancestorsSizeDiff === undefined ? cfgSettings.maxAncestorsSize - 1000 : (unconfUtxoInfo.ancestorsSizeDiff >= 0 ? cfgSettings.maxAncestorsSize - unconfUtxoInfo.ancestorsSizeDiff : undefined);
         this.descendantsCountUpperLimit = unconfUtxoInfo.descendantsCountDiff === undefined ? cfgSettings.maxDescendantsCount - 1 : (unconfUtxoInfo.descendantsCountDiff >= 0 ? cfgSettings.maxDescendantsCount - unconfUtxoInfo.descendantsCountDiff : undefined);
         this.descendantsSizeUpperLimit = unconfUtxoInfo.descendantsSizeDiff === undefined ? cfgSettings.maxDescendantsSize - 1000 : (unconfUtxoInfo.descendantsSizeDiff >= 0 ? cfgSettings.maxDescendantsSize - unconfUtxoInfo.descendantsSizeDiff : undefined);
+    }
+
+    if (excludeUtxos !== undefined) {
+        this.excludedUtxos = new Set(excludeUtxos);
     }
 
     // Initialize in-memory database to hold UTXOs
@@ -500,6 +508,11 @@ FundSource.prototype.clearAllocatedUtxos = function () {
 //      or .bind().
 //
 
+function isExcludedUtxo(utxo) {
+    return this.excludedUtxos !== undefined && this.excludedUtxos.has(Util.txoutToString(utxo));
+}
+
+
 function loadUtxos() {
     // Retrieve UTXOs associated with given addresses, including unconfirmed ones if requested
     const utxos = Catenis.bitcoinCore.listUnspent(this.useUnconfirmedUtxo ? 0 : 1, this.addresses);
@@ -510,19 +523,22 @@ function loadUtxos() {
     const unconfTxids = new Set();
 
     utxos.forEach((utxo) => {
-        this.collUtxo.insert({
-            address: utxo.address,
-            txid: utxo.txid,
-            vout: utxo.vout,
-            scriptPubKey: utxo.scriptPubKey,
-            amount: new BigNumber(utxo.amount).times(100000000).toNumber(),
-            confirmations: utxo.confirmations,
-            allocated: false
-        });
+        // Make sure that UTXO is not excluded
+        if (!isExcludedUtxo.call(this, utxo)) {
+            this.collUtxo.insert({
+                address: utxo.address,
+                txid: utxo.txid,
+                vout: utxo.vout,
+                scriptPubKey: utxo.scriptPubKey,
+                amount: new BigNumber(utxo.amount).times(100000000).toNumber(),
+                confirmations: utxo.confirmations,
+                allocated: false
+            });
 
-        if (utxo.confirmations === 0) {
-            // Store uncofirmed transaction ID
-            unconfTxids.add(utxo.txid);
+            if (utxo.confirmations === 0) {
+                // Store unconfirmed transaction ID
+                unconfTxids.add(utxo.txid);
+            }
         }
     });
 
@@ -571,6 +587,7 @@ function loadUtxos() {
 
 // Critical section object to avoid concurrent access to UTXOs
 FundSource.utxoCS = new CriticalSection();
+
 
 // Definition of module (private) functions
 //

@@ -38,6 +38,7 @@ import { Service } from './Service';
 import { Transaction } from './Transaction';
 import { Util } from './Util';
 import { Message } from './Message';
+import { ReadConfirmation } from './ReadConfirmation';
 
 // Config entries
 const deviceConfig = config.get('device');
@@ -95,8 +96,6 @@ export function Device(docDevice, client) {
     // Critical section object to avoid concurrent access to database at the
     //  device object level (when updating device status basically)
     this.devDbCS = new CriticalSection();
-
-    // TODO: update ReceivedMessage doc/rec to indicate that message has already been read as messages are read (read confirmation tx received)
 }
 
 
@@ -390,8 +389,11 @@ Device.prototype.sendMessage = function (targetDeviceId, message, encryptMessage
 
             txid = sendMsgTransact.sendTransaction();
 
+            // Force polling of blockchain so newly sent transaction is received and processed right away
+            Catenis.txMonitor.pollNow();
+
             // Create message and save it to local database
-            messageId = Message.createSentMessage(sendMsgTransact);
+            messageId = Message.createLocalMessage(sendMsgTransact);
         }
         catch (err) {
             // Error sending message to another device.
@@ -462,18 +464,15 @@ Device.prototype.logMessage = function (message, encryptMessage = true, storageS
             });
 
             // Build and send transaction
-            //console.time('>>>>>> Device#logMessage: call LogMessage#buildTransaction');
             logMsgTransact.buildTransaction();
-            //console.timeEnd('>>>>>> Device#logMessage: call LogMessage#buildTransaction');
 
-            //console.time('>>>>>> Device#logMessage: call LogMessage#sendTransaction');
             txid = logMsgTransact.sendTransaction();
-            //console.timeEnd('>>>>>> Device#logMessage: call LogMessage#sendTransaction');
+
+            // Force polling of blockchain so newly sent transaction is received and processed right away
+            Catenis.txMonitor.pollNow();
 
             // Create message and save it to local database
-            //console.time('>>>>>> Device#logMessage: call Message.createSentMessage');
-            messageId = Message.createSentMessage(logMsgTransact);
-            //console.timeEnd('>>>>>> Device#logMessage: call Message.createSentMessage');
+            messageId = Message.createLocalMessage(logMsgTransact);
         }
         catch (err) {
             // Error logging message
@@ -522,11 +521,10 @@ Device.prototype.readMessage = function (messageId) {
     }
 
     // Get message
-    const message = Message.getMessageByMessageId(messageId);
+    const message = Message.getMessageByMessageId(messageId, this.deviceId);
 
     // Make sure that device can read the message. For now, just make sure that
     //  device is the one that either logged or to which the message has been sent
-    // TODO: check if the device has (extended) permission to read the message
     if (!((message.action === Message.action.log && message.originDeviceId === this.deviceId)
             || (message.action === Message.action.send && message.targetDeviceId === this.deviceId))) {
         // Throw exception indicating that message cannot be accessed by this device
@@ -619,7 +617,13 @@ Device.prototype.readMessage = function (messageId) {
         // Indicates that message has been read
         if (message.readNow()) {
             // This was the first time that message has been read
-            // TODO: Issue read confirmation transaction
+            if (message.action === Message.action.send) {
+                // Confirm that message has been read
+                // TODO: check whether target device allows sending read confirmation notification to origin device. If not, set confirmType to ReadConfirmation.confirmationType.spendOnly
+                const confirmType = ReadConfirmation.confirmationType.spendNotify;
+
+                Catenis.readConfirm.confirmMessageRead(msgTransact, confirmType);
+            }
         }
 
         // And returns message info
@@ -680,7 +684,7 @@ Device.prototype.retrieveMessageContainer = function (messageId) {
     }
 
     // Get message
-    const message = Message.getMessageByMessageId(messageId);
+    const message = Message.getMessageByMessageId(messageId, this.deviceId);
 
     // Make sure that device can read the message. Only the device that logged/sent
     //  the message can retrieve its container
