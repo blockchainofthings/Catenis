@@ -580,7 +580,7 @@ function addServiceCredit(srvCreditType, count) {
 
             // Allocate system pay tx expense addresses if required (that is, if system pay tx expense
             //  balance is not enough to cover new service credits being added)
-            const fundAmount = (srvCreditType === Client.serviceCreditType.message ? Service.getPayMessageTxExpenseFundAmount() : Service.getPayAssetTxExpenseFundAmount())(count);
+            const fundAmount = (srvCreditType === Client.serviceCreditType.message ? Service.getPayMessageTxExpenseFundAmount : Service.getPayAssetTxExpenseFundAmount)(count);
             distribFund = this.ctnNode.checkPayTxExpenseFundingBalance(false, fundAmount);
 
             if (distribFund !== undefined) {
