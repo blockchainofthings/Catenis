@@ -49,119 +49,173 @@ export function ClientsUI() {
 //      or .bind().
 //
 
-/*function priv_func() {
- }*/
 
 
-// ClientsUI function class (public) methods
-//
+//ensure user is in sys-admin role to call certain functions.
+
+
+// ClientsUI function class (public) method
+function verifyUserRole(){
+    try{
+
+        var user= Meteor.user();
+
+        if(user && user.roles && user.roles.includes('sys-admin') ){
+            return true;
+        }else{
+            return false;
+        }
+
+    }catch(err){
+        Catenis.logger.ERROR('Failure trying to verify Meteor user role.', err);
+        throw new Meteor.Error('client.verifyUserRole.failure', 'Failure trying to verify role of current user: ' + err.toString());
+    }
+}
+
+
 
 ClientsUI.initialize = function () {
     // Declaration of RPC methods to be called from client
     Meteor.methods({
-        addMessageCredits: function (clientId, count) {
-            if (!Number.isInteger(count) || count < 0 || count > maxMsgCreditsCount) {
-                // Invalid number of message credits to add. Log error and throw exception
-                Catenis.logger.ERROR(util.format('Invalid number of message credits to add. Make sure that it is a positive integer not greater than %s', maxMsgCreditsCount.toString()), {count: count});
-                throw new Meteor.Error('clients.add-msg-credits.invalid-param', util.format('Invalid number of message credits to add. Make sure that it is a positive integer not greater than %s', maxMsgCreditsCount.toString()));
-            }
 
-            Client.getClientByClientId(clientId).addMessageCredit(count);
+        addMessageCredits: function (clientId, count) {
+            if(verifyUserRole()) {
+                if (!Number.isInteger(count) || count < 0 || count > maxMsgCreditsCount) {
+                    // Invalid number of message credits to add. Log error and throw exception
+                    Catenis.logger.ERROR(util.format('Invalid number of message credits to add. Make sure that it is a positive integer not greater than %s', maxMsgCreditsCount.toString()), {count: count});
+                    throw new Meteor.Error('clients.add-msg-credits.invalid-param', util.format('Invalid number of message credits to add. Make sure that it is a positive integer not greater than %s', maxMsgCreditsCount.toString()));
+                }
+
+                Client.getClientByClientId(clientId).addMessageCredit(count);
+            }else{
+
+                Catenis.logger.ERROR('User does not have permission to access method "addMessageCredits"');
+                throw new Meteor.Error('User does not have permission to access method "addMessageCredits"');
+
+            }
         },
 
 
         //added by peter to allow for resending enrollment email.
         resendEnrollmentEmail: function(clientId){
+            if(verifyUserRole()) {
             try {
                 Accounts.sendEnrollmentEmail(clientId);
             }catch(err){
                 Catenis.logger.ERROR('Failure trying to resend enrollment Email to client.', err);
                 throw new Meteor.Error('client.resendEnrollmentEmail.failure', 'Failure trying to resend enrollment Email: ' + err.toString());
             }
+            }else{
+                Catenis.logger.ERROR('User does not have permission to access method "resendEnrollmentEmail"');
+                throw new Meteor.Error('User does not have permission to access method "resendEnrollmentEmail"');
+            }
 
         },
 
         //added by peter to allow Meteor account activation on enrollment. called from ../both/ConfigLoginForm.js
+
         activateCurrentUser: function(){
-            try{
+            if( Meteor.user().status!=="Pending" ){
+                Catenis.logger.ERROR('Failure trying to activate Meteor user. User is not "pending". ');
+                throw new Meteor.Error('client.activateCurrentUser.failure', 'Failure trying to activate current user: User is not "pending"');
+            }else{
+                try{
+                    Meteor.users.update(Meteor.userId(), {$set: {'profile.status': "Activated"}});
 
-                Meteor.users.update(Meteor.userId(), {$set: {'profile.status': "Activated"}});
+                }catch(err){
 
-            }catch(err){
-
-                Catenis.logger.ERROR('Failure trying to activate Meteor user.', err);
-                throw new Meteor.Error('client.activateCurrentUser.failure', 'Failure trying to activate current user: ' + err.toString());
-
+                    Catenis.logger.ERROR('Failure trying to activate Meteor user.', err);
+                    throw new Meteor.Error('client.activateCurrentUser.failure', 'Failure trying to activate current user: ' + err.toString());
+                }
             }
-
         },
 
-        //added by peter to allow Meteor account deactivation and activation. called from ClientDetailsTemplate
+        //added by peter to allow admin Meteor account deactivation and activation. called from ClientDetailsTemplate
         changeUserStatus: function(user_id, newStatus){
             let user;
-
-            try{
-                user=Meteor.users.findOne({_id: user_id});
-                //Ensure that the new status passed is different than the current status.
-
-                // if(newStatus!== user.profile.status){
+            if(verifyUserRole()){
+                try{
+                    user=Meteor.users.findOne({_id: user_id});
                     Meteor.users.update( user, {$set: {'profile.status': newStatus}});
-                // }else{
-                //     Catenis.logger.ERROR("Failure trying to change User Status. Attempted to reset the same status");
-                //     throw new Meteor.Error("client.changeUserStatus.failure Failure trying to deactivate User")
-                // }
-
-            }catch(err){
-                Catenis.logger.ERROR('Failure trying to change user Status Meteor user.', err);
-                throw new Meteor.Error('client.changeUserStatus.failure', 'Failure trying to change user active status: ' + err.toString());
+                }catch(err){
+                    Catenis.logger.ERROR('Failure trying to change user Status Meteor user.', err);
+                    throw new Meteor.Error('client.changeUserStatus.failure', 'Failure trying to change user active status: ' + err.toString());
+                }
+            }else{
+                Catenis.logger.ERROR('User does not have permission to access method "changeUserStatus"');
+                throw new Meteor.Error('User does not have permission to access method "changeUserStatus"');
             }
+
         },
 
 
         createClient: function (ctnNodeIndex, clientInfo) {
             // Try to create meteor client user
             let user_id;
+            if(verifyUserRole()){
+                try {
 
-            try {
+                    const opts = {
+                        username: clientInfo.username,
+                        //got rid of this, as the users will be setting this on their own.
+                        // password: clientInfo.psw,
 
-                const opts = {
-                    username: clientInfo.username,
-                    //we should probably get rid of this password field later, given that we're allowing users to set their own
-                    password: clientInfo.psw,
-                    // below email and status were added by peter
-                    //added this field to send emails.
-                    email: clientInfo.email,
-                    profile: {
-                        name: 'User for Catenis client ' + clientInfo.name,
-                        status: "Pending",
-                    }
-                };
+                        // below email and status were added by peter
+                        //added this field to send emails.
+                        email: clientInfo.email,
 
-                user_id = Accounts.createUser(opts);
-             // peter:  adding this to allow for enrollment email when meteor account is created.
-                Accounts.sendEnrollmentEmail(user_id);
+                        profile: {
+                            name: 'User for Catenis client ' + clientInfo.name,
+                            status: "Pending",
+                            firstname: clientInfo.firstName,
+                            lastname: clientInfo.lastName,
+                            company: clientInfo.companyName,
+                        }
+                    };
+
+                    user_id = Accounts.createUser(opts);
+                    // peter:  adding this to allow for enrollment email when meteor account is created.
+                    Accounts.sendEnrollmentEmail(user_id);
+                }
+
+                catch (err) {
+                    // Error trying to create meteor user for client. Log error and throw exception
+                    Catenis.logger.ERROR('Failure trying to create new user for client.', err);
+                    throw new Meteor.Error('client.create-user.failure', 'Failure trying to create new user for client: ' + err.toString());
+                }
+
+                // Try to create Catenis client
+                let clientId;
+                try {
+                    clientId = CatenisNode.getCatenisNodeByIndex(ctnNodeIndex).createClient(clientInfo.name, user_id);
+                }
+                catch (err) {
+                    // Error trying to create Catenis client. Log error and throw exception
+                    Catenis.logger.ERROR('Failure trying to create new Catenis client.', err);
+                    throw new Meteor.Error('client.create.failure', 'Failure trying to create new Catenis client: ' + err.toString());
+                }
+
+                return clientId;
+
+
+
+            }else{
+                Catenis.logger.ERROR('User does not have permission to access method "changeUserStatus"');
+                throw new Meteor.Error('User does not have permission to access method "changeUserStatus"');
+            }
+        },
+
+        //Unsure if meteor account takes into consideration that this update is a critical section.
+        //Do more research and find out.
+        updateUser: function (ctnNodeIndex, clientInfo, clientId) {
+            if(verifyUserRole()){
+
+            }else{
+
             }
 
-            catch (err) {
-                // Error trying to create meteor user for client. Log error and throw exception
-                Catenis.logger.ERROR('Failure trying to create new user for client.', err);
-                throw new Meteor.Error('client.create-user.failure', 'Failure trying to create new user for client: ' + err.toString());
-            }
 
-            // Try to create Catenis client
-            let clientId;
-
-            try {
-                clientId = CatenisNode.getCatenisNodeByIndex(ctnNodeIndex).createClient(clientInfo.name, user_id);
-            }
-            catch (err) {
-                // Error trying to create Catenis client. Log error and throw exception
-                Catenis.logger.ERROR('Failure trying to create new Catenis client.', err);
-                throw new Meteor.Error('client.create.failure', 'Failure trying to create new Catenis client: ' + err.toString());
-            }
-
-            return clientId;
-        }
+        },
     });
 
 

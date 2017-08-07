@@ -74,7 +74,6 @@ Meteor.startup(function () {
         BitcoinCore.initialize();
         //ColoredCoins.initialize();
         CatenisNode.initialize();
-
         // Make sure that all addresses are currently imported onto Bitcoin Core
         CheckImportAddresses(cfgSettings.fixMissingAddresses);
 

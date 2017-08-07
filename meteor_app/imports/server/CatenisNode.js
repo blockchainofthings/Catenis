@@ -572,6 +572,7 @@ function fundDeviceMainAddresses(amountPerAddress) {
 
 CatenisNode.initialize = function () {
     Catenis.logger.TRACE('CatenisNode initialization');
+
     // Retrieve (HD node) index of last created CatenisNode doc/rec
     const docCtnNode = Catenis.db.collection.CatenisNode.findOne({}, {
         fields: {ctnNodeIndex: 1},
@@ -589,6 +590,7 @@ CatenisNode.initialize = function () {
         // Instantiate CatenisNode object making sure that associated clients are also initialized
         new CatenisNode(doc, true);
     });
+
 };
 
 // Create new Catenis node

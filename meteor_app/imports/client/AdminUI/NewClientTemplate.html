@@ -8,7 +8,41 @@
                     <div class="col-lg-12">
                         <br>
                         {{#if newClientId}}
+                            {{#if successfulUpdate}}
+                                <p> successfully updated user information </p>
+                            {{else}}
+                                    <p style="color:red">{{{errorMessage}}}</p>
+                            {{/if}}
                             <p style="color:blue">New client "{{newClientId}}" successfully created</p>
+                            {{#if clientInfo}}
+                                <!--showing the newly generated client's information-->
+                                <div class="table-responsive">
+                                    <table class="table table-striped">
+                                        <thead>
+                                            <tr>
+                                                <th>Client Name</th>
+                                                <th>User name</th>
+                                                <th>First Name</th>
+                                                <th>Last Name</th>
+                                                <th>Company Name</th>
+                                                <th>Email</th>
+                                                <th>Password</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td>{{clientInfo.name}}</td>
+                                                <td>{{clientInfo.username}}</td>
+                                                <td>{{clientInfo.firstName}}</td>
+                                                <td>{{clientInfo.lastName}}</td>
+                                                <td>{{clientInfo.companyName}}</td>
+                                                <td>{{clientInfo.email}}</td>
+                                                <td>***Password is not Visible***</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            {{/if}}
                             <div class="row">
                                 <div class="col-md-6">
                                     <a href="/admin/clients" class="form-control btn btn-login at-btn">Back to clients</a>
@@ -28,21 +62,63 @@
                                 <div class="form-group">
                                     <input type="text" maxlength="40" id="txtUsername" name="username" placeholder="Username" autocapitalize="none" autocorrect="off">
                                 </div>
+
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <input type="text" maxlength="80" id="txtFirstName" name="firstName" placeholder="First Name" autocapitalize="none" autocorrect="off">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <input type="text" maxlength="80" id="txtLastName" name="lastName" placeholder="Last Name" autocapitalize="none" autocorrect="off">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <input type="email" maxlength="40" id="txtEmail" name="email" placeholder="Email" autocapitalize="none" autocorrect="off">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <button type="button"  class="form-control btn btn-login at-btn submit" data-toggle="modal" data-target="#confirmEmail" style="{{#if emailValidated}} background-color: greenyellow {{else}} background-color: red {{/if}}">{{ValidateEmailMessage}}</button>
+
+                                        <div class="modal" tabindex="-1" role="dialog" id="confirmEmail">
+                                            <div class="modal-dialog" role="document">
+                                                <div class="modal-content">
+                                                    <div class="modal-header">
+                                                        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                                                        <h4 class="modal-title">Validate Email</h4>
+                                                    </div>
+                                                    <div class="modal-body">
+                                                        <!--error message box, should not appear unless there is an issue-->
+                                                        <p id="resultEmailConfirmation">please validate client's email</p>
+                                                        <div class="form-group" id="confirmEmail">
+                                                            <input type="email" maxlength="40" id="txtConfirmEmail" name="confirmEmail" placeholder="Validate Email" autocapitalize="none" autocorrect="off">
+                                                        </div>
+                                                    </div>
+                                                    <div class="modal-footer">
+                                                        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                                                        <button type="button" class="btn btn-primary" id="checkEmailValidity">Validate</button>
+                                                    </div>
+                                                </div><!-- /.modal-content -->
+                                            </div><!-- /.modal-dialog -->
+                                        </div><!-- /.modal -->
+                                    </div>
+                                </div>
+
+
                                 <div class="form-group">
-                                    <input type="email" maxlength="40" id="txtEmail" name="email" placeholder="Email" autocapitalize="none" autocorrect="off">
+                                    <input type="text" maxlength="80" id="txtCompanyName" name="companyName" placeholder="Company" autocapitalize="none" autocorrect="off">
                                 </div>
                                 <div class="form-group">
-                                    <input type="email" maxlength="40" id="txtConfirmEmail" name="confirmEmail" placeholder="Confirm Email" autocapitalize="none" autocorrect="off">
-                                </div>
-                                <div class="form-group">
-                                    <input type="password" maxlength="40" id="pswPassword" name="password" placeholder="Password" autocapitalize="none" autocorrect="off">
-                                </div>
-                                <div class="form-group">
-                                    <input type="password" maxlength="40" id="pswConfirmPassword" name="confirmPassword" placeholder="Confirm Password" autocapitalize="none" autocorrect="off">
+                                    <input type="hidden" id="emailValidation" value="notValidated">
                                 </div>
                                 <div class="row">
                                     <div class="col-xs-6 form-group pull-left">
-                                        <a href="/admin/clients" class="form-control btn btn-login at-btn">Back to clients</a>
+                                        <a href="#" id="reset" class="form-control btn btn-login at-btn">Clear</a>
                                     </div>
                                     <div class="col-xs-6 form-group pull-right">
                                         <button type="submit" class="form-control btn btn-login at-btn submit {{submitDisabled}}">Add Client</button>

@@ -18,11 +18,14 @@
 //import config from 'config';
 // Meteor packages
 import { Meteor } from 'meteor/meteor';
+import { RectiveDict } from 'meteor/reactive-dict';
 import { AccountsTemplates } from 'meteor/useraccounts:core';
+
 // Module code
 //
 
 
+//don't allow client side users to update code from console. Must call methods to update accounts.
 Meteor.users.deny({
     update: function() {
         return true;
@@ -30,44 +33,62 @@ Meteor.users.deny({
 });
 
 
-
+//function that runs on submit of at-pwd-form. "state" is the AccountTemplates internal state
 var onSubmitFunc = function(error, state){
+
     //runs on successful at-pwd-form submit. Use this to allow for client activation and banning disabled users
     if (!error) {
         // Successfully enrolled client, change client status to "ACTIVE"
         if (state === "enrollAccount") {
 
             //check if user is actually a first time user.
-
             if(Meteor.user().profile.status==="Pending"){
                 //activate user
                 Meteor.call('activateCurrentUser', (error) => {
-                    if (error) {
-                        template.state.set('errMsgs', [
-                            error.toString()
-                        ]);
-                    }
+                    console.log("error activating user" + error);
                 });
+
 
                 //initiate building of corresponding Catenis Client for this user.
                 //Claudio, you should call the Client initialization from here.
-
+                //it'd be helpful if the action from line 46 to the client creation was atomic.
 
             }
+
+            //Successful Activation, now going to log this person out and redirect them to a new page with a link to login.
+            Meteor.logout();
+            if( confirm("Success! Login to Catenis now?")==true){
+                FlowRouter.go('/admin');
+            }
+
 
         }
         if(state==="signIn"){
             //ensure that the meteor account of the client is activated. Otherwise logout
             var userAccountStatus=Meteor.user();
 
+            if(userAccountStatus.profile.status !=="Activated"){
+                Meteor.logout();
+            }
+        }
+
+        if(state==="resetPwd"){
+        //    ensure that this user is activated. otherwise refuse login
+            var userAccountStatus=Meteor.user();
             if( userAccountStatus.profile.status !=="Activated"){
                 Meteor.logout();
             }
         }
     }
+
+
+
 };
 
 
+
+Accounts.config({passwordResetTokenExpirationInDays: 3 });
+Accounts.config({passwordEnrollTokenExpirationInDays: 7 });
 
 AccountsTemplates.configure({
     forbidClientAccountCreation: true,
@@ -94,9 +115,8 @@ AccountsTemplates.configure({
         }
     },
     enablePasswordChange: true,
-    onSubmitHook: onSubmitFunc
+    onSubmitHook: onSubmitFunc,
 });
-
 
 AccountsTemplates.configureRoute('resetPwd', {template: 'resetPwd'});
 AccountsTemplates.configureRoute('enrollAccount', {template: 'enrollAccount'});

@@ -135,20 +135,26 @@ Template.clientDetails.events({
 
     //NOTE: this is not linked to the deactivation of the Catenis Clients, so they have to be implemented as well.
     'click #activateUser'(events, template) {
-        const client = Catenis.db.collection.Client.findOne({_id: Template.instance().data.client_id});
-        Meteor.call('changeUserStatus', client.user_id, 'Activated', (error) => {
-            if (error) {
-                console.log("there was an error", error);
-            }
-        });
+        if( confirm("you're about to activate this user. Are you sure?")==true){
+            const client = Catenis.db.collection.Client.findOne({_id: Template.instance().data.client_id});
+            Meteor.call('changeUserStatus', client.user_id, 'Activated', (error) => {
+                if (error) {
+                    console.log("there was an error", error);
+                }
+            });
+        }
+
     },
     'click #deactivateUser'(events, template) {
-        const client = Catenis.db.collection.Client.findOne({_id: Template.instance().data.client_id});
-        Meteor.call('changeUserStatus', client.user_id, 'Deactivated', (error) => {
-            if (error) {
-                console.log("there was an error", error);
-            }
-        });
+        if(confirm("you're about to deactivate this user and all linked devices. Are you sure?")==true){
+            const client = Catenis.db.collection.Client.findOne({_id: Template.instance().data.client_id});
+            Meteor.call('changeUserStatus', client.user_id, 'Deactivated', (error) => {
+                if (error) {
+                    console.log("there was an error", error);
+                }
+            });
+        }
+
     },
 
 });

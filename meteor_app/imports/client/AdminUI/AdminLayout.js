@@ -33,7 +33,7 @@ import './NewDeviceTemplate.js';
 //below was added by Peter to incorporate bootstrap styling of useraccounts
 import './LoginForm.js';
 import './LoginBtn.js';
-
+import './enrollAccount.js';
 
 
 

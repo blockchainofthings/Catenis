@@ -60,9 +60,11 @@ currently using useraccounts:unstyled
 -> refer to https://github.com/meteor-useraccounts/core/blob/master/Guide.md#css-rules to see relevant classes & ids
 */
 
-.form-group>.at-input>input{
+.form-group>.at-input>input,
+.form-group>input{
     width:100%;
 }
+
 #frmNewClient>.form-group>input,
 #frmNewDevice>.form-group>input{
     width:100%;

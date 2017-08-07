@@ -24,7 +24,6 @@ import { BlazeLayout } from 'meteor/kadira:blaze-layout';
 // Import templates
 import './AdminUI/AdminLayout.js';
 import './AdminUI/resetPwd.html';
-import './AdminUI/enrollAccount.html';
 // Module code
 //
 
@@ -113,7 +112,6 @@ FlowRouter.route('/enroll-account/:token',{
         });
 
         AccountsTemplates.paramToken= params.token;
-        AccountsTemplates.setState('enrollAccount');
     }
 });
 
@@ -127,3 +125,4 @@ FlowRouter.route('/reset-password/:token', {
         AccountsTemplates.paramToken= params.token;
     }
 });
+
