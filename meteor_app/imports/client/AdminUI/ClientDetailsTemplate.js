@@ -41,12 +41,6 @@ Template.clientDetails.onCreated(function () {
     //added by peter to check whether enrollment email was sent.
     this.state.set('haveResentEnrollmentEmail', false);
 
-    //was working on this before weekend started, need to make sure that
-
-    //1. I can pass activated parameter
-    //2. the function much below can interact properly with the corresponding function in ClientsUI.js
-
-
     // Subscribe to receive fund balance updates
     this.clientRecordSubs = this.subscribe('clientRecord', this.data.client_id);
     this.clientUserSubs = this.subscribe('clientUser', this.data.client_id);
@@ -168,7 +162,6 @@ Template.clientDetails.helpers({
     },
     clientUsername: function (user_id) {
         const user = Meteor.users.findOne({_id: user_id});
-
         return user ? user.username : undefined;
     },
     messageCredits: function () {

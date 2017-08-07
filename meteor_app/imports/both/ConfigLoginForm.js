@@ -45,7 +45,6 @@ var onSubmitFunc = function(error, state){
             if(Meteor.user().profile.status==="Pending"){
                 //activate user
                 Meteor.call('activateCurrentUser', (error) => {
-                    console.log("error activating user" + error);
                 });
 
 
@@ -57,9 +56,8 @@ var onSubmitFunc = function(error, state){
 
             //Successful Activation, now going to log this person out and redirect them to a new page with a link to login.
             Meteor.logout();
-            if( confirm("Success! Login to Catenis now?")==true){
-                FlowRouter.go('/admin');
-            }
+            FlowRouter.go('/admin');
+
 
 
         }
@@ -107,7 +105,7 @@ AccountsTemplates.configure({
         },
         button: {
             changePwd: "Change Password",
-            enrollAccount: "Enroll Account",
+            enrollAccount: "Set Password to Enroll Account",
             forgotPwd: "Send Email Link",
             resetPwd: "Reset Password",
             signIn: "Log In",

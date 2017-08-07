@@ -115,7 +115,7 @@ ClientsUI.initialize = function () {
         //added by peter to allow Meteor account activation on enrollment. called from ../both/ConfigLoginForm.js
 
         activateCurrentUser: function(){
-            if( Meteor.user().status!=="Pending" ){
+            if( Meteor.user().profile.status!=="Pending" ){
                 Catenis.logger.ERROR('Failure trying to activate Meteor user. User is not "pending". ');
                 throw new Meteor.Error('client.activateCurrentUser.failure', 'Failure trying to activate current user: User is not "pending"');
             }else{
@@ -207,15 +207,44 @@ ClientsUI.initialize = function () {
 
         //Unsure if meteor account takes into consideration that this update is a critical section.
         //Do more research and find out.
-        updateUser: function (ctnNodeIndex, clientInfo, clientId) {
-            if(verifyUserRole()){
+        updateUser: function (clientInfo) {
+            if(verifyUserRole()) {
+                const user= Meteor.users.findOne({username: clientInfo.username});
+                if(clientInfo.pwd){
+                //    update client Password
+                    try{
+                        Accounts.setPassword(user._id, clientInfo.pwd);
 
+                    }catch(err){
+                        Catenis.logger.ERROR('Failure trying to update Catenis user pwd', err);
+                        throw new Meteor.Error('client.update.failure', 'Failure trying to update user pwd: ' + err.toString());
+                    }
+
+                }
+                //assuming one email per user. ensure that user does not attempt to set email to an email that already exists.
+                if(clientInfo.email !== user.emails[0].address){
+                    //update user email
+                    try{
+                        Accounts.removeEmail(user._id, user.emails[0].address);
+                        Accounts.addEmail(user._id, clientInfo.email);
+                    }catch(err){
+                        Catenis.logger.ERROR('Failure trying to update Catenis user email', err);
+                        throw new Meteor.Error('client.update.failure', 'Failure trying to update user email: ' + err.toString());
+                    }
+
+                }
+                Meteor.users.update
+                (user,
+                    {$set:
+                        {'profile.name': clientInfo.name, 'profile.firstname':clientInfo.firstName,
+                            'profile.lastname': clientInfo.lastName, 'profile.company': clientInfo.companyName}
+                    }
+                );
             }else{
-
+                Catenis.logger.ERROR('User does not have permission to access method "updateUser"');
+                throw new Meteor.Error('User does not have permission to access method "updateUser"');
             }
-
-
-        },
+        }
     });
 
 
@@ -273,6 +302,24 @@ ClientsUI.initialize = function () {
                     profile:1,
                 }
             });
+        }
+        else {
+            // Nothing to return
+            return this.ready();
+        }
+
+    });
+    //userList returns the information of all user details the user has access to.
+    //currently, only differentiates if the user is super user or not.
+    Meteor.publish('userList', function(userInfo){
+
+        const user = userInfo;
+        if (user) {
+            if(user.roles && user.roles.includes('sys-admin')){
+                return Meteor.users.find();
+            }else{
+                return user;
+            }
         }
         else {
             // Nothing to return

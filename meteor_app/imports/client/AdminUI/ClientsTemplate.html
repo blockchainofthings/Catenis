@@ -8,6 +8,12 @@
                         {{#unless Template.subscriptionsReady}}
                             <p style="color:lightgray; margin-top:1em">Loading...</p>
                         {{else}}
+                            {{#if successfulUpdate}}
+                                <p> successfully updated user information </p>
+                            {{else}}
+                                <p style="color:red">{{{errorMessage}}}</p>
+                            {{/if}}
+
                             <table  class="table table-striped table-responsive">
                                 <thead>
                                     <tr>

@@ -36,6 +36,7 @@ Catenis.db = {
         ReceivedAmount: new Mongo.Collection('ReceivedAmount'),
         Client: new Mongo.Collection('Client'),
         MessageCredits: new Mongo.Collection('MessageCredits'),
-        Device: new Mongo.Collection('Device')
+        Device: new Mongo.Collection('Device'),
     }
 };
+

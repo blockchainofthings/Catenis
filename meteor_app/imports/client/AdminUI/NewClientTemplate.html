@@ -8,11 +8,6 @@
                     <div class="col-lg-12">
                         <br>
                         {{#if newClientId}}
-                            {{#if successfulUpdate}}
-                                <p> successfully updated user information </p>
-                            {{else}}
-                                    <p style="color:red">{{{errorMessage}}}</p>
-                            {{/if}}
                             <p style="color:blue">New client "{{newClientId}}" successfully created</p>
                             {{#if clientInfo}}
                                 <!--showing the newly generated client's information-->
