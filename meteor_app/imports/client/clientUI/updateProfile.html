@@ -1,0 +1,126 @@
+<template name="updateProfile">
+<div>
+    <div class="panel panel-login scrollBox650 noBoxShadow">
+        <div class="panel-body">
+            <div class="row">
+                <div class="col-lg-12">
+                <h2>Update Profile</h2>
+                {{#unless Template.subscriptionsReady}}
+                    <p style="color:lightgray; margin-top:1em">Loading...</p>
+                {{else}}
+
+                    {{#if successfulUpdate}}
+                        <p> successfully updated user information </p>
+                    {{/if}}
+
+                    <!--table to show current information-->
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                            <tr>
+                                <th>Client Name</th>
+                                <th>User name</th>
+                                <th>First Name</th>
+                                <th>Last Name</th>
+                                <th>Company Name</th>
+                                <th>Email</th>
+                                <th> License Type</th>
+                                <th>Password</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <tr>
+                                <td>{{clientInfo.name}}</td>
+                                <td>{{clientInfo.username}}</td>
+                                <td>{{clientInfo.firstName}}</td>
+                                <td>{{clientInfo.lastName}}</td>
+                                <td>{{clientInfo.companyName}}</td>
+                                <td>{{clientInfo.email}}</td>
+                                <td> clientInfo.licenceType </td>
+                                <td>***Password is not Visible***</td>
+                                <td><button type="button" id="editFormUser" class="form-control btn btn-login at-btn submit editButton" data-toggle="modal" data-target="#updateFormModal">Update My Profile</button></td>
+                            </tr>
+
+
+                            <!--Modal form to update the values-->
+                            <div class="modal fade" tabindex="-1" role="dialog" id="updateFormModal">
+                                <div class="modal-dialog" role="document">
+                                    <div class="modal-content">
+                                        <form id="updateFormUser">
+                                            <div class="modal-header">
+                                                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                                                <h4 class="modal-title">Update Information</h4>
+
+                                                {{#unless successfulUpdate}}
+                                                    <p style="color:red">{{{errorMessage}}}</p>
+                                                {{/unless}}
+                                            </div>
+
+                                            <div class="modal-body">
+                                                <div class="table-responsive">
+                                                    <table class="table table-striped">
+                                                        <thead>
+                                                        <tr>
+                                                            <th> Field </th>
+                                                            <th> Content </th>
+                                                        </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                        <tr>
+                                                            <th>Client Name</th>
+                                                            <td><input type="text" maxlength="80" id="txtClientNameUpdate" name="clientName" placeholder="Client Name" autocapitalize="none" autocorrect="off"></td>
+                                                        </tr>
+                                                        <tr>
+                                                            <th>User name</th>
+                                                            <td><input type="text" maxlength="40" id="txtUsernameUpdate" name="username" placeholder="Username" autocapitalize="none" autocorrect="off" disabled="disabled"></td>
+                                                        </tr>
+                                                        <tr>
+                                                            <th>First Name</th>
+                                                            <td><input type="text" maxlength="80" id="txtFirstNameUpdate" name="firstName" placeholder="First Name" autocapitalize="none" autocorrect="off"></td>
+                                                        </tr>
+                                                        <tr>
+                                                            <th>Last Name</th>
+                                                            <td><input type="text" maxlength="80" id="txtLastNameUpdate" name="lastName" placeholder="Last Name" autocapitalize="none" autocorrect="off"></td>
+                                                        </tr>
+                                                        <tr>
+                                                            <th>Company Name</th>
+                                                            <td><input type="text" maxlength="80" id="txtCompanyNameUpdate" name="companyName" placeholder="Company" autocapitalize="none" autocorrect="off"></td>
+                                                        </tr>
+                                                        <tr>
+                                                            <th>Email</th>
+                                                            <td><input type="email" maxlength="40" id="emailUpdate" name="email" placeholder="Email" autocapitalize="none" autocorrect="off"></td>
+                                                        </tr>
+                                                        <tr>
+                                                            <th>Confirm Email</th>
+                                                            <td><input type="email" maxlength="40" id="confirmEmailUpdate" name="confirmEmail" placeholder="Confirm Email" autocapitalize="none" autocorrect="off"></td>
+                                                        </tr>
+                                                        <tr>
+                                                            <th>Password</th>
+                                                            <td><input type="password" maxlength="40" id="passwordUpdate" name="password" placeholder="Password" autocapitalize="none" autocorrect="off"></td>
+                                                        </tr>
+                                                        <tr>
+                                                            <th>Password Repeat</th>
+                                                            <td><input type="password" maxlength="40" id="confirmPasswordUpdate" name="confirmPassword" placeholder="Confirm Password" autocapitalize="none" autocorrect="off"></td>
+                                                        </tr>
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                                                <button type="submit" class="btn btn-primary" id="changeAccountSettings">Update</button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                            </tbody>
+                        </table>
+                    </div>
+                {{/unless}}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</template>

@@ -16,6 +16,7 @@
 //const util = require('util');
 // Third-party node modules
 //import config from 'config';
+
 // Meteor packages
 import { Meteor } from 'meteor/meteor';
 import { Template } from 'meteor/templating';
@@ -27,8 +28,10 @@ import { Catenis } from '../ClientCatenis';
 // Import template UI
 import './NewClientTemplate.html';
 
+
 // Definition of module (private) functions
 //
+
 
 function validateFormData(form, errMsgs) {
     const clientInfo = {};

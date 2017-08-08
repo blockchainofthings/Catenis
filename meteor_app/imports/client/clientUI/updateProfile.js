@@ -1,37 +1,8 @@
 /**
- * Created by claudio on 17/05/17.
+ * Created by peter on 8/7/17.
  */
+import './updateProfile.html';
 
-//console.log('[ClientsTemplate.js]: This code just ran.');
-
-// Module variables
-//
-
-// References to external code
-//
-// Internal node modules
-//  NOTE: the reference of these modules are done sing 'require()' instead of 'import' to
-//      to avoid annoying WebStorm warning message: 'default export is not defined in
-//      imported module'
-//const util = require('util');
-// Third-party node modules
-//import config from 'config';
-// Meteor packages
-//import { Meteor } from 'meteor/meteor';
-import { Template } from 'meteor/templating';
-
-// References code in other (Catenis) modules on the client
-import { Catenis } from '../ClientCatenis';
-
-// Import template UI
-import './ClientsTemplate.html';
-
-// Import dependent templates
-import './ClientDetailsTemplate.js';
-import './NewClientTemplate.js';
-
-// Module code
-//
 
 function validateFormData(form, errMsgs) {
     const clientInfo = {};
@@ -90,16 +61,7 @@ function validateFormData(form, errMsgs) {
     }
 
 
-    //check if the validation on the form has been completed. If this works, the above email check is redundant.
-
-    if(form.emailValidation && form.emailValidation.value!=="Validated"){
-        errMsgs.push('Email was not validated');
-        hasError =true;
-    }
-
-    // password will be filled in by the users, except when we're updating it ourselves
     if(form.password){
-
         //this method is being called in the update form
         clientInfo.pwd = form.password.value ? form.password.value.trim() : '';
 
@@ -115,41 +77,38 @@ function validateFormData(form, errMsgs) {
             }
         }
     }
+
     return !hasError ? clientInfo : undefined;
 }
 
 
-Template.clients.onCreated(function () {
-    // Subscribe to receive fund balance updates
-    this.catenisClientsSubs = this.subscribe('catenisClients', Catenis.ctnHubNodeIndex);
-    this.userListSubs = this.subscribe('userList', Meteor.user());
 
-    //show state
+Template.updateProfile.onCreated(function () {
     this.state = new ReactiveDict();
     this.state.set('errMsgs', []);
+    let user= Meteor.user();
+
+    this.state.set('clientInfo',{
+        name: user.profile.name,
+        username: user.username,
+        firstName: user.profile.firstname,
+        lastName: user.profile.lastname,
+        companyName: user.profile.company,
+        email: user.emails? user.emails[0].address: undefined,
+    });
 
 });
 
-Template.clients.onDestroyed(function () {
-    if (this.catenisClientsSubs) {
-        this.catenisClientsSubs.stop();
-    }
 
-    if (this.userListSubs){
-        this.userListSubs.stop();
-    }
 
-});
+Template.updateProfile.events({
 
-Template.clients.events({
-
-    'click #editForm': function(event, template){
-
-        let userId= event.target.value;
-        let user=Meteor.users.findOne({_id: userId});
+    'click #editFormUser': function(event, template){
+        event.preventDefault();
+        let user= Meteor.user();
 
         // Populate the form fields with the data from the current form.
-        $('#updateForm')
+        $('#updateFormUser')
             .find('[name="clientName"]').val(user.profile.name).end()
             .find('[name="username"]').val(user.username).end()
             .find('[name="email"]').val(user.emails[0].address).end()
@@ -159,7 +118,7 @@ Template.clients.events({
             .find('[name="companyName"]').val(user.profile.company).end();
     },
 
-    'submit #updateForm'(event, template){
+    'submit #updateFormUser'(event, template){
         event.preventDefault();
         const form = event.target;
         // Reset errors
@@ -169,18 +128,16 @@ Template.clients.events({
         let clientInfo;
 
         if ((clientInfo = validateFormData(form, errMsgs))) {
-            // Call remote method to update client
+
             Meteor.call('updateUser', clientInfo, (error) => {
                 if (error) {
                     template.state.set('errMsgs', [
                         error.toString()
                     ]);
-                }
-
-                else {
+                }else {
                     // Catenis client successfully updated
                     template.state.set('successfulUpdate', true);
-
+                    template.state.set('clientInfo', clientInfo);
                     //close modal form
                     $('#updateFormModal').modal('hide');
                     $('body').removeClass('modal-open');
@@ -190,13 +147,16 @@ Template.clients.events({
         }else {
             template.state.set('errMsgs', errMsgs);
         }
-
     }
+
+
+
+
 });
 
-Template.clients.helpers({
-    listClients: function () {
-        return Catenis.db.collection.Client.find({}, {sort:{'props.name': 1}}).fetch();
+Template.updateProfile.helpers({
+    clientInfo: function() {
+        return Template.instance().state.get('clientInfo');
     },
     successfulUpdate: function(){
         return Template.instance().state.get('successfulUpdate');
@@ -210,7 +170,4 @@ Template.clients.helpers({
         }, '');
     },
 
-    isClientActive: function (client) {
-        return client.status === 'active';
-    }
 });

@@ -10,8 +10,6 @@
                         {{else}}
                             {{#if successfulUpdate}}
                                 <p> successfully updated user information </p>
-                            {{else}}
-                                <p style="color:red">{{{errorMessage}}}</p>
                             {{/if}}
 
                             <table  class="table table-striped table-responsive">
@@ -47,7 +45,12 @@
                                                 <div class="modal-header">
                                                     <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
                                                     <h4 class="modal-title">Update Information</h4>
+
+                                                {{#unless successfulUpdate}}
+                                                    <p style="color:red">{{{errorMessage}}}</p>
+                                                {{/unless}}
                                                 </div>
+
                                                 <div class="modal-body">
                                                     <div class="table-responsive">
                                                         <table class="table table-striped">
@@ -100,7 +103,7 @@
                                                 </div>
                                                 <div class="modal-footer">
                                                     <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-                                                    <button type="submit" class="btn btn-primary" id="changeAccountSettings">Change</button>
+                                                    <button type="submit" class="btn btn-primary" id="changeAccountSettings">Update</button>
                                                 </div>
                                             </form>
                                         </div>

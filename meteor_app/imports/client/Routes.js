@@ -24,14 +24,39 @@ import { BlazeLayout } from 'meteor/kadira:blaze-layout';
 // Import templates
 import './AdminUI/AdminLayout.js';
 import './AdminUI/resetPwd.html';
+import './clientUI/baseTemplate.js';
 // Module code
 //
 
 BlazeLayout.setRoot('body');
 
+
+FlowRouter.route('/', {
+    action: function () {
+        BlazeLayout.render('baseTemplate');
+    }
+});
+
+FlowRouter.route('/updateProfile', {
+    action: function () {
+        BlazeLayout.render('baseTemplate', {
+            page: 'updateProfile'
+        });
+    }
+});
+
+
 FlowRouter.route('/admin', {
     action: function () {
         BlazeLayout.render('adminLayout');
+    }
+});
+
+FlowRouter.route('/admin/updateProfile', {
+    action: function () {
+        BlazeLayout.render('adminLayout',{
+            page: 'updateProfile'
+        });
     }
 });
 
@@ -100,6 +125,8 @@ FlowRouter.route('/admin/clients/:client_id/newdevice', {
         });
     }
 });
+
+
 
 
 FlowRouter.route('/enroll-account/:token',{

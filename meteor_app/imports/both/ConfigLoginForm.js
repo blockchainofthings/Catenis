@@ -56,9 +56,7 @@ var onSubmitFunc = function(error, state){
 
             //Successful Activation, now going to log this person out and redirect them to a new page with a link to login.
             Meteor.logout();
-            FlowRouter.go('/admin');
-
-
+            FlowRouter.go('/');
 
         }
         if(state==="signIn"){
@@ -72,10 +70,8 @@ var onSubmitFunc = function(error, state){
 
         if(state==="resetPwd"){
         //    ensure that this user is activated. otherwise refuse login
-            var userAccountStatus=Meteor.user();
-            if( userAccountStatus.profile.status !=="Activated"){
-                Meteor.logout();
-            }
+            Meteor.logout();
+            FlowRouter.go('/');
         }
     }
 
@@ -105,7 +101,7 @@ AccountsTemplates.configure({
         },
         button: {
             changePwd: "Change Password",
-            enrollAccount: "Set Password to Enroll Account",
+            enrollAccount: "Enroll Account",
             forgotPwd: "Send Email Link",
             resetPwd: "Reset Password",
             signIn: "Log In",

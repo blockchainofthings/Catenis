@@ -30,6 +30,7 @@ import './ClientsTemplate.js';
 import './DeviceDetailsTemplate.js';
 import './NewClientTemplate.js';
 import './NewDeviceTemplate.js';
+import '../clientUI/updateProfile.js'
 //below was added by Peter to incorporate bootstrap styling of useraccounts
 import './LoginForm.js';
 import './LoginBtn.js';

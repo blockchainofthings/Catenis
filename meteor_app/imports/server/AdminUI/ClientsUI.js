@@ -57,9 +57,7 @@ export function ClientsUI() {
 // ClientsUI function class (public) method
 function verifyUserRole(){
     try{
-
-        var user= Meteor.user();
-
+        var user=Meteor.user();
         if(user && user.roles && user.roles.includes('sys-admin') ){
             return true;
         }else{
@@ -71,6 +69,7 @@ function verifyUserRole(){
         throw new Meteor.Error('client.verifyUserRole.failure', 'Failure trying to verify role of current user: ' + err.toString());
     }
 }
+
 
 
 
@@ -121,7 +120,6 @@ ClientsUI.initialize = function () {
             }else{
                 try{
                     Meteor.users.update(Meteor.userId(), {$set: {'profile.status': "Activated"}});
-
                 }catch(err){
 
                     Catenis.logger.ERROR('Failure trying to activate Meteor user.', err);
@@ -135,7 +133,7 @@ ClientsUI.initialize = function () {
             let user;
             if(verifyUserRole()){
                 try{
-                    user=Meteor.users.findOne({_id: user_id});
+                    user=Meteor.user();
                     Meteor.users.update( user, {$set: {'profile.status': newStatus}});
                 }catch(err){
                     Catenis.logger.ERROR('Failure trying to change user Status Meteor user.', err);
@@ -170,6 +168,7 @@ ClientsUI.initialize = function () {
                             firstname: clientInfo.firstName,
                             lastname: clientInfo.lastName,
                             company: clientInfo.companyName,
+                            licenseType: "Starter"
                         }
                     };
 
@@ -197,8 +196,6 @@ ClientsUI.initialize = function () {
 
                 return clientId;
 
-
-
             }else{
                 Catenis.logger.ERROR('User does not have permission to access method "changeUserStatus"');
                 throw new Meteor.Error('User does not have permission to access method "changeUserStatus"');
@@ -208,38 +205,74 @@ ClientsUI.initialize = function () {
         //Unsure if meteor account takes into consideration that this update is a critical section.
         //Do more research and find out.
         updateUser: function (clientInfo) {
-            if(verifyUserRole()) {
-                const user= Meteor.users.findOne({username: clientInfo.username});
-                if(clientInfo.pwd){
-                //    update client Password
-                    try{
-                        Accounts.setPassword(user._id, clientInfo.pwd);
 
-                    }catch(err){
-                        Catenis.logger.ERROR('Failure trying to update Catenis user pwd', err);
-                        throw new Meteor.Error('client.update.failure', 'Failure trying to update user pwd: ' + err.toString());
+            const userValue=Meteor.user();
+
+            //    Either has to be in sys-admin role, or the user has to be changing his or her own profile
+            const superUser= verifyUserRole();
+            const ownProfile= (userValue.username===clientInfo.username);
+
+            if( superUser || ownProfile) {
+                try{
+                    const user = Meteor.users.findOne({username: clientInfo.username});
+
+                    if (clientInfo.pwd) {
+                        //    update client Password
+                        try {
+                            Accounts.setPassword(user._id, clientInfo.pwd, {logout: !ownProfile});
+
+                        } catch (err) {
+                            Catenis.logger.ERROR('Failure trying to update Catenis user pwd', err);
+                            throw new Meteor.Error('client.update.failure', 'Failure trying to update user pwd: ' + err.toString());
+                        }
+
                     }
+                    //assuming one email per user. ensure that user does not attempt to set email to an email that already exists.
+                    if(user.emails && user.emails[0]){
 
+                        if (user.emails && clientInfo.email !== user.emails[0].address) {
+                            //update user email
+                            let pastEmail = user.emails[0].address;
+                            try {
+                                Accounts.addEmail(user._id, clientInfo.email);
+                            } catch (err) {
+                                Catenis.logger.ERROR('Failure trying to update Catenis user email', err);
+                                throw new Meteor.Error('client.update.failure', 'Failure trying to update user email: ' + err.toString());
+                            }
+                            //    if the email was succesfully added, remove the past email
+                            try {
+                                Accounts.removeEmail(user._id, pastEmail);
+                            } catch (err) {
+                                Catenis.logger.ERROR('Failure trying to update Catenis user email (delete)', err);
+                                throw new Meteor.Error('client.update.failure', 'Failure trying to update user email(delete): ' + err.toString());
+                            }
+                        }
+
+                    }else{
+                        try {
+
+                            Accounts.addEmail(user._id, clientInfo.email);
+                        } catch (err) {
+                            Catenis.logger.ERROR('Failure trying to update Catenis user email', err);
+                            throw new Meteor.Error('client.update.failure', 'Failure trying to update user email: ' + err.toString());
+                        }
+
+                    }
+                    Meteor.users.update
+                    (user,
+                        {
+                            $set: {
+                                'profile.name': clientInfo.name, 'profile.firstname': clientInfo.firstName,
+                                'profile.lastname': clientInfo.lastName, 'profile.company': clientInfo.companyName
+                            }
+                        }
+                    );
+
+
+                }catch(err){
+                    Catenis.logger.ERROR('Failure trying to update Catenis user', err);
+                    throw new Meteor.Error('client.update.failure', 'Failure trying to update user: ' + err.toString());
                 }
-                //assuming one email per user. ensure that user does not attempt to set email to an email that already exists.
-                if(clientInfo.email !== user.emails[0].address){
-                    //update user email
-                    try{
-                        Accounts.removeEmail(user._id, user.emails[0].address);
-                        Accounts.addEmail(user._id, clientInfo.email);
-                    }catch(err){
-                        Catenis.logger.ERROR('Failure trying to update Catenis user email', err);
-                        throw new Meteor.Error('client.update.failure', 'Failure trying to update user email: ' + err.toString());
-                    }
-
-                }
-                Meteor.users.update
-                (user,
-                    {$set:
-                        {'profile.name': clientInfo.name, 'profile.firstname':clientInfo.firstName,
-                            'profile.lastname': clientInfo.lastName, 'profile.company': clientInfo.companyName}
-                    }
-                );
             }else{
                 Catenis.logger.ERROR('User does not have permission to access method "updateUser"');
                 throw new Meteor.Error('User does not have permission to access method "updateUser"');
