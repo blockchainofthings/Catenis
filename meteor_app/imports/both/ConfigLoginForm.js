@@ -47,7 +47,6 @@ var onSubmitFunc = function(error, state){
                 Meteor.call('activateCurrentUser', (error) => {
                 });
 
-
                 //initiate building of corresponding Catenis Client for this user.
                 //Claudio, you should call the Client initialization from here.
                 //it'd be helpful if the action from line 46 to the client creation was atomic.
@@ -62,7 +61,6 @@ var onSubmitFunc = function(error, state){
         if(state==="signIn"){
             //ensure that the meteor account of the client is activated. Otherwise logout
             var userAccountStatus=Meteor.user();
-
             if(userAccountStatus.profile.status !=="Activated"){
                 Meteor.logout();
             }

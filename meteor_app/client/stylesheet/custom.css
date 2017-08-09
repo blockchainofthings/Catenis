@@ -5,11 +5,30 @@
 
 html, body{
     height: 100%;
-    overflow-x: hidden;
-    overflow-y: hidden;
+    /*overflow-y: hidden;*/
     font-family: 'Roboto', sans-serif;
     font-weight:100;
 }
+body{
+    overflow-x: hidden;
+}
+
+.center {
+    margin: auto;
+    width: 80%;
+    padding: 10px;
+}
+
+
+.topNavCustom{
+    background-color: rgb(232,233,236);
+    width:100%;
+    position:fixed;
+    z-index: 1000;
+
+}
+
+
 .fill{
     height:100%;
     width:100%;
@@ -111,7 +130,7 @@ currently using useraccounts:unstyled
 
 #sidebar-wrapper {
     z-index: 1000;
-    position: absolute;
+    position: fixed;
     top: 50px;
     left: 0px;
     width: 250px;
@@ -137,18 +156,17 @@ currently using useraccounts:unstyled
 }
 
 #page-content-wrapper {
-    margin-top:50px;
     /*above should change according to the size of the header.*/
-    width: auto;
-    position: relative;
-    padding: 0px;
-    margin-left: 250px;
+    position:absolute;
+    left: 250px;
+    width: calc(100% - 250px);
 }
 
 #wrapper.toggled #page-content-wrapper {
-    position: relative;
-    margin-left: 80px;
-    /*margin-right: -250px;*/
+    /*position: relative;*/
+    position:absolute;
+    left: 80px;
+    width: calc(100% - 80px);
 }
 
 
@@ -235,22 +253,27 @@ currently using useraccounts:unstyled
 
     #sidebar-wrapper {
         width: 250px;
-
     }
 
     #wrapper.toggled #sidebar-wrapper {
         width: 80px;
-
     }
 
     #page-content-wrapper {
-        margin-left: 250px;
+        /*margin-left: 250px;*/
         padding: 0px;
+        /*position: absolute;*/
+        left: 250px;
+        width: calc(100% - 250px);
         position: relative;
     }
 
     #wrapper.toggled #page-content-wrapper {
+        /*position: absolute;*/
         position: relative;
+        left: 80px;
+        width: calc(100% - 80px);
+
         /*margin-right: 0;*/
     }
 }
@@ -329,7 +352,7 @@ currently using useraccounts:unstyled
     }
     /*above single one is for the menu size discrepancy in smaller sizes*/
     .navbar-default .navbar-nav .open .dropdown-menu>li>a{
-       color: black;
+        color: black;
     }
 
 }
@@ -593,14 +616,14 @@ btn:active{
 
 
 
-.scrollBox650{
-    overflow-y:scroll;
-    height: 650px;
-}
-.scrollBox400{
-    overflow-y:scroll;
-    height: 400px;
-}
+/*.scrollBox650{*/
+/*overflow-y:scroll;*/
+/*height: 650px;*/
+/*}*/
+/*.scrollBox400{*/
+/*overflow-y:scroll;*/
+/*height: 400px;*/
+/*}*/
 
 .noBoxShadow{
     box-shadow: none;

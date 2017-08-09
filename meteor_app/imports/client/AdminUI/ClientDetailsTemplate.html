@@ -70,6 +70,12 @@
                                                 {{userStatus client.user_id}}
                                             </td>
                                         </tr>
+                                        <tr>
+                                            <td><label> User License Type:</label></td>
+                                            <td>
+                                                {{licenseType client.user_id}}
+                                            </td>
+                                        </tr>
                                         </tbody>
                                     </table>
 
@@ -87,20 +93,62 @@
                             {{/if}}
                             <br>
                             <div class="row paddingTop40px">
-                                <div class="col-md-4">
-                                    <a href="#" id="resendEnrollmentEmail" role="button" class="btn-login btn paddedBtn fullWidth "> Resend Enrollment Mail</a>
+                                <div class="col-md-3">
+                                    <a href="#" id="resendEnrollmentEmail" role="button" class="btn-login btn paddedBtn fullWidth ">Resend Enrollment Mail</a>
                                 </div>
-                                <div class="col-md-4">
+                                <div class="col-md-3">
+                                    <button type="button" id="updateUserLicense" class="btn-login btn paddedBtn fullWidth " data-toggle="modal" data-target="#changeUserLicense">Change User License</button>
+                                    <div class="modal fade" tabindex="-1" role="dialog" id="changeUserLicense">
+                                        <div class="modal-dialog" role="document">
+                                            <div class="modal-content">
+                                                <form id="updateLicenseAdminForm">
+                                                    <div class="modal-header">
+                                                        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                                                        <h4 class="modal-title">Change User License</h4>
+                                                        <p id="currentLicenseStatus"> </p>
+                                                        {{#unless successfulLicenseUpdate}}
+                                                            <p style="color:red">{{{licenseErrorMessage}}}</p>
+                                                        {{/unless}}
+                                                    </div>
+                                                    <div class="modal-body">
+                                                        <label class="radio-inline">
+                                                            <input type="radio" name="licenseStateRadio" id="starter" value="Starter"> Starter
+                                                        </label>
+                                                        <label class="radio-inline">
+                                                            <input type="radio" name="licenseStateRadio" id="basic" value="Basic"> Basic
+                                                        </label>
+                                                        <label class="radio-inline">
+                                                            <input type="radio" name="licenseStateRadio" id="professional" value="Professional"> Professional
+                                                        </label>
+                                                        <label class="radio-inline">
+                                                            <input type="radio" name="licenseStateRadio" id="enterprise" value="Enterprise"> Enterprise
+                                                        </label>
+                                                    </div>
+                                                    <div class="modal-footer">
+                                                        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                                                        <button type="submit" class="btn btn-primary" id="licenseChangeSubmit">Change License</button>
+                                                    </div>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
+
+
+
+
+
+                                </div>
+                                <div class="col-md-3">
                                     {{#unless (userActive client.user_id)}}
-                                        <a href="#" id="activateUser" role="button" class="btn-login btn paddedBtn fullWidth "> Activate User Account</a>
+                                        <a href="#" id="activateUser" role="button" class="btn-login btn paddedBtn fullWidth ">Activate User Account</a>
                                     {{else}}
-                                        <a href="#" id="deactivateUser" role="button" class="btn-login btn paddedBtn fullWidth "> Deactivate User Account</a>
+                                        <a href="#" id="deactivateUser" role="button" class="btn-login btn paddedBtn fullWidth ">Deactivate User Account</a>
                                     {{/unless}}
                                     <!--also have a slot for incase the user is pending-->
                                 </div>
-                                <div class="col-md-4">
+                                <div class="col-md-3">
                                     {{#unless showDevices}}
-                                            <a href="#" id="lnkShowDevices" role="button" class="btn-login btn paddedBtn fullWidth "> Show devices</a>
+                                            <a href="#" id="lnkShowDevices" role="button" class="btn-login btn paddedBtn fullWidth ">Show devices</a>
                                     {{else}}
                                             <a id="lnkHideDevices" href="#" role="button" class="btn-login btn paddedBtn fullWidth">Hide devices</a>
                                     {{/unless}}

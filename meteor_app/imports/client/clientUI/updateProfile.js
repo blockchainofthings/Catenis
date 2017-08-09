@@ -94,7 +94,9 @@ Template.updateProfile.onCreated(function () {
         firstName: user.profile.firstname,
         lastName: user.profile.lastname,
         companyName: user.profile.company,
-        email: user.emails? user.emails[0].address: undefined,
+        email: user.emails? user.emails[0].address: "non-existent",
+        licenseType: user.profile.license? user.profile.license.licenseType: "non-existent",
+        licenseExpiry: user.profile.license? ( user.profile.license.licenseType!=="Starter"? "Unlimited": (user.profile.license.licenseRenewedDate + 2.592e+9 ).toString() ): "non-existent"
     });
 
 });
@@ -102,6 +104,7 @@ Template.updateProfile.onCreated(function () {
 
 
 Template.updateProfile.events({
+
 
     'click #editFormUser': function(event, template){
         event.preventDefault();

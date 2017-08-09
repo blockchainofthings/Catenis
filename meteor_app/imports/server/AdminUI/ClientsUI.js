@@ -133,7 +133,7 @@ ClientsUI.initialize = function () {
             let user;
             if(verifyUserRole()){
                 try{
-                    user=Meteor.user();
+                    user=Meteor.users.findOne({"_id": user_id});
                     Meteor.users.update( user, {$set: {'profile.status': newStatus}});
                 }catch(err){
                     Catenis.logger.ERROR('Failure trying to change user Status Meteor user.', err);
@@ -150,6 +150,8 @@ ClientsUI.initialize = function () {
         createClient: function (ctnNodeIndex, clientInfo) {
             // Try to create meteor client user
             let user_id;
+            let currTime= new Date();
+
             if(verifyUserRole()){
                 try {
 
@@ -168,8 +170,13 @@ ClientsUI.initialize = function () {
                             firstname: clientInfo.firstName,
                             lastname: clientInfo.lastName,
                             company: clientInfo.companyName,
-                            licenseType: "Starter"
-                        }
+                            license: {
+                                licenseType: "Starter",
+                                licenseRenewedDate: currTime,
+                            }
+                        },
+
+
                     };
 
                     user_id = Accounts.createUser(opts);
@@ -202,8 +209,9 @@ ClientsUI.initialize = function () {
             }
         },
 
-        //Unsure if meteor account takes into consideration that this update is a critical section.
-        //Do more research and find out.
+
+        //update user's information including the password, email, first and last name, as well as company name.
+        //license information is handled on a separate function at updateLicenseAdmin, which is right below this function.
         updateUser: function (clientInfo) {
 
             const userValue=Meteor.user();
@@ -277,7 +285,43 @@ ClientsUI.initialize = function () {
                 Catenis.logger.ERROR('User does not have permission to access method "updateUser"');
                 throw new Meteor.Error('User does not have permission to access method "updateUser"');
             }
-        }
+        },
+
+        //update user license. At this time, it is designed so that only the admin user can update this.
+        //this means that users have to request via call/messaging, which will be handled by the admin who logs in and manually changes it.
+        //integration with Payment must also be considered in the future.
+
+        updateLicenseAdmin: function(user_id, newLicenseState){
+
+            if(verifyUserRole()){
+                try{
+                    Meteor.users.update(user_id,
+                        {
+                            $set: {
+                                'profile.license.licenseType': newLicenseState,
+                                'profile.license.licenseRenewedDate': new Date(),
+                            }
+                        }
+                    );
+
+                //    this would be a good place to make corresponding change to the amount of devices that the user can hold.
+                //    Need to discuss what retroactive actions can be taken to remove devices should the user downgrade the license
+
+
+
+                }catch(err){
+                    Catenis.logger.ERROR('Failure trying to update user License ', err);
+                    throw new Meteor.Error('client.updateLicenseAdmin.failure', 'Failure trying to update user License: ' + err.toString());
+                }
+            }else{
+                Catenis.logger.ERROR('User does not have permission to access method "updateLicenseAdmin"');
+                throw new Meteor.Error('User does not have permission to access method "updateLicenseAdmin"');
+            }
+
+        },
+
+
+
     });
 
 
@@ -333,6 +377,7 @@ ClientsUI.initialize = function () {
                     username: 1,
                     //below added to allow user activation status access.
                     profile:1,
+                    //below added to allow license information access.
                 }
             });
         }

@@ -4,9 +4,10 @@
             {{> login}}
         {{else}}
              <div id="wrapper">
-                <!--top navigation bar-->
+
+                 <!--top navigation bar-->
                  <nav class="navbar navbar-default top-navBar">
-                     <div class="container-fluid">
+                     <div class="container-fluid topNavCustom">
                          <div class="navbar-header">
                              <a class="navbar-brand" href="#">
                                  <p> Catenis<span class="gray">Enterprise</span></p>
@@ -32,12 +33,15 @@
                  </nav>
                 <!--end of top nav bar-->
 
+
+
+
                 <!-- Sidebar -->
                 <div id="sidebar-wrapper">
                     <ul class="sidebar-nav">
                         <li>
-                            <a href="#" class="menu-toggle show"><i class="glyphicon glyphicon-menu-left"></i>  Toggle Sidebar</a>
-                            <a href="#" class="menu-toggle notshow"><i class="glyphicon glyphicon-menu-right"></i></a>
+                            <a href="" class="menu-toggle show"><i class="glyphicon glyphicon-menu-left"></i>  Toggle Sidebar</a>
+                            <a href="" class="menu-toggle notshow"><i class="glyphicon glyphicon-menu-right"></i></a>
                         </li>
                         {{#if isInRole 'sys-admin'}}
                         <li>
@@ -62,11 +66,11 @@
                 </div>
                 <!-- end of sidebar -->
 
+
                 <!--start of content-wrapper-->
-                <div id="page-content-wrapper">
-                    <div class="container-fluid">
+                <div id="page-content-wrapper" class="text-center">
                         <div class="row">
-                            <div class="col-lg-8 col-lg-offset-2">
+                            <div class="col-md-8 col-md-offset-2">
                                 {{#if isInRole 'sys-admin'}}
                                     <article class="text-center">
                                         {{#if page}}
@@ -78,9 +82,12 @@
                                 {{/if}}
                             </div>
                         </div>
-                    </div>
                 </div>
                 <!--end of content-wrapper-->
+
+
+
+
              </div>
             <!--end of wrapper -->
         {{/unless}}

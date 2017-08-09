@@ -31,6 +31,33 @@ import './ClientDetailsTemplate.html';
 import './DevicesTemplate.js';
 
 
+
+function licenseViolation(numDevices, user_id) {
+
+    const licenseType= Meteor.users.findOne( {_id: user_id} ).profile.license.licenseType;
+
+    let numAllowed;
+    // needs to be changed if the numAllowed value for license gets changed.
+    // NOTE: could be used to indicate how many devices the user is overusing.
+    switch(licenseType){
+        case "Starter":
+            numAllowed= 2;
+            break;
+        case "Basic":
+            numAllowed= 20 ;
+            break;
+        case "Professional":
+            numAllowed= 200;
+            break;
+        case "Enterprise":
+            return true;
+    }
+
+    //returns true if this situation results in a license violation.
+    return numAllowed < numDevices;
+
+}
+
 // Module code
 //
 
@@ -46,6 +73,9 @@ Template.clientDetails.onCreated(function () {
     this.clientUserSubs = this.subscribe('clientUser', this.data.client_id);
     this.clientMessageCreditsSubs = this.subscribe('clientMessageCredits', this.data.client_id);
 
+    //added to allow device number count.
+    this.clientDevicesSubs = this.subscribe('clientDevices', this.data.client_id);
+
 });
 
 Template.clientDetails.onDestroyed(function () {
@@ -59,6 +89,11 @@ Template.clientDetails.onDestroyed(function () {
 
     if (this.clientMessageCreditsSubs) {
         this.clientMessageCreditsSubs.stop();
+    }
+
+    //added to allow device number count.
+    if (this.clientDevicesSubs) {
+        this.clientDevicesSubs.stop();
     }
 });
 
@@ -124,36 +159,60 @@ Template.clientDetails.events({
     },
 
 
+
     //in future, these two functions below should be coalesced to become a single changeUserStatus function, that takes in
     //the parameter of current status and flips it other way. Be mindful that there are three statuses, activated, deactivated, and pending.
 
     //NOTE: this is not linked to the deactivation of the Catenis Clients, so they have to be implemented as well.
     'click #activateUser'(events, template) {
-        if( confirm("you're about to activate this user. Are you sure?")==true){
-            const client = Catenis.db.collection.Client.findOne({_id: Template.instance().data.client_id});
+        const client = Catenis.db.collection.Client.findOne({_id: Template.instance().data.client_id});
+
+        if( confirm("you're about to activate this user. Are you sure?")===true){
             Meteor.call('changeUserStatus', client.user_id, 'Activated', (error) => {
                 if (error) {
-                    console.log("there was an error", error);
+                    console.log("there was an error activating user", error);
                 }
             });
         }
 
     },
     'click #deactivateUser'(events, template) {
-        if(confirm("you're about to deactivate this user and all linked devices. Are you sure?")==true){
-            const client = Catenis.db.collection.Client.findOne({_id: Template.instance().data.client_id});
+        const client = Catenis.db.collection.Client.findOne({_id: Template.instance().data.client_id});
+
+        if(confirm("you're about to deactivate this user and all linked devices. Are you sure?")===true){
             Meteor.call('changeUserStatus', client.user_id, 'Deactivated', (error) => {
                 if (error) {
-                    console.log("there was an error", error);
+                    console.log("there was an error deactivating user", error);
                 }
             });
         }
 
     },
 
+    'submit #updateLicenseAdminForm'(event, template){
+        const client = Catenis.db.collection.Client.findOne({_id: Template.instance().data.client_id});
+        const form = event.target;
+        const newLicenseState = form.licenseStateRadio.value ? form.licenseStateRadio.value.trim() : '';
+
+        if(confirm("you're about to change this user's license to "+ newLicenseState+". Are you sure?")===true){
+            Meteor.call('updateLicenseAdmin', client.user_id, newLicenseState, (error)=>{
+                if(error) {
+                    console.log("there was an error updating license", error);
+                }else{
+                    //successfully changed user license state
+
+                    //    alert the Admin if the user currently has more devices than can be held under the new service scheme.
+                    const numUserDevices= Catenis.db.collection.Device.find( {"client_id": {$eq: client._id } } ).count();
+
+                    if( licenseViolation(numUserDevices, client.user_id) ){
+                        alert("after changing the license, the user now has more devices than allowed!");
+                    }
+                }
+            });
+        }
+    }
+
 });
-
-
 
 
 Template.clientDetails.helpers({
@@ -171,6 +230,7 @@ Template.clientDetails.helpers({
         return messageCredits && messageCredits.unconfirmed > 0;
     },
     // compareOper: valid values: 'equal'/'any-of', 'not-equal'/'none-of'
+
     checkAddMsgCreditsStatus: function (status, compareOper) {
         compareOper = compareOper && (Array.isArray(status) ? 'all-of' : 'equal');
         const currentStatus = Template.instance().state.get('addMsgCreditsStatus');
@@ -225,9 +285,16 @@ Template.clientDetails.helpers({
     },
     resendEnrollmentEmailSuccess: function(){
         return Template.instance().state.get('resendEnrollmentEmailSuccess');
-    }
-
-
-
+    },
+    licenseType: function(user_id){
+        const user= Meteor.users.findOne( {_id: user_id} );
+        let licenseType;
+        if( user && user.profile && user.profile.license ){
+            licenseType= Meteor.users.findOne( {_id: user_id} ).profile.license.licenseType;
+           return licenseType;
+        }else{
+            return "user has no license";
+        }
+    },
 
 });
