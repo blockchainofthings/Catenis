@@ -10,8 +10,81 @@
                             <h2> {{client.props.name}} </h2>
                             <br>
                             <div class="row">
-
                                 <div class="col-md-12">
+                                    <!--edit user-->
+                                    <div class="pull-left">
+                                        {{#if successfulUpdate}}
+                                            <p style="color:green">successfully updated user </p>
+                                        {{/if}}
+                                        <button type="button" id="editForm" value="{{client.user_id}}" class="form-control btn btn-login at-btn submit editButton paddedBtn" data-toggle="modal" data-target="#updateFormModal">Update User Profile</button>
+                                        <!--Modal form to update the values-->
+                                        <div class="modal fade" tabindex="-1" role="dialog" id="updateFormModal">
+                                            <div class="modal-dialog" role="document">
+                                                <div class="modal-content">
+                                                    <form id="updateForm">
+                                                        <div class="modal-header">
+                                                            <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                                                            <h4 class="modal-title">Update Information</h4>
+                                                            {{#unless successfulUpdate}}
+                                                                <p style="color:red">{{{errorMessage}}}</p>
+                                                            {{/unless}}
+                                                        </div>
+
+                                                        <div class="modal-body">
+                                                            <div class="table-responsive">
+                                                                <table class="table table-striped">
+                                                                    <tbody>
+                                                                    <tr>
+                                                                        <th>Client Name</th>
+                                                                        <td><input type="text" maxlength="80" id="txtClientNameUpdate" name="clientName" placeholder="Client Name" autocapitalize="none" autocorrect="off"></td>
+                                                                    </tr>
+                                                                    <tr>
+                                                                        <th>User name</th>
+                                                                        <td><input type="text" maxlength="40" id="txtUsernameUpdate" name="username" placeholder="Username" autocapitalize="none" autocorrect="off" disabled="disabled"></td>
+                                                                    </tr>
+                                                                    <tr>
+                                                                        <th>First Name</th>
+                                                                        <td><input type="text" maxlength="80" id="txtFirstNameUpdate" name="firstName" placeholder="First Name" autocapitalize="none" autocorrect="off"></td>
+                                                                    </tr>
+                                                                    <tr>
+                                                                        <th>Last Name</th>
+                                                                        <td><input type="text" maxlength="80" id="txtLastNameUpdate" name="lastName" placeholder="Last Name" autocapitalize="none" autocorrect="off"></td>
+                                                                    </tr>
+                                                                    <tr>
+                                                                        <th>Company Name</th>
+                                                                        <td><input type="text" maxlength="80" id="txtCompanyNameUpdate" name="companyName" placeholder="Company" autocapitalize="none" autocorrect="off"></td>
+                                                                    </tr>
+                                                                    <tr>
+                                                                        <th>Email</th>
+                                                                        <td><input type="email" maxlength="40" id="emailUpdate" name="email" placeholder="Email" autocapitalize="none" autocorrect="off"></td>
+                                                                    </tr>
+                                                                    <tr>
+                                                                        <th>Confirm Email</th>
+                                                                        <td><input type="email" maxlength="40" id="confirmEmailUpdate" name="confirmEmail" placeholder="Confirm Email" autocapitalize="none" autocorrect="off"></td>
+                                                                    </tr>
+                                                                    <tr>
+                                                                        <th>Password</th>
+                                                                        <td><input type="password" maxlength="40" id="passwordUpdate" name="password" placeholder="Password" autocapitalize="none" autocorrect="off"></td>
+                                                                    </tr>
+                                                                    <tr>
+                                                                        <th>Password Repeat</th>
+                                                                        <td><input type="password" maxlength="40" id="confirmPasswordUpdate" name="confirmPassword" placeholder="Confirm Password" autocapitalize="none" autocorrect="off"></td>
+                                                                    </tr>
+                                                                    </tbody>
+                                                                </table>
+                                                            </div>
+                                                        </div>
+                                                        <div class="modal-footer">
+                                                            <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                                                            <button type="submit" class="btn btn-primary" id="changeAccountSettings">Update</button>
+                                                        </div>
+                                                    </form>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!--add Message Credit-->
                                     <div class="pull-right">
                                         {{#if (checkAddMsgCreditsStatus 'idle')}}
                                             <a id="lnkAddMsgCredits" href="#" role="button" class="btn-login btn paddedBtn fullWidth">Add more credits</a>
@@ -73,7 +146,19 @@
                                         <tr>
                                             <td><label> User License Type:</label></td>
                                             <td>
-                                                {{licenseType client.user_id}}
+                                                {{licenseType client.user_id}} ({{devicesForLicense (licenseType client.user_id)}} devices)
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td><label> Devices in Use:</label></td>
+                                            <td>
+                                                {{ numDevices "active"}}
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td><label> Devices Available:</label></td>
+                                            <td>
+                                                {{ numDevices "available"}}
                                             </td>
                                         </tr>
                                         </tbody>
@@ -112,16 +197,17 @@
                                                     </div>
                                                     <div class="modal-body">
                                                         <label class="radio-inline">
-                                                            <input type="radio" name="licenseStateRadio" id="starter" value="Starter"> Starter
+                                                            <input type="radio" name="licenseStateRadio" id="starter" value="Starter" required> Starter: {{devicesForLicense "Starter"}}
+                                                            <!--have to finish this work.-->
                                                         </label>
                                                         <label class="radio-inline">
-                                                            <input type="radio" name="licenseStateRadio" id="basic" value="Basic"> Basic
+                                                            <input type="radio" name="licenseStateRadio" id="basic" value="Basic"> Basic: {{devicesForLicense "Basic"}}
                                                         </label>
                                                         <label class="radio-inline">
-                                                            <input type="radio" name="licenseStateRadio" id="professional" value="Professional"> Professional
+                                                            <input type="radio" name="licenseStateRadio" id="professional" value="Professional"> Professional: {{devicesForLicense "Professional"}}
                                                         </label>
                                                         <label class="radio-inline">
-                                                            <input type="radio" name="licenseStateRadio" id="enterprise" value="Enterprise"> Enterprise
+                                                            <input type="radio" name="licenseStateRadio" id="enterprise" value="Enterprise"> Enterprise: {{devicesForLicense "Enterprise"}}
                                                         </label>
                                                     </div>
                                                     <div class="modal-footer">
@@ -132,7 +218,6 @@
                                             </div>
                                         </div>
                                     </div>
-
 
 
 

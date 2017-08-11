@@ -19,6 +19,7 @@ const util = require('util');
 // Meteor packages
 import { Meteor } from 'meteor/meteor';
 import { Accounts } from 'meteor/accounts-base'
+import { Mongo } from 'meteor/mongo';
 
 // References code in other (Catenis) modules
 import { Catenis } from '../Catenis';
@@ -221,9 +222,9 @@ ClientsUI.initialize = function () {
             const ownProfile= (userValue.username===clientInfo.username);
 
             if( superUser || ownProfile) {
+
                 try{
                     const user = Meteor.users.findOne({username: clientInfo.username});
-
                     if (clientInfo.pwd) {
                         //    update client Password
                         try {
@@ -239,8 +240,10 @@ ClientsUI.initialize = function () {
                     if(user.emails && user.emails[0]){
 
                         if (user.emails && clientInfo.email !== user.emails[0].address) {
+
                             //update user email
                             let pastEmail = user.emails[0].address;
+
                             try {
                                 Accounts.addEmail(user._id, clientInfo.email);
                             } catch (err) {
@@ -291,27 +294,38 @@ ClientsUI.initialize = function () {
         //this means that users have to request via call/messaging, which will be handled by the admin who logs in and manually changes it.
         //integration with Payment must also be considered in the future.
 
-        updateLicenseAdmin: function(user_id, newLicenseState){
+        updateLicenseAdmin: function(client, newLicenseState){
 
             if(verifyUserRole()){
-                try{
-                    Meteor.users.update(user_id,
-                        {
-                            $set: {
-                                'profile.license.licenseType': newLicenseState,
-                                'profile.license.licenseRenewedDate': new Date(),
+
+                //verify that the user has less devices then would be given by the new license.
+                const numUserDevices= Catenis.db.collection.Device.find( {"client_id": {$eq: client._id } } ).count();
+                const numDevicesforLicense= Catenis.db.collection.License.findOne({licenseType: newLicenseState}).numAllowedDevices;
+                if( numUserDevices > numDevicesforLicense){
+
+                    Catenis.logger.ERROR('Client has too many devices to be reverted into license type: '+ newLicenseState);
+                    throw new Meteor.Error('Client has too many devices to be reverted into license type: '+ newLicenseState);
+
+                }else{
+
+                    try{
+                        Meteor.users.update(client.user_id,
+                            {
+                                $set: {
+                                    'profile.license.licenseType': newLicenseState,
+                                    'profile.license.licenseRenewedDate': new Date(),
+                                }
                             }
-                        }
-                    );
+                        );
 
-                //    this would be a good place to make corresponding change to the amount of devices that the user can hold.
-                //    Need to discuss what retroactive actions can be taken to remove devices should the user downgrade the license
+                        //    this would be a good place to make corresponding change to the amount of devices that the user can hold.
+                        //    Need to discuss what retroactive actions can be taken to remove devices should the user downgrade the license
 
+                    }catch(err){
+                        Catenis.logger.ERROR('Failure trying to update user License ', err);
+                        throw new Meteor.Error('client.updateLicenseAdmin.failure', 'Failure trying to update user License: ' + err.toString());
+                    }
 
-
-                }catch(err){
-                    Catenis.logger.ERROR('Failure trying to update user License ', err);
-                    throw new Meteor.Error('client.updateLicenseAdmin.failure', 'Failure trying to update user License: ' + err.toString());
                 }
             }else{
                 Catenis.logger.ERROR('User does not have permission to access method "updateLicenseAdmin"');
@@ -320,7 +334,20 @@ ClientsUI.initialize = function () {
 
         },
 
+        updateLicenseConfig: function(newConfiguration){
+            if(verifyUserRole()){
 
+                Catenis.db.collection.License.update({licenseType: "Starter"}, {$set:{numAllowedDevices:newConfiguration.starter}});
+                Catenis.db.collection.License.update({licenseType: "Basic"}, {$set:{numAllowedDevices:newConfiguration.basic}});
+                Catenis.db.collection.License.update({licenseType: "Professional"}, {$set:{numAllowedDevices:newConfiguration.professional}});
+                Catenis.db.collection.License.update({licenseType: "Enterprise"}, {$set:{numAllowedDevices:newConfiguration.enterprise}});
+
+            }else{
+
+                Catenis.logger.ERROR('User does not have permission to access method "updateLicenseConfig"');
+                throw new Meteor.Error('User does not have permission to access method "updateLicenseConfig"');
+            }
+        }
 
     });
 
@@ -403,6 +430,12 @@ ClientsUI.initialize = function () {
             // Nothing to return
             return this.ready();
         }
+    });
+
+    Meteor.publish('license', function(){
+
+        return Catenis.db.collection.License.find({});
+
     });
 
     Meteor.publish('clientMessageCredits', function (client_id) {

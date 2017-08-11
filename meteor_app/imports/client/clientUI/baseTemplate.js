@@ -6,6 +6,11 @@ import './baseTemplate.html';
 
 Template.baseTemplate.onCreated(function () {
 
+
+});
+
+Template.baseTemplate.onDestroyed(function(){
+
 });
 
 Template.baseTemplate.onRendered(function(){

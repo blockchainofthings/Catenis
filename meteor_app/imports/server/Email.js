@@ -8,7 +8,7 @@
 //configure smtp server
 smtp = {
     username: "makeitpossibleseongun@gmail.com", //server email
-    password: "ZZZ", // email password
+    password: "XXXXX", // email password
     server:   "smtp.gmail.com", //server domain
     port: 465,
 };

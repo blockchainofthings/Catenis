@@ -12,6 +12,9 @@
                              <a class="navbar-brand" href="#">
                                  <p> Catenis<span class="gray">Enterprise</span></p>
                              </a>
+                             <div class="pull-left">
+                                 <a href="" class="menu-toggle"><i class="fa fa-bars fa-th-large"></i></a>
+                             </div>
                              <div class="pull-right" id="userAccount">
                                  <ul class="nav navbar-nav navbar-right">
                                      <li class="dropdown">
@@ -20,6 +23,9 @@
                                              <li><a>{{currentUser.username}}</a></li>
                                              <li role="separator" class="divider"></li>
                                              <li><a href="/admin/updateProfile  ">Manage Account</a></li>
+                                             {{#if isInRole 'sys-admin'}}
+                                             <li><a href="" id="changeLicenseConfigButton" data-toggle="modal" data-target="#changeLicenseConfig">Device License Config</a></li>
+                                             {{/if}}
                                              <li><a id="lnkLogout" href="#" role="button">Log Out</a></li>
                                          </ul>
                                      </li>
@@ -33,16 +39,9 @@
                  </nav>
                 <!--end of top nav bar-->
 
-
-
-
                 <!-- Sidebar -->
                 <div id="sidebar-wrapper">
                     <ul class="sidebar-nav">
-                        <li>
-                            <a href="" class="menu-toggle show"><i class="glyphicon glyphicon-menu-left"></i>  Toggle Sidebar</a>
-                            <a href="" class="menu-toggle notshow"><i class="glyphicon glyphicon-menu-right"></i></a>
-                        </li>
                         {{#if isInRole 'sys-admin'}}
                         <li>
                             <a href="/admin/sysfunding" class="show"><i class="glyphicon glyphicon-bitcoin"></i>  System Funding</a>
@@ -72,6 +71,47 @@
                         <div class="row">
                             <div class="col-md-8 col-md-offset-2">
                                 {{#if isInRole 'sys-admin'}}
+                                    <div class="modal fade" tabindex="-1" role="dialog" id="changeLicenseConfig">
+                                        <div class="modal-dialog" role="document">
+                                            <div class="modal-content">
+                                                <form id="changeLicenseConfigForm">
+                                                    <div class="modal-header">
+                                                        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                                                        <h4 class="modal-title">Change License Configuration</h4>
+                                                    </div>
+                                                    <div class="modal-body">
+                                                        <div class="table-responsive">
+                                                            <table class="table table-striped">
+                                                                <tbody>
+                                                                <tr>
+                                                                    <th>Starter</th>
+                                                                    <td><input type="number" id="starterLicense" name="starter"></td>
+                                                                </tr>
+                                                                <tr>
+                                                                    <th>Basic</th>
+                                                                    <td><input type="number" id="basicLicense" name="basic"></td>
+                                                                </tr>
+                                                                <tr>
+                                                                    <th>Professional</th>
+                                                                    <td><input type="number" id="professionalLicense" name="professional"></td>
+                                                                </tr>
+                                                                <tr>
+                                                                    <th>Enterprise</th>
+                                                                    <td><input type="number" id="enterpriseLicense" name="enterprise"></td>
+                                                                </tr>
+                                                                </tbody>
+                                                            </table>
+                                                        </div>
+                                                    </div>
+                                                    <div class="modal-footer">
+                                                        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                                                        <button type="submit" class="btn btn-primary">Change License Config</button>
+                                                    </div>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
+
                                     <article class="text-center">
                                         {{#if page}}
                                             {{> Template.dynamic template=page data=dataContext}}

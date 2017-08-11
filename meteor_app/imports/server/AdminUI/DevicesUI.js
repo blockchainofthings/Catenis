@@ -33,6 +33,24 @@ export function DevicesUI() {
 }
 
 
+// DevicesUI function class (public) method
+function verifyUserRole(){
+    try{
+        var user=Meteor.user();
+        if(user && user.roles && user.roles.includes('sys-admin') ){
+            return true;
+        }else{
+            return false;
+        }
+
+    }catch(err){
+        Catenis.logger.ERROR('Failure trying to verify Meteor user role.', err);
+        throw new Meteor.Error('devices.verifyUserRole.failure', 'Failure trying to verify role of current user: ' + err.toString());
+    }
+}
+
+
+
 // Public DevicesUI object methods
 //
 
@@ -57,43 +75,90 @@ DevicesUI.initialize = function () {
     // Declaration of RPC methods to be called from client
     Meteor.methods({
         getAPIAccessSecret: function (device_id) {
-            const docDevice = Catenis.db.collection.Device.findOne({_id: device_id}, {fields: {deviceId: 1}});
+            if(verifyUserRole()){
+                const docDevice = Catenis.db.collection.Device.findOne({_id: device_id}, {fields: {deviceId: 1}});
+                return docDevice !== undefined ? Device.getDeviceByDeviceId(docDevice.deviceId).apiAccessSecret : undefined;
 
-            return docDevice !== undefined ? Device.getDeviceByDeviceId(docDevice.deviceId).apiAccessSecret : undefined;
+            }else{
+
+                Catenis.logger.ERROR('Failure trying to get API access secret, user does not have the right to access this method');
+                throw new Meteor.Error('devices.getAPIAccessSecret.failure', 'Failure trying to get API access secret, user does not have the right to access this method');
+
+            }
         },
+
         createDevice: function (client_id, deviceInfo) {
-            const docClient = Catenis.db.collection.Client.findOne({_id: client_id}, {fields: {clientId: 1}});
+            if(verifyUserRole()){
 
-            if (docClient === undefined) {
-                // Invalid client. Log error and throw exception
-                Catenis.logger.ERROR('Invalid client doc ID for creating device', {doc_id: client_id});
-                throw new Meteor.Error('device.create.invalid-client', 'Invalid client for creating device');
-            }
+                const docClient = Catenis.db.collection.Client.findOne({_id: client_id}, {fields: {clientId: 1, user_id: 1}});
 
-            let deviceId;
+                const user= Meteor.users.findOne( {_id: docClient.user_id} );
 
-            try {
-                const props = {};
+                let licenseType;
 
-                if (deviceInfo.name.length > 0) {
-                    props.name = deviceInfo.name;
+                if( user && user.profile && user.profile.license ){
+
+                    licenseType= user.profile.license.licenseType;
+
+                }else{
+
+                    Catenis.logger.ERROR('Error creating Device: Client has no license Type!');
+                    throw new Meteor.Error('Error creating Device: Client has no license Type!');
                 }
 
-                if (deviceInfo.prodUniqueId.length > 0) {
-                    props.prodUniqueId = deviceInfo.prodUniqueId;
+                const numUserDevices= Catenis.db.collection.Device.find( {"client_id": {$eq: client_id } } ).count();
+                const numDevicesforLicense= Catenis.db.collection.License.findOne({licenseType: licenseType}).numAllowedDevices;
+                if( numUserDevices > numDevicesforLicense){
+
+                    Catenis.logger.ERROR('Error creating new device: Client has already surpassed max number of devices at this license.');
+                    throw new Meteor.Error('Error creating new device: Client has already surpassed max number of devices at this license.');
+
+                }else if(numUserDevices === numDevicesforLicense){
+
+                    Catenis.logger.ERROR('Error creating new device: Client has already maxed out the number of devices for this license.');
+                    throw new Meteor.Error('Error creating new device: Client has already maxed out the number of devices for this license.');
+
+                }else{
+
+                    if (docClient === undefined) {
+                        // Invalid client. Log error and throw exception
+                        Catenis.logger.ERROR('Invalid client doc ID for creating device', {doc_id: client_id});
+                        throw new Meteor.Error('device.create.invalid-client', 'Invalid client for creating device');
+                    }
+
+                    let deviceId;
+
+                    try {
+                        const props = {};
+
+                        if (deviceInfo.name.length > 0) {
+                            props.name = deviceInfo.name;
+                        }
+
+                        if (deviceInfo.prodUniqueId.length > 0) {
+                            props.prodUniqueId = deviceInfo.prodUniqueId;
+                        }
+
+                        props.public = deviceInfo.public;
+
+                        deviceId = Client.getClientByClientId(docClient.clientId).createDevice(props, deviceInfo.ownAPIAccessKey);
+                    }
+                    catch (err) {
+                        // Error trying to create client device. Log error and throw exception
+                        Catenis.logger.ERROR('Failure trying to create new client device.', err);
+                        throw new Meteor.Error('device.create.failure', 'Failure trying to create new client device: ' + err.toString());
+                    }
+
+                    return deviceId;
                 }
+            }else{
 
-                props.public = deviceInfo.public;
+                Catenis.logger.ERROR('Failure trying to create Device, user does not have the right to access this method');
+                throw new Meteor.Error('devices.createDevice.failure', 'Failure trying to create Device, user does not have the right to access this method');
 
-                deviceId = Client.getClientByClientId(docClient.clientId).createDevice(props, deviceInfo.ownAPIAccessKey);
-            }
-            catch (err) {
-                // Error trying to create client device. Log error and throw exception
-                Catenis.logger.ERROR('Failure trying to create new client device.', err);
-                throw new Meteor.Error('device.create.failure', 'Failure trying to create new client device: ' + err.toString());
             }
 
-            return deviceId;
+
         }
     });
 

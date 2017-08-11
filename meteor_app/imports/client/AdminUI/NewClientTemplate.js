@@ -28,10 +28,7 @@ import { Catenis } from '../ClientCatenis';
 // Import template UI
 import './NewClientTemplate.html';
 
-
 // Definition of module (private) functions
-//
-
 
 function validateFormData(form, errMsgs) {
     const clientInfo = {};
@@ -143,6 +140,10 @@ Template.newClient.events({
     },
     //null the email Validation if the email value is changed after validation.
     'change #txtEmail'(event, template){
+        template.$('#emailValidation')[0].value="notValidated";
+        template.state.set('emailValidated',false);
+    },
+    'change #txtConfirmEmail'(event, template){
         template.$('#emailValidation')[0].value="notValidated";
         template.state.set('emailValidated',false);
     },

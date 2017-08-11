@@ -17,7 +17,7 @@
 // Third-party node modules
 //import config from 'config';
 // Meteor packages
-//import { Meteor } from 'meteor/meteor';
+import { Meteor } from 'meteor/meteor';
 import { FlowRouter } from 'meteor/kadira:flow-router';
 import { BlazeLayout } from 'meteor/kadira:blaze-layout';
 
@@ -41,6 +41,19 @@ FlowRouter.route('/updateProfile', {
     action: function () {
         BlazeLayout.render('baseTemplate', {
             page: 'updateProfile'
+        });
+    }
+});
+
+FlowRouter.route('/device', {
+    action: function () {
+        BlazeLayout.render('baseTemplate', {
+            page: 'clientDetails'
+
+            //
+            // dataContext: {
+            //     client_id:
+
         });
     }
 });

@@ -88,9 +88,12 @@ Meteor.startup(function () {
         ClientsUI.initialize();
         DevicesUI.initialize();
 
+
         Catenis.logger.INFO('Initialization ended.');
 
         Catenis.application.startProcessing();
+
+
 
 
 

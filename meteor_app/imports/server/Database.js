@@ -94,6 +94,30 @@ Database.initialize = function() {
                 }
             }]
         },
+
+        License: {
+            indices: [{
+                fields: {
+                    licenseType: 1
+                },
+                opts: {
+                    unique: true,
+                    background: true,
+                    safe: true,      // Should be replaced with 'w: 1' for newer mongodb drivers
+                    sparse: true
+                }
+            },
+                {
+                fields: {
+                    numAllowedDevices:1
+                },
+                opts: {
+                    background:true,
+                    safe: true
+                }
+                }
+            ]
+        },
         IssuedBlockchainAddress: {
             indices: [{
                 fields: {
@@ -821,10 +845,13 @@ Database.initialize = function() {
                     safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
                 }
             }]
-        }
+        },
+
     };
 
     Catenis.db = new Database(collections);
+
+
 };
 
 // Temporary method used to adjust the Message collection

@@ -30,51 +30,125 @@ import './ClientDetailsTemplate.html';
 // Import dependent templates
 import './DevicesTemplate.js';
 
+function validateFormData(form, errMsgs) {
+    const clientInfo = {};
+    let hasError = false;
 
+    clientInfo.name = form.clientName.value ? form.clientName.value.trim() : '';
 
-function licenseViolation(numDevices, user_id) {
-
-    const licenseType= Meteor.users.findOne( {_id: user_id} ).profile.license.licenseType;
-
-    let numAllowed;
-    // needs to be changed if the numAllowed value for license gets changed.
-    // NOTE: could be used to indicate how many devices the user is overusing.
-    switch(licenseType){
-        case "Starter":
-            numAllowed= 2;
-            break;
-        case "Basic":
-            numAllowed= 20 ;
-            break;
-        case "Professional":
-            numAllowed= 200;
-            break;
-        case "Enterprise":
-            return true;
+    if (clientInfo.name.length === 0) {
+        // Client name not supplied. Report error
+        errMsgs.push('Please enter a client name');
+        hasError = true;
     }
 
-    //returns true if this situation results in a license violation.
-    return numAllowed < numDevices;
+    clientInfo.username = form.username.value ? form.username.value.trim() : '';
 
+    if (clientInfo.username.length === 0) {
+        // Username not supplied. Report error
+        errMsgs.push('Please enter a username');
+        hasError = true;
+    }
+
+    clientInfo.email = form.email.value ? form.email.value.trim() : '';
+
+    if (clientInfo.email.length === 0) {
+        // Email not supplied. Report error
+        errMsgs.push('Please enter an email address');
+        hasError = true;
+    }
+    else {
+        const confEmail = form.confirmEmail.value ? form.confirmEmail.value.trim() : '';
+
+        if (clientInfo.email !== confEmail) {
+            // Confirmation email does not match. Report error
+            errMsgs.push('Confirmation email does not match');
+            hasError = true;
+        }
+    }
+    clientInfo.firstName = form.firstName.value? form.firstName.value.trim() : '';
+    if (clientInfo.firstName.length === 0) {
+        // firstName not supplied. Report error
+        errMsgs.push("Please enter client's first name");
+        hasError = true;
+    }
+
+    clientInfo.lastName = form.lastName.value? form.lastName.value.trim() : '';
+    if (clientInfo.lastName.length === 0) {
+        // firstName not supplied. Report error
+        errMsgs.push("Please enter client's last name");
+        hasError = true;
+    }
+    clientInfo.companyName= form.companyName.value? form.companyName.value.trim() : '';
+    if (clientInfo.companyName.length === 0) {
+        // firstName not supplied. Report error
+        errMsgs.push("Please enter client's company name");
+        hasError = true;
+    }
+
+
+    //check if the validation on the form has been completed. If this works, the above email check is redundant.
+
+    if(form.emailValidation && form.emailValidation.value!=="Validated"){
+        errMsgs.push('Email was not validated');
+        hasError =true;
+    }
+
+    // password will be filled in by the users, except when we're updating it ourselves
+    if(form.password){
+
+        //this method is being called in the update form
+        clientInfo.pwd = form.password.value ? form.password.value.trim() : '';
+
+        if (clientInfo.pwd.length === 0) {
+            // Password not supplied. We're not changing the password
+        }
+        else {
+            const confPsw = form.confirmPassword.value ? form.confirmPassword.value.trim() : '';
+            if (clientInfo.pwd !== confPsw) {
+                // Confirmation password does not match. Report error
+                errMsgs.push('Confirmation password does not match');
+                hasError = true;
+            }
+        }
+    }
+    return !hasError ? clientInfo : undefined;
+}
+
+function licenseViolation(numDevices, user_id) {
+    const licenseType= Meteor.users.findOne( {_id: user_id} ).profile.license.licenseType;
+
+    if(licenseType==="Enterprise"){
+        return false;
+    }else{
+        let numAllowed= Catenis.db.collection.License.findOne({licenseType: licenseType}).numAllowedDevices;
+        //returns true if this situation results in a license violation.
+        return numAllowed < numDevices;
+    }
 }
 
 // Module code
 //
 
 Template.clientDetails.onCreated(function () {
+
     this.state = new ReactiveDict();
     this.state.set('addMsgCreditsStatus', 'idle');  // Valid statuses: 'idle', 'data-enter', 'processing', 'error', 'success'
     this.state.set('showDevices', !!this.data.showDevices);
     //added by peter to check whether enrollment email was sent.
     this.state.set('haveResentEnrollmentEmail', false);
+    this.state.set('errMsgs', []);
 
     // Subscribe to receive fund balance updates
     this.clientRecordSubs = this.subscribe('clientRecord', this.data.client_id);
     this.clientUserSubs = this.subscribe('clientUser', this.data.client_id);
     this.clientMessageCreditsSubs = this.subscribe('clientMessageCredits', this.data.client_id);
+    this.userListSubs = this.subscribe('userList', Meteor.user());
 
     //added to allow device number count.
     this.clientDevicesSubs = this.subscribe('clientDevices', this.data.client_id);
+    //added to find allowed devices number
+    this.licenseSubs = this.subscribe('license');
 
 });
 
@@ -94,6 +168,15 @@ Template.clientDetails.onDestroyed(function () {
     //added to allow device number count.
     if (this.clientDevicesSubs) {
         this.clientDevicesSubs.stop();
+    }
+
+
+    if (this.userListSubs){
+        this.userListSubs.stop();
+    }
+
+    if(this.licenseSubs){
+        this.licenseSubs.stop();
     }
 });
 
@@ -194,22 +277,82 @@ Template.clientDetails.events({
         const form = event.target;
         const newLicenseState = form.licenseStateRadio.value ? form.licenseStateRadio.value.trim() : '';
 
+        // see if the user currently has more devices than can be held under the new service scheme.
+        const numUserDevices = Catenis.db.collection.Device.find( {"client_id": {$eq: client._id } } ).count();
+        const newlyAllowedDevices = Catenis.db.collection.License.findOne({licenseType: newLicenseState}).numAllowedDevices;
         if(confirm("you're about to change this user's license to "+ newLicenseState+". Are you sure?")===true){
-            Meteor.call('updateLicenseAdmin', client.user_id, newLicenseState, (error)=>{
-                if(error) {
-                    console.log("there was an error updating license", error);
-                }else{
-                    //successfully changed user license state
 
-                    //    alert the Admin if the user currently has more devices than can be held under the new service scheme.
-                    const numUserDevices= Catenis.db.collection.Device.find( {"client_id": {$eq: client._id } } ).count();
+            //client side verification
+            if(newlyAllowedDevices < numUserDevices ){
 
-                    if( licenseViolation(numUserDevices, client.user_id) ){
-                        alert("after changing the license, the user now has more devices than allowed!");
+                alert("The user has too many devices to allow to be reverted to "+ newLicenseState +".");
+
+            }else{
+
+                Meteor.call('updateLicenseAdmin', client, newLicenseState, (error)=>{
+                    if(error) {
+                        console.log("there was an error updating license", error);
+                    }else{
+
+                        //successfully changed user license state
+                        if( licenseViolation(numUserDevices, client.user_id) ){
+                            alert("after changing the license, the user now has more devices than allowed!");
+                        }
                     }
+                });
+            }
+        }
+    },
+
+
+    'click #editForm': function(event, template){
+
+        let userId= event.target.value;
+        let user=Meteor.users.findOne({_id: userId});
+
+        // Populate the form fields with the data from the current form.
+        $('#updateForm')
+            .find('[name="clientName"]').val(user.profile.name).end()
+            .find('[name="username"]').val(user.username).end()
+            .find('[name="email"]').val(user.emails? user.emails[0].address: "" ).end()
+            .find('[name="confirmEmail"]').val(user.emails? user.emails[0].address: "").end()
+            .find('[name="firstName"]').val(user.profile.firstname).end()
+            .find('[name="lastName"]').val(user.profile.lastname).end()
+            .find('[name="companyName"]').val(user.profile.company).end();
+    },
+
+    'submit #updateForm'(event, template){
+        event.preventDefault();
+        const form = event.target;
+        // Reset errors
+        template.state.set('errMsgs', []);
+        template.state.set('successfulUpdate', false);
+        let errMsgs = [];
+        let clientInfo;
+
+        if ((clientInfo = validateFormData(form, errMsgs))) {
+            // Call remote method to update client
+            Meteor.call('updateUser', clientInfo, (error) => {
+                if (error) {
+                    template.state.set('errMsgs', [
+                        error.toString()
+                    ]);
+                }
+
+                else {
+                    // Catenis client successfully updated
+                    template.state.set('successfulUpdate', true);
+
+                    //close modal form
+                    $('#updateFormModal').modal('hide');
+                    $('body').removeClass('modal-open');
+                    $('.modal-backdrop').remove();
                 }
             });
+        }else {
+            template.state.set('errMsgs', errMsgs);
         }
+
     }
 
 });
@@ -290,11 +433,64 @@ Template.clientDetails.helpers({
         const user= Meteor.users.findOne( {_id: user_id} );
         let licenseType;
         if( user && user.profile && user.profile.license ){
-            licenseType= Meteor.users.findOne( {_id: user_id} ).profile.license.licenseType;
+            licenseType= user.profile.license.licenseType;
            return licenseType;
         }else{
             return "user has no license";
         }
     },
+
+    errorMessage: function () {
+        return Template.instance().state.get('errMsgs').reduce((compMsg, errMsg) => {
+            if (compMsg.length > 0) {
+                compMsg += '<br>';
+            }
+            return compMsg + errMsg;
+        }, '');
+    },
+    successfulUpdate: function(){
+        return Template.instance().state.get('successfulUpdate');
+    },
+
+    numDevices: function(opt){
+        const client = Catenis.db.collection.Client.findOne({_id: Template.instance().data.client_id});
+        const numUserDevices= Catenis.db.collection.Device.find( {"client_id": {$eq: client._id } } ).count();
+
+        if(opt==="active"){
+            return numUserDevices;
+
+        }else if(opt==="available"){
+            let licenseType;
+            if(Meteor.users.findOne( {_id: client.user_id} ).profile.license){
+
+                licenseType= Meteor.users.findOne( {_id: client.user_id} ).profile.license.licenseType;
+
+                if(licenseType==="Enterprise"){
+
+                    return 'unlimited';
+
+                }else{
+
+                    let numAllowed;
+                    // needs to be changed if the numAllowed value for license gets changed.
+                    // NOTE: could be used to indicate how many devices the user is overusing.
+                    numAllowed= Catenis.db.collection.License.findOne({licenseType: licenseType}).numAllowedDevices;
+
+                    return numAllowed- numUserDevices< 0 ? "user is overusing "+ (numUserDevices-numAllowed).toString()+" devices": numAllowed- numUserDevices;
+                }
+
+            }else{
+                return "user has no license";
+            }
+
+        }else{
+            return "something went wrong";
+        }
+    },
+
+    //takes in input of licenseType, returns the number of devices allowed
+    devicesForLicense: function(licenseType){
+        return Catenis.db.collection.License.findOne({licenseType: licenseType}).numAllowedDevices;
+    }
 
 });

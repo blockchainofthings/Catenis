@@ -639,3 +639,19 @@ btn:active{
     text-align:center;
 }
 
+
+
+
+/*font Awesome set up so that we can have */
+
+.navbar-header>.pull-left>.menu-toggle>i{
+    padding-top: 12px;
+    padding-left: 3px;
+    font-size: 25px;
+    color: #333399;
+}
+
+
+
+
+

@@ -11,6 +11,9 @@
                         <a class="navbar-brand" href="#">
                             <p> Catenis<span class="gray">Enterprise</span></p>
                         </a>
+                        <div class="pull-left">
+                            <a href="" class="menu-toggle"><i class="fa fa-bars fa-th-large"></i></a>
+                        </div>
                         <div class="pull-right" id="userAccount">
                             <ul class="nav navbar-nav navbar-right">
                                 <li class="dropdown">
@@ -36,8 +39,8 @@
             <div id="sidebar-wrapper">
                 <ul class="sidebar-nav">
                     <li>
-                        <a href="#" class="menu-toggle show"><i class="glyphicon glyphicon-menu-left"></i>  Toggle Sidebar</a>
-                        <a href="#" class="menu-toggle notshow"><i class="glyphicon glyphicon-menu-right"></i></a>
+                        <a href="/device" class="show"><i class="glyphicon glyphicon-bitcoin"></i> Add Devices</a>
+                        <a href="/device" class="notshow"><i class="glyphicon glyphicon-bitcoin"></i></a>
                     </li>
                     {{#if isInRole 'sys-admin'}}
                         <li>

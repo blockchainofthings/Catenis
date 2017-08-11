@@ -3,13 +3,11 @@
         <div class="panel panel-login noBoxShadow">
             <div class="panel-body">
                 <div class="row">
-                    <h2>ADD NEW DEVICE</h2>
-                    <br>
                     {{#unless Template.subscriptionsReady}}
                         <p style="color:lightgray; margin-top:1em">Loading...</p>
                     {{else}}
                         <div class="col-lg-6">
-
+                            <h2> Previous Devices</h2>
                                 <div class="scrollBox400">
                                     <table class="table table-striped">
                                         <thead>
@@ -40,6 +38,8 @@
                         </div>
                         <div class="col-lg-6">
                             {{#if newDeviceId}}
+                                <h2>Success!</h2>
+
                                 <p style="color:blue">New device {{newDeviceId}} successfully created</p>
 
                                 <div class="row">
@@ -51,6 +51,8 @@
                                     </div>
                                 </div>
                             {{else}}
+                                <h2>Add New Device</h2>
+
                                 {{#if hasError}}
                                     <p style="color:red">{{{errorMessage}}}</p>
                                 {{/if}}
