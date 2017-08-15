@@ -48,11 +48,15 @@ import { Message } from './Message';
 //
 //  Success data returned: {
 //    "from" : {            // Note: only returned if origin device different than device that issued the request
-//      deviceId: [String]      // Catenis ID of the origin device (device that had sent/logged the message)
+//      "deviceId": [String]      // Catenis ID of the origin device (device that had sent/logged the message)
+//      "name": [String],         // (only returned if defined and device that issued the request has permission to access this device's main props) - Assigned name of the device
+//      "prodUniqueId": [String]  // (only returned if defined and device that issued the request has permission to access this device's main props) - Product unique ID of the device
 //    },
 //    "to" : {              // Note: only returned if target device different than device that issued the request.
 //                          //  Never returned for version 0.1 that does not have permission control.
-//      deviceId: [String]      // Catenis ID of target device (device to which the message had been sent)
+//      "deviceId": [String]      // Catenis ID of target device (device to which the message had been sent)
+//      "name": [String],         // (only returned if defined and device that issued the request has permission to access this device's main props) - Assigned name of the device
+//      "prodUniqueId": [String]  // (only returned if defined and device that issued the request has permission to access this device's main props) - Product unique ID of the device
 //    },
 //    "message": [String]       // The read message formatted using the specified encoding
 //  }
@@ -131,7 +135,7 @@ export function readMessage() {
             };
 
             // Add origin device public properties
-            _und.extend(result.from, msgInfo.originDevice.getPublicProps());
+            _und.extend(result.from, msgInfo.originDevice.discloseMainPropsTo(this.user.device));
         }
 
         if (msgInfo.action === Message.action.send && msgInfo.targetDevice.deviceId !== this.user.device.deviceId) {
@@ -140,7 +144,7 @@ export function readMessage() {
             };
 
             // Add target device public properties
-            _und.extend(result.to, msgInfo.targetDevice.getPublicProps());
+            _und.extend(result.to, msgInfo.targetDevice.discloseMainPropsTo(this.user.device));
         }
 
         result.message = msgInfo.message.toString(optEncoding);

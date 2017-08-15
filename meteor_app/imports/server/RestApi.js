@@ -25,12 +25,16 @@ import { Restivus } from 'meteor/nimble:restivus';
 // References code in other (Catenis) modules
 import { Catenis } from './Catenis';
 import { Device } from './Device';
+import { ApiVersion } from './ApiVersion';
 import { logMessage } from './ApiLogMessage';
 import { sendMessage } from './ApiSendMessage';
 import { readMessage } from './ApiReadMessage';
 import { readMessage2 } from './ApiReadMessage2';
 import { retrieveMessageContainer } from './ApiMessageContainer';
 import { listMessages } from './ApiListMessages';
+import { listPermissionEvents } from './ApiListPermissionEvents';
+import { retrievePermissionRights } from './ApiGetPermissionRights';
+import { setPermissionRights } from './ApiPostPermissionRights';
 
 // Config entries
 const restApiConfig = config.get('restApi');
@@ -61,6 +65,8 @@ export const restApiRootPath = cfgSettings.rootPath;
 
 // RestApi function class
 export function RestApi(apiVersion) {
+    this.apiVer = new ApiVersion(apiVersion);
+
     this.api = new Restivus({
         apiPath: cfgSettings.rootPath,
         auth: {
@@ -82,10 +88,10 @@ export function RestApi(apiVersion) {
                 return '';
             }
         },
-        version: apiVersion
+        version: this.apiVer.toString()
     });
 
-    if (apiVersion === '0.2' || apiVersion === '0.3') {
+    if (this.apiVer.gte('0.2')) {
         this.api.addRoute('messages/log', {authRequired: true}, {
             // Record a message to blockchain
             //
@@ -110,8 +116,7 @@ export function RestApi(apiVersion) {
             //  Refer to the source file where the action function is defined for a detailed description of the endpoint
             get: {
                 // Different implementations depending on the version of the API
-                action: apiVersion === '0.2' ? readMessage :
-                        apiVersion === '0.3' ? readMessage2 : undefined
+                action: this.apiVer.gt('0.2') ? readMessage2 : readMessage
             }
         });
 
@@ -125,13 +130,39 @@ export function RestApi(apiVersion) {
         });
     }
 
-    if (apiVersion === '0.3') {
+    if (this.apiVer.gte('0.3')) {
         this.api.addRoute('messages', {authRequired: true}, {
             // Retrieve a list of message entries filtered by a given criteria
             //
             //  Refer to the source file where the action function is defined for a detailed description of the endpoint
             get: {
                 action: listMessages
+            }
+        });
+    }
+
+    if (this.apiVer.gte('0.4')) {
+        this.api.addRoute('permission/events', {authRequired: true}, {
+            // Retrieve a list of system defined permission events
+            //
+            //  Refer to the source file where the action function is defined for a detailed description of the endpoint
+            get: {
+                action: listPermissionEvents
+            }
+        });
+
+        this.api.addRoute('permission/:eventName/rights', {authRequired: true}, {
+            // Retrieve permission right currently set for the specified event
+            //
+            //  Refer to the source file where the action function is defined for a detailed description of the endpoint
+            get: {
+                action: retrievePermissionRights
+            },
+            // Set permission rights for the specified event
+            //
+            //  Refer to the source file where the action function is defined for a detailed description of the endpoint
+            post: {
+                action: setPermissionRights
             }
         });
     }
@@ -163,7 +194,8 @@ RestApi.initialize = function () {
     // Instantiate RestApi object
     Catenis.restApi = {
         'ver0.2': new RestApi('0.2'),
-        'ver0.3': new RestApi('0.3')
+        'ver0.3': new RestApi('0.3'),
+        'ver0.4': new RestApi('0.4')
     };
 };
 
@@ -287,23 +319,29 @@ function authenticateDevice() {
         }
 
         if (device !== undefined) {
-            // Sign request and validate signature
-            const reqSignature = signRequest.call(this, {
-                timestamp: strTmstmp,
-                signDate: strSignDate,
-                apiAccessSecret: device.apiAccessSecret
-            });
+            // Make sure not to authenticate a device that is disabled
+            if (!device.isDisabled) {
+                // Sign request and validate signature
+                const reqSignature = signRequest.call(this, {
+                    timestamp: strTmstmp,
+                    signDate: strSignDate,
+                    apiAccessSecret: device.apiAccessSecret
+                });
 
-            if (reqSignature === signature) {
-                // Signature is valid. Return device as authenticated user
-                return {
-                    user: {
-                        device: device
+                if (reqSignature === signature) {
+                    // Signature is valid. Return device as authenticated user
+                    return {
+                        user: {
+                            device: device
+                        }
                     }
+                }
+                else {
+                    Catenis.logger.DEBUG(util.format('Error authenticating API request: invalid signature (expected signature: %s)', reqSignature), this.request);
                 }
             }
             else {
-                Catenis.logger.DEBUG(util.format('Error authenticating API request: invalid signature (expected signature: %s)', reqSignature), this.request);
+                Catenis.logger.DEBUG('Error authenticating API request: device is disabled', this.request);
             }
         }
         else {

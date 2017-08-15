@@ -189,6 +189,42 @@
   "balanceInfo": {
     "defaultSafetyFactor": 0.1     // Safety factor used to check whether current balance is enough to cover current expect balance
   },
+  // Parameters partaining to Client module
+  "client": {
+    // NOTE: the following should be interpreted as a single entry with an object value
+    "deviceDefaultRightsByEvent": {   // Default permission right settings for newly created devices to be assigned to clients: there must be one entry for each defined permission event
+      "receive_notify_new_msg": {
+        "system": "deny",
+        "client": {
+          "allow": "self"
+        }
+      },
+      "receive_notify_msg_read": {
+        "system": "deny",
+        "client": {
+          "allow": "self"
+        }
+      },
+      "send_read_msg_confirm": {
+        "system": "deny",
+        "client": {
+          "allow": "self"
+        }
+      },
+      "receive_msg": {
+        "system": "deny",
+        "client": {
+          "allow": "self"
+        }
+      },
+      "disclose_main_props": {
+        "system": "deny",
+        "client": {
+          "allow": "self"
+        }
+      }
+    }
+  },
   // Parameters pertaining to Device module
   "device": {
     "creditsToSendMessage": 1,  // Number of client service credits that is required for a device to send a message

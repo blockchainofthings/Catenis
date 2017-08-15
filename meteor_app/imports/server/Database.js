@@ -839,26 +839,59 @@ Database.initialize = function() {
                     safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
                 }
             }]
+        },
+        Permission: {
+            indices: [{
+                fields: {
+                    event: 1,
+                    subjectEntityId: 1,
+                    level: 1,
+                    objectEntityId: 1
+                },
+                opts: {
+                    unique: true,
+                    sparse: true,
+                    background: true,
+                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                }
+            }, {
+                fields: {
+                    event: 1
+                },
+                opts: {
+                    background: true,
+                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                }
+            }, {
+                fields: {
+                    subjectEntityId: 1
+                },
+                opts: {
+                    background: true,
+                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                }
+            }, {
+                fields: {
+                    level: 1
+                },
+                opts: {
+                    background: true,
+                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                }
+            }, {
+                fields: {
+                    objectEntityId: 1
+                },
+                opts: {
+                    sparse: true,
+                    background: true,
+                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                }
+            }]
         }
     };
 
     Catenis.db = new Database(collections);
-};
-
-// Temporary method used to replace Message source field
-Database.replaceMessageSource = function () {
-    // Update source field on Message documents as necessary
-    const docsUpdated = Catenis.db.collection.Message.update({
-        source: 'sent_msg'
-    }, {
-        $set: {
-            source: 'local'
-        }
-    }, {
-        multi: true
-    });
-
-    console.log('Message docs that had their source field update: ' + docsUpdated);
 };
 
 

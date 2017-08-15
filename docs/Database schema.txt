@@ -246,3 +246,17 @@ Malleability {
   modifiedTxid: [string],  // New blockchain attributed ID (hash) of transaction due to malleability
   createdDate: [date/time]  // Date and time when record has been created
 }
+
+Permission {
+   _id: [string], // MongoDB internal document ID provided by Meteor
+   event: [string], // Name of event for which permission is being defined. Valid values (from Permission.event): 'receive_notify_new_msg', 'receive_notify_msg_read', 'send_read_msg_confirm', 'receive_msg'
+   subjectEntityId: [string], // ID of device that functions as the subject of the action associated with the event for which permission is being defined,
+                              //  or ID of client for which default permission for all its devices is being set
+   level: [string], // Designates upon which devices the permission right should be applied. Valid values (from Permission.level): '1.device', '2.client', '3.catenis_node', '4.system'
+   objectEntityId: [string], // Identifies the device that functions as the object of the action associated with the event and upon which the permission right should be applied
+                             //  If level = 'device', it should contain a device ID, and the permission right applies to a given device.
+                             //  If level = 'client', it should contain a client ID, and the permission right applies to any devices that belongs to that client.
+                             //  If level = 'catenisNode', it should contain a Catenis Node index, and the permission right applies to any devices that belong to any clients that pertain to that Catenis node.
+                             //  If level = 'system', this field should not exist, and the permission right applies to any devices
+   right: [string]  // The permission right that should be applied: allow, deny
+}

@@ -51,13 +51,13 @@ import { Message } from './Message';
 //    "from": {         // Note: only returned if origin device different than device that issued the request, unless
 //                      //  it is the (rare) case where the device that issued the request sent a message to itself
 //      "deviceId": [String],     // Catenis ID of the origin device (device that had sent/logged the message)
-//      "name": [String],         // (only returned if device is public and has this data) - Assigned name of the device
-//      "prodUniqueId": [String]  // (only returned if device is public and has this data) - Product unique ID of the device
+//      "name": [String],         // (only returned if defined and device that issued the request has permission to access this device's main props) - Assigned name of the device
+//      "prodUniqueId": [String]  // (only returned if defined and device that issued the request has permission to access this device's main props) - Product unique ID of the device
 //    },
 //    "to": {          // Note: only returned if target device different than device that issued the request
 //      "deviceId": [String]      // Catenis ID of target device (device to which the message had been sent)
-//      "name": [String],         // (only returned if device is public and has this data) - Assigned name of the device
-//      "prodUniqueId": [String]  // (only returned if device is public and has this data) - Product unique ID of the device
+//      "name": [String],         // (only returned if defined and device that issued the request has permission to access this device's main props) - Assigned name of the device
+//      "prodUniqueId": [String]  // (only returned if defined and device that issued the request has permission to access this device's main props) - Product unique ID of the device
 //    },
 //    "message": [String]       // The read message formatted using the specified encoding
 //  }
@@ -143,7 +143,7 @@ export function readMessage2() {
                 };
 
                 // Add origin device public properties
-                _und.extend(result.from, msgInfo.originDevice.getPublicProps());
+                _und.extend(result.from, msgInfo.originDevice.discloseMainPropsTo(this.user.device));
             }
         }
         else if (msgInfo.action === Message.action.send) {
@@ -157,7 +157,7 @@ export function readMessage2() {
                 };
 
                 // Add origin device public properties
-                _und.extend(result.from, msgInfo.originDevice.getPublicProps());
+                _und.extend(result.from, msgInfo.originDevice.discloseMainPropsTo(this.user.device));
             }
             else {
                 // Message not sent to current device
@@ -169,7 +169,7 @@ export function readMessage2() {
                     };
 
                     // Add origin device public properties
-                    _und.extend(result.from, msgInfo.originDevice.getPublicProps());
+                    _und.extend(result.from, msgInfo.originDevice.discloseMainPropsTo(this.user.device));
                 }
 
                 // Return info about device to which message was sent
@@ -178,7 +178,7 @@ export function readMessage2() {
                 };
 
                 // Add target device public properties
-                _und.extend(result.to, msgInfo.targetDevice.getPublicProps());
+                _und.extend(result.to, msgInfo.targetDevice.discloseMainPropsTo(this.user.device));
             }
         }
 

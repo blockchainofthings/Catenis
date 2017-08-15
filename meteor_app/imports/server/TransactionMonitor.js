@@ -995,6 +995,15 @@ function handleNewTransactions(data) {
                             });
                         }
                         // TODO: parse transaction (using Transaction.fromHex()) and try to identify Catenis transactions (using tx.matches())
+                        else {
+                            // TODO: IMPORTANT - identify unrecognized transactions that send bitcoins to internal Cetenis addresses (any address other than sys_fund_addr) and spend the amount transferred  to a "gargage" addresss that should be defined so the bitcoins are gotten out of the way
+                            // An unrecognized transaction had been received.
+                            //  Log warning condition
+                            // noinspection JSUnfilteredForInLoop
+                            Catenis.logger.WARN('An unrecognized transaction involving Catenis addresses has been received', {
+                                txid: txid
+                            });
+                        }
                     }
                 }
 

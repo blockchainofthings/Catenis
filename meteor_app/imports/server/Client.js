@@ -15,10 +15,10 @@
 //      imported module'
 const util = require('util');
 const crypto = require('crypto');
-const _und = require('underscore');     // NOTE: we dot not use the underscore library provided by Meteor because we need
-                                        //        a feature (_und.omit(obj,predicate)) that is not available in that version
 // Third-party node modules
-//import config from 'config';
+import config from 'config';
+import _und from 'underscore';     // NOTE: we dot not use the underscore library provided by Meteor because we nee
+                                   //        a feature (_und.omit(obj,predicate)) that is not available in that version
 // Meteor packages
 import { Meteor } from 'meteor/meteor';
 import { Random } from 'meteor/random';
@@ -34,14 +34,15 @@ import { Device } from './Device';
 import { FundSource } from './FundSource';
 import { FundTransaction } from './FundTransaction';
 import { Service} from './Service';
+import { Permission } from './Permission';
 
 // Config entries
-/*const config_entryConfig = config.get('config_entry');
+const clientConfig = config.get('client');
 
 // Configuration settings
-const cfgSettings = {
-    property: config_entryConfig.get('property_name')
-};*/
+export const cfgSettings = {
+    deviceDefaultRightsByEvent: clientConfig.get('deviceDefaultRightsByEvent')
+};
 
 
 // Definition of function classes
@@ -354,8 +355,9 @@ Client.prototype.getDeviceByIndex = function (deviceIndex, includeDeleted = true
 //      (any additional property)
 //    }
 //    ownApiAccessKey: [boolean]
-//
-Client.prototype.createDevice = function (props, ownApiAccessKey = false) {
+//    initRightsByEvent: [Object] - (optional) Initial rights for newly created device. Object the keys of which should be the defined permission event names.
+//                                -  The value for each event name key should be a rights object as defined for the Permission.setRights method
+Client.prototype.createDevice = function (props, ownApiAccessKey = false, initRightsByEvent) {
     props = typeof props === 'string' ? {name: props} : (typeof props === 'object' && props !== null ? props : {});
 
     // Validate (pre-defined) properties
@@ -395,6 +397,7 @@ Client.prototype.createDevice = function (props, ownApiAccessKey = false) {
     }
 
     let docDevice = undefined;
+    let device;
 
     // Execute code in critical section to avoid DB concurrency
     this.clnDbCS.execute(() => {
@@ -443,6 +446,18 @@ Client.prototype.createDevice = function (props, ownApiAccessKey = false) {
             }
         }
 
+        try {
+            // Instantiate device and set initial permission rights. If no initial
+            //  rights are specified, get the default rights from the client
+            device = new Device(docDevice, this);
+
+            device.setInitialRights(initRightsByEvent !== undefined ? initRightsByEvent : device.client.getDeviceDefaultRights());
+        }
+        catch (err) {
+            Catenis.logger.ERROR(util.format('Error setting initial permission rights for newly created device (deviceId: %s).', device.deviceId), err);
+            throw new Meteor.Error('ctn_device_init_rights_error', util.format('Error setting initial permission rights for newly created device (deviceId: %s).', device.deviceId), err.stack);
+        }
+
         // Now, adjust last device index
         this.lastDeviceIndex = deviceIndex;
     });
@@ -450,8 +465,8 @@ Client.prototype.createDevice = function (props, ownApiAccessKey = false) {
     // If we hit this point, a Device doc (rec) has been successfully created
 
     try {
-        // Instantiate Device object to fund recently created device
-        (new Device(docDevice, this)).fundAddresses();
+        // Fund recently created device
+        device.fundAddresses();
     }
     catch (err) {
         // Error trying to fund addresses of newly created device. Log error condition
@@ -524,6 +539,36 @@ Client.prototype.updateProperties = function (newProps) {
         }
     }
 };
+
+/** Permission related methods **/
+// Set the default permission rights to use for newly created devices
+//
+//  Arguments:
+//   rightsByEvent: [Object] - Object the keys of which should be the defined permission event names.
+//                           -  The value for each event name key should be a rights object as defined for the Permission.setRights method but without including the device level key
+Client.prototype.setDeviceDefaultRights = function(rightsByEvent) {
+    Object.keys(rightsByEvent).forEach((eventName) => {
+        if (Permission.isValidEventName(eventName)) {
+            Catenis.permission.setRights(eventName, this, Permission.fixRightsReplaceOwnHierarchyEntity(rightsByEvent[eventName], this));
+        }
+    });
+};
+
+// Retrieve the default permission rights to use for newly created devices
+//
+//  Result:
+//   rightsByEvent: [Object] - Object the keys of which should be the defined permission event names.
+//                           -  The value for each event name key should be a rights object as defined for the Permission.setRights method but without including the device level key
+Client.prototype.getDeviceDefaultRights = function() {
+    const rightsByEvent = {};
+
+    Object.keys(Permission.listEvents()).forEach((eventName) => {
+        rightsByEvent[eventName] = Catenis.permission.getRights(eventName, this);
+    });
+
+    return rightsByEvent;
+};
+/** End of permission related methods **/
 
 
 // Module functions used to simulate private Client object methods
@@ -795,6 +840,174 @@ Client.getClientByUserId = function (user_id, includeDeleted = true) {
     }
 
     return new Client(docClient, CatenisNode.getCatenisNodeByIndex(docClient.index.ctnNodeIndex));
+};
+
+// Check if a given client exists
+//
+//  Argument:
+//   clientId [String] - Client ID of client to check existence
+//   wildcardAccepted [Boolean] - Indicate whether wildcard ('*') should be accepted for client ID
+//   includeDeleted [Boolean] - Indicate whether deleted clients should also be included in the check
+//
+//  Result:
+//   [Boolean] - Indicates whether the client being checked exists or not
+Client.checkExist = function (clientId, wildcardAccepted = false, includeDeleted = false) {
+    if (wildcardAccepted && clientId === Permission.entityToken.wildcard) {
+        return true;
+    }
+    else {
+        if (clientId === undefined) {
+            return false;
+        }
+
+        const selector = {
+            clientId: clientId
+        };
+
+        if (!includeDeleted) {
+            selector.status = {
+                $ne: Client.status.deleted.name
+            }
+        }
+
+        const docClient = Catenis.db.collection.Client.findOne(selector, {fields: {_id: 1}});
+
+        return docClient !== undefined;
+    }
+};
+
+// Check if one or more clients exist
+//
+//  Argument:
+//   clientIds [Array(String)|String] - List of client IDs (or a single client ID) of clients to check existence
+//   wildcardAccepted [Boolean] - Indicate whether wildcard ('*') should be accepted for client ID
+//   includeDeleted [Boolean] - Indicate whether deleted clients should also be included in the check
+//
+//  Result:
+//   result: {
+//     doExist: [Boolean] - Indicates whether all clients being checked exist or not
+//     nonexistentClientIds: [Array(String)] - List of client IDs of clients, from the ones that were being checked, that do not exist
+//   }
+Client.checkExistMany = function (clientIds, wildcardAccepted = false, includeDeleted = false) {
+    const result = {};
+
+    if (Array.isArray(clientIds)) {
+        if (clientIds.length === 0) {
+            return {
+                doExist: false
+            };
+        }
+
+        if (wildcardAccepted) {
+            // Filter out wildcard ID
+            clientIds = clientIds.filter((clientId) => clientId !== Permission.entityToken.wildcard);
+
+            if (clientIds.length === 0) {
+                return {
+                    doExist: true
+                }
+            }
+        }
+
+        const selector = {
+            clientId: {
+                $in: clientIds
+            }
+        };
+
+        if (!includeDeleted) {
+            selector.status = {
+                $ne: Client.status.deleted.name
+            };
+        }
+
+        const resultSet = Catenis.db.collection.Client.find(selector, {
+            fields: {
+                clientId: 1
+            }
+        });
+
+        if (resultSet.count() !== clientIds.length) {
+            // Not all IDs returned. Indicated that not all exist and identify the ones that do not
+            result.doExist = false;
+            result.nonexistentClientIds = [];
+            const existingClientIds = new Set(resultSet.fetch().map(doc => doc.clientId));
+
+            clientIds.forEach((clientId) => {
+                if (!existingClientIds.has(clientId)) {
+                    result.nonexistentClientIds.push(clientId);
+                }
+            });
+        }
+        else {
+            // Found all indices. Indicate that all exist
+            result.doExist = true;
+        }
+    }
+    else {
+        // A single client ID had been passed to be checked
+        result.doExist = Client.checkExist(clientIds, wildcardAccepted, includeDeleted);
+
+        if (!result.doExist) {
+            result.nonexistentClientIds = [clientIds];
+        }
+    }
+
+    return result;
+};
+
+// Make sure that device default permission rights are set for all clients and permission events
+Client.checkDeviceDefaultRights = function () {
+    // Retrieve client ID of all currently defined clients
+    const clientIds = Catenis.db.collection.Client.find({
+        status: {$ne: Client.status.deleted.name}
+    }, {
+        fields: {
+            clientId: 1
+        }
+    }).map((doc) => doc.clientId);
+
+    // Identity clients for which device default rights are already set for at least some permission events
+    const alreadySetClientIdEvents = new Map();
+
+    Catenis.db.collection.Permission.find({
+        subjectEntityId: {
+            $in: clientIds
+        },
+        level: Permission.level.system.name
+    }, {
+        fields: {
+            subjectEntityId: 1,
+            event: 1
+        }
+    }).forEach((doc) => {
+        if (!alreadySetClientIdEvents.has(doc.subjectEntityId)) {
+            alreadySetClientIdEvents.set(doc.subjectEntityId, new Set([doc.event]));
+        }
+        else {
+            alreadySetClientIdEvents.get(doc.subjectEntityId).add(doc.event);
+        }
+    });
+
+    // For all existing clients, check if there are any permission event for which
+    //  device default rights setting is missing, and fix it
+    const numEventsDeviceDefaultRights = Object.keys(cfgSettings.deviceDefaultRightsByEvent).length;
+
+    clientIds.forEach((clientId) => {
+        let alreadySetEvents;
+
+        if (!alreadySetClientIdEvents.has(clientId) || (alreadySetEvents = alreadySetClientIdEvents.get(clientId)).size < numEventsDeviceDefaultRights) {
+            // Prepare device default rights containing only the events that are missing...
+            const deviceDefaultRightsByEvent = _und.omit(cfgSettings.deviceDefaultRightsByEvent, (rights, event) => alreadySetEvents !== undefined && alreadySetEvents.has(event));
+
+            // And set them
+            Catenis.logger.DEBUG('Setting device default permission rights for client', {
+                clientId: clientId,
+                rightsByEvent: deviceDefaultRightsByEvent
+            });
+            Client.getClientByClientId(clientId).setDeviceDefaultRights(deviceDefaultRightsByEvent);
+        }
+    });
 };
 
 

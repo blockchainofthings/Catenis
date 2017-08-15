@@ -78,13 +78,13 @@ import { successResponse, errorResponse } from './RestApi';
 //      "direction": [String],  // (only returned for action = 'send') Direction of the sent message; either 'inbound' or 'outbound'
 //      "from": {    // Note: only returned for messages sent to the device that issued the request (action = 'send' and direction = 'inbound')
 //        "deviceId": [String],   // Catenis device ID of the device that had sent the message
-//        "name": [String]        // (only returned if device is public and has this data) - Assigned name of the device
-//        "prodUniqueId: [String] // (only returned if device is public and has this data) - Product unique ID of the device
+//        "name": [String]        // (only returned if defined and device that issued the request has permission to access this device's main props) - Assigned name of the device
+//        "prodUniqueId: [String] // (only returned if defined and device that issued the request has permission to access this device's main props) - Product unique ID of the device
 //      },
 //      "to": {      // Note: only returned for messages sent from the device that issued the request (action = 'send' and direction = 'outbound')
 //        "deviceId": [String]      // Catenis device ID of device to which the message had been sent
-//        "name": [String]        // (only returned if device is public and has this data) Assigned name of the device
-//        "prodUniqueId: [String] // (only returned if device is public and has this data) Product unique ID of the device
+//        "name": [String]        // (only returned if defined and device that issued the request has permission to access this device's main props) Assigned name of the device
+//        "prodUniqueId: [String] // (only returned if defined and device that issued the request has permission to access this device's main props) Product unique ID of the device
 //      },
 //      "read": [Boolean],  // Indicates whether the message had already been read
 //      "date": [String],  // ISO 8601 formatted date and time when the message had been: logged, in case of messages logged
@@ -299,7 +299,7 @@ export function listMessages() {
                 };
 
                 // Add device public properties
-                _und.extend(msg.from, msgEntry.fromDevice.getPublicProps());
+                _und.extend(msg.from, msgEntry.fromDevice.discloseMainPropsTo(this.user.device));
             }
 
             if (msgEntry.toDevice !== undefined) {
@@ -308,7 +308,7 @@ export function listMessages() {
                 };
 
                 // Add device public properties
-                _und.extend(msg.to, msgEntry.toDevice.getPublicProps());
+                _und.extend(msg.to, msgEntry.toDevice.discloseMainPropsTo(this.user.device));
             }
 
             msg.read = msgEntry.read;

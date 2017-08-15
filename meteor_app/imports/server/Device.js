@@ -39,6 +39,8 @@ import { Transaction } from './Transaction';
 import { Util } from './Util';
 import { Message } from './Message';
 import { ReadConfirmation } from './ReadConfirmation';
+import { Permission } from './Permission';
+import { cfgSettings as clientCfgSettings } from './Client';
 
 // Config entries
 const deviceConfig = config.get('device');
@@ -77,13 +79,37 @@ export function Device(docDevice, client) {
     this.apiAccessGenKey = docDevice.apiAccessGenKey;
     this.status = docDevice.status;
 
-    Object.defineProperty(this, 'apiAccessSecret', {
-        get: function () {
-            // Use API access secret from client is an API access generator key is not defined
-            //  for the device
-            //noinspection JSPotentiallyInvalidUsageOfThis
-            return this.apiAccessGenKey !== null ? crypto.createHmac('sha512', this.apiAccessGenKey).update('And here it is: the Catenis API key for device' + this.clientId).digest('hex')
+    // Properties definition
+    Object.defineProperties(this, {
+        apiAccessSecret: {
+            get: function () {
+                // Use API access secret from client is an API access generator key is not defined
+                //  for the device
+                //noinspection JSPotentiallyInvalidUsageOfThis
+                return this.apiAccessGenKey !== null ? crypto.createHmac('sha512', this.apiAccessGenKey).update('And here it is: the Catenis API key for device' + this.clientId).digest('hex')
                     : this.client.apiAccessSecret;
+            }
+        },
+        isActive: {
+            get: function () {
+                // noinspection JSPotentiallyInvalidUsageOfThis
+                return this.status === Device.status.active.name;
+            },
+            enumerable: true
+        },
+        isDisabled: {
+            get: function () {
+                // noinspection JSPotentiallyInvalidUsageOfThis
+                return this.status === Device.status.inactive.name;
+            },
+            enumerable: true
+        },
+        isDeleted: {
+            get: function () {
+                // noinspection JSPotentiallyInvalidUsageOfThis
+                return this.status === Device.status.deleted.name;
+            },
+            enumerable: true
         }
     });
 
@@ -326,7 +352,6 @@ Device.prototype.sendMessage = function (targetDeviceId, message, encryptMessage
         throw new Meteor.Error('ctn_device_not_active', util.format('Cannot send message from a device that is not active (deviceId: %s)', this.deviceId));
     }
 
-    // TODO: make sure that this device has permission to send message to target device
     // Check if device's client has enough credits
     const confirmedMsgCredits = this.client.availableMessageCredits().confirmed;
 
@@ -619,8 +644,7 @@ Device.prototype.readMessage = function (messageId) {
             // This was the first time that message has been read
             if (message.action === Message.action.send) {
                 // Confirm that message has been read
-                // TODO: check whether target device allows sending read confirmation notification to origin device. If not, set confirmType to ReadConfirmation.confirmationType.spendOnly
-                const confirmType = ReadConfirmation.confirmationType.spendNotify;
+                const confirmType = this.shouldSendReadMsgConfirmationTo(msgTransact.originDevice) ? ReadConfirmation.confirmationType.spendNotify : ReadConfirmation.confirmationType.spendOnly;
 
                 Catenis.readConfirm.confirmMessageRead(msgTransact, confirmType);
             }
@@ -885,6 +909,93 @@ Device.prototype.getPublicProps = function () {
 
     return result;
 };
+
+Device.prototype.discloseMainPropsTo = function (device) {
+    let result = {};
+
+    if (this.shouldDiscloseMainPropsTo(device)) {
+        if (this.props.name !== undefined) {
+            result.name = this.props.name;
+        }
+
+        if (this.props.prodUniqueId !== undefined) {
+            result.prodUniqueId = this.props.prodUniqueId;
+        }
+    }
+
+    return result;
+};
+
+/** Permission related methods **/
+Device.prototype.shouldBeNotifiedOfNewMessageFrom = function (device) {
+    return Catenis.permission.hasRight(Permission.event.receive_notify_new_msg.name, this, device);
+};
+
+Device.prototype.shouldBeNotifiedOfMessageReadBy = function (device) {
+    return Catenis.permission.hasRight(Permission.event.receive_notify_msg_read.name, this, device);
+};
+
+Device.prototype.shouldSendReadMsgConfirmationTo = function (device) {
+    return Catenis.permission.hasRight(Permission.event.send_read_msg_confirm.name, this, device);
+};
+
+Device.prototype.shouldReceiveMsgFrom = function (device) {
+    return Catenis.permission.hasRight(Permission.event.receive_msg.name, this, device);
+};
+
+Device.prototype.shouldDiscloseMainPropsTo = function (device) {
+    return Catenis.permission.hasRight(Permission.event.disclose_main_props.name, this, device);
+};
+
+Device.prototype.setRights = function(eventName, rights, isInitial = false) {
+    // Make sure that device is not deleted
+    if (this.status === Device.status.deleted.name) {
+        // Cannot set permission rights for a deleted device. Log error and throw exception
+        Catenis.logger.ERROR('Cannot set permission rights for a deleted device', {deviceId: this.deviceId});
+        throw new Meteor.Error('ctn_device_deleted', util.format('Cannot set permission rights for a deleted device (deviceId: %s)', this.deviceId));
+    }
+
+    // Make sure that device is active
+    if (!isInitial && this.status !== Device.status.active.name) {
+        // Cannot set permission rights for a device that is not active. Log error and throw exception
+        Catenis.logger.ERROR('Cannot set permission rights for a device that is not active', {deviceId: this.deviceId});
+        throw new Meteor.Error('ctn_device_not_active', util.format('Cannot set permission rights for a device that is not active (deviceId: %s)', this.deviceId));
+    }
+
+    return Catenis.permission.setRights(eventName, this, Permission.fixRightsReplaceOwnHierarchyEntity(rights, this));
+};
+
+Device.prototype.getRights = function(eventName) {
+    // Make sure that device is not deleted
+    if (this.status === Device.status.deleted.name) {
+        // Cannot retrieve permission right settings for a deleted device. Log error and throw exception
+        Catenis.logger.ERROR('Cannot retrieve permission right setting for a deleted device', {deviceId: this.deviceId});
+        throw new Meteor.Error('ctn_device_deleted', util.format('Cannot retrieve permission right setting for a deleted device (deviceId: %s)', this.deviceId));
+    }
+
+    // Make sure that device is active
+    if (this.status !== Device.status.active.name) {
+        // Cannot retrieve permission right settings for a device that is not active. Log error and throw exception
+        Catenis.logger.ERROR('Cannot retrieve permission right settings for a device that is not active', {deviceId: this.deviceId});
+        throw new Meteor.Error('ctn_device_not_active', util.format('Cannot retrieve permission right settings for a device that is not active (deviceId: %s)', this.deviceId));
+    }
+
+    return Catenis.permission.getRights(eventName, this);
+};
+
+// Set initial permission rights for device
+//
+//  Arguments:
+//   rightsByEvent [Object] - Object the keys of which should be the defined permission event names.
+//                          -  The value for each event name key should be a rights object as defined for the Permission.setRights method
+Device.prototype.setInitialRights = function (rightsByEvent) {
+    Object.keys(rightsByEvent).forEach((eventName) => {
+        if (Permission.isValidEventName(eventName)) {
+            this.setRights(eventName, rightsByEvent[eventName], true);
+        }
+    });
+};
+/** End of permission related methods **/
 
 // TODO: add methods to: issue asset (both locked and unlocked), register/import asset issued elsewhere, transfer asset, etc.
 
@@ -1166,6 +1277,176 @@ Device.getMessageProofOfOrigin = function (txid, deviceId, textToSign) {
     }
 
     return result;
+};
+
+// Check if a given device exists
+//
+//  Argument:
+//   deviceId [String] - Device ID of device to check existence
+//   wildcardAccepted [Boolean] - Indicate whether wildcard ('*') should be accepted for device ID
+//   includeDeleted [Boolean] - Indicate whether deleted devices should also be included in the check
+//
+//  Result:
+//   [Boolean] - Indicates whether the device being checked exists or not
+Device.checkExist = function (deviceId, wildcardAccepted = false, includeDeleted = false) {
+    if (wildcardAccepted && deviceId === Permission.entityToken.wildcard) {
+        return true;
+    }
+    else {
+        if (deviceId === undefined) {
+            return false;
+        }
+
+        const selector = {
+            deviceId: deviceId
+        };
+
+        if (!includeDeleted) {
+            selector.status = {
+                $ne: Device.status.deleted.name
+            }
+        }
+
+        const docDevice = Catenis.db.collection.Device.findOne(selector, {fields: {_id: 1}});
+
+        return docDevice !== undefined;
+    }
+};
+
+// Check if one or more devices exist
+//
+//  Argument:
+//   deviceIds [Array(String)|String] - List of device IDs (or a single device ID) of devices to check existence
+//   wildcardAccepted [Boolean] - Indicate whether wildcard ('*') should be accepted for device ID
+//   includeDeleted [Boolean] - Indicate whether deleted devices should also be included in the check
+//
+//  Result:
+//   result: {
+//     doExist: [Boolean] - Indicates whether all devices being checked exist or not
+//     nonexistentDeviceIds: [Array(String)] - List of device IDs of devices, from the ones that were being checked, that do not exist
+//   }
+Device.checkExistMany = function (deviceIds, wildcardAccepted = false, includeDeleted = false) {
+    const result = {};
+
+    if (Array.isArray(deviceIds)) {
+        if (deviceIds.length === 0) {
+            return {
+                doExist: false
+            };
+        }
+
+        if (wildcardAccepted) {
+            // Filter out wildcard ID
+            deviceIds = deviceIds.filter((deviceId) => deviceId !== Permission.entityToken.wildcard);
+
+            if (deviceIds.length === 0) {
+                return {
+                    doExist: true
+                }
+            }
+        }
+
+        const selector = {
+            deviceId: {
+                $in: deviceIds
+            }
+        };
+
+        if (!includeDeleted) {
+            selector.status = {
+                $ne: Device.status.deleted.name
+            };
+        }
+
+        const resultSet = Catenis.db.collection.Device.find(selector, {
+            fields: {
+                deviceId: 1
+            }
+        });
+
+        if (resultSet.count() !== deviceIds.length) {
+            // Not all IDs returned. Indicated that not exist and identify the ones that do not
+            result.doExist = false;
+            result.nonexistentDeviceIds = [];
+            const existingDeviceIds = new Set(resultSet.fetch().map(doc => doc.deviceId));
+
+            deviceIds.forEach((deviceId) => {
+                if (!existingDeviceIds.has(deviceId)) {
+                    result.nonexistentDeviceIds.push(deviceId);
+                }
+            });
+        }
+        else {
+            // Found all indices. Indicate that all exist
+            result.doExist = true;
+        }
+    }
+    else {
+        // A single device ID had been passed to be checked
+        result.doExist = Device.checkExist(deviceIds, wildcardAccepted, includeDeleted);
+
+        if (!result.doExist) {
+            result.nonexistentDeviceIds = [deviceIds];
+        }
+    }
+
+    return result;
+};
+
+
+// Make sure that initial permission rights are set for all devices and permission events
+Device.checkDeviceInitialRights = function () {
+    // Retrieve device ID of all currently defined devices
+    const deviceIds = Catenis.db.collection.Device.find({
+        status: {$ne: Device.status.deleted.name}
+    }, {
+        fields: {
+            deviceId: 1
+        }
+    }).map((doc) => doc.deviceId);
+
+    // Identity devices for which initial rights are already set for at least some permission events
+    const alreadySetDeviceIdEvents = new Map();
+
+    Catenis.db.collection.Permission.find({
+        subjectEntityId: {
+            $in: deviceIds
+        },
+        level: Permission.level.system.name
+    }, {
+        fields: {
+            subjectEntityId: 1,
+            event: 1
+        }
+    }).forEach((doc) => {
+        if (!alreadySetDeviceIdEvents.has(doc.subjectEntityId)) {
+            alreadySetDeviceIdEvents.set(doc.subjectEntityId, new Set([doc.event]));
+        }
+        else {
+            alreadySetDeviceIdEvents.get(doc.subjectEntityId).add(doc.event);
+        }
+    });
+
+    // For all existing devices, check if there are any permission event for which
+    //  initial rights setting is missing, and fix it
+    const numEventsDeviceDefaultRights = Object.keys(clientCfgSettings.deviceDefaultRightsByEvent).length;
+
+    deviceIds.forEach((deviceId) => {
+        let alreadySetEvents;
+
+        if (!alreadySetDeviceIdEvents.has(deviceId) || (alreadySetEvents = alreadySetDeviceIdEvents.get(deviceId)).size < numEventsDeviceDefaultRights) {
+            // Prepare initial rights containing only the events that are missing...
+            const device = Device.getDeviceByDeviceId(deviceId);
+            const initialRightsByEvent = _und.omit(device.client.getDeviceDefaultRights(), (rights, event) => alreadySetEvents !== undefined && alreadySetEvents.has(event));
+
+            // And set them
+            Catenis.logger.DEBUG('Setting initial permission rights for device', {
+                deviceId: deviceId,
+                rightsByEvent: initialRightsByEvent
+            });
+            device.setInitialRights(initialRightsByEvent);
+        }
+    });
 };
 
 

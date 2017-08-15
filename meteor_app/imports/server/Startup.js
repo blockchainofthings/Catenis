@@ -39,6 +39,7 @@ import { ClientsUI } from './AdminUI/ClientsUI';
 import { DevicesUI } from './AdminUI/DevicesUI';
 import { ReceiveMessage } from './ReceiveMessage';
 import { ReadConfirmation } from './ReadConfirmation';
+import { Permission } from './Permission'
 
 // DEBUG - begin
 //import { resetBitcoinCore } from './Test/FundSourceTest';
@@ -74,6 +75,7 @@ Meteor.startup(function () {
         KeyStore.initialize();
         BitcoinCore.initialize();
         //ColoredCoins.initialize();
+        Permission.initialize();
         CatenisNode.initialize();
 
         // Make sure that all addresses are currently imported onto Bitcoin Core
@@ -82,6 +84,11 @@ Meteor.startup(function () {
         BlockchainAddress.initialize();
         Client.initialize();
         Device.initialize();
+
+        // Make sure that permission rights are set for all clients, devices and permission events
+        Client.checkDeviceDefaultRights();
+        Device.checkDeviceInitialRights();
+
         ReceiveMessage.initialize();
         ReadConfirmation.initialize();
         TransactionMonitor.initialize();

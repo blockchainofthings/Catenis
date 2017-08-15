@@ -42,8 +42,6 @@ const cfgSettings = {
 
 // ReceiveMessage function class
 export function ReceiveMessage() {
-    // Set up handler for event indicating that new send message transaction has been received
-    TransactionMonitor.addEventHandler(TransactionMonitor.notifyEvent.send_message_tx_rcvd.name, processReceivedMessage.bind(this));
 }
 
 
@@ -60,6 +58,29 @@ export function ReceiveMessage() {
 //      or .bind().
 //
 
+/*function priv_func() {
+}*/
+
+
+// ReceiveMessage function class (public) methods
+//
+
+ReceiveMessage.initialize = function () {
+    Catenis.logger.TRACE('ReceiveMessage initialization');
+    // Set up handler for event indicating that new send message transaction has been received
+    TransactionMonitor.addEventHandler(TransactionMonitor.notifyEvent.send_message_tx_rcvd.name, processReceivedMessage);
+};
+
+
+// ReceiveMessage function class (public) properties
+//
+
+/*ReceiveMessage.prop = {};*/
+
+
+// Definition of module (private) functions
+//
+
 function processReceivedMessage(data) {
     Catenis.logger.TRACE('Received notification of newly received send message transaction', data);
     try {
@@ -74,7 +95,12 @@ function processReceivedMessage(data) {
             blockMessage = true;
         }
 
-        // TODO: at this point, we would check if message should be blocked due to the target device's permission setting; that is, if target device is blocking messages from that given source (Catenis node/client/device)
+        const originDevice = Device.getDeviceByDeviceId(data.originDeviceId);
+
+        if (!targetDevice.shouldReceiveMsgFrom(originDevice)) {
+            // Block message if permission settings do allow to receive message from origin device
+            blockMessage = true;
+        }
 
         // Make sure that system read confirmation pay tx expense addresses are properly funded
         targetDevice.client.ctnNode.checkReadConfirmPayTxExpenseFundingBalance();
@@ -88,7 +114,9 @@ function processReceivedMessage(data) {
             Catenis.readConfirm.confirmMessageRead(sendMsgTransact, ReadConfirmation.confirmationType.spendNull);
         }
         else {
-            // TODO: check target device's current notification settings and send notification of received message if enabled
+            if (targetDevice.shouldBeNotifiedOfNewMessageFrom(originDevice)) {
+                // TODO: send notification to target device that new message had been received
+            }
         }
     }
     catch (err) {
@@ -96,26 +124,6 @@ function processReceivedMessage(data) {
         Catenis.logger.ERROR(util.format('Error while processing received message (txid: %s).', data.txid), err);
     }
 }
-
-
-// ReceiveMessage function class (public) methods
-//
-
-ReceiveMessage.initialize = function () {
-    Catenis.logger.TRACE('ReceiveMessage initialization');
-    // Instantiate ReceiveMessage object
-    Catenis.rcvMsg = new ReceiveMessage();
-};
-
-
-// ReceiveMessage function class (public) properties
-//
-
-/*ReceiveMessage.prop = {};*/
-
-
-// Definition of module (private) functions
-//
 
 // Method used to record received message
 //

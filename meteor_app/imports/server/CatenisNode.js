@@ -14,9 +14,11 @@
 //      to avoid annoying WebStorm warning message: 'default export is not defined in
 //      imported module'
 const util = require('util');
-const _und = require('underscore');     // NOTE: we dot not use the underscore library provided by Meteor because we need
-                                        //        a feature (_und.omit(obj,predicate)) that is not available in that version
 const events = require('events');
+// Third-party node modules
+import _und from 'underscore';     // NOTE: we dot not use the underscore library provided by Meteor because we need
+                                   //        a feature (_und.omit(obj,predicate)) that is not available in that version
+
 // Meteor packages
 import { Meteor } from 'meteor/meteor';
 import { Random } from 'meteor/random';
@@ -35,7 +37,10 @@ import {
     SystemReadConfirmSpendNullAddress,
     SystemReadConfirmPayTxExpenseAddress
 } from './BlockchainAddress';
-import { Client } from './Client';
+import {
+    Client,
+    cfgSettings as clientCfgSettings
+} from './Client';
 import { FundSource } from './FundSource';
 import { FundTransaction } from './FundTransaction';
 import { Service } from './Service';
@@ -43,6 +48,7 @@ import { Transaction } from './Transaction';
 import { Util } from './Util';
 import { BitcoinFees } from './BitcoinFees'
 import { BalanceInfo } from './BalanceInfo';
+import { Permission } from './Permission';
 
 // Critical section object to avoid concurrent access to database at the
 //  module level (when creating new Catenis nodes basically)
@@ -393,8 +399,10 @@ CatenisNode.prototype.updateProperties = function (newProps) {
 //      (any additional property)
 //    }
 //    user_id: [string] - (optional)
+//    deviceDefaultRightsByEvent: [Object] - (optional) Default rights to be used when creating new devices. Object the keys of which should be the defined permission event names.
+//                                         -  The value for each event name key should be a rights object as defined for the Permission.setRights method but without including the device level key
 //
-CatenisNode.prototype.createClient = function (props, user_id) {
+CatenisNode.prototype.createClient = function (props, user_id, deviceDefaultRightsByEvent) {
     props = typeof props === 'string' ? {name: props} : (typeof props === 'object' && props !== null ? props : {});
 
     // Validate (pre-defined) properties
@@ -489,6 +497,20 @@ CatenisNode.prototype.createClient = function (props, user_id) {
                 Catenis.logger.ERROR(util.format('Error updating user (Id: %s) associated with new client (doc Id: %s).', user_id, docClient._id), err);
                 throw new Meteor.Error('ctn_client_update_user_error', util.format('Error updating user (Id: %s) associated with new client (doc Id: %s).', user_id, docClient._id), err.stack);
             }
+        }
+
+        let client;
+
+        try {
+            // Instantiate client and set device default rights. If no device default rights
+            //  are specified, get system's configured default
+            client = new Client(docClient, this);
+
+            client.setDeviceDefaultRights(deviceDefaultRightsByEvent !== undefined ? deviceDefaultRightsByEvent : clientCfgSettings.deviceDefaultRightsByEvent);
+        }
+        catch (err) {
+            Catenis.logger.ERROR(util.format('Error setting device default permission rights for newly created client (clientId: %s).', client.clientId), err);
+            throw new Meteor.Error('ctn_client_device_default_rights_error', util.format('Error setting device default permission rights for newly created client (clientId: %s).', client.clientId), err.stack);
         }
 
         // Now, adjust last client index
@@ -774,6 +796,120 @@ CatenisNode.getCatenisNodeByIndex = function (ctnNodeIndex, includeDeleted = tru
 
         return new CatenisNode(docCtnNode);
     }
+};
+
+// Check if a given Catenis node exists
+//
+//  Argument:
+//   ctnNodeIndex [Number] - Index of Catenis node to check existence
+//   wildcardAccepted [Boolean] - Indicate whether wildcard ('*') should be accepted for Catenis node index
+//   includeDeleted [Boolean] - Indicate whether deleted Catenis nodes should also be included in the check
+//
+//  Result:
+//   [Boolean] - Indicates whether the Catenis node being checked exists or not
+CatenisNode.checkExist = function (ctnNodeIndex, wildcardAccepted = false, includeDeleted = false) {
+    if (wildcardAccepted && ctnNodeIndex === Permission.entityToken.wildcard) {
+        return true;
+    }
+    else {
+        if (ctnNodeIndex === undefined) {
+            return false;
+        }
+
+        const selector = {
+            ctnNodeIndex: ctnNodeIndex
+        };
+
+        if (!includeDeleted) {
+            selector.status = {
+                $ne: CatenisNode.status.deleted.name
+            }
+        }
+
+        const docCtnNode = Catenis.db.collection.CatenisNode.findOne(selector, {fields: {_id: 1}});
+
+        return docCtnNode !== undefined;
+    }
+};
+
+// Check if one or more Catenis nodes exist
+//
+//  Argument:
+//   ctnNodeIndices [Array(Number)|Number] - List of indices (or a single index) of Catenis nodes to check existence
+//   wildcardAccepted [Boolean] - Indicate whether wildcard ('*') should be accepted for Catenis node index
+//   includeDeleted [Boolean] - Indicate whether deleted Catenis nodes should also be included in the check
+//
+//  Result:
+//   result: {
+//     doExist: [Boolean] - Indicates whether all Catenis nodes being checked exist or not
+//     nonexistentCtnNodeIndices: [Array(Number)] - List of indices of Catenis nodes, from the ones that were being checked, that do not exist
+//   }
+CatenisNode.checkExistMany = function (ctnNodeIndices, wildcardAccepted = false, includeDeleted = false) {
+    const result = {};
+
+    if (Array.isArray(ctnNodeIndices)) {
+        if (ctnNodeIndices.length === 0) {
+            return {
+                doExist: false
+            };
+        }
+
+        if (wildcardAccepted) {
+            // Filter out wildcard ID
+            ctnNodeIndices = ctnNodeIndices.filter((ctnNodeIndex) => ctnNodeIndex !== Permission.entityToken.wildcard);
+
+            if (ctnNodeIndices.length === 0) {
+                return {
+                    doExist: true
+                }
+            }
+        }
+
+        const selector = {
+            ctnNodeIndex: {
+                $in: ctnNodeIndices
+            }
+        };
+
+        if (!includeDeleted) {
+            selector.status = {
+                $ne: CatenisNode.status.deleted.name
+            };
+        }
+
+        const resultSet = Catenis.db.collection.CatenisNode.find(selector, {
+            fields: {
+                ctnNodeIndex: 1
+            }
+        });
+
+        if (resultSet.count() !== ctnNodeIndices.length) {
+            // Not all indices returned. Indicated that not all exist and identify the ones that do not
+            result.doExist = false;
+            result.nonexistentCtnNodeIndices = [];
+            const existingCtnNodeIndices = new Set(resultSet.fetch().map(doc => doc.ctnNodeIndex));
+
+            ctnNodeIndices.forEach((ctnNodeIndex) => {
+                if (!existingCtnNodeIndices.has(ctnNodeIndex)) {
+                    result.nonexistentCtnNodeIndices.push(ctnNodeIndex);
+                }
+            });
+        }
+        else {
+            // Found all indices. Indicate that all exist
+            result.doExist = true;
+        }
+    }
+    else {
+        // A single Catenis node index had been passed to be checked
+        result.doExist = CatenisNode.checkExist(ctnNodeIndices, wildcardAccepted, includeDeleted);
+
+        if (!result.doExist) {
+            result.nonexistentCtnNodeIndices = [ctnNodeIndices];
+        }
+    }
+
+    return result;
 };
 
 

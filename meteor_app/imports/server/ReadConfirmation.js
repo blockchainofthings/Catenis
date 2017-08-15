@@ -251,6 +251,7 @@ function processReceivedReadConfirmation(data) {
                     _id: 1,
                     messageId: 1,
                     originDeviceId: 1,
+                    targetDeviceId: 1,
                     blockchain: 1
                 }
             }).forEach((doc) => {
@@ -261,11 +262,13 @@ function processReceivedReadConfirmation(data) {
                 }
                 else {
                     const originDevice = Device.getDeviceByDeviceId(doc.originDeviceId);
+                    const targetDevice = Device.getDeviceByDeviceId(doc.targetDeviceId);
 
-                    // TODO: check if origin device's permission setting allows for message read notification (replace comment below)
-                    if (originDevice.status === Device.status.active.name /** && device can be notified **/) {
+                    if (originDevice.status === Device.status.active.name && originDevice.shouldBeNotifiedOfMessageReadBy(targetDevice)) {
+                        // Prepare to notify origin device that previously sent message had been read
                         devIdReadMsgsToNotify.set(doc.originDeviceId, {
                             originDevice: originDevice,
+                            targetDevice: targetDevice,
                             readMsgIds: [doc.messageId]
                         });
                     }
@@ -288,7 +291,7 @@ function processReceivedReadConfirmation(data) {
 
                 // Notify origin devices that messages had been read
                 for (let devReadMsgs of devIdReadMsgsToNotify.values()) {
-                    // TODO: send notification to origin device that messages sent by it had been read
+                    // TODO: send notification to origin device that previously sent message had been read
                 }
             }
         }
