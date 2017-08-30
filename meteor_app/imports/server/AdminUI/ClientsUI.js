@@ -409,9 +409,9 @@ ClientsUI.initialize = function () {
         }
     });
 
-    Meteor.publish('clientRecord', function (client_id) {
+    Meteor.publish('clientRecord', function (user_id) {
         return Catenis.db.collection.Client.find({
-            _id: client_id
+            user_id: user_id
         }, {
             fields: {
                 _id: 1,
@@ -424,8 +424,8 @@ ClientsUI.initialize = function () {
         });
     });
 
-    Meteor.publish('clientUser', function (client_id) {
-        const client = Catenis.db.collection.Client.findOne({_id: client_id}, {fields: {user_id: 1}});
+    Meteor.publish('clientUser', function (user_id) {
+        const client = Catenis.db.collection.Client.findOne({user_id: user_id}, {fields: {user_id: 1}});
 
         if (client && client.user_id) {
             return Meteor.users.find({_id: client.user_id}, {
@@ -468,7 +468,10 @@ ClientsUI.initialize = function () {
 
     });
 
-    Meteor.publish('clientMessageCredits', function (client_id) {
+    Meteor.publish('clientMessageCredits', function (user_id) {
+
+        let client_id= Catenis.db.collection.Client.findOne({user_id: user_id}).client_id;
+
         const messageCreditCount = {
             unconfirmed: 0,
             confirmed: 0

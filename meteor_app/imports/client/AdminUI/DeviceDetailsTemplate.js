@@ -32,7 +32,7 @@ import './DeviceDetailsTemplate.html';
 
 Template.deviceDetails.onCreated(function () {
     // Subscribe to receive client and device updates
-    this.clientRecordSubs = this.subscribe('clientRecord', this.data.client_id);
+    this.clientRecordSubs = this.subscribe('clientRecord', this.data.user_id);
     this.deviceRecordSubs = this.subscribe('deviceRecord', this.data.device_id);
 });
 
@@ -61,7 +61,7 @@ Template.deviceDetails.events({
 
 Template.deviceDetails.helpers({
     client: function () {
-        return Catenis.db.collection.Client.findOne({_id: Template.instance().data.client_id});
+        return Catenis.db.collection.Client.findOne({user_id: Template.instance().data.user_id});
     },
     device: function () {
         return Catenis.db.collection.Device.findOne({_id: Template.instance().data.device_id});
@@ -77,5 +77,9 @@ Template.deviceDetails.helpers({
     },
     publicStatus: function (device) {
         return device && device.props && device.props.public !== undefined ? (device.props.public ? 'true' : 'false') : undefined;
+    },
+    user_id: function(){
+        return Template.instance().data.user_id;
     }
+
 });

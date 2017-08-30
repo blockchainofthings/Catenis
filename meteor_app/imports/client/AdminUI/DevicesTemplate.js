@@ -34,7 +34,7 @@ import './DevicesTemplate.html';
 
 Template.devices.onCreated(function () {
     // Subscribe to receive device updates
-    this.clientDevicesSubs = this.subscribe('clientDevices', this.data.client_id);
+    this.clientDevicesSubs = this.subscribe('clientDevices', this.data.user_id);
 });
 
 Template.devices.onDestroyed(function () {
@@ -53,7 +53,10 @@ Template.devices.helpers({
     isDeviceActive: function (device) {
         return device.status === 'active';
     },
-    docClientId: function () {
-        return Template.instance().data.client_id;
+    // docClientId: function () {
+    //     return Template.instance().data.client_id;
+    // },
+    docUserId: function(){
+        return Template.instance().data.user_id;
     }
 });

@@ -22,7 +22,7 @@
                                             <tr>
                                                 <td>
                                                     {{#if (isDeviceActive device)}}
-                                                        <a href="/admin/clients/{{docClientId}}/devices/{{device._id}}">Device #{{device.index.deviceIndex}}</a>
+                                                        <a href="/admin/clients/{{docUserId}}/devices/{{device._id}}">Device #{{device.index.deviceIndex}}</a>
                                                     {{else}}
                                                         Device #{{device.index.deviceIndex}}
                                                     {{/if}}
@@ -44,7 +44,7 @@
 
                                 <div class="row">
                                     <div class="col-md-6">
-                                        <a href="/admin/clients/{{docClientId}}?showDevices=1" class="form-control btn btn-login at-btn">Back to client {{client.props.name}}</a>
+                                        <a href="/admin/clients/{{docUserId}}?showDevices=1" class="form-control btn btn-login at-btn">Back to client {{client.props.name}}</a>
                                     </div>
                                     <div class="col-md-6">
                                         <a href="#" id="reset" class="form-control btn btn-login at-btn">Add Another</a>
@@ -79,7 +79,7 @@
                                     </div>
                                     <div class="row">
                                         <div class="col-md-6">
-                                            <a href="/admin/clients/{{docClientId}}?showDevices=1" class="form-control btn btn-login at-btn">Back to client {{client.props.name}}</a>
+                                            <a href="/admin/clients/{{docUserId}}?showDevices=1" class="form-control btn btn-login at-btn">Back to client {{client.props.name}}</a>
                                         </div>
                                         <div class="col-md-6">
                                             <button type="submit" class="form-control btn btn-login at-btn submit">Add Device</button>

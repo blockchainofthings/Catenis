@@ -115,6 +115,7 @@ function validateFormData(form, errMsgs) {
     return !hasError ? clientInfo : undefined;
 }
 
+
 function licenseViolation(numDevices, user_id) {
     const licenseType= Meteor.users.findOne( {_id: user_id} ).profile.license.licenseType;
 
@@ -138,15 +139,14 @@ Template.clientDetails.onCreated(function () {
     //added by peter to check whether enrollment email was sent.
     this.state.set('haveResentEnrollmentEmail', false);
     this.state.set('errMsgs', []);
-
     // Subscribe to receive fund balance updates
-    this.clientRecordSubs = this.subscribe('clientRecord', this.data.client_id);
-    this.clientUserSubs = this.subscribe('clientUser', this.data.client_id);
-    this.clientMessageCreditsSubs = this.subscribe('clientMessageCredits', this.data.client_id);
+    this.clientRecordSubs = this.subscribe('clientRecord', this.data.user_id);
+    // this.clientUserSubs = this.subscribe('clientUser', this.data.user_id);
+    this.clientMessageCreditsSubs = this.subscribe('clientMessageCredits', this.data.user_id);
     this.userListSubs = this.subscribe('userList', Meteor.user());
 
     //added to allow device number count.
-    this.clientDevicesSubs = this.subscribe('clientDevices', this.data.client_id);
+    this.clientDevicesSubs = this.subscribe('clientDevices', this.data.user_id);
     //added to find allowed devices number
     this.licenseSubs = this.subscribe('license');
 
@@ -186,7 +186,8 @@ Template.clientDetails.events({
         return false;
     },
     'click #butAddMsgCredits'(event, template) {
-        const client = Catenis.db.collection.Client.findOne({_id: Template.instance().data.client_id});
+
+        const client = Catenis.db.collection.Client.findOne({user_id: Template.instance().data.user_id});
         const fieldCreditsCount = template.$('#txiMsgCreditAmount')[0];
         const creditsCount = parseInt(fieldCreditsCount.value);
 
@@ -226,7 +227,7 @@ Template.clientDetails.events({
 
     //added by peter to allow resending enrollment Email
     'click #resendEnrollmentEmail'(events, template) {
-        const client = Catenis.db.collection.Client.findOne({_id: Template.instance().data.client_id});
+        const client = Catenis.db.collection.Client.findOne({user_id: Template.instance().data.user_id});
         template.state.set('haveResentEnrollmentEmail', true);
 
         Meteor.call('resendEnrollmentEmail', client.user_id, (error) => {
@@ -248,7 +249,7 @@ Template.clientDetails.events({
 
     //NOTE: this is not linked to the deactivation of the Catenis Clients, so they have to be implemented as well.
     'click #activateUser'(events, template) {
-        const client = Catenis.db.collection.Client.findOne({_id: Template.instance().data.client_id});
+        const client = Catenis.db.collection.Client.findOne({user_id: Template.instance().data.user_id});
 
         if( confirm("you're about to activate this user. Are you sure?")===true){
             Meteor.call('changeUserStatus', client.user_id, 'Activated', (error) => {
@@ -260,7 +261,7 @@ Template.clientDetails.events({
 
     },
     'click #deactivateUser'(events, template) {
-        const client = Catenis.db.collection.Client.findOne({_id: Template.instance().data.client_id});
+        const client = Catenis.db.collection.Client.findOne({user_id: Template.instance().data.user_id});
 
         if(confirm("you're about to deactivate this user and all linked devices. Are you sure?")===true){
             Meteor.call('changeUserStatus', client.user_id, 'Deactivated', (error) => {
@@ -273,7 +274,7 @@ Template.clientDetails.events({
     },
 
     'submit #updateLicenseAdminForm'(event, template){
-        const client = Catenis.db.collection.Client.findOne({_id: Template.instance().data.client_id});
+        const client = Catenis.db.collection.Client.findOne({user_id: Template.instance().data.user_id});
         const form = event.target;
         const newLicenseState = form.licenseStateRadio.value ? form.licenseStateRadio.value.trim() : '';
 
@@ -360,7 +361,7 @@ Template.clientDetails.events({
 
 Template.clientDetails.helpers({
     client: function () {
-        return Catenis.db.collection.Client.findOne({_id: Template.instance().data.client_id});
+        return Catenis.db.collection.Client.findOne({user_id: Template.instance().data.user_id});
     },
     clientUsername: function (user_id) {
         const user = Meteor.users.findOne({_id: user_id});
@@ -406,8 +407,8 @@ Template.clientDetails.helpers({
     haveResentEnrollmentEmail: function(){
         return Template.instance().state.get('haveResentEnrollmentEmail');
     },
-    userActive: function(user_id){
-        const user= Meteor.users.findOne({_id: user_id});
+    userActive: function(){
+        const user= Meteor.users.findOne({_id:  Template.instance().data.user_id});
         if(user){
             if(user.profile.status==="Activated"){
                 return true;
@@ -453,7 +454,7 @@ Template.clientDetails.helpers({
     },
 
     numDevices: function(opt){
-        const client = Catenis.db.collection.Client.findOne({_id: Template.instance().data.client_id});
+        const client = Catenis.db.collection.Client.findOne({user_id: Template.instance().data.user_id});
         const numUserDevices= Catenis.db.collection.Device.find( {"client_id": {$eq: client._id } } ).count();
 
         if(opt==="active"){
@@ -487,10 +488,17 @@ Template.clientDetails.helpers({
             return "something went wrong";
         }
     },
+    user_id: function(){
+        return Template.instance().data.user_id;
+    },
 
     //takes in input of licenseType, returns the number of devices allowed
     devicesForLicense: function(licenseType){
         return Catenis.db.collection.License.findOne({licenseType: licenseType}).numAllowedDevices;
+    },
+    ensureUserExists: function(){
+    //    check if the user actually exists, or this is some random address typed up that should not render anything
+        return Meteor.users.findOne( {_id: Template.instance().data.user_id});
     }
 
 });

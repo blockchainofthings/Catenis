@@ -166,10 +166,10 @@ DevicesUI.initialize = function () {
     });
 
     // Declaration of publications to see the devices of a certain client.
-    Meteor.publish('clientDevices', function (client_id) {
-
+    Meteor.publish('clientDevices', function (user_id) {
+        const client= Catenis.db.collection.Client.findOne({ user_id: user_id});
         const user= Meteor.users.findOne({_id: this.userId});
-        const client= Catenis.db.collection.Client.findOne({ _id: client_id});
+        const client_id= client._id;
 
         let verifyPublishing= false;
 

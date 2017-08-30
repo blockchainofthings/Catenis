@@ -7,6 +7,9 @@
                         {{#unless Template.subscriptionsReady}}
                             <p style="color:lightgray; margin-top:1em">Loading...</p>
                         {{else}}
+                            {{#unless ensureUserExists}}
+                                <p>This is not a valid user, please check if there wasn't an error in approaching this page</p>
+                            {{else}}
                             <h2> {{client.props.name}} </h2>
                             <br>
                             <div class="row">
@@ -86,7 +89,7 @@
                                     </div>
 
                                     <!--add Message Credit-->
-                                    {{#unless userActive}}
+                                    {{#if userActive}}
                                     <div class="pull-right">
                                         {{#if (checkAddMsgCreditsStatus 'idle')}}
                                             <a id="lnkAddMsgCredits" href="#" role="button" class="btn-login btn paddedBtn fullWidth">Add more credits</a>
@@ -111,7 +114,7 @@
                                               <a id="lnkCancelAddMsgCredits" href="#" role="button" class="btn-login btn paddedBtn">Close</a>
                                         {{/if}}
                                     </div>
-                                    {{/unless}}
+                                    {{/if}}
                                 </div>
                             </div>
                             <br>
@@ -122,7 +125,7 @@
                                     <!--<h2> Client Info </h2>-->
                                     <table class="table table-striped">
                                         <tbody>
-                                        {{#unless userActive}}
+                                        {{#if userActive}}
                                         <tr>
                                             <td><label>Client&nbsp;ID:&nbsp;</label></td>
                                             <td>{{client.clientId}}</td>
@@ -135,6 +138,7 @@
                                             <td><label>Username:&nbsp;</label></td>
                                             <td>{{clientUsername client.user_id}}</td>
                                         </tr>
+                                        {{/if}}
                                         <tr>
                                             <td><label>Message&nbsp;Credits:&nbsp;</label></td>
                                             <td>
@@ -183,10 +187,10 @@
                             <br>
                             <div class="row paddingTop40px">
                                 <div class="col-md-3">
-                                    <a href="#" id="resendEnrollmentEmail" role="button" class="btn-login btn paddedBtn fullWidth ">Resend Enrollment Mail</a>
+                                    <a href="#" id="resendEnrollmentEmail" role="button" class="btn-login btn paddedBtn fullWidth ">Re-Enroll User</a>
                                 </div>
                                 <div class="col-md-3">
-                                    <button type="button" id="updateUserLicense" class="btn-login btn paddedBtn fullWidth " data-toggle="modal" data-target="#changeUserLicense">Change User License</button>
+                                    <button type="button" id="updateUserLicense" class="btn-login btn paddedBtn fullWidth " data-toggle="modal" data-target="#changeUserLicense">Change License</button>
                                     <div class="modal fade" tabindex="-1" role="dialog" id="changeUserLicense">
                                         <div class="modal-dialog" role="document">
                                             <div class="modal-content">
@@ -223,15 +227,12 @@
                                         </div>
                                     </div>
 
-
-
-
                                 </div>
                                 <div class="col-md-3">
-                                    {{#unless (userActive client.user_id)}}
-                                        <a href="#" id="activateUser" role="button" class="btn-login btn paddedBtn fullWidth ">Activate User Account</a>
+                                    {{#unless userActive}}
+                                        <a href="#" id="activateUser" role="button" class="btn-login btn paddedBtn fullWidth ">Activate User</a>
                                     {{else}}
-                                        <a href="#" id="deactivateUser" role="button" class="btn-login btn paddedBtn fullWidth ">Deactivate User Account</a>
+                                        <a href="#" id="deactivateUser" role="button" class="btn-login btn paddedBtn fullWidth ">Deactivate User</a>
                                     {{/unless}}
                                     <!--also have a slot for incase the user is pending-->
                                 </div>
@@ -250,19 +251,20 @@
                                     <div>
                                         {{#if showDevices}}
                                             {{#if client._id}}
-                                                {{> devices client_id=client._id}}
+                                                {{> devices user_id=user_id}}
                                             {{/if}}
                                         {{/if}}
                                     </div>
                                 </div>
                             </div>
+                            {{/unless}}
                         {{/unless}}
                         <div class="row">
                             <div class="col-md-6">
-                                <a href="/admin/clients" role="button" class="btn-login btn paddedBtn fullWidth">Back to clients</a>
+                                <a href="/admin/clients" role="button" class="btn-login btn paddedBtn fullWidth">Back to Users</a>
                             </div>
                             <div class="col-md-6">
-                                <a href="/admin/newclient" role="button" class="btn-login btn paddedBtn fullWidth">Add another client</a>
+                                <a href="/admin/newclient" role="button" class="btn-login btn paddedBtn fullWidth">Add another User</a>
                             </div>
                         </div>
                     </div>

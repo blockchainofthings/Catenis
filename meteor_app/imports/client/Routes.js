@@ -88,10 +88,10 @@ FlowRouter.route('/admin/clients', {
     }
 });
 
-FlowRouter.route('/admin/clients/:client_id', {
+FlowRouter.route('/admin/clients/:user_id', {
     action: function (params, queryParams) {
         const dataContext = {
-            client_id: params.client_id
+            user_id: params.user_id
         };
 
         if (queryParams.showDevices) {
@@ -105,12 +105,12 @@ FlowRouter.route('/admin/clients/:client_id', {
     }
 });
 
-FlowRouter.route('/admin/clients/:client_id/devices/:device_id', {
+FlowRouter.route('/admin/clients/:user_id/devices/:device_id', {
     action: function (params) {
         BlazeLayout.render('adminLayout', {
             page: 'deviceDetails',
             dataContext: {
-                client_id: params.client_id,
+                user_id: params.user_id,
                 device_id: params.device_id
             }
         });
@@ -125,12 +125,12 @@ FlowRouter.route('/admin/newclient', {
     }
 });
 
-FlowRouter.route('/admin/clients/:client_id/newdevice', {
+FlowRouter.route('/admin/clients/:user_id/newdevice', {
     action: function (params, queryParams) {
         BlazeLayout.render('adminLayout', {
             page: 'newDevice',
             dataContext: {
-                client_id: params.client_id
+                user_id: params.user_id
             }
         });
     }

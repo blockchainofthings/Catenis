@@ -54,22 +54,22 @@ Template.newDevice.onCreated(function () {
     this.state = new ReactiveDict();
     this.state.set('errMsgs', []);
     // Subscribe to receive client updates
-    this.clientRecordSubs = this.subscribe('clientRecord', this.data.client_id);
+    this.clientRecordSubs = this.subscribe('clientRecord', this.data.user_id);
 
     //this is here to allow for the table
     // Subscribe to receive device updates
-    this.clientDevicesSubs = this.subscribe('clientDevices', this.data.client_id);
+    this.clientDevicesSubs = this.subscribe('clientDevices', this.data.user_id);
 });
 
 Template.newDevice.onRendered(function(){
     this.state = new ReactiveDict();
     this.state.set('errMsgs', []);
     // Subscribe to receive client updates
-    this.clientRecordSubs = this.subscribe('clientRecord', this.data.client_id);
+    this.clientRecordSubs = this.subscribe('clientRecord', this.data.user_id);
 
     //this is here to allow for the table
     // Subscribe to receive device updates
-    this.clientDevicesSubs = this.subscribe('clientDevices', this.data.client_id);
+    this.clientDevicesSubs = this.subscribe('clientDevices', this.data.user_id);
 });
 
 
@@ -133,10 +133,13 @@ Template.newDevice.helpers({
         }, '');
     },
     client: function () {
-        return Catenis.db.collection.Client.findOne({_id: Template.instance().data.client_id});
+        return Catenis.db.collection.Client.findOne({user_id: Template.instance().data.user_id});
     },
     docClientId: function () {
-        return Template.instance().data.client_id;
+        return Catenis.db.collection.Client.findOne({user_id: Template.instance().data.user_id})._id;
+    },
+    docUserId: function(){
+        return Template.instance().data.user_id;
     },
     newDeviceId: function () {
         return Template.instance().state.get('newDeviceId');

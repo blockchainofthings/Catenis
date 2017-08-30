@@ -4,7 +4,7 @@
         <p style="color:lightgray; margin-top:1em">Loading...</p>
     {{else}}
         <div class="col-md-4 col-md-offset-4">
-            <a href="/admin/clients/{{docClientId}}/newdevice" class="btn-login btn paddedBtn fullWidth">Add new device</a>
+            <a href="/admin/clients/{{docUserId}}/newdevice" class="btn-login btn paddedBtn fullWidth">Add new device</a>
         </div>
 
         <table class="table table-striped">
@@ -20,7 +20,7 @@
                    <tr>
                        <td>
                            {{#if (isDeviceActive device)}}
-                               <a href="/admin/clients/{{docClientId}}/devices/{{device._id}}">Device #{{device.index.deviceIndex}}</a>
+                               <a href="/admin/clients/{{docUserId}}/devices/{{device._id}}">Device #{{device.index.deviceIndex}}</a>
                            {{else}}
                                Device #{{device.index.deviceIndex}}
                            {{/if}}
