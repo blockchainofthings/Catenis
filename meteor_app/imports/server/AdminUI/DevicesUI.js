@@ -42,7 +42,6 @@ function verifyUserRole(){
         }else{
             return false;
         }
-
     }catch(err){
         Catenis.logger.ERROR('Failure trying to verify Meteor user role.', err);
         throw new Meteor.Error('devices.verifyUserRole.failure', 'Failure trying to verify role of current user: ' + err.toString());
@@ -87,8 +86,12 @@ DevicesUI.initialize = function () {
             }
         },
 
+        //create device if the logged in user is creating a device for oneself or it's admin
         createDevice: function (client_id, deviceInfo) {
-            if(verifyUserRole()){
+
+            const isSameUser = (  Catenis.db.collection.Client.findOne({user_id: this.userId})._id ===client_id);
+
+            if(verifyUserRole() || isSameUser ){
 
                 const docClient = Catenis.db.collection.Client.findOne({_id: client_id}, {fields: {clientId: 1, user_id: 1}});
 
@@ -162,21 +165,47 @@ DevicesUI.initialize = function () {
         }
     });
 
-    // Declaration of publications
+    // Declaration of publications to see the devices of a certain client.
     Meteor.publish('clientDevices', function (client_id) {
-        return Catenis.db.collection.Device.find({
-            client_id: client_id,
-            status: {$ne: 'deleted'}
-        }, {
-            fields: {
-                _id: 1,
-                client_id: 1,
-                deviceId: 1,
-                index: 1,
-                props: 1,
-                status: 1
-            }
-        });
+
+        const user= Meteor.users.findOne({_id: this.userId});
+        const client= Catenis.db.collection.Client.findOne({ _id: client_id});
+
+        let verifyPublishing= false;
+
+        //user is admin/
+        if(user && user.roles && user.roles.includes('sys-admin') ){
+
+            verifyPublishing=true;
+
+            //user is accessing one's own info
+        }else if(client.user_id===this.userId){
+
+            verifyPublishing=true;
+
+        }
+
+        if(verifyPublishing){
+            return Catenis.db.collection.Device.find({
+                client_id: client_id,
+                status: {$ne: 'deleted'}
+            }, {
+                fields: {
+                    _id: 1,
+                    client_id: 1,
+                    deviceId: 1,
+                    index: 1,
+                    props: 1,
+                    status: 1
+                }
+            });
+
+        }else{
+            //user has no right to access this data. Return null and let them suffer.
+            return null;
+
+        }
+
     });
 
     Meteor.publish('deviceRecord', function (device_id) {

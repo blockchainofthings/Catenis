@@ -25,6 +25,8 @@ import { BlazeLayout } from 'meteor/kadira:blaze-layout';
 import './AdminUI/AdminLayout.js';
 import './AdminUI/resetPwd.html';
 import './clientUI/baseTemplate.js';
+import './clientUI/infoLine.js';
+
 // Module code
 //
 
@@ -45,15 +47,10 @@ FlowRouter.route('/updateProfile', {
     }
 });
 
-FlowRouter.route('/device', {
-    action: function () {
+FlowRouter.route('/devices', {
+    action: function() {
         BlazeLayout.render('baseTemplate', {
-            page: 'clientDetails'
-
-            //
-            // dataContext: {
-            //     client_id:
-
+            page: 'userNewDevice',
         });
     }
 });

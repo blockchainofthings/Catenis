@@ -37,6 +37,7 @@ import { RestApi } from './RestApi';
 import { SystemFundingUI } from './AdminUI/SystemFundingUI';
 import { ClientsUI } from './AdminUI/ClientsUI';
 import { DevicesUI } from './AdminUI/DevicesUI';
+
 import './Email.js';
 
 // DEBUG - begin
@@ -87,7 +88,6 @@ Meteor.startup(function () {
         SystemFundingUI.initialize();
         ClientsUI.initialize();
         DevicesUI.initialize();
-
 
         Catenis.logger.INFO('Initialization ended.');
 

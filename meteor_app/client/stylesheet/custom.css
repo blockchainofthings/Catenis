@@ -29,6 +29,7 @@ body{
 }
 
 
+
 .fill{
     height:100%;
     width:100%;
@@ -652,6 +653,34 @@ btn:active{
 }
 
 
+#wrapper>.navbar{
+    margin-bottom:0px;
+}
 
+.breadCrumbs{
+    width: 30%;
+    height: 100px;
+    font-size: 16px;
+}
 
+.creditStatusCollection{
+    width: 70%;
+    height: 100px;
+}
 
+.creditStatus{
+    text-align: center;
+    width: 100px;
+    height: 100px;
+    border-color: black;
+    border-style: solid;
+    border-width: 2px;
+    border-left-color: darkblue;
+    border-left-style: solid;
+    border-left-width: 2px;
+
+}
+
+.infoLine{
+    z-index:4;
+}

@@ -1,5 +1,5 @@
 <template name="baseTemplate">
-    <!--this is the template that is first rendered at /admin call-->
+         <!--this is the template that is first rendered at /admin call-->
     {{#unless currentUser}}
         {{> login}}
     {{else}}
@@ -39,8 +39,8 @@
             <div id="sidebar-wrapper">
                 <ul class="sidebar-nav">
                     <li>
-                        <a href="/device" class="show"><i class="glyphicon glyphicon-bitcoin"></i> Add Devices</a>
-                        <a href="/device" class="notshow"><i class="glyphicon glyphicon-bitcoin"></i></a>
+                        <a href="/devices" class="show"><i class="glyphicon glyphicon-bitcoin"></i> Add Devices</a>
+                        <a href="/devices" class="notshow"><i class="glyphicon glyphicon-bitcoin"></i></a>
                     </li>
                     {{#if isInRole 'sys-admin'}}
                         <li>
@@ -49,19 +49,28 @@
                         </li>
                     {{/if}}
                     <li>
-                        <a id="lnkLogout" href="#" role="button" class="show"><i class="glyphicon glyphicon-thumbs-down"></i>Log out</a>
-                        <a href="menu-toggle" id="menu-toggle" class="notshow"><i class="glyphicon glyphicon-thumbs-down"></i></a>
+                        <a id="lnkLogout" href="" role="button" class="show"><i class="glyphicon glyphicon-thumbs-down"></i>Log out</a>
+                        <a href="menu-toggle" id="lnkLogout" class="notshow"><i class="glyphicon glyphicon-thumbs-down"></i></a>
                     </li>
                 </ul>
             </div>
             <!-- end of sidebar -->
 
+
             <!--start of content-wrapper-->
             <div id="page-content-wrapper">
+                    <div class="row">
+                        <div class="col-md-12 fullWidth infoLine">
+                            {{>infoLine}}
+                        </div>
+                    </div>
+                    <br>
+                    <hr>
                     <div class="row">
                         <div class="col-lg-8 col-lg-offset-2">
                             <article class="text-center">
                                 {{#if page}}
+                                    <!--added while having no wifi access, let's see if this actually works-->
                                     {{> Template.dynamic template=page data=dataContext}}
                                 {{/if}}
                             </article>

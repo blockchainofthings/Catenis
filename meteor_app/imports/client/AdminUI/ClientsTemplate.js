@@ -36,15 +36,18 @@ import './NewClientTemplate.js';
 
 Template.clients.onCreated(function () {
     // Subscribe to receive fund balance updates
-    this.catenisClientsSubs = this.subscribe('catenisClients', Catenis.ctnHubNodeIndex);
-
-
+    // this.catenisClientsSubs = this.subscribe('catenisClients', Catenis.ctnHubNodeIndex);
+    this.userListSubs = this.subscribe('userList', Meteor.user());
 
 });
 
 Template.clients.onDestroyed(function () {
-    if (this.catenisClientsSubs) {
-        this.catenisClientsSubs.stop();
+    // if (this.catenisClientsSubs) {
+    //     this.catenisClientsSubs.stop();
+    // }
+
+    if (this.userListSubs){
+        this.userListSubs.stop();
     }
 
 
@@ -55,11 +58,11 @@ Template.clients.events({
 });
 
 Template.clients.helpers({
-    listClients: function () {
-        return Catenis.db.collection.Client.find({}, {sort:{'props.name': 1}}).fetch();
+    listUsers: function () {
+        return Meteor.users.find({}, {sort:{'_id': 1}}).fetch();
     },
 
-    isClientActive: function (client) {
-        return client.status === 'active';
+    isUserActive: function (user) {
+        return user.profile.status === 'Activated';
     }
 });

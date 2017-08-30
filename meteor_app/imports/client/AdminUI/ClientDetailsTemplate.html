@@ -11,6 +11,7 @@
                             <br>
                             <div class="row">
                                 <div class="col-md-12">
+                                    {{#unless userActive}}<p>The user currently has no activated client</p>{{/unless}}
                                     <!--edit user-->
                                     <div class="pull-left">
                                         {{#if successfulUpdate}}
@@ -85,6 +86,7 @@
                                     </div>
 
                                     <!--add Message Credit-->
+                                    {{#unless userActive}}
                                     <div class="pull-right">
                                         {{#if (checkAddMsgCreditsStatus 'idle')}}
                                             <a id="lnkAddMsgCredits" href="#" role="button" class="btn-login btn paddedBtn fullWidth">Add more credits</a>
@@ -92,10 +94,10 @@
                                             <input id="txiMsgCreditAmount" type="text" placeholder="Credit Amount"/>
                                             <div class="row">
                                                 <div class="col-md-6">
-                                                    <button id="butAddMsgCredits" class="btn-login btn fullWidth topMargin05">Add credit</button>
+                                                    <button id="butAddMsgCredits" class="btn-login btn paddedBtn fullWidth topMargin05">Add credit</button>
                                                 </div>
                                                 <div class="col-md-6">
-                                                    <button id="lnkCancelAddMsgCredits" href="#" class="btn-login btn fullWidth topMargin05">Cancel</button>
+                                                    <button id="lnkCancelAddMsgCredits" href="#" class="btn-login btn paddedBtn fullWidth topMargin05">Cancel</button>
                                                 </div>
                                             </div>
                                         {{else if (checkAddMsgCreditsStatus 'processing')}}
@@ -109,6 +111,7 @@
                                               <a id="lnkCancelAddMsgCredits" href="#" role="button" class="btn-login btn paddedBtn">Close</a>
                                         {{/if}}
                                     </div>
+                                    {{/unless}}
                                 </div>
                             </div>
                             <br>
@@ -119,6 +122,7 @@
                                     <!--<h2> Client Info </h2>-->
                                     <table class="table table-striped">
                                         <tbody>
+                                        {{#unless userActive}}
                                         <tr>
                                             <td><label>Client&nbsp;ID:&nbsp;</label></td>
                                             <td>{{client.clientId}}</td>

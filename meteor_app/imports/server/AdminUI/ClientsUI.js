@@ -72,8 +72,6 @@ function verifyUserRole(){
 }
 
 
-
-
 ClientsUI.initialize = function () {
     // Declaration of RPC methods to be called from client
     Meteor.methods({
@@ -364,19 +362,51 @@ ClientsUI.initialize = function () {
             throw new Meteor.Error('clients.subscribe.catenis-clients.invalid-param', 'Subscription to method \'catenisClients\' made with an invalid Catenis node index');
         }
 
-        return Catenis.db.collection.Client.find({
-            catenisNode_id: docCtnNode._id,
-            status: {$ne: 'deleted'}
-        }, {
-            fields: {
-                _id: 1,
-                user_id: 1,
-                clientId: 1,
-                index: 1,
-                props: 1,
-                status: 1
-            }
-        });
+        let isAdminUser;
+        let userId=this.userId;
+        let user= Meteor.users.findOne({_id: userId});
+
+
+        //check if the user is Admin
+        if(user && user.roles && user.roles.includes('sys-admin') ){
+            isAdminUser= true;
+        }else{
+            isAdminUser= false;
+        }
+        //user is Admin. Return every data there is.
+        if(isAdminUser){
+
+            return Catenis.db.collection.Client.find({
+                catenisNode_id: docCtnNode._id,
+                status: {$ne: 'deleted'}
+            }, {
+                fields: {
+                    _id: 1,
+                    user_id: 1,
+                    clientId: 1,
+                    index: 1,
+                    props: 1,
+                    status: 1
+                }
+            });
+
+        }else{
+
+        //    user is just a normal person, we return only their client id.
+        //    alternatively, we could look into having client_id be coupled with user
+            return Catenis.db.collection.Client.find({
+                catenisNode_id: docCtnNode._id,
+                status: {$ne: 'deleted'},
+                user_id: this.userId
+            },
+                {
+                    fields:{
+                        _id: 1,
+                        clientId: 1,
+                        user_id:1
+                    }
+                })
+        }
     });
 
     Meteor.publish('clientRecord', function (client_id) {
