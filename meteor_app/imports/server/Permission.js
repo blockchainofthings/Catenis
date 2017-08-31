@@ -504,7 +504,7 @@ Permission.event = Object.freeze({
     }),
     disclose_main_props: Object.freeze({
         name: 'disclose_main_props',
-        description: 'Disclose device\'s main properties (name and product unique ID), if defined, to a device'
+        description: 'Disclose device\'s main properties (name, product unique ID) to a device'
     })
 });
 

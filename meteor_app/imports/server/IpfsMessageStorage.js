@@ -2,10 +2,6 @@
  * Created by claudio on 26/12/16.
  */
 
-/**
- * Created by claudio on 30/05/16.
- */
-
 //console.log('[IpfsMessageStorage.js]: This code just ran.');
 
 // Module variables

@@ -1,5 +1,5 @@
 /**
- * Created by claudio on 08/10/17.
+ * Created by claudio on 10/08/17.
  */
 
 //console.log('[ApiGetPermissionRights.js]: This code just ran.');

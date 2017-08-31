@@ -1,5 +1,5 @@
 /**
- * Created by claudio on 08/10/17.
+ * Created by claudio on 10/08/17.
  */
 
 //console.log('[ApiListPermissionEvents.js]: This code just ran.');
@@ -41,8 +41,8 @@ import {
 
 // Method used to process GET 'permission/events' endpoint of Rest API
 //
-//  Success data returned: {    // An object the properties of which are the names of the events, and the value
-//                              //  of those properties the description of the corresponding event
+//  Success data returned: {    // An object the properties of which are the names of the permission events, and the value
+//                              //  of those properties the corresponding description of the event
 //    "<event_name>": "<event_description>"
 //  }
 export function listPermissionEvents() {
@@ -61,7 +61,7 @@ export function listPermissionEvents() {
         }
         catch (err) {
             Catenis.logger.ERROR('Error processing GET \'permission/events\' API request.', err);
-            return errorResponse.call(this, 400, 'Device is deleted');
+            return errorResponse.call(this, 500, 'Internal server error');
         }
 
         // Return success
