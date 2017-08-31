@@ -41,6 +41,7 @@ import { Message } from './Message';
 import { ReadConfirmation } from './ReadConfirmation';
 import { Permission } from './Permission';
 import { cfgSettings as clientCfgSettings } from './Client';
+import { Notification } from './Notification';
 
 // Config entries
 const deviceConfig = config.get('device');
@@ -784,14 +785,14 @@ Device.prototype.listMessages = function(filter) {
         };
 
         if (message.action === Message.action.log) {
-            msgEntry.read = message.lastReadDate !== undefined;
+            msgEntry.read = message.firstReadDate !== undefined;
             msgEntry.date = message.sentDate;
         }
         else if (message.action === Message.action.send) {
             if ((filter.direction === undefined || filter.direction === Message.direction.outbound) && message.originDeviceId === this.deviceId) {
                 msgEntry.direction = Message.direction.outbound;
                 msgEntry.toDevice = Device.getDeviceByDeviceId(message.targetDeviceId);
-                msgEntry.read = message.lastReadDate !== undefined;
+                msgEntry.read = message.firstReadDate !== undefined;
                 msgEntry.date = message.sentDate;
             }
 
@@ -810,7 +811,7 @@ Device.prototype.listMessages = function(filter) {
 
                 msgEntry.direction = Message.direction.inbound;
                 msgEntry.fromDevice = Device.getDeviceByDeviceId(message.originDeviceId);
-                msgEntry.read = message.lastReadDate !== undefined;
+                msgEntry.read = message.firstReadDate !== undefined;
                 msgEntry.date = message.receivedDate;
             }
         }
@@ -996,6 +997,42 @@ Device.prototype.setInitialRights = function (rightsByEvent) {
     });
 };
 /** End of permission related methods **/
+
+/** Notification related methods **/
+Device.prototype.notifyNewMessageReceived = function (message) {
+    // Prepare information about received message to be sent by notification
+    const msgInfo = {
+        messageId: message.messageId,
+        from: {
+            deviceId: message.originDevice.deviceId,
+        },
+        receivedDate: message.receivedDate
+    };
+
+    // Add device public properties
+    _und.extend(msgInfo.from, message.originDevice.discloseMainPropsTo(this));
+
+    // Dispatch notification message
+    Catenis.notification.dispatchNotifyMessage(this.deviceId, Notification.event.new_msg_received.name, JSON.stringify(msgInfo));
+};
+
+Device.prototype.notifyMessageRead = function (message) {
+    // Prepare information about read message to be sent by notification
+    const msgInfo = {
+        messageId: message.messageId,
+        to: {
+            deviceId: message.targetDevice.deviceId,
+        },
+        readDate: message.firstReadDate
+    };
+
+    // Add device public properties
+    _und.extend(msgInfo.from, message.originDevice.discloseMainPropsTo(this));
+
+    // Dispatch notification message
+    Catenis.notification.dispatchNotifyMessage(this.deviceId, Notification.event.new_msg_received.name, JSON.stringify(msgInfo));
+};
+/** End of notification related methods **/
 
 // TODO: add methods to: issue asset (both locked and unlocked), register/import asset issued elsewhere, transfer asset, etc.
 

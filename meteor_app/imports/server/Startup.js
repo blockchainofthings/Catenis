@@ -39,7 +39,9 @@ import { ClientsUI } from './AdminUI/ClientsUI';
 import { DevicesUI } from './AdminUI/DevicesUI';
 import { ReceiveMessage } from './ReceiveMessage';
 import { ReadConfirmation } from './ReadConfirmation';
-import { Permission } from './Permission'
+import { Permission } from './Permission';
+import { Notification } from './Notification';
+import { WebSocketNotifyMsgDispatcher } from './WebSocketNotifyMsgDispatcher';
 
 // DEBUG - begin
 //import { resetBitcoinCore } from './Test/FundSourceTest';
@@ -70,6 +72,7 @@ Meteor.startup(function () {
         // Normal processing
         Catenis.logger.INFO('Starting initialization...');
         Database.initialize();
+        Database.fixMessageFirstReadDate();
         Application.initialize();
         BitcoinFees.initialize();
         KeyStore.initialize();
@@ -92,6 +95,11 @@ Meteor.startup(function () {
         ReceiveMessage.initialize();
         ReadConfirmation.initialize();
         TransactionMonitor.initialize();
+
+        // Initialize all notification message dispatchers first
+        WebSocketNotifyMsgDispatcher.initialize();
+        // Then the notification module itself
+        Notification.initialize();
 
         RestApi.initialize();
 

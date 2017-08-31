@@ -210,7 +210,6 @@ function boostPendingReadConfirmTx() {
         //  Log error condition
         Catenis.logger.ERROR(util.format('Error while boosting read confirmation transaction (txid: %s) that was pending.', this.pendingBoostTx), err);
     }
-
 }
 
 // Method used to process notification of newly received read confirmation transaction
@@ -235,6 +234,7 @@ function processReceivedReadConfirmation(data) {
             // Filter out local messages that had not yet been read confirmed and group
             //  them by origin devices that should be notified
             const idDocMessagesToUpdate = [];
+            const idDocMsgsNo1stReadDtToUpdate = [];
             const devIdReadMsgsToNotify = new Map();
 
             Catenis.db.collection.Message.find({
@@ -252,23 +252,29 @@ function processReceivedReadConfirmation(data) {
                     messageId: 1,
                     originDeviceId: 1,
                     targetDeviceId: 1,
-                    blockchain: 1
+                    blockchain: 1,
+                    firstReadDate: 1
                 }
             }).forEach((doc) => {
-                idDocMessagesToUpdate.push(doc._id);
-
-                if (devIdReadMsgsToNotify.has(doc.originDeviceId)) {
-                    devIdReadMsgsToNotify.get(doc.originDeviceId).readMsgIds.push(doc.messageId);
+                if (doc.firstReadDate !== undefined) {
+                    idDocMessagesToUpdate.push(doc._id);
                 }
                 else {
-                    const originDevice = Device.getDeviceByDeviceId(doc.originDeviceId);
-                    const targetDevice = Device.getDeviceByDeviceId(doc.targetDeviceId);
+                    // 'Remote' messages the firstReadDate field of which is not filled yet
+                    idDocMsgsNo1stReadDtToUpdate.push(doc._id);
+                }
 
-                    if (originDevice.status === Device.status.active.name && originDevice.shouldBeNotifiedOfMessageReadBy(targetDevice)) {
-                        // Prepare to notify origin device that previously sent message had been read
+                const originDevice = Device.getDeviceByDeviceId(doc.originDeviceId);
+                const targetDevice = Device.getDeviceByDeviceId(doc.targetDeviceId);
+
+                if (originDevice.status === Device.status.active.name && originDevice.shouldBeNotifiedOfMessageReadBy(targetDevice)) {
+                    // Prepare to notify origin device that previously sent message has been read
+                    if (devIdReadMsgsToNotify.has(doc.originDeviceId)) {
+                        devIdReadMsgsToNotify.get(doc.originDeviceId).readMsgIds.push(doc.messageId);
+                    }
+                    else {
                         devIdReadMsgsToNotify.set(doc.originDeviceId, {
                             originDevice: originDevice,
-                            targetDevice: targetDevice,
                             readMsgIds: [doc.messageId]
                         });
                     }
@@ -288,11 +294,36 @@ function processReceivedReadConfirmation(data) {
                 }, {
                     multi: true
                 });
+            }
 
-                // Notify origin devices that messages had been read
-                for (let devReadMsgs of devIdReadMsgsToNotify.values()) {
-                    // TODO: send notification to origin device that previously sent message had been read
-                }
+            if (idDocMsgsNo1stReadDtToUpdate.length > 0) {
+                // Retrieve date that transaction has been received
+                const receivedDate = Catenis.db.collection.ReceivedTransaction.findOne({txid: data.txid}, {fields: {receivedDate: 1}}).receivedDate;
+
+                // Update Message collection docs to mark them as read confirmed, and also
+                //  fill date that message was first read
+                Catenis.db.collection.Message.update({
+                    _id: {
+                        $in: idDocMsgsNo1stReadDtToUpdate
+                    }
+                }, {
+                    $set: {
+                        firstReadDate: receivedDate,
+                        readConfirmed: true
+                    }
+                }, {
+                    multi: true
+                });
+            }
+
+            // Notify origin devices that messages had been read
+            for (let devReadMsgs of devIdReadMsgsToNotify.values()) {
+                // Send notification to origin device that previously sent messages have been read
+                devReadMsgs.readMsgIds.forEach((messageId) => {
+                    const message = Message.getMessageByMessageId(messageId);
+
+                    devReadMsgs.originDevice.notifyMessageRead(message);
+                })
             }
         }
     }

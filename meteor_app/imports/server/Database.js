@@ -581,6 +581,16 @@ Database.initialize = function() {
             },
             {
                 fields: {
+                    firstReadDate: 1
+                },
+                opts: {
+                    sparse: true,
+                    background: true,
+                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                }
+            },
+            {
+                fields: {
                     lastReadDate: 1
                 },
                 opts: {
@@ -892,6 +902,38 @@ Database.initialize = function() {
     };
 
     Catenis.db = new Database(collections);
+};
+
+//** Temporary method used to fill in (new) 'firstReadDate' field of Message collection docs
+Database.fixMessageFirstReadDate = function () {
+    let updatedDocsCount = 0;
+
+    // Retrieve Message docs that have lastReadDate field but not firstReadDate field
+    Catenis.db.collection.Message.find({
+        lastReadDate: {
+            exists: true
+        },
+        firstReadDate: {
+            exists: false
+        }
+    }, {
+        fields: {
+            _id: 1,
+            lastReadDate: 1
+        }
+    }).forEach((doc) => {
+        // Update Message doc setting firstReadDate the same as lastReadDate
+        updatedDocsCount += Catenis.db.collection.Message.update({
+            _id: doc._id
+        }, {
+            $set: {
+                firstReadDate: doc.lastReadDate
+            }
+        })
+    });
+
+    if (updatedDocsCount > 0)
+        Catenis.logger.INFO(util.format('>>>>>> Number of Message docs that had their firstReadDate field filled: ' + updatedDocsCount));
 };
 
 

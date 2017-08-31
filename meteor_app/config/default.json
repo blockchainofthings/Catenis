@@ -273,8 +273,11 @@
   },
   // Parameters pertaining to RestApi module
   "restApi": {
-    "rootPath": "api",
-    "requestSignature": {
+    "rootPath": "api"
+  },
+  // Parameters pertaining to Authentication module
+  "authentication": {
+    "httpRequestSignature": {
       "signVersionId": "CTN1",
       "signMethodId": "CTN1-HMAC-SHA256",
       "scopeRequest": "ctn1_request",
@@ -282,7 +285,23 @@
       "allowedTimestampOffset": 300,   // Time, in seconds, representing the allowed variation (+/-) of timestamp in regards to current time
                                        //  for request to be considered valid
       "authRegexPattern": "^<signMethodId> +(?:C|c)redential *= *(\\w{20})/(\\d{8})/<scopeRequest> *, *(?:S|s)ignature *= *([0-9a-fA-F]{64}) *$",
-      "signValidDays": 7  // Number of days from specified signature date after which signature is not considered valid anymore
+      "signValidDays": 7,  // Number of days from specified signature date after which signature is not considered valid anymore
+      "wsAuthUsernameRegexPattern": "^(\\w{20})/(\\d{8})/<scopeRequest>#(.+)$",
+      "wsAuthPasswordRegexPattern": "^[0-9a-fA-F]{64}$"
     }
+  },
+  // Parameters pertaining to NotifyMsgDispatcher module
+  "notification": {
+    "notifyRootPath": "notify"  // Root path to be used for all notification message dispatcher based on the HTTP protocol.
+                                //  NOTE: the Rest API root path (see restApi section above) shall be prepended to this path to form the fully qualified notification root path
+  },
+  // Parameters pertaining to WebSocketNotifyMsgDispatcher module
+  "webSocketNotifyMsgDispatcher": {
+    "wsNotifyRootPath": "ws",  // Root of all paths to be used as endpoints for establishing WebSocket connections for this notification message dispatcher.
+                         //  NOTE: the fully qualified notification root path (see notification section above) shall be prepended to this path to form the qualified base URI path for this dispatcher
+    "notifyWsSubprotocol": "notify.catenis.io",  // Name of WebSocket subprotocol to be used for dispatching notification messages
+                                                 //  NOTE: it's a proprietatry protocol that just sends the notification messages straight to the connected client as long as there is an open connection for the given notification event.
+                                                 //    Thus the client needs to open one WebSocket connection for each notification event for which it wishes to receive notifications. There shall be an enpoint URI for each notification event
+    "heartbeatInterval": 30000  // Time interval, in miliseconds, for sending heartbeat ping package to client
   }
 }

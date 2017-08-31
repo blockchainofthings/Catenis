@@ -13,11 +13,9 @@
 //  NOTE: the reference of these modules are done sing 'require()' instead of 'import' to
 //      to avoid annoying WebStorm warning message: 'default export is not defined in
 //      imported module'
-const crypto = require('crypto');
 const util = require('util');
 // Third-party node modules
 import config from 'config';
-import moment from 'moment';
 // Meteor packages
 import { Meteor } from 'meteor/meteor';
 import { Restivus } from 'meteor/nimble:restivus';
@@ -26,6 +24,7 @@ import { Restivus } from 'meteor/nimble:restivus';
 import { Catenis } from './Catenis';
 import { Device } from './Device';
 import { ApiVersion } from './ApiVersion';
+import { Authentication } from './Authentication';
 import { logMessage } from './ApiLogMessage';
 import { sendMessage } from './ApiSendMessage';
 import { readMessage } from './ApiReadMessage';
@@ -35,27 +34,15 @@ import { listMessages } from './ApiListMessages';
 import { listPermissionEvents } from './ApiListPermissionEvents';
 import { retrievePermissionRights } from './ApiGetPermissionRights';
 import { setPermissionRights } from './ApiPostPermissionRights';
+import { listNotificationEvents } from './ApiListNotificationEvents';
 
 // Config entries
 const restApiConfig = config.get('restApi');
-const apiReqSignConfig = restApiConfig.get('requestSignature');
 
 // Configuration settings
 const cfgSettings = {
-    rootPath: restApiConfig.get('rootPath'),
-    requestSignature: {
-        signVersionId: apiReqSignConfig.get('signVersionId'),
-        signMethodId: apiReqSignConfig.get('signMethodId'),
-        scopeRequest: apiReqSignConfig.get('scopeRequest'),
-        timestampHdr: apiReqSignConfig.get('timestampHdr'),
-        allowedTimestampOffset: apiReqSignConfig.get('allowedTimestampOffset'),
-        authRegexPattern: apiReqSignConfig.get('authRegexPattern'),
-        signValidDays: apiReqSignConfig.get('signValidDays')
-    }
+    rootPath: restApiConfig.get('rootPath')
 };
-
-const authRegex = new RegExp(cfgSettings.requestSignature.authRegexPattern.replace('<signMethodId>', cfgSettings.requestSignature.signMethodId)
-        .replace('<scopeRequest>', cfgSettings.requestSignature.scopeRequest));
 
 export const restApiRootPath = cfgSettings.rootPath;
 
@@ -165,6 +152,15 @@ export function RestApi(apiVersion) {
                 action: setPermissionRights
             }
         });
+
+        this.api.addRoute('notification/events', {authRequired: true}, {
+            // Retrieve a list of system defined notification events
+            //
+            //  Refer to the source file where the action function is defined for a detailed description of the endpoint
+            get: {
+                action: listNotificationEvents
+            }
+        });
     }
 }
 
@@ -199,32 +195,6 @@ RestApi.initialize = function () {
     };
 };
 
-// NOTE: this method is only provided for debugging purpose
-RestApi.genReqSignature = function (apiAccessSecret, timestamp, signDate, host = 'beta.catenis.io', method = 'GET', url = '/api/0.3/messages/mdQP57eQjwmsciBwTssw?encoding=utf8', rawBody = new Buffer('')) {
-    if (signDate === undefined) {
-        signDate = moment(timestamp).utc().format('YYYYMMDD');
-    }
-
-    const context = {
-        request: {
-            method: method,
-            url: url,
-            headers: {
-                host: host,
-                'x-bcot-timestamp': timestamp
-            },
-            rawBody: rawBody
-        }
-    };
-
-    const info = {
-        timestamp: timestamp,
-        signDate: signDate,
-        apiAccessSecret: apiAccessSecret
-    };
-
-    return signRequest.call(context, info);
-};
 
 // RestApi function class (public) properties
 //
@@ -237,77 +207,14 @@ RestApi.genReqSignature = function (apiAccessSecret, timestamp, signDate, host =
 
 function authenticateDevice() {
     try {
-        const dtNow = new Date(Date.now());
-
-        // Make sure that required headers are present
-        if (!(cfgSettings.requestSignature.timestampHdr in this.request.headers) || !('authorization' in this.request.headers)) {
-            // Missing required HTTP headers. Return error
-            Catenis.logger.DEBUG('Error authenticating API request: missing required HTTP header', this.request);
-            return {
-                error: errorResponse.call(this, 401, 'Authorization failed; missing required HTTP header')
-            };
-        }
-
-        // Make sure that timestamp is valid
-        const strTmstmp = this.request.headers[cfgSettings.requestSignature.timestampHdr],
-            tmstmp = moment(strTmstmp, 'YYYYMMDDTHHmmssZ', true),
-            now = moment(dtNow).milliseconds(0);
-
-        if (!tmstmp.isValid()) {
-            // Timestamp not well formed. Return error
-            Catenis.logger.DEBUG('Error authenticating API request: timestamp not well formed', this.request);
-            return {
-                error: errorResponse.call(this, 401, 'Authorization failed; timestamp not well formed')
-            };
-        }
-
-        if (!tmstmp.isBetween(now.clone().subtract(cfgSettings.requestSignature.allowedTimestampOffset, 'seconds'), now.clone().add(cfgSettings.requestSignature.allowedTimestampOffset, 'seconds'), null, '[]')) {
-            // Timestamp not within acceptable time variation. Return error
-            Catenis.logger.DEBUG('Error authenticating API request: timestamp not within acceptable time variation', this.request);
-            return {
-                error: errorResponse.call(this, 401, 'Authorization failed; timestamp not within acceptable time variation')
-            };
-        }
-
-        // Try to parse Authorization header
-        let matchResult;
-
-        if (!(matchResult = this.request.headers.authorization.match(authRegex))) {
-            // Authorization HTTP header value not well formed. Return error
-            Catenis.logger.DEBUG('Error authenticating API request: authorization value not well formed', this.request);
-            return {
-                error: errorResponse.call(this, 401, 'Authorization failed; authorization value not well formed')
-            };
-        }
-
-        const deviceId = matchResult[1],
-            strSignDate = matchResult[2],
-            signature = matchResult[3];
-
-        // Make sure that date of signature is valid
-        const signDate = moment.utc(strSignDate, 'YYYYMMDD', true);
-
-        if (!signDate.isValid()) {
-            // Signature date not well formed. Return error
-            Catenis.logger.DEBUG('Error authenticating API request: signature date not well formed', this.request);
-            return {
-                error: errorResponse.call(this, 401, 'Authorization failed; signature date not well formed')
-            };
-        }
-
-        if (!now.clone().utc().isBetween(signDate, signDate.clone().add(cfgSettings.requestSignature.signValidDays, 'days'), 'day', '[)')) {
-            // Signature date out of bounds. Return error
-            Catenis.logger.DEBUG('Error authenticating API request: signature date out of bounds', this.request);
-            return {
-                error: errorResponse.call(this, 401, 'Authorization failed; signature date out of bounds')
-            };
-        }
+        // Parse HTTP request to retrieve relevant authentication data
+        const authData = Authentication.parseHttpRequest(this.request);
 
         // Make sure that device ID is valid
         let device = undefined;
 
         try {
-            device = Device.getDeviceByDeviceId(deviceId, false);
+            device = Device.getDeviceByDeviceId(authData.deviceId, false);
         }
         catch (err) {
             if (!(err instanceof Meteor.Error) || err.error !== 'ctn_device_not_found') {
@@ -322,13 +229,13 @@ function authenticateDevice() {
             // Make sure not to authenticate a device that is disabled
             if (!device.isDisabled) {
                 // Sign request and validate signature
-                const reqSignature = signRequest.call(this, {
-                    timestamp: strTmstmp,
-                    signDate: strSignDate,
+                const reqSignature = Authentication.signHttpRequest(this.request, {
+                    timestamp: authData.timestamp,
+                    signDate: authData.signDate,
                     apiAccessSecret: device.apiAccessSecret
                 });
 
-                if (reqSignature === signature) {
+                if (reqSignature === authData.signature) {
                     // Signature is valid. Return device as authenticated user
                     return {
                         user: {
@@ -354,62 +261,38 @@ function authenticateDevice() {
         };
     }
     catch (err) {
+        let error;
+
+        if (err instanceof Meteor.Error) {
+            if (err.error === 'ctn_auth_parse_err_missing_headers') {
+                error = errorResponse.call(this, 401, 'Authorization failed; missing required HTTP headers');
+            }
+            else if (err.error === 'ctn_auth_parse_err_malformed_timestamp') {
+                error = errorResponse.call(this, 401, 'Authorization failed; timestamp not well formed');
+            }
+            else if (err.error === 'ctn_auth_parse_err_timestamp_out_of_bounds') {
+                error = errorResponse.call(this, 401, 'Authorization failed; timestamp not within acceptable time variation');
+            }
+            else if (err.error === 'ctn_auth_parse_err_malformed_auth_header') {
+                error = errorResponse.call(this, 401, 'Authorization failed; authorization value not well formed');
+            }
+            else if (err.error === 'ctn_auth_parse_err_malformed_sign_date') {
+                error = errorResponse.call(this, 401, 'Authorization failed; signature date not well formed');
+            }
+            else if (err.error === 'ctn_auth_parse_err_sign_date_out_of_bounds') {
+                error = errorResponse.call(this, 401, 'Authorization failed; signature date out of bounds');
+            }
+            else {
+                error = errorResponse.call(this, 500, 'Internal server error');
+            }
+        }
+        else {
+            error = errorResponse.call(this, 500, 'Internal server error');
+        }
+
         Catenis.logger.ERROR('Error authenticating API request.', err);
-        return {
-            error: errorResponse.call(this, 500, 'Internal server error')
-        };
+        return error;
     }
-}
-
-// Sign request
-//
-// Arguments:
-//  info: {
-//    timestamp: [string],
-//    signDate: [string],
-//    apiAccessSecret: [string]
-//  }
-function signRequest(info) {
-    //Catenis.logger.DEBUG('>>>>>> Sign date: ' + info.signDate);
-    // First step: compute conformed request
-    let confReq = this.request.method + '\n';
-    confReq += this.request.url + '\n';
-
-    let essentialHeaders = 'host:' + this.request.headers.host + '\n';
-    essentialHeaders += cfgSettings.requestSignature.timestampHdr + ':' + this.request.headers[cfgSettings.requestSignature.timestampHdr] + '\n';
-
-    confReq += essentialHeaders + '\n';
-    confReq += hashData(this.request.rawBody) + '\n';
-    //Catenis.logger.DEBUG('>>>>>> Conformed request: ' + confReq);
-
-    // Second step: assemble string to sign
-    let strToSign = cfgSettings.requestSignature.signMethodId +'\n';
-    strToSign += info.timestamp + '\n';
-
-    const scope = info.signDate + '/' + cfgSettings.requestSignature.scopeRequest;
-
-    strToSign += scope + '\n';
-    strToSign += hashData(confReq) + '\n';
-    //Catenis.logger.DEBUG('>>>>>> String to sign: ' + strToSign);
-
-    // Third step: generate the signature
-    const dateKey = signData(info.signDate, cfgSettings.requestSignature.signVersionId + info.apiAccessSecret),
-        signKey = signData(cfgSettings.requestSignature.scopeRequest, dateKey);
-    //Catenis.logger.DEBUG('>>>>>> Date key (hex): ' + dateKey.toString('hex'));
-    //Catenis.logger.DEBUG('>>>>>> Sign key (hex): ' + signKey.toString('hex'));
-
-    //return signData(strToSign, signKey, true);
-    const signature = signData(strToSign, signKey, true);
-    //Catenis.logger.DEBUG('>>>>>> Request signature: ' + signature);
-    return signature;
-}
-
-function hashData(data) {
-    return crypto.createHash('sha256').update(data).digest('hex');
-}
-
-function signData(data, secret, hexEncode = false) {
-    return crypto.createHmac('sha256', secret).update(data).digest(hexEncode ? 'hex' : undefined);
 }
 
 function optionsResponseHeaders() {

@@ -115,7 +115,8 @@ function processReceivedMessage(data) {
         }
         else {
             if (targetDevice.shouldBeNotifiedOfNewMessageFrom(originDevice)) {
-                // TODO: send notification to target device that new message had been received
+                // Send notification to target device that new message has been received
+                targetDevice.notifyNewMessageReceived(message);
             }
         }
     }

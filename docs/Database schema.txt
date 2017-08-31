@@ -141,7 +141,11 @@ Message {
   sentDate: [date/time],  // Date and time when message has been sent
   receivedDate: [date/time],  // Date and time when message has been received. This field only exists for 'send' messages after they had actually been received.
   blocked: [boolean],  // Identifies a 'send' message that should have been received but instead had been blocked (due to the intended receiving device not being active or its permission setting). Note that this field should never exist along with the receivedDate field; only one of these fields should exist for a given Message doc (for 'send' message after it had been received/blocked). Also, if present, this field should always have the value true
+  firstReadDate: [date/time],  // Date and time when message has first been read (by the device that logged it, or by its intended receiver in case of a 'send' message)
+                               //  NOTE: this field is available for both 'local' and 'remote' messages, and only once the message has been read at least one.
+                               //   However, for 'remote' messages, if shall only be available if the targeting device allows for message read notification.
   lastReadDate: [date/time],  // Date and time when message has last been read (by the device that logged it, or by its intended receiver in case of a 'send' message)
+                              //  NOTE: this field is only available for 'local' messages, not for 'remote' messages, and once the message has been read at least once
   readConfirmed: [boolean]  // Indicates that a read confirmation had already been received for this message. This field should only exist (with the value true) after a read confirmation had been received
 }
 

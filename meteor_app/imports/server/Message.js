@@ -61,6 +61,7 @@ export function Message(docMessage) {
     this.sentDate = docMessage.sentDate;
     this.receivedDate = docMessage.receivedDate;
     this.blocked = docMessage.blocked !== undefined;
+    this.firstReadDate = docMessage.firstReadDate;
     this.lastReadDate = docMessage.lastReadDate;
 }
 
@@ -71,20 +72,24 @@ export function Message(docMessage) {
 // Update last read date
 //
 //  Return:
-//   firstRead: [Boolean]  // Indication if this was the first time that message was read
+//   isFirstRead: [Boolean]  // Indication if this was the first time that message was read
 Message.prototype.readNow = function () {
-    const prevLastReadDate = this.lastReadDate;
     this.lastReadDate = new Date();
 
+    const isFirstRead = this.firstReadDate === undefined;
+    const modifier = isFirstRead ? {$set: {firstReadDate: this.lastReadDate}} : {$set: {}};
+
+    modifier.$set.lastReadDate = this.lastReadDate;
+
     try {
-        Catenis.db.collection.Message.update({_id: this.doc_id}, {$set: {lastReadDate: this.lastReadDate}});
+        Catenis.db.collection.Message.update({_id: this.doc_id}, modifier);
     }
     catch (err) {
         Catenis.logger.ERROR(util.format('Error trying to update last read date of message (doc_id: %s).', this.doc_id), err);
         throw new Meteor.Error('ctn_msg_update_error', util.format('Error trying to update last read date of message (doc_id: %s)', this.doc_id), err.stack);
     }
 
-    return !prevLastReadDate;
+    return isFirstRead;
 };
 
 // Set message as received
@@ -377,10 +382,10 @@ Message.query = function (issuerDeviceId, filter) {
 
         // Read state filter
         if (filter.readState === Message.readState.read) {
-            logSelector.lastReadDate = {$exists: true};
+            logSelector.firstReadDate = {$exists: true};
         }
         else if (filter.readState === Message.readState.unread) {
-            logSelector.lastReadDate = {$exists: false};
+            logSelector.firstReadDate = {$exists: false};
         }
     }
 
@@ -487,10 +492,10 @@ Message.query = function (issuerDeviceId, filter) {
         let readStateSelector = undefined;
 
         if (filter.readState === Message.readState.read) {
-            readStateSelector = {lastReadDate: {$exists: true}}
+            readStateSelector = {firstReadDate: {$exists: true}}
         }
         else if (filter.readState === Message.readState.unread) {
-            readStateSelector = {lastReadDate: {$exists: false}}
+            readStateSelector = {firstReadDate: {$exists: false}}
         }
 
         if (directionSelector !== undefined || readStateSelector !== undefined) {
@@ -586,10 +591,10 @@ Message.query = function (issuerDeviceId, filter) {
 
         // Read state filter
         if (filter.readState === Message.readState.read) {
-            selector.lastReadDate = {$exists: true};
+            selector.firstReadDate = {$exists: true};
         }
         else if (filter.readState === Message.readState.unread) {
-            selector.lastReadDate = {$exists: false};
+            selector.firstReadDate = {$exists: false};
         }
     }
 
