@@ -270,12 +270,18 @@ function processReceivedReadConfirmation(data) {
                 if (originDevice.status === Device.status.active.name && originDevice.shouldBeNotifiedOfMessageReadBy(targetDevice)) {
                     // Prepare to notify origin device that previously sent message has been read
                     if (devIdReadMsgsToNotify.has(doc.originDeviceId)) {
-                        devIdReadMsgsToNotify.get(doc.originDeviceId).readMsgIds.push(doc.messageId);
+                        devIdReadMsgsToNotify.get(doc.originDeviceId).readMsgIds.push({
+                            messageId: doc.messageId,
+                            targetDevice: targetDevice
+                        });
                     }
                     else {
                         devIdReadMsgsToNotify.set(doc.originDeviceId, {
                             originDevice: originDevice,
-                            readMsgIds: [doc.messageId]
+                            readMsgIds: [{
+                                messageId: doc.messageId,
+                                targetDevice: targetDevice
+                            }]
                         });
                     }
                 }
@@ -319,10 +325,10 @@ function processReceivedReadConfirmation(data) {
             // Notify origin devices that messages had been read
             for (let devReadMsgs of devIdReadMsgsToNotify.values()) {
                 // Send notification to origin device that previously sent messages have been read
-                devReadMsgs.readMsgIds.forEach((messageId) => {
-                    const message = Message.getMessageByMessageId(messageId);
+                devReadMsgs.readMsgIds.forEach((msgInfo) => {
+                    const message = Message.getMessageByMessageId(msgInfo.messageId);
 
-                    devReadMsgs.originDevice.notifyMessageRead(message);
+                    devReadMsgs.originDevice.notifyMessageRead(message, msgInfo.targetDevice);
                 })
             }
         }

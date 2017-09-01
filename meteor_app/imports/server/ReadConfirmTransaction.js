@@ -240,7 +240,7 @@ export function ReadConfirmTransaction(transact) {
                     this.hasReadConfirmSpendNullOutput = true;
 
                     // Check if output position is valid
-                    if (idx !== this.readConfirmSpendOnlyOutputPos) {
+                    if (idx !== this.readConfirmSpendNullOutputPos) {
                         // Output position is not valid.
                         //  Log error condition and throw exception
                         Catenis.logger.ERROR('Inconsistent read confirmation transaction; invalid spend null output position', {

@@ -999,38 +999,46 @@ Device.prototype.setInitialRights = function (rightsByEvent) {
 /** End of permission related methods **/
 
 /** Notification related methods **/
-Device.prototype.notifyNewMessageReceived = function (message) {
+Device.prototype.notifyNewMessageReceived = function (message, originDevice) {
     // Prepare information about received message to be sent by notification
     const msgInfo = {
         messageId: message.messageId,
         from: {
-            deviceId: message.originDevice.deviceId,
+            deviceId: message.originDeviceId,
         },
         receivedDate: message.receivedDate
     };
 
     // Add device public properties
-    _und.extend(msgInfo.from, message.originDevice.discloseMainPropsTo(this));
+    if (originDevice === undefined) {
+        originDevice = Device.getDeviceByDeviceId(message.originDeviceId);
+    }
+
+    _und.extend(msgInfo.from, originDevice.discloseMainPropsTo(this));
 
     // Dispatch notification message
     Catenis.notification.dispatchNotifyMessage(this.deviceId, Notification.event.new_msg_received.name, JSON.stringify(msgInfo));
 };
 
-Device.prototype.notifyMessageRead = function (message) {
+Device.prototype.notifyMessageRead = function (message, targetDevice) {
     // Prepare information about read message to be sent by notification
     const msgInfo = {
         messageId: message.messageId,
         to: {
-            deviceId: message.targetDevice.deviceId,
+            deviceId: message.targetDeviceId,
         },
         readDate: message.firstReadDate
     };
 
     // Add device public properties
-    _und.extend(msgInfo.from, message.originDevice.discloseMainPropsTo(this));
+    if (targetDevice === undefined) {
+        targetDevice = Device.getDeviceByDeviceId(message.targetDeviceId);
+    }
+
+    _und.extend(msgInfo.from, targetDevice.discloseMainPropsTo(this));
 
     // Dispatch notification message
-    Catenis.notification.dispatchNotifyMessage(this.deviceId, Notification.event.new_msg_received.name, JSON.stringify(msgInfo));
+    Catenis.notification.dispatchNotifyMessage(this.deviceId, Notification.event.sent_msg_read.name, JSON.stringify(msgInfo));
 };
 /** End of notification related methods **/
 

@@ -13,7 +13,7 @@
 //  NOTE: the reference of these modules are done using 'require()' instead of 'import' to
 //      to avoid annoying WebStorm warning message: 'default export is not defined in
 //      imported module'
-//const util = require('util');
+const util = require('util');
 // Third-party node modules
 //import config from 'config';
 // Meteor packages
@@ -116,7 +116,7 @@ function processReceivedMessage(data) {
         else {
             if (targetDevice.shouldBeNotifiedOfNewMessageFrom(originDevice)) {
                 // Send notification to target device that new message has been received
-                targetDevice.notifyNewMessageReceived(message);
+                targetDevice.notifyNewMessageReceived(message, originDevice);
             }
         }
     }

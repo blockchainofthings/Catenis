@@ -312,7 +312,7 @@ Message.getMessageByMessageId = function (messageId, requestingDeviceId) {
 
 Message.getMessageByTxid = function (txid) {
     // Retrieve Message doc/rec
-    const docMessage = Catenis.db.collection.Message.findOne({txid: txid});
+    const docMessage = Catenis.db.collection.Message.findOne({'blockchain.txid': txid});
 
     if (!docMessage) {
         // No message available with the given transaction ID. Log error and throw exception
