@@ -59,19 +59,24 @@
 
             <!--start of content-wrapper-->
             <div id="page-content-wrapper">
-                    <div class="row">
+                    <div class="row infoLineBox">
                         <div class="col-md-12 fullWidth infoLine">
+                        {{#unless Template.subscriptionsReady}}
+                            <p style="color:lightgray; margin-top:1em">Loading...</p>
+                        {{else}}
                             {{>infoLine}}
+                        {{/unless}}
                         </div>
                     </div>
-                    <br>
-                    <hr>
+
                     <div class="row">
                         <div class="col-lg-8 col-lg-offset-2">
                             <article class="text-center">
                                 {{#if page}}
-                                    <!--added while having no wifi access, let's see if this actually works-->
-                                    {{> Template.dynamic template=page data=dataContext}}
+                                    <div class="block">
+                                        <!--added while having no wifi access, let's see if this actually works-->
+                                        {{> Template.dynamic template=page data=dataContext}}
+                                    </div>
                                 {{/if}}
                             </article>
                         </div>

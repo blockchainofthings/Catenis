@@ -203,8 +203,8 @@ ClientsUI.initialize = function () {
                 return clientId;
 
             }else{
-                Catenis.logger.ERROR('User does not have permission to access method "changeUserStatus"');
-                throw new Meteor.Error('User does not have permission to access method "changeUserStatus"');
+                Catenis.logger.ERROR('User does not have permission to access method "createClient"');
+                throw new Meteor.Error('User does not have permission to access method "createClient"');
             }
         },
 

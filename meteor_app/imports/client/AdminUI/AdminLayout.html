@@ -113,9 +113,11 @@
                                     </div>
 
                                     <article class="text-center">
-                                        {{#if page}}
-                                            {{> Template.dynamic template=page data=dataContext}}
-                                        {{/if}}
+                                            {{#if page}}
+                                            <div class="block">
+                                                {{> Template.dynamic template=page data=dataContext}}
+                                            </div>
+                                            {{/if}}
                                     </article>
                                 {{else}}
                                     <p>User does not have the necessary permission.</p>
@@ -124,9 +126,6 @@
                         </div>
                 </div>
                 <!--end of content-wrapper-->
-
-
-
 
              </div>
             <!--end of wrapper -->
