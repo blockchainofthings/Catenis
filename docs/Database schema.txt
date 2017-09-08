@@ -254,8 +254,9 @@ Malleability {
 Permission {
    _id: [string], // MongoDB internal document ID provided by Meteor
    event: [string], // Name of event for which permission is being defined. Valid values (from Permission.event): 'receive_notify_new_msg', 'receive_notify_msg_read', 'send_read_msg_confirm', 'receive_msg'
-   subjectEntityId: [string], // ID of device that functions as the subject of the action associated with the event for which permission is being defined,
-                              //  or ID of client for which default permission for all its devices is being set
+   subjectEntityType: [string],  // The type of the subject entity: either 'client' or 'device'
+   subjectEntityId: [string], // ID of device that functions as the subject of the action associated with the event for which permission is being defined (subjectEntityType = 'device'),
+                              //  or ID of client for which default permission for all its devices is being set (subjectEntityType = 'client')
    level: [string], // Designates upon which devices the permission right should be applied. Valid values (from Permission.level): '1.device', '2.client', '3.catenis_node', '4.system'
    objectEntityId: [string], // Identifies the device that functions as the object of the action associated with the event and upon which the permission right should be applied
                              //  If level = 'device', it should contain a device ID, and the permission right applies to a given device.

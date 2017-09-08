@@ -43,7 +43,7 @@ import {
 //
 //  Success data returned: {    // An object the properties of which are the names of the notification events, and the value
 //                              //  of those properties the corresponding description of the event
-//    "<event_name>": "<event_description>"
+//    "<event_name>": [String] - A short description of the event
 //  }
 export function listNotificationEvents() {
     try {

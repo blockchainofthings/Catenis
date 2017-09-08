@@ -18,7 +18,7 @@
 import _und from 'underscore';      // NOTE: we do not use the underscore library provided by Meteor because we need
                                     //        a feature (_und.omit(obj,predicate)) that is not available in that version
 // Meteor packages
-//import { Meteor } from 'meteor/meteor';
+import { Meteor } from 'meteor/meteor';
 
 // References code in other (Catenis) modules
 import { Catenis } from './Catenis';
@@ -41,25 +41,28 @@ import {
 // Definition of module (private) functions
 //
 
-// Method used to process GET 'permission/:eventName/rights' endpoint of Rest API
+// Method used to process GET 'permission/events/:eventName/rights' endpoint of Rest API
+//
+//  URL parameters:
+//    eventName [String] - Name of permission event
 //
 //  Success data returned: [{
-//    "system": [String] - (optional) Permission right attributed at system level for the specified event; either "allow" or "deny"
-//    "catenisNode": {   - (optional) Permission rights attributed at the Catenis node level for the specified event
-//      "allow": [Array(String)],  - (optional) List of indices of Catenis nodes to which have been given allow right
-//      "deny": [Array(String)]    - (optional) List of indices of Catenis nodes to which have been given deny right
+//    "system": [String] - Permission right attributed at system level for the specified event; either "allow" or "deny"
+//    "catenisNode": {   - (only returned if not empty) Permission rights attributed at the Catenis node level for the specified event
+//      "allow": [Array(String)],  - (only returned if not empty) List of indices of Catenis nodes to which have been given allow right
+//      "deny": [Array(String)]    - (only returned if not empty) List of indices of Catenis nodes to which have been given deny right
 //    },
-//    "client": {   - (optional) Permission rights attributed at the client level for the specified event
-//      "allow": [Array(String)],  - (optional) List of IDs of clients to which have been given allow right
-//      "deny": [Array(String)]    - (optional) List of IDs of clients to which have been given deny right
+//    "client": {   - (only returned if not empty) Permission rights attributed at the client level for the specified event
+//      "allow": [Array(String)],  - (only returned if not empty) List of IDs of clients to which have been given allow right
+//      "deny": [Array(String)]    - (only returned if not empty) List of IDs of clients to which have been given deny right
 //    },
-//    "device": {   - (optional) Permission rights attributed at the device level for the specified event
-//      "allow": [{   - (optional) List of devices to which have been given allow right
+//    "device": {   - (only returned if not empty) Permission rights attributed at the device level for the specified event
+//      "allow": [{   - (only returned if not empty) List of devices to which have been given allow right
 //        "deviceId": [String],     - Catenis ID of the device
 //        "name": [String],         - (only returned if defined and device that issued the request has permission to access this device's main props) - Assigned name of the device
 //        "prodUniqueId": [String]  - (only returned if defined and device that issued the request has permission to access this device's main props) - Product unique ID of the device
 //      }],
-//      "deny": [{    - (optional) List of devices to which have been given deny right
+//      "deny": [{    - (only returned if not empty) List of devices to which have been given deny right
 //        "deviceId": [String],     - Catenis ID of the device
 //        "name": [String],         - (only returned if defined and device that issued the request has permission to access this device's main props) - Assigned name of the device
 //        "prodUniqueId": [String]  - (only returned if defined and device that issued the request has permission to access this device's main props) - Product unique ID of the device
@@ -72,13 +75,13 @@ export function retrievePermissionRights() {
 
         // eventName param
         if (!(typeof this.urlParams.eventName === 'string' && this.urlParams.eventName.length > 0 && Permission.isValidEventName(this.urlParams.eventName))) {
-            Catenis.logger.DEBUG('Invalid \'eventName\' parameter for GET \'permission/:eventName/rights\' API request', this.urlParams);
+            Catenis.logger.DEBUG('Invalid \'eventName\' parameter for GET \'permission/events/:eventName/rights\' API request', this.urlParams);
             return errorResponse.call(this, 400, 'Invalid parameters');
         }
 
         // Make sure that system is running and accepting API calls
         if (!Catenis.application.isRunning()) {
-            Catenis.logger.DEBUG('System currently not available for fulfilling GET \'permission/:eventName/rights\' API request', {applicationStatus: Catenis.application.status});
+            Catenis.logger.DEBUG('System currently not available for fulfilling GET \'permission/events/:eventName/rights\' API request', {applicationStatus: Catenis.application.status});
             return errorResponse.call(this, 503, 'System currently not available; please try again at a later time');
         }
 
@@ -108,7 +111,7 @@ export function retrievePermissionRights() {
             }
 
             if (error.statusCode === 500) {
-                Catenis.logger.ERROR('Error processing GET \'permission/:eventName/rights\' API request.', err);
+                Catenis.logger.ERROR('Error processing GET \'permission/events/:eventName/rights\' API request.', err);
             }
 
             return error;
@@ -118,7 +121,7 @@ export function retrievePermissionRights() {
         return successResponse.call(this, fixRightsReplaceDeviceId(rights, this.user.device));
     }
     catch (err) {
-        Catenis.logger.ERROR('Error processing GET \'permission/:eventName/rights\' API request.', err);
+        Catenis.logger.ERROR('Error processing GET \'permission/events/:eventName/rights\' API request.', err);
         return errorResponse.call(this, 500, 'Internal server error');
     }
 }

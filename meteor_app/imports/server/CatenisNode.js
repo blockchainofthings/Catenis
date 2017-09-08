@@ -389,6 +389,25 @@ CatenisNode.prototype.updateProperties = function (newProps) {
     }
 };
 
+// Get Catenis node's basic identification information
+CatenisNode.prototype.getIdentityInfo = function () {
+    const idInfo = {
+        catenisNode: {
+            ctnNodeIndex: this.ctnNodeIndex
+        }
+    };
+
+    if (this.props.name !== undefined) {
+        idInfo.catenisNode.name = this.props.name;
+    }
+
+    if (this.props.description !== undefined) {
+        idInfo.catenisNode.description = this.props.description;
+    }
+
+    return idInfo;
+};
+
 // Create new client
 //
 //  Arguments:
@@ -400,7 +419,7 @@ CatenisNode.prototype.updateProperties = function (newProps) {
 //    }
 //    user_id: [string] - (optional)
 //    deviceDefaultRightsByEvent: [Object] - (optional) Default rights to be used when creating new devices. Object the keys of which should be the defined permission event names.
-//                                         -  The value for each event name key should be a rights object as defined for the Permission.setRights method but without including the device level key
+//                                         -  The value for each event name key should be a rights object as defined for the Permission.setRights method
 //
 CatenisNode.prototype.createClient = function (props, user_id, deviceDefaultRightsByEvent) {
     props = typeof props === 'string' ? {name: props} : (typeof props === 'object' && props !== null ? props : {});
@@ -802,13 +821,14 @@ CatenisNode.getCatenisNodeByIndex = function (ctnNodeIndex, includeDeleted = tru
 //
 //  Argument:
 //   ctnNodeIndex [Number] - Index of Catenis node to check existence
+//   selfReferenceAccepted [Boolean] - Indicate whether 'self' token should be accepted for Catenis node index
 //   wildcardAccepted [Boolean] - Indicate whether wildcard ('*') should be accepted for Catenis node index
 //   includeDeleted [Boolean] - Indicate whether deleted Catenis nodes should also be included in the check
 //
 //  Result:
 //   [Boolean] - Indicates whether the Catenis node being checked exists or not
-CatenisNode.checkExist = function (ctnNodeIndex, wildcardAccepted = false, includeDeleted = false) {
-    if (wildcardAccepted && ctnNodeIndex === Permission.entityToken.wildcard) {
+CatenisNode.checkExist = function (ctnNodeIndex, selfReferenceAccepted = false, wildcardAccepted = false, includeDeleted = false) {
+    if ((selfReferenceAccepted && ctnNodeIndex === Permission.entityToken.ownHierarchy) || (wildcardAccepted && ctnNodeIndex === Permission.entityToken.wildcard)) {
         return true;
     }
     else {
@@ -836,6 +856,7 @@ CatenisNode.checkExist = function (ctnNodeIndex, wildcardAccepted = false, inclu
 //
 //  Argument:
 //   ctnNodeIndices [Array(Number)|Number] - List of indices (or a single index) of Catenis nodes to check existence
+//   selfReferenceAccepted [Boolean] - Indicate whether 'self' token should be accepted for Catenis node index
 //   wildcardAccepted [Boolean] - Indicate whether wildcard ('*') should be accepted for Catenis node index
 //   includeDeleted [Boolean] - Indicate whether deleted Catenis nodes should also be included in the check
 //
@@ -844,7 +865,7 @@ CatenisNode.checkExist = function (ctnNodeIndex, wildcardAccepted = false, inclu
 //     doExist: [Boolean] - Indicates whether all Catenis nodes being checked exist or not
 //     nonexistentCtnNodeIndices: [Array(Number)] - List of indices of Catenis nodes, from the ones that were being checked, that do not exist
 //   }
-CatenisNode.checkExistMany = function (ctnNodeIndices, wildcardAccepted = false, includeDeleted = false) {
+CatenisNode.checkExistMany = function (ctnNodeIndices, selfReferenceAccepted = false, wildcardAccepted = false, includeDeleted = false) {
     const result = {};
 
     if (Array.isArray(ctnNodeIndices)) {
@@ -854,9 +875,9 @@ CatenisNode.checkExistMany = function (ctnNodeIndices, wildcardAccepted = false,
             };
         }
 
-        if (wildcardAccepted) {
-            // Filter out wildcard ID
-            ctnNodeIndices = ctnNodeIndices.filter((ctnNodeIndex) => ctnNodeIndex !== Permission.entityToken.wildcard);
+        if (selfReferenceAccepted || wildcardAccepted) {
+            // Filter out self reference and/or wildcard ID
+            ctnNodeIndices = ctnNodeIndices.filter((ctnNodeIndex) => (!selfReferenceAccepted || ctnNodeIndex !== Permission.entityToken.ownHierarchy) && (!wildcardAccepted || ctnNodeIndex !== Permission.entityToken.wildcard));
 
             if (ctnNodeIndices.length === 0) {
                 return {
@@ -902,7 +923,7 @@ CatenisNode.checkExistMany = function (ctnNodeIndices, wildcardAccepted = false,
     }
     else {
         // A single Catenis node index had been passed to be checked
-        result.doExist = CatenisNode.checkExist(ctnNodeIndices, wildcardAccepted, includeDeleted);
+        result.doExist = CatenisNode.checkExist(ctnNodeIndices, selfReferenceAccepted, wildcardAccepted, includeDeleted);
 
         if (!result.doExist) {
             result.nonexistentCtnNodeIndices = [ctnNodeIndices];

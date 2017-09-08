@@ -17,7 +17,7 @@ const util = require('util');
 // Third-party node modules
 //import config from 'config';
 // Meteor packages
-//import { Meteor } from 'meteor/meteor';
+import { Meteor } from 'meteor/meteor';
 
 // References code in other (Catenis) modules
 import { Catenis } from './Catenis';
@@ -40,7 +40,7 @@ import {
 // Definition of module (private) functions
 //
 
-// Method used to process POST 'permission/:eventName/rights' endpoint of Rest API
+// Method used to process POST 'permission/events/:eventName/rights' endpoint of Rest API
 //
 //  JSON payload: {
 //    "system": [String] - (optional) Permission right to be attributed at system level for the specified event. Must be one of the following values: "allow", "deny"
@@ -90,7 +90,7 @@ export function setPermissionRights() {
         //
         // eventName param
         if (!(typeof this.urlParams.eventName === 'string' && Permission.isValidEventName(this.urlParams.eventName))) {
-            Catenis.logger.DEBUG('Invalid \'eventName\' parameter for POST \'permission/:eventName/rights\' API request', this.urlParams);
+            Catenis.logger.DEBUG('Invalid \'eventName\' parameter for POST \'permission/events/:eventName/rights\' API request', this.urlParams);
             return errorResponse.call(this, 400, 'Invalid parameters');
         }
         
@@ -98,37 +98,37 @@ export function setPermissionRights() {
         //
         // Make sure that there are no unknown parameters
         if (!isValidRightSettings(this.bodyParams)) {
-            Catenis.logger.DEBUG('Not specified or unknown parameters for POST \'permission/:eventName/rights\' API request', this.bodyParams);
+            Catenis.logger.DEBUG('Not specified or unknown parameters for POST \'permission/events/:eventName/rights\' API request', this.bodyParams);
             return errorResponse.call(this, 400, 'Invalid parameters');
         }
 
         // system param
         if (this.bodyParams.system !== undefined && !(typeof this.bodyParams.system === 'string' && Permission.isValidRight(this.bodyParams.system))) {
-            Catenis.logger.DEBUG('Invalid \'system\' parameter for POST \'permission/:eventName/rights\' API request', this.bodyParams);
+            Catenis.logger.DEBUG('Invalid \'system\' parameter for POST \'permission/events/:eventName/rights\' API request', this.bodyParams);
             return errorResponse.call(this, 400, 'Invalid parameters');
         }
 
         // catenisNode param
         if (this.bodyParams.catenisNode !== undefined && !isValidRightSettingEntry(this.bodyParams.catenisNode)) {
-            Catenis.logger.DEBUG('Invalid \'catenisNode\' parameter for POST \'permission/:eventName/rights\' API request', this.bodyParams);
+            Catenis.logger.DEBUG('Invalid \'catenisNode\' parameter for POST \'permission/events/:eventName/rights\' API request', this.bodyParams);
             return errorResponse.call(this, 400, 'Invalid parameters');
         }
 
         // client param
         if (this.bodyParams.client !== undefined && !isValidRightSettingEntry(this.bodyParams.client)) {
-            Catenis.logger.DEBUG('Invalid \'client\' parameter for POST \'permission/:eventName/rights\' API request', this.bodyParams);
+            Catenis.logger.DEBUG('Invalid \'client\' parameter for POST \'permission/events/:eventName/rights\' API request', this.bodyParams);
             return errorResponse.call(this, 400, 'Invalid parameters');
         }
 
         // device param
         if (this.bodyParams.device !== undefined && !isValidRightSettingEntry(this.bodyParams.device, true)) {
-            Catenis.logger.DEBUG('Invalid \'device\' parameter for POST \'permission/:eventName/rights\' API request', this.bodyParams);
+            Catenis.logger.DEBUG('Invalid \'device\' parameter for POST \'permission/events/:eventName/rights\' API request', this.bodyParams);
             return errorResponse.call(this, 400, 'Invalid parameters');
         }
 
         // Make sure that system is running and accepting API calls
         if (!Catenis.application.isRunning()) {
-            Catenis.logger.DEBUG('System currently not available for fulfilling POST \'permission/:eventName/rights\' API request', {applicationStatus: Catenis.application.status});
+            Catenis.logger.DEBUG('System currently not available for fulfilling POST \'permission/events/:eventName/rights\' API request', {applicationStatus: Catenis.application.status});
             return errorResponse.call(this, 503, 'System currently not available; please try again at a later time');
         }
 
@@ -163,7 +163,7 @@ export function setPermissionRights() {
             }
 
             if (error.statusCode === 500) {
-                Catenis.logger.ERROR('Error processing POST \'permission/:eventName/rights\' API request.', err);
+                Catenis.logger.ERROR('Error processing POST \'permission/events/:eventName/rights\' API request.', err);
             }
 
             return error;
@@ -175,7 +175,7 @@ export function setPermissionRights() {
         });
     }
     catch (err) {
-        Catenis.logger.ERROR('Error processing POST \'permission/:eventName/rights\' API request.', err);
+        Catenis.logger.ERROR('Error processing POST \'permission/events/:eventName/rights\' API request.', err);
         return errorResponse.call(this, 500, 'Internal server error');
     }
 }

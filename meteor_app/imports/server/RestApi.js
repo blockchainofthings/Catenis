@@ -2,6 +2,7 @@
  * Created by claudio on 19/01/17.
  */
 
+
 //console.log('[RestApi.js]: This code just ran.');
 
 // Module variables
@@ -35,6 +36,8 @@ import { listPermissionEvents } from './ApiListPermissionEvents';
 import { retrievePermissionRights } from './ApiGetPermissionRights';
 import { setPermissionRights } from './ApiPostPermissionRights';
 import { listNotificationEvents } from './ApiListNotificationEvents';
+import { checkEffectivePermissionRight } from './ApiEffectivePermissionRight';
+import { retrieveDeviceIdentifyInfo } from './ApiDeviceIdentityInfo';
 
 // Config entries
 const restApiConfig = config.get('restApi');
@@ -138,8 +141,8 @@ export function RestApi(apiVersion) {
             }
         });
 
-        this.api.addRoute('permission/:eventName/rights', {authRequired: true}, {
-            // Retrieve permission right currently set for the specified event
+        this.api.addRoute('permission/events/:eventName/rights', {authRequired: true}, {
+            // Retrieve permission rights currently set for the specified event
             //
             //  Refer to the source file where the action function is defined for a detailed description of the endpoint
             get: {
@@ -153,12 +156,30 @@ export function RestApi(apiVersion) {
             }
         });
 
+        this.api.addRoute('permission/events/:eventName/rights/:deviceId', {authRequired: true}, {
+            // Check effective permission right applied to a given device for the specified event
+            //
+            //  Refer to the source file where the action function is defined for a detailed description of the endpoint
+            get: {
+                action: checkEffectivePermissionRight
+            }
+        });
+
         this.api.addRoute('notification/events', {authRequired: true}, {
             // Retrieve a list of system defined notification events
             //
             //  Refer to the source file where the action function is defined for a detailed description of the endpoint
             get: {
                 action: listNotificationEvents
+            }
+        });
+
+        this.api.addRoute('devices/:deviceId', {authRequired: true}, {
+            // Retrieve basic identification information of a given device
+            //
+            //  Refer to the source file where the action function is defined for a detailed description of the endpoint
+            get: {
+                action: retrieveDeviceIdentifyInfo
             }
         });
     }

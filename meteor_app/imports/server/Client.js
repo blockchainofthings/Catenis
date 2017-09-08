@@ -540,12 +540,27 @@ Client.prototype.updateProperties = function (newProps) {
     }
 };
 
+// Get client's basic identification information, including Catenis node's identification information
+Client.prototype.getIdentityInfo = function () {
+    const idInfo = this.ctnNode.getIdentityInfo();
+
+    idInfo.client = {
+        clientId: this.clientId
+    };
+
+    if (this.props.name !== undefined) {
+        idInfo.client.name = this.props.name;
+    }
+
+    return idInfo;
+};
+
 /** Permission related methods **/
 // Set the default permission rights to use for newly created devices
 //
 //  Arguments:
 //   rightsByEvent: [Object] - Object the keys of which should be the defined permission event names.
-//                           -  The value for each event name key should be a rights object as defined for the Permission.setRights method but without including the device level key
+//                           -  The value for each event name key should be a rights object as defined for the Permission.setRights method
 Client.prototype.setDeviceDefaultRights = function(rightsByEvent) {
     Object.keys(rightsByEvent).forEach((eventName) => {
         if (Permission.isValidEventName(eventName)) {
@@ -558,7 +573,7 @@ Client.prototype.setDeviceDefaultRights = function(rightsByEvent) {
 //
 //  Result:
 //   rightsByEvent: [Object] - Object the keys of which should be the defined permission event names.
-//                           -  The value for each event name key should be a rights object as defined for the Permission.setRights method but without including the device level key
+//                           -  The value for each event name key should be a rights object as defined for the Permission.setRights method
 Client.prototype.getDeviceDefaultRights = function() {
     const rightsByEvent = {};
 
@@ -846,13 +861,14 @@ Client.getClientByUserId = function (user_id, includeDeleted = true) {
 //
 //  Argument:
 //   clientId [String] - Client ID of client to check existence
+//   selfReferenceAccepted [Boolean] - Indicate whether 'self' token should be accepted for client ID
 //   wildcardAccepted [Boolean] - Indicate whether wildcard ('*') should be accepted for client ID
 //   includeDeleted [Boolean] - Indicate whether deleted clients should also be included in the check
 //
 //  Result:
 //   [Boolean] - Indicates whether the client being checked exists or not
-Client.checkExist = function (clientId, wildcardAccepted = false, includeDeleted = false) {
-    if (wildcardAccepted && clientId === Permission.entityToken.wildcard) {
+Client.checkExist = function (clientId, selfReferenceAccepted = false, wildcardAccepted = false, includeDeleted = false) {
+    if ((selfReferenceAccepted && clientId === Permission.entityToken.ownHierarchy) || (wildcardAccepted && clientId === Permission.entityToken.wildcard)) {
         return true;
     }
     else {
@@ -880,6 +896,7 @@ Client.checkExist = function (clientId, wildcardAccepted = false, includeDeleted
 //
 //  Argument:
 //   clientIds [Array(String)|String] - List of client IDs (or a single client ID) of clients to check existence
+//   selfReferenceAccepted [Boolean] - Indicate whether 'self' token should be accepted for client ID
 //   wildcardAccepted [Boolean] - Indicate whether wildcard ('*') should be accepted for client ID
 //   includeDeleted [Boolean] - Indicate whether deleted clients should also be included in the check
 //
@@ -888,7 +905,7 @@ Client.checkExist = function (clientId, wildcardAccepted = false, includeDeleted
 //     doExist: [Boolean] - Indicates whether all clients being checked exist or not
 //     nonexistentClientIds: [Array(String)] - List of client IDs of clients, from the ones that were being checked, that do not exist
 //   }
-Client.checkExistMany = function (clientIds, wildcardAccepted = false, includeDeleted = false) {
+Client.checkExistMany = function (clientIds, selfReferenceAccepted = false, wildcardAccepted = false, includeDeleted = false) {
     const result = {};
 
     if (Array.isArray(clientIds)) {
@@ -898,9 +915,9 @@ Client.checkExistMany = function (clientIds, wildcardAccepted = false, includeDe
             };
         }
 
-        if (wildcardAccepted) {
-            // Filter out wildcard ID
-            clientIds = clientIds.filter((clientId) => clientId !== Permission.entityToken.wildcard);
+        if (selfReferenceAccepted || wildcardAccepted) {
+            // Filter out self reference and/or wildcard ID
+            clientIds = clientIds.filter((clientId) => (!selfReferenceAccepted || clientId !== Permission.entityToken.ownHierarchy) && (!wildcardAccepted || clientId !== Permission.entityToken.wildcard));
 
             if (clientIds.length === 0) {
                 return {
@@ -946,7 +963,7 @@ Client.checkExistMany = function (clientIds, wildcardAccepted = false, includeDe
     }
     else {
         // A single client ID had been passed to be checked
-        result.doExist = Client.checkExist(clientIds, wildcardAccepted, includeDeleted);
+        result.doExist = Client.checkExist(clientIds, selfReferenceAccepted, wildcardAccepted, includeDeleted);
 
         if (!result.doExist) {
             result.nonexistentClientIds = [clientIds];

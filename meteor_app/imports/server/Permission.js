@@ -59,6 +59,7 @@ Permission.prototype.hasRight = function (eventName, subjectDevice, objectDevice
     // Retrieve rights set for given event, subject and object devices
     const docPermission = this.collPermission.findOne({
         event: eventName,
+        subjectEntityType: Permission.subjectEntityType.device,
         subjectEntityId: subjectDevice.deviceId,
         $or: [{
             level: Permission.level.device.name,
@@ -105,7 +106,7 @@ Permission.prototype.hasRight = function (eventName, subjectDevice, objectDevice
 //       none: [Array(String)|String]   - (optional) List of client IDs (or a single client ID) of the clients from which to remove the right setting.
 //                                      -              Optionally, a wildcard ('*') can be used to indicate that all rights at the level should be removed
 //     },
-//     device: {       (optional) Defines the rights at the device level: the designated client
+//     device: {       (optional) Defines the rights at the device level: the designated device
 //       allow: [Array(String)|String], - (optional) List of device IDs (or a single device ID) of the devices to give allow right
 //       deny: [Array(String)|String]   - (optional) List of device IDS (or a single device ID) of the devices to give deny right
 //       none: [Array(String)|String]   - (optional) List of device IDs (or a single device ID) of the devices from which to remove the right setting.
@@ -132,8 +133,18 @@ Permission.prototype.setRights = function (eventName, subjectEntity, rights) {
     }
 
     // Parse rights and prepare to update the Permission database collection
-    const isSubjectDevice = subjectEntity instanceof Device;
-    const subjectEntityId = isSubjectDevice ? subjectEntity.deviceId : subjectEntity.clientId;
+    let subjectEntityType,
+        subjectEntityId;
+
+    if (subjectEntity instanceof Device) {
+        subjectEntityType = Permission.subjectEntityType.device ;
+        subjectEntityId = subjectEntity.deviceId;
+    }
+    else {
+        subjectEntityType = Permission.subjectEntityType.client;
+        subjectEntityId = subjectEntity.clientId;
+    }
+
     const upsertInfos = [];
     const removeSelectors = [];
     const errorMsgs = [];
@@ -148,6 +159,7 @@ Permission.prototype.setRights = function (eventName, subjectEntity, rights) {
                 upsertInfos.push({
                     selector: {
                         event: eventName,
+                        subjectEntityType: subjectEntityType,
                         subjectEntityId: subjectEntityId,
                         level: Permission.level.system.name
                     },
@@ -168,7 +180,7 @@ Permission.prototype.setRights = function (eventName, subjectEntity, rights) {
                 throw new Meteor.Error('ctn_permission_invalid_right', util.format('Invalid right (\'%s\') setting permission at system level', rights[levelKey]));
             }
         }
-        else if (levelKey === Permission.level.catenis_node.key || levelKey === Permission.level.client.key || (isSubjectDevice && levelKey === Permission.level.device.key)) {
+        else if (levelKey === Permission.level.catenis_node.key || levelKey === Permission.level.client.key || levelKey === Permission.level.device.key) {
             // noinspection JSUnfilteredForInLoop
             for (let right in rights[levelKey]) {
                 if (right === Permission.right.allow || right === Permission.right.deny || right === Permission.deleteRightKey) {
@@ -181,7 +193,7 @@ Permission.prototype.setRights = function (eventName, subjectEntity, rights) {
 
                     // Make sure that entities are valid
                     // noinspection JSUnfilteredForInLoop
-                    const checkResult = checkExistEntities(levelKey, entityIds, right === Permission.deleteRightKey);
+                    const checkResult = checkExistEntities(levelKey, entityIds, subjectEntityType === Permission.subjectEntityType.client && levelKey === Permission.level.device.key, right === Permission.deleteRightKey);
 
                     if (checkResult.doExist) {
                         // noinspection JSUnfilteredForInLoop
@@ -196,6 +208,7 @@ Permission.prototype.setRights = function (eventName, subjectEntity, rights) {
                                 upsertInfos.push({
                                     selector: {
                                         event: eventName,
+                                        subjectEntityType: subjectEntityType,
                                         subjectEntityId: subjectEntityId,
                                         level: levelName,
                                         objectEntityId: entityId
@@ -223,6 +236,7 @@ Permission.prototype.setRights = function (eventName, subjectEntity, rights) {
                         if (removeAllEntities) {
                             removeSelectors.push({
                                 event: eventName,
+                                subjectEntityType: subjectEntityType,
                                 subjectEntityId: subjectEntityId,
                                 level: levelName
                             });
@@ -230,6 +244,7 @@ Permission.prototype.setRights = function (eventName, subjectEntity, rights) {
                         else if (entityIdsToRemove.length > 0) {
                             removeSelectors.push({
                                 event: eventName,
+                                subjectEntityType: subjectEntityType,
                                 subjectEntityId: subjectEntityId,
                                 level: levelName,
                                 objectEntityId: {
@@ -300,7 +315,7 @@ Permission.prototype.setRights = function (eventName, subjectEntity, rights) {
 //  Arguments:
 //   eventName [String] - Name of permission event
 //   subjectEntity [Object] - Instance of Device function class for device that triggers the event,
-//                          -  or instance of Client function class for client for which default permission for all its devices is being set
+//                          -  or instance of Client function class for client for which default permission for all its devices is being gotten
 //
 //  Result:
 //   rights: {
@@ -313,7 +328,7 @@ Permission.prototype.setRights = function (eventName, subjectEntity, rights) {
 //       allow: [Array(String)|String], - (optional) List of client IDs (or a single client ID) of the clients to which have been given allow right
 //       deny: [Array(String)|String]   - (optional) List of client IDS (or a single client ID) of the clients to which have been given deny right
 //     },
-//     device: {       (optional) Defines the rights at the device level: the designated client
+//     device: {       (optional) Defines the rights at the device level: the designated device
 //       allow: [Array(String)|String], - (optional) List of device IDs (or a single device ID) of the devices to which have been given allow right
 //       deny: [Array(String)|String]   - (optional) List of device IDS (or a single device ID) of the devices to which have been given deny right
 //     }
@@ -337,12 +352,24 @@ Permission.prototype.getRights = function (eventName, subjectEntity) {
         throw Error(util.format('Invalid %s argument%s', errArgs.join(', '), errArgs.length > 1 ? 's' : ''));
     }
 
-    const isSubjectDevice = subjectEntity instanceof Device;
+    let subjectEntityType,
+        subjectEntityId;
+
+    if (subjectEntity instanceof Device) {
+        subjectEntityType = Permission.subjectEntityType.device ;
+        subjectEntityId = subjectEntity.deviceId;
+    }
+    else {
+        subjectEntityType = Permission.subjectEntityType.client;
+        subjectEntityId = subjectEntity.clientId;
+    }
+
     const rights = {};
 
     this.collPermission.find({
         event: eventName,
-        subjectEntityId: isSubjectDevice ? subjectEntity.deviceId : subjectEntity.clientId
+        subjectEntityType: subjectEntityType,
+        subjectEntityId: subjectEntityId
     }, {
         fields: {
             level: 1,
@@ -442,6 +469,8 @@ Permission.fixRightsReplaceOwnHierarchyEntity = function (rights, entity) {
     else if (entity instanceof Client) {
         replacement.ctnNodeIndex = entity.ctnNode.ctnNodeIndex;
         replacement.clientId = entity.clientId;
+        // Make sure that 'self' token at device level for device default rights is not replaced
+        replacement.deviceId = Permission.entityToken.ownHierarchy;
     }
 
     for (let levelKey in rights) {
@@ -505,6 +534,10 @@ Permission.event = Object.freeze({
     disclose_main_props: Object.freeze({
         name: 'disclose_main_props',
         description: 'Disclose device\'s main properties (name, product unique ID) to a device'
+    }),
+    disclose_identity_info: Object.freeze({
+        name: 'disclose_identity_info',
+        description: 'Disclose device\'s basic identification information to a device'
     })
 });
 
@@ -567,6 +600,11 @@ Permission.right = Object.freeze({
     deny: 'deny'
 });
 
+Permission.subjectEntityType = Object.freeze({
+    client: 'client',
+    device: 'device'
+});
+
 Permission.deleteRightKey = 'none';
 
 Permission.entityToken = Object.freeze({
@@ -592,8 +630,8 @@ function levelKeyFromLevelName(levelName) {
     return foundLevel !== undefined ? foundLevel.key : undefined;
 }
 
-function checkExistEntities(levelKey, entityIds, acceptWildcard) {
-    const checkResult = levelKey === Permission.level.catenis_node.key ? CatenisNode.checkExistMany(entityIds, acceptWildcard) : (levelKey === Permission.level.client.key ? Client.checkExistMany(entityIds, acceptWildcard) : Device.checkExistMany(entityIds, acceptWildcard));
+function checkExistEntities(levelKey, entityIds, acceptSelfReference, acceptWildcard) {
+    const checkResult = levelKey === Permission.level.catenis_node.key ? CatenisNode.checkExistMany(entityIds, acceptSelfReference, acceptWildcard) : (levelKey === Permission.level.client.key ? Client.checkExistMany(entityIds, acceptSelfReference, acceptWildcard) : Device.checkExistMany(entityIds, acceptSelfReference, acceptWildcard));
 
     const checkResultKeys = Object.keys(checkResult);
 

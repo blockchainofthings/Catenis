@@ -197,29 +197,53 @@
         "system": "deny",
         "client": {
           "allow": "self"
+        },
+        "device": {
+          "allow": "self"
         }
       },
       "receive_notify_msg_read": {
         "system": "deny",
         "client": {
           "allow": "self"
+        },
+        "device": {
+          "deny": "self"
         }
       },
       "send_read_msg_confirm": {
         "system": "deny",
         "client": {
           "allow": "self"
+        },
+        "device": {
+          "deny": "self"
         }
       },
       "receive_msg": {
         "system": "deny",
         "client": {
           "allow": "self"
+        },
+        "device": {
+          "allow": "self"
         }
       },
       "disclose_main_props": {
         "system": "deny",
         "client": {
+          "allow": "self"
+        },
+        "device": {
+          "allow": "self"
+        }
+      },
+      "disclose_identity_info": {
+        "system": "deny",
+        "client": {
+          "allow": "self"
+        },
+        "device": {
           "allow": "self"
         }
       }

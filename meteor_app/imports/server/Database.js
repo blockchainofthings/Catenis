@@ -854,6 +854,7 @@ Database.initialize = function() {
             indices: [{
                 fields: {
                     event: 1,
+                    subjectEntityType: 1,
                     subjectEntityId: 1,
                     level: 1,
                     objectEntityId: 1
@@ -867,6 +868,14 @@ Database.initialize = function() {
             }, {
                 fields: {
                     event: 1
+                },
+                opts: {
+                    background: true,
+                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                }
+            }, {
+                fields: {
+                    subjectEntityType: 1
                 },
                 opts: {
                     background: true,
