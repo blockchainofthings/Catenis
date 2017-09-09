@@ -329,13 +329,12 @@ function saveAuthenticatedClientConnection(ws) {
             if (currWs !== ws) {
                 // Not the same client connection. Check its current state
                 if (currWs.readyState === WebSocket.CONNECTING || currWs.readyState === WebSocket.OPEN) {
-                    // Current client connection is active, so close new one
-                    ws.close(1011, 'There is already an active WebSocket client connection for this device and notification event');
+                    // Current client connection is active. So close it before replacing it with new one
+                    currWs.close(1011, 'A new WebSocket client connection for this device and notification event has been established');
                 }
-                else {
-                    // Current client connection not active. Just replace it with the new one
-                    eventClient[ws.ctnNotify.eventName] = currWs;
-                }
+
+                // Replace current existing connection with the new one
+                eventClient[ws.ctnNotify.eventName] = ws;
             }
             else {
                 // Same client connection. Nothing to do
