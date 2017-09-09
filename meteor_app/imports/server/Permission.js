@@ -516,27 +516,27 @@ Permission.fixRightsReplaceOwnHierarchyEntity = function (rights, entity) {
 
 Permission.event = Object.freeze({
     receive_notify_new_msg: Object.freeze({
-        name: 'receive_notify_new_msg',
+        name: 'receive-notify-new-msg',
         description: 'Receive notification of new message from a device'
     }),
     receive_notify_msg_read: Object.freeze({
-        name: 'receive_notify_msg_read',
+        name: 'receive-notify-msg-read',
         description: 'Receive notification of message read by a device'
     }),
     send_read_msg_confirm: Object.freeze({
-        name: 'send_read_msg_confirm',
+        name: 'send-read-msg-confirm',
         description: 'Send read message confirmation to a device'
     }),
     receive_msg: Object.freeze({
-        name: 'receive_msg',
+        name: 'receive-msg',
         description: 'Receive message from a device'
     }),
     disclose_main_props: Object.freeze({
-        name: 'disclose_main_props',
+        name: 'disclose-main-props',
         description: 'Disclose device\'s main properties (name, product unique ID) to a device'
     }),
     disclose_identity_info: Object.freeze({
-        name: 'disclose_identity_info',
+        name: 'disclose-identity-info',
         description: 'Disclose device\'s basic identification information to a device'
     })
 });

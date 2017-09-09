@@ -193,7 +193,7 @@
   "client": {
     // NOTE: the following should be interpreted as a single entry with an object value
     "deviceDefaultRightsByEvent": {   // Default permission right settings for newly created devices to be assigned to clients: there must be one entry for each defined permission event
-      "receive_notify_new_msg": {
+      "receive-notify-new-msg": {
         "system": "deny",
         "client": {
           "allow": "self"
@@ -202,16 +202,7 @@
           "allow": "self"
         }
       },
-      "receive_notify_msg_read": {
-        "system": "deny",
-        "client": {
-          "allow": "self"
-        },
-        "device": {
-          "deny": "self"
-        }
-      },
-      "send_read_msg_confirm": {
+      "receive-notify-msg-read": {
         "system": "deny",
         "client": {
           "allow": "self"
@@ -220,7 +211,16 @@
           "deny": "self"
         }
       },
-      "receive_msg": {
+      "send-read-msg-confirm": {
+        "system": "deny",
+        "client": {
+          "allow": "self"
+        },
+        "device": {
+          "deny": "self"
+        }
+      },
+      "receive-msg": {
         "system": "deny",
         "client": {
           "allow": "self"
@@ -229,7 +229,7 @@
           "allow": "self"
         }
       },
-      "disclose_main_props": {
+      "disclose-main-props": {
         "system": "deny",
         "client": {
           "allow": "self"
@@ -238,7 +238,7 @@
           "allow": "self"
         }
       },
-      "disclose_identity_info": {
+      "disclose-identity-info": {
         "system": "deny",
         "client": {
           "allow": "self"
