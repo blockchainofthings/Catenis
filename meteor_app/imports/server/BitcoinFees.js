@@ -64,11 +64,11 @@ BitcoinFees.prototype.getFeeRateByTime = function (confirmTime) {
     let firstEntryLowestTime = undefined;
 
     const foundEntry = this.list.fees.find((entry) => {
-        if (firstEntryLowestTime === undefined || entry.maxMinutes < firstEntryLowestTime.maxMinutes) {
+        if (firstEntryLowestTime === undefined || (entry.maxFee !== 0 && entry.maxMinutes < firstEntryLowestTime.maxMinutes)) {
             firstEntryLowestTime = entry;
         }
 
-        return entry.maxMinutes <= confirmTime;
+        return entry.maxFee !== 0 && entry.maxMinutes <= confirmTime;
     });
 
     return foundEntry !== undefined ? foundEntry.maxFee : firstEntryLowestTime.maxFee;
