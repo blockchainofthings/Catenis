@@ -116,7 +116,7 @@
     "fundPayTxSafetyFactor": 0.15,   // Safety factor used when funding and checking balance of system pay tx expense addresses
     "message": {
       "messagesPerMinute": 4,  // Number of messages sents per minute that is expected to be sustained
-      "minutesToConfirm": 60,  // Time, in minutes, within which send message txs are expected to be confirmed
+      "minutesToConfirm": 300,  // Time, in minutes, within which send message txs are expected to be confirmed
       "unconfMainAddrReuses": 10,  // Number of times an UTXO associated with a device main addr is expected to be reused
       "fundMainAddrAmount": 600, // Amount, in satoshis, that should be allocated to a device main addr
       "fundMainAddrMultiplyFactor": 10,  // Maximum number of fund amount (fundMainAddrAmount) that can be pre-allocated to a device main addr

@@ -206,6 +206,13 @@ Service.distributeDeviceMainAddressFund  = function () {
     };
 };
 
+// This method should be used to fix the funding amount allocated to a device's main addresses due to the change
+//  of the 'messagesPerMinute' and/or 'minutesToConfirm' system configuration settings (and thus the total funding
+//  amount that should be allocated)
+Service.distributeDeviceMainAddressDeltaFund  = function (deltaAmount) {
+    return distributePayment(deltaAmount, cfgSettings.message.fundMainAddrAmount, cfgSettings.message.unconfMainAddrReuses, cfgSettings.message.fundMainAddrMultiplyFactor)
+};
+
 Service.distributeDeviceAssetIssuanceAddressFund = function () {
     let totalAmount = numActiveDeviceAssetIssuanceAddresses() * cfgSettings.asset.fundAssetIssueAddrAmount;
 

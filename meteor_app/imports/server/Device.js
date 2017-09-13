@@ -255,27 +255,27 @@ Device.prototype.fundAddresses = function () {
 
         // If device main addresses already exist, check if their
         //  balance is as expected
-        const devMainAddrBalance = devMainAddresses.length > 0 ? (new FundSource(devMainAddresses, {})).getBalance() : undefined;
+        const devMainAddrBalance = devMainAddresses.length > 0 ? (new FundSource(devMainAddresses, {})).getBalance(true) : undefined;
 
         if (devMainAddrBalance !== undefined && devMainAddrBalance > 0 && devMainAddrBalance !== devMainAddrDistribFund.totalAmount) {
             // Amount funded to device main addresses different than expected.
             //  Log inconsistent condition
             Catenis.logger.WARN(util.format('Amount funded to device (Id: %s) main addresses different than expected. Current amount: %s, expected amount: %s', this.deviceId, Util.formatCoins(devMainAddrBalance), Util.formatCoins(devMainAddrDistribFund.totalAmount)));
 
-            // Indicate that addresses should not be funded
+            // Indicate that main addresses should not be funded
             devMainAddrDistribFund.amountPerAddress = undefined;
         }
 
         // If device asset issuance addresses already exist, check if their
         //  balance is as expected
-        const assetIssuanceAddrBalance = assetIssuanceAddresses.length > 0 ? (new FundSource(assetIssuanceAddresses, {})).getBalance() : undefined;
+        const assetIssuanceAddrBalance = assetIssuanceAddresses.length > 0 ? (new FundSource(assetIssuanceAddresses, {})).getBalance(true) : undefined;
 
         if (assetIssuanceAddrBalance !== undefined && assetIssuanceAddrBalance > 0 && assetIssuanceAddrBalance !== assetIssuanceAddrDistribFund.totalAmount) {
             // Amount funded to device asset issuance addresses different than expected.
             //  Log inconsistent condition
-            Catenis.logger.WARN(util.format('Amount funded to device (Id: %s) asseet issuance addresses different than expected. Current amount: %s, expected amount: %s', this.deviceId, Util.formatCoins(assetIssuanceAddrBalance), Util.formatCoins(assetIssuanceAddrDistribFund.totalAmount)));
+            Catenis.logger.WARN(util.format('Amount funded to device (Id: %s) asset issuance addresses different than expected. Current amount: %s, expected amount: %s', this.deviceId, Util.formatCoins(assetIssuanceAddrBalance), Util.formatCoins(assetIssuanceAddrDistribFund.totalAmount)));
 
-            // Indicate that addresses should not be funded
+            // Indicate that asset issuance addresses should not be funded
             assetIssuanceAddrDistribFund.amountPerAddress = undefined;
         }
 
@@ -321,6 +321,48 @@ Device.prototype.fundAddresses = function () {
             catch (err) {
                 Catenis.logger.ERROR(util.format('Error trying to update status of device (doc Id: %s) to \'%s\'.', this.doc_id, newDevStatus), err);
                 throw new Meteor.Error('ctn_device_update_error', util.format('Error trying to update status of device (doc Id: %s) to \'%s\'', this.doc_id, newDevStatus), err.stack);
+            }
+        }
+    });
+};
+
+Device.prototype.fixFundAddresses = function () {
+    // Execute code in critical section to avoid UTXOs concurrency
+    FundSource.utxoCS.execute(() => {
+        // Check if device main addresses are already funded
+        const devMainAddresses = this.mainAddr.listAddressesInUse(),
+            devMainAddrDistribFund = Service.distributeDeviceMainAddressFund();
+
+        // If device main addresses already exist, check if their balance is as expected
+        const devMainAddrBalance = devMainAddresses.length > 0 ? (new FundSource(devMainAddresses, {})).getBalance(true) : undefined;
+
+        if (devMainAddrBalance !== undefined && devMainAddrBalance > 0 && devMainAddrBalance !== devMainAddrDistribFund.totalAmount) {
+            // Amount funded to device main addresses different than expected
+            if (devMainAddrDistribFund.totalAmount > devMainAddrBalance) {
+                // Expected funding amount is higher than currently funded amount.
+                //  Allocate amount difference to fix funding of device main addresses
+                Catenis.logger.INFO('Funding of device main addresses lower than expected; preparing to fix it', {
+                    deviceId: this.deviceId,
+                    expectedFundingAmount: Util.formatCoins(devMainAddrDistribFund.totalAmount),
+                    currentFundingAmount: Util.formatCoins(devMainAddrBalance)
+                });
+                devMainAddrDistribFund.totalAmount = devMainAddrDistribFund.totalAmount - devMainAddrBalance;
+                devMainAddrDistribFund.amountPerAddress = Service.distributeDeviceMainAddressDeltaFund(devMainAddrDistribFund.totalAmount);
+
+                // Fix funding of device main addresses
+                fundDeviceAddresses.call(this, devMainAddrDistribFund.amountPerAddress);
+
+                // Make sure that system is properly funded
+                Catenis.ctnHubNode.checkFundingBalance();
+            }
+            else {
+                // Expected funding amount lower than currently funded amount.
+                //  Just log inconsistent condition
+                Catenis.logger.WARN('Funding of device main addresses higher than expected', {
+                    deviceId: this.deviceId,
+                    expectedFundingAmount: Util.formatCoins(devMainAddrDistribFund.totalAmount),
+                    currentFundingAmount: Util.formatCoins(devMainAddrBalance)
+                });
             }
         }
     });
@@ -1123,6 +1165,11 @@ Device.prototype.notifyMessageRead = function (message, targetDevice) {
 // NOTE: make sure that this method is called from code executed from the FundSource.utxoCS
 //  critical section object
 function fundDeviceAddresses(amountPerDevMainAddress, amountPerAssetIssuanceAddress) {
+    Catenis.logger.TRACE('Funding device addresses', {
+        deviceId: this.deviceId,
+        amountPerDevMainAddress: amountPerDevMainAddress,
+        amountPerAssetIssuanceAddress: amountPerAssetIssuanceAddress
+    });
     let fundTransact = undefined;
 
     try {
@@ -1190,7 +1237,7 @@ function activateDevice() {
     }
     else if (this.status === Device.status.deleted.name) {
         // Log inconsistent condition
-        Catenis.logger.WARN('Trying to activate an inactive device', {deviceId: this.deviceId});
+        Catenis.logger.WARN('Trying to activate a deleted device', {deviceId: this.deviceId});
     }
     else {  // status == 'active'
         // Log inconsistent condition
@@ -1290,6 +1337,26 @@ Device.checkDevicesToFund = function () {
         catch (err) {
             // Error trying to fund addresses of device. Log error condition
             Catenis.logger.ERROR(util.format('Error trying to fund addresses of device (deviceId: %s).', doc.deviceId), err);
+        }
+    });
+};
+
+Device.checkDevicesMainAddrFunding = function () {
+    // Retrieve devices the status of which is neither 'new' nor 'deleted'
+    Catenis.db.collection.Device.find({
+        $and: [{
+            status: {$ne: Device.status.new.name}
+        }, {
+            status: {$ne: Device.status.deleted.name}
+        }]
+    }).forEach(doc => {
+        try {
+            Catenis.logger.TRACE(util.format('Checking funding of main addresses of existing device (deviceId: %s)', doc.deviceId));
+            (new Device(doc, CatenisNode.getCatenisNodeByIndex(doc.index.ctnNodeIndex).getClientByIndex(doc.index.clientIndex))).fixFundAddresses();
+        }
+        catch (err) {
+            // Error trying to fund addresses of device. Log error condition
+            Catenis.logger.ERROR(util.format('Error checking/fixing funding of main addresses of device (deviceId: %s).', doc.deviceId), err);
         }
     });
 };
@@ -1603,17 +1670,18 @@ function fundingOfAddressesConfirmed(data) {
         const device = Device.getDeviceByDeviceId(data.entityId);
 
         // Check consistency of device status
-        if (device.status !== Device.status.pending.name) {
+        if (device.status === Device.status.pending.name) {
+            // Activate device
+            activateDevice.call(device, data.txid);
+        }
+        else {
             // Log unexpected condition
             Catenis.logger.WARN('Unexpected device status processing confirmation of funding of device addresses', {
-                deviceId: this.deviceId,
+                deviceId: device.deviceId,
                 expectedStatus: Device.status.pending.name,
-                currentStatus: this.status
+                currentStatus: device.status
             });
         }
-
-        // Activate device
-        activateDevice.call(device, data.txid);
     }
     catch (err) {
         // Just log error condition

@@ -129,6 +129,7 @@ Application.prototype.startProcessing = function () {
 
         // Check if any devices still need to have their addresses funded
         Device.checkDevicesToFund();
+        Device.checkDevicesMainAddrFunding();
     }
     catch (err) {
         if ((err instanceof Meteor.Error) && err.error === 'ctn_sys_no_fund') {
@@ -241,6 +242,7 @@ function sysFundingTxConfirmed(data) {
 
         // Assume system already started. Check if there are devices to provision
         Device.checkDevicesToFund();
+        Device.checkDevicesMainAddrFunding();
     }
 }
 

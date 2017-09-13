@@ -123,14 +123,35 @@ CatenisNode.prototype.startNode = function () {
         if (devMainAddresses.length > 0) {
             // System device main addresses already exist. Check if
             //  balance is as expected
-            devMainAddrBalance = (new FundSource(devMainAddresses, {})).getBalance();
+            devMainAddrBalance = (new FundSource(devMainAddresses, {})).getBalance(true);
         }
 
         if (devMainAddrBalance !== undefined && devMainAddrBalance > 0) {
             if (devMainAddrBalance !== distribFund.totalAmount) {
-                // Amount funded to system device main addresses different than expected.
-                //  Log inconsistent condition
-                Catenis.logger.WARN(util.format('Amount funded to Catenis node #%d system device main addresses different than expected. Current amount: %s, expected amount: %s', this.ctnNodeIndex, Util.formatCoins(devMainAddrBalance), Util.formatCoins(distribFund.totalAmount)));
+                // Amount funded to system device main addresses different than expected
+                if (distribFund.totalAmount > devMainAddrBalance) {
+                    // Expected funding amount is higher than currently funded amount.
+                    //  Allocate amount difference to fix funding of system device main addresses
+                    Catenis.logger.INFO('Amount funded to Catenis node system device main addresses lower than expected', {
+                        ctnNodeIndex: this.ctnNodeIndex,
+                        expectedFundingAmount: Util.formatCoins(distribFund.totalAmount),
+                        currentFundingAmount: Util.formatCoins(devMainAddrBalance)
+                    });
+                    distribFund.totalAmount = distribFund.totalAmount - devMainAddrBalance;
+                    distribFund.amountPerAddress = Service.distributeDeviceMainAddressDeltaFund(distribFund.totalAmount);
+
+                    // Fix funding of device main addresses
+                    fundDeviceMainAddresses.call(this, distribFund.amountPerAddress);
+                }
+                else {
+                    // Expected funding amount lower than currently funded amount.
+                    //  Just log inconsistent condition
+                    Catenis.logger.WARN('Amount funded to Catenis node system device main addresses higher than expected', {
+                        ctnNodeIndex: this.ctnNodeIndex,
+                        expectedFundingAmount: Util.formatCoins(distribFund.totalAmount),
+                        currentFundingAmount: Util.formatCoins(devMainAddrBalance)
+                    });
+                }
             }
         }
         else {
