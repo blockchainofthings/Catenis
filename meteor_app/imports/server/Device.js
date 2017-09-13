@@ -341,7 +341,7 @@ Device.prototype.fixFundAddresses = function () {
             if (devMainAddrDistribFund.totalAmount > devMainAddrBalance) {
                 // Expected funding amount is higher than currently funded amount.
                 //  Allocate amount difference to fix funding of device main addresses
-                Catenis.logger.INFO('Funding of device main addresses lower than expected; preparing to fix it', {
+                Catenis.logger.WARN('Funding of device main addresses lower than expected; preparing to fix it', {
                     deviceId: this.deviceId,
                     expectedFundingAmount: Util.formatCoins(devMainAddrDistribFund.totalAmount),
                     currentFundingAmount: Util.formatCoins(devMainAddrBalance)
