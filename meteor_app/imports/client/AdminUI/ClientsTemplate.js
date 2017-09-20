@@ -42,9 +42,6 @@ Template.clients.onCreated(function () {
 });
 
 Template.clients.onDestroyed(function () {
-    // if (this.catenisClientsSubs) {
-    //     this.catenisClientsSubs.stop();
-    // }
 
     if (this.userListSubs){
         this.userListSubs.stop();

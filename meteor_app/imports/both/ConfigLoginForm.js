@@ -21,8 +21,11 @@ import { Meteor } from 'meteor/meteor';
 import { RectiveDict } from 'meteor/reactive-dict';
 import { AccountsTemplates } from 'meteor/useraccounts:core';
 
+
 // Module code
 //
+
+
 
 
 //don't allow client side users to update code from console. Must call methods to update accounts.
@@ -47,9 +50,8 @@ var onSubmitFunc = function(error, state){
                 Meteor.call('activateCurrentUser', (error) => {
                 });
 
-                //initiate building of corresponding Catenis Client for this user.
-                //Claudio, you should call the Client initialization from here.
-                //it'd be helpful if the action from line 46 to the client creation was atomic.
+                //createClient
+                Meteor.call('createClient', Meteor.user()._id, (error))
 
             }
 

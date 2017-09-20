@@ -6,11 +6,9 @@ import './UserNewDevice.js';
 import './infoLine.js';
 import { Catenis } from '../ClientCatenis';
 
-
 Template.baseTemplate.onCreated(function () {
 
     this.catenisClientsSubs = this.subscribe('catenisClients', Catenis.ctnHubNodeIndex);
-
 
 });
 
@@ -24,6 +22,8 @@ Template.baseTemplate.onDestroyed(function(){
 
 Template.baseTemplate.onRendered(function(){
 
+
+
 });
 
 Template.baseTemplate.events({
@@ -31,9 +31,12 @@ Template.baseTemplate.events({
         Meteor.logout();
         return false;
     },
+
     'click .menu-toggle'(event, template){
         $("#wrapper").toggleClass("toggled");
+
     },
+
 });
 
 
@@ -48,7 +51,6 @@ Template.baseTemplate.helpers({
             return null;
         }
     },
-
 
 });
 

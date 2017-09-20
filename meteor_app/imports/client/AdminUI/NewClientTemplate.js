@@ -178,7 +178,7 @@ Template.newClient.events({
 
         if ((clientInfo = validateFormData(form, errMsgs))) {
             // Call remote method to create client
-            Meteor.call('createClient', Catenis.ctnHubNodeIndex, clientInfo, (error, clientId) => {
+            Meteor.call('createUserToEnroll', Catenis.ctnHubNodeIndex, clientInfo, (error, userId) => {
                 if (error) {
                     template.state.set('errMsgs', [
                         error.toString()
@@ -186,7 +186,7 @@ Template.newClient.events({
                 }
                 else {
                     // Catenis client successfully created
-                    template.state.set('newClientId', clientId);
+                    template.state.set('newUserId', userId);
                     template.state.set('clientInfo', clientInfo);
                 }
             });
@@ -215,8 +215,8 @@ Template.newClient.helpers({
         }, '');
     },
 
-    newClientId: function () {
-        return Template.instance().state.get('newClientId');
+    newUserId: function () {
+        return Template.instance().state.get('newUserId');
     },
     clientInfo: function() {
         return Template.instance().state.get('clientInfo');

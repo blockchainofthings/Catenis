@@ -146,7 +146,8 @@ ClientsUI.initialize = function () {
         },
 
 
-        createClient: function (ctnNodeIndex, clientInfo) {
+        //create user from admin side.
+        createUserToEnroll: function (ctnNodeIndex, clientInfo) {
             // Try to create meteor client user
             let user_id;
             let currTime= new Date();
@@ -172,7 +173,9 @@ ClientsUI.initialize = function () {
                             license: {
                                 licenseType: "Starter",
                                 licenseRenewedDate: currTime,
-                            }
+                            },
+                            ctnNodeIndex: ctnNodeIndex
+
                         },
 
 
@@ -189,24 +192,39 @@ ClientsUI.initialize = function () {
                     throw new Meteor.Error('client.create-user.failure', 'Failure trying to create new user for client: ' + err.toString());
                 }
 
-                // Try to create Catenis client
-                let clientId;
-                try {
-                    clientId = CatenisNode.getCatenisNodeByIndex(ctnNodeIndex).createClient(clientInfo.name, user_id);
-                }
-                catch (err) {
-                    // Error trying to create Catenis client. Log error and throw exception
-                    Catenis.logger.ERROR('Failure trying to create new Catenis client.', err);
-                    throw new Meteor.Error('client.create.failure', 'Failure trying to create new Catenis client: ' + err.toString());
-                }
-
-                return clientId;
+                return user_id;
 
             }else{
                 Catenis.logger.ERROR('User does not have permission to access method "createClient"');
                 throw new Meteor.Error('User does not have permission to access method "createClient"');
             }
         },
+
+
+        //create Client on enrollment
+        createClient: function(user_id){
+
+
+            // Try to create Catenis client
+            let clientId;
+
+            //initially set clientName as user's first&lastName, then later set it to companyName
+            let clientName=  Meteor.users.findOne({_id: user_id}).profile.firstName;
+            let ctnNodeIndex= Meteor.users.findOne({_id: user_id}).profile.ctnNodeIndex;
+
+            try {
+                clientId = CatenisNode.getCatenisNodeByIndex(ctnNodeIndex).createClient(clientName, user_id);
+            }
+            catch (err) {
+                // Error trying to create Catenis client. Log error and throw exception
+                Catenis.logger.ERROR('Failure trying to create new Catenis client.', err);
+                throw new Meteor.Error('client.create.failure', 'Failure trying to create new Catenis client: ' + err.toString());
+            }
+
+            // return clientId;
+
+        },
+
 
 
         //update user's information including the password, email, first and last name, as well as company name.
