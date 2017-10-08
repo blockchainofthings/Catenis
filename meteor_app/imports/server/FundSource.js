@@ -518,14 +518,13 @@ function loadUtxos() {
     // Retrieve UTXOs associated with given addresses, including unconfirmed ones if requested
     const utxos = Catenis.bitcoinCore.listUnspent(this.useUnconfirmedUtxo ? 0 : 1, this.addresses);
 
-    // Store retrieved UTXOs onto local DB making sure that only spendable UTXOs
-    //  (the ones associated with addresses the private key of which is held by
-    //  Bitcoin Core) are included, and converting amount from bitcoins to satoshis
+    // Store retrieved UTXOs onto local DB making sure that any excluded UTXOs are not included,
+    //  and converting amount from bitcoins to satoshis
     const unconfTxids = new Set();
 
     utxos.forEach((utxo) => {
-        // Make sure that UTXO is not excluded and is spendable
-        if (!isExcludedUtxo.call(this, utxo) && utxo.spendable) {
+        // Make sure that UTXO is not excluded
+        if (!isExcludedUtxo.call(this, utxo)) {
             this.collUtxo.insert({
                 address: utxo.address,
                 txid: utxo.txid,
