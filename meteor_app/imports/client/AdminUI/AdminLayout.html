@@ -43,21 +43,21 @@
                 <div id="sidebar-wrapper">
                     <ul class="sidebar-nav">
                         {{#if isInRole 'sys-admin'}}
-                        <li>
+                        <li class="sideNavButtons">
                             <a href="/admin/sysfunding" class="show"><i class="glyphicon glyphicon-bitcoin"></i>  System Funding</a>
                             <a href="/admin/sysfunding" class="notshow"><i class="glyphicon glyphicon-bitcoin"></i></a>
 
                         </li>
-                        <li>
+                        <li  class="sideNavButtons">
                             <a href="/admin/clients" class="show"><i class="glyphicon glyphicon-knight"></i> Users</a>
                             <a href="/admin/clients" id="menu-toggle" class="notshow"><i class="glyphicon glyphicon-knight"></i></a>
                         </li>
-                        <li>
+                        <li  class="sideNavButtons">
                             <a href="/admin/newclient" class="show" id="register-form-link"><i class="glyphicon glyphicon-save"></i> Register Users</a>
                             <a href="/admin/newclient"  class="notshow" id="register-form-link"><i class="glyphicon glyphicon-save"></i></a>
                         </li>
                         {{/if}}
-                        <li>
+                        <li  class="sideNavButtons">
                             <a id="lnkLogout" href="#" role="button" class="show"><i class="glyphicon glyphicon-thumbs-down"></i> Log out</a>
                             <a href="" id="lnkLogout" class="notshow"><i class="glyphicon glyphicon-thumbs-down"></i></a>
                         </li>

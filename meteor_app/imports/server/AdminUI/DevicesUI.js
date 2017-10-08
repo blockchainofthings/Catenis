@@ -86,6 +86,24 @@ DevicesUI.initialize = function () {
             }
         },
 
+        resetDeviceAPISecret: function (device_id) {
+
+            if(verifyUserRole()){
+
+                const docDevice = Catenis.db.collection.Device.findOne({_id: device_id}, {fields: {deviceId: 1}});
+                Device.prototype.renewApiAccessGenKey();
+
+                return docDevice !== undefined ? Device.getDeviceByDeviceId(docDevice.deviceId).apiAccessSecret : undefined;
+
+            }else{
+
+                Catenis.logger.ERROR('Failure trying to reset API access secret for device, user does not have the right to access this method');
+                throw new Meteor.Error('devices.resetDeviceAPISecret.failure', 'Failure trying to get API access secret, user does not have the right to access this method');
+
+            }
+        },
+
+
         //create device if the logged in user is creating a device for oneself or it's admin
         createDevice: function (client_id, deviceInfo) {
 

@@ -1,4 +1,4 @@
-<template name="newDevice">
+<template name="userNewDevice">
     <div>
         <div class="panel panel-login minWidthElement noBoxShadow">
             <div class="panel-body">
@@ -8,32 +8,32 @@
                     {{else}}
                         <div class="col-lg-6">
                             <h2> Previous Devices</h2>
-                                <div class="scrollBox400">
-                                    <table class="table table-striped">
-                                        <thead>
+                            <div class="scrollBox400">
+                                <table class="table table-striped">
+                                    <thead>
+                                    <tr>
+                                        <th>Index</th>
+                                        <th>Device ID</th>
+                                        <th>Status</th>
+                                    </tr>
+                                    </thead>
+                                    <tbody>
+                                    {{#each device in listDevices}}
                                         <tr>
-                                            <th>Index</th>
-                                            <th>Device ID</th>
-                                            <th>Status</th>
+                                            <td>
+                                                {{#if (isDeviceActive device)}}
+                                                    <a href="/devices/{{device._id}}">Device #{{device.index.deviceIndex}}</a>
+                                                {{else}}
+                                                    Device #{{device.index.deviceIndex}}
+                                                {{/if}}
+                                            </td>
+                                            <td>{{device.deviceId}}</td>
+                                            <td>{{device.status}}</td>
                                         </tr>
-                                        </thead>
-                                        <tbody>
-                                        {{#each device in listDevices}}
-                                            <tr>
-                                                <td>
-                                                    {{#if (isDeviceActive device)}}
-                                                        <a href="/admin/clients/{{docUserId}}/devices/{{device._id}}">Device #{{device.index.deviceIndex}}</a>
-                                                    {{else}}
-                                                        Device #{{device.index.deviceIndex}}
-                                                    {{/if}}
-                                                </td>
-                                                <td>{{device.deviceId}}</td>
-                                                <td>{{device.status}}</td>
-                                            </tr>
-                                        {{/each}}
-                                        </tbody>
-                                    </table>
-                                </div>
+                                    {{/each}}
+                                    </tbody>
+                                </table>
+                            </div>
 
                         </div>
                         <div class="col-lg-6">
@@ -43,10 +43,7 @@
                                 <p style="color:blue">New device {{newDeviceId}} successfully created</p>
 
                                 <div class="row">
-                                    <div class="col-md-6">
-                                        <a href="/admin/clients/{{docUserId}}?showDevices=1" class="form-control btn btn-login at-btn">Back to client {{client.props.name}}</a>
-                                    </div>
-                                    <div class="col-md-6">
+                                    <div class="col-md-12">
                                         <a href="#" id="reset" class="form-control btn btn-login at-btn">Add Another</a>
                                     </div>
                                 </div>
@@ -78,10 +75,7 @@
                                         </div>
                                     </div>
                                     <div class="row">
-                                        <div class="col-md-6">
-                                            <a href="/admin/clients/{{docUserId}}?showDevices=1" class="form-control btn btn-login at-btn">Back to client {{client.props.name}}</a>
-                                        </div>
-                                        <div class="col-md-6">
+                                        <div class="col-md-12">
                                             <button type="submit" class="form-control btn btn-login at-btn submit">Add Device</button>
                                         </div>
                                     </div>

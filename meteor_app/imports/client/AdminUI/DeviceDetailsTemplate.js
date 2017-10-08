@@ -56,6 +56,18 @@ Template.deviceDetails.events({
                 alert('Device API access secret: ' + key);
             }
         });
+    },
+
+
+    'click #resetDeviceAPISecret'(event, template) {
+        Meteor.call('resetDeviceAPISecret', template.data.device_id, (error, key) => {
+            if (error) {
+                console.log('Error calling \'resetDeviceAPISecret\' remote method: ' + error);
+            }
+            else {
+                alert('New device API access secret: ' + key);
+            }
+        });
     }
 });
 

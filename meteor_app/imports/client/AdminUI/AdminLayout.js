@@ -103,7 +103,27 @@ Template.adminLayout.events({
                     $('.modal-backdrop').remove();
                 }
             });
-    }
+    },
+    'click .sideNavButtons'(event, template){
+        //    change all colors to original color
+        var sideNav= document.getElementsByClassName("sideNavButtons");
+
+        for ( var i=0; i< sideNav.length ; i++ ){
+            sideNav[i].style.backgroundColor = "#e8e9ec";
+            $(sideNav[i]).children()[0].style= "";
+            $(sideNav[i]).children()[1].style= "";
+
+            // sideNav[i].style.color = "#333399";
+            sideNav[i].style = "";
+        }
+
+        (event.currentTarget).style.backgroundColor ="#5555bb";
+
+        console.log( event.currentTarget);
+        $(event.currentTarget).children()[0].style.color="white";
+        $(event.currentTarget).children()[1].style.color="white";
+
+    },
 
 
 
@@ -112,6 +132,8 @@ Template.adminLayout.events({
 
 
 Template.adminLayout.helpers({
+
+
 
 });
 

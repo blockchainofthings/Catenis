@@ -1,0 +1,43 @@
+<template name="infoLine">
+    <div class="infoLine" id="infoLine">
+        <div class="breadCrumbs" id="breadCrumb">
+            <h3 class="breadCrumb_Current">{{lastCrumb}}</h3>
+            <ol class="breadcrumb breadCrumb_List">
+                {{#each crumb in breadCrumbs}}
+                    <li>
+                        <a href="">{{crumb}}</a>
+                    </li>
+                {{/each}}
+            </ol>
+        </div>
+        <div class="creditStatusCollection">
+            <div class="creditsBox">
+                <h1 class="fees">Estimated Fees</h1>
+                <div class="fill">
+                    <div class="creditStatus">
+                        <i class="fa fa-envelope fa-th-large"></i>
+                        <span>Messaging</span>
+                        <p><span>0.23</span></p>
+                    </div>
+                    <div class="creditStatus">
+                        <i class="fa fa-pencil fa-th-large"></i>
+                        <span>Logging</span>
+                        <p><span>0.1112</span></p>
+                    </div>
+                    <div class="creditStatus">
+                        <i class="fa fa-cab fa-th-large"></i>
+                        <span>Smart Asset Transmission</span>
+                        <p><span>0.134</span></p>
+                    </div>
+                    <div class="creditStatus">
+                        <i class="fa fa-television fa-th-large"></i>
+                        <span>Smart Asset Creation</span>
+                        <p><span>0.51</span></p>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+</template>

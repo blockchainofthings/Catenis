@@ -27,6 +27,9 @@
                                 </li>
                             </ul>
                         </div>
+                        <div class="pull-right credit">
+                            <p class="creditDetail">Catenis Credit: 0.12001278</p>
+                        </div>
                     </div>
                     <!-- Brand and toggle get grouped for better mobile display -->
                     <!--<a href="#menu-toggle" class="btn btn-default" id="menu-toggle"><a class="navbar-brand noPadding" href="#"><img src="images/CompanyElement_SM_Darkbackgrounds.png" class="logoImage" alt="logo"></a></a>-->
@@ -38,19 +41,23 @@
             <!-- Sidebar -->
             <div id="sidebar-wrapper">
                 <ul class="sidebar-nav">
-                    <li>
-                        <a href="/devices" class="show"><i class="glyphicon glyphicon-bitcoin"></i> Add Devices</a>
+                    <li class="sideNavButtons">
+                        <a href="/devices" class="show "><i class="glyphicon glyphicon-bitcoin"></i> Add Devices</a>
+                        <a href="/devices" class="notshow "><i class="glyphicon glyphicon-bitcoin"></i></a>
+                    </li>
+                    <li class="sideNavButtons">
+                        <a href="/devices" class="show "><i class="glyphicon glyphicon-bitcoin"></i> Add Devices</a>
                         <a href="/devices" class="notshow"><i class="glyphicon glyphicon-bitcoin"></i></a>
                     </li>
                     {{#if isInRole 'sys-admin'}}
-                        <li>
-                            <a href="/admin" class="show"><i class="glyphicon glyphicon-bitcoin"></i>  Go to Admin Site</a>
-                            <a href="/admin" class="notshow"><i class="glyphicon glyphicon-bitcoin"></i></a>
+                        <li class="sideNavButtons">
+                            <a href="/admin" class="show "><i class="glyphicon glyphicon-bitcoin"></i>  Go to Admin Site</a>
+                            <a href="/admin" class="notshow "><i class="glyphicon glyphicon-bitcoin"></i></a>
                         </li>
                     {{/if}}
-                    <li>
-                        <a id="lnkLogout" href="" role="button" class="show"><i class="glyphicon glyphicon-thumbs-down"></i>Log out</a>
-                        <a href="menu-toggle" id="lnkLogout" class="notshow"><i class="glyphicon glyphicon-thumbs-down"></i></a>
+                    <li class="sideNavButtons">
+                        <a id="lnkLogout" href="" role="button" class="show "><i class="glyphicon glyphicon-thumbs-down"></i>Log out</a>
+                        <a href="menu-toggle" id="lnkLogout" class="notshow "><i class="glyphicon glyphicon-thumbs-down"></i></a>
                     </li>
                 </ul>
             </div>

@@ -1,6 +1,6 @@
 <template name="deviceDetails">
     <div>
-        <div class="panel panel-login scrollBox650 noBoxShadow">
+        <div class="panel panel-login minWidthElement noBoxShadow">
             <div class="panel-body">
                 <div class="row">
                     <div class="col-lg-12">
@@ -39,11 +39,14 @@
 
                             </div>
                             <div class="row">
-                                <div class="col-md-6">
-                                    <a href="/admin/clients/{{user_id}}?showDevices=1" role="button" class="btn-login btn paddedBtn fullWidth">Back to client  {{client.props.name}}</a>
+                                <div class="col-md-4">
+                                    <a href="/admin/clients/{{user_id}}?showDevices=1" role="button" class="btn-login btn paddedBtn fullWidth">Back to {{client.props.name}}</a>
                                 </div>
-                                <div class="col-md-6">
+                                <div class="col-md-4">
                                     <a id="lnkShowAPIAccessSecret" href="#" role="button" class="btn-login btn paddedBtn fullWidth">Show API access secret</a>
+                                </div>
+                                <div class="col-md-4">
+                                    <a id="resetDeviceAPISecret" href="#" role="button" class="btn-login btn paddedBtn fullWidth">Reset device API secret</a>
                                 </div>
                             </div>
                         {{/unless}}
