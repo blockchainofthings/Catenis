@@ -331,17 +331,17 @@ function loadUtxos() {
     const utxos = Catenis.ccFNClient.getAddressesUtxos(this.addresses, this.useUnconfirmedUtxo ? 0 : 1);
 
     // Store retrieved UTXOs onto local DB making sure that only UTXOs associated with
-    //  the specified asset, are spendable UTXOs (the ones associated with addresses the
-    //  private key of which is held by Bitcoin Core) are included, and converting bitcoin
-    //  amount from bitcoins to satoshis and the asset amount to its smallest division
+    //  the specified asset are included, and that any excluded UTXOs are not included,
+    //  and converting bitcoin amount from bitcoins to satoshis and the asset amount to its
+    //  smallest division
     const unconfTxids = new Set();
 
     utxos.forEach((utxo) => {
         let assetUtxoInfo;
 
-        // Make sure that UTXO is not excluded, is spendable, and has asset info that pertains
+        // Make sure that UTXO is not excluded, and has asset info that pertains
         //  to the specified asset
-        if (!isExcludedUtxo.call(this, utxo) && utxo.spendable && (assetUtxoInfo = getAssetUtxoInfo.call(this, utxo))) {
+        if (!isExcludedUtxo.call(this, utxo) && (assetUtxoInfo = getAssetUtxoInfo.call(this, utxo))) {
             // Store relevant asset info
             let inconsistentAssetUtxoInfo = false;
 
