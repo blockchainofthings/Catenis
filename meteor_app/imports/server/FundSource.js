@@ -19,7 +19,7 @@ import config from 'config';
 import Loki from 'lokijs';
 import BigNumber from 'bignumber.js';
 // Meteor packages
-//import { Meteor } from 'meteor/meteor';
+import { Meteor } from 'meteor/meteor';
 
 // References code in other (Catenis) modules
 import { Catenis } from './Catenis';
@@ -27,12 +27,13 @@ import { CriticalSection } from './CriticalSection';
 import { Service } from './Service';
 import { Transaction } from './Transaction';
 import { Util } from './Util';
+import { BitcoinCore } from './BitcoinCore';
 
 // Config entries
 const fundSourceConfig = config.get('fundSource');
 
 // Configuration settings
-const cfgSettings = {
+export const cfgSettings = {
     maxAncestorsCount: fundSourceConfig.get('maxAncestorsCount'),
     maxAncestorsSize: fundSourceConfig.get('maxAncestorsSize'),
     maxDescendantsCount: fundSourceConfig.get('maxDescendantsCount'),
@@ -523,8 +524,8 @@ function loadUtxos() {
     const unconfTxids = new Set();
 
     utxos.forEach((utxo) => {
-        // Make sure that UTXO is not excluded
-        if (!isExcludedUtxo.call(this, utxo)) {
+        // Make sure that UTXO is not excluded and is spendable
+        if (!isExcludedUtxo.call(this, utxo) && utxo.spendable) {
             this.collUtxo.insert({
                 address: utxo.address,
                 txid: utxo.txid,

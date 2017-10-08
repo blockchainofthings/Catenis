@@ -63,5 +63,25 @@
         "apiProtocol": "http"
       }
     }
+  },
+  // Parameters pertaining to CCFullNodeClient module
+  "ccFullNodeClient": {
+    "serverHost": "10.8.0.1", // Colored Coins Full-Node server host name/IP address (access via VPN)
+    //"serverHost": "localhost", // Colored Coins Full-Node server host name/IP address
+    "localAddress": "", // IP address of local network interface to use to connect with the Colored Coins Full-Node server. If not specified (empty string) the default network interface is used
+    "connectionTimeout": 30000  // Timeout, in miliseconds, for connection with the Colored Coins Full-Node server
+  },
+  // Parameters pertaining to CCFullNodeClient module
+  "ccMetadataClient": {
+    "serverHost": "10.8.0.1", // Colored Coins Metadata server host name/IP address
+    "tcpPort": 8180, // TCP port used to connect with the Colored Coins Metadata server
+    "tokenValidityDuration": 15, // Time, in seconds, within which JWT token is considered valid for authentication
+    "connectionTimeout": 30000  // Timeout, in miliseconds, for connection with the Colored Coins Full-Node server
+  },
+  // Parameters pertaining to CCMetadata module
+  "ccMetadata": {
+    "signingCertificateFilePath": "/Users/claudio/Documents/Híades/Clientes/Blockchain of Things/Projects/Catenis/Development/Test SSL certificate/Test_cert.pem",  // Filesystem path to Blockchain of Things' owned SSL certificate used to signed message for asset verification
+    "signingCertificateKeyFilePath": "/Users/claudio/Documents/Híades/Clientes/Blockchain of Things/Projects/Catenis/Development/Test SSL certificate/Test_encrypt_key.pem",  // Path to file containing (password protected) key of SSL certificate used to sign message for asset verification
+    "urlContentTimeout": 15000  // Timeout, in miliseconds, fro retrieving content associated with a given URL
   }
 }

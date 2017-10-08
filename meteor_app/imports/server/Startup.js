@@ -42,6 +42,8 @@ import { ReadConfirmation } from './ReadConfirmation';
 import { Permission } from './Permission';
 import { Notification } from './Notification';
 import { WebSocketNotifyMsgDispatcher } from './WebSocketNotifyMsgDispatcher';
+import { CCFullNodeClient } from './CCFullNodeClient';
+import { CCMetadataClient } from './CCMetadataClient';
 
 // DEBUG - begin
 //import { resetBitcoinCore } from './Test/FundSourceTest';
@@ -77,6 +79,8 @@ Meteor.startup(function () {
         BitcoinFees.initialize();
         KeyStore.initialize();
         BitcoinCore.initialize();
+        CCFullNodeClient.initialize();
+        CCMetadataClient.initialize();
         //ColoredCoins.initialize();
         Permission.initialize();
         CatenisNode.initialize();

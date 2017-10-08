@@ -265,3 +265,19 @@ Permission {
                              //  If level = 'system', this field should not exist, and the permission right applies to any devices
    right: [string]  // The permission right that should be applied: allow, deny
 }
+
+Asset {
+  _id: [string],  // MongoDB internal document ID provided by Meteor
+  assetId: [string],  // (Catenis attributed) External ID used to uniquely identify this asset
+  ccAssetId: [string],  // Colored Coins attributed ID of the asset
+  type: [string],  // Type of Colored Coins asset; either 'locked' or 'unlocked' (more of the same asset can be reissued)
+  issuance: {
+    deviceId: [string],  // ID of the device that first issued this asset
+    addrPath: [string],  // The HD node path which identifies the blockchain address used for issuing 'unlocked' asset
+    txid: [string],  // Blockchain attributed ID (hash) of the transaction used to first issue the asset
+    confirmed: [boolean]  // Indicates whether transaction used to first issue the asset has already been confirmed
+  },
+  divisibility: [number],  // Number of decimal places allowed for representing quantities of this asset
+  isAggregatable: [boolean],  // Indicates whether quantities of the asset from different UTXOs can be combined
+  createdDate: [date/time],  // Date and time when doc/rec has been created
+}
