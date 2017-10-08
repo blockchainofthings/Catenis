@@ -19,7 +19,7 @@ import config from 'config';
 import Loki from 'lokijs';
 import BigNumber from 'bignumber.js';
 // Meteor packages
-//import { Meteor } from 'meteor/meteor';
+import { Meteor } from 'meteor/meteor';
 
 // References code in other (Catenis) modules
 import { Catenis } from './Catenis';
@@ -27,6 +27,7 @@ import { CriticalSection } from './CriticalSection';
 import { Service } from './Service';
 import { Transaction } from './Transaction';
 import { Util } from './Util';
+import { BitcoinCore } from './BitcoinCore';
 
 // Config entries
 const fundSourceConfig = config.get('fundSource');
@@ -517,9 +518,8 @@ function loadUtxos() {
     // Retrieve UTXOs associated with given addresses, including unconfirmed ones if requested
     const utxos = Catenis.bitcoinCore.listUnspent(this.useUnconfirmedUtxo ? 0 : 1, this.addresses);
 
-    // Store retrieved UTXOs onto local DB making sure that only spendable UTXOs
-    //  (the ones associated with addresses the private key of which is held by
-    //  Bitcoin Core) are included, and converting amount from bitcoins to satoshis
+    // Store retrieved UTXOs onto local DB making sure that any excluded UTXOs are not included,
+    //  and converting amount from bitcoins to satoshis
     const unconfTxids = new Set();
 
     utxos.forEach((utxo) => {
