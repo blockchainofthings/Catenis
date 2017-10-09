@@ -10,10 +10,7 @@
 // References to external code
 //
 // Internal node modules
-//  NOTE: the reference of these modules are done sing 'require()' instead of 'import' to
-//      to avoid annoying WebStorm warning message: 'default export is not defined in
-//      imported module'
-//const util = require('util');
+import util from 'util';
 // Third-party node modules
 //import config from 'config';
 // Meteor packages
@@ -920,10 +917,10 @@ Database.fixMessageFirstReadDate = function () {
     // Retrieve Message docs that have lastReadDate field but not firstReadDate field
     Catenis.db.collection.Message.find({
         lastReadDate: {
-            exists: true
+            $exists: true
         },
         firstReadDate: {
-            exists: false
+            $exists: false
         }
     }, {
         fields: {
