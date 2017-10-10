@@ -314,6 +314,7 @@ export function ReadConfirmTransaction(transact) {
         this.ctnNdIdxReadConfirmSpndNtfyOutRelPos = new Map(); // Contains a map of relative position
         this.fee = 0;
         this.change = 0;
+        this.txChanged = false;
         this.txFunded = false;
         this.lastTxid = undefined;
         this.lastTxChangeOutputPos = -1;
@@ -411,6 +412,9 @@ ReadConfirmTransaction.prototype.initInputsOutputs = function (inputs, outputs) 
                     });
                     throw new Error('Inconsistency of data used to initialize read confirmation transaction; not all amount in spend notify output mapped to read confirmation address inputs');
                 }
+
+                // Save output to be added
+                readConfirmSpendOutputs.push(output);
             }
             else if (output.payInfo.addrInfo.type === KeyStore.extKeyType.sys_read_conf_spnd_only_addr.name) {
                 // Read confirmation spend only output type
@@ -460,6 +464,9 @@ ReadConfirmTransaction.prototype.initInputsOutputs = function (inputs, outputs) 
                     });
                     throw new Error('Inconsistency of data used to initialize read confirmation transaction; not all amount in spend only output mapped to read confirmation address inputs');
                 }
+
+                // Save output to be added
+                readConfirmSpendOutputs.push(output);
             }
             else if (output.payInfo.addrInfo.type === KeyStore.extKeyType.sys_read_conf_spnd_null_addr.name) {
                 // Read confirmation spend null output type
@@ -509,6 +516,9 @@ ReadConfirmTransaction.prototype.initInputsOutputs = function (inputs, outputs) 
                     });
                     throw new Error('Inconsistency of data used to initialize read confirmation transaction; not all amount in spend null output mapped to read confirmation address inputs');
                 }
+
+                // Save output to be added
+                readConfirmSpendOutputs.push(output);
             }
             else {
                 // Unexpected output type. Log warning condition
@@ -530,12 +540,25 @@ ReadConfirmTransaction.prototype.initInputsOutputs = function (inputs, outputs) 
             });
             throw new Error('Inconsistency of data used to initialize read confirmation transaction; total amount of inputs does not match total amount of outputs');
         }
+
+        if (readConfirmAddrInputs.length > 0 || readConfirmSpendOutputs.length > 0) {
+            // Indicate that transaction has changed
+            this.txChanged = true;
+        }
     }
     else {
         // Trying to initialize inputs and outputs of read confirmation transaction that is already funded.
         //  Log warning condition
         Catenis.logger.WARN("Trying to initialized inputs and outputs of read confirmation transaction that is already funded", {readConfirmTransaction: this});
     }
+};
+
+ReadConfirmTransaction.prototype.needsToFund = function () {
+    return this.txChanged && !this.txFunded;
+};
+
+ReadConfirmTransaction.prototype.needsToSend = function () {
+    return this.txChanged && this.txFunded;
 };
 
 ReadConfirmTransaction.prototype.addSendMsgTxToConfirm = function (sendMsgTransact, confirmType) {
@@ -639,6 +662,7 @@ ReadConfirmTransaction.prototype.addSendMsgTxToConfirm = function (sendMsgTransa
         }
 
         // Indicate that tx needs to be funded
+        this.txChanged = true;
         this.txFunded = false;
     }
     else {
@@ -832,6 +856,9 @@ ReadConfirmTransaction.prototype.sendTransaction = function () {
         if (this.transact.txid === undefined) {
             this.transact.sendTransaction();
 
+            // Reset indication that tx had changed
+            this.txChanged = false;
+
             this.readConfirmTxInfo.setRealTxSize(this.transact.realSize());
 
             // Save sent transaction onto local database
@@ -896,6 +923,7 @@ ReadConfirmTransaction.prototype.sendTransaction = function () {
 
 ReadConfirmTransaction.prototype.setOptimumFeeRate = function () {
     this.readConfirmTxInfo.checkResetFeeRate(Catenis.bitcoinFees.getOptimumFeeRate());
+    this.txChanged = true;
     this.txFunded = false;
 };
 

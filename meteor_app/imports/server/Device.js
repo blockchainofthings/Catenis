@@ -689,7 +689,13 @@ Device.prototype.readMessage = function (messageId) {
                 // Confirm that message has been read
                 const confirmType = this.shouldSendReadMsgConfirmationTo(msgTransact.originDevice) ? ReadConfirmation.confirmationType.spendNotify : ReadConfirmation.confirmationType.spendOnly;
 
-                Catenis.readConfirm.confirmMessageRead(msgTransact, confirmType);
+                try {
+                    Catenis.readConfirm.confirmMessageRead(msgTransact, confirmType);
+                }
+                catch (err) {
+                    // Error while trying to send confirmation of message read
+                    Catenis.logger.ERROR('Error while trying to send confirmation of message read.', err);
+                }
             }
         }
 

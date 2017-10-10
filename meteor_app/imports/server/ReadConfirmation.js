@@ -84,14 +84,16 @@ ReadConfirmation.prototype.confirmMessageRead = function (sendMsgTransact, confi
         // Add new send message tx read confirmation output to read confirmation tx
         this.readConfirmTransact.addSendMsgTxToConfirm(sendMsgTransact, confirmType);
 
-        if (this.readConfirmTransact.transact.estimateSize() > Transaction.maxTxSize * cfgSettings.txSizeThresholdRatio) {
-            // Current transaction size is above threshold. Reset fee rate
-            //  so it is confirmed as soon as possible
-            this.readConfirmTransact.setOptimumFeeRate();
-        }
+        if (this.readConfirmTransact.needsToFund() || this.readConfirmTransact.needsToSend()) {
+            if (this.readConfirmTransact.transact.estimateSize() > Transaction.maxTxSize * cfgSettings.txSizeThresholdRatio) {
+                // Current transaction size is above threshold. Reset fee rate
+                //  so it is confirmed as soon as possible
+                this.readConfirmTransact.setOptimumFeeRate();
+            }
 
-        // And send read confirmation transaction
-        sendReadConfirmTransaction.call(this);
+            // And send read confirmation transaction
+            sendReadConfirmTransaction.call(this);
+        }
     });
 };
 
@@ -105,44 +107,58 @@ ReadConfirmation.prototype.confirmMessageRead = function (sendMsgTransact, confi
 function sendReadConfirmTransaction() {
     // Execute code in critical section to avoid UTXOs concurrency
     FundSource.utxoCS.execute(() => {
-        let txid;
-
-        try {
-            // Fund read confirmation tx and send it
-            this.readConfirmTransact.fundTransaction();
-
-            txid = this.readConfirmTransact.sendTransaction();
-
-            // Force polling of blockchain so newly sent transaction is received and processed right away
-            Catenis.txMonitor.pollNow();
-        }
-        catch (err) {
-            // Error sending read confirmation transaction
-            if ((err instanceof Meteor.Error) && err.error === 'ctn_btcore_rpc_error' && err.details !== undefined && typeof err.details.code === 'number'
-                && err.details.code === BitcoinCore.rpcErrorCode.RPC_VERIFY_REJECTED) {
-                // Transaction has been rejected. Assume that it is due to the fact that previous tx
-                //  would have been replaced was confirmed. So only log waring condition and
-                //  expect that things will be fixed spontaneously
-                Catenis.logger.WARN('Read confirmation transaction has been rejected when trying to send it', {
-                    transact: this.readConfirmTransact.transact
-                });
+        if (this.readConfirmTransact.needsToFund()) {
+            try {
+                // Fund read confirmation tx
+                this.readConfirmTransact.fundTransaction();
             }
-            else {
-                // Any other error, log error condition and rethrows it
-                Catenis.logger.ERROR('Error sending read confirmation transaction.', err);
+            catch (err) {
+                // Error funding read confirmation transaction.
+                //  Log error condition and rethrows exception
+                Catenis.logger.ERROR('Error funding read confirmation transaction.', err);
 
                 throw err;
             }
         }
 
-        if (txid !== undefined) {
-            // Set up timer to make sure that read confirmation transaction will not be unconfirmed for too long
-            if (this.unconfTxTimeoutHandle !== undefined) {
-                // Turn off previous timer
-                Meteor.clearTimeout(this.unconfTxTimeoutHandle);
+        if (this.readConfirmTransact.needsToSend()) {
+            let txid;
+
+            try {
+                // Send read confirmation tx
+                txid = this.readConfirmTransact.sendTransaction();
+            }
+            catch (err) {
+                // Error sending read confirmation transaction
+                if ((err instanceof Meteor.Error) && err.error === 'ctn_btcore_rpc_error' && err.details !== undefined && typeof err.details.code === 'number'
+                    && err.details.code === BitcoinCore.rpcErrorCode.RPC_VERIFY_REJECTED) {
+                    // Transaction has been rejected. Assume that it is due to the fact that previous tx
+                    //  would have been replaced was confirmed. So only log waring condition and
+                    //  expect that things will be fixed spontaneously
+                    Catenis.logger.WARN('Read confirmation transaction has been rejected when trying to send it', {
+                        transact: this.readConfirmTransact.transact
+                    });
+                }
+                else {
+                    // Any other error, log error condition and rethrows it
+                    Catenis.logger.ERROR('Error sending read confirmation transaction.', err);
+
+                    throw err;
+                }
             }
 
-            this.unconfTxTimeoutHandle = Meteor.setTimeout(boostReadConfirmTx.bind(this, this.readConfirmTransact.lastTxid), cfgSettings.unconfirmedTxTimeout * 60 * 1000);
+            if (txid !== undefined) {
+                // Force polling of blockchain so newly sent transaction is received and processed right away
+                Catenis.txMonitor.pollNow();
+
+                // Set up timer to make sure that read confirmation transaction will not be unconfirmed for too long
+                if (this.unconfTxTimeoutHandle !== undefined) {
+                    // Turn off previous timer
+                    Meteor.clearTimeout(this.unconfTxTimeoutHandle);
+                }
+
+                this.unconfTxTimeoutHandle = Meteor.setTimeout(boostReadConfirmTx.bind(this, this.readConfirmTransact.lastTxid), cfgSettings.unconfirmedTxTimeout * 60 * 1000);
+            }
         }
     });
 }
@@ -487,6 +503,11 @@ function readConfirmTxConfirmed(data) {
 
             if (inputsToAdd.length > 0 || outputsToAdd.outputs.length > 0) {
                 this.readConfirmTransact.initInputsOutputs(inputsToAdd, outputsToAdd.outputs);
+
+                if (this.readConfirmTransact.needsToFund()) {
+                    // Send read confirmation transaction
+                    sendReadConfirmTransaction.call(this);
+                }
             }
         }
         catch (err) {
