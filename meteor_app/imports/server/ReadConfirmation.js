@@ -122,6 +122,7 @@ function sendReadConfirmTransaction() {
         }
 
         if (this.readConfirmTransact.needsToSend()) {
+            const lastTxid = this.readConfirmTransact.lastTxid;
             let txid;
 
             try {
@@ -130,17 +131,32 @@ function sendReadConfirmTransaction() {
             }
             catch (err) {
                 // Error sending read confirmation transaction
+                let errorAddressed = false;
+
                 if ((err instanceof Meteor.Error) && err.error === 'ctn_btcore_rpc_error' && err.details !== undefined && typeof err.details.code === 'number'
-                    && err.details.code === BitcoinCore.rpcErrorCode.RPC_VERIFY_REJECTED) {
-                    // Transaction has been rejected. Assume that it is due to the fact that previous tx
-                    //  would have been replaced was confirmed. So only log waring condition and
-                    //  expect that things will be fixed spontaneously
-                    Catenis.logger.WARN('Read confirmation transaction has been rejected when trying to send it', {
-                        transact: this.readConfirmTransact.transact
-                    });
+                        && (err.details.code === BitcoinCore.rpcErrorCode.RPC_VERIFY_ERROR || err.details.code === BitcoinCore.rpcErrorCode.RPC_VERIFY_REJECTED)) {
+                    // Transaction has been rejected
+                    if (lastTxid) {
+                        try {
+                            // Check if it is due to the fact that previous tx that would have been replaced was confirmed
+                            const txInfo = Catenis.bitcoinCore.getTransaction(lastTxid, false);
+
+                            if (txInfo.confirmations > 0) {
+                                // Last sent read confirmation tx has been confirmed.
+                                //  Only log warning condition and expect that things will be fixed spontaneously
+                                Catenis.logger.WARN('Read confirmation transaction has been rejected when trying to send it', {
+                                    transact: this.readConfirmTransact.transact
+                                });
+
+                                errorAddressed = true;
+                            }
+                        }
+                        catch (err2) {}
+                    }
                 }
-                else {
-                    // Any other error, log error condition and rethrows it
+
+                if (!errorAddressed) {
+                    // Log error condition and rethrows it
                     Catenis.logger.ERROR('Error sending read confirmation transaction.', err);
 
                     throw err;
