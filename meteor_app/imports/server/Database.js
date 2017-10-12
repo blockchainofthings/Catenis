@@ -910,38 +910,6 @@ Database.initialize = function() {
     Catenis.db = new Database(collections);
 };
 
-//** Temporary method used to fill in (new) 'firstReadDate' field of Message collection docs
-Database.fixMessageFirstReadDate = function () {
-    let updatedDocsCount = 0;
-
-    // Retrieve Message docs that have lastReadDate field but not firstReadDate field
-    Catenis.db.collection.Message.find({
-        lastReadDate: {
-            $exists: true
-        },
-        firstReadDate: {
-            $exists: false
-        }
-    }, {
-        fields: {
-            _id: 1,
-            lastReadDate: 1
-        }
-    }).forEach((doc) => {
-        // Update Message doc setting firstReadDate the same as lastReadDate
-        updatedDocsCount += Catenis.db.collection.Message.update({
-            _id: doc._id
-        }, {
-            $set: {
-                firstReadDate: doc.lastReadDate
-            }
-        })
-    });
-
-    if (updatedDocsCount > 0)
-        Catenis.logger.INFO(util.format('>>>>>> Number of Message docs that had their firstReadDate field filled: ' + updatedDocsCount));
-};
-
 
 // Module functions used to simulate private Database object methods
 //  NOTE: these functions need to be bound to a Database object reference (this) before
