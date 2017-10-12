@@ -595,6 +595,7 @@ function addDiffOutput(outputsToAdd, output) {
             }
 
             Array.prototype.unshift.apply(outputsToAdd.outputs, newOutputs);
+            outputsToAdd.hasReadConfirmSpendOnlyOutput = true;
         }
         else {
             // Spend only output type is already present. Discard it and
