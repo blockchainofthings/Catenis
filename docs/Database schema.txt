@@ -179,12 +179,20 @@ SentTransaction {
       deviceId: [string] // External ID of the device that logged the message
     },
     readConfirmation: {
-      txouts: [{ // Identifies the read confirmation tx outputs that are spent by this transaction
-        txid: [string], // Blockchain attributed ID of the transaction containing the read confirmation output that is spent
-        vout: [integer] // The index of the output within the transaction that is spent
-      }],
-      feeAmount: [integer], // Amount, in satoshis, paid as fee for this transaction
-      txSize: [integer] // Transaction size, in bytes. Used to calculate fee rate
+      serializedTx: {   // Object from serialized tx minus useOptInRBF and txid properties
+        inputs: [{
+          txid: [string],    // Blockchain assigned ID of transaction containing output that is spent by this input
+          vout: [number],    // Index which identifies the output that is spent by this input
+          amount: [number],  // Amount, in satoshis, associated with the output that is spent by this input
+          addrPath: [string] // HD node path of the blockchain address associated with the output that is spent by this input
+        }],
+        outputs: [{
+          type: [string],           // Identifies the type of the output. Either: 'P2PKH', 'P2SH'
+          addrPath: [string],       // HD node path of the blockchain address to where payment should be sent
+          amount: [number],         // Amount, in satoshis, to send
+        }]
+      },
+      spentReadConfirmTxOutCount: [number]  // Number of send message tx read confirmation address outputs that had been spent by this tx
     },
     issueLockedAsset: {
       assetId: [string], // ID that uniquely identifies the Colored Coins asset that is issued
@@ -229,7 +237,7 @@ ReceivedTransaction {
       }
     },
     readConfirmation: {
-      txouts: [{ // Identifies the read confirmation tx outputs that are spent by this transaction
+      spentReadConfirmTxOuts: [{ // Identifies the read confirmation tx outputs that are spent by this transaction
         txid: [string], // Blockchain attributed ID of the transaction containing the read confirmation output that is spent
         vout: [integer] // The index of the output within the transaction that is spent
       }]

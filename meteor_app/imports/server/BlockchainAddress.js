@@ -1245,6 +1245,40 @@ BlockchainAddress.retrieveObsoleteAddress = function (addr) {
     return result;
 };
 
+// Place obsolete address back onto local key storage
+BlockchainAddress.retrieveObsoleteAddressByPath = function (addrPath) {
+    let result = false;
+
+    // Try to retrieve obsolete address from database
+    const docIssuedAddr = Catenis.db.collection.IssuedBlockchainAddress.findOne({
+        path: addrPath,
+        status: 'obsolete'
+    }, {
+        fields: {
+            type: 1,
+            path: 1,
+            addrIndex: 1
+        }
+    });
+
+    if (docIssuedAddr) {
+        // Only one doc/rec returned
+        const addrKeys = Catenis.keyStore.getCryptoKeysByPath(addrPath);
+
+        // Make sure that address is not yet in local key storage
+        if (addrKeys === null) {
+            let classInstance = BlockchainAddress.getInstance({type: docIssuedAddr.type, pathParts: KeyStore.getPathParts(docIssuedAddr)});
+
+            if (classInstance !== null) {
+                // Store address in local key storage making sure that it is set as obsolete
+                result = classInstance._getAddressKeys(docIssuedAddr.addrIndex, true) !== null;
+            }
+        }
+    }
+
+    return result;
+};
+
 BlockchainAddress.revertAddress = function (addr) {
     const addrTypeAndPath = Catenis.keyStore.getTypeAndPathByAddress(addr);
     let result = false;

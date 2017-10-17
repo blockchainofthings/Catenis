@@ -42,6 +42,7 @@ import { ReadConfirmation } from './ReadConfirmation';
 import { Permission } from './Permission';
 import { Notification } from './Notification';
 import { WebSocketNotifyMsgDispatcher } from './WebSocketNotifyMsgDispatcher';
+import { MalleabilityEventEmitter } from './MalleabilityEventEmitter';
 
 // DEBUG - begin
 //import { resetBitcoinCore } from './Test/FundSourceTest';
@@ -72,7 +73,11 @@ Meteor.startup(function () {
         // Normal processing
         Catenis.logger.INFO('Starting initialization...');
         Database.initialize();
+        Database.fixSentTransactionIndices();
+        Database.fixReceivedTransactionFields();
+        Database.fixReceivedTransactionIndices();
         Application.initialize();
+        MalleabilityEventEmitter.initialize();
         BitcoinFees.initialize();
         KeyStore.initialize();
         BitcoinCore.initialize();

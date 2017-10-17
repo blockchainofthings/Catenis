@@ -19,6 +19,7 @@ const util = require('util');
 // Third-party node modules
 import config from 'config';
 import bitcoinLib from 'bitcoinjs-lib';
+// noinspection JSFileReferences
 import BigNumber from 'bignumber.js';
 // Meteor packages
 import { Meteor } from 'meteor/meteor';
@@ -88,7 +89,7 @@ const dbMalleabilityCS = new CriticalSection();
 //    data: [Buffer object] // Should only exist for 'nullData' output type
 //  }
 
-export function Transaction(useOptinRBF = false) {
+export function Transaction(useOptInRBF = false) {
     this.inputs = [];
     this.outputs = [];
     this.hasNullDataOutput = false;
@@ -97,7 +98,7 @@ export function Transaction(useOptinRBF = false) {
     this.txid = undefined;
     this.sentDate = undefined;
     this.txSaved = false;
-    this.useOptinRBF = useOptinRBF;     // Indicates whether opt-in Replace By Fee feature should be used when building transaction
+    this.useOptInRBF = useOptInRBF;     // Indicates whether opt-in Replace By Fee feature should be used when building transaction
 
     // Input and output sequence of tokens. Each token corresponds to an input/output
     //  of the transaction, and basically identifies what type of blockchain address
@@ -466,7 +467,7 @@ Transaction.prototype.getTransaction = function () {
             vins = [];
 
         this.inputs.forEach((input) => {
-            vins.push(txBuilder.addInput(input.txout.txid, input.txout.vout, this.useOptinRBF ? 0xffffffff - 2 : undefined));
+            vins.push(txBuilder.addInput(input.txout.txid, input.txout.vout, this.useOptInRBF ? 0xffffffff - 2 : undefined));
         });
 
         this.outputs.forEach((output) => {
@@ -501,6 +502,66 @@ Transaction.prototype.sendTransaction = function (resend = false) {
     }
 
     return this.txid;
+};
+
+// Serializes transaction object so it can be saved
+//
+//  Result: [String] - JSON representing the following object: {
+//    inputs: [{  [Array(Object)] - List of inputs currently added to the transaction
+//      txid: [String],           - Blockchain assigned ID of transaction containing output that is spent by this input
+//      vout: [Number],           - Index which identifies the output that is spent by this input
+//      amount: [Number],         - Amount, in satoshis, associated with the output that is spent by this input
+//      addrPath: [String]        - HD node path of the blockchain address associated with the output that is spent by this input
+//                                   Note: it shall have the actual blockchain address for non-Catenis blockchain addresses
+//    }],
+//    outputs: [{ [Array(Object)] - List of outputs currently added to the transaction
+//      type: [String],           - Identifies the type of the output. Either: 'P2PKH', 'P2SH' or 'nullData'
+//      addrPath: [String],       - (only present for output of type 'P2PKH' or 'P2SH') HD node path of the blockchain address to where payment should be sent
+//                                   Note: it shall have the actual blockchain address for non-Catenis blockchain addresses
+//      amount: [Number],         - (only present for output of type 'P2PKH' or 'P2SH') Amount, in satoshis, to send
+//      data: [String]            - (only present for output of type 'nullData') Base-64 encoded data to be embedded in transaction
+//    }],
+//    useOptInRBF: [Boolean],     - Indicates whether tx uses Replace By Fee feature
+//    txid: [String]              - (only present if tx had already been sent) The blockchain assigned ID of the transaction
+//  }
+Transaction.prototype.serialize = function () {
+    const txObj = {
+        inputs: this.inputs.map((input) => {
+            const addrInfo = Catenis.keyStore.getAddressInfo(input.address, true);
+
+            return {
+                txid: input.txout.txid,
+                vout: input.txout.vout,
+                amount: input.txout.amount,
+                addrPath: addrInfo !== null ? addrInfo.path : input.address
+            };
+        }),
+        outputs: this.outputs.map((output) => {
+            const convOutput = {
+                type: output.type
+            };
+
+            if (convOutput.type === Transaction.outputType.P2PKH || convOutput.type === Transaction.outputType.P2SH) {
+                const addrInfo = Catenis.keyStore.getAddressInfo(output.payInfo.address, true);
+
+                convOutput.addrPath = addrInfo !== null ? addrInfo.path : output.payInfo.address;
+                convOutput.amount = output.payInfo.amount;
+            }
+            else if (convOutput.type === Transaction.outputType.nullData) {
+                // noinspection JSCheckFunctionSignatures
+                convOutput.data = output.data.toString('base64');
+            }
+
+            return convOutput;
+        }),
+        useOptInRBF: this.useOptInRBF
+    };
+
+    if (this.txid !== undefined) {
+        txObj.txid = this.txid;
+    }
+
+    return JSON.stringify(txObj);
 };
 
 //  type: [Object] // Object of type Transaction.type identifying the type of transaction. All transaction types are accepted
@@ -839,6 +900,87 @@ Transaction.computeTransactionSize = function (nInputs, nOutputs, nullDataPayloa
     return nInputs * cfgSettings.txInputSize + nOutputs * cfgSettings.txOutputSize + (nullDataPayloadSize > 0 ? (nullDataPayloadSize <= 75 ? 11 :13) + nullDataPayloadSize : 0) + 10;
 };
 
+// Reconstruct transaction object from a serialized string
+Transaction.parse = function (serializedTx) {
+    const txObj = JSON.parse(serializedTx);
+
+    const tx = new Transaction(txObj.useOptInRBF);
+
+    txObj.inputs.forEach((input, idx) => {
+        const convInput = {
+            txout: {
+                txid: input.txid,
+                vout: input.vout,
+                amount: input.amount
+            }
+        };
+
+        const addrInfo = Catenis.keyStore.getAddressInfoByPath(input.addrPath, true);
+
+        if (addrInfo !== null) {
+            convInput.address = addrInfo.cryptoKeys.getAddress();
+            convInput.addrInfo = addrInfo;
+        }
+        else {
+            // Assume it is not a Catenis blockchain address and that the addrPath
+            //  property contains actually an external blockchain address
+            convInput.address = input.addrPath;
+        }
+
+        tx.inputs[idx] = convInput;
+    });
+
+    txObj.outputs.forEach((output, idx) => {
+        let convOutput;
+
+        if (output.type === Transaction.outputType.P2PKH || output.type === Transaction.outputType.P2SH) {
+            convOutput = {
+                type: output.type
+            };
+
+            const addrInfo = Catenis.keyStore.getAddressInfoByPath(output.addrPath, true);
+
+            if (addrInfo !== null) {
+                convOutput.payInfo = {
+                    address: addrInfo.cryptoKeys.getAddress(),
+                    amount: output.amount,
+                    addrInfo: addrInfo
+                };
+            }
+            else {
+                // Assume it is not a Catenis blockchain address and that the addrPath
+                //  property contains actually an external blockchain address
+                convOutput.payInfo = {
+                    address: output.addrPath,
+                    amount: output.amount
+                };
+            }
+        }
+        else if (output.type === Transaction.outputType.nullData) {
+            const dataBuf = new Buffer(output.data, 'base64');
+
+            convOutput = {
+                type: output.type,
+                data: dataBuf
+            };
+
+            tx.hasNullDataOutput = true;
+            tx.nullDataPayloadSize = dataBuf.length;
+        }
+
+        if (convOutput !== undefined) {
+            tx.outputs[idx] = convOutput;
+        }
+    });
+
+    if (txObj.txid !== undefined) {
+        tx.txid = txObj.txid;
+    }
+
+    // Return deserialized tx
+    return tx;
+};
+
 Transaction.fromTxid = function (txid) {
     return Transaction.fromHex(Catenis.bitcoinCore.getRawTransaction(txid, false, false));
 };
@@ -854,7 +996,7 @@ Transaction.fromHex = function (hexTx) {
             // Save basic transaction info
             tx.rawTransaction = hexTx;
             tx.txid = decodedTx.txid;
-            tx.useOptinRBF = false;
+            tx.useOptInRBF = false;
 
             // Get inputs
             const txidTxouts = new Map();
@@ -869,7 +1011,7 @@ Transaction.fromHex = function (hexTx) {
 
                 // Check if input calls for opt-in RBF
                 if (input.sequence === 0xffffffff - 2) {
-                    tx.useOptinRBF = true;
+                    tx.useOptInRBF = true;
                 }
 
                 // Save tx out to retrieve further info
@@ -1095,13 +1237,31 @@ Transaction.fixMalleability = function (source, originalTxid, modifiedTxid) {
                         }
                     });
 
-                    // NOTE: we can update the 'info.readConfirmation.txouts.txid' field with a single update call
-                    //  due to the fact that it is guaranteed that, for a given doc/rec, the txouts (array)
-                    //  field will have only unique values for the txid field
-                    Catenis.db.collection.SentTransaction.update({'info.readConfirmation.txouts.txid': originalTxid}, {
-                        $set: {
-                            'info.readConfirmation.txouts.$.txid': modifiedTxid
+                    // NOTE: we CANNOT update the 'info.readConfirmation.serializedTx.inputs.txid' field with a single
+                    //  update call due to the fact that there is no guarantee that, for a given doc/rec, the inputs
+                    //  (array) field will have only unique values for the txid field (due to the inputs used to pay
+                    //  for the tx expense)
+                    Catenis.db.collection.SentTransaction.find({
+                        'info.readConfirmation.serializedTx.inputs.txid': originalTxid
+                    }, {
+                        fields: {
+                            _id: 1,
+                            'info.readConfirmation.serializedTx.inputs': 1
                         }
+                    }).forEach((doc) => {
+                        Catenis.db.collection.SentTransaction.update({
+                            _id: doc._id
+                        }, {
+                            $set: {
+                                'info.readConfirmation.serializedTx.inputs': doc.info.readConfirmation.serializedTx.inputs.map((input) => {
+                                    if (input.txid === originalTxid) {
+                                        input.txid = modifiedTxid;
+                                    }
+
+                                    return input;
+                                })
+                            }
+                        })
                     });
                 }
 
@@ -1118,14 +1278,17 @@ Transaction.fixMalleability = function (source, originalTxid, modifiedTxid) {
                     }
                 });
 
-                // NOTE: we can update the 'info.readConfirmation.txouts.txid' field with a single update call
-                //  due to the fact that it is guaranteed that, for a given doc/rec, the txouts (array)
+                // NOTE: we can update the 'info.readConfirmation.spentReadConfirmTxOuts.txid' field with a single update call
+                //  due to the fact that it is guaranteed that, for a given doc/rec, the spentReadConfirmTxOuts (array)
                 //  field will have only unique values for the txid field
-                Catenis.db.collection.ReceivedTransaction.update({'info.readConfirmation.txouts.txid': originalTxid}, {
+                Catenis.db.collection.ReceivedTransaction.update({'info.readConfirmation.spentReadConfirmTxOuts.txid': originalTxid}, {
                     $set: {
-                        'info.readConfirmation.txouts.$.txid': modifiedTxid
+                        'info.readConfirmation.spentReadConfirmTxOuts.$.txid': modifiedTxid
                     }
                 });
+
+                // Emit event notifying that txid has changed
+                Catenis.malleabilityEventEmitter.notifyTxidChanged(originalTxid, modifiedTxid);
             }
             catch (err) {
                 Catenis.logger.ERROR(util.format('Error updating collections to replace transaction ID modified due to malleability: originalTxid: %s, modifiedTxid: %s', originalTxid, modifiedTxid), err);

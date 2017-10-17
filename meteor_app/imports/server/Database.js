@@ -10,9 +10,10 @@
 // References to external code
 //
 // Internal node modules
-import util from 'util';
+//import util from 'util';
 // Third-party node modules
 //import config from 'config';
+import Future from 'fibers/future';
 // Meteor packages
 import { Meteor } from 'meteor/meteor';
 import { Mongo } from 'meteor/mongo';
@@ -657,9 +658,10 @@ Database.initialize = function() {
             },
             {
                 fields: {
-                    'replacedByTxid': 1
+                    replacedByTxid: 1
                 },
                 opts: {
+                    unique: true,
                     sparse: true,
                     background: true,
                     safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
@@ -667,7 +669,7 @@ Database.initialize = function() {
             },
             {
                 fields: {
-                    'info.readConfirmation.txouts.txid': 1
+                    'info.readConfirmation.serializedTx.inputs.txid': 1
                 },
                 opts: {
                     sparse: true,
@@ -787,7 +789,7 @@ Database.initialize = function() {
             },
             {
                 fields: {
-                    'info.readConfirmation.txouts.txid': 1
+                    'info.readConfirmation.spentReadConfirmTxOuts.txid': 1
                 },
                 opts: {
                     sparse: true,
@@ -910,6 +912,206 @@ Database.initialize = function() {
     Catenis.db = new Database(collections);
 };
 
+//** Temporary method used to fix indices of SentTransaction collection
+//   - index on replacedByTxid changed to be made unique
+//   - index on 'info.readConfirmation.txouts.txid' replaced with index on 'info.readConfirmation.serializedTx.inputs.txid'
+Database.fixSentTransactionIndices = function () {
+    let indicesChanged = false;
+    const fut1 = new Future();
+    const fut2 = new Future();
+
+    Catenis.db.mongoCollection.SentTransaction.indexes(function (error, indices) {
+        if (!error) {
+            const replacedByTxidIndex = indices.find((index) => {
+                const keyFields = Object.keys(index.key);
+
+                return keyFields.length === 1 && keyFields[0] === 'replacedByTxid';
+            });
+
+            if (replacedByTxidIndex) {
+                if (!replacedByTxidIndex.unique) {
+                    // Index does not currently has the unique constraint.
+                    //  So remove it and reinsert it
+                    // noinspection JSIgnoredPromiseFromCall
+                    Catenis.db.mongoCollection.SentTransaction.dropIndex(replacedByTxidIndex.name, function (error) {
+                        if (!error) {
+                            // Insert index
+                            // noinspection JSUnusedLocalSymbols, JSIgnoredPromiseFromCall
+                            Catenis.db.mongoCollection.SentTransaction.ensureIndex({
+                                replacedByTxid: 1
+                            }, {
+                                unique: true,
+                                sparse: true,
+                                background: true,
+                                safe: true
+                            }, function (error, indexName) {
+                                if (!error) {
+                                    Catenis.logger.INFO('****** Index on replacedByTxid field of SentTransaction DB collection has been fixed');
+                                    indicesChanged = true;
+                                    fut1.return();
+                                }
+                                else {
+                                    // Error trying to insert index. Log error and throw exception
+                                    Catenis.logger.ERROR('Error trying to insert fixed index on replacedByTxid field of SentTransaction DB collection.', error);
+                                    throw new Error('Error trying to insert fixed index on replacedByTxid field of SentTransaction DB collection');
+                                }
+                            })
+                        }
+                        else {
+                            // Error trying to remove index. Log error and throw exception
+                            Catenis.logger.ERROR('Error trying to remove index on replacedByTxid field of SentTransaction DB collection.', error);
+                            throw new Error('Error trying to remove index on replacedByTxid field of SentTransaction DB collection');
+                        }
+                    })
+                }
+                else {
+                    fut1.return();
+                }
+            }
+            else {
+                fut1.return();
+            }
+
+            const infoRdCfTxOutsTxidIndex = indices.find((index) => {
+                const keyFields = Object.keys(index.key);
+
+                return keyFields.length === 1 && keyFields[0] === 'info.readConfirmation.txouts.txid';
+            });
+
+            if (infoRdCfTxOutsTxidIndex) {
+                // Remove current index and replace it with one on a different field
+                // noinspection JSIgnoredPromiseFromCall
+                Catenis.db.mongoCollection.SentTransaction.dropIndex(infoRdCfTxOutsTxidIndex.name, function (error) {
+                    if (!error) {
+                        Catenis.logger.INFO('****** Index on \'info.readConfirmation.txouts.txid\' field of SentTransaction DB collection has been removed');
+                        indicesChanged = true;
+                        fut2.return();
+                    }
+                    else {
+                        // Error trying to remove index. Log error and throw exception
+                        Catenis.logger.ERROR('Error trying to remove index on \'info.readConfirmation.txouts.txid\' field of SentTransaction DB collection.', error);
+                        throw new Error('Error trying to remove index on \'info.readConfirmation.txouts.txid\' field of SentTransaction DB collection');
+                    }
+                })
+            }
+            else {
+                fut2.return();
+            }
+        }
+        else {
+            // Error retrieving indices. Log error
+            Catenis.logger.ERROR('Error retrieving indices from SentTransaction DB collection.', error);
+            throw new Error('Error retrieving indices from SentTransaction DB collection');
+        }
+    });
+
+    fut1.wait();
+    fut2.wait();
+
+    if (indicesChanged) {
+        const fut3 = new Future();
+
+        // Reindex collection
+        // noinspection JSIgnoredPromiseFromCall, JSUnusedLocalSymbols
+        Catenis.db.mongoCollection.SentTransaction.reIndex(function (error, result) {
+            if (!error) {
+                Catenis.logger.INFO('****** SentTransaction DB collection successfully reindexed.');
+                fut3.return();
+            }
+            else {
+                Catenis.logger.ERROR('Error trying to reindex SentTransaction collection.', error);
+                throw new Error('Error trying to reindex SentTransaction collection');
+            }
+        });
+
+        fut3.wait();
+        Catenis.logger.DEBUG('>>>>>> Returned from mongoCollection.SentTransaction.reIndex() method call');
+    }
+};
+
+//** Temporary method used to fix fields of ReceivedTransaction collection
+//   - rename 'info.readConfirmation.txouts.txid' field to 'info.readConfirmation.spentReadConfirmTxOuts.txid'
+Database.fixReceivedTransactionFields = function () {
+    const numUpdatedDocs = Catenis.db.collection.ReceivedTransaction.update({
+        'info.readConfirmation.txouts': {
+            $exists: true
+        }
+    }, {
+        $rename: {'info.readConfirmation.txouts': 'info.readConfirmation.spentReadConfirmTxOuts'}
+    }, {
+        multi: true
+    });
+
+    if (numUpdatedDocs > 0) {
+        Catenis.logger.INFO('****** ReceivedTransaction docs have been updated and had their \'info.readConfirmation.txouts\' renamed to \'info.readConfirmation.spentReadConfirmTxOuts\'', {
+            numUpdatedDocs: numUpdatedDocs
+        });
+    }
+};
+
+//** Temporary method used to fix indices of ReceivedTransaction collection
+//   - index on 'info.readConfirmation.txouts.txid' replaced with index on 'info.readConfirmation.spentReadConfirmTxOuts.txid'
+Database.fixReceivedTransactionIndices = function () {
+    let indicesChanged = false;
+    const fut1 = new Future();
+
+    Catenis.db.mongoCollection.ReceivedTransaction.indexes(function (error, indices) {
+        if (!error) {
+            const infoRdCfTxOutsTxidIndex = indices.find((index) => {
+                const keyFields = Object.keys(index.key);
+
+                return keyFields.length === 1 && keyFields[0] === 'info.readConfirmation.txouts.txid';
+            });
+
+            if (infoRdCfTxOutsTxidIndex) {
+                // Remove current index and replace it with one on a different field
+                // noinspection JSIgnoredPromiseFromCall
+                Catenis.db.mongoCollection.ReceivedTransaction.dropIndex(infoRdCfTxOutsTxidIndex.name, function (error) {
+                    if (!error) {
+                        Catenis.logger.INFO('****** Index on \'info.readConfirmation.txouts.txid\' field of ReceivedTransaction DB collection has been removed');
+                        indicesChanged = true;
+                        fut1.return();
+                    }
+                    else {
+                        // Error trying to remove index. Log error and throw exception
+                        Catenis.logger.ERROR('Error trying to remove index on \'info.readConfirmation.txouts.txid\' field of Receivedransaction DB collection,', error);
+                        throw new Error('Error trying to remove index on \'info.readConfirmation.txouts.txid\' field of ReceivedTransaction DB collection');
+                    }
+                })
+            }
+            else {
+                fut1.return();
+            }
+        }
+        else {
+            // Error retrieving indices. Log error
+            Catenis.logger.ERROR('Error retrieving indices from ReceivedTransaction DB collection.', error);
+            throw new Error('Error retrieving indices from ReceivedTransaction DB collection');
+        }
+    });
+
+    fut1.wait();
+
+    if (indicesChanged) {
+        const fut2 = new Future();
+
+        // Reindex collection
+        // noinspection JSIgnoredPromiseFromCall, JSUnusedLocalSymbols
+        Catenis.db.mongoCollection.ReceivedTransaction.reIndex(function (error, result) {
+            if (!error) {
+                Catenis.logger.INFO('****** ReceivedTransaction DB collection successfully reindexed.');
+                fut2.return();
+            }
+            else {
+                Catenis.logger.ERROR('Error trying to reindex SentTransaction collection.', error);
+                throw new Error('Error trying to reindex SentTransaction collection');
+            }
+        });
+
+        fut2.wait();
+        Catenis.logger.DEBUG('>>>>>> Returned from mongoCollection.ReceivedTransaction.reIndex() method call');
+    }
+};
 
 // Module functions used to simulate private Database object methods
 //  NOTE: these functions need to be bound to a Database object reference (this) before

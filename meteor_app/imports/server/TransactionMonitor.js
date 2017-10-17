@@ -32,10 +32,12 @@ const events = require('events');
 // Third-party node modules
 import config from 'config';
 import Future from 'fibers/future';
+// noinspection JSFileReferences
 import BigNumber from 'bignumber.js';
 import Loki from 'lokijs';
 // Meteor packages
 import { Meteor } from 'meteor/meteor';
+// noinspection NpmUsedModulesInstalled
 import { _ } from 'meteor/underscore';
 
 // References code in other (Catenis) modules
@@ -119,6 +121,7 @@ export class TransactionMonitor extends events.EventEmitter {
         //    }]
         //  }
         this.db = new Loki();
+        // noinspection JSCheckFunctionSignatures
         this.collCtnTx = this.db.addCollection('CtnTx', {
             unique: ['txid'],
             indices: [
@@ -314,6 +317,7 @@ export class TransactionMonitor extends events.EventEmitter {
     //                     -  method except for the hex property which is not present
     //    }
     newCatenisTransactions() {
+        // noinspection JSCheckFunctionSignatures
         return this.collCtnTx.chain()
             .find({confirmations: 0})
             .where(doc => !doc.details.some(detail => detail.abandoned !== undefined && detail.abandoned === true))
@@ -341,6 +345,7 @@ export class TransactionMonitor extends events.EventEmitter {
     confirmedCatenisTransactions() {
         let lastBlockHash = undefined;
 
+        // noinspection JSCheckFunctionSignatures
         return this.collCtnTx.chain()
             .find({confirmations: {$gt: 0}})
             .compoundsort(['blocktime', 'time'])
@@ -891,6 +896,21 @@ function handleNewTransactions(data) {
                     //  'read_confirmation', and 'transfer_asset' for now
                     if (doc.type === Transaction.type.send_message.name || doc.type === Transaction.type.read_confirmation.name || doc.type === Transaction.type.transfer_asset.name) {
                         Catenis.logger.TRACE('Processing sent transaction as received transaction', doc);
+
+                        // Get needed data from read confirmation tx
+                        const spentReadConfirmTxOuts = [];
+
+                        if (doc.type === Transaction.type.read_confirmation.name) {
+                            doc.info.readConfirmation.serializedTx.inputs.forEach((input, idx) => {
+                                if (idx < doc.info.readConfirmation.spentReadConfirmTxOutCount) {
+                                    spentReadConfirmTxOuts.push({
+                                        txid: input.txid,
+                                        vout: input.vout
+                                    });
+                                }
+                            });
+                        }
+
                         // Prepare to emit event notifying of new transaction received
                         // TODO: in the future, when other Catenis nodes are active, only send notification event and record received transaction if target device belongs to this node
                         const notifyEvent = getTxRcvdNotifyEventFromTxType(doc.type);
@@ -905,7 +925,7 @@ function handleNewTransactions(data) {
                                 eventData.targetDeviceId = doc.info.sendMessage.targetDeviceId;
                             }
                             else if (doc.type === Transaction.type.read_confirmation.name) {
-                                eventData.txouts = doc.info.readConfirmation.txouts;
+                                eventData.spentReadConfirmTxOuts = spentReadConfirmTxOuts;
                             }
                             else if (doc.type === Transaction.type.transfer_asset.name) {
                                 eventData.assetId = doc.info.transferAsset.assetId;
@@ -933,8 +953,9 @@ function handleNewTransactions(data) {
                             docInfo.sendMessage.readConfirmation.spent = false;
                         }
                         else if (doc.type === Transaction.type.read_confirmation.name) {
-                            // Get rid of fields that are not important for received tx
-                            docInfo.readConfirmation = _.omit(docInfo.readConfirmation, ['feeAmount', 'txSize']);
+                            docInfo.readConfirmation = {
+                                spentReadConfirmTxOuts: spentReadConfirmTxOuts
+                            };
                         }
 
                         //  Prepared to save received tx to the local database

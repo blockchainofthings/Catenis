@@ -143,9 +143,9 @@
       "paymentResolution": 10,  // Resolution of amount that should be allocated to pay for read confirmation tx expenses. In other words, the allocated amount should be a multiple of the amount
       // NOTE: fundReadConfirmPayTxResolution (resolution of amount allocated to system read confirmation pay tx expense addresses) is dynamically calculated
       "fundPayTxResolutionSafetyFactor": 0,   // Safety factor used when calculating fundReadConfirmPayTxResolution (from highest tx cost)
-      "fundPayTxMultiplyFactor": 100,  // Maximum number of fund read confirmation pay tx expense (fundReadConfrmPayTxResolution) that can be pre-allocated to a system read confirmation pay tx expense addr
+      "fundPayTxMultiplyFactor": 10,  // Maximum number of fund read confirmation pay tx expense (fundReadConfrmPayTxResolution) that can be pre-allocated to a system read confirmation pay tx expense addr
       "minFundPayTxAmountMultiplyFactor": 100,  // Multiply factor used to determine mininum amount (x fundReadConfirmPayTxResolution) that should be used to fund system pay tx expense addresses
-      "fundPayTxSafetyFactor": 0,   // Safety factor used when funding and checking balance of system read confirmation pay tx expense addresses
+      "fundPayTxSafetyFactor": 0.15,   // Safety factor used when funding and checking balance of system read confirmation pay tx expense addresses
       "initNumTxInputs": 2,         // Initial number of inputs of a read confirmation transaction (1 to spend a read confirmation output, 1 to pay for tx expense)
       "initNumTxOutputs": 2,        // Initial number of outputs of a read confirmation transaction (1 to receive payment of read confirmation output spent, 1 to receive change)
       "txNullDataPayloadSize": 0,  // Size, in bytes, of payload of null data output in read confirmation transaction
@@ -153,7 +153,16 @@
                                       // NOTE: these additional outputs should account for read confirmation outputs spent to notify devices that belong to a different Catenis node
       "initTxFeeRate": 1,  // Amount, in satoshis/byte, for the initial fee rate for a read confirmation transaction
       "txFeeRateIncrement": 1,  // Amount, in satoshis/byte, that transaction feed rate should be incremented for the new replacement transaction
-      "numReadConfirmTxsMinFundBalance": 1  // Number of read confirmation txs the cost of which should be covered by the minimum expected balance amount of the system read confirmation pay tx expense addresses
+      "numReadConfirmTxsMinFundBalance": 10,  // Number of read confirmation txs the cost of which should be covered by the minimum expected balance amount of the system read confirmation pay tx expense addresses
+      "terminalReadConfirmTx": {
+        "minutesToConfirm": 300,  // Time, in minutes, within which terminal read confirmatino txs are expected to be confirmed
+        "typicalTxConfig": {
+          "numMessagesConfirmed": 2,  // Number of send message txs confirmed by terminal read confirmation transactions
+          "numPayTxExpenseInputs": 2,  // Number of inputs used to pay for tx expense (fee)
+          "hasChangeOutput": true, // Indicates whether tx includes an output for receiving change
+          "nullDataPayloadSize": 0  // Size, in bytes, of payload of null data output
+        }
+      }
     },
     "asset": {
       "unlockedAssetsPerMinute": 0.33,  // Number of unlocked assets issued per minute that is expected to be sustained
@@ -292,7 +301,7 @@
   },
   // Parameters pertaining to ReadConfirmation module
   "readConfirmation": {
-    "unconfirmedTxTimeout": 10080,  // Timeout, in minutes, for waiting for latest read confirmation tx to be confirmed
+    "unconfirmedTxTimeout": 10080,  // Timeout, in minutes, for waiting for latest read confirmation tx to be confirmed (set to 7 days, which is half the default mempool tx eviction time of 14 days)
     "txSizeThresholdRatio": 0.5  // Ratio that should be applied to maximum tx size to calculate theshold for read confirmation tx size. Above that size the tx fee rate should be reset so that is is confirmed as soon as possible
   },
   // Parameters pertaining to RestApi module
