@@ -944,7 +944,7 @@ ReadConfirmTransaction.prototype.sendTransaction = function () {
             // Reset indication that tx had changed
             this.txChanged = false;
 
-            this.readConfirmTxInfo.setRealTxSize(this.transact.realSize());
+            this.readConfirmTxInfo.setRealTxSize(this.transact.realSize(), this.transact.countInputs());
 
             // Save sent transaction onto local database
             this.transact.saveSentTransaction(Transaction.type.read_confirmation, {
