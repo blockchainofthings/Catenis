@@ -314,6 +314,7 @@ SendMessageTransaction.checkTransaction = function (transact) {
         const origDevMainAddr = getAddrAndAddrInfo(transact.getInputAt(0));
         const clntMsgCreditAddr = getAddrAndAddrInfo(transact.getInputAt(1));
         const trgtDevMainAddr = getAddrAndAddrInfo(transact.getOutputAt(0).payInfo);
+        // noinspection JSUnusedLocalSymbols
         const trgtDevReadConfirmAddr = getAddrAndAddrInfo(transact.getOutputAt(1).payInfo);
 
         let origDevMainRefundChangeAddr1 = undefined;
@@ -321,7 +322,7 @@ SendMessageTransaction.checkTransaction = function (transact) {
         let clntMsgCreditChangeAddr = undefined;
 
         for (let pos = 3; pos <= 5; pos++) {
-            const output = transact.getOutputAt(1);
+            const output = transact.getOutputAt(pos);
             if (output !== undefined) {
                 const outputAddr = getAddrAndAddrInfo(output.payInfo);
                 if (outputAddr.addrInfo.type === KeyStore.extKeyType.dev_main_addr.name) {
@@ -339,9 +340,9 @@ SendMessageTransaction.checkTransaction = function (transact) {
         }
 
         if (trgtDevMainAddr.address !== origDevMainAddr.address &&
-                (origDevMainRefundChangeAddr1 === undefined || origDevMainRefundChangeAddr1.address !== origDevMainAddr.address) &&
-                (origDevMainRefundChangeAddr2 === undefined || origDevMainRefundChangeAddr2.address !== origDevMainAddr.address) &&
-                (clntMsgCreditChangeAddr === undefined || clntMsgCreditChangeAddr.address !== clntMsgCreditAddr.address)) {
+                (origDevMainRefundChangeAddr1 === undefined || (origDevMainRefundChangeAddr1.address !== origDevMainAddr.address && areAddressesFromSameDevice(origDevMainRefundChangeAddr1.addrInfo, origDevMainAddr.addrInfo))) &&
+                (origDevMainRefundChangeAddr2 === undefined || (origDevMainRefundChangeAddr2.address !== origDevMainAddr.address && areAddressesFromSameDevice(origDevMainRefundChangeAddr2.addrInfo, origDevMainAddr.addrInfo))) &&
+                (clntMsgCreditChangeAddr === undefined || (clntMsgCreditChangeAddr.address !== clntMsgCreditAddr.address && areAddressesFromSameClient(clntMsgCreditChangeAddr.addrInfo, clntMsgCreditAddr.addrInfo)))) {
             // Now, check if data in null data output is correctly formatted
             let ctnMessage = undefined;
 
@@ -426,11 +427,22 @@ SendMessageTransaction.matchingPattern = Object.freeze({
 // Definition of module (private) functions
 //
 
-function getAddrAndAddrInfo(obj) {
+export function getAddrAndAddrInfo(obj) {
     return obj !== undefined ? {
         address: obj.address,
         addrInfo: obj.addrInfo
     } : undefined;
+}
+
+export function areAddressesFromSameDevice(addrInfo1, addrInfo2) {
+    return addrInfo1.pathParts.deviceIndex === addrInfo2.pathParts.deviceIndex
+            && addrInfo1.pathParts.clientIndex === addrInfo2.pathParts.clientIndex
+            && addrInfo1.pathParts.ctnNodeIndex === addrInfo2.pathParts.ctnNodeIndex;
+}
+
+export function areAddressesFromSameClient(addrInfo1, addrInfo2) {
+    return addrInfo1.pathParts.clientIndex === addrInfo2.pathParts.clientIndex
+        && addrInfo1.pathParts.ctnNodeIndex === addrInfo2.pathParts.ctnNodeIndex;
 }
 
 
