@@ -952,6 +952,9 @@ ReadConfirmTransaction.prototype.sendTransaction = function () {
                 spentReadConfirmTxOutCount: this.readConfirmAddrInputCount
             });
 
+            // Set read confirmation address outputs of respective send message transactions as spent
+            setSpentReadConfirmAddrTxOuts.call(this);
+
             if (this.lastTxid !== undefined) {
                 // Update entry of previous read confirmation transaction to indicate that it has been replaced
                 const docsUpdated = Catenis.db.collection.SentTransaction.update({
@@ -1167,6 +1170,34 @@ function newTransactionId(txid) {
     this.lastTxid = txid;
 }
 
+function setSpentReadConfirmAddrTxOuts() {
+    // Get list of txids of send message transactions the read confirmation address output of which
+    //  had been spent by this read confirmation transaction
+    const sendMsgTxids = [];
+
+    for (let pos = 0; pos < this.nextReadConfirmAddrSpndNtfyInputPos; pos++) {
+        sendMsgTxids.push(this.transact.getInputAt(pos).txout.txid);
+    }
+
+    try {
+        // Update local database to indicate that read confirmation txouts had been spent
+        Catenis.db.collection.ReceivedTransaction.update({
+            txid: {
+                $in: sendMsgTxids
+            },
+            'info.sendMessage.readConfirmation.spent': false
+        }, {
+            $set: {
+                'info.sendMessage.readConfirmation.spent': true
+            }
+        }, {
+            multi: true
+        });
+    }
+    catch (err) {
+        Catenis.logger.ERROR('Error trying to update ReceivedTransaction DB collection docs to set read confirmation txouts as spent.', err);
+    }
+}
 
 // ReadConfirmTransaction function class (public) methods
 //

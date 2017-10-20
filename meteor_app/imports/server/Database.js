@@ -1113,6 +1113,46 @@ Database.fixReceivedTransactionIndices = function () {
     }
 };
 
+//** Temporary method used to fix ReceivedTransaction collection docs and set read confirmation address
+//  outputs (of send message txs) associated with read confirmation transactions as spent
+Database.fixSetSpentReadConfirmAddrTxOuts = function () {
+    const sendMsgTxids = new Set();
+
+    Catenis.db.collection.SentTransaction.find({
+        type: 'read_confirmation',
+        replcedByTxid: {
+            $exists: false
+        }
+    }, {
+        fields: {
+            _id: 1,
+            info: 1
+        }
+    }).forEach((doc) => {
+        for (let pos = 0, limit = doc.info.readConfirmation.spentReadConfirmTxOutCount; pos < limit; pos++) {
+            sendMsgTxids.add(doc.info.readConfirmation.serializedTx.inputs[pos].txid);
+        }
+    });
+
+    Catenis.logger.DEBUG('>>>>>> Number of identified send message txs the read confirmation address output of which had been spent: %d', sendMsgTxids.size);
+    const numUpdatedDocs = Catenis.db.collection.ReceivedTransaction.update({
+        txid: {
+            $in: Array.from(sendMsgTxids)
+        },
+        'info.sendMessage.readConfirmation.spent': false
+    }, {
+        $set: {
+            'info.sendMessage.readConfirmation.spent': true
+        }
+    }, {
+        multi: true
+    });
+
+    if (numUpdatedDocs > 0) {
+        Catenis.logger.INFO('****** Number of ReceivedTransaction DB collection docs for send message txs that had been updated and had their corresponding read confirmation address outputs set as spent: %d', numUpdatedDocs);
+    }
+};
+
 // Module functions used to simulate private Database object methods
 //  NOTE: these functions need to be bound to a Database object reference (this) before
 //      they are called, by means of one of the predefined function methods .call(), .apply()
