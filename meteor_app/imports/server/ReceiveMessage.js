@@ -102,16 +102,15 @@ function processReceivedMessage(data) {
             blockMessage = true;
         }
 
-        // Make sure that system read confirmation pay tx expense addresses are properly funded
-        targetDevice.client.ctnNode.checkReadConfirmPayTxExpenseFundingBalance();
-
         // Get send message transaction and received message onto local database
         const sendMsgTransact = SendMessageTransaction.checkTransaction(Transaction.fromTxid(data.txid));
         const message = saveReceivedMessage(sendMsgTransact, blockMessage);
 
         if (blockMessage) {
-            // Spend transaction's read confirmation output to mark it as been blocked
-            Catenis.readConfirm.confirmMessageRead(sendMsgTransact, ReadConfirmation.confirmationType.spendNull);
+            if (message.readConfirmationEnabled) {
+                // Spend transaction's read confirmation output to mark it as been blocked
+                Catenis.readConfirm.confirmMessageRead(sendMsgTransact, ReadConfirmation.confirmationType.spendNull);
+            }
         }
         else {
             if (targetDevice.shouldBeNotifiedOfNewMessageFrom(originDevice)) {

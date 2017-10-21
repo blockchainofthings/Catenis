@@ -948,9 +948,11 @@ function handleNewTransactions(data) {
                         const docInfo = doc.info;
 
                         if (doc.type === Transaction.type.send_message.name) {
-                            // Add field that indicates whether read confirmation output has been spent
-                            //  (in other words, if the message has been read)
-                            docInfo.sendMessage.readConfirmation.spent = false;
+                            if (doc.info.sendMessage.readConfirmation !== undefined) {
+                                // Add field that indicates whether read confirmation output has been spent
+                                //  (in other words, if the message has been read)
+                                docInfo.sendMessage.readConfirmation.spent = false;
+                            }
                         }
                         else if (doc.type === Transaction.type.read_confirmation.name) {
                             docInfo.readConfirmation = {

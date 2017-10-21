@@ -125,9 +125,10 @@ Message {
   _id: [string],  // MongoDB internal document ID provided by Meteor
   messageId: [string],  // External ID used to uniquely identify this message
   action: [string],   // Identifies the action performed on the message. Valid values (from Message.action): 'log', 'send'
-  source: [string],  // Identifies if this a message that had been issued by this Catenis node (value = 'local') or by another Catenis node (value = 'remote')
+  source: [string],  // Identifies if this is a message that had been issued by this Catenis node (value = 'local') or by another Catenis node (value = 'remote')
   originDeviceId: [string],  // External ID of the device that logged/sent the message
-  targetDeviceId: [string],  // External ID of the device to which message had been sent
+  targetDeviceId: [string],  // External ID of the device to which message had been sent. This field should only be present for sent messages (action = 'send')
+  readConfirmationEnabled: [boolean],  // Indicates whether message was sent with read confirmation enabled. This field should only be present for sent messages (action = 'send')
   isEncrypted: [boolean],   // Indicates whether stored message is encrypted
   blockchain: {
     txid: [string],  // Blockchain attributed ID (hash) of transaction created to record the message
@@ -138,15 +139,16 @@ Message {
     reference: [string]  // Reference to message in the external storage
   },
   createdDate: [date/time],  // Date and time when doc/rec has been created
-  sentDate: [date/time],  // Date and time when message has been sent
+  sentDate: [date/time],  // Date and time when message has been sent. This field is only available for 'local' messages
   receivedDate: [date/time],  // Date and time when message has been received. This field only exists for 'send' messages after they had actually been received.
   blocked: [boolean],  // Identifies a 'send' message that should have been received but instead had been blocked (due to the intended receiving device not being active or its permission setting). Note that this field should never exist along with the receivedDate field; only one of these fields should exist for a given Message doc (for 'send' message after it had been received/blocked). Also, if present, this field should always have the value true
   firstReadDate: [date/time],  // Date and time when message has first been read (by the device that logged it, or by its intended receiver in case of a 'send' message)
-                               //  NOTE: this field is available for both 'local' and 'remote' messages, and only once the message has been read at least one.
-                               //   However, for 'remote' messages, if shall only be available if the targeting device allows for message read notification.
+                               //  NOTE: this field is available for both 'local' and 'remote' messages, and only once the message has been read at least once.
+                               //   However, for 'local' messages sent to a remote Catenis node, it shall only be available if the message had read confirmation enabled and the target device allows for message read notification.
   lastReadDate: [date/time],  // Date and time when message has last been read (by the device that logged it, or by its intended receiver in case of a 'send' message)
-                              //  NOTE: this field is only available for 'local' messages, not for 'remote' messages, and once the message has been read at least once
-  readConfirmed: [boolean]  // Indicates that a read confirmation had already been received for this message. This field should only exist (with the value true) after a read confirmation had been received
+                              //  NOTE: this field is available for both 'local' and 'remote' messages, and only once the message has been read at least once.
+                              //    However, it is not available for 'local' messages sent to a remote Catenis node
+  readConfirmed: [boolean]  // Indicates that a read confirmation had already been received for this message. This field should only exist (with the value true) for messages that had read confirmation enabled and after a read confirmation had been received
 }
 
 SentTransaction {
@@ -171,7 +173,7 @@ SentTransaction {
     sendMessage: { // Information for send message transactions
       originDeviceId: [string], // External ID of the device that sent the message
       targetDeviceId: [string], // External ID of the device that receives the message
-      readConfirmation: {
+      readConfirmation: {  // This field should only exist for messages sent with read confirmation enabled
         vout: [integer] // The index of the output within this transaction that is used for read confirmation
       }
     },
@@ -231,7 +233,7 @@ ReceivedTransaction {
     sendMessage: { // Information for send message transactions
       originDeviceId: [string], // External ID of the device that sent the message
       targetDeviceId: [string], // External ID of the device that receives the message
-      readConfirmation: {
+      readConfirmation: {   // This field should only exist for messages that had been sent with read confirmation enabled
         vout: [integer], // The index of the output within this transaction that is used for read confirmation
         spent: [boolean] // Indicates whether the read confirmation output has already been spent by a transaction (of the 'read_confirmation' type)
       }

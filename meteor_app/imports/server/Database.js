@@ -912,6 +912,118 @@ Database.initialize = function() {
     Catenis.db = new Database(collections);
 };
 
+//** Temporary method used to fix Message collection by adding new readConfirmationEnabled field
+Database.fixMessageAddReadConfirmationEnabledField = function () {
+    // Identify send message docs/recs in which readConfirmationEnabled field in missing
+    const sentTxids = [];
+    const rcvdTxids = [];
+
+    Catenis.db.collection.Message.find({
+        action: 'send',
+        readConfirmationEnabled: {
+            $exists: false
+        }
+    }, {
+        fields: {
+            _id: 1,
+            source: 1,
+            'blockchain.txid': 1
+        }
+    }).forEach((doc) => {
+        if (doc.source === 'local') {
+            sentTxids.push(doc.blockchain.txid);
+        }
+        else {
+            rcvdTxids.push(doc.blockchain.txid);
+        }
+    });
+
+    Catenis.logger.DEBUG('>>>>>> SentTransaction DB collection docs found', {
+        sentTxids: sentTxids
+    });
+    Catenis.logger.DEBUG('>>>>>> ReceivedTransaction DB collection docs found', {
+        sentTxids: rcvdTxids
+    });
+
+    const readConfirmTxids = [];
+    const noReadConfirmTxids = [];
+
+    if (sentTxids.length > 0) {
+        Catenis.db.collection.SentTransaction.find({
+            txid: {
+                $in: sentTxids
+            }
+        }, {
+            txid: 1,
+            'info.sendMessage.readConfirmation': 1
+        }).forEach((doc) => {
+            if (doc.info.sendMessage.readConfirmation !== undefined) {
+                readConfirmTxids.push(doc.txid);
+            }
+            else {
+                noReadConfirmTxids.push(doc.txid);
+            }
+        });
+    }
+
+    if (rcvdTxids.length > 0) {
+        Catenis.db.collection.ReceivedTransaction.find({
+            txid: {
+                $in: rcvdTxids
+            }
+        }, {
+            txid: 1,
+            'info.sendMessage.readConfirmation': 1
+        }).forEach((doc) => {
+            if (doc.info.sendMessage.readConfirmation !== undefined) {
+                readConfirmTxids.push(doc.txid);
+            }
+            else {
+                noReadConfirmTxids.push(doc.txid);
+            }
+        });
+    }
+
+    Catenis.logger.DEBUG('>>>>>> Message DB collection docs to update', {
+        readConfirmTxids: readConfirmTxids,
+        noReadConfirmTxids: noReadConfirmTxids
+    });
+
+    let numUpdatedDocs = 0;
+
+    if (readConfirmTxids.length > 0) {
+        numUpdatedDocs += Catenis.db.collection.Message.update({
+            'blockchain.txid': {
+                $in: readConfirmTxids
+            }
+        }, {
+            $set: {
+                readConfirmationEnabled: true
+            }
+        }, {
+            multi: true
+        });
+    }
+
+    if (noReadConfirmTxids.length > 0) {
+        numUpdatedDocs += Catenis.db.collection.Message.update({
+            'blockchain.txid': {
+                $in: readConfirmTxids
+            }
+        }, {
+            $set: {
+                readConfirmationEnabled: false
+            }
+        }, {
+            multi: true
+        });
+    }
+
+    if (numUpdatedDocs > 0) {
+        Catenis.logger.INFO('****** Number of Message DB collection docs updated to add readConfirmationEnabled field: %d', numUpdatedDocs);
+    }
+};
+
 
 // Module functions used to simulate private Database object methods
 //  NOTE: these functions need to be bound to a Database object reference (this) before

@@ -19,6 +19,7 @@ const util = require('util');
 import config from 'config';
 // Meteor packages
 import { Meteor } from 'meteor/meteor';
+// noinspection NpmUsedModulesInstalled
 import { Restivus } from 'meteor/nimble:restivus';
 
 // References code in other (Catenis) modules
@@ -28,10 +29,12 @@ import { ApiVersion } from './ApiVersion';
 import { Authentication } from './Authentication';
 import { logMessage } from './ApiLogMessage';
 import { sendMessage } from './ApiSendMessage';
+import { sendMessage2 } from './ApiSendMessage2';
 import { readMessage } from './ApiReadMessage';
 import { readMessage2 } from './ApiReadMessage2';
 import { retrieveMessageContainer } from './ApiMessageContainer';
 import { listMessages } from './ApiListMessages';
+import { listMessages2 } from './ApiListMessages2';
 import { listPermissionEvents } from './ApiListPermissionEvents';
 import { retrievePermissionRights } from './ApiGetPermissionRights';
 import { setPermissionRights } from './ApiPostPermissionRights';
@@ -96,7 +99,7 @@ export function RestApi(apiVersion) {
             //
             //  Refer to the source file where the action function is defined for a detailed description of the endpoint
             post: {
-                action: sendMessage
+                action: this.apiVer.gt('0.4') ? sendMessage2 : sendMessage
             }
         });
 
@@ -126,7 +129,7 @@ export function RestApi(apiVersion) {
             //
             //  Refer to the source file where the action function is defined for a detailed description of the endpoint
             get: {
-                action: listMessages
+                action: this.apiVer.gt('0.4') ? listMessages2 : listMessages
             }
         });
     }
@@ -212,7 +215,8 @@ RestApi.initialize = function () {
     Catenis.restApi = {
         'ver0.2': new RestApi('0.2'),
         'ver0.3': new RestApi('0.3'),
-        'ver0.4': new RestApi('0.4')
+        'ver0.4': new RestApi('0.4'),
+        'ver0.5': new RestApi('0.5')
     };
 };
 

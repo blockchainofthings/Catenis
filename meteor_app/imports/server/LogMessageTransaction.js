@@ -159,6 +159,7 @@ LogMessageTransaction.prototype.buildTransaction = function () {
 
         if (this.options.encrypted) {
             // Encrypt message
+            // noinspection JSUnusedGlobalSymbols
             msgToLog = this.encryptedMessage = this.deviceMainAddrKeys.encryptData(this.deviceMainAddrKeys, this.message);
         }
         else {
