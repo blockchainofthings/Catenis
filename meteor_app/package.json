@@ -1,6 +1,6 @@
 {
   "name": "catenis",
-  "version": "0.2.9",
+  "version": "0.2.10",
   "description": "Catenis Enterprise application",
   "main": "Catenis.js",
   "scripts": {
@@ -22,7 +22,7 @@
     "config": "^1.17.1",
     "eccrypto": "^1.0.3",
     "fibers": "^1.0.15",
-    "ipfs-api": "^12.1.2",
+    "ipfs-api": "^12.1.7",
     "lokijs": "^1.3.16",
     "meteor-node-stubs": "^0.2.11",
     "moment": "^2.17.1",

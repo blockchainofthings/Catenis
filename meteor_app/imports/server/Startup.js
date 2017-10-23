@@ -23,6 +23,8 @@ import { Meteor } from 'meteor/meteor';
 import { Catenis } from './Catenis';
 import { Application } from './Application';
 import { BitcoinCore } from './BitcoinCore';
+import { IpfsClient } from './IpfsClient';
+import { IpfsServerMonitor } from './IpfsServerMonitor';
 import { BitcoinFees } from './BitcoinFees';
 import { BlockchainAddress } from './BlockchainAddress';
 import { CatenisNode } from './CatenisNode';
@@ -78,6 +80,8 @@ Meteor.startup(function () {
         BitcoinFees.initialize();
         KeyStore.initialize();
         BitcoinCore.initialize();
+        IpfsClient.initialize();
+        IpfsServerMonitor.initialize();
         //ColoredCoins.initialize();
         Permission.initialize();
         CatenisNode.initialize();

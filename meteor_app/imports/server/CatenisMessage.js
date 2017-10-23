@@ -25,20 +25,11 @@ import { IpfsMessageStorage } from './IpfsMessageStorage';
 
 // Config entries
 const ctnMessageConfig = config.get('catenisMessage');
-const ctnMsgStorageConfig = ctnMessageConfig.get('msgStorage');
-const ctnMsgStoIpfsConfig = ctnMsgStorageConfig.get('ipfs');
 
 // Configuration settings
 const cfgSettings = {
     nullDataMaxSize: ctnMessageConfig.get('nullDataMaxSize'),
-    defaultStorageProvider: ctnMessageConfig.get('defaultStorageProvider'),
-    msgStorage: {
-        ipfs: {
-            apiHost: ctnMsgStoIpfsConfig.get('apiHost'),
-            apiPort: ctnMsgStoIpfsConfig.get('apiPort'),
-            apiProtocol: ctnMsgStoIpfsConfig.get('apiProtocol')
-        }
-    }
+    defaultStorageProvider: ctnMessageConfig.get('defaultStorageProvider')
 };
 
 const msgPrefix = 'CTN';
@@ -87,7 +78,7 @@ export function CatenisMessage(message, funcByte, options) {
         this.options.encrypted = options.encrypted;
 
         if (options.storageScheme === CatenisMessage.storageScheme.embedded || (options.storageScheme === CatenisMessage.storageScheme.auto && message.length <= cfgSettings.nullDataMaxSize - bytesWritten - 1)) {
-            // Messagae should be embedded
+            // Message should be embedded
             optsByte += CatenisMessage.optionBit.embedding;
             this.options.embedded = true;
         }
@@ -104,13 +95,13 @@ export function CatenisMessage(message, funcByte, options) {
             this.msgPayload = message;
         }
         else {
-            this.options.storageProvider = options.storageProvider != undefined ? options.storageProvider : CatenisMessage.defaultStorageProvider;
+            this.options.storageProvider = options.storageProvider !== undefined ? options.storageProvider : CatenisMessage.defaultStorageProvider;
             const msgStorage = CatenisMessage.getMessageStorageInstance(this.options.storageProvider);
             this.extMsgRef = msgStorage.store(message);
 
             this.msgPayload = new Buffer(this.extMsgRef.length + 1);
 
-            this.msgPayload.writeUInt8(this.options.storageProvider.byteCode);
+            this.msgPayload.writeUInt8(this.options.storageProvider.byteCode, 0);
             this.extMsgRef.copy(this.msgPayload, 1);
         }
 
@@ -206,7 +197,7 @@ CatenisMessage.getMessageStorageInstance = function (storageProvider) {
         // Otherwise, instantiate it now
         switch(storageProvider.byteCode) {
             case CatenisMessage.storageProvider.ipfs.byteCode:
-                instance = new IpfsMessageStorage(cfgSettings.msgStorage.ipfs.apiHost, cfgSettings.msgStorage.ipfs.apiPort, cfgSettings.msgStorage.ipfs.apiProtocol);
+                instance = new IpfsMessageStorage();
 
                 CatenisMessage.msgStoInstances.set(storageProvider.byteCode, instance);
 
@@ -281,9 +272,10 @@ CatenisMessage.fromData = function (data, logError = true) {
         // Parse message data
 
         // Read message prefix
-        const readMsgPrefix = data.toString(undefined, 0, msgPrefix.length);
+        // noinspection JSCheckFunctionSignatures
+        const readMsgPrefix = data.toString('utf8', 0, msgPrefix.length);
 
-        if (readMsgPrefix.length != msgPrefix.length) {
+        if (readMsgPrefix.length !== msgPrefix.length) {
             //noinspection ExceptionCaughtLocallyJS
             throw new Error('Inconsistent message prefix size');
         }
@@ -343,7 +335,7 @@ CatenisMessage.fromData = function (data, logError = true) {
             const spByteCode = msgPayload.readUInt8(0);
             const storageProvider = CatenisMessage.getStorageProviderByByteCode(spByteCode);
 
-            if (storageProvider == undefined) {
+            if (storageProvider === undefined) {
                 //noinspection ExceptionCaughtLocallyJS
                 throw new Error('Invalid message storage provided byte code');
             }
@@ -446,10 +438,11 @@ function isValidOptionsByte(optsByte) {
         return sum + CatenisMessage.optionBit[key];
     }, 0);
 
-    return (optsByte | optBitsSum) == optBitsSum;
+    return (optsByte | optBitsSum) === optBitsSum;
 }
 
 function optionsFromOptionsByte(optsByte) {
+    // noinspection JSBitwiseOperatorUsage, RedundantConditionalExpressionJS
     return {
         encrypted: (optsByte & CatenisMessage.optionBit.encryption) ? true : false,
         embedded: (optsByte & CatenisMessage.optionBit.embedding) ? true : false

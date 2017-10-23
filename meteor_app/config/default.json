@@ -286,14 +286,18 @@
   // Parameters pertaining to CatenisMessage module
   "catenisMessage": {
     "nullDataMaxSize": 80,  // Maximum size, in bytes, of data that fits in null data output
-    "defaultStorageProvider": "ipfs",
-    "msgStorage": {
-      "ipfs": {
-        "apiHost": "catenis-ipfs",
-        "apiPort": 5001,
-        "apiProtocol": "http"
-      }
-    }
+    "defaultStorageProvider": "ipfs"
+  },
+  // Parameter pertaining to IpfsClient module
+  "ipfsClient": {
+    "apiHost": "catenis-ipfs",
+    "apiPort": 5001,
+    "apiProtocol": "http"
+  },
+  // Paramenters pertaining to IpfsServerMonitor module
+  "ipfsServerMonitor": {
+    "enabled": true,
+    "checkInterval": 30  // Time, in seconds, defining the period within which IPFS server shall be checked to make sure it is still alive
   },
   // Parameters pertaining to Message module
   "message": {

@@ -16,7 +16,6 @@
 const util = require('util');
 const crypto = require('crypto');
 // Third-party node modules
-import ipfsApi from 'ipfs-api';
 import Future from 'fibers/future';
 // Meteor packages
 import { Meteor } from 'meteor/meteor';
@@ -30,19 +29,8 @@ import { MessageStorage } from './MessageStorage';
 
 // IpfsMessageStorage class
 export class IpfsMessageStorage extends MessageStorage {
-    constructor (host, port, protocol) {
+    constructor () {
         super();
-
-        this.ipfs = ipfsApi({
-            host: host,
-            port: port,
-            procotol: protocol
-        });
-
-        this.api = {
-            add: Meteor.wrapAsync(this.ipfs.files.add, this.ipfs.files),
-            cat: Meteor.wrapAsync(this.ipfs.files.cat, this.ipfs.files)
-        };
     }
 
     // Method used to store the message contents onto the external storage
@@ -57,13 +45,13 @@ export class IpfsMessageStorage extends MessageStorage {
             let msgHash = hashRipemd160(hashSha256(message));
 
             // Save message onto IPFS
-            let addResult = this.api.add(message)[0];
+            let addResult = Catenis.ipfsClient.api.filesAdd(message)[0];
 
             // Prepare to return combined message reference
             let msgRef = new Buffer(addResult.hash.length + msgHash.length + 2);
 
             // Write size of IPFS hash onto message reference
-            let bytesWritten = msgRef.writeUInt8(addResult.hash.length);
+            let bytesWritten = msgRef.writeUInt8(addResult.hash.length, 0);
 
             // Write IPFS hash itself onto message reference
             bytesWritten += msgRef.write(addResult.hash, bytesWritten);
@@ -80,14 +68,14 @@ export class IpfsMessageStorage extends MessageStorage {
             // Error storing message onto external message storage.
             //  Log error condition and throw exception
             Catenis.logger.ERROR('Error storing message onto IPFS message storage.', err);
-            throw new Meteor.Error('ctn_ipfs_msg_store_error', util.format('Error storing message onto IPFS messsage storage: %s', err.message), err.stack);
+            throw new Meteor.Error('ctn_ipfs_msg_store_error', util.format('Error storing message onto IPFS message storage: %s', err.message), err.stack);
         }
     }
 
     // Method used to retrieve the message contents stored on the external storage
     //
     //  Arguments:
-    //    msgRef: [Object] // Object of type Buffer containing tthe reference (a unique ID) to the stored message
+    //    msgRef: [Object] // Object of type Buffer containing the reference (a unique ID) to the stored message
     //                     //  (as returned by the 'store' method)
     //
     //  Return: [Object] // Object of type Buffer containing the retrieved message
@@ -100,9 +88,10 @@ export class IpfsMessageStorage extends MessageStorage {
             let bytesRead = 1;
 
             // Read IPFS hash itself
-            let ipfsHash = msgRef.toString(undefined, bytesRead, bytesRead + ipfsHashLength);
+            // noinspection JSCheckFunctionSignatures
+            let ipfsHash = msgRef.toString('utf8', bytesRead, bytesRead + ipfsHashLength);
 
-            if (ipfsHash.length != ipfsHashLength) {
+            if (ipfsHash.length !== ipfsHashLength) {
                 //noinspection ExceptionCaughtLocallyJS
                 throw new Error('Inconsistent IPFS hash size');
             }
@@ -118,13 +107,13 @@ export class IpfsMessageStorage extends MessageStorage {
             let msgHash = new Buffer(msgHashLength);
             let bytesCopied = msgRef.copy(msgHash, 0, bytesRead, bytesRead + msgHashLength);
 
-            if (bytesCopied != msgHashLength) {
+            if (bytesCopied !== msgHashLength) {
                 //noinspection ExceptionCaughtLocallyJS
                 throw new Error('Inconsistent message hash size');
             }
 
             // Now, get message from IPFS
-            let dataReader = this.api.cat(ipfsHash);
+            let dataReader = Catenis.ipfsClient.api.filesCat(ipfsHash);
             let fut = new Future();
             let message = undefined;
 
@@ -133,7 +122,7 @@ export class IpfsMessageStorage extends MessageStorage {
                     data = new Buffer(data);
                 }
 
-                if (message == undefined) {
+                if (message === undefined) {
                     message = data;
                 }
                 else {
@@ -150,7 +139,7 @@ export class IpfsMessageStorage extends MessageStorage {
             // Wait until all message is read
             fut.wait();
 
-            if (message == undefined) {
+            if (message === undefined) {
                 //noinspection ExceptionCaughtLocallyJS
                 throw Error('Unable to get message from IPFS')
             }
@@ -169,7 +158,7 @@ export class IpfsMessageStorage extends MessageStorage {
             // Error retrieving message from external message storage.
             //  Log error condition and throw exception
             Catenis.logger.ERROR('Error retrieving message from IPFS message storage.', err);
-            throw new Meteor.Error('ctn_ipfs_msg_retrieve_error', util.format('Error retrieving message from IPFS messsage storage: %s', err.message), err.stack);
+            throw new Meteor.Error('ctn_ipfs_msg_retrieve_error', util.format('Error retrieving message from IPFS message storage: %s', err.message), err.stack);
         }
     }
 
@@ -177,7 +166,7 @@ export class IpfsMessageStorage extends MessageStorage {
     //  is actually stored from the message reference (returned from the 'store' method)
     //
     //  Arguments:
-    //    msgRef: [Object] // Object of type Buffer containing tthe reference (a unique ID) to the stored message
+    //    msgRef: [Object] // Object of type Buffer containing the reference (a unique ID) to the stored message
     //                     //  (as returned by the 'store' method)
     //
     //  Return: [String]  // Serialized version of native storage reference
@@ -189,9 +178,10 @@ export class IpfsMessageStorage extends MessageStorage {
         let bytesRead = 1;
 
         // Read IPFS hash itself
-        let ipfsHash = msgRef.toString(undefined, bytesRead, bytesRead + ipfsHashLength);
+        // noinspection JSCheckFunctionSignatures
+        let ipfsHash = msgRef.toString('utf8', bytesRead, bytesRead + ipfsHashLength);
 
-        if (ipfsHash.length != ipfsHashLength) {
+        if (ipfsHash.length !== ipfsHashLength) {
             //noinspection ExceptionCaughtLocallyJS
             throw new Error('Inconsistent IPFS hash size');
         }
