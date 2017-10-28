@@ -617,7 +617,7 @@ BitcoinCore.prototype.getTransaction = function (txid, includeDetails = false, l
 
 // Note: by default the verbose arg is set to false what makes
 //  the method return the transaction as a hex enconded string.
-//  Otherwise, is returns an object with the transaction details
+//  Otherwise, it returns an object with the transaction details
 BitcoinCore.prototype.getRawTransaction = function (txid, verbose, logError = true) {
     const args = [txid];
 
@@ -729,6 +729,70 @@ BitcoinCore.prototype.getBlockHeader = function (blockHash, verbose) {
     }
     catch (err) {
         handleError('getblockheader', err);
+    }
+};
+
+// The following are special (more complex) methods that do not
+//  match directly to only one RPC method
+//
+
+BitcoinCore.prototype.getRawTransactionCheck = function (txid, logError = true) {
+    // First try to retrieve the raw hex data representation of the transaction
+    //  using getrawtransaction RPC method
+    try {
+        return this.rpcApi.getrawtransaction(txid, false);
+    }
+    catch (err) {
+        if (err.code === BitcoinCore.rpcErrorCode.RPC_INVALID_ADDRESS_OR_KEY) {
+            // No transaction exists (neither in mempool nor the blockchain) with that txid.
+            //  Check if it is possibly a transaction that had been sent by Catenis previously
+            //  and that have been replaced later
+            try {
+                return this.rpcApi.gettransaction(txid, false).hex;
+            }
+            catch (err2) {
+                handleError('gettransaction', err2, logError);
+            }
+        }
+        else {
+            handleError('getrawtransaction', err, logError);
+        }
+    }
+};
+
+// Note: the actual contents of the returned decoded transaction may vary depending on
+//  the fact that it had been gotten by calling either the getrawtransaction or the
+//  decoderawtransaction RPC methods. The difference is that, when returned by the first
+//  RPC method, it includes three additional properties: hex, blockchash, and confirmations
+BitcoinCore.prototype.getDecodedRawTransactionCheck = function (txid, logError = true) {
+    // First try to retrieve the decoded transaction using getrawtransaction RPC method
+    try {
+        return this.rpcApi.getrawtransaction(txid, true);
+    }
+    catch (err) {
+        if (err.code === BitcoinCore.rpcErrorCode.RPC_INVALID_ADDRESS_OR_KEY) {
+            // No transaction exists (neither in mempool nor the blockchain) with that txid.
+            //  Check if it is possibly a transaction that had been sent by Catenis previously
+            //  and that have been replaced later
+            let hexTx;
+
+            try {
+                hexTx = this.rpcApi.gettransaction(txid, false).hex;
+            }
+            catch (err2) {
+                handleError('gettransaction', err2, logError);
+            }
+
+            try {
+                return this.rpcApi.decoderawtransaction(hexTx);
+            }
+            catch (err3) {
+                handleError('decoderawtransaction', err3, logError);
+            }
+        }
+        else {
+            handleError('getrawtransaction', err, logError);
+        }
     }
 };
 

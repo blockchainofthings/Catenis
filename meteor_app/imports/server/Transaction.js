@@ -982,7 +982,7 @@ Transaction.parse = function (serializedTx) {
 };
 
 Transaction.fromTxid = function (txid) {
-    return Transaction.fromHex(Catenis.bitcoinCore.getRawTransaction(txid, false, false));
+    return Transaction.fromHex(Catenis.bitcoinCore.getRawTransactionCheck(txid, false));
 };
 
 Transaction.fromHex = function (hexTx) {
@@ -1035,7 +1035,7 @@ Transaction.fromHex = function (hexTx) {
                 try {
                     // Retrieve information about transaction containing outputs
                     //  spent by this transaction's inputs
-                    const decodedTxout = Catenis.bitcoinCore.getRawTransaction(txoutid, true, false);
+                    const decodedTxout = Catenis.bitcoinCore.getDecodedRawTransactionCheck(txoutid, false);
 
                     txidTxouts.get(txoutid).forEach((txout) => {
                         const input = tx.inputs[txout.vin];
