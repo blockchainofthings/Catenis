@@ -1119,10 +1119,6 @@ Transaction.fromHex = function (hexTx) {
                 tx.outputs.push(txOutput);
             });
 
-            // Initialize both input and output toke sequences
-            initInputTokenSequence.call(tx);
-            initOutputTokenSequence.call(tx);
-
             // Return deserialized transaction
             return tx;
         }
