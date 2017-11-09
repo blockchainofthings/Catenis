@@ -996,7 +996,7 @@ Transaction.fromHex = function (hexTx) {
             // Save basic transaction info
             tx.rawTransaction = hexTx;
             tx.txid = decodedTx.txid;
-            tx.useOptInRBF = false;
+            tx.useOptInRBF = true;
 
             // Get inputs
             const txidTxouts = new Map();
@@ -1009,9 +1009,9 @@ Transaction.fromHex = function (hexTx) {
                     }
                 });
 
-                // Check if input calls for opt-in RBF
-                if (input.sequence === 0xffffffff - 2) {
-                    tx.useOptInRBF = true;
+                // Check if input does not call for opt-in RBF
+                if (input.sequence > 0xffffffff - 2) {
+                    tx.useOptInRBF = false;
                 }
 
                 // Save tx out to retrieve further info
