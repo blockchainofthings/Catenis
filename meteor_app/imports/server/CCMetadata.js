@@ -14,7 +14,6 @@ import util from 'util';
 import crypto from 'crypto';
 import fs from 'fs';
 import Url from 'url';
-import _und from 'underscore';
 // Third-party node modules
 import config from 'config';
 import openssl from 'openssl-wrapper';
@@ -69,7 +68,8 @@ export function CCMetadata(metadata, decCryptoKeys) {
         this.assetName = metadata.assetName;
         this.assetDescription = metadata.description;
         this.urls = metadata.urls ? metadata.urls : [];
-        this.userData = parseUserData(metadata.userData, decCryptoKeys);
+
+        parseUserData.call(this, metadata.userData, decCryptoKeys);
 
         if (this.userData && this.userData.meta && typeof this.userData.meta.ctnAssetId === 'string') {
             this.ctnAssetId = this.userData.meta.ctnAssetId;
@@ -83,6 +83,7 @@ export function CCMetadata(metadata, decCryptoKeys) {
         this.assetDescription = undefined;
         this.urls = [];
         this.userData = undefined;
+        this.encryptUserDataKeys = new Set();
         this.signingCertificate = undefined;
         this.metadata = undefined;
         this.storeResult = undefined;
@@ -122,28 +123,30 @@ export function CCMetadata(metadata, decCryptoKeys) {
 CCMetadata.prototype.setAssetMetadata = function (metadata) {
     // Make sure that required data is supplied
     if (typeof metadata !== 'object' || metadata === null) {
-        Catenis.logger.ERROR('CCMetadata.setAssetMetadata() method called with invalid \'metadta\' argument', {metadata: metadata});
+        Catenis.logger.ERROR('CCMetadata.setAssetMetadata() method called with invalid \'metadata\' argument', {metadata: metadata});
         return;
     }
-    else if (!metadata.ctnAssetId) {
+
+    if (metadata.ctnAssetId) {
+        this.ctnAssetId = metadata.ctnAssetId;
+
+        if (metadata.name) {
+            this.assetName = metadata.name;
+        }
+
+        if (metadata.description) {
+            this.assetDescription = metadata.description;
+        }
+
+        if (metadata.urls) {
+            this.setUrls(metadata.urls);
+        }
+
+        resetMetadata.call(this);
+    }
+    else {
         Catenis.logger.ERROR('CCMetadata.setAssetMetadata() method called without required \'metadata\' property \'ctnAssetId\'', {metadata: metadata});
     }
-
-    this.ctnAssetId = metadata.ctnAssetId;
-
-    if (metadata.name) {
-        this.assetName = metadata.name;
-    }
-
-    if (metadata.description) {
-        this.assetDescription = metadata.description;
-    }
-
-    if (metadata.urls) {
-        this.setUrls(metadata.urls);
-    }
-
-    resetMetadata.call(this);
 };
 
 // Specify URLs to be added to the metadata
@@ -178,11 +181,12 @@ CCMetadata.prototype.setUrls = function (urls) {
 // Specify user data of a given type to be added to the metadata
 //
 //  Arguments:
-//   data [Object] - Object the properties of which the name of the data and the value its value. To specify a value
-//                      of a given data type (i.e. 'URL' or 'Email'), the value should be an Array of the format:
-//                      [type(String),value]. Otherwise, the data type is inferred from the value itself (String,
-//                      Number, Boolean or Date). When the value is an object, the object is interpreted the same
-//                      way as the data argument, and an array of data is inserted
+//   data [Object] - Object the properties of which define the data to add. The name of the properties is the
+//                    name of the data, and the value of the properties the value of the data. To specify a value
+//                    of a given data type (i.e. 'URL' or 'Email'), the value should be an Array of the format:
+//                    [type(String),value]. Otherwise, the data type is inferred from the value itself (String,
+//                    Number, Boolean or Date). When the value is an object, the object is interpreted the same
+//                    way as the data argument, and an array of data is inserted
 CCMetadata.prototype.setMetaUserData = function (data) {
     const meta = formatMetaUserData(data);
 
@@ -207,8 +211,8 @@ CCMetadata.prototype.setMetaUserData = function (data) {
 //  Arguments:
 //   key [String] - The key to be associated with this data
 //   data [Object] - The data to be added. Should be an instance of Buffer if data is intended to be encrypted
-//   encCryptKeys [Object(CryptoKeys)] - (optional) The crypto key-pair associated with a blockchain address that should be used to encrypt the data
-CCMetadata.prototype.setFreeUserData = function (key, data, encCryptoKeys) {
+//   encryptData [Boolean] - Indicates whether data should be encrypted
+CCMetadata.prototype.setFreeUserData = function (key, data, encryptData) {
     // Make sure that key is a string
     if (typeof key !== 'string') {
         Catenis.logger.ERROR('CCMetadata.setFreeUserData() method called with invalid \'key\' argument', {key: key});
@@ -217,29 +221,15 @@ CCMetadata.prototype.setFreeUserData = function (key, data, encCryptoKeys) {
 
     // Make sure that key is not a reserved key
     if (key !== 'meta') {
-        if (encCryptoKeys && Buffer.isBuffer(data)) {
-            try {
-                // Encrypt data
-                data = encCryptoKeys.encryptData(encCryptoKeys, new Buffer(data)).toString('base64');
-
-                // Adjust key by adding prefix that indicates that this is a encrypted entry,
-                //  but make sure that original key does not yet exist (other wise delete it first)
-                if (key in this.userData) {
-                    delete this.userData[key];
-                }
-
-                key = cfgSettings.encryptedUserDataKeyPrefix + key;
-            }
-            catch (err) {
-                Catenis.logger.ERROR(util.format('Error trying to encrypt Colored Coins metadata user data (key: %s, value: %s).', key, data), err);
-            }
-        }
-
         if (this.userData === undefined) {
             this.userData = {};
         }
 
         this.userData[key] = data;
+
+        if (encryptData && Buffer.isBuffer(data)) {
+            this.encryptUserDataKeys.add(key);
+        }
 
         resetMetadata.call(this);
     }
@@ -248,7 +238,9 @@ CCMetadata.prototype.setFreeUserData = function (key, data, encCryptoKeys) {
     }
 };
 
-CCMetadata.prototype.assembleMetadata = function () {
+//  Arguments:
+//   encCryptoKeys [Object(CryptoKeys)] - (optional) The crypto key-pair associated with a blockchain address that should be used to encrypt the data
+CCMetadata.prototype.assemble = function (encCryptoKeys) {
     if (this.metadata === undefined) {
         this.metadata = {};
 
@@ -295,7 +287,24 @@ CCMetadata.prototype.assembleMetadata = function () {
                 this.metadata.userData.meta = this.metadata.userData.meta === undefined ? this.userData.meta : this.metadata.userData.meta.concat(this.userData.meta);
             }
 
-            _und.extend(this.metadata.userData, _und.omit(this.userData, 'meta'));
+            Object.keys(this.userData).forEach((key) => {
+                if (key !== 'meta') {
+                    if (encCryptoKeys && this.encryptUserDataKeys.has(key)) {
+                        // Encrypt before saving user data
+                        const encKey = cfgSettings.encryptedUserDataKeyPrefix + key;
+
+                        try {
+                            this.metadata.userData[encKey] = encCryptoKeys.encryptData(encCryptoKeys, this.userData[key]).toString('base64');
+                        }
+                        catch (err) {
+                            Catenis.logger.ERROR(util.format('Error trying to encrypt Colored Coins metadata user data (key: %s, value: %s).', key, this.userData[key]), err);
+                        }
+                    }
+                    else {
+                        this.metadata.userData[key] = this.userData[key];
+                    }
+                }
+            });
         }
     }
     else {
@@ -303,7 +312,11 @@ CCMetadata.prototype.assembleMetadata = function () {
     }
 };
 
-CCMetadata.prototype.storeMetadata = function () {
+//  Result: {
+//   torrentHash: [String] - The hash of the torrent file containing the added metadata
+//   sha2: [String] - The SHA256 hash of the metadata (JSON.stringify())
+//  }
+CCMetadata.prototype.store = function () {
     if (this.storeResult === undefined) {
         if (this.metadata) {
             const metadata = {
@@ -324,13 +337,15 @@ CCMetadata.prototype.storeMetadata = function () {
     else {
         Catenis.logger.WARN('Trying to store Colored Coins metadata that is already stored', this);
     }
+
+    return this.storeResult;
 };
 
-CCMetadata.prototype.isMetadataAssembled = function () {
+CCMetadata.prototype.isAssembled = function () {
     return this.metadata !== undefined;
 };
 
-CCMetadata.prototype.isMetadataStored = function () {
+CCMetadata.prototype.isStored = function () {
     return this.storeResult !== undefined;
 };
 
@@ -401,6 +416,52 @@ function getMetadataSignedVerification() {
     return signedVerification;
 }
 
+// Parse metadata user data entry
+//
+//  Arguments:
+//   userData [Object] - The user data to be parsed
+//   decCryptKeys [Object(CryptoKeys)] - (optional) The crypto key-pair associated with a blockchain address that should be used to decrypt encrypted data
+function parseUserData(userData, decCryptoKeys) {
+    this.userData = undefined;
+    this.encryptUserDataKeys = new Set();
+
+    if (typeof userData === 'object' && userData !== null) {
+        const parsedUserData = {};
+
+        Object.keys(userData).forEach((key) => {
+            if (key === 'meta') {
+                const parsedMetaUserData = parseMetaUserData(userData[key]);
+
+                if (parsedMetaUserData) {
+                    parsedUserData.meta = parsedMetaUserData;
+                }
+            }
+            else {
+                let data = userData[key];
+
+                if (decCryptoKeys && key.startsWith(cfgSettings.encryptedUserDataKeyPrefix) && key.length > cfgSettings.encryptedUserDataKeyPrefix.length
+                        && typeof data === 'string') {
+                    try {
+                        data = decCryptoKeys.decryptData(decCryptoKeys, new Buffer(data, 'base64'));
+                    }
+                    catch (err) {
+                        Catenis.logger.ERROR(util.format('Error trying to decrypt Colored Coins user data (key: %s, value: %s).', key, userData[key]), err);
+                    }
+
+                    key = key.substr(cfgSettings.encryptedUserDataKeyPrefix.length);
+                    this.encryptUserDataKeys.add(key);
+                }
+
+                parsedUserData[key] = data;
+            }
+        });
+
+        if (Object.keys(parsedUserData).length > 0) {
+            this.userData = parsedUserData;
+        }
+    }
+}
+
 
 // CCMetadata function class (public) methods
 //
@@ -409,7 +470,7 @@ function getMetadataSignedVerification() {
 //
 //  Arguments:
 //   torrentHash: [String] - The hash of the torrent file containing the metadata
-//   sha2: [String] - The SHA256 hash of the metadata (JSON.stringigy())
+//   sha2: [String] - The SHA256 hash of the metadata (JSON.stringify())
 //   decCryptKeys [Object(CryptoKeys)] - (optional) The crypto key-pair associated with a blockchain address that should be used to decrypt encrypted user data
 CCMetadata.fromTorrent = function (torrentHash, sha2, decCryptoKeys) {
     let metadata;
@@ -423,7 +484,14 @@ CCMetadata.fromTorrent = function (torrentHash, sha2, decCryptoKeys) {
 
     if (metadata) {
         try {
-            return new CCMetadata(metadata, decCryptoKeys);
+            const ccMeta = new CCMetadata(metadata, decCryptoKeys);
+
+            ccMeta.storeResult = {
+                torrentHash: torrentHash,
+                sha2: sha2
+            };
+
+            return ccMeta;
         }
         catch (err) {
             Catenis.logger.ERROR('Error parsing Colored Coins metadata.', err);
@@ -653,45 +721,6 @@ function parseMetaUserData(meta) {
         });
 
         return Object.keys(data).length > 0 ? data : undefined;
-    }
-}
-
-// Parse metadata user data entry
-//
-//  Arguments:
-//   userData [Object] - The user data to be parsed
-//   decCryptKeys [Object(CryptoKeys)] - (optional) The crypto key-pair associated with a blockchain address that should be used to decrypt encrypted data
-function parseUserData(userData, decCryptoKeys) {
-    if (typeof userData === 'object' && userData !== null) {
-        const parsedUserData = {};
-
-        Object.keys(userData).forEach((key) => {
-            if (key === 'meta') {
-                const parsedMetaUserData = parseMetaUserData(userData[key]);
-
-                if (parsedMetaUserData) {
-                    parsedUserData.meta = parsedMetaUserData;
-                }
-            }
-            else {
-                let data = userData[key];
-
-                if (decCryptoKeys && key.startsWith(cfgSettings.encryptedUserDataKeyPrefix) && key.length > cfgSettings.encryptedUserDataKeyPrefix.length
-                    && typeof data === 'string') {
-                    try {
-                        data = decCryptoKeys.decryptData(decCryptoKeys, new Buffer(data, 'base64'));
-                        key = key.substr(cfgSettings.encryptedUserDataKeyPrefix.length);
-                    }
-                    catch (err) {
-                        Catenis.logger.ERROR(util.format('Error trying to decrypt Colored Coins user data (key: %s, value: %s).', key, userData[key]), err);
-                    }
-                }
-
-                parsedUserData[key] = data;
-            }
-        });
-
-        return Object.keys(parsedUserData).length > 0 ? parsedUserData : undefined;
     }
 }
 

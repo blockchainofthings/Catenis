@@ -15,7 +15,9 @@
 //      imported module'
 const util = require('util');
 // Third-party node modules
+// noinspection JSFileReferences
 import BigNumber from 'bignumber.js';
+import bitcoinLib from 'bitcoinjs-lib';
 // Meteor packages
 //import { Meteor } from 'meteor/meteor';
 
@@ -113,6 +115,17 @@ Util.spendAddresses = function (origAddresses, destAddress, fee) {
 //   txout: [Object] - Object representing a transaction output. Should have two properties: txid, and vout
 Util.txoutToString = function (txout) {
     return util.format('%s:%d', txout.txid, txout.vout);
+};
+
+Util.isValidBlockchainAddress = function (address) {
+    try {
+        bitcoinLib.address.fromBase58Check(address);
+    }
+    catch (err) {
+        return false;
+    }
+
+    return true;
 };
 
 // Util function class (public) properties

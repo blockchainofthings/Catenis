@@ -2530,6 +2530,10 @@ KeyStore.initialize = function () {
     purgeUnusedExtKeyInternalHandle = Meteor.setInterval(purgeUnusedExtendedKeys.bind(Catenis.keyStore), cfgSettings.purgeUnusedExtKeyInterval);
 };
 
+KeyStore.isValidPath = function (path) {
+    return /^m(?:\/(?:0|(?:[1-9]\d*)))*$/.test(path);
+};
+
 KeyStore.systemFundingPaymentRootPath = function (ctnNodeIndex) {
     // Validate Catenis node index
     if (!isValidCatenisNodeIndex(ctnNodeIndex)) {

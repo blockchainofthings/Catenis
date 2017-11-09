@@ -36,6 +36,7 @@ const cfgSettings = {
     methodPath: {
         getAddressesUtxos: methodPathConfig.get('getAddressesUtxos'),
         getUtxos: methodPathConfig.get('getUtxos'),
+        getTxouts: methodPathConfig.get('getTxouts'),
         getAddressesTransactions: methodPathConfig.get('getAddressesTransactions'),
         transmit: methodPathConfig.get('transmit'),
         getInfo: methodPathConfig.get('getInfo'),
@@ -113,6 +114,26 @@ CCFullNodeClient.prototype.getUtxos = function (utxos, numOfConfirmations) {
     catch (err) {
         handleError('getUtxos', err);
     }
+};
+
+// Call Colored Coins Full Node (BCoT modified version) getTxouts method
+//
+//  Arguments:
+//   txouts: [{ [Object|Array(Object)] - Transaction outputs for which to retrieve Colored Coins data
+//     txid: [String],  - Transaction ID
+//     vout: [Number]  - Output index
+//   }]
+CCFullNodeClient.prototype.getTxouts = function (txouts) {
+  const postData = {
+    txouts: Array.isArray(txouts) ? txouts : [txouts]
+  };
+
+  try {
+    return postRequest.call(this, cfgSettings.methodPath.getTxouts, postData);
+  }
+  catch (err) {
+    handleError('getTxouts', err);
+  }
 };
 
 // Call Colored Coins Full Node getAddressesTransactions method
@@ -200,7 +221,7 @@ function postRequest(path, data) {
 // Sends an HTTP request and processes its response
 //
 //  Arguments:
-//   method [String] - The method/verb of the reuest; either 'GET' or 'POST'
+//   method [String] - The method/verb of the request; either 'GET' or 'POST'
 //   path [String]   - The url path of the request
 //   body [String] - (optional) Contents of the body of the request to send
 //   callback [Function(err, res)] - The callback function to receive the request outcome

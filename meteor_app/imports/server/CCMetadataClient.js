@@ -85,7 +85,7 @@ export function CCMetadataClient(host, port, inetAddr, user, secret, timeout) {
 //
 //  Result: {
 //   torrentHash: [String] - The hash of the torrent file containing the added metadata
-//   sha2: [String] - The SHA256 hash of the metadata (JSON.stringigy())
+//   sha2: [String] - The SHA256 hash of the metadata (JSON.stringify())
 //  }
 CCMetadataClient.prototype.addMetadata = function (metadata) {
     try {
@@ -151,7 +151,7 @@ function postRequest(path, data, isPublic = false) {
 // Sends an HTTP request and processes its response
 //
 //  Arguments:
-//   method [String] - The method/verb of the reuest; either 'GET' or 'POST'
+//   method [String] - The method/verb of the request; either 'GET' or 'POST'
 //   path [String]   - The url path of the request
 //   body [Object|String] - (optional) Contents of the body of the request to send
 //   isPublic [Boolean] - Indicates whether this this is a public request (does not require authorization) or not

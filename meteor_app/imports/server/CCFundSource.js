@@ -13,6 +13,7 @@
 //import util from 'util';
 // Third-party node modules
 import Loki from 'lokijs';
+// noinspection JSFileReferences
 import BigNumber from 'bignumber.js';
 // Meteor packages
 import { Meteor } from 'meteor/meteor';
@@ -85,6 +86,7 @@ export function CCFundSource(ccAssetId, addresses, unconfUtxoInfo, excludeUtxos)
     //      vout: [number],
     //      scriptPubKey: [string],
     //      amount: [number],      - Bitcoin amount in satoshis
+    //      ccAssetId: [string],  - Colored Coins attributed ID of asset
     //      assetAmount: [number], - Asset amount represented as an integer number of the asset's smallest division (according to the asset divisibility)
     //      assetDivisibility: [number], - Number of decimal places allowed for representing quantities of this asset
     //      isAggregatableAsset: [boolean], - Indicates whether quantities of the asset from different UTXOs can be combined to allocate the necessary fund
@@ -290,6 +292,7 @@ CCFundSource.prototype.allocateFund = function (amount) {
                 result.changeAssetAmount = allocatedAmount - amount;
 
                 // Update local DB setting UTXOs as allocated
+                // noinspection JSIgnoredPromiseFromCall
                 this.collUtxo.update(allocatedUtxos.docUtxos);
             }
         }
@@ -310,6 +313,7 @@ CCFundSource.prototype.clearAllocatedUtxos = function () {
             docUtxo.allocated = false;
         });
 
+        // noinspection JSIgnoredPromiseFromCall
         this.collUtxo.update(docAllocatedUtxos);
     }
 };
@@ -382,6 +386,7 @@ function loadUtxos() {
                     vout: utxo.vout,
                     scriptPubKey: utxo.scriptPubKey,
                     amount: new BigNumber(utxo.amount).times(100000000).toNumber(),
+                    ccAssetId: this.ccAssetId,
                     assetAmount: assetUtxoInfo.divisibility === 0 ? assetUtxoInfo.amount : new BigNumber(assetUtxoInfo.amount).times(Math.pow(10, assetUtxoInfo.divisibility)).toNumber(),
                     assetDivisibility: assetUtxoInfo.divisibility,
                     isAggregatableAsset: isAggregatableAsset,

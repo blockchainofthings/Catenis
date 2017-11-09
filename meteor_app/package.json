@@ -18,6 +18,7 @@
     "bitcoinjs-message": "^1.0.1",
     "body-parser": "^1.16.1",
     "cc-assetid-encoder": "^0.6.0",
+    "cc-transaction": "git://github.com/blockchainofthings/CC-Transaction.git#BCoTv1.2.2",
     "coloredcoinsd-wraper": "^0.4.8",
     "config": "^1.17.1",
     "eccrypto": "^1.0.3",

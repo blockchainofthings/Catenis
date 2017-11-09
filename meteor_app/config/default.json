@@ -265,14 +265,17 @@
   },
   // Parameters pertaining to Transaction module
   "transaction": {
-    "txOutputDustAmount": 600,  // Minimum amount that should be allocated to a transaction output
+    "txOutputDustAmount": 600,  // Minimum amount that should be allocated to a transaction output - (<output_size> + 148) * <dust_relay_fee>/1000 => (34+148)*3000/1000 = 546 satoshis/kb ~ 600
     "txInputSize": 148, // Size, in bytes, of typical transaction input (spending a P2PKH UTXO)
                         //  NOTE 1: IMPORTANT - this is an everage size for such inputs. The actual size can vary from 147 up to 149 (in other workds, the actual size is 148 +/- 1)
                         //  NOTE 2: this value should be reviewed for segwit transactions
     "txOutputSize": 34, // Size, in bytes, of a typical (P2PKH) transaction output
                        //  NOTE: this value should be reviewed for segwit transactions
-    "maxTxSize": 100000  // Maximum size, in bytes, of a transaction that is considered valid
+    "maxTxSize": 100000,  // Maximum size, in bytes, of a transaction that is considered valid
                          //  NOTE: this value should be reviewed for segwit transactions
+    "pubKeySize": 33,  // Size, in bytes, of blockchain key-pair public key
+    "oneOf2MultiSigTxOutputDustAmount": 700,  // Minimum amount that should be allocated to a 1-of-2 multisig transaction output - (<output_size> + 148) * <dust_relay_fee>/1000 => (80+148)*3000/1000 = 684 satoshis/kb ~ 700
+    "oneOf3multiSigTxOutputDustAmount": 800  // Minimum amount that should be allocated to a 1-of-3 multisig transaction output - (<output_size> + 148) * <dust_relay_fee>/1000 => (114+148)*3000/1000 = 786 satoshis/kb ~ 800
   },
   // Parameters pertaining to TransactionMonitor module
   "transactionMonitor": {
@@ -352,6 +355,7 @@
     "methodPath": {
       "getAddressesUtxos": "/getAddressesUtxos",
       "getUtxos": "/getUtxos",
+      "getTxouts": "/getTxouts",
       "getAddressesTransactions": "/getAddressesTransactions",
       "transmit": "/transmit",
       "getInfo": "/getInfo",
@@ -388,5 +392,12 @@
     "signingCertificateKeyFilePath": "/etc/ssl/encrypt_catenis.key",  // Path to file containing (password protected) key of SSL certificate used to sign message for asset verification
     "urlContentTimeout": 15000,  // Timeout, in miliseconds, fro retrieving content associated with a given URL
     "encryptedUserDataKeyPrefix": "__enc_"  // Prefix that is prepended to user data key when its value is encrypted
+  },
+  // Parameters pertaining to CCTransaction module
+  "ccTransaction": {
+    "ccProtocolPrefix": "4343",  // Hex encoded Colored Coins protocol data prefix
+    "ccVersionByte": "02", // Hex encoded Colored Coins version byte
+    "torrentHashSize": 20,  // Size, in number of bytes, of a torrent hash
+    "sha2Size": 32  // Size, in number of bytes, of a SHA2 hash
   }
 }
