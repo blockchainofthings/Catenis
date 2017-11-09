@@ -403,7 +403,7 @@ ReadConfirmTransaction.prototype.isTxOutputUsedToPayFee = function (txout) {
     });
 };
 
-// Checks whether a transction ID has been used for this read confirmation transaction
+// Checks whether a transaction ID has been used for this read confirmation transaction
 ReadConfirmTransaction.prototype.hasTxidBeenUsed = function (txid) {
     return this.txids.some((usedTxid) => {
         return usedTxid === txid;
@@ -821,9 +821,16 @@ ReadConfirmTransaction.prototype.fundTransaction = function () {
                         // Try to allocate UTXOs to pay for transaction additional fee
                         if (readConfirmPayTxExpenseFundSource === undefined) {
                             // Object used to allocate UTXOs is not instantiated yet. Instantiate it now,
-                            //  making sure that UTXO of last change be excluded
+                            //  making sure that, if allocating funds for a tx that is to replace a previous one,
+                            //  unconfirmed UTXOs NOT be included, and that the change UTXO of last tx be excluded.
+                            //  NOTE: by avoiding that unconfirmed UTXOs be included, when allocating funds for
+                            //      a tx that is to replace a previous one, the change UTXO of last tx (if it exists)
+                            //      is automatically not included (since that change UTXO is obviously not yet confirmed,
+                            //      and we would be replacing a previous tx). However, we are keeping both conditions
+                            //      just as an additional precaution
                             readConfirmPayTxExpenseFundSource = new FundSource(Catenis.ctnHubNode.readConfirmPayTxExpenseAddr.listAddressesInUse(),
-                                {}, this.lastTxChangeOutputPos >= 0 ? Util.txoutToString({
+                                this.lastTxid !== undefined ? undefined : {},
+                                this.lastTxChangeOutputPos >= 0 ? Util.txoutToString({
                                     txid: this.lastTxid,
                                     vout: this.lastTxChangeOutputPos
                                 }) : undefined);
