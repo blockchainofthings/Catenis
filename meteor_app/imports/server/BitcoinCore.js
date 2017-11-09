@@ -50,7 +50,7 @@ export function BitcoinCore(network, host, username, password, timeout) {
         pass: password
     };
 
-    if (timeout != undefined) {
+    if (timeout !== undefined) {
         opts.timeout = timeout;
     }
 
@@ -61,7 +61,11 @@ export function BitcoinCore(network, host, username, password, timeout) {
         // Note: the 'command' method below should be used when calling a Bitcoin Core
         //  JSON RPC method that is not directly exposed by the bitcoinCoreLib module.
         //  The following Bitcoin Core JSON RPC methods are being called through this
-        //  mechanism: 'importpubkey'
+        //  mechanism:
+        //  - 'importpubkey'
+        //  - 'getmempoolentry'
+        //  - 'getblockheader'
+        //  - 'abandontransaction'
         command: Meteor.wrapAsync(this.btcClient.cmd, this.btcClient),
         getinfo: Meteor.wrapAsync(this.btcClient.getInfo, this.btcClient),
         getblockchaininfo: Meteor.wrapAsync(this.btcClient.getBlockchainInfo, this.btcClient),
@@ -116,7 +120,7 @@ BitcoinCore.prototype.getBlockchainInfo = function () {
 // NOTE: this method should not be called since no private keys
 //  are going to be added to the wallet but only public keys
 BitcoinCore.prototype.importPrivateKey = function (privKeyWif, rescan, callback) {
-    if (rescan == undefined) {
+    if (rescan === undefined) {
         rescan = false;
     }
 
@@ -177,6 +181,7 @@ BitcoinCore.prototype.importPrivateKey = function (privKeyWif, rescan, callback)
             socket.on('connect', () => {
                 Catenis.logger.TRACE('Connection established to call Bitcoin Core \'importprivkey\' RPC method');
             });
+            // noinspection JSUnusedLocalSymbols
             socket.on('close', (had_error) => {
                 Catenis.logger.TRACE('Connection to call Bitcoin Core \'importprivkey\' RPC method closed');
                 if (Catenis.application.getWaitingBitcoinCoreRescan()) {
@@ -192,7 +197,7 @@ BitcoinCore.prototype.importPrivateKey = function (privKeyWif, rescan, callback)
                         unlockedWallet = false;
                     }
 
-                    if (callback != undefined && typeof callback === 'function') {
+                    if (callback !== undefined && typeof callback === 'function') {
                         // Return error
                         callback(new Meteor.Error('ctn_btcore_impkey_conn_closed', 'Connection closed while waiting for Bitcoin Core to finish rescanning the blockchain after importing public key'));
                     }
@@ -218,7 +223,7 @@ BitcoinCore.prototype.importPrivateKey = function (privKeyWif, rescan, callback)
             rescanTimeout = true;
             request.abort();
 
-            if (callback != undefined && typeof callback === 'function') {
+            if (callback !== undefined && typeof callback === 'function') {
                 // Return error
                 callback(new Meteor.Error('ctn_btcore_impkey_timeout', 'Timeout while waiting for Bitcoin Core to finish rescanning the blockchain after importing public key'));
             }
@@ -247,7 +252,7 @@ BitcoinCore.prototype.importPrivateKey = function (privKeyWif, rescan, callback)
 
                 const retError = new Meteor.Error('ctn_btcore_impkey_conn_error', errMsg, err.stack);
 
-                if (callback != undefined && typeof callback === 'function') {
+                if (callback !== undefined && typeof callback === 'function') {
                     // Return error
                     callback(retError);
                 }
@@ -258,6 +263,7 @@ BitcoinCore.prototype.importPrivateKey = function (privKeyWif, rescan, callback)
             }
         });
 
+        // noinspection JSUnusedLocalSymbols
         request.on('response', (response) => {
             // 'importprivkey' method returned. Clear indication that we are
             //  waiting on Bitcoin Core to finish rescanning the blockchain
@@ -270,7 +276,7 @@ BitcoinCore.prototype.importPrivateKey = function (privKeyWif, rescan, callback)
                 unlockedWallet = false;
             }
 
-            if (callback != undefined && typeof callback === 'function') {
+            if (callback !== undefined && typeof callback === 'function') {
                 // Return successful result
                 callback(undefined, true);
             }
@@ -285,7 +291,7 @@ BitcoinCore.prototype.importPrivateKey = function (privKeyWif, rescan, callback)
 };
 
 BitcoinCore.prototype.importPublicKey = function (pubKeyHex, rescan, callback) {
-    if (rescan == undefined) {
+    if (rescan === undefined) {
         rescan = false;
     }
 
@@ -337,6 +343,7 @@ BitcoinCore.prototype.importPublicKey = function (pubKeyHex, rescan, callback) {
             socket.on('connect', () => {
                 Catenis.logger.TRACE('Connection established to call Bitcoin Core \'importpubkey\' RPC method');
             });
+            // noinspection JSUnusedLocalSymbols
             socket.on('close', (had_error) => {
                 Catenis.logger.TRACE('Connection to call Bitcoin Core \'importpubkey\' RPC method closed');
                 if (Catenis.application.getWaitingBitcoinCoreRescan()) {
@@ -346,7 +353,7 @@ BitcoinCore.prototype.importPublicKey = function (pubKeyHex, rescan, callback) {
                     Catenis.logger.ERROR('Connection closed while waiting for Bitcoin Core to finish rescanning the blockchain after importing public key');
                     Catenis.application.setWaitingBitcoinCoreRescan(false);
 
-                    if (callback != undefined && typeof callback === 'function') {
+                    if (callback !== undefined && typeof callback === 'function') {
                         // Return error
                         callback(new Meteor.Error('ctn_btcore_impkey_conn_closed', 'Connection closed while waiting for Bitcoin Core to finish rescanning the blockchain after importing public key'));
                     }
@@ -366,7 +373,7 @@ BitcoinCore.prototype.importPublicKey = function (pubKeyHex, rescan, callback) {
             rescanTimeout = true;
             request.abort();
 
-            if (callback != undefined && typeof callback === 'function') {
+            if (callback !== undefined && typeof callback === 'function') {
                 // Return error
                 callback(new Meteor.Error('ctn_btcore_impkey_timeout', 'Timeout while waiting for Bitcoin Core to finish rescanning the blockchain after importing public key'));
             }
@@ -389,7 +396,7 @@ BitcoinCore.prototype.importPublicKey = function (pubKeyHex, rescan, callback) {
 
                 const retError = new Meteor.Error('ctn_btcore_impkey_conn_error', errMsg, err.stack);
 
-                if (callback != undefined && typeof callback === 'function') {
+                if (callback !== undefined && typeof callback === 'function') {
                     // Return error
                     callback(retError);
                 }
@@ -400,13 +407,14 @@ BitcoinCore.prototype.importPublicKey = function (pubKeyHex, rescan, callback) {
             }
         });
 
+        // noinspection JSUnusedLocalSymbols
         request.on('response', (response) => {
             // 'importpubkey' method returned. Clear indication that we are
             //  waiting on Bitcoin Core to finish rescanning the blockchain
             Catenis.logger.TRACE('Bitcoin Core finished rescanning the blockchain after importing public key');
             Catenis.application.setWaitingBitcoinCoreRescan(false);
 
-            if (callback != undefined && typeof callback === 'function') {
+            if (callback !== undefined && typeof callback === 'function') {
                 // Return successful result
                 callback(undefined, true);
             }
@@ -425,17 +433,17 @@ BitcoinCore.prototype.importPublicKey = function (pubKeyHex, rescan, callback) {
 BitcoinCore.prototype.listUnspent = function (minConf, addresses) {
     const args = [];
     
-    if (typeof minConf === 'string' && addresses == undefined) {
+    if (typeof minConf === 'string' && addresses === undefined) {
         addresses = minConf;
         minConf = undefined;
     }
 
-    if (minConf != undefined) {
+    if (minConf !== undefined) {
         args.push(minConf);
     }
 
-    if (addresses != undefined) {
-        if (minConf == undefined) {
+    if (addresses !== undefined) {
+        if (minConf === undefined) {
             args.push(1);
         }
 
@@ -532,7 +540,7 @@ BitcoinCore.prototype.getMempoolInfo = function () {
 BitcoinCore.prototype.getRawMempool = function (verbose) {
     const args = [];
 
-    if (verbose != undefined) {
+    if (verbose !== undefined) {
         args.push(verbose);
     }
 
@@ -551,7 +559,7 @@ BitcoinCore.prototype.getRawMempool = function (verbose) {
 BitcoinCore.prototype.getBlock = function (blockHash, verbose) {
     const args = [blockHash];
 
-    if (verbose != undefined) {
+    if (verbose !== undefined) {
         args.push(verbose);
     }
 
@@ -613,7 +621,7 @@ BitcoinCore.prototype.getTransaction = function (txid, includeDetails = false, l
 BitcoinCore.prototype.getRawTransaction = function (txid, verbose, logError = true) {
     const args = [txid];
 
-    if (verbose != undefined) {
+    if (verbose !== undefined) {
         // NOTE: the type of the verbose parameter has been changed from Number to Boolean in Bitcoin Core ver. 0.14.0 onwards.
         //      However, as of ver. 0.14.1, passing either 1 or 0 is still accepted. Thus, for now, we better just leave the
         //      way it is so it is also compatible with previous versions.
@@ -685,6 +693,15 @@ BitcoinCore.prototype.getMempoolEntry = function (txid) {
     }
 };
 
+BitcoinCore.prototype.abandonTransaction = function (txid) {
+    try {
+        return this.rpcApi.command('abandontransaction', txid);
+    }
+    catch (err) {
+        handleError('abandontransaction', err);
+    }
+};
+
 BitcoinCore.prototype.listSinceBlock = function (blockHash, targetConfirmations) {
     targetConfirmations = targetConfirmations !== undefined ? targetConfirmations : 1;
 
@@ -703,7 +720,7 @@ BitcoinCore.prototype.listSinceBlock = function (blockHash, targetConfirmations)
 BitcoinCore.prototype.getBlockHeader = function (blockHash, verbose) {
     const args = ['getblockheader', blockHash];
 
-    if (verbose != undefined) {
+    if (verbose !== undefined) {
         args.push(verbose);
     }
 
@@ -840,7 +857,7 @@ function convertTxoutStrToObj(txout) {
     let result = txout,
         searchResult;
 
-    if (typeof txout == 'string' && (searchResult = txout.match(/^(\w+):(\d+)$/))) {
+    if (typeof txout === 'string' && (searchResult = txout.match(/^(\w+):(\d+)$/))) {
         result = {txid: searchResult[1], vout: parseInt(searchResult[2])};
     }
 

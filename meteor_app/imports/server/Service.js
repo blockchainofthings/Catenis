@@ -18,6 +18,7 @@
 import config from 'config';
 // Meteor packages
 //import { Meteor } from 'meteor/meteor';
+// noinspection NpmUsedModulesInstalled
 import { _ } from 'meteor/underscore';
 
 
@@ -34,6 +35,9 @@ const srvMsgTypTxCfgSysMsgConfig = srvMsgTypTxCfgConfig.get('sysMessage');
 const srvMsgTypTxCfgSendMsgConfig = srvMsgTypTxCfgConfig.get('sendMessage');
 const srvMsgTypTxCfgLogMsgConfig = srvMsgTypTxCfgConfig.get('logMessage');
 const srvReadConfirmConfig = serviceConfig.get('readConfirmation');
+const srvReadConfTerminalTxConfig = srvReadConfirmConfig.get('terminalReadConfirmTx');
+const srvReadConfTermTxTypTxCfgConfig = srvReadConfTerminalTxConfig.get('typicalTxConfig');
+
 const srvAssetConfig = serviceConfig.get('asset');
 const srvAssetTxWeights = srvAssetConfig.get('txWeights');
 const srvAstTypTxCfgConfig = srvAssetConfig.get('typicalTxConfig');
@@ -94,7 +98,16 @@ const cfgSettings = {
         txInputOutputGrowthRatio: srvReadConfirmConfig.get('txInputOutputGrowthRatio'),
         initTxFeeRate: srvReadConfirmConfig.get('initTxFeeRate'),
         txFeeRateIncrement: srvReadConfirmConfig.get('txFeeRateIncrement'),
-        numReadConfirmTxsMinFundBalance: srvReadConfirmConfig.get('numReadConfirmTxsMinFundBalance')
+        numReadConfirmTxsMinFundBalance: srvReadConfirmConfig.get('numReadConfirmTxsMinFundBalance'),
+        terminalReadConfirmTx: {
+            minutesToConfirm: srvReadConfTerminalTxConfig.get('minutesToConfirm'),
+            typicalTxConfig: {
+                numMessagesConfirmed: srvReadConfTermTxTypTxCfgConfig.get('numMessagesConfirmed'),
+                numPayTxExpenseInputs: srvReadConfTermTxTypTxCfgConfig.get('numPayTxExpenseInputs'),
+                hasChangeOutput: srvReadConfTermTxTypTxCfgConfig.get('hasChangeOutput'),
+                nullDataPayloadSize: srvReadConfTermTxTypTxCfgConfig.get('nullDataPayloadSize')
+            }
+        }
     },
     asset: {
         unlockedAssetsPerMinute: srvAssetConfig.get('unlockedAssetsPerMinute'),
@@ -156,7 +169,12 @@ Service.testFunctions = function () {
         typicalLogMessageTxSize: typicalLogMessageTxSize(),
         estimatedHighestMessageTxCost: estimatedHighestMessageTxCost(),
         typicalHighestMessageTxSize: typicalHighestMessageTxSize(),
+        estimatedTerminalReadConfirmTxCostPerMessage: estimatedTerminalReadConfirmTxCostPerMessage(),
+        typicalTerminalReadConfirmTxSize: typicalTerminalReadConfirmTxSize(),
+        numInputsTerminalReadConfirmTx: numInputsTerminalReadConfirmTx(),
+        numOutputsTerminalReadConfirmTx: numOutputsTerminalReadConfirmTx(),
         averageReadConfirmTxCostPerMessage: averageReadConfirmTxCostPerMessage(),
+        estimatedHighestReadConfirmTxCostPerMessage: estimatedHighestReadConfirmTxCostPerMessage(),
         deviceAssetProvisionCost: deviceAssetProvisionCost(),
         numActiveDeviceAssetIssuanceAddresses: numActiveDeviceAssetIssuanceAddresses(),
         estimatedAssetTxCost: estimatedAssetTxCost(),
@@ -176,7 +194,7 @@ Service.getExpectedPayTxExpenseBalance = function (messageCredits, assetCredits)
 };
 
 Service.getExpectedReadConfirmPayTxExpenseBalance = function (unreadMessages) {
-    return (unreadMessages + cfgSettings.readConfirmation.numReadConfirmTxsMinFundBalance) * averageReadConfirmTxCostPerMessage();
+    return (unreadMessages + cfgSettings.readConfirmation.numReadConfirmTxsMinFundBalance) * estimatedHighestReadConfirmTxCostPerMessage();
 };
 
 Service.distributeSystemDeviceMainAddressFund = function () {
@@ -262,7 +280,7 @@ Service.distributeReadConfirmPayTxExpenseFund = function (amount) {
 
     return {
         totalAmount: totalAmount,
-        amountPerAddress: distributePayment(totalAmount, fundReadConfirmPayTxResolution, 1, cfgSettings.readConfirmation.fundPayTxMultiplyFactor)
+        amountPerAddress: distributePayment(totalAmount, fundReadConfirmPayTxResolution, cfgSettings.readConfirmation.fundPayTxMultiplyFactor, cfgSettings.readConfirmation.fundPayTxMultiplyFactor)
     };
 };
 
@@ -350,6 +368,49 @@ function typicalHighestMessageTxSize() {
     ]);
 }
 
+function estimatedTerminalReadConfirmTxCostPerMessage() {
+    const typicalTxCost = Math.ceil((typicalTerminalReadConfirmTxSize() * Catenis.bitcoinFees.getFeeRateByTime(cfgSettings.readConfirmation.terminalReadConfirmTx.minutesToConfirm)) / cfgSettings.paymentResolution) * cfgSettings.paymentResolution;
+
+    return Math.ceil((typicalTxCost / cfgSettings.readConfirmation.terminalReadConfirmTx.typicalTxConfig.numMessagesConfirmed) / cfgSettings.readConfirmation.paymentResolution) * cfgSettings.readConfirmation.paymentResolution;
+}
+
+function typicalTerminalReadConfirmTxSize() {
+    return Transaction.computeTransactionSize(numInputsTerminalReadConfirmTx(), numOutputsTerminalReadConfirmTx(), cfgSettings.readConfirmation.terminalReadConfirmTx.typicalTxConfig.nullDataPayloadSize);
+}
+
+function numInputsTerminalReadConfirmTx() {
+    return cfgSettings.readConfirmation.terminalReadConfirmTx.typicalTxConfig.numMessagesConfirmed + cfgSettings.readConfirmation.terminalReadConfirmTx.typicalTxConfig.numPayTxExpenseInputs;
+}
+
+function numOutputsTerminalReadConfirmTx() {
+    const numMsgs = cfgSettings.readConfirmation.terminalReadConfirmTx.typicalTxConfig.numMessagesConfirmed;
+    let numOutputs = cfgSettings.readConfirmation.terminalReadConfirmTx.typicalTxConfig.hasChangeOutput ? 1 : 0;
+
+    if (numMsgs > 0) {
+        if (numMsgs >= 1) {
+            // Account for a single read confirmation send notify output
+            numOutputs++;
+        }
+
+        if (numMsgs >= 2) {
+            // Add a single read confirmation send null output
+            numOutputs++;
+        }
+
+        if (numMsgs >= 3) {
+            // Add a single read confirmation send only output
+            numOutputs++;
+        }
+
+        if (numMsgs % cfgSettings.readConfirmation.txInputOutputGrowthRatio === 0) {
+            // Add one more read confirmation send notify outpu
+            numOutputs++;
+        }
+    }
+
+    return numOutputs;
+}
+
 // Calculate average cost (fee paid) of Read Confirmation tx per message
 //
 //  NOTE: the reason for that is because we use the Replace By Fee (RBF) feature
@@ -409,6 +470,13 @@ function averageReadConfirmTxCostPerMessage() {
     }
 
     return Service.avrgReadConfirmTxCostPerMsgCtrl.lastCostPerMsg;
+}
+
+function estimatedHighestReadConfirmTxCostPerMessage() {
+    return _.max([
+        averageReadConfirmTxCostPerMessage(),
+        estimatedTerminalReadConfirmTxCostPerMessage()
+    ]);
 }
 
 function deviceAssetProvisionCost() {
@@ -537,7 +605,7 @@ Object.defineProperties(Service, {
     },
     fundReadConfirmPayTxResolution: {
         get: function () {
-            return Math.ceil((averageReadConfirmTxCostPerMessage() * (1 + cfgSettings.readConfirmation.fundPayTxResolutionSafetyFactor)) / cfgSettings.paymentResolution) * cfgSettings.paymentResolution;
+            return Math.ceil((estimatedHighestReadConfirmTxCostPerMessage() * (1 + cfgSettings.readConfirmation.fundPayTxResolutionSafetyFactor)) / cfgSettings.paymentResolution) * cfgSettings.paymentResolution;
         },
         enumerable: true
     },
@@ -612,7 +680,13 @@ Object.defineProperties(Service, {
             return cfgSettings.readConfirmation.txFeeRateIncrement;
         },
         enumerable: true
-    }
+    },
+    readConfirmTerminalTxMinToConfirm: {
+        get: function () {
+            return cfgSettings.readConfirmation.terminalReadConfirmTx.minutesToConfirm;
+        },
+        enumerable: true
+    },
 });
 
 // Lock function class

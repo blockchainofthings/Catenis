@@ -16,6 +16,7 @@
 const util = require('util');
 // Third-party node modules
 //import config from 'config';
+import _und from 'underscore';
 // Meteor packages
 import { Meteor } from 'meteor/meteor';
 
@@ -28,6 +29,8 @@ import { Service } from './Service';
 import { ReadConfirmation } from './ReadConfirmation';
 import { FundSource } from './FundSource';
 import { Util } from './Util';
+import { MalleabilityEventEmitter } from './MalleabilityEventEmitter';
+import { CatenisNode } from './CatenisNode';
 
 // Config entries
 /*const config_entryConfig = config.get('config_entry');
@@ -98,33 +101,67 @@ export function ReadConfirmTransaction(transact) {
             get: function () {
                 //noinspection JSPotentiallyInvalidUsageOfThis
                 return this.ctnNdIdxReadConfirmSpndNtfyOutRelPos.size - 1 + (this.hasReadConfirmSpendNullOutput ? 1 : 0) + (this.hasReadConfirmSpendOnlyOutput ? 1 : 0);
-            }
+            },
+            enumerable: false
+        },
+        lastTxChangeTxout: {
+            get: function () {
+                let txout;
+
+                //noinspection JSPotentiallyInvalidUsageOfThis
+                if (this.lastTxChangeOutputPos > 0) {
+                    //noinspection JSPotentiallyInvalidUsageOfThis
+                    txout = {
+                        txid: this.lastTxid,
+                        vout: this.lastTxChangeOutputPos
+                    }
+                }
+
+                return txout;
+            },
+            enumerable: true
         }
     });
 
-    if (transact === undefined) {
-        // Check if there is a previous read confirmation transaction still pending
-        retrievePreviousReadConfirmationTx.call(this);
-    }
-    else {
+    if (transact) {
+        // Initialize object with existing (read confirmation) transaction
         this.transact = transact;
-    }
 
-    if (this.transact !== undefined) {
-        // Compute number of inputs that are associated with a device read confirmation address output
+        // Compute number of inputs that are associated with a device read confirmation address output,
+        //  and also identify the inputs that are used to pay for the transaction fee
         let numReadConfirmAddrInputs = 0;
+        this.payFeeInputTxouts = [];
 
-        this.transact.inputs.some((input) => {
-            if (input.addrInfo !== undefined && input.addrInfo.type === KeyStore.extKeyType.dev_read_conf_addr.name) {
-                numReadConfirmAddrInputs++;
-
-                // Continue iteration
-                return false;
+        this.transact.inputs.forEach((input, idx) => {
+            if (input.addrInfo !== undefined) {
+                if (input.addrInfo.type === KeyStore.extKeyType.dev_read_conf_addr.name) {
+                    // Increment number of read confirmation address inputs
+                    numReadConfirmAddrInputs++;
+                }
+                else if (input.addrInfo.type === KeyStore.extKeyType.sys_read_conf_pay_tx_exp_addr.name) {
+                    // Save input used to pay for the transaction fee
+                    this.payFeeInputTxouts.push(input.txout);
+                }
+                else {
+                    // Transaction has an input of an invalid type.
+                    //  Log error condition and throw exception
+                    Catenis.logger.ERROR('Inconsistent read confirmation transaction; transaction has an input of an invalid type', {
+                        txid: this.transact.txid,
+                        input: input,
+                        inputPosition: idx
+                    });
+                    throw new Error('Inconsistent read confirmation transaction; transaction has an input of an invalid type');
+                }
             }
             else {
-                // Input is not associated with a device read confirmation address output.
-                //  Just stop iteration
-                return true;
+                // Transaction has an input of an unknown type.
+                //  Log error condition and throw exception
+                Catenis.logger.ERROR('Inconsistent read confirmation transaction; transaction has an input of an unknown type', {
+                    txid: this.transact.txid,
+                    input: input,
+                    inputPosition: idx
+                });
+                throw new Error('Inconsistent read confirmation transaction; transaction has an input of an unknown type');
             }
         });
 
@@ -136,12 +173,12 @@ export function ReadConfirmTransaction(transact) {
         this.hasReadConfirmSpendOnlyOutput = false;
         this.ctnNdIdxReadConfirmSpndNtfyOutRelPos = new Map();
 
-        this.transact.outputs.some((output, idx) => {
+        this.transact.outputs.forEach((output, idx) => {
             if (output.payInfo.addrInfo !== undefined) {
                 if (output.payInfo.addrInfo.type === KeyStore.extKeyType.sys_read_conf_spnd_ntfy_addr.name) {
                     // Save position of output associated with system read confirmation spend notify address
                     //  and continue iteration
-                    this.setReadConfirmSpendNotifyOutputPos(output.payInfo.addrInfo.pathParts.ctnNodeIndex);
+                    setReadConfirmSpendNotifyOutputPos.call(this, output.payInfo.addrInfo.pathParts.ctnNodeIndex);
 
                     // Compute number of read confirmation spend notify address inputs
                     let amount = output.payInfo.amount;
@@ -164,9 +201,6 @@ export function ReadConfirmTransaction(transact) {
                         });
                         throw new Error('Inconsistent read confirmation transaction; not all amount in spend notify output mapped to read confirmation address inputs');
                     }
-
-                    // Continue iteration
-                    return false;
                 }
                 else if (output.payInfo.addrInfo.type === KeyStore.extKeyType.sys_read_conf_spnd_only_addr.name) {
                     // Read confirmation spend only output type
@@ -218,9 +252,6 @@ export function ReadConfirmTransaction(transact) {
                         });
                         throw new Error('Inconsistent read confirmation transaction; not all amount in spend only output mapped to read confirmation address inputs');
                     }
-
-                    // Continue iteration
-                    return false;
                 }
                 else if (output.payInfo.addrInfo.type === KeyStore.extKeyType.sys_read_conf_spnd_null_addr.name) {
                     // Read confirmation spend null output type
@@ -272,15 +303,28 @@ export function ReadConfirmTransaction(transact) {
                         });
                         throw new Error('Inconsistent read confirmation transaction; not all amount in spend null output mapped to read confirmation address inputs');
                     }
-
-                    // Continue iteration
-                    return false;
+                }
+                else if (!output.payInfo.addrInfo.type === KeyStore.extKeyType.sys_read_conf_pay_tx_exp_addr.name) {
+                    // Transaction has an output of an invalid type.
+                    //  Log error condition and throw exception
+                    Catenis.logger.ERROR('Inconsistent read confirmation transaction; transaction has an output of an invalid type', {
+                        txid: this.transact.txid,
+                        output: output,
+                        outputPosition: idx
+                    });
+                    throw new Error('Inconsistent read confirmation transaction; transaction has an output of an invalid type');
                 }
             }
-
-            // Output is not associated with a read confirmation spend address.
-            //  Just stop iteration
-            return true;
+            else {
+                // Transaction has an output of an unknown type.
+                //  Log error condition and throw exception
+                Catenis.logger.ERROR('Inconsistent read confirmation transaction; transaction has an output of an unknown type', {
+                    txid: this.transact.txid,
+                    output: output,
+                    outputPosition: idx
+                });
+                throw new Error('Inconsistent read confirmation transaction; transaction has an output of an unknown type');
+            }
         });
 
         // Make sure that total amount of read confirm address inputs matches total amount of read confirm spend outputs
@@ -296,16 +340,19 @@ export function ReadConfirmTransaction(transact) {
         // Determine current fee and current change
         this.fee = this.transact.totalInputsAmount() - this.transact.totalOutputsAmount();
         this.change = this.transact.totalOutputsAmount(this.lastReadConfirmSpendOutputPos + 1);
+        this.txChanged = false;
         this.txFunded = true;
 
         // Instantiate RBF tx info object
         initReadConfirmTxInfo.call(this);
 
-        this.lastTxid = this.transact.txid;
         this.lastTxChangeOutputPos = this.change > 0 ? this.lastReadConfirmSpendOutputPos + 1 : -1;
+        retrieveReplacedTransactionIds.call(this);
+        newTransactionId.call(this, this.transact.txid);
     }
     else {
         this.transact = new Transaction(true);
+        this.payFeeInputTxouts = [];
         this.readConfirmAddrSpndNullInputCount = 0;
         this.readConfirmAddrSpndOnlyInputCount = 0;
         this.readConfirmAddrSpndNtfyInputCount = 0;
@@ -314,27 +361,53 @@ export function ReadConfirmTransaction(transact) {
         this.ctnNdIdxReadConfirmSpndNtfyOutRelPos = new Map(); // Contains a map of relative position
         this.fee = 0;
         this.change = 0;
+        this.txChanged = false;
         this.txFunded = false;
+        this.txids = [];
         this.lastTxid = undefined;
         this.lastTxChangeOutputPos = -1;
-        this.lastSentDate = undefined;
     }
+
+    // Set up handler for event notifying that txid has changed due to malleability
+    this.txidChangedEventHandler = TransactIdChanged.bind(this);
+
+    Catenis.malleabilityEventEmitter.on(MalleabilityEventEmitter.notifyEvent.txid_changed.name, this.txidChangedEventHandler);
 }
 
 
 // Public ReadConfirmTransaction object methods
 //
 
-ReadConfirmTransaction.prototype.getReadConfirmSpendNotifyOutputPos = function (ctnNodeIndex) {
-    return this.ctnNdIdxReadConfirmSpndNtfyOutRelPos.has(ctnNodeIndex) ? this.ctnNdIdxReadConfirmSpndNtfyOutRelPos.get(ctnNodeIndex) + (this.hasReadConfirmSpendNullOutput ? 1 : 0) + (this.hasReadConfirmSpendOnlyOutput ? 1 : 0) : -1;
+// Check whether all send message transactions the read confirm address outputs of which
+//  spent by this read confirmation transaction are already confirmed
+ReadConfirmTransaction.prototype.areReadConfirmAddrTxConfirmed = function () {
+    let result = true;
+
+    for (let inputPos = 0; inputPos < this.nextReadConfirmAddrSpndNtfyInputPos; inputPos++) {
+        const input = this.transact.getInputAt(inputPos);
+        const txoutInfo = Catenis.bitcoinCore.getTxOut(input.txout.txid, input.txout.vout);
+
+        if (txoutInfo.confirmations === 0) {
+            result = false;
+            break;
+        }
+    }
+
+    return result;
 };
 
-ReadConfirmTransaction.prototype.setReadConfirmSpendNotifyOutputPos = function (ctnNodeIndex) {
-    if (!this.ctnNdIdxReadConfirmSpndNtfyOutRelPos.has(ctnNodeIndex)) {
-        const pos = this.ctnNdIdxReadConfirmSpndNtfyOutRelPos.size;
+// Checks whether a transaction output is used to pay for transaction fee
+ReadConfirmTransaction.prototype.isTxOutputUsedToPayFee = function (txout) {
+    return this.payFeeInputTxouts.some((inTxout) => {
+        return inTxout.txid === txout.txid && inTxout.vout === txout.vout;
+    });
+};
 
-        this.ctnNdIdxReadConfirmSpndNtfyOutRelPos.set(ctnNodeIndex, pos);
-    }
+// Checks whether a transction ID has been used for this read confirmation transaction
+ReadConfirmTransaction.prototype.hasTxidBeenUsed = function (txid) {
+    return this.txids.some((usedTxid) => {
+        return usedTxid === txid;
+    })
 };
 
 // Method used to set up a predefined set of inputs and outputs for the transaction
@@ -388,7 +461,7 @@ ReadConfirmTransaction.prototype.initInputsOutputs = function (inputs, outputs) 
 
             if (output.payInfo.addrInfo.type === KeyStore.extKeyType.sys_read_conf_spnd_ntfy_addr.name) {
                 // Save position of output associated with system read confirmation spend notify address
-                this.setReadConfirmSpendNotifyOutputPos(output.payInfo.addrInfo.pathParts.ctnNodeIndex);
+                setReadConfirmSpendNotifyOutputPos.call(this, output.payInfo.addrInfo.pathParts.ctnNodeIndex);
 
                 // Compute number of read confirmation spend notify address inputs
                 let amount = output.payInfo.amount;
@@ -411,6 +484,9 @@ ReadConfirmTransaction.prototype.initInputsOutputs = function (inputs, outputs) 
                     });
                     throw new Error('Inconsistency of data used to initialize read confirmation transaction; not all amount in spend notify output mapped to read confirmation address inputs');
                 }
+
+                // Save output to be added
+                readConfirmSpendOutputs.push(output);
             }
             else if (output.payInfo.addrInfo.type === KeyStore.extKeyType.sys_read_conf_spnd_only_addr.name) {
                 // Read confirmation spend only output type
@@ -460,6 +536,9 @@ ReadConfirmTransaction.prototype.initInputsOutputs = function (inputs, outputs) 
                     });
                     throw new Error('Inconsistency of data used to initialize read confirmation transaction; not all amount in spend only output mapped to read confirmation address inputs');
                 }
+
+                // Save output to be added
+                readConfirmSpendOutputs.push(output);
             }
             else if (output.payInfo.addrInfo.type === KeyStore.extKeyType.sys_read_conf_spnd_null_addr.name) {
                 // Read confirmation spend null output type
@@ -509,6 +588,9 @@ ReadConfirmTransaction.prototype.initInputsOutputs = function (inputs, outputs) 
                     });
                     throw new Error('Inconsistency of data used to initialize read confirmation transaction; not all amount in spend null output mapped to read confirmation address inputs');
                 }
+
+                // Save output to be added
+                readConfirmSpendOutputs.push(output);
             }
             else {
                 // Unexpected output type. Log warning condition
@@ -530,6 +612,11 @@ ReadConfirmTransaction.prototype.initInputsOutputs = function (inputs, outputs) 
             });
             throw new Error('Inconsistency of data used to initialize read confirmation transaction; total amount of inputs does not match total amount of outputs');
         }
+
+        if (readConfirmAddrInputs.length > 0 || readConfirmSpendOutputs.length > 0) {
+            // Indicate that transaction has changed
+            this.txChanged = true;
+        }
     }
     else {
         // Trying to initialize inputs and outputs of read confirmation transaction that is already funded.
@@ -538,96 +625,68 @@ ReadConfirmTransaction.prototype.initInputsOutputs = function (inputs, outputs) 
     }
 };
 
-ReadConfirmTransaction.prototype.addSendMsgTxToConfirm = function (sendMsgTransact, confirmType) {
-    // Find read confirmation output of send message transaction
-    let addrInfo;
+ReadConfirmTransaction.prototype.needsToFund = function () {
+    return this.txChanged && !this.txFunded;
+};
 
-    const readConfirmOutputPos = sendMsgTransact.transact.outputs.findIndex((output) => {
-        if (output.type === Transaction.outputType.P2PKH) {
-            addrInfo = typeof output.payInfo.addrInfo !== 'undefined' ? output.payInfo.addrInfo : Catenis.keyStore.getAddressInfo(output.payInfo.address, true);
+ReadConfirmTransaction.prototype.needsToSend = function () {
+    return this.txChanged && this.txFunded;
+};
 
-            return addrInfo !== null && addrInfo.type === KeyStore.extKeyType.dev_read_conf_addr.name;
+ReadConfirmTransaction.prototype.addSendMsgTxToConfirm = function (sendMsgTransact, readConfirmOutputPos, confirmType) {
+    const readConfirmOutput = sendMsgTransact.transact.getOutputAt(readConfirmOutputPos);
+
+    // Prepare input to add
+    const readConfirmAddrInput = {
+        txout: {
+            txid: sendMsgTransact.transact.txid,
+            vout: readConfirmOutputPos,
+            amount: readConfirmOutput.payInfo.amount,
+        },
+        address: readConfirmOutput.payInfo.address,
+        addrInfo: readConfirmOutput.payInfo.addrInfo
+    };
+
+    // Add proper input and output according to the type of confirmation
+    let newOutputAdded = false;
+
+    if (confirmType === ReadConfirmation.confirmationType.spendNotify) {
+        // Spend notify
+        newOutputAdded = addReadConfirmAddrSpendNotify.call(this, readConfirmAddrInput, sendMsgTransact.originDevice.client.ctnNode);
+    }
+    else if (confirmType === ReadConfirmation.confirmationType.spendOnly) {
+        // Spend only
+        newOutputAdded = addReadConfirmAddrSpendOnly.call(this, readConfirmAddrInput);
+    }
+    else if (confirmType === ReadConfirmation.confirmationType.spendNull) {
+        // Spend null
+        newOutputAdded = addReadConfirmAddrSpendNull.call(this, readConfirmAddrInput);
+    }
+
+    if (this.readConfirmTxInfo) {
+        // Update read confirmation tx info
+        this.readConfirmTxInfo.incrementNumTxInputs(1);
+
+        if (newOutputAdded) {
+            this.readConfirmTxInfo.incrementNumTxOutputs(1);
         }
+    }
 
-        return false;
-    });
+    // Indicate that tx needs to be funded
+    this.txChanged = true;
+    this.txFunded = false;
+};
 
-    if (readConfirmOutputPos >= 0) {
-        const readConfirmOutput = sendMsgTransact.transact.getOutputAt(readConfirmOutputPos);
+// Method used to merge inputs and outputs of another read confirmation transaction with this one
+//
+//  NOTE: it is assumed that a transaction is not a replacement for the other, and as suck that
+//      they do not share the same inputs
+ReadConfirmTransaction.prototype.mergeReadConfirmTransaction = function (readConfirmTransact) {
+    let newInputAdded = false;
 
-        // Prepare input to add
-        const readConfirmAddrInput = {
-            txout: {
-                txid: sendMsgTransact.transact.txid,
-                vout: readConfirmOutputPos,
-                amount: readConfirmOutput.payInfo.amount,
-            },
-            address: readConfirmOutput.payInfo.address,
-            addrInfo: addrInfo
-        };
-
-        // Add proper input and output according to the type of confirmation
-        let newOutputAdded = false;
-
-        if (confirmType === ReadConfirmation.confirmationType.spendNotify) {
-            // Spend notify
-
-            // Add input
-            this.transact.addInputs(readConfirmAddrInput, this.nextReadConfirmAddrSpndNtfyInputPos);
-            this.readConfirmAddrSpndNtfyInputCount++;
-
-            // Prepare to add output
-            const ctnNode = sendMsgTransact.originDevice.client.ctnNode;
-
-            if (this.ctnNdIdxReadConfirmSpndNtfyOutRelPos.has(ctnNode.ctnNodeIndex)) {
-                // Output is already present. Just increment its amount
-                this.transact.incrementOutputAmount(this.getReadConfirmSpendNotifyOutputPos(ctnNode.ctnNodeIndex), readConfirmOutput.payInfo.amount);
-            }
-            else {
-                // Add new output
-                this.setReadConfirmSpendNotifyOutputPos(ctnNode.ctnNodeIndex);
-                this.transact.addP2PKHOutput(ctnNode.readConfirmSpendNotifyAddr.newAddressKeys().getAddress(), readConfirmOutput.payInfo.amount, this.getReadConfirmSpendNotifyOutputPos(ctnNode.ctnNodeIndex));
-                newOutputAdded = true;
-            }
-        }
-        else if (confirmType === ReadConfirmation.confirmationType.spendOnly) {
-            // Spend only
-
-            // Add input
-            this.transact.addInputs(readConfirmAddrInput, this.nextReadConfirmAddrSpndOnlyInputPos);
-            this.readConfirmAddrSpndOnlyInputCount++;
-
-            // Prepare to add output
-            if (this.hasReadConfirmSpendOnlyOutput) {
-                // Output is already present. Just increment its amount
-                this.transact.incrementOutputAmount(this.readConfirmSpendOnlyOutputPos, readConfirmOutput.payInfo.amount);
-            }
-            else {
-                // Add new output
-                this.hasReadConfirmSpendOnlyOutput = true;
-                this.transact.addP2PKHOutput(Catenis.ctnHubNode.readConfirmSpendOnlyAddr.newAddressKeys().getAddress(), readConfirmOutput.payInfo.amount, this.readConfirmSpendOnlyOutputPos);
-                newOutputAdded = true;
-            }
-        }
-        else if (confirmType === ReadConfirmation.confirmationType.spendNull) {
-            // Spend null
-
-            // Add input
-            this.transact.addInputs(readConfirmAddrInput, this.nextReadConfirmAddrSpndNullInputPos);
-            this.readConfirmAddrSpndNullInputCount++;
-
-            // Prepare to add output
-            if (this.hasReadConfirmSpendNullOutput) {
-                // Output is already present. Just increment its amount
-                this.transact.incrementOutputAmount(this.readConfirmSpendNullOutputPos, readConfirmOutput.payInfo.amount);
-            }
-            else {
-                // Add new output
-                this.hasReadConfirmSpendNullOutput = true;
-                this.transact.addP2PKHOutput(Catenis.ctnHubNode.readConfirmSpendNullAddr.newAddressKeys().getAddress(), readConfirmOutput.payInfo.amount, this.readConfirmSpendNullOutputPos);
-                newOutputAdded = true;
-            }
-        }
+    // Process read confirmation address to spend null
+    for (let inputPos = 0; inputPos < readConfirmTransact.nextReadConfirmAddrSpndNullInputPos; inputPos++) {
+        const newOutputAdded = addReadConfirmAddrSpendNull.call(this, readConfirmTransact.transact.getInputAt(inputPos), readConfirmTransact.transact.getOutputAt(readConfirmTransact.readConfirmSpendNullOutputPos).payInfo.address);
 
         if (this.readConfirmTxInfo) {
             // Update read confirmation tx info
@@ -638,13 +697,58 @@ ReadConfirmTransaction.prototype.addSendMsgTxToConfirm = function (sendMsgTransa
             }
         }
 
-        // Indicate that tx needs to be funded
-        this.txFunded = false;
+        newInputAdded = true;
     }
-    else {
-        // No read configuration output found in send message transaction to confirm.
-        //  Log waring condition
-        Catenis.logger.WARN('No read confirmation output found in send message transaction to confirm', sendMsgTransact);
+
+    // Process read confirmation address to spend only
+    for (let inputPos = readConfirmTransact.nextReadConfirmAddrSpndNullInputPos; inputPos < readConfirmTransact.nextReadConfirmAddrSpndOnlyInputPos; inputPos++) {
+        const newOutputAdded = addReadConfirmAddrSpendOnly.call(this, readConfirmTransact.transact.getInputAt(inputPos), readConfirmTransact.transact.getOutputAt(readConfirmTransact.readConfirmSpendOnlyOutputPos).payInfo.address);
+
+        if (this.readConfirmTxInfo) {
+            // Update read confirmation tx info
+            this.readConfirmTxInfo.incrementNumTxInputs(1);
+
+            if (newOutputAdded) {
+                this.readConfirmTxInfo.incrementNumTxOutputs(1);
+            }
+        }
+
+        newInputAdded = true;
+    }
+
+    // Process read confirmation address to spend notify
+    let inputPos = readConfirmTransact.startReadConfirmAddrSpndNtfyInputPos;
+
+    for (let ctnNodeIdx of readConfirmTransact.ctnNdIdxReadConfirmSpndNtfyOutRelPos.keys()) {
+        const ctnNode = CatenisNode.getCatenisNodeByIndex(ctnNodeIdx);
+        const readConfirmSpendNotifyOutput = readConfirmTransact.transact.getOutputAt(getReadConfirmSpendNotifyOutputPos.call(readConfirmTransact, ctnNodeIdx));
+        let amountLeft = readConfirmSpendNotifyOutput.payInfo.amount;
+
+        do {
+            const input = readConfirmTransact.transact.getInputAt(inputPos);
+            const newOutputAdded = addReadConfirmAddrSpendNotify.call(this, input, ctnNode, readConfirmSpendNotifyOutput.payInfo.address);
+
+            if (this.readConfirmTxInfo) {
+                // Update read confirmation tx info
+                this.readConfirmTxInfo.incrementNumTxInputs(1);
+
+                if (newOutputAdded) {
+                    this.readConfirmTxInfo.incrementNumTxOutputs(1);
+                }
+            }
+
+            newInputAdded = true;
+
+            amountLeft -= input.txout.amount;
+            inputPos++;
+        }
+        while (amountLeft > 0);
+    }
+
+    if (newInputAdded) {
+        // Indicate that tx needs to be funded
+        this.txChanged = true;
+        this.txFunded = false;
     }
 };
 
@@ -746,6 +850,11 @@ ReadConfirmTransaction.prototype.fundTransaction = function () {
 
                             this.transact.addInputs(inputs);
 
+                            // Save inputs used to pay for transaction fee
+                            inputs.forEach((input) => {
+                                this.payFeeInputTxouts.push(input.txout);
+                            });
+
                             // Update transaction fee
                             this.fee += deltaFee;
 
@@ -832,19 +941,19 @@ ReadConfirmTransaction.prototype.sendTransaction = function () {
         if (this.transact.txid === undefined) {
             this.transact.sendTransaction();
 
-            this.readConfirmTxInfo.setRealTxSize(this.transact.realSize());
+            // Reset indication that tx had changed
+            this.txChanged = false;
+
+            this.readConfirmTxInfo.setRealTxSize(this.transact.realSize(), this.transact.countInputs());
 
             // Save sent transaction onto local database
             this.transact.saveSentTransaction(Transaction.type.read_confirmation, {
-                txouts:  this.transact.listInputTxouts(0, this.readConfirmAddrInputCount - 1).map((txout) => {
-                    return {
-                        txid: txout.txid,
-                        vout: txout.vout
-                    };
-                }),
-                feeAmount: this.fee,
-                txSize: this.transact.realSize()
+                serializedTx: _und.omit(JSON.parse(this.transact.serialize()), 'useOptInRBF', 'txid'),
+                spentReadConfirmTxOutCount: this.readConfirmAddrInputCount
             });
+
+            // Set read confirmation address outputs of respective send message transactions as spent
+            setSpentReadConfirmAddrTxOuts.call(this);
 
             if (this.lastTxid !== undefined) {
                 // Update entry of previous read confirmation transaction to indicate that it has been replaced
@@ -869,9 +978,8 @@ ReadConfirmTransaction.prototype.sendTransaction = function () {
             }
 
             // Save data about last issued read confirmation transaction
-            this.lastTxid = this.transact.txid;
             this.lastTxChangeOutputPos = this.change > 0 ? this.lastReadConfirmSpendOutputPos + 1 : -1;
-            this.lastSentDate = new Date();
+            newTransactionId.call(this, this.transact.txid);
 
             // Check if system read confirmation pay tx expense addresses need to be refunded
             Catenis.ctnHubNode.checkReadConfirmPayTxExpenseFundingBalance();
@@ -896,7 +1004,19 @@ ReadConfirmTransaction.prototype.sendTransaction = function () {
 
 ReadConfirmTransaction.prototype.setOptimumFeeRate = function () {
     this.readConfirmTxInfo.checkResetFeeRate(Catenis.bitcoinFees.getOptimumFeeRate());
+    this.txChanged = true;
     this.txFunded = false;
+};
+
+ReadConfirmTransaction.prototype.setTerminalFeeRate = function () {
+    this.readConfirmTxInfo.checkResetFeeRate(Catenis.bitcoinFees.getFeeRateByTime(Service.readConfirmTerminalTxMinToConfirm));
+    this.txChanged = true;
+    this.txFunded = false;
+};
+
+ReadConfirmTransaction.prototype.dispose = function () {
+    // Remove event handler
+    Catenis.malleabilityEventEmitter.removeListener(MalleabilityEventEmitter.notifyEvent.txid_changed.name, this.txidChangedEventHandler);
 };
 
 
@@ -906,34 +1026,99 @@ ReadConfirmTransaction.prototype.setOptimumFeeRate = function () {
 //      or .bind().
 //
 
-function retrievePreviousReadConfirmationTx() {
-    const docSentReadConfirmTxs = Catenis.db.collection.SentTransaction.find({
-        type: Transaction.type.read_confirmation.name,
-        'confirmation.confirmed': false,
-        replacedByTxid: {
-            $exists: false
-        }
-    }, {
-        sort: {
-            sentDate: -1
-        },
-        fields: {
-            txid: 1,
-            sentDate: 1
-        }
-    }).fetch();
+function getReadConfirmSpendNotifyOutputPos(ctnNodeIndex) {
+    return this.ctnNdIdxReadConfirmSpndNtfyOutRelPos.has(ctnNodeIndex) ? this.ctnNdIdxReadConfirmSpndNtfyOutRelPos.get(ctnNodeIndex) + (this.hasReadConfirmSpendNullOutput ? 1 : 0) + (this.hasReadConfirmSpendOnlyOutput ? 1 : 0) : -1;
+}
 
-    if (docSentReadConfirmTxs.length > 0) {
-        // Make sure that no more than one read confirmation transaction is awaiting confirmation
-        if (docSentReadConfirmTxs.length > 1) {
-            // Log warning condition
-            Catenis.logger.WARN('More than one read confirmation transaction is awaiting confirmation', {
-                docsSentTransaction: docSentReadConfirmTxs
-            });
-        }
+function setReadConfirmSpendNotifyOutputPos(ctnNodeIndex) {
+    if (!this.ctnNdIdxReadConfirmSpndNtfyOutRelPos.has(ctnNodeIndex)) {
+        const pos = this.ctnNdIdxReadConfirmSpndNtfyOutRelPos.size;
 
-        this.transact = Transaction.fromTxid(docSentReadConfirmTxs[0].txid);
-        this.lastSentDate = docSentReadConfirmTxs[0].sentDate;
+        this.ctnNdIdxReadConfirmSpndNtfyOutRelPos.set(ctnNodeIndex, pos);
+    }
+}
+
+function addReadConfirmAddrSpendNull(input, readConfirmSpendAddress) {
+    // Add input
+    this.transact.addInputs(input, this.nextReadConfirmAddrSpndNullInputPos);
+    this.readConfirmAddrSpndNullInputCount++;
+
+    // Prepare to add output
+    let newOutputAdded = false;
+
+    if (this.hasReadConfirmSpendNullOutput) {
+        // Output is already present. Just increment its amount
+        this.transact.incrementOutputAmount(this.readConfirmSpendNullOutputPos, input.txout.amount);
+    }
+    else {
+        // Add new output
+        this.hasReadConfirmSpendNullOutput = true;
+        readConfirmSpendAddress = readConfirmSpendAddress !== undefined ? readConfirmSpendAddress : Catenis.ctnHubNode.readConfirmSpendNullAddr.newAddressKeys().getAddress();
+        this.transact.addP2PKHOutput(readConfirmSpendAddress, input.txout.amount, this.readConfirmSpendNullOutputPos);
+        newOutputAdded = true;
+    }
+
+    return newOutputAdded;
+}
+
+function addReadConfirmAddrSpendOnly(input, readConfirmSpendAddress) {
+    // Add input
+    this.transact.addInputs(input, this.nextReadConfirmAddrSpndOnlyInputPos);
+    this.readConfirmAddrSpndOnlyInputCount++;
+
+    // Prepare to add output
+    let newOutputAdded = false;
+
+    if (this.hasReadConfirmSpendOnlyOutput) {
+        // Output is already present. Just increment its amount
+        this.transact.incrementOutputAmount(this.readConfirmSpendOnlyOutputPos, input.txout.amount);
+    }
+    else {
+        // Add new output
+        this.hasReadConfirmSpendOnlyOutput = true;
+        readConfirmSpendAddress = readConfirmSpendAddress !== undefined ? readConfirmSpendAddress : Catenis.ctnHubNode.readConfirmSpendOnlyAddr.newAddressKeys().getAddress();
+        this.transact.addP2PKHOutput(readConfirmSpendAddress, input.txout.amount, this.readConfirmSpendOnlyOutputPos);
+        newOutputAdded = true;
+    }
+
+    return newOutputAdded;
+}
+
+function addReadConfirmAddrSpendNotify(input, ctnNode, readConfirmSpendAddress) {
+    // Add input
+    this.transact.addInputs(input, this.nextReadConfirmAddrSpndNtfyInputPos);
+    this.readConfirmAddrSpndNtfyInputCount++;
+
+    // Prepare to add output
+    let newOutputAdded = false;
+
+    if (this.ctnNdIdxReadConfirmSpndNtfyOutRelPos.has(ctnNode.ctnNodeIndex)) {
+        // Output is already present. Just increment its amount
+        this.transact.incrementOutputAmount(getReadConfirmSpendNotifyOutputPos.call(this, ctnNode.ctnNodeIndex), input.txout.amount);
+    }
+    else {
+        // Add new output
+        setReadConfirmSpendNotifyOutputPos.call(this, ctnNode.ctnNodeIndex);
+        readConfirmSpendAddress = readConfirmSpendAddress !== undefined ? input.txout : ctnNode.readConfirmSpendNotifyAddr.newAddressKeys().getAddress();
+        this.transact.addP2PKHOutput(readConfirmSpendAddress, input.txout.amount, getReadConfirmSpendNotifyOutputPos.call(this, ctnNode.ctnNodeIndex));
+        newOutputAdded = true;
+    }
+
+    return newOutputAdded;
+}
+
+function TransactIdChanged(data) {
+    // Replace reference to txid that has changed due to malleability
+    const txidIdx = this.txids.find((txid) => {
+        return txid === data.originalTxid;
+    });
+
+    if (txidIdx > 0) {
+        this.txids[txidIdx] = data.modifiedTxid;
+
+        if (this.lastTxid === data.originalTxid) {
+            this.lastTxid = data.modifiedTxid;
+        }
     }
 }
 
@@ -955,6 +1140,64 @@ function initReadConfirmTxInfo() {
     this.readConfirmTxInfo = new RbfTransactionInfo(opts);
 }
 
+function retrieveReplacedTransactionIds() {
+    this.txids = [];
+    let nextTxid = this.transact.txid;
+
+    do {
+        const replacedTxDoc = Catenis.db.collection.SentTransaction.findOne({
+            type: Transaction.type.read_confirmation.name,
+            replacedByTxid: nextTxid
+        }, {
+            fields: {
+                txid: 1
+            }
+        });
+
+        if (replacedTxDoc) {
+            nextTxid = replacedTxDoc.txid;
+            this.txids.unshift(nextTxid);
+        }
+        else {
+            nextTxid = undefined;
+        }
+    }
+    while (nextTxid);
+}
+
+function newTransactionId(txid) {
+    this.txids.push(txid);
+    this.lastTxid = txid;
+}
+
+function setSpentReadConfirmAddrTxOuts() {
+    // Get list of txids of send message transactions the read confirmation address output of which
+    //  had been spent by this read confirmation transaction
+    const sendMsgTxids = [];
+
+    for (let pos = 0; pos < this.nextReadConfirmAddrSpndNtfyInputPos; pos++) {
+        sendMsgTxids.push(this.transact.getInputAt(pos).txout.txid);
+    }
+
+    try {
+        // Update local database to indicate that read confirmation txouts had been spent
+        Catenis.db.collection.ReceivedTransaction.update({
+            txid: {
+                $in: sendMsgTxids
+            },
+            'info.sendMessage.readConfirmation.spent': false
+        }, {
+            $set: {
+                'info.sendMessage.readConfirmation.spent': true
+            }
+        }, {
+            multi: true
+        });
+    }
+    catch (err) {
+        Catenis.logger.ERROR('Error trying to update ReceivedTransaction DB collection docs to set read confirmation txouts as spent.', err);
+    }
+}
 
 // ReadConfirmTransaction function class (public) methods
 //

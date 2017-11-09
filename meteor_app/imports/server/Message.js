@@ -48,6 +48,7 @@ export function Message(docMessage) {
     this.source = docMessage.source;
     this.originDeviceId = docMessage.originDeviceId;
     this.targetDeviceId = docMessage.targetDeviceId;
+    this.readConfirmationEnabled = docMessage.readConfirmationEnabled;
     this.isEncrypted = docMessage.isEncrypted;
     this.txid = docMessage.blockchain.txid;
     this.isTxConfirmed = docMessage.blockchain.confirmed;
@@ -176,6 +177,7 @@ Message.createLocalMessage = function (msgTransact) {
     else {  // action == Message.action.send
         docMessage.originDeviceId = msgTransact.originDevice.deviceId;
         docMessage.targetDeviceId = msgTransact.targetDevice.deviceId;
+        docMessage.readConfirmationEnabled = msgTransact.options.readConfirmation;
     }
 
     docMessage.isEncrypted = msgTransact.options.encrypted;
@@ -238,6 +240,7 @@ Message.createRemoteMessage = function (sendMsgTransact, receivedDate) {
         source: Message.source.remote,
         originDeviceId: sendMsgTransact.originDevice.deviceId,
         targetDeviceId: sendMsgTransact.targetDevice.deviceId,
+        readConfirmationEnabled: sendMsgTransact.options.readConfirmation,
         isEncrypted: sendMsgTransact.options.encrypted,
         blockchain: {
             txid: sendMsgTransact.transact.txid,
@@ -331,7 +334,7 @@ Message.getMessageByTxid = function (txid) {
 //      action: [String],   // The action originally performed on the message. One of the properties of the Message.action object
 //      direction: [String],  // Direction of the sent message in reference to the issuer device. One of the properties of the Message.direction object
 //      fromDeviceId: [String|Array(String)], // Single Catenis device ID or list of Catenis device IDs specifying the device(s) that have sent the messages to the issuer device
-//      toDeviceId: [Arraty(String)],  // Single Catenis device ID or list of Catenis device IDs specifying the device(s) to which the messages sent from the issuer device have been sent
+//      toDeviceId: [Array(String)],  // Single Catenis device ID or list of Catenis device IDs specifying the device(s) to which the messages sent from the issuer device have been sent
 //      readState: [String],  // The read state (either read or unread) of the message. One of the properties of the Message.readState object
 //      startDate: [Date],  // Date and time specifying the lower bound of the time frame within which the message had been sent/received
 //      endDate: [Date]  // Date and time specifying the upper bound of the time frame within which the message had been sent/received
@@ -409,7 +412,7 @@ Message.query = function (issuerDeviceId, filter) {
                 }
             };
 
-            // From devide ID filter
+            // From device ID filter
             if (filter.fromDeviceId !== undefined) {
                 filter.fromDeviceId = !Array.isArray(filter.fromDeviceId) ? [filter.fromDeviceId] : filter.fromDeviceId;
 
@@ -434,6 +437,13 @@ Message.query = function (issuerDeviceId, filter) {
                     inboundSelector.receivedDate = {$lte: filter.endDate};
                 }
             }
+
+             if (filter.readState === Message.readState.read) {
+                 inboundSelector.firstReadDate = {$exists: true};
+             }
+             else if (filter.readState === Message.readState.unread) {
+                 inboundSelector.firstReadDate = {$exists: false};
+             }
         }
 
         if (filter.direction === undefined || filter.direction === Message.direction.outbound) {
@@ -467,6 +477,14 @@ Message.query = function (issuerDeviceId, filter) {
                     outboundSelector.sentDate = {$lte: filter.endDate};
                 }
             }
+
+            if (filter.readState === Message.readState.read || filter.readState === Message.readState.unread) {
+                // Make that only messages that had been sent with read confirmation enabled are included
+                outboundSelector.readConfirmationEnabled = true;
+                outboundSelector.firstReadDate = {
+                    $exists: filter.readState === Message.readState.read
+                };
+            }
         }
 
         // Message direction filter
@@ -488,30 +506,13 @@ Message.query = function (issuerDeviceId, filter) {
             }
         }
 
-        // Read state filter
-        let readStateSelector = undefined;
-
-        if (filter.readState === Message.readState.read) {
-            readStateSelector = {firstReadDate: {$exists: true}}
-        }
-        else if (filter.readState === Message.readState.unread) {
-            readStateSelector = {firstReadDate: {$exists: false}}
-        }
-
-        if (directionSelector !== undefined || readStateSelector !== undefined) {
+        if (directionSelector !== undefined) {
             sendSelector = {
                 $and: [
-                    sendSelector
+                    sendSelector,
+                    directionSelector
                 ]
             };
-
-            if (directionSelector !== undefined) {
-                sendSelector.$and.push(directionSelector);
-            }
-
-            if (readStateSelector !== undefined) {
-                sendSelector.$and.push(readStateSelector);
-            }
         }
     }
 
@@ -582,20 +583,35 @@ Message.query = function (issuerDeviceId, filter) {
             }
         }
 
+        // Read state filter
+        if (filter.readState === Message.readState.read || filter.readState === Message.readState.unread) {
+            sentSelector.$and = [{
+                $or: [{
+                    action: Message.action.log
+                }, {
+                    $and: [{
+                        action: Message.action.send
+                    }, {
+                        // Make that only messages that had been sent with read confirmation enabled are included
+                        readConfirmationEnabled: true
+                    }]
+                }]
+            }, {
+                firstReadDate: {
+                    $exists: filter.readState === Message.readState.read
+                }
+            }];
+            receivedSelector.firstReadDate = {
+                $exists: filter.readState === Message.readState.read
+            };
+        }
+
         selector = {
             $or: [
                 sentSelector,
                 receivedSelector
             ]
         };
-
-        // Read state filter
-        if (filter.readState === Message.readState.read) {
-            selector.firstReadDate = {$exists: true};
-        }
-        else if (filter.readState === Message.readState.unread) {
-            selector.firstReadDate = {$exists: false};
-        }
     }
 
     Catenis.logger.DEBUG('Query selector computed for Message.query() method:', selector);

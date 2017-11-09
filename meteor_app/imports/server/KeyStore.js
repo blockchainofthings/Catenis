@@ -212,6 +212,7 @@ export function KeyStore(ctnHubNodeIndex, seed, cryptoNetwork) {
 
     // Initialize in-memory database
     this.db = new Loki();
+    // noinspection JSCheckFunctionSignatures
     this.collExtKey = this.db.addCollection('ExtendedKey', {indices: ['type', 'path', 'parentPath', 'index', 'address']});
 
     this.collExtKey.ensureUniqueIndex('path');
@@ -291,6 +292,47 @@ KeyStore.prototype.getAddressInfo = function (addr, retrieveObsolete = false) {
             }
         }
         else if (retrieveObsolete && BlockchainAddress.retrieveObsoleteAddress(addr)) {
+            tryAgain = true;
+        }
+    }
+    while (tryAgain);
+
+    return addrInfo;
+};
+
+KeyStore.prototype.getAddressInfoByPath = function (path, retrieveObsolete = false) {
+    let addrInfo = null,
+        tryAgain;
+
+    do {
+        tryAgain = false;
+
+        const docExtKey = this.collExtKey.by('path', path);
+
+        if (docExtKey !== undefined) {
+            if (retrieveObsolete && docExtKey.isObsolete) {
+                // Check if address marked as obsolete is in use and reset its status if so
+                if (BlockchainAddress.checkObsoleteAddress(docExtKey.address)) {
+                    // Address status has been reset (address is not obsolete anymore)
+                    docExtKey.isObsolete = false;
+                }
+            }
+
+            addrInfo = {
+                cryptoKeys: new CryptoKeys(bitcoinLib.HDNode.fromBase58(docExtKey.strHDNode, this.cryptoNetwork).keyPair),
+                type: docExtKey.type,
+                path: path,
+                parentPath: docExtKey.parentPath,
+                isObsolete: docExtKey.isObsolete
+            };
+
+            const pathParts = KeyStore.getPathParts(docExtKey);
+
+            if (pathParts !== null) {
+                addrInfo.pathParts = pathParts;
+            }
+        }
+        else if (retrieveObsolete && BlockchainAddress.retrieveObsoleteAddressByPath(path)) {
             tryAgain = true;
         }
     }
@@ -2361,6 +2403,7 @@ KeyStore.prototype.latestDevicePublicAddress = function (ctnNodeIndex, clientInd
         query = queryTerms[0];
     }
 
+    // noinspection JSCheckFunctionSignatures
     return this.collExtKey.chain().find(query).simplesort('index', true).limit(1).data().reduce((docExtKey) => {
         return docExtKey.address;
     }, null);

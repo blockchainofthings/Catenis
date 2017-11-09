@@ -37,14 +37,15 @@ import { Transaction } from './Transaction';
 // SendMessageTransaction function class
 //
 //  Constructor arguments:
-//    originDevice: [Object] // Object of type Device identifying the device that is sending the message
-//    targetDevice: [Object] // Object of type Device identifying the device to which the message is sent
-//    message: [Object] // Object of type Buffer containing the message to be sent
+//    originDevice: [Object(Device)] - Object of type Device identifying the device that is sending the message
+//    targetDevice: [Object(Device)] - Object of type Device identifying the device to which the message is sent
+//    message: [Object(Buffer)]      - Object of type Buffer containing the message to be sent
 //    options: {
-//      encrypted: [Boolean], // Indicates whether message should be encrypted before storing it
-//      storageScheme: [String], // A field of the CatenisMessage.storageScheme property identifying how the message should be stored
-//      storageProvider: [Object] // (optional, default: defaultStorageProvider) A field of the CatenisMessage.storageProvider property
-//                                //    identifying the type of external storage to be used to store the message that should not be embedded
+//      readConfirmation: [Boolean], - Indicates whether transaction should include support for read confirmation in it
+//      encrypted: [Boolean], - Indicates whether message should be encrypted before storing it
+//      storageScheme: [String], - A field of the CatenisMessage.storageScheme property identifying how the message should be stored
+//      storageProvider: [Object] - (optional, default: defaultStorageProvider) A field of the CatenisMessage.storageProvider property
+//                                -    identifying the type of external storage to be used to store the message that should not be embedded
 //    }
 //
 // NOTE: make sure that objects of this function class are instantiated and used (their methods
@@ -66,7 +67,7 @@ export function SendMessageTransaction(originDevice, targetDevice, message, opti
             errArg.message = message;
         }
 
-        if (typeof options !== 'object' || options === null || !('encrypted' in options) || !('storageScheme' in options) || !CatenisMessage.isValidStorageScheme(options.storageScheme)
+        if (typeof options !== 'object' || options === null || !('readConfirmation' in options) || !('encrypted' in options) || !('storageScheme' in options) || !CatenisMessage.isValidStorageScheme(options.storageScheme)
             || (('storageProvider' in options) && options.storageProvider !== undefined && !CatenisMessage.isValidStorageProvider(options.storageProvider))) {
             errArg.options = options;
         }
@@ -162,17 +163,20 @@ SendMessageTransaction.prototype.buildTransaction = function () {
         // Add target device main address output
         this.transact.addP2PKHOutput(this.targetDeviceMainAddrKeys.getAddress(), Service.devMainAddrAmount);
 
-        // Prepare to add target device read confirmation output
-        const trgtDevReadConfirmAddrKeys = this.targetDevice.readConfirmAddr.newAddressKeys();
+        if (this.options.readConfirmation) {
+            // Prepare to add target device read confirmation output
+            const trgtDevReadConfirmAddrKeys = this.targetDevice.readConfirmAddr.newAddressKeys();
 
-        // Add target device read confirmation output
-        this.transact.addP2PKHOutput(trgtDevReadConfirmAddrKeys.getAddress(), Service.devReadConfirmAddrAmount);
+            // Add target device read confirmation output
+            this.transact.addP2PKHOutput(trgtDevReadConfirmAddrKeys.getAddress(), Service.devReadConfirmAddrAmount);
+        }
 
         // Prepare to add null data output containing message data
         let msgToSend = undefined;
 
         if (this.options.encrypted) {
             // Encrypt message
+            // noinspection JSUnusedGlobalSymbols
             msgToSend = this.encryptedMessage = this.originDeviceMainAddrKeys.encryptData(this.targetDeviceMainAddrKeys, this.message);
         }
         else {
@@ -256,13 +260,18 @@ SendMessageTransaction.prototype.sendTransaction = function () {
         this.transact.sendTransaction();
 
         // Save sent transaction onto local database
-        this.transact.saveSentTransaction(Transaction.type.send_message, {
+        const info = {
             originDeviceId: this.originDevice.deviceId,
-            targetDeviceId: this.targetDevice.deviceId,
-            readConfirmation: {
+            targetDeviceId: this.targetDevice.deviceId
+        };
+
+        if (this.options.readConfirmation) {
+            info.readConfirmation = {
                 vout: 1
             }
-        });
+        }
+
+        this.transact.saveSentTransaction(Transaction.type.send_message, info);
 
         // Spend client message credit
         this.originDevice.client.spendMessageCredit(deviceCfgSettings.creditsToSendMessage);
@@ -314,14 +323,24 @@ SendMessageTransaction.checkTransaction = function (transact) {
         const origDevMainAddr = getAddrAndAddrInfo(transact.getInputAt(0));
         const clntMsgCreditAddr = getAddrAndAddrInfo(transact.getInputAt(1));
         const trgtDevMainAddr = getAddrAndAddrInfo(transact.getOutputAt(0).payInfo);
-        const trgtDevReadConfirmAddr = getAddrAndAddrInfo(transact.getOutputAt(1).payInfo);
+
+        // Determine if device read confirmation address output is present
+        const output2 = transact.getOutputAt(1);
+        let trgtDevReadConfirmAddr;
+        let nextOutputPos = 2;
+
+        if (output2.type !== Transaction.outputType.nullData) {
+            // Yes, it is present. Get it and adjust next output (after null data output) position
+            trgtDevReadConfirmAddr = getAddrAndAddrInfo(output2.payInfo);
+            nextOutputPos++;
+        }
 
         let origDevMainRefundChangeAddr1 = undefined;
         let origDevMainRefundChangeAddr2 = undefined;
         let clntMsgCreditChangeAddr = undefined;
 
-        for (let pos = 3; pos <= 5; pos++) {
-            const output = transact.getOutputAt(1);
+        for (let pos = nextOutputPos, limit = nextOutputPos + 2; pos <= limit; pos++) {
+            const output = transact.getOutputAt(pos);
             if (output !== undefined) {
                 const outputAddr = getAddrAndAddrInfo(output.payInfo);
                 if (outputAddr.addrInfo.type === KeyStore.extKeyType.dev_main_addr.name) {
@@ -339,9 +358,9 @@ SendMessageTransaction.checkTransaction = function (transact) {
         }
 
         if (trgtDevMainAddr.address !== origDevMainAddr.address &&
-                (origDevMainRefundChangeAddr1 === undefined || origDevMainRefundChangeAddr1.address !== origDevMainAddr.address) &&
-                (origDevMainRefundChangeAddr2 === undefined || origDevMainRefundChangeAddr2.address !== origDevMainAddr.address) &&
-                (clntMsgCreditChangeAddr === undefined || clntMsgCreditChangeAddr.address !== clntMsgCreditAddr.address)) {
+                (origDevMainRefundChangeAddr1 === undefined || (origDevMainRefundChangeAddr1.address !== origDevMainAddr.address && areAddressesFromSameDevice(origDevMainRefundChangeAddr1.addrInfo, origDevMainAddr.addrInfo))) &&
+                (origDevMainRefundChangeAddr2 === undefined || (origDevMainRefundChangeAddr2.address !== origDevMainAddr.address && areAddressesFromSameDevice(origDevMainRefundChangeAddr2.addrInfo, origDevMainAddr.addrInfo))) &&
+                (clntMsgCreditChangeAddr === undefined || (clntMsgCreditChangeAddr.address !== clntMsgCreditAddr.address && areAddressesFromSameClient(clntMsgCreditChangeAddr.addrInfo, clntMsgCreditAddr.addrInfo)))) {
             // Now, check if data in null data output is correctly formatted
             let ctnMessage = undefined;
 
@@ -389,6 +408,7 @@ SendMessageTransaction.checkTransaction = function (transact) {
                                                         //      for target device
                 sendMsgTransact.rawMessage = ctnMessage.getMessage();    // Contents of message as it was recorded (encrypted, if encryption was used)
                 sendMsgTransact.options = {
+                    readConfirmation: trgtDevReadConfirmAddr !== undefined,
                     encrypted: ctnMessage.isEncrypted(),
                     storageScheme: ctnMessage.isEmbedded() ? CatenisMessage.storageScheme.embedded : CatenisMessage.storageScheme.external
                 };
@@ -413,7 +433,7 @@ SendMessageTransaction.matchingPattern = Object.freeze({
             Transaction.ioToken.p2_dev_main_addr.token,
             Transaction.ioToken.p2_cln_msg_crd_addr.token,
             Transaction.ioToken.p2_sys_pay_tx_exp_addr.token),
-    output: util.format('^(?:%s)(?:%s)(?:%s)(?:%s){0,2}(?:%s)?(?:%s)?$',
+    output: util.format('^(?:%s)(?:%s)?(?:%s)(?:%s){0,2}(?:%s)?(?:%s)?$',
             Transaction.ioToken.p2_dev_main_addr.token,
             Transaction.ioToken.p2_dev_read_conf_addr.token,
             Transaction.ioToken.null_data.token,
@@ -426,11 +446,22 @@ SendMessageTransaction.matchingPattern = Object.freeze({
 // Definition of module (private) functions
 //
 
-function getAddrAndAddrInfo(obj) {
+export function getAddrAndAddrInfo(obj) {
     return obj !== undefined ? {
         address: obj.address,
         addrInfo: obj.addrInfo
     } : undefined;
+}
+
+export function areAddressesFromSameDevice(addrInfo1, addrInfo2) {
+    return addrInfo1.pathParts.deviceIndex === addrInfo2.pathParts.deviceIndex
+            && addrInfo1.pathParts.clientIndex === addrInfo2.pathParts.clientIndex
+            && addrInfo1.pathParts.ctnNodeIndex === addrInfo2.pathParts.ctnNodeIndex;
+}
+
+export function areAddressesFromSameClient(addrInfo1, addrInfo2) {
+    return addrInfo1.pathParts.clientIndex === addrInfo2.pathParts.clientIndex
+        && addrInfo1.pathParts.ctnNodeIndex === addrInfo2.pathParts.ctnNodeIndex;
 }
 
 

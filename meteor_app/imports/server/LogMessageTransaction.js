@@ -29,7 +29,11 @@ import { FundSource } from './FundSource';
 import { KeyStore } from './KeyStore';
 import { Service } from './Service';
 import { Transaction } from './Transaction';
-
+import {
+    getAddrAndAddrInfo,
+    areAddressesFromSameDevice,
+    areAddressesFromSameClient
+} from './SendMessageTransaction';
 
 // Definition of function classes
 //
@@ -155,6 +159,7 @@ LogMessageTransaction.prototype.buildTransaction = function () {
 
         if (this.options.encrypted) {
             // Encrypt message
+            // noinspection JSUnusedGlobalSymbols
             msgToLog = this.encryptedMessage = this.deviceMainAddrKeys.encryptData(this.deviceMainAddrKeys, this.message);
         }
         else {
@@ -297,7 +302,7 @@ LogMessageTransaction.checkTransaction = function (transact) {
         let clntMsgCreditChangeAddr = undefined;
 
         for (let pos = 1; pos <= 3; pos++) {
-            const output = transact.getOutputAt(1);
+            const output = transact.getOutputAt(pos);
             if (output !== undefined) {
                 const outputAddr = getAddrAndAddrInfo(output.payInfo);
                 if (outputAddr.addrInfo.type === KeyStore.extKeyType.dev_main_addr.name) {
@@ -314,9 +319,9 @@ LogMessageTransaction.checkTransaction = function (transact) {
             }
         }
 
-        if ((devMainRefundChangeAddr1 === undefined || devMainRefundChangeAddr1.address !== devMainAddr.address) &&
-                (devMainRefundChangeAddr2 === undefined || devMainRefundChangeAddr2.address !== devMainAddr.address) &&
-                (clntMsgCreditChangeAddr === undefined || clntMsgCreditChangeAddr.address !== clntMsgCreditAddr.address)) {
+        if ((devMainRefundChangeAddr1 === undefined || (devMainRefundChangeAddr1.address !== devMainAddr.address && areAddressesFromSameDevice(devMainRefundChangeAddr1.addrInfo, devMainAddr.addrInfo))) &&
+                (devMainRefundChangeAddr2 === undefined || (devMainRefundChangeAddr2.address !== devMainAddr.address && areAddressesFromSameDevice(devMainRefundChangeAddr2.addrInfo, devMainAddr.addrInfo))) &&
+                (clntMsgCreditChangeAddr === undefined || (clntMsgCreditChangeAddr.address !== clntMsgCreditAddr.address && areAddressesFromSameClient(clntMsgCreditChangeAddr.addrInfo, clntMsgCreditAddr.addrInfo)))) {
             // Now, check if data in null data output is correctly formatted
             let ctnMessage = undefined;
 
@@ -398,13 +403,6 @@ LogMessageTransaction.matchingPattern = Object.freeze({
 
 // Definition of module (private) functions
 //
-
-function getAddrAndAddrInfo(obj) {
-    return obj !== undefined ? {
-            address: obj.address,
-            addrInfo: obj.addrInfo
-        } : undefined;
-}
 
 
 // Module code

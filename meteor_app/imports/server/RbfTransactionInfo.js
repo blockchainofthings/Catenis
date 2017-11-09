@@ -186,12 +186,12 @@ export class RbfTransactionInfo {
         }
     }
 
-    setRealTxSize(size) {
+    setRealTxSize(size, countInputs = 0) {
         size = parseInt(size);
 
         const oldMaxTxSize = this.txSize.max;
 
-        this.txSize.setRealSize(size);
+        this.txSize.setRealSize(size, countInputs);
 
         if (this.txSize.max > oldMaxTxSize) {
             // Reset transaction fee
@@ -250,8 +250,10 @@ class TxSize {
         this.max += sizeInc;
     }
 
-    setRealSize(size) {
-        if (size >= this.min && size <= this.max) {
+    setRealSize(size, countInputs = 0) {
+        // Note: allow a variation of +/- countInputs if real size had already been set previously (min = max = avrg)
+        if ((size >= this.min && size <= this.max) || (this.min === this.max && this.max === this.avrg
+                && countInputs > 0 && size >= this.min - countInputs && size <= this.max + countInputs)) {
             this.min = this.max = this.avrg = size;
         }
         else {

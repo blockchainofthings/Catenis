@@ -23,6 +23,8 @@ import { Meteor } from 'meteor/meteor';
 import { Catenis } from './Catenis';
 import { Application } from './Application';
 import { BitcoinCore } from './BitcoinCore';
+import { IpfsClient } from './IpfsClient';
+import { IpfsServerMonitor } from './IpfsServerMonitor';
 import { BitcoinFees } from './BitcoinFees';
 import { BlockchainAddress } from './BlockchainAddress';
 import { CatenisNode } from './CatenisNode';
@@ -42,6 +44,7 @@ import { ReadConfirmation } from './ReadConfirmation';
 import { Permission } from './Permission';
 import { Notification } from './Notification';
 import { WebSocketNotifyMsgDispatcher } from './WebSocketNotifyMsgDispatcher';
+import { MalleabilityEventEmitter } from './MalleabilityEventEmitter';
 import { CCFullNodeClient } from './CCFullNodeClient';
 import { CCMetadataClient } from './CCMetadataClient';
 
@@ -74,11 +77,13 @@ Meteor.startup(function () {
         // Normal processing
         Catenis.logger.INFO('Starting initialization...');
         Database.initialize();
-        Database.fixMessageFirstReadDate();
         Application.initialize();
+        MalleabilityEventEmitter.initialize();
         BitcoinFees.initialize();
         KeyStore.initialize();
         BitcoinCore.initialize();
+        IpfsClient.initialize();
+        IpfsServerMonitor.initialize();
         CCFullNodeClient.initialize();
         CCMetadataClient.initialize();
         //ColoredCoins.initialize();

@@ -10,12 +10,10 @@
 // References to external code
 //
 // Internal node modules
-//  NOTE: the reference of these modules are done sing 'require()' instead of 'import' to
-//      to avoid annoying WebStorm warning message: 'default export is not defined in
-//      imported module'
-//const util = require('util');
+//import util from 'util';
 // Third-party node modules
 //import config from 'config';
+import Future from 'fibers/future';
 // Meteor packages
 import { Meteor } from 'meteor/meteor';
 import { Mongo } from 'meteor/mongo';
@@ -660,9 +658,10 @@ Database.initialize = function() {
             },
             {
                 fields: {
-                    'replacedByTxid': 1
+                    replacedByTxid: 1
                 },
                 opts: {
+                    unique: true,
                     sparse: true,
                     background: true,
                     safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
@@ -670,7 +669,7 @@ Database.initialize = function() {
             },
             {
                 fields: {
-                    'info.readConfirmation.txouts.txid': 1
+                    'info.readConfirmation.serializedTx.inputs.txid': 1
                 },
                 opts: {
                     sparse: true,
@@ -790,7 +789,7 @@ Database.initialize = function() {
             },
             {
                 fields: {
-                    'info.readConfirmation.txouts.txid': 1
+                    'info.readConfirmation.spentReadConfirmTxOuts.txid': 1
                 },
                 opts: {
                     sparse: true,
@@ -913,36 +912,116 @@ Database.initialize = function() {
     Catenis.db = new Database(collections);
 };
 
-//** Temporary method used to fill in (new) 'firstReadDate' field of Message collection docs
-Database.fixMessageFirstReadDate = function () {
-    let updatedDocsCount = 0;
+//** Temporary method used to fix Message collection by adding new readConfirmationEnabled field
+Database.fixMessageAddReadConfirmationEnabledField = function () {
+    // Identify send message docs/recs in which readConfirmationEnabled field in missing
+    const sentTxids = [];
+    const rcvdTxids = [];
 
-    // Retrieve Message docs that have lastReadDate field but not firstReadDate field
     Catenis.db.collection.Message.find({
-        lastReadDate: {
-            exists: true
-        },
-        firstReadDate: {
-            exists: false
+        action: 'send',
+        readConfirmationEnabled: {
+            $exists: false
         }
     }, {
         fields: {
             _id: 1,
-            lastReadDate: 1
+            source: 1,
+            'blockchain.txid': 1
         }
     }).forEach((doc) => {
-        // Update Message doc setting firstReadDate the same as lastReadDate
-        updatedDocsCount += Catenis.db.collection.Message.update({
-            _id: doc._id
-        }, {
-            $set: {
-                firstReadDate: doc.lastReadDate
-            }
-        })
+        if (doc.source === 'local') {
+            sentTxids.push(doc.blockchain.txid);
+        }
+        else {
+            rcvdTxids.push(doc.blockchain.txid);
+        }
     });
 
-    if (updatedDocsCount > 0)
-        Catenis.logger.INFO(util.format('>>>>>> Number of Message docs that had their firstReadDate field filled: ' + updatedDocsCount));
+    Catenis.logger.DEBUG('>>>>>> SentTransaction DB collection docs found', {
+        sentTxids: sentTxids
+    });
+    Catenis.logger.DEBUG('>>>>>> ReceivedTransaction DB collection docs found', {
+        sentTxids: rcvdTxids
+    });
+
+    const readConfirmTxids = [];
+    const noReadConfirmTxids = [];
+
+    if (sentTxids.length > 0) {
+        Catenis.db.collection.SentTransaction.find({
+            txid: {
+                $in: sentTxids
+            }
+        }, {
+            txid: 1,
+            'info.sendMessage.readConfirmation': 1
+        }).forEach((doc) => {
+            if (doc.info.sendMessage.readConfirmation !== undefined) {
+                readConfirmTxids.push(doc.txid);
+            }
+            else {
+                noReadConfirmTxids.push(doc.txid);
+            }
+        });
+    }
+
+    if (rcvdTxids.length > 0) {
+        Catenis.db.collection.ReceivedTransaction.find({
+            txid: {
+                $in: rcvdTxids
+            }
+        }, {
+            txid: 1,
+            'info.sendMessage.readConfirmation': 1
+        }).forEach((doc) => {
+            if (doc.info.sendMessage.readConfirmation !== undefined) {
+                readConfirmTxids.push(doc.txid);
+            }
+            else {
+                noReadConfirmTxids.push(doc.txid);
+            }
+        });
+    }
+
+    Catenis.logger.DEBUG('>>>>>> Message DB collection docs to update', {
+        readConfirmTxids: readConfirmTxids,
+        noReadConfirmTxids: noReadConfirmTxids
+    });
+
+    let numUpdatedDocs = 0;
+
+    if (readConfirmTxids.length > 0) {
+        numUpdatedDocs += Catenis.db.collection.Message.update({
+            'blockchain.txid': {
+                $in: readConfirmTxids
+            }
+        }, {
+            $set: {
+                readConfirmationEnabled: true
+            }
+        }, {
+            multi: true
+        });
+    }
+
+    if (noReadConfirmTxids.length > 0) {
+        numUpdatedDocs += Catenis.db.collection.Message.update({
+            'blockchain.txid': {
+                $in: readConfirmTxids
+            }
+        }, {
+            $set: {
+                readConfirmationEnabled: false
+            }
+        }, {
+            multi: true
+        });
+    }
+
+    if (numUpdatedDocs > 0) {
+        Catenis.logger.INFO('****** Number of Message DB collection docs updated to add readConfirmationEnabled field: %d', numUpdatedDocs);
+    }
 };
 
 

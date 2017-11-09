@@ -21,6 +21,7 @@ import _und from 'underscore';      // NOTE: we dot not use the underscore libra
                                     //        a feature (_und.omit(obj,predicate)) that is not available in that version
 // Meteor packages
 import { Meteor } from 'meteor/meteor';
+// noinspection NpmUsedModulesInstalled
 import { Random } from 'meteor/random';
 
 // References code in other (Catenis) modules
@@ -371,16 +372,17 @@ Device.prototype.fixFundAddresses = function () {
 // Send message to another device
 //
 //  Arguments:
-//    targetDeviceId: [String] // Device ID identifying the device to which the message should be sent
-//    message: [Object] // Object of type Buffer containing the message to be sent
-//    encryptMessage: [Boolean], // (optional, default: true) Indicates whether message should be encrypted before sending it
-//    storageScheme: [String], // (optional, default: 'auto') A field of the CatenisMessage.storageScheme property identifying how the message should be stored
-//    storageProvider: [Object] // (optional, default: defaultStorageProvider) A field of the CatenisMessage.storageProvider property
-//                              //    identifying the type of external storage to be used to store the message that should not be embedded
+//    targetDeviceId: [String]   - Device ID identifying the device to which the message should be sent
+//    message: [Object(Buffer)]  - Object of type Buffer containing the message to be sent
+//    readConfirmation: [Boolean], - (optional, default: false) Indicates whether message should be sent with read confirmation enabled
+//    encryptMessage: [Boolean],   - (optional, default: true) Indicates whether message should be encrypted before sending it
+//    storageScheme: [String],     - (optional, default: 'auto') A field of the CatenisMessage.storageScheme property identifying how the message should be stored
+//    storageProvider: [Object]    - (optional, default: defaultStorageProvider) A field of the CatenisMessage.storageProvider property
+//                                 -   identifying the type of external storage to be used to store the message that should not be embedded
 //
 //  Return value: {
-//    messageId: [String]       // ID of sent message
-Device.prototype.sendMessage = function (targetDeviceId, message, encryptMessage = true, storageScheme = 'auto', storageProvider) {
+//    messageId: [String]       - ID of sent message
+Device.prototype.sendMessage = function (targetDeviceId, message, readConfirmation = false, encryptMessage = true, storageScheme = 'auto', storageProvider) {
     // Make sure that device is not deleted
     if (this.status === Device.status.deleted.name) {
         // Cannot send message from a deleted device. Log error and throw exception
@@ -437,7 +439,7 @@ Device.prototype.sendMessage = function (targetDeviceId, message, encryptMessage
         }
     }
 
-    let messageId;
+    let messageId = undefined;
 
     // Execute code in critical section to avoid UTXOs concurrency
     FundSource.utxoCS.execute(() => {
@@ -447,6 +449,7 @@ Device.prototype.sendMessage = function (targetDeviceId, message, encryptMessage
         try {
             // Prepare transaction to send message to a device
             sendMsgTransact = new SendMessageTransaction(this, targetDevice, message, {
+                readConfirmation: readConfirmation,
                 encrypted: encryptMessage,
                 storageScheme: storageScheme,
                 storageProvider: storageProvider
@@ -516,7 +519,7 @@ Device.prototype.logMessage = function (message, encryptMessage = true, storageS
         throw new Meteor.Error('ctn_device_no_credits', util.format('Not enough credits to log message (clientId: %s, confirmedMsgCredits: %d, creditsToLogMessage: %d)', this.client.clientId, confirmedMsgCredits, cfgSettings.creditsToLogMessage));
     }
 
-    let messageId ;
+    let messageId = undefined;
 
     // Execute code in critical section to avoid UTXOs concurrency
     FundSource.utxoCS.execute(() => {
@@ -685,11 +688,17 @@ Device.prototype.readMessage = function (messageId) {
         // Indicates that message has been read
         if (message.readNow()) {
             // This was the first time that message has been read
-            if (message.action === Message.action.send) {
+            if (message.action === Message.action.send && message.readConfirmationEnabled) {
                 // Confirm that message has been read
                 const confirmType = this.shouldSendReadMsgConfirmationTo(msgTransact.originDevice) ? ReadConfirmation.confirmationType.spendNotify : ReadConfirmation.confirmationType.spendOnly;
 
-                Catenis.readConfirm.confirmMessageRead(msgTransact, confirmType);
+                try {
+                    Catenis.readConfirm.confirmMessageRead(msgTransact, confirmType);
+                }
+                catch (err) {
+                    // Error while trying to send confirmation of message read
+                    Catenis.logger.ERROR('Error while trying to send confirmation of message read.', err);
+                }
             }
         }
 
@@ -817,6 +826,7 @@ Device.prototype.listMessages = function(filter) {
 
     const listResult = {
         msgEntries: [],
+        msgCount: queryResult.messages.length,
         countExceeded: queryResult.countExceeded
     };
 
@@ -834,7 +844,13 @@ Device.prototype.listMessages = function(filter) {
             if ((filter.direction === undefined || filter.direction === Message.direction.outbound) && message.originDeviceId === this.deviceId) {
                 msgEntry.direction = Message.direction.outbound;
                 msgEntry.toDevice = Device.getDeviceByDeviceId(message.targetDeviceId);
-                msgEntry.read = message.firstReadDate !== undefined;
+                msgEntry.readConfirmationEnabled = message.readConfirmationEnabled;
+
+                // Make sure that 'message read' info is only shown if message was sent with read confirmation enabled
+                if (message.readConfirmationEnabled) {
+                    msgEntry.read = message.firstReadDate !== undefined;
+                }
+
                 msgEntry.date = message.sentDate;
             }
 
