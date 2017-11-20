@@ -906,6 +906,78 @@ Database.initialize = function() {
                     safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
                 }
             }]
+        },
+        Asset: {
+            indices: [{
+                fields: {
+                    assetId: 1
+                },
+                opts: {
+                    unique: true,
+                    background: true,
+                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                }
+            }, {
+                fields: {
+                    ccAssetId: 1
+                },
+                opts: {
+                    unique: true,
+                    background: true,
+                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                }
+            }, {
+                fields: {
+                    type: 1
+                },
+                opts: {
+                    background: true,
+                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                }
+            }, {
+                fields: {
+                    name: 1
+                },
+                opts: {
+                    sparse: true,
+                    background: true,
+                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                }
+            }, {
+                fields: {
+                    issuingType: 1
+                },
+                opts: {
+                    background: true,
+                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                }
+            }, {
+                fields: {
+                    entityId: 1
+                },
+                opts: {
+                    background: true,
+                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                }
+            }, {
+                fields: {
+                    addrPath: 1
+                },
+                opts: {
+                    unique: true,
+                    sparse: true,
+                    background: true,
+                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                }
+            }, {
+                fields: {
+                    createdDate: 1
+                },
+                opts: {
+                    background: true,
+                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                }
+            }]
         }
     };
 
