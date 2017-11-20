@@ -130,6 +130,17 @@
     "fundPayTxMultiplyFactor": 10,  // Maximum number of fund pay tx expense (fundPayTxResolution) that can be pre-allocated to a system pay tx expense addr
     "minFundPayTxAmountMultiplyFactor": 10,  // Multiply factor used to determine mininum amount (x fundPayTxResolution) that should be used to fund system pay tx expense addresses
     "fundPayTxSafetyFactor": 0.15,   // Safety factor used when funding and checking balance of system pay tx expense addresses
+    "serviceCredit": {
+      "issuingAddrFunding": {
+        "unitAmount": 600,  // Amount, in satoshis, equivalent to one unit of funding
+        "unitsPerPrePaidClients": 0.1,  // Expected number of units of funding that there should exist per pre-paid clients
+        "unitsPerPostPaidClients": 0.1,  // Expected number of units of funding that there should exist per post-paid clients
+        "minPrePaidClientsToFund": 100,  // Minimum number of pre-paid clients to consider when calculating total amount to fund
+        "minPostPaidClientsToFund": 100,  // Minimum number of post-paid clients to consider when calculating total amount to fund
+        "maxUnitsPerUtxo": 2,  // Maximum number of units of funding that should be accumulated into a single UTXO
+        "minUtxosToFund": 10  // Number of UTXOs that should be funded before start accumulating funding units into a single UTXO
+      }
+    },
     "message": {
       "messagesPerMinute": 4,  // Number of messages sents per minute that is expected to be sustained
       "minutesToConfirm": 300,  // Time, in minutes, within which send message txs are expected to be confirmed

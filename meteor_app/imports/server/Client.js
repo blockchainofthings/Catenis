@@ -167,6 +167,12 @@ Client.prototype.assignUser = function (user_id) {
             // Update local status
             this.status = Client.status.active.name;
         }
+
+        // Execute code in critical section to avoid UTXOs concurrency
+        FundSource.utxoCS.execute(() => {
+            // Make sure that system service credit issuance is properly provisioned
+            this.ctnNode.checkServiceCreditIssuanceProvision();
+        });
     }
     else {
         // Client already has a user assigned to it. Log error
@@ -194,6 +200,13 @@ Client.prototype.activate = function () {
                 });
 
                 this.active = true;
+
+                // Execute code in critical section to avoid UTXOs concurrency
+                FundSource.utxoCS.execute(() => {
+                    // Make sure that system service credit issuance is properly provisioned
+                    this.ctnNode.checkServiceCreditIssuanceProvision();
+                });
+
                 result = true;
             }
         }

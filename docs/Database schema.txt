@@ -167,10 +167,10 @@ SentTransaction {
   info: {  // Specific information about the transaction according to its type
     funding: {  // Information for funding transactions
       event: {
-        name: [string], // Identifies the event that triggered the funding action. Valid values (from Catenis.FundTransaction.fundingEvent): 'provision_system_device', 'provision_client_srv_credit', 'provision_client_device', 'add_extra_tx_pay_funds'
+        name: [string], // Identifies the event that triggered the funding action. Valid values (from Catenis.FundTransaction.fundingEvent): 'provision_system_device', 'provision_service_credit_issuance', 'provision_client_srv_credit', 'provision_client_device', 'add_extra_tx_pay_funds', 'add_extra_read_confirm_tx_pay_funds'
         entityId: [string] // Id of the entity associated with the event. Should only exist for 'provision_client_srv_credit' and 'provision_client_device' events. For 'provision_client_srv_credit' events, it refers to the clientId; for 'provision_client_device' events, it refers to the deviceId
       },
-      payees: [Array(string)] // Identifies the type of blockchain addresses that receive the funds. Valid values (from Catenis.KeyStore.extKeyType): 'ctnd_dev_main_addr', 'ctnd_pay_tx_exp_addr', 'cln_msg_crd_addr', 'cln_asst_crd_addr', 'dev_main_addr', 'dev_asst_issu_addr'
+      payees: [Array(string)] // Identifies the type of blockchain addresses that receive the funds. Valid values (from Catenis.KeyStore.extKeyType): 'sys_dev_main_addr', 'sys_pay_tx_exp_addr', 'sys_read_conf_pay_tx_exp_addr', 'sys_serv_cred_issu_addr', 'cln_msg_crd_addr', 'cln_asst_crd_addr', 'dev_main_addr', 'dev_asst_issu_addr'
     },
     sendMessage: { // Information for send message transactions
       originDeviceId: [string], // External ID of the device that sent the message

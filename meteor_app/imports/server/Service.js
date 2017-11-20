@@ -26,9 +26,12 @@ import { _ } from 'meteor/underscore';
 import { Catenis } from './Catenis';
 import { Transaction } from './Transaction';
 import { RbfTransactionInfo } from './RbfTransactionInfo';
+import { Client } from './Client';
 
 // Config entries
 const serviceConfig = config.get('service');
+const servCredConfig = serviceConfig.get('serviceCredit');
+const servCredIssueAddrFundConfig = servCredConfig.get('issuingAddrFunding');
 const srvMessageConfig = serviceConfig.get('message');
 const srvMsgTypTxCfgConfig = srvMessageConfig.get('typicalTxConfig');
 const srvMsgTypTxCfgSysMsgConfig = srvMsgTypTxCfgConfig.get('sysMessage');
@@ -61,6 +64,18 @@ const cfgSettings = {
     fundPayTxResolutionSafetyFactor: serviceConfig.get('fundPayTxResolutionSafetyFactor'),
     fundPayTxMultiplyFactor: serviceConfig.get('fundPayTxMultiplyFactor'),
     minFundPayTxAmountMultiplyFactor: serviceConfig.get('minFundPayTxAmountMultiplyFactor'),
+    serviceCredit: {
+        issuingAddrFunding: {
+            unitAmount: servCredIssueAddrFundConfig.get('unitAmount'),
+            unitsPerPrePaidClients: servCredIssueAddrFundConfig.get('unitsPerPrePaidClients'),
+            unitsPerPostPaidClients: servCredIssueAddrFundConfig.get('unitsPerPostPaidClients'),
+            minPrePaidClientsToFund: servCredIssueAddrFundConfig.get('minPrePaidClientsToFund'),
+            minPostPaidClientsToFund: servCredIssueAddrFundConfig.get('minPostPaidClientsToFund'),
+            maxUnitsPerUtxo: servCredIssueAddrFundConfig.get('maxUnitsPerUtxo'),
+            minUtxosToFund: servCredIssueAddrFundConfig.get('minUtxosToFund')
+
+        }
+    },
     message: {
         messagesPerMinute: srvMessageConfig.get('messagesPerMinute'),
         minutesToConfirm: srvMessageConfig.get('minutesToConfirm'),
@@ -187,6 +202,12 @@ Service.testFunctions = function () {
     };
 };
 
+Service.getExpectedServiceCreditIssuanceBalance = function () {
+    return (Math.ceil(Client.activePrePaidClientsCount() * cfgSettings.serviceCredit.issuingAddrFunding.unitsPerPrePaidClients)
+            + Math.ceil(Client.activePostPaidClientsCount() * cfgSettings.serviceCredit.issuingAddrFunding.unitsPerPostPaidClients))
+            * cfgSettings.serviceCredit.issuingAddrFunding.unitAmount;
+};
+
 Service.getExpectedPayTxExpenseBalance = function (messageCredits, assetCredits) {
     const splitMsgCredits = splitMessageCredits(messageCredits);
 
@@ -195,6 +216,24 @@ Service.getExpectedPayTxExpenseBalance = function (messageCredits, assetCredits)
 
 Service.getExpectedReadConfirmPayTxExpenseBalance = function (unreadMessages) {
     return (unreadMessages + cfgSettings.readConfirmation.numReadConfirmTxsMinFundBalance) * estimatedHighestReadConfirmTxCostPerMessage();
+};
+
+Service.distributeServiceCreditIssuanceFund = function (amount) {
+    let totalAmount = Math.ceil(amount / cfgSettings.serviceCredit.issuingAddrFunding.unitAmount) * cfgSettings.serviceCredit.issuingAddrFunding.unitAmount;
+
+    // Make sure that amount to fund is not below minimum
+    const minFundAmount = (Math.ceil(cfgSettings.serviceCredit.issuingAddrFunding.minPrePaidClientsToFund * cfgSettings.serviceCredit.issuingAddrFunding.unitsPerPrePaidClients)
+            + Math.ceil(cfgSettings.serviceCredit.issuingAddrFunding.minPostPaidClientsToFund * cfgSettings.serviceCredit.issuingAddrFunding.unitsPerPostPaidClients))
+            * cfgSettings.serviceCredit.issuingAddrFunding.unitAmount;
+
+    if (totalAmount < minFundAmount) {
+        totalAmount = minFundAmount;
+    }
+
+    return {
+        totalAmount: totalAmount,
+        amountPerAddress: distributePayment(totalAmount, cfgSettings.serviceCredit.issuingAddrFunding.unitAmount, cfgSettings.serviceCredit.issuingAddrFunding.minUtxosToFund, cfgSettings.serviceCredit.issuingAddrFunding.maxUnitsPerUtxo)
+    };
 };
 
 Service.distributeSystemDeviceMainAddressFund = function () {

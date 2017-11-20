@@ -165,6 +165,9 @@ CatenisNode.prototype.startNode = function () {
             fundDeviceMainAddresses.call(this, distribFund.amountPerAddress);
         }
 
+        // Make sure that system service credit issuance is properly provisioned
+        this.checkServiceCreditIssuanceProvision();
+
         // Make sure that system read confirmation pay tx expense addresses are properly funded
         this.checkReadConfirmPayTxExpenseFundingBalance();
     });
@@ -249,6 +252,27 @@ CatenisNode.prototype.checkPayTxExpenseFundingBalance = function (doFunding = tr
     if (doFunding) {
         return payTxBalanceInfo.hasLowBalance();
     }
+};
+
+// NOTE: make sure that this method is called from code executed from the FundSource.utxoCS
+//  critical section object
+CatenisNode.prototype.checkServiceCreditIssuanceProvision = function () {
+    const servCredIssuanceBalanceInfo = new BalanceInfo(Service.getExpectedServiceCreditIssuanceBalance(),
+        this.servCredIssueAddr.lastAddressKeys().getAddress(), {
+            useSafetyFactor: false
+        });
+
+    if (servCredIssuanceBalanceInfo.hasLowBalance()) {
+        // Prepare to provision system for service credit issuance
+
+        // Distribute funds to be allocated to system service credit issuing address
+        const distribFund = Service.distributeServiceCreditIssuanceFund(servCredIssuanceBalanceInfo.getBalanceDifference());
+
+        // ...and try to fund them
+        this.provisionServiceCreditIssuance(distribFund.amountPerAddress);
+    }
+
+    return servCredIssuanceBalanceInfo.hasLowBalance();
 };
 
 // NOTE: make sure that this method is called from code executed from the FundSource.utxoCS
@@ -566,6 +590,14 @@ CatenisNode.prototype.createClient = function (props, user_id, billingMode = Cli
 
     // If we hit this point, a new Client doc (rec) has been successfully created
 
+    if (docClient.status === Client.status.active.name) {
+        // Execute code in critical section to avoid UTXOs concurrency
+        FundSource.utxoCS.execute(() => {
+            // Make sure that system service credit issuance is properly provisioned
+            this.checkServiceCreditIssuanceProvision();
+        });
+    }
+
     // Return ID of newly creadted client
     return docClient.clientId;
 };
@@ -601,6 +633,38 @@ CatenisNode.prototype.fundPayTxExpenseAddresses = function (amountPerAddress) {
             // Revert addresses of payees added to transaction
             fundTransact.revertPayeeAddresses();
         }
+
+        // Rethrows exception
+        throw err;
+    }
+};
+
+// NOTE: make sure that this method is called from code executed from the FundSource.utxoCS
+//  critical section object
+CatenisNode.prototype.provisionServiceCreditIssuance = function (amountPerUtxo) {
+    let fundTransact = undefined;
+
+    try {
+        // Prepare transaction to provision system for service credit issuance
+        fundTransact = new FundTransaction(FundTransaction.fundingEvent.provision_service_credit_issuance);
+
+        fundTransact.addPayees(this.servCredIssueAddr, amountPerUtxo, true);
+
+        if (fundTransact.addPayingSource()) {
+            // Now, issue (create and send) the transaction
+            fundTransact.sendTransaction();
+        }
+        else {
+            // Could not allocated UTXOs to pay for transaction fee.
+            //  Throw exception
+            //noinspection ExceptionCaughtLocallyJS
+            throw new Meteor.Error('ctn_sys_no_fund', 'Could not allocate UTXOs from system funding addresses to pay for tx expense');
+        }
+    }
+    catch (err) {
+        // Error provisioning system for service credit issuance.
+        //  Log error condition
+        Catenis.logger.ERROR('Error provisioning system for service credit issuance.', err);
 
         // Rethrows exception
         throw err;

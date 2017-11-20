@@ -83,15 +83,19 @@ export function FundTransaction(fundingEvent, entityId) {
 // Public FundTransaction object methods
 //
 
-//  blockchainAddress: [BlockchainAddress object]    // Object used to generate addresses to receive payment
-//  amountPerAddress: [Array]    // List of amount to be assigned to each individual address
+//  Arguments:
+//   blockchainAddress: [BlockchainAddress object] - Object used to generate addresses to receive payment
+//   amountPerAddress: [Array] - List of amount to be assigned to each individual address
+//   singleAddress: [Boolean] - Indicates whether the last issued blockchain address should be used instead of issuing new ones
 //
-FundTransaction.prototype.addPayees = function (blockchainAddress, amountPerAddress) {
+FundTransaction.prototype.addPayees = function (blockchainAddress, amountPerAddress, useLastAddress = false) {
     // Prepare list of outputs to be added to transaction by generating
     //  new addresses and associating them with the respective amount
+    const lastAddress = useLastAddress ? blockchainAddress.lastAddressKeys().getAddress() : undefined;
+
     const payInfos = amountPerAddress.map((amount) => {
         return {
-            address: blockchainAddress.newAddressKeys().getAddress(),
+            address: useLastAddress ? lastAddress : blockchainAddress.newAddressKeys().getAddress(),
             amount: amount
         }
     });
@@ -196,6 +200,10 @@ FundTransaction.fundingEvent = Object.freeze({
     provision_system_device: Object.freeze({
         name: 'provision_system_device',
         description: 'Provision system device'
+    }),
+    provision_service_credit_issuance: Object.freeze({
+        name: 'provision_service_credit_issuance',
+        description: 'Provision system for service credit issuance'
     }),
     provision_client_srv_credit: Object.freeze({
         name: 'provision_client_srv_credit',

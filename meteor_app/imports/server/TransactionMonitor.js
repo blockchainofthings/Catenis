@@ -1328,7 +1328,11 @@ TransactionMonitor.notifyEvent = Object.freeze({
     }),
     funding_provision_system_device_tx_conf: Object.freeze({
         name: 'funding_provision_system_device_tx_conf',
-        description: 'Funding transaction sent for provisioning Catenis Hub device has been confirmed'
+        description: 'Funding transaction sent for provisioning system device has been confirmed'
+    }),
+    funding_provision_service_credit_issuance_tx_conf: Object.freeze({
+        name: 'funding_provision_service_credit_issuance_tx_conf',
+        description: 'Funding transaction sent for provisioning system service credit issuance has been confirmed'
     }),
     funding_provision_client_srv_credit_tx_conf: Object.freeze({
         name: 'funding_provision_client_srv_credit_tx_conf',
