@@ -281,6 +281,15 @@ Database.initialize = function() {
             },
             {
                 fields: {
+                    billingMode: 1
+                },
+                opts: {
+                    background: true,
+                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                }
+            },
+            {
+                fields: {
                     status: 1
                 },
                 opts: {
@@ -1093,6 +1102,27 @@ Database.fixMessageAddReadConfirmationEnabledField = function () {
 
     if (numUpdatedDocs > 0) {
         Catenis.logger.INFO('****** Number of Message DB collection docs updated to add readConfirmationEnabled field: %d', numUpdatedDocs);
+    }
+};
+
+//** Temporary method used to fill new billingMode field of Client docs/recs
+import { Client } from '/imports/server/Client';
+
+Database.fillClientBillingModeField = function () {
+    const numUpdatedDocs = Catenis.db.collection.Client.update({
+        billingMode: {
+            $exists: false
+        }
+    }, {
+        $set: {
+            billingMode: Client.billingMode['pre-paid']
+        }
+    }, {
+        multi: true
+    });
+
+    if (numUpdatedDocs > 0) {
+        Catenis.logger.INFO('****** Number of Client DB collection docs updated to fill new billingMode field: %d', numUpdatedDocs);
     }
 };
 

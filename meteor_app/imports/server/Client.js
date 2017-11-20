@@ -870,6 +870,26 @@ Client.getClientByUserId = function (user_id, includeDeleted = true) {
     return new Client(docClient, CatenisNode.getCatenisNodeByIndex(docClient.index.ctnNodeIndex));
 };
 
+Client.activeClientsCount = function (billingMode) {
+    const selector = {
+        status: Client.status.active.name
+    };
+
+    if (billingMode !== undefined) {
+        selector.billingMode = billingMode
+    }
+
+    return Catenis.db.collection.Client.find(selector).count();
+};
+
+Client.activePrePaidClientsCount = function () {
+    return Client.activeClientsCount(Client.billingMode['pre-paid']);
+};
+
+Client.activePostPaidClientsCount = function () {
+    return Client.activeClientsCount(Client.billingMode['post-paid']);
+};
+
 // Check if a given client exists
 //
 //  Argument:
@@ -1064,6 +1084,11 @@ Client.status = Object.freeze({
         name: 'deleted',
         description: 'Client has been logically deleted'
     })
+});
+
+Client.billingMode = Object.freeze({
+    'pre-paid': 'pre-paid',
+    'post-paid': 'post-paid'
 });
 
 

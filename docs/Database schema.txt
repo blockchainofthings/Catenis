@@ -70,6 +70,7 @@ Client {
     lastModifiedDate: [date/time]  // Date and time when one of the client's properties had been last modified
   },
   apiAccessGenKey: [string],  // Key used to generate default secret key used for client's devices to access the Catenis API
+  billingMode: [string],  // Identifies the billing mode used for this client. Valid values (from Client.billingMode): 'pre-paid', 'post-paid'
   status: [string],  // Valid values: 'new' (newly created client awaiting activation); 'active' (client is in normal use mode); 'deleted' (client has been logically deleted)
   createdDate: [date/time],  // Date and time when doc/rec has been created
   lastStatusChangedDate: [date/time], // Date and time when status has been last changed

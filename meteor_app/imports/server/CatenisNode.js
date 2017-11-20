@@ -445,10 +445,10 @@ CatenisNode.prototype.getIdentityInfo = function () {
 //      (any additional property)
 //    }
 //    user_id: [string] - (optional)
+//    billingMode: [String] - (optional) Identifies that billing mode to be used for this client. One of the properties of Client.billingMode object
 //    deviceDefaultRightsByEvent: [Object] - (optional) Default rights to be used when creating new devices. Object the keys of which should be the defined permission event names.
 //                                         -  The value for each event name key should be a rights object as defined for the Permission.setRights method
-//
-CatenisNode.prototype.createClient = function (props, user_id, deviceDefaultRightsByEvent) {
+CatenisNode.prototype.createClient = function (props, user_id, billingMode = Client.billingMode['pre-paid'], deviceDefaultRightsByEvent) {
     props = typeof props === 'string' ? {name: props} : (typeof props === 'object' && props !== null ? props : {});
 
     // Validate (pre-defined) properties
@@ -517,6 +517,7 @@ CatenisNode.prototype.createClient = function (props, user_id, deviceDefaultRigh
             },
             props: props,
             apiAccessGenKey: Random.secret(),
+            billingMode: billingMode,
             status: user_id !== undefined && docUser.services !== undefined && docUser.services.password !== undefined ? Client.status.active.name : Client.status.new.name,
             createdDate: new Date(Date.now())
         };
