@@ -35,7 +35,10 @@ import {
     SystemReadConfirmSpendNotifyAddress,
     SystemReadConfirmSpendOnlyAddress,
     SystemReadConfirmSpendNullAddress,
-    SystemReadConfirmPayTxExpenseAddress
+    SystemReadConfirmPayTxExpenseAddress,
+    SystemServiceCreditIssuingAddress,
+    SystemServiceCreditPayTxExpenseAddress,
+    SystemMultiSigSigneeAddress
 } from './BlockchainAddress';
 import {
     Client,
@@ -79,6 +82,9 @@ export class CatenisNode extends events.EventEmitter {
         this.readConfirmSpendOnlyAddr = SystemReadConfirmSpendOnlyAddress.getInstance(this.ctnNodeIndex);
         this.readConfirmSpendNullAddr = SystemReadConfirmSpendNullAddress.getInstance(this.ctnNodeIndex);
         this.readConfirmPayTxExpenseAddr = SystemReadConfirmPayTxExpenseAddress.getInstance(this.ctnNodeIndex);
+        this.servCredIssueAddr = SystemServiceCreditIssuingAddress.getInstance(this.ctnNodeIndex);
+        this.servCredPayTxExpenseAddr = SystemServiceCreditPayTxExpenseAddress.getInstance(this.ctnNodeIndex);
+        this.multiSigSigneeAddr = SystemMultiSigSigneeAddress.getInstance(this.ctnNodeIndex);
 
         // Retrieve (HD node) index of last Client doc/rec created for this Catenis node
         const docClient = Catenis.db.collection.Client.findOne({catenisNode_id: this.doc_id}, {

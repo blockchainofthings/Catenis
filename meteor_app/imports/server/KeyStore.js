@@ -24,6 +24,8 @@
 //
 //      m/k/0/3 -> System read confirmation root HD extended key
 //
+//      m/k/0/4 -> System asset root HD extended key
+//
 //      m/k/0/0/0 -> System device main addresses root HD extended key
 //      m/k/0/0/1 -> System device (reserved) addresses #2 root HD extended key
 //      m/k/0/0/2 -> System device (reserved) addresses #3 root HD extended key
@@ -45,7 +47,7 @@
 //
 //      m/k/0/1/1/* -> System funding change addresses HD extended keys (used to hold change from funds)
 //
-//      m/k/0/2/* -> System pay tx expense addresses HD extended keys (used to pay for transaction fees, except for read confirmation txs)
+//      m/k/0/2/* -> System pay tx expense addresses HD extended keys (used to pay for fees of message and asset related transactions)
 //
 //      m/k/0/3/0 -> System read confirmation spend root HD extended key
 //
@@ -65,6 +67,20 @@
 //
 //      m/k/0/3/1/* -> System read confirmation pay tx expense addresses HD extended keys (used to pay for read confirmation transaction fees)
 //
+//      m/k/0/4/0 -> System service credit root HD extended key
+//
+//      m/k/0/4/1 -> System multi-signature Colored Coins tx output signee root HD extended key
+//
+//      m/k/0/4/0/0 -> System service credit issuing root HD extended key (NOTE: each Catenis node shall have its own service credit asset)
+//
+//      m/k/0/4/0/1 -> System service credit pay tx expense root HD extended key
+//
+//      m/k/0/4/0/0/* -> System service credit issuing addresses HD extended key (NOTE: there should be only a single address generated)
+//
+//      m/k/0/4/0/1/* -> System service credit pay tx expense addresses HD extended keys (used to pay for fees of service credit related transactions)
+//
+//      m/k/0/4/1/* -> System multi-signature Colored Coins tx output signee addresses HD extended keys
+//
 //      m/k/i (i>=1) -> client #i root HD extended key
 //
 //      m/k/i/0 (i>=1) -> client #i internal hierarchy root HD extended key
@@ -74,43 +90,23 @@
 //      m/k/i/0/0 (i>=1) -> client #i internal root HD extended key
 //
 //      m/k/i/0/0/0 (i>=1) -> client #i service credit root HD extended key
-// TODO: create a new root for standby service credits
-/*  NOTE: standby service credits addresses shall hold service credits that are in excess, above a predefined threshold
-     (a given number of credits). Less than 2 x threshold credits are initially provisioned (funds added to service credit
-     addresses), the remainder (a even multiple of threshold credits) are added to the standby service credit addresses).
-     When the provisioned service credit balance drops to threshold credits, an additional threshold credits are transferred
-     from the standby service credit addresses to the service credit addresses (provided that there are any left standby credits).
-     It is important to note that the necessary funds to the system pay tx expense addresses to support newly added service
-     credits shall only be added when services credits are actually provisioned.
-     This scheme will lower the resources when a large amount of service credits is added at once, and will also higher the
-     probability of the funds used to pay for tx fees to the more accurate (due to a fee rate fluctuation).
-     Example: threshold = 50, adding 130 credits (count)
-       initial_provisioned_credits = (count % threshold) + (count - (count % threshold) > 0 ? threshold : 0)
-       standby_credits = count - initial_provisioned_credits
-       thus: initial_provisioned_credits: 80, standby_credits: 50
-  */
 //
-//      m/k/i/0/0/0/0 (i>=1) -> client #i message credit addresses root HD extended key
-//      m/k/i/0/0/0/1 (i>=1) -> client #i asset credit addresses root HD extended key
-//      m/k/i/0/0/0/2 (i>=1) -> client #i service credit (reserved) address #3 root HD extended key
-// TODO: message credit addresses root shall be replaced with log message credit addresses root
-// TODO: asset credit addresses root shall be replaced with send message credit addresses root
-// TODO: service credit (reserved) address #3 root shall be replaced with asset credit addresses root
-//      m/k/i/0/0/0/3 (i>=1) -> client #i service credit (reserved) address #4 root HD extended key
-//      m/k/i/0/0/0/4 (i>=1) -> client #i service credit (reserved) address #5 root HD extended key
+//      m/k/i/0/0/0/0 (i>=1) -> client #i message credit addresses root HD extended key (DEPRECATED)
+//      m/k/i/0/0/0/1 (i>=1) -> client #i asset credit addresses root HD extended key (DEPRECATED)
+//      m/k/i/0/0/0/2 (i>=1) -> client #i service account credit line addresses root HD extended key
+//      m/k/i/0/0/0/3 (i>=1) -> client #i service account debit line addresses root HD extended key
+//      m/k/i/0/0/0/4 (i>=1) -> client #i BCOT token payment addresses root HD extended key
 //      m/k/i/0/0/0/5 (i>=1) -> client #i service credit (reserved) address #6 root HD extended key
 //      m/k/i/0/0/0/6 (i>=1) -> client #i service credit (reserved) address #7 root HD extended key
 //      m/k/i/0/0/0/7 (i>=1) -> client #i service credit (reserved) address #8 root HD extended key
 //      m/k/i/0/0/0/8 (i>=1) -> client #i service credit (reserved) address #9 root HD extended key
 //      m/k/i/0/0/0/9 (i>=1) -> client #i service credit (reserved) address #10 root HD extended key
 //
-//      m/k/i/0/0/0/0/* (i>=1) -> client #i message credit addresses HD extended key
-//      m/k/i/0/0/0/1/* (i>=1) -> client #i asset credit addresses HD extended key
-// TODO: message credit addresses shall be replaced with log message credit addresses
-// TODO: asset credit addresses shall be replaced with send message credit addresses
-// TODO: add assert credit addresses as m/k/i/0/0/0/2/*
-//
-// TODO: create same structure for standby service credit HHD extended keys as there is for service credit HD extended keys
+//      m/k/i/0/0/0/0/* (i>=1) -> client #i message credit addresses HD extended key (DEPRECATED)
+//      m/k/i/0/0/0/1/* (i>=1) -> client #i asset credit addresses HD extended key (DEPRECATED)
+//      m/k/i/0/0/0/2/* (i>=1) -> client #i service account credit line addresses HD extended key
+//      m/k/i/0/0/0/3/* (i>=1) -> client #i service account debit line addresses HD extended key
+//      m/k/i/0/0/0/4/* (i>=1) -> client #i BCOT token payment addresses HD extended key
 //
 //      m/k/i/0/j (i,j>=1) -> device #j of client #i internal root HD extended key
 //
@@ -180,10 +176,28 @@ const cfgSettings = {
     purgeUnusedExtKeyInterval: configKeyStore.get('purgeUnusedExtKeyInterval')
 };
 
-const numServiceCreditAddrRoots = 10,
+const clientServCredAddrRootTypes = [{
+        root: 'cln_msg_crd_addr_root',
+        address: 'cln_msg_crd_addr'
+    }, {
+        root: 'cln_asst_crd_addr_root',
+        address: 'cln_asst_crd_addr'
+    }, {
+        root: 'cln_srv_acc_cred_ln_addr_root',
+        address: 'cln_srv_acc_cred_ln_addr'
+    }, {
+        root: 'cln_srv_acc_debt_ln_addr_root',
+        address: 'cln_srv_acc_debt_ln_addr'
+    }, {
+        root: 'cln_bcot_tok_pay_addr_root',
+        address: 'cln_bcot_tok_pay_addr'
+    }
+];
+
+const numClientServCredAddrRoots = 10,
     numDeviceAddrRoots = 10,
     numUsedSysDeviceAddrRoots = 1,
-    numUsedServiceCreditAddrRoots = 2,
+    numUsedClientServCredAddrRoots = clientServCredAddrRootTypes.length,
     numUsedDeviceIntAddrRoots = 1,
     numUsedDevicePubAddrRoots = 3;
 
@@ -356,10 +370,7 @@ KeyStore.prototype.listAddressesInfo = function (addrList, retrieveObsolete = fa
 KeyStore.prototype.setAddressAsObsolete = function (addr) {
     const docExtKey = this.collExtKey.by('address', addr);
 
-    if (docExtKey !== undefined && (docExtKey.type === 'sys_fund_pay_addr' || docExtKey.type === 'sys_fund_chg_addr' || docExtKey.type === 'sys_pay_tx_exp_addr'
-        || docExtKey.type === 'sys_dev_main_addr' || docExtKey.type === 'cln_msg_crd_addr' || docExtKey.type === 'cln_asst_crd_addr'
-        || docExtKey.type === 'dev_read_conf_addr' || docExtKey.type === 'dev_main_addr' || docExtKey.type === 'dev_asst_addr' || docExtKey.type === 'dev_asst_issu_addr')
-        && !docExtKey.isObsolete) {
+    if (docExtKey !== undefined && docExtKey.isLeaf && !docExtKey.isObsolete) {
         docExtKey.isObsolete = true;
         //noinspection JSIgnoredPromiseFromCall
         this.collExtKey.update(docExtKey);
@@ -377,10 +388,17 @@ KeyStore.prototype.resetObsoleteAddress = function (addr) {
 };
 
 KeyStore.prototype.setAddressListAsObsolete = function (addrList) {
-    this.collExtKey.chain().find({$and: [{address: {$in: addrList}}, {type: {$in: ['sys_fund_pay_addr', 'sys_fund_chg_addr', 'sys_pay_tx_exp_addr', 'sys_dev_main_addr', 'cln_msg_crd_addr', 'cln_asst_crd_addr', 'dev_read_conf_addr', 'dev_main_addr', 'dev_asst_addr', 'dev_asst_issu_addr']}}, {isObsolete: false}]})
-        .update((docExtKey) => {
-            docExtKey.isObsolete = true;
-        });
+    this.collExtKey.chain().find({
+        $and: [{
+            address: {$in: addrList}
+        }, {
+            isLeaf: true
+        }, {
+            isObsolete: false
+        }]
+    }).update((docExtKey) => {
+        docExtKey.isObsolete = true;
+    });
 };
 
 KeyStore.prototype.isObsoleteAddress = function (addr) {
@@ -480,6 +498,18 @@ KeyStore.prototype.initCatenisNodeHDNodes = function (ctnNodeIndex) {
         // Save newly created HD extended key to store it later
         hdNodesToStore.push({type: 'sys_read_conf_root', path: path, hdNode: sysReadConfRootHDNode, isLeaf: false, isReserved: false});
 
+        // Create system asset root HD extended key
+        path = sysRootPath + '/4';
+        const sysAssetRootHDNode = sysRootHDNode.derive(4);
+
+        if (sysAssetRootHDNode.index !== 4) {
+            Catenis.logger.WARN(util.format('System asset root HD extended key (%s) derived with an unexpected index', path), {expectedIndex: 4, returnedIndex: sysAssetRootHDNode.index});
+            return false;
+        }
+
+        // Save newly created HD extended key to store it later
+        hdNodesToStore.push({type: 'sys_asset_root', path: path, hdNode: sysAssetRootHDNode, isLeaf: false, isReserved: false});
+
         // Create all predefined and reserved system device addresses root HD extended keys
         for (let idx = 0; idx < numDeviceAddrRoots; idx++) {
             path = util.format('%s/0/%d', sysRootPath, idx);
@@ -530,7 +560,7 @@ KeyStore.prototype.initCatenisNodeHDNodes = function (ctnNodeIndex) {
         const sysReadConfSpendRootHDNode = sysReadConfRootHDNode.derive(0);
 
         if (sysReadConfSpendRootHDNode.index !== 0) {
-            Catenis.logger.WARN(util.format('System read confirmation spend root HD extended key (%s) derived with an unexpected index', path), {expectedIndex: 1, returnedIndex: sysReadConfSpendRootHDNode.index});
+            Catenis.logger.WARN(util.format('System read confirmation spend root HD extended key (%s) derived with an unexpected index', path), {expectedIndex: 0, returnedIndex: sysReadConfSpendRootHDNode.index});
             return false;
         }
 
@@ -584,6 +614,54 @@ KeyStore.prototype.initCatenisNodeHDNodes = function (ctnNodeIndex) {
 
         // Save newly created HD extended key to store it later
         hdNodesToStore.push({type: 'sys_read_conf_spnd_null_root', path: path, hdNode: sysReadConfSpendNullRootHDNode, isLeaf: false, isReserved: false});
+
+        // Create system service credit root HD extended key
+        path = sysRootPath + '/4/0';
+        const sysServCreditRootHDNode = sysAssetRootHDNode.derive(0);
+
+        if (sysServCreditRootHDNode.index !== 0) {
+            Catenis.logger.WARN(util.format('System service credit root HD extended key (%s) derived with an unexpected index', path), {expectedIndex: 0, returnedIndex: sysServCreditRootHDNode.index});
+            return false;
+        }
+
+        // Save newly created HD extended key to store it later
+        hdNodesToStore.push({type: 'sys_serv_cred_root', path: path, hdNode: sysServCreditRootHDNode, isLeaf: false, isReserved: false});
+
+        // Create system multi-signature Colored Coins tx output signee root HD extended key
+        path = sysRootPath + '/4/1';
+        const sysMultiSigSigneeRootHDNode = sysAssetRootHDNode.derive(1);
+
+        if (sysMultiSigSigneeRootHDNode.index !== 1) {
+            Catenis.logger.WARN(util.format('System multi-signature Colored Coins tx output signee root HD extended key (%s) derived with an unexpected index', path), {expectedIndex: 1, returnedIndex: sysMultiSigSigneeRootHDNode.index});
+            return false;
+        }
+
+        // Save newly created HD extended key to store it later
+        hdNodesToStore.push({type: 'sys_msig_sign_root', path: path, hdNode: sysMultiSigSigneeRootHDNode, isLeaf: false, isReserved: false});
+
+        // Create system service credit issuing root HD extended key
+        path = sysRootPath + '/4/0/0';
+        const sysServCredIssueRootHDNode = sysServCreditRootHDNode.derive(0);
+
+        if (sysServCredIssueRootHDNode.index !== 0) {
+            Catenis.logger.WARN(util.format('System service credit issuing root HD extended key (%s) derived with an unexpected index', path), {expectedIndex: 0, returnedIndex: sysServCredIssueRootHDNode.index});
+            return false;
+        }
+
+        // Save newly created HD extended key to store it later
+        hdNodesToStore.push({type: 'sys_serv_cred_issu_root', path: path, hdNode: sysServCredIssueRootHDNode, isLeaf: false, isReserved: false});
+        
+        // Create system service credit pay tx expense root HD extended key
+        path = sysRootPath + '/4/0/1';
+        const sysServCredPayTxExpRootHDNode = sysServCreditRootHDNode.derive(1);
+
+        if (sysServCredPayTxExpRootHDNode.index !== 1) {
+            Catenis.logger.WARN(util.format('System service credit pay tx expense root HD extended key (%s) derived with an unexpected index', path), {expectedIndex: 1, returnedIndex: sysServCredPayTxExpRootHDNode.index});
+            return false;
+        }
+
+        // Save newly created HD extended key to store it later
+        hdNodesToStore.push({type: 'sys_serv_cred_pay_tx_exp_root', path: path, hdNode: sysServCredPayTxExpRootHDNode, isLeaf: false, isReserved: false});
 
         // Store all newly created HD extended keys
         hdNodesToStore.forEach((hdNodeToStore) => {
@@ -1470,6 +1548,381 @@ KeyStore.prototype.listSystemReadConfirmPayTxExpenseAddressesInUse = function (c
     return this.listSystemReadConfirmPayTxExpenseAddresses(ctnNodeIndex, fromAddrIndex, toAddrIndex);
 };
 
+KeyStore.prototype.getSystemServiceCreditIssuingAddressKeys = function (ctnNodeIndex, addrIndex, isObsolete = false) {
+    // Validate arguments
+    const errArg = {};
+
+    if (!isValidCatenisNodeIndex(ctnNodeIndex)) {
+        errArg.ctnNodeIndex = ctnNodeIndex;
+    }
+
+    if (!isValidAddressIndex(addrIndex)) {
+        errArg.addrIndex = addrIndex;
+    }
+
+    if (Object.keys(errArg).length > 0) {
+        const errArgs = Object.keys(errArg);
+
+        Catenis.logger.ERROR(util.format('KeyStore.getSystemServiceCreditIssuingAddressKeys method called with invalid argument%s', errArgs.length > 1 ? 's' : ''), errArg);
+        throw Error(util.format('Invalid %s argument%s', errArgs.join(', '), errArgs.length > 1 ? 's' : ''));
+    }
+
+    // Try to retrieve system service credit issuing address HD extended key for given Catenis node with the given index
+    const sysServCredIssueAddrPath = util.format('m/%d/0/4/0/0/%d', ctnNodeIndex, addrIndex);
+    let sysServCredIssueAddrHDNode = retrieveHDNode.call(this, sysServCredIssueAddrPath),
+        sysServCredIssueAddrKeys = null;
+
+    if (sysServCredIssueAddrHDNode === null) {
+        // System service credit issuing address HD extended key does not exist yet.
+        //  Retrieve parent root HD extended key to create it
+        const path = parentPath(sysServCredIssueAddrPath);
+        let sysServCredIssueRootHDNode = retrieveHDNode.call(this, path);
+
+        if (sysServCredIssueRootHDNode === null) {
+            // System service credit issuing root HD extended key does not exist yet.
+            //  Try to initialize Catenis node HD extended keys
+            if (! this.initCatenisNodeHDNodes(ctnNodeIndex)) {
+                Catenis.logger.ERROR(util.format('HD extended keys for Catenis node with index %d could not be initialized', ctnNodeIndex));
+            }
+            else {
+                // Catenis node HD extended keys successfully initialized.
+                //  Try to retrieve system service credit issuing root HD extended key again
+                sysServCredIssueRootHDNode = retrieveHDNode.call(this, path);
+            }
+        }
+
+        if (sysServCredIssueRootHDNode === null) {
+            Catenis.logger.ERROR(util.format('System service credit issuing root HD extended key (%s) for Catenis node with index %d not found', path, ctnNodeIndex));
+        }
+        else {
+            // Try to create system service credit issuing address HD extended key now
+            sysServCredIssueAddrHDNode = sysServCredIssueRootHDNode.derive(addrIndex);
+
+            if (sysServCredIssueAddrHDNode.index !== addrIndex) {
+                Catenis.logger.WARN(util.format('System service credit issuing address HD extended key (%s) derived with an unexpected index', sysServCredIssueAddrPath), {expectedIndex: addrIndex, returnedIndex: sysServCredIssueAddrHDNode.index});
+                sysServCredIssueAddrHDNode = null;
+            }
+            else {
+                // Store created HD extended key
+                storeHDNode.call(this, 'sys_serv_cred_issu_addr', sysServCredIssueAddrPath, sysServCredIssueAddrHDNode, true, false, isObsolete);
+            }
+        }
+    }
+
+    if (sysServCredIssueAddrHDNode !== null) {
+        sysServCredIssueAddrKeys = new CryptoKeys(sysServCredIssueAddrHDNode.keyPair);
+    }
+
+    return sysServCredIssueAddrKeys;
+};
+
+KeyStore.prototype.listSystemServiceCreditIssuingAddresses = function (ctnNodeIndex, fromAddrIndex, toAddrIndex, onlyInUse) {
+    // Validate arguments
+    const errArg = {},
+        queryTerms = [{parentPath: util.format('m/%d/0/4/0/0', ctnNodeIndex)}];
+
+    if (!isValidCatenisNodeIndex(ctnNodeIndex)) {
+        errArg.ctnNodeIndex = ctnNodeIndex;
+    }
+
+    if (fromAddrIndex !== undefined) {
+        if (!isValidAddressIndex(fromAddrIndex)) {
+            errArg.fromAddrIndex = fromAddrIndex;
+        }
+        else {
+            queryTerms.push({index: {$gte: fromAddrIndex}});
+        }
+    }
+
+    if (toAddrIndex !== undefined) {
+        if (!isValidAddressIndex(toAddrIndex) || (fromAddrIndex !== undefined && toAddrIndex < fromAddrIndex)) {
+            errArg.toAddrIndex = toAddrIndex;
+        }
+        else {
+            queryTerms.push({index: {$lte: toAddrIndex}});
+        }
+    }
+
+    if (Object.keys(errArg).length > 0) {
+        const errArgs = Object.keys(errArg);
+
+        Catenis.logger.ERROR(util.format('KeyStore.listSystemServiceCreditIssuingAddresses method called with invalid argument%s', errArgs.length > 1 ? 's' : ''), errArg);
+        throw Error(util.format('Invalid %s argument%s', errArgs.join(', '), errArgs.length > 1 ? 's' : ''));
+    }
+
+    if (onlyInUse) {
+        queryTerms.push({isObsolete: false});
+    }
+
+    // Return existing system service credit issuing addresses within the specified range
+    let query;
+
+    if (queryTerms.length > 1) {
+        query = {$and: queryTerms};
+    }
+    else {
+        query = queryTerms[0];
+    }
+
+    return this.collExtKey.chain().find(query).simplesort('index').data().map((docExtKey) => {
+        return docExtKey.address;
+    });
+};
+
+KeyStore.prototype.listSystemServiceCreditIssuingAddressesInUse = function (ctnNodeIndex, fromAddrIndex, toAddrIndex) {
+    return this.listSystemServiceCreditIssuingAddresses(ctnNodeIndex, fromAddrIndex, toAddrIndex);
+};
+
+KeyStore.prototype.getSystemServiceCreditPayTxExpenseAddressKeys = function (ctnNodeIndex, addrIndex, isObsolete = false) {
+    // Validate arguments
+    const errArg = {};
+
+    if (!isValidCatenisNodeIndex(ctnNodeIndex)) {
+        errArg.ctnNodeIndex = ctnNodeIndex;
+    }
+
+    if (!isValidAddressIndex(addrIndex)) {
+        errArg.addrIndex = addrIndex;
+    }
+
+    if (Object.keys(errArg).length > 0) {
+        const errArgs = Object.keys(errArg);
+
+        Catenis.logger.ERROR(util.format('KeyStore.getSystemServiceCreditPayTxExpenseAddressKeys method called with invalid argument%s', errArgs.length > 1 ? 's' : ''), errArg);
+        throw Error(util.format('Invalid %s argument%s', errArgs.join(', '), errArgs.length > 1 ? 's' : ''));
+    }
+
+    // Try to retrieve system service credit pay tx expense address HD extended key for given Catenis node with the given index
+    const sysServCredPayTxExpenseAddrPath = util.format('m/%d/0/4/0/1/%d', ctnNodeIndex, addrIndex);
+    let sysServCredPayTxExpenseAddrHDNode = retrieveHDNode.call(this, sysServCredPayTxExpenseAddrPath),
+        sysServCredPayTxExpenseAddrKeys = null;
+
+    if (sysServCredPayTxExpenseAddrHDNode === null) {
+        // System service credit pay tx expense address HD extended key does not exist yet.
+        //  Retrieve parent root HD extended key to create it
+        const path = parentPath(sysServCredPayTxExpenseAddrPath);
+        let sysServCredPayTxExpenseRootHDNode = retrieveHDNode.call(this, path);
+
+        if (sysServCredPayTxExpenseRootHDNode === null) {
+            // System service credit pay tx expense root HD extended key does not exist yet.
+            //  Try to initialize Catenis node HD extended keys
+            if (! this.initCatenisNodeHDNodes(ctnNodeIndex)) {
+                Catenis.logger.ERROR(util.format('HD extended keys for Catenis node with index %d could not be initialized', ctnNodeIndex));
+            }
+            else {
+                // Catenis node HD extended keys successfully initialized.
+                //  Try to retrieve system service credit pay tx expense root HD extended key again
+                sysServCredPayTxExpenseRootHDNode = retrieveHDNode.call(this, path);
+            }
+        }
+
+        if (sysServCredPayTxExpenseRootHDNode === null) {
+            Catenis.logger.ERROR(util.format('System service credit pay tx expense root HD extended key (%s) for Catenis node with index %d not found', path, ctnNodeIndex));
+        }
+        else {
+            // Try to create system service credit pay tx expense address HD extended key now
+            sysServCredPayTxExpenseAddrHDNode = sysServCredPayTxExpenseRootHDNode.derive(addrIndex);
+
+            if (sysServCredPayTxExpenseAddrHDNode.index !== addrIndex) {
+                Catenis.logger.WARN(util.format('System service credit pay tx expense address HD extended key (%s) derived with an unexpected index', sysServCredPayTxExpenseAddrPath), {expectedIndex: addrIndex, returnedIndex: sysServCredPayTxExpenseAddrHDNode.index});
+                sysServCredPayTxExpenseAddrHDNode = null;
+            }
+            else {
+                // Store created HD extended key
+                storeHDNode.call(this, 'sys_serv_cred_pay_tx_exp_addr', sysServCredPayTxExpenseAddrPath, sysServCredPayTxExpenseAddrHDNode, true, false, isObsolete);
+            }
+        }
+    }
+
+    if (sysServCredPayTxExpenseAddrHDNode !== null) {
+        sysServCredPayTxExpenseAddrKeys = new CryptoKeys(sysServCredPayTxExpenseAddrHDNode.keyPair);
+    }
+
+    return sysServCredPayTxExpenseAddrKeys;
+};
+
+KeyStore.prototype.listSystemServiceCreditPayTxExpenseAddresses = function (ctnNodeIndex, fromAddrIndex, toAddrIndex, onlyInUse) {
+    // Validate arguments
+    const errArg = {},
+        queryTerms = [{parentPath: util.format('m/%d/0/4/0/1', ctnNodeIndex)}];
+
+    if (!isValidCatenisNodeIndex(ctnNodeIndex)) {
+        errArg.ctnNodeIndex = ctnNodeIndex;
+    }
+
+    if (fromAddrIndex !== undefined) {
+        if (!isValidAddressIndex(fromAddrIndex)) {
+            errArg.fromAddrIndex = fromAddrIndex;
+        }
+        else {
+            queryTerms.push({index: {$gte: fromAddrIndex}});
+        }
+    }
+
+    if (toAddrIndex !== undefined) {
+        if (!isValidAddressIndex(toAddrIndex) || (fromAddrIndex !== undefined && toAddrIndex < fromAddrIndex)) {
+            errArg.toAddrIndex = toAddrIndex;
+        }
+        else {
+            queryTerms.push({index: {$lte: toAddrIndex}});
+        }
+    }
+
+    if (Object.keys(errArg).length > 0) {
+        const errArgs = Object.keys(errArg);
+
+        Catenis.logger.ERROR(util.format('KeyStore.listSystemServiceCreditPayTxExpenseAddresses method called with invalid argument%s', errArgs.length > 1 ? 's' : ''), errArg);
+        throw Error(util.format('Invalid %s argument%s', errArgs.join(', '), errArgs.length > 1 ? 's' : ''));
+    }
+
+    if (onlyInUse) {
+        queryTerms.push({isObsolete: false});
+    }
+
+    // Return existing system service credit pay tx expense addresses within the specified range
+    let query;
+
+    if (queryTerms.length > 1) {
+        query = {$and: queryTerms};
+    }
+    else {
+        query = queryTerms[0];
+    }
+
+    return this.collExtKey.chain().find(query).simplesort('index').data().map((docExtKey) => {
+        return docExtKey.address;
+    });
+};
+
+KeyStore.prototype.listSystemServiceCreditPayTxExpenseAddressesInUse = function (ctnNodeIndex, fromAddrIndex, toAddrIndex) {
+    return this.listSystemServiceCreditPayTxExpenseAddresses(ctnNodeIndex, fromAddrIndex, toAddrIndex);
+};
+
+KeyStore.prototype.getSystemMultiSigSigneeAddressKeys = function (ctnNodeIndex, addrIndex, isObsolete = false) {
+    // Validate arguments
+    const errArg = {};
+
+    if (!isValidCatenisNodeIndex(ctnNodeIndex)) {
+        errArg.ctnNodeIndex = ctnNodeIndex;
+    }
+
+    if (!isValidAddressIndex(addrIndex)) {
+        errArg.addrIndex = addrIndex;
+    }
+
+    if (Object.keys(errArg).length > 0) {
+        const errArgs = Object.keys(errArg);
+
+        Catenis.logger.ERROR(util.format('KeyStore.getSystemMultiSigSigneeAddressKeys method called with invalid argument%s', errArgs.length > 1 ? 's' : ''), errArg);
+        throw Error(util.format('Invalid %s argument%s', errArgs.join(', '), errArgs.length > 1 ? 's' : ''));
+    }
+
+    // Try to retrieve system multi-signature Colored Coins tx output signee address HD extended key for given Catenis node with the given index
+    const sysMultiSigSigneeAddrPath = util.format('m/%d/0/4/1/%d', ctnNodeIndex, addrIndex);
+    let sysMultiSigSigneeAddrHDNode = retrieveHDNode.call(this, sysMultiSigSigneeAddrPath),
+        sysMultiSigSigneeAddrKeys = null;
+
+    if (sysMultiSigSigneeAddrHDNode === null) {
+        // System multi-signature Colored Coins tx output signee address HD extended key does not exist yet.
+        //  Retrieve parent root HD extended key to create it
+        const path = parentPath(sysMultiSigSigneeAddrPath);
+        let sysMultiSigSigneeRootHDNode = retrieveHDNode.call(this, path);
+
+        if (sysMultiSigSigneeRootHDNode === null) {
+            // System multi-signature Colored Coins tx output signee root HD extended key does not exist yet.
+            //  Try to initialize Catenis node HD extended keys
+            if (! this.initCatenisNodeHDNodes(ctnNodeIndex)) {
+                Catenis.logger.ERROR(util.format('HD extended keys for Catenis node with index %d could not be initialized', ctnNodeIndex));
+            }
+            else {
+                // Catenis node HD extended keys successfully initialized.
+                //  Try to retrieve system multi-signature Colored Coins tx output signee root HD extended key again
+                sysMultiSigSigneeRootHDNode = retrieveHDNode.call(this, path);
+            }
+        }
+
+        if (sysMultiSigSigneeRootHDNode === null) {
+            Catenis.logger.ERROR(util.format('System multi-signature Colored Coins tx output signee root HD extended key (%s) for Catenis node with index %d not found', path, ctnNodeIndex));
+        }
+        else {
+            // Try to create system multi-signature Colored Coins tx output signee address HD extended key now
+            sysMultiSigSigneeAddrHDNode = sysMultiSigSigneeRootHDNode.derive(addrIndex);
+
+            if (sysMultiSigSigneeAddrHDNode.index !== addrIndex) {
+                Catenis.logger.WARN(util.format('System multi-signature Colored Coins tx output signee address HD extended key (%s) derived with an unexpected index', sysMultiSigSigneeAddrPath), {expectedIndex: addrIndex, returnedIndex: sysMultiSigSigneeAddrHDNode.index});
+                sysMultiSigSigneeAddrHDNode = null;
+            }
+            else {
+                // Store created HD extended key
+                storeHDNode.call(this, 'sys_msig_sign_addr', sysMultiSigSigneeAddrPath, sysMultiSigSigneeAddrHDNode, true, false, isObsolete);
+            }
+        }
+    }
+
+    if (sysMultiSigSigneeAddrHDNode !== null) {
+        sysMultiSigSigneeAddrKeys = new CryptoKeys(sysMultiSigSigneeAddrHDNode.keyPair);
+    }
+
+    return sysMultiSigSigneeAddrKeys;
+};
+
+KeyStore.prototype.listSystemMultiSigSigneeAddresses = function (ctnNodeIndex, fromAddrIndex, toAddrIndex, onlyInUse) {
+    // Validate arguments
+    const errArg = {},
+        queryTerms = [{parentPath: util.format('m/%d/0/4/1', ctnNodeIndex)}];
+
+    if (!isValidCatenisNodeIndex(ctnNodeIndex)) {
+        errArg.ctnNodeIndex = ctnNodeIndex;
+    }
+
+    if (fromAddrIndex !== undefined) {
+        if (!isValidAddressIndex(fromAddrIndex)) {
+            errArg.fromAddrIndex = fromAddrIndex;
+        }
+        else {
+            queryTerms.push({index: {$gte: fromAddrIndex}});
+        }
+    }
+
+    if (toAddrIndex !== undefined) {
+        if (!isValidAddressIndex(toAddrIndex) || (fromAddrIndex !== undefined && toAddrIndex < fromAddrIndex)) {
+            errArg.toAddrIndex = toAddrIndex;
+        }
+        else {
+            queryTerms.push({index: {$lte: toAddrIndex}});
+        }
+    }
+
+    if (Object.keys(errArg).length > 0) {
+        const errArgs = Object.keys(errArg);
+
+        Catenis.logger.ERROR(util.format('KeyStore.listSystemMultiSigSigneeAddresses method called with invalid argument%s', errArgs.length > 1 ? 's' : ''), errArg);
+        throw Error(util.format('Invalid %s argument%s', errArgs.join(', '), errArgs.length > 1 ? 's' : ''));
+    }
+
+    if (onlyInUse) {
+        queryTerms.push({isObsolete: false});
+    }
+
+    // Return existing system multi-signature Colored Coins tx output signee addresses within the specified range
+    let query;
+
+    if (queryTerms.length > 1) {
+        query = {$and: queryTerms};
+    }
+    else {
+        query = queryTerms[0];
+    }
+
+    return this.collExtKey.chain().find(query).simplesort('index').data().map((docExtKey) => {
+        return docExtKey.address;
+    });
+};
+
+KeyStore.prototype.listSystemMultiSigSigneeAddressesInUse = function (ctnNodeIndex, fromAddrIndex, toAddrIndex) {
+    return this.listSystemMultiSigSigneeAddresses(ctnNodeIndex, fromAddrIndex, toAddrIndex);
+};
+
 KeyStore.prototype.getSystemDeviceAddressKeys = function (ctnNodeIndex, addrRootIndex, addrIndex, isObsolete = false) {
     // Validate arguments
     const errArg = {};
@@ -1719,7 +2172,7 @@ KeyStore.prototype.initClientHDNodes = function (ctnNodeIndex, clientIndex) {
                                 hdNodesToStore.push({type: 'cln_srv_crd_root', path: clientSrvCreditRootPath, hdNode: clientSrvCreditRootHDNode, isLeaf: false, isReserved: false});
 
                                 // Create all predefined and reserved client service credit addresses root HD extended keys
-                                for (let idx = 0; idx < numServiceCreditAddrRoots; idx++) {
+                                for (let idx = 0; idx < numClientServCredAddrRoots; idx++) {
                                     const clientSrvCreditAddrRootPath = util.format('%s/%d', clientSrvCreditRootPath, idx),
                                         clientSrvCreditAddrRootHDNode = clientSrvCreditRootHDNode.derive(idx);
 
@@ -1730,7 +2183,7 @@ KeyStore.prototype.initClientHDNodes = function (ctnNodeIndex, clientIndex) {
                                     }
                                     else {
                                         // Save newly created HD extended key to store it later
-                                        hdNodesToStore.push({type: idx === 0 ? 'cln_msg_crd_addr_root' : (idx === 1 ? 'cln_asst_crd_addr_root' : 'cln_srv_crd_rsrv_addr_root'), path: clientSrvCreditAddrRootPath, hdNode: clientSrvCreditAddrRootHDNode, isLeaf: false, isReserved: idx >= numUsedServiceCreditAddrRoots});
+                                        hdNodesToStore.push({type: idx < numUsedClientServCredAddrRoots ? clientServCredAddrRootTypes[idx].root : 'cln_srv_crd_rsrv_addr_root', path: clientSrvCreditAddrRootPath, hdNode: clientSrvCreditAddrRootHDNode, isLeaf: false, isReserved: idx >= numUsedClientServCredAddrRoots});
                                     }
                                 }
 
@@ -1822,7 +2275,7 @@ KeyStore.prototype.getClientServiceCreditAddressKeys = function (ctnNodeIndex, c
             }
             else {
                 // Store created HD extended key
-                storeHDNode.call(this, servCreditIndex === 0 ? 'cln_msg_crd_addr' : (servCreditIndex === 1 ? 'cln_asst_crd_addr' : 'cln_srv_crd_rsrv_addr'), clientSrvCreditAddrPath, clientSrvCreditAddrHDNode, true, servCreditIndex >= numUsedServiceCreditAddrRoots, isObsolete);
+                storeHDNode.call(this, servCreditIndex < numUsedClientServCredAddrRoots ? clientServCredAddrRootTypes[servCreditIndex].address : 'cln_srv_crd_rsrv_addr', clientSrvCreditAddrPath, clientSrvCreditAddrHDNode, true, servCreditIndex >= numUsedClientServCredAddrRoots, isObsolete);
             }
         }
     }
@@ -1908,7 +2361,7 @@ KeyStore.prototype.listClientMessageCreditAddresses = function (ctnNodeIndex, cl
 };
 
 KeyStore.prototype.listClientMessageCreditAddressesInUse = function (ctnNodeIndex, clientIndex, fromAddrIndex, toAddrIndex) {
-    return this.listClientServiceCreditAddresses(ctnNodeIndex, clientIndex, 0, fromAddrIndex, toAddrIndex, true);
+    return this.listClientServiceCreditAddressesInUse(ctnNodeIndex, clientIndex, 0, fromAddrIndex, toAddrIndex);
 };
 
 KeyStore.prototype.getClientAssetCreditAddressKeys = function (ctnNodeIndex, clientIndex, addrIndex, isObsolete = false) {
@@ -1920,7 +2373,49 @@ KeyStore.prototype.listClientAssetCreditAddresses = function (ctnNodeIndex, clie
 };
 
 KeyStore.prototype.listClientAssetCreditAddressesInUse = function (ctnNodeIndex, clientIndex, fromAddrIndex, toAddrIndex) {
-    return this.listClientServiceCreditAddresses(ctnNodeIndex, clientIndex, 1, fromAddrIndex, toAddrIndex, true);
+    return this.listClientServiceCreditAddressesInUse(ctnNodeIndex, clientIndex, 1, fromAddrIndex, toAddrIndex);
+};
+
+KeyStore.prototype.getClientServiceAccountCreditLineAddressKeys = function (ctnNodeIndex, clientIndex, addrIndex, isObsolete = false) {
+    return this.getClientServiceCreditAddressKeys(ctnNodeIndex, clientIndex, 2, addrIndex, isObsolete);
+};
+
+KeyStore.prototype.listClientServiceAccountCreditLineAddresses = function (ctnNodeIndex, clientIndex, fromAddrIndex, toAddrIndex, onlyInUse) {
+    return this.listClientServiceCreditAddresses(ctnNodeIndex, clientIndex, 2, fromAddrIndex, toAddrIndex, onlyInUse);
+};
+
+KeyStore.prototype.listClientServiceAccountCreditLineAddressesInUse = function (ctnNodeIndex, clientIndex, fromAddrIndex, toAddrIndex) {
+    return this.listClientServiceCreditAddressesInUse(ctnNodeIndex, clientIndex, 2, fromAddrIndex, toAddrIndex);
+};
+
+KeyStore.prototype.getClientServiceAccountDebitLineAddressKeys = function (ctnNodeIndex, clientIndex, addrIndex, isObsolete = false) {
+    return this.getClientServiceCreditAddressKeys(ctnNodeIndex, clientIndex, 3, addrIndex, isObsolete);
+};
+
+KeyStore.prototype.listClientServiceAccountDebitLineAddresses = function (ctnNodeIndex, clientIndex, fromAddrIndex, toAddrIndex, onlyInUse) {
+    return this.listClientServiceCreditAddresses(ctnNodeIndex, clientIndex, 3, fromAddrIndex, toAddrIndex, onlyInUse);
+};
+
+KeyStore.prototype.listClientServiceAccountDebitLineAddressesInUse = function (ctnNodeIndex, clientIndex, fromAddrIndex, toAddrIndex) {
+    return this.listClientServiceCreditAddressesInUse(ctnNodeIndex, clientIndex, 3, fromAddrIndex, toAddrIndex);
+};
+
+KeyStore.prototype.getClientBcotTokenPaymentAddressKeys = function (ctnNodeIndex, clientIndex, addrIndex, isObsolete = false) {
+    return this.getClientServiceCreditAddressKeys(ctnNodeIndex, clientIndex, 4, addrIndex, isObsolete);
+};
+
+KeyStore.prototype.listClientBcotTokenPaymentAddresses = function (ctnNodeIndex, clientIndex, fromAddrIndex, toAddrIndex, onlyInUse) {
+    return this.listClientServiceCreditAddresses(ctnNodeIndex, clientIndex, 4, fromAddrIndex, toAddrIndex, onlyInUse);
+};
+
+KeyStore.prototype.listClientBcotTokenPaymentAddressesInUse = function (ctnNodeIndex, clientIndex, fromAddrIndex, toAddrIndex) {
+    return this.listClientServiceCreditAddressesInUse(ctnNodeIndex, clientIndex, 4, fromAddrIndex, toAddrIndex);
+};
+
+KeyStore.prototype.listAllClientBcotTokenPaymentAddressesInUse = function () {
+    return this.collExtKey.find({$and: [{type: KeyStore.extKeyType.cln_bcot_tok_pay_addr.name}, {isObsolete: false}]}).map((docExtKey) => {
+        return docExtKey.address;
+    });
 };
 
 KeyStore.prototype.initDeviceHDNodes = function (ctnNodeIndex, clientIndex, deviceIndex) {
@@ -2604,6 +3099,36 @@ KeyStore.systemReadConfirmPayTxExpenseRootPath = function (ctnNodeIndex) {
     return util.format('m/%d/0/3/1', ctnNodeIndex);
 };
 
+KeyStore.systemServiceCreditIssuingRootPath = function (ctnNodeIndex) {
+    // Validate Catenis node index
+    if (!isValidCatenisNodeIndex(ctnNodeIndex)) {
+        Catenis.logger.ERROR('KeyStore.systemServiceCreditIssuingRootPath method called with invalid argument', {ctnNodeIndex: ctnNodeIndex});
+        throw Error('Invalid ctnNodeIndex argument');
+    }
+
+    return util.format('m/%d/0/4/0/0', ctnNodeIndex);
+};
+
+KeyStore.systemServiceCreditPayTxExpenseRootPath = function (ctnNodeIndex) {
+    // Validate Catenis node index
+    if (!isValidCatenisNodeIndex(ctnNodeIndex)) {
+        Catenis.logger.ERROR('KeyStore.systemServiceCreditPayTxExpenseRootPath method called with invalid argument', {ctnNodeIndex: ctnNodeIndex});
+        throw Error('Invalid ctnNodeIndex argument');
+    }
+
+    return util.format('m/%d/0/4/0/1', ctnNodeIndex);
+};
+
+KeyStore.systemMultiSigSigneeRootPath = function (ctnNodeIndex) {
+    // Validate Catenis node index
+    if (!isValidCatenisNodeIndex(ctnNodeIndex)) {
+        Catenis.logger.ERROR('KeyStore.systemMultiSigSigneeRootPath method called with invalid argument', {ctnNodeIndex: ctnNodeIndex});
+        throw Error('Invalid ctnNodeIndex argument');
+    }
+
+    return util.format('m/%d/0/4/1', ctnNodeIndex);
+};
+
 KeyStore.systemDeviceMainAddressRootPath = function (ctnNodeIndex) {
     // Validate Catenis node index
     if (!isValidCatenisNodeIndex(ctnNodeIndex)) {
@@ -2656,6 +3181,72 @@ KeyStore.clientAssetCreditAddressRootPath = function (ctnNodeIndex, clientIndex)
     }
 
     return util.format('m/%d/%d/0/0/0/1', ctnNodeIndex, clientIndex);
+};
+
+KeyStore.clientServiceAccountCreditLineAddressRootPath = function (ctnNodeIndex, clientIndex) {
+    // Validate arguments
+    const errArg = {};
+
+    if (!isValidCatenisNodeIndex(ctnNodeIndex)) {
+        errArg.ctnNodeIndex = ctnNodeIndex;
+    }
+
+    if (!isValidClientIndex(clientIndex)) {
+        errArg.clientIndex = clientIndex;
+    }
+
+    if (Object.keys(errArg).length > 0) {
+        const errArgs = Object.keys(errArg);
+
+        Catenis.logger.ERROR(util.format('KeyStore.clientServiceAccountCreditLineAddressesRootPath method called with invalid argument%s', errArgs.length > 1 ? 's' : ''), errArg);
+        throw Error(util.format('Invalid %s argument%s', errArgs.join(', '), errArgs.length > 1 ? 's' : ''));
+    }
+
+    return util.format('m/%d/%d/0/0/0/2', ctnNodeIndex, clientIndex);
+};
+
+KeyStore.clientServiceAccountDebitLineAddressRootPath = function (ctnNodeIndex, clientIndex) {
+    // Validate arguments
+    const errArg = {};
+
+    if (!isValidCatenisNodeIndex(ctnNodeIndex)) {
+        errArg.ctnNodeIndex = ctnNodeIndex;
+    }
+
+    if (!isValidClientIndex(clientIndex)) {
+        errArg.clientIndex = clientIndex;
+    }
+
+    if (Object.keys(errArg).length > 0) {
+        const errArgs = Object.keys(errArg);
+
+        Catenis.logger.ERROR(util.format('KeyStore.clientServiceAccountDebitLineAddressesRootPath method called with invalid argument%s', errArgs.length > 1 ? 's' : ''), errArg);
+        throw Error(util.format('Invalid %s argument%s', errArgs.join(', '), errArgs.length > 1 ? 's' : ''));
+    }
+
+    return util.format('m/%d/%d/0/0/0/3', ctnNodeIndex, clientIndex);
+};
+
+KeyStore.clientBcotTokenPaymentAddressRootPath = function (ctnNodeIndex, clientIndex) {
+    // Validate arguments
+    const errArg = {};
+
+    if (!isValidCatenisNodeIndex(ctnNodeIndex)) {
+        errArg.ctnNodeIndex = ctnNodeIndex;
+    }
+
+    if (!isValidClientIndex(clientIndex)) {
+        errArg.clientIndex = clientIndex;
+    }
+
+    if (Object.keys(errArg).length > 0) {
+        const errArgs = Object.keys(errArg);
+
+        Catenis.logger.ERROR(util.format('KeyStore.clientBcotTokenPaymentAddressRootPath method called with invalid argument%s', errArgs.length > 1 ? 's' : ''), errArg);
+        throw Error(util.format('Invalid %s argument%s', errArgs.join(', '), errArgs.length > 1 ? 's' : ''));
+    }
+
+    return util.format('m/%d/%d/0/0/0/4', ctnNodeIndex, clientIndex);
 };
 
 KeyStore.deviceReadConfirmAddressRootPath = function (ctnNodeIndex, clientIndex, deviceIndex) {
@@ -2840,6 +3431,14 @@ KeyStore.extKeyType = Object.freeze({
             1: 'ctnNodeIndex'
         }
     }),
+    sys_asset_root: Object.freeze({
+        name: 'sys_asset_root',
+        description: 'system asset root',
+        pathRegEx: /^m\/(\d+)\/0\/4$/,
+        pathParts: {
+            1: 'ctnNodeIndex'
+        }
+    }),
     sys_dev_main_addr_root: Object.freeze({
         name: 'sys_dev_main_addr_root',
         description: 'System device main addresses root',
@@ -2995,6 +3594,65 @@ KeyStore.extKeyType = Object.freeze({
             2: 'addrIndex'
         }
     }),
+    sys_serv_cred_root: Object.freeze({
+        name: 'sys_serv_cred_root',
+        description: 'system service credit root',
+        pathRegEx: /^m\/(\d+)\/0\/4\/0$/,
+        pathParts: {
+            1: 'ctnNodeIndex'
+        }
+    }),
+    sys_msig_sign_root: Object.freeze({
+        name: 'sys_msig_sign_root',
+        description: 'system multi-signature Colored Coins tx out signee root',
+        pathRegEx: /^m\/(\d+)\/0\/4\/1$/,
+        pathParts: {
+            1: 'ctnNodeIndex'
+        }
+    }),
+    sys_serv_cred_issu_root: Object.freeze({
+        name: 'sys_serv_cred_issu_root',
+        description: 'system service credit issuing root',
+        pathRegEx: /^m\/(\d+)\/0\/4\/0$/,
+        pathParts: {
+            1: 'ctnNodeIndex'
+        }
+    }),
+    sys_serv_cred_pay_tx_exp_root: Object.freeze({
+        name: 'sys_serv_cred_pay_tx_exp_root',
+        description: 'system service credit pay tx expense root',
+        pathRegEx: /^m\/(\d+)\/0\/4\/0\/1$/,
+        pathParts: {
+            1: 'ctnNodeIndex'
+        }
+    }),
+    sys_serv_cred_issu_addr: Object.freeze({
+        name: 'sys_serv_cred_issu_addr',
+        description: 'system service credit issuing address',
+        pathRegEx: /^m\/(\d+)\/0\/4\/0\/0\/(\d+)$/,
+        pathParts: {
+            1: 'ctnNodeIndex',
+            2: 'addrIndex'
+        }
+    }),
+    sys_serv_cred_pay_tx_exp_addr: Object.freeze({
+        name: 'sys_serv_cred_pay_tx_exp_addr',
+        description: 'system service credit pay tx expense address',
+        pathRegEx: /^m\/(\d+)\/0\/4\/0\/1\/(\d+)$/,
+        pathParts: {
+            1: 'ctnNodeIndex',
+            2: 'addrIndex'
+        }
+    }),
+    sys_msig_sign_addr: Object.freeze({
+        name: 'sys_msig_sign_addr',
+        description: 'system multi-signature Colored Coins tx out signee address',
+        pathRegEx: /^m\/(\d+)\/0\/4\/1\/(\d+)$/,
+        pathParts: {
+            1: 'ctnNodeIndex',
+            2: 'addrIndex'
+        }
+    }),
     cln_root: Object.freeze({
         name: 'cln_root',
         description: 'client root',
@@ -3058,6 +3716,33 @@ KeyStore.extKeyType = Object.freeze({
             2: 'clientIndex'
         }
     }),
+    cln_srv_acc_cred_ln_addr_root: Object.freeze({
+        name: 'cln_srv_acc_cred_ln_addr_root',
+        description: 'client service account credit line addresses root',
+        pathRegEx: /^m\/(\d+)\/(\d+)\/0\/0\/0\/2$/,
+        pathParts: {
+            1: 'ctnNodeIndex',
+            2: 'clientIndex'
+        }
+    }),
+    cln_srv_acc_debt_ln_addr_root: Object.freeze({
+        name: 'cln_srv_acc_debt_ln_addr_root',
+        description: 'client service account debit line addresses root',
+        pathRegEx: /^m\/(\d+)\/(\d+)\/0\/0\/0\/3$/,
+        pathParts: {
+            1: 'ctnNodeIndex',
+            2: 'clientIndex'
+        }
+    }),
+    cln_bcot_tok_pay_addr_root: Object.freeze({
+        name: 'cln_bcot_tok_pay_addr_root',
+        description: 'client BCOT token payment addresses root',
+        pathRegEx: /^m\/(\d+)\/(\d+)\/0\/0\/0\/4$/,
+        pathParts: {
+            1: 'ctnNodeIndex',
+            2: 'clientIndex'
+        }
+    }),
     cln_srv_crd_rsrv_addr_root: Object.freeze({
         name: 'cln_srv_crd_rsrv_addr_root',
         description: 'client service credit reserved addresses root',
@@ -3082,6 +3767,36 @@ KeyStore.extKeyType = Object.freeze({
         name: 'cln_asst_crd_addr',
         description: 'client asset credit address',
         pathRegEx: /^m\/(\d+)\/(\d+)\/0\/0\/0\/1\/(\d+)$/,
+        pathParts: {
+            1: 'ctnNodeIndex',
+            2: 'clientIndex',
+            3: 'addrIndex'
+        }
+    }),
+    cln_srv_acc_cred_ln_addr: Object.freeze({
+        name: 'cln_srv_acc_cred_ln_addr',
+        description: 'client service account credit line addresses',
+        pathRegEx: /^m\/(\d+)\/(\d+)\/0\/0\/0\/2\/(\d+)$/,
+        pathParts: {
+            1: 'ctnNodeIndex',
+            2: 'clientIndex',
+            3: 'addrIndex'
+        }
+    }),
+    cln_srv_acc_debt_ln_addr: Object.freeze({
+        name: 'cln_srv_acc_debt_ln_addr',
+        description: 'client service account debit line addresses',
+        pathRegEx: /^m\/(\d+)\/(\d+)\/0\/0\/0\/3\/(\d+)$/,
+        pathParts: {
+            1: 'ctnNodeIndex',
+            2: 'clientIndex',
+            3: 'addrIndex'
+        }
+    }),
+    cln_bcot_tok_pay_addr: Object.freeze({
+        name: 'cln_bcot_tok_pay_addr',
+        description: 'client BCOT toke payment addresses',
+        pathRegEx: /^m\/(\d+)\/(\d+)\/0\/0\/0\/4\/(\d+)$/,
         pathParts: {
             1: 'ctnNodeIndex',
             2: 'clientIndex',
@@ -3287,7 +4002,7 @@ function isValidAddressIndex(index) {
 }
 
 function isValidServiceCreditIndex(index) {
-    return typeof index === 'number' && Number.isInteger(index) && index >= 0 && index < numServiceCreditAddrRoots;
+    return typeof index === 'number' && Number.isInteger(index) && index >= 0 && index < numClientServCredAddrRoots;
 }
 
 

@@ -28,7 +28,13 @@ import { Catenis } from './Catenis';
 import { CriticalSection } from './CriticalSection';
 import { ServiceCreditsCounter } from './ServiceCreditsCounter';
 import { TransactionMonitor } from './TransactionMonitor';
-import { ClientMessageCreditAddress, ClientAssetCreditAddress } from './BlockchainAddress';
+import {
+    ClientMessageCreditAddress,
+    ClientAssetCreditAddress,
+    ClientServiceAccountCreditLineAddress,
+    ClientServiceAccountDebitLineAddress,
+    ClientBcotTokenPaymentAddress
+} from './BlockchainAddress';
 import { CatenisNode } from './CatenisNode';
 import { Device } from './Device';
 import { FundSource } from './FundSource';
@@ -86,6 +92,9 @@ export function Client(docClient, ctnNode, initializeDevices) {
     // Instantiate objects to manage blockchain addresses for client
     this.messageCreditAddr = ClientMessageCreditAddress.getInstance(this.ctnNode.ctnNodeIndex, this.clientIndex);
     this.assetCreditAddr = ClientAssetCreditAddress.getInstance(this.ctnNode.ctnNodeIndex, this.clientIndex);
+    this.servAccCreditLineAddr = ClientServiceAccountCreditLineAddress.getInstance(this.ctnNode.ctnNodeIndex, this.clientIndex);
+    this.servAccDebitLineAddr = ClientServiceAccountDebitLineAddress.getInstance(this.ctnNode.ctnNodeIndex, this.clientIndex);
+    this.bcotTokenPaymentAddr = ClientBcotTokenPaymentAddress.getInstance(this.ctnNode.ctnNodeIndex, this.clientIndex);
 
     // Retrieve (HD node) index of last Device doc/rec created for this client
     const docDevice = Catenis.db.collection.Device.findOne({client_id: this.doc_id}, {fields: {'index.deviceIndex': 1}, sort: {'index.deviceIndex': -1}});
@@ -294,6 +303,10 @@ Client.prototype.delete = function (deletedDate) {
         // Client already deleted
         Catenis.logger.WARN('Trying to delete client that is already deleted', {client: this});
     }
+};
+
+Client.prototype.newBcotTokenPaymentAddress = function () {
+    return this.bcotTokenPaymentAddr.newAddressKeys().getAddress();
 };
 
 Client.prototype.addMessageCredit = function (count) {

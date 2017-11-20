@@ -35,7 +35,8 @@ IssuedBlockchainAddress {
   addrIndex: [integer],  // The position occupied by this address within the range of addresses of that type
   addressHash: [string],  // Base-64 formatted SHA256 hash of blockchain address
   issuedDate: [date/time],  // Date and time when address has been issued (doc/rec created)
-  expirationDate: [date/time],  // Date and time until when this address is considered to be valid to receive payments
+  expirationDate: [date/time],  // Date and time until when this address is considered to be valid to receive payments.
+                                //  If set to null, address never expires; useful for unlocked Colored Coins issuing assets
   status: [string],  // Valid values: 'new' (from creation util expiration date), 'expired' (after expiration date while there are UTXOs associated with it), 'obsolete' (after expiration date if there are no UTXOs associated with it), 'nonexistent' (address for given index does not exist), 'discarded' (excluded from current available range of addresses of that type)
   lastStatusChangedDate: [date/time]  // Date and time when status has been last modified
 }
