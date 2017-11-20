@@ -29,7 +29,6 @@ import { BitcoinFees } from './BitcoinFees';
 import { BlockchainAddress } from './BlockchainAddress';
 import { CatenisNode } from './CatenisNode';
 import { Client } from './Client';
-//import { ColoredCoins } from './ColoredCoins';
 import { Database } from './Database';
 import { Device } from './Device';
 import { KeyStore } from './KeyStore';
