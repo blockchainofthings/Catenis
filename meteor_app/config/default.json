@@ -66,6 +66,16 @@
     "rpcConnectionTimeout": 15000,  // Timeout, in miliseconds, for RPC connection with the Bitcoin Core server
     "rescanTimeout": 7200000 // Timeout, in miniseconds, for waiting on Bitcoin Core to finish rescanning the blockchain after importing private key
   },
+  // Parameters pertaining to OmniCore module
+  "omniCore": {
+    "serverHost": "catenis-omnicore", // Omni Core server host name/IP address
+    "mainRpcPort": 8332, // Port used to connect with Omni Core server via its RPC interface to interact with bitcoin's main blockchain
+    "testnetRpcPort": 18332, // Port used to connect with Omni Core server via its RPC interface to interact with bitcoin's testnet blockchain
+    "rpcUser": "??????", // Username used to connect with Omni Core server via its RPC interface
+    "rpcPassword": "??????", // Password used to connect with Omni Core server via its RPC interface
+    "rpcConnectionTimeout": 15000,  // Timeout, in miliseconds, for RPC connection with the Omni Core server
+    "rescanTimeout": 7200000 // Timeout, in miniseconds, for waiting on Omni Core to finish rescanning the blockchain after importing private key
+  },
   // Parameters pertaining to BlockchainAddress module
   "blockchainAddress": {
     "addressValidity": {  // Time, in seconds, before which a newly issued address expires

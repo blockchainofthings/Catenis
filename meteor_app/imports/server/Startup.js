@@ -16,6 +16,7 @@
 //const util = require('util');
 // Third-party node modules
 import config from 'config';
+import Future from 'fibers/future';
 // Meteor packages
 import { Meteor } from 'meteor/meteor';
 
@@ -46,6 +47,7 @@ import { WebSocketNotifyMsgDispatcher } from './WebSocketNotifyMsgDispatcher';
 import { MalleabilityEventEmitter } from './MalleabilityEventEmitter';
 import { CCFullNodeClient } from './CCFullNodeClient';
 import { CCMetadataClient } from './CCMetadataClient';
+import { OmniCore } from './OmniCore';
 
 // DEBUG - begin
 //import { resetBitcoinCore } from './Test/FundSourceTest';
@@ -81,6 +83,7 @@ Meteor.startup(function () {
         BitcoinFees.initialize();
         KeyStore.initialize();
         BitcoinCore.initialize();
+        OmniCore.initialize();
         IpfsClient.initialize();
         IpfsServerMonitor.initialize();
         CCFullNodeClient.initialize();
@@ -123,7 +126,7 @@ Meteor.startup(function () {
 });
 
 function CheckImportAddresses(fixMissingAddresses) {
-    Catenis.logger.TRACE('Checking import addresses');
+    Catenis.logger.TRACE('Checking imported addresses onto Bitcoin Core');
     // Retrieve list of addresses currently imported onto Bitcoin Core
     const btcAddresses = new Set(Catenis.bitcoinCore.getAddresses());
 
@@ -132,31 +135,92 @@ function CheckImportAddresses(fixMissingAddresses) {
         return !btcAddresses.has(addr);
     });
 
-    if (notImportedAddresses.length > 0) {
+    Catenis.logger.TRACE('Checking imported addresses onto Omni Core');
+    // Retrieve list of addresses currently imported onto Omni Core
+    const omniAddresses = new Set(Catenis.omniCore.getAddresses());
+
+    // Identify addresses currently in use that are not yet imported onto Omni Core
+    const notImportedOmniAddresses = Catenis.keyStore.listAllClientBcotTokenPaymentAddressesInUse().filter((addr) => {
+        return !omniAddresses.has(addr);
+    });
+
+    if (notImportedAddresses.length > 0 || notImportedOmniAddresses.length > 0) {
         if (fixMissingAddresses) {
             // Import missing addresses
-            Catenis.logger.WARN('There are blockchain addresses missing (not currently imported) from Bitcoin Core. They shall be imported now. The system might be unavailable for several minutes.');
+            const fut = new Future();
+            let importingAddresses = false,
+                importingOmniAddresses = false;
 
-            const lastAddressToImport = notImportedAddresses.pop();
+            if (notImportedAddresses.length > 0) {
+                importingAddresses = true;
+                Catenis.logger.WARN('There are blockchain addresses missing (not currently imported) from Bitcoin Core. They shall be imported now. The system might be unavailable for several minutes.');
 
-            // TODO: replace this loop with a call to the new (as of Bitcoin Core ver. 0.14.0) importmulti JSON-RPC command, which takes an array of objects to import
-            // TODO: today we do not store the date and time when the address was created, which can be used in the importnulti call, so we would need to make change to the KeyStore module to include that info
-            notImportedAddresses.forEach((addr) => {
-                // Get public key associated with address and import it onto Bitcoin Core
-                //  without rescanning the blockchain
-                Catenis.bitcoinCore.importPublicKey(Catenis.keyStore.getCryptoKeysByAddress(addr).exportPublicKey(), false);
-            });
+                const lastAddressToImport = notImportedAddresses.pop();
 
-            // Now, import public key associated with last address, this time requesting
-            //  that the blockchain be rescanned
-            Catenis.logger.TRACE('About to import public key onto Bitcoin Core requesting blockchain to be rescanned');
-            Meteor.wrapAsync(Catenis.bitcoinCore.importPublicKey, Catenis.bitcoinCore)(Catenis.keyStore.getCryptoKeysByAddress(lastAddressToImport).exportPublicKey(), true);
-            Catenis.logger.TRACE('Finished importing public key onto Bitcoin Core with blockchain rescan');
+                // TODO: replace this loop with a call to the new (as of Bitcoin Core ver. 0.14.0) importmulti JSON-RPC command, which takes an array of objects to import
+                // TODO: today we do not store the date and time when the address was created, which can be used in the importnulti call, so we would need to make change to the KeyStore module to include that info
+                notImportedAddresses.forEach((addr) => {
+                    // Get public key associated with address and import it onto Bitcoin Core
+                    //  without rescanning the blockchain
+                    Catenis.bitcoinCore.importPublicKey(Catenis.keyStore.getCryptoKeysByAddress(addr).exportPublicKey(), false);
+                });
+
+                // Now, import public key associated with last address, this time requesting
+                //  that the blockchain be rescanned
+                Catenis.logger.TRACE('About to import public key onto Bitcoin Core requesting blockchain to be rescanned');
+
+                Catenis.bitcoinCore.importPublicKey(Catenis.keyStore.getCryptoKeysByAddress(lastAddressToImport).exportPublicKey(), true, (error) => {
+                    importingAddresses = false;
+
+                    if (error) {
+                        throw error;
+                    }
+
+                    Catenis.logger.TRACE('Finished importing public key onto Bitcoin Core with blockchain rescan');
+
+                    if (!importingOmniAddresses) {
+                        fut.return();
+                    }
+                });
+            }
+
+            if (notImportedOmniAddresses.length > 0) {
+                importingOmniAddresses = true;
+                Catenis.logger.WARN('There are blockchain addresses missing (not currently imported) from Omni Core. They shall be imported now. The system might be unavailable for several minutes.');
+
+                const lastAddressToImport = notImportedOmniAddresses.pop();
+
+                notImportedOmniAddresses.forEach((addr) => {
+                    // Get public key associated with address and import it onto Omni Core
+                    //  without rescanning the blockchain
+                    Catenis.omniCore.importPublicKey(Catenis.keyStore.getCryptoKeysByAddress(addr).exportPublicKey(), false);
+                });
+
+                // Now, import public key associated with last address, this time requesting
+                //  that the blockchain be rescanned
+                Catenis.logger.TRACE('About to import public key onto Omni Core requesting blockchain to be rescanned');
+
+                Catenis.omniCore.importPublicKey(Catenis.keyStore.getCryptoKeysByAddress(lastAddressToImport).exportPublicKey(), true), (error) => {
+                    importingOmniAddresses = false;
+
+                    if (error) {
+                        throw error;
+                    }
+
+                    Catenis.logger.TRACE('Finished importing public key onto Omni Core with blockchain rescan');
+
+                    if (!importingAddresses) {
+                        fut.return();
+                    }
+                };
+            }
+
+            fut.wait();
         }
         else {
             // Throw error indicating that some blockchain addresses are missing
-            Catenis.logger.FATAL('There are blockchain addresses missing (not currently imported) from Bitcoin Core');
-            throw new Meteor.Error('There are blockchain addresses missing (not currently imported) from Bitcoin Core');
+            Catenis.logger.FATAL('There are blockchain addresses missing (not currently imported) from Bitcoin Core and/or Omni Core');
+            throw new Meteor.Error('There are blockchain addresses missing (not currently imported) from Bitcoin Core and/or Omni Core');
         }
     }
 }
