@@ -13,7 +13,6 @@
 //import util from 'util';
 // Third-party node modules
 //import config from 'config';
-import Future from 'fibers/future';
 // Meteor packages
 import { Meteor } from 'meteor/meteor';
 import { Mongo } from 'meteor/mongo';
@@ -318,71 +317,6 @@ Database.initialize = function() {
             {
                 fields: {
                     lastApiAccessGenKeyModifiedDate: 1
-                },
-                opts: {
-                    background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
-                }
-            }]
-        },
-        ServiceCredit: {
-            indices: [{
-                fields: {
-                    client_id: 1
-                },
-                opts: {
-                    background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
-                }
-            },
-            {
-                fields: {
-                    srvCreditType: 1
-                },
-                opts: {
-                    background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
-                }
-            },
-            {
-                fields: {
-                    'fundingTx.txid': 1
-                },
-                opts: {
-                    background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
-                }
-            },
-            {
-                fields: {
-                    'fundingTx.confirmed': 1
-                },
-                opts: {
-                    background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
-                }
-            },
-            {
-                fields: {
-                    remainCredits: 1
-                },
-                opts: {
-                    background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
-                }
-            },
-            {
-                fields: {
-                    createdDate: 1
-                },
-                opts: {
-                    background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
-                }
-            },
-            {
-                fields: {
-                    lastCreditUpdatedDate: 1
                 },
                 opts: {
                     background: true,

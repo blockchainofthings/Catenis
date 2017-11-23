@@ -177,11 +177,11 @@ const cfgSettings = {
 };
 
 const clientServCredAddrRootTypes = [{
-        root: 'cln_msg_crd_addr_root',
-        address: 'cln_msg_crd_addr'
+        root: 'cln_msg_crd_addr_root',      // DEPRECATED
+        address: 'cln_msg_crd_addr'         // DEPRECATED
     }, {
-        root: 'cln_asst_crd_addr_root',
-        address: 'cln_asst_crd_addr'
+        root: 'cln_asst_crd_addr_root',     // DEPRECATED
+        address: 'cln_asst_crd_addr'        // DEPRECATED
     }, {
         root: 'cln_srv_acc_cred_ln_addr_root',
         address: 'cln_srv_acc_cred_ln_addr'
@@ -2352,30 +2352,6 @@ KeyStore.prototype.listClientServiceCreditAddressesInUse = function (ctnNodeInde
     return this.listClientServiceCreditAddresses(ctnNodeIndex, clientIndex, servCreditIndex, fromAddrIndex, toAddrIndex, true);
 };
 
-KeyStore.prototype.getClientMessageCreditAddressKeys = function (ctnNodeIndex, clientIndex, addrIndex, isObsolete = false) {
-    return this.getClientServiceCreditAddressKeys(ctnNodeIndex, clientIndex, 0, addrIndex, isObsolete);
-};
-
-KeyStore.prototype.listClientMessageCreditAddresses = function (ctnNodeIndex, clientIndex, fromAddrIndex, toAddrIndex, onlyInUse) {
-    return this.listClientServiceCreditAddresses(ctnNodeIndex, clientIndex, 0, fromAddrIndex, toAddrIndex, onlyInUse);
-};
-
-KeyStore.prototype.listClientMessageCreditAddressesInUse = function (ctnNodeIndex, clientIndex, fromAddrIndex, toAddrIndex) {
-    return this.listClientServiceCreditAddressesInUse(ctnNodeIndex, clientIndex, 0, fromAddrIndex, toAddrIndex);
-};
-
-KeyStore.prototype.getClientAssetCreditAddressKeys = function (ctnNodeIndex, clientIndex, addrIndex, isObsolete = false) {
-    return this.getClientServiceCreditAddressKeys(ctnNodeIndex, clientIndex, 1, addrIndex, isObsolete);
-};
-
-KeyStore.prototype.listClientAssetCreditAddresses = function (ctnNodeIndex, clientIndex, fromAddrIndex, toAddrIndex, onlyInUse) {
-    return this.listClientServiceCreditAddresses(ctnNodeIndex, clientIndex, 1, fromAddrIndex, toAddrIndex, onlyInUse);
-};
-
-KeyStore.prototype.listClientAssetCreditAddressesInUse = function (ctnNodeIndex, clientIndex, fromAddrIndex, toAddrIndex) {
-    return this.listClientServiceCreditAddressesInUse(ctnNodeIndex, clientIndex, 1, fromAddrIndex, toAddrIndex);
-};
-
 KeyStore.prototype.getClientServiceAccountCreditLineAddressKeys = function (ctnNodeIndex, clientIndex, addrIndex, isObsolete = false) {
     return this.getClientServiceCreditAddressKeys(ctnNodeIndex, clientIndex, 2, addrIndex, isObsolete);
 };
@@ -3139,50 +3115,6 @@ KeyStore.systemDeviceMainAddressRootPath = function (ctnNodeIndex) {
     return util.format('m/%d/0/0/0', ctnNodeIndex);
 };
 
-KeyStore.clientMessageCreditAddressRootPath = function (ctnNodeIndex, clientIndex) {
-    // Validate arguments
-    const errArg = {};
-
-    if (!isValidCatenisNodeIndex(ctnNodeIndex)) {
-        errArg.ctnNodeIndex = ctnNodeIndex;
-    }
-
-    if (!isValidClientIndex(clientIndex)) {
-        errArg.clientIndex = clientIndex;
-    }
-
-    if (Object.keys(errArg).length > 0) {
-        const errArgs = Object.keys(errArg);
-
-        Catenis.logger.ERROR(util.format('KeyStore.clientMessageCreditAddressesRootPath method called with invalid argument%s', errArgs.length > 1 ? 's' : ''), errArg);
-        throw Error(util.format('Invalid %s argument%s', errArgs.join(', '), errArgs.length > 1 ? 's' : ''));
-    }
-
-    return util.format('m/%d/%d/0/0/0/0', ctnNodeIndex, clientIndex);
-};
-
-KeyStore.clientAssetCreditAddressRootPath = function (ctnNodeIndex, clientIndex) {
-    // Validate arguments
-    const errArg = {};
-
-    if (!isValidCatenisNodeIndex(ctnNodeIndex)) {
-        errArg.ctnNodeIndex = ctnNodeIndex;
-    }
-
-    if (!isValidClientIndex(clientIndex)) {
-        errArg.clientIndex = clientIndex;
-    }
-
-    if (Object.keys(errArg).length > 0) {
-        const errArgs = Object.keys(errArg);
-
-        Catenis.logger.ERROR(util.format('KeyStore.clientAssetCreditAddressesRootPath method called with invalid argument%s', errArgs.length > 1 ? 's' : ''), errArg);
-        throw Error(util.format('Invalid %s argument%s', errArgs.join(', '), errArgs.length > 1 ? 's' : ''));
-    }
-
-    return util.format('m/%d/%d/0/0/0/1', ctnNodeIndex, clientIndex);
-};
-
 KeyStore.clientServiceAccountCreditLineAddressRootPath = function (ctnNodeIndex, clientIndex) {
     // Validate arguments
     const errArg = {};
@@ -3698,7 +3630,7 @@ KeyStore.extKeyType = Object.freeze({
             2: 'clientIndex'
         }
     }),
-    cln_msg_crd_addr_root: Object.freeze({
+    cln_msg_crd_addr_root: Object.freeze({      // DEPRECATED
         name: 'cln_msg_crd_addr_root',
         description: 'client message credit addresses root',
         pathRegEx: /^m\/(\d+)\/(\d+)\/0\/0\/0\/0$/,
@@ -3707,7 +3639,7 @@ KeyStore.extKeyType = Object.freeze({
             2: 'clientIndex'
         }
     }),
-    cln_asst_crd_addr_root: Object.freeze({
+    cln_asst_crd_addr_root: Object.freeze({     // DEPRECATED
         name: 'cln_asst_crd_addr_root',
         description: 'client asset credit addresses root',
         pathRegEx: /^m\/(\d+)\/(\d+)\/0\/0\/0\/1$/,
@@ -3753,7 +3685,7 @@ KeyStore.extKeyType = Object.freeze({
             3: 'servCreditIndex'
         }
     }),
-    cln_msg_crd_addr: Object.freeze({
+    cln_msg_crd_addr: Object.freeze({       // DEPRECATED
         name: 'cln_msg_crd_addr',
         description: 'client message credit address',
         pathRegEx: /^m\/(\d+)\/(\d+)\/0\/0\/0\/0\/(\d+)$/,
@@ -3763,7 +3695,7 @@ KeyStore.extKeyType = Object.freeze({
             3: 'addrIndex'
         }
     }),
-    cln_asst_crd_addr: Object.freeze({
+    cln_asst_crd_addr: Object.freeze({      // DEPRECATED
         name: 'cln_asst_crd_addr',
         description: 'client asset credit address',
         pathRegEx: /^m\/(\d+)\/(\d+)\/0\/0\/0\/1\/(\d+)$/,

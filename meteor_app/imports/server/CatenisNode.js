@@ -26,7 +26,6 @@ import { Random } from 'meteor/random';
 // References code in other (Catenis) modules
 import { Catenis } from './Catenis';
 import { CriticalSection } from './CriticalSection';
-import { ServiceCreditsCounter } from './ServiceCreditsCounter';
 import {
     SystemDeviceMainAddress,
     SystemFundingPaymentAddress,
@@ -144,7 +143,7 @@ CatenisNode.prototype.startNode = function () {
                         currentFundingAmount: Util.formatCoins(devMainAddrBalance)
                     });
                     distribFund.totalAmount = distribFund.totalAmount - devMainAddrBalance;
-                    distribFund.amountPerAddress = Service.distributeDeviceMainAddressDeltaFund(distribFund.totalAmount);
+                    distribFund.amountPerAddress = Service.distributeSystemMainAddressDeltaFund(distribFund.totalAmount);
 
                     // Fix funding of device main addresses
                     fundDeviceMainAddresses.call(this, distribFund.amountPerAddress);
@@ -197,61 +196,28 @@ CatenisNode.prototype.checkFundingBalance = function () {
     }
 };
 
-CatenisNode.prototype.currentServiceCreditsCount = function () {
-    const counter = {};
-
-    counter[Client.serviceCreditType.message] = new ServiceCreditsCounter();
-    counter[Client.serviceCreditType.asset] = new ServiceCreditsCounter();
-
-    // Compute remaining service credits for all clients of this Catenis node
-    Catenis.db.collection.Client.find({catenisNode_id: this.doc_id}, {fields: {_id: 1}}).forEach(clientDoc => {
-        Catenis.db.collection.ServiceCredit.find({client_id: clientDoc._id, remainCredits: {$gt: 0}}, {fields: {_id: 1, remainCredits: 1, srvCreditType: 1, 'fundingTx.confirmed': 1}}).fetch().reduce((counter, doc) => {
-            if (doc.fundingTx.confirmed) {
-                counter[doc.srvCreditType].addConfirmed(doc.remainCredits);
-            }
-            else {
-                counter[doc.srvCreditType].addUnconfirmed(doc.remainCredits);
-            }
-
-            return counter;
-        }, counter);
-    });
-
-    return counter;
-};
-
 CatenisNode.prototype.currentUnreadMessagesCount = function () {
     return Catenis.db.collection.ReceivedTransaction.find({type: Transaction.type.send_message.name, 'info.sendMessage.readConfirmation.spent': false}, {fields: {_id: 1}}).count();
 };
 
 // NOTE: make sure that this method is called from code executed from the FundSource.utxoCS
 //  critical section object
-CatenisNode.prototype.checkPayTxExpenseFundingBalance = function (doFunding = true, extraBalanceAmount = 0) {
-    const currServiceCreditsCount = this.currentServiceCreditsCount();
-    const payTxBalanceInfo = new BalanceInfo(Service.getExpectedPayTxExpenseBalance(currServiceCreditsCount[Client.serviceCreditType.message].total, currServiceCreditsCount[Client.serviceCreditType.asset].total) + extraBalanceAmount,
-        this.payTxExpenseAddr.listAddressesInUse(), {
-            safetyFactor: Service.fundPayTxSafetyFactor
+CatenisNode.prototype.checkPayTxExpenseFundingBalance = function () {
+    const payTxBalanceInfo = new BalanceInfo(Service.getMinimumPayTxExpenseBalance(), this.payTxExpenseAddr.listAddressesInUse(), {
+            safetyFactor: Service.payTxExpBalanceSafetyFactor
     });
 
     if (payTxBalanceInfo.hasLowBalance()) {
         // Prepare to refund system pay tx expense addresses
 
-        // Allocate system pay tx expense addresses...
+        // Distribute funds to be allocated
         const distribFund = Service.distributePayTxExpenseFund(payTxBalanceInfo.getBalanceDifference());
 
-        if (doFunding) {
-            // ...and try to fund them
-            this.fundPayTxExpenseAddresses(distribFund.amountPerAddress);
-        }
-        else {
-            // No funding is actually done, but only return allocated addresses
-            return distribFund;
-        }
+        // And try to fund system pay tx expense addresses
+        this.fundPayTxExpenseAddresses(distribFund.amountPerAddress);
     }
 
-    if (doFunding) {
-        return payTxBalanceInfo.hasLowBalance();
-    }
+    return payTxBalanceInfo.hasLowBalance();
 };
 
 // NOTE: make sure that this method is called from code executed from the FundSource.utxoCS
@@ -265,10 +231,10 @@ CatenisNode.prototype.checkServiceCreditIssuanceProvision = function () {
     if (servCredIssuanceBalanceInfo.hasLowBalance()) {
         // Prepare to provision system for service credit issuance
 
-        // Distribute funds to be allocated to system service credit issuing address
+        // Distribute funds to be allocated
         const distribFund = Service.distributeServiceCreditIssuanceFund(servCredIssuanceBalanceInfo.getBalanceDifference());
 
-        // ...and try to fund them
+        // And try to fund system service credit issuing address
         this.provisionServiceCreditIssuance(distribFund.amountPerAddress);
     }
 
@@ -280,7 +246,7 @@ CatenisNode.prototype.checkServiceCreditIssuanceProvision = function () {
 CatenisNode.prototype.checkReadConfirmPayTxExpenseFundingBalance = function () {
     const readConfirmPayTxBalanceInfo = new BalanceInfo(Service.getExpectedReadConfirmPayTxExpenseBalance(this.currentUnreadMessagesCount()),
         this.readConfirmPayTxExpenseAddr.listAddressesInUse(), {
-            safetyFactor: Service.fundReadConfirmPayTxSafetyFactor
+            safetyFactor: Service.readConfirmPayTxExpBalanceSafetyFactor
         });
 
     if (readConfirmPayTxBalanceInfo.hasLowBalance()) {
@@ -598,7 +564,7 @@ CatenisNode.prototype.createClient = function (props, user_id, billingMode = Cli
         });
     }
 
-    // Return ID of newly creadted client
+    // Return ID of newly created client
     return docClient.clientId;
 };
 

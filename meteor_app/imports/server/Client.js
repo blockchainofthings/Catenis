@@ -26,11 +26,7 @@ import { Random } from 'meteor/random';
 // References code in other (Catenis) modules
 import { Catenis } from './Catenis';
 import { CriticalSection } from './CriticalSection';
-import { ServiceCreditsCounter } from './ServiceCreditsCounter';
-import { TransactionMonitor } from './TransactionMonitor';
 import {
-    ClientMessageCreditAddress,
-    ClientAssetCreditAddress,
     ClientServiceAccountCreditLineAddress,
     ClientServiceAccountDebitLineAddress,
     ClientBcotTokenPaymentAddress
@@ -38,8 +34,6 @@ import {
 import { CatenisNode } from './CatenisNode';
 import { Device } from './Device';
 import { FundSource } from './FundSource';
-import { FundTransaction } from './FundTransaction';
-import { Service} from './Service';
 import { Permission } from './Permission';
 
 // Config entries
@@ -90,8 +84,6 @@ export function Client(docClient, ctnNode, initializeDevices) {
     });
 
     // Instantiate objects to manage blockchain addresses for client
-    this.messageCreditAddr = ClientMessageCreditAddress.getInstance(this.ctnNode.ctnNodeIndex, this.clientIndex);
-    this.assetCreditAddr = ClientAssetCreditAddress.getInstance(this.ctnNode.ctnNodeIndex, this.clientIndex);
     this.servAccCreditLineAddr = ClientServiceAccountCreditLineAddress.getInstance(this.ctnNode.ctnNodeIndex, this.clientIndex);
     this.servAccDebitLineAddr = ClientServiceAccountDebitLineAddress.getInstance(this.ctnNode.ctnNodeIndex, this.clientIndex);
     this.bcotTokenPaymentAddr = ClientBcotTokenPaymentAddress.getInstance(this.ctnNode.ctnNodeIndex, this.clientIndex);
@@ -102,8 +94,7 @@ export function Client(docClient, ctnNode, initializeDevices) {
     this.lastDeviceIndex = docDevice !== undefined ? docDevice.index.deviceIndex : 0;
 
     // Critical section object to avoid concurrent access to database at the
-    //  client object level (when creating new devices for this client and
-    //  handling service credits basically)
+    //  client object level (when creating new devices for this client basically)
     this.clnDbCS = new CriticalSection();
 
     if (initializeDevices) {
@@ -322,30 +313,6 @@ Client.prototype.newBcotTokenPaymentAddress = function () {
     return this.bcotTokenPaymentAddr.newAddressKeys().getAddress();
 };
 
-Client.prototype.addMessageCredit = function (count) {
-    addServiceCredit.call(this, Client.serviceCreditType.message, count);
-};
-
-Client.prototype.addAssetCredit = function (count) {
-    addServiceCredit.call(this, Client.serviceCreditType.asset, count);
-};
-
-Client.prototype.spendMessageCredit = function (count) {
-    spendServiceCredit.call(this, Client.serviceCreditType.message, count);
-};
-
-Client.prototype.spendAssetCredit = function (count) {
-    spendServiceCredit.call(this, Client.serviceCreditType.asset, count);
-};
-
-Client.prototype.availableMessageCredits = function () {
-    return availableServiceCredits.call(this, Client.serviceCreditType.message);
-};
-
-Client.prototype.availableAssetCredits = function () {
-    return availableServiceCredits.call(this, Client.serviceCreditType.asset);
-};
-
 Client.prototype.getDeviceByIndex = function (deviceIndex, includeDeleted = true) {
     // Retrieve Device doc/rec
     const query = {
@@ -492,6 +459,7 @@ Client.prototype.createDevice = function (props, ownApiAccessKey = false, initRi
 
     try {
         // Fund recently created device
+        // noinspection JSUnusedAssignment
         device.fundAddresses();
     }
     catch (err) {
@@ -618,227 +586,12 @@ Client.prototype.getDeviceDefaultRights = function() {
 //      or .bind().
 //
 
-function addServiceCredit(srvCreditType, count) {
-    // Make sure that client is not deleted
-    if (this.status === Client.status.deleted.name) {
-        // Cannot add service credit to deleted client. Log error and throw exception
-        Catenis.logger.ERROR('Cannot add service credit to a deleted client', {clientId: this.clientId});
-        throw new Meteor.Error('ctn_client_deleted', util.format('Cannot add service credit to a deleted client (clientId: %s)', this.clientId));
-    }
-
-    // Make sure that client is active
-    if (this.status !== Client.status.active.name) {
-        // Cannot add service credit to inactive client. Log error and throw exception
-        Catenis.logger.ERROR('Cannot add service credit to an inactive client', {clientId: this.clientId});
-        throw new Meteor.Error('ctn_client_inactive', util.format('Cannot add service credit to an inactive client (clientId: %s)', this.clientId));
-    }
-
-    // Validate arguments
-    const errArg = {};
-
-    if (!isValidServiceCreditType(srvCreditType)) {
-        errArg.srvCreditType = srvCreditType;
-    }
-
-    if (!isValidServiceCreditCount(count)) {
-        errArg.count = count;
-    }
-
-    if (Object.keys(errArg).length > 0) {
-        const errArgs = Object.keys(errArg);
-
-        Catenis.logger.ERROR(util.format('Client.addServiceCredit method called with invalid argument%s', errArgs.length > 1 ? 's' : ''), errArg);
-        throw new Meteor.Error('ctn_client_add_srv_credit_inv_args', util.format('Invalid %s argument%s', errArgs.join(', '), errArgs.length > 1 ? 's' : ''));
-    }
-
-    let fundTransact;
-
-    try {
-        // Execute code in critical section to avoid UTXOs concurrency
-        FundSource.utxoCS.execute(() => {
-            // Prepare transaction to fund client service credits
-            fundTransact = new FundTransaction(FundTransaction.fundingEvent.provision_client_srv_credit, this.clientId);
-
-            // Allocate service credit addresses
-            let distribFund = Service.distributeClientServiceCreditFund(count);
-
-            fundTransact.addPayees(srvCreditType === Client.serviceCreditType.message ? this.messageCreditAddr : this.assetCreditAddr, distribFund.amountPerAddress);
-
-            // Allocate system pay tx expense addresses if required (that is, if system pay tx expense
-            //  balance is not enough to cover new service credits being added)
-            const fundAmount = (srvCreditType === Client.serviceCreditType.message ? Service.getPayMessageTxExpenseFundAmount : Service.getPayAssetTxExpenseFundAmount)(count);
-            distribFund = this.ctnNode.checkPayTxExpenseFundingBalance(false, fundAmount);
-
-            if (distribFund !== undefined) {
-                fundTransact.addPayees(this.ctnNode.payTxExpenseAddr, distribFund.amountPerAddress);
-            }
-
-            // Try to fund client service credits
-            fundClientServiceCredits(fundTransact);
-
-            // Make sure that system is properly funded
-            Catenis.ctnHubNode.checkFundingBalance();
-        });
-    }
-    catch (err) {
-        Catenis.logger.ERROR(util.format('Error funding client (Id: %d) service credits (type: %s, count: %d).', this.clientId, srvCreditType, count), err);
-        throw new Meteor.Error('ctn_client_srv_credit_fund_error', util.format('Error funding client (Id: %d) service credits (type: %s, count: %d).', this.clientId, srvCreditType, count), err.stack);
-    }
-    finally {
-        if (fundTransact.transact.txid !== undefined) {
-            try {
-                // Record new service credit add transaction to database
-                Catenis.db.collection.ServiceCredit.insert({
-                    client_id: this.doc_id,
-                    srvCreditType: srvCreditType,
-                    fundingTx: {
-                        txid: fundTransact.transact.txid,
-                        confirmed: false
-                    },
-                    initCredits: count,
-                    remainCredits: count,
-                    createdDate: new Date(Date.now())
-                });
-            }
-            catch (err) {
-                Catenis.logger.ERROR('Error trying to insert ServiceCredit doc/rec.', err);
-                //noinspection ThrowInsideFinallyBlockJS
-                throw new Meteor.Error('ctn_client_srv_credit_insert_error', 'Error trying to insert ServiceCredit doc/rec', err.stack);
-            }
-        }
-    }
-}
-
-function spendServiceCredit(srvCreditType, count) {
-    // Make sure that client is not deleted
-    if (this.status === Client.status.deleted.name) {
-        // Cannot spend service credit from deleted client. Log error and throw exception
-        Catenis.logger.ERROR('Cannot spend service credit from a deleted client', {clientId: this.clientId});
-        throw new Meteor.Error('ctn_client_deleted', util.format('Cannot spend service credit from a deleted client (clientId: %s)', this.clientId));
-    }
-
-    // Make sure that client is active
-    if (this.status !== Client.status.active.name) {
-        // Cannot spend service credit from inactive client. Log error and throw exception
-        Catenis.logger.ERROR('Cannot spend service credit from an inactive client', {clientId: this.clientId});
-        throw new Meteor.Error('ctn_client_inactive', util.format('Cannot  spend service credit from an inactive client (clientId: %s)', this.clientId));
-    }
-
-    // Validate arguments
-    const errArg = {};
-
-    if (!isValidServiceCreditType(srvCreditType)) {
-        errArg.srvCreditType = srvCreditType;
-    }
-
-    if (!isValidServiceCreditCount(count)) {
-        errArg.count = count;
-    }
-
-    if (Object.keys(errArg).length > 0) {
-        const errArgs = Object.keys(errArg);
-
-        Catenis.logger.ERROR(util.format('Client.spendServiceCredit method called with invalid argument%s', errArgs.length > 1 ? 's' : ''), errArg);
-        throw Meteor.Error('ctn_client_spend_srv_credit_inv_args', util.format('Invalid %s argument%s', errArgs.join(', '), errArgs.length > 1 ? 's' : ''));
-    }
-
-    // Execute code in critical section to avoid DB concurrency
-    this.clnDbCS.execute(() => {
-        const srvCreditIdsToZero = [];
-        let docSrvCreditsToUpdate = undefined,
-            remainCount = count;
-
-        // Take into account only already confirmed service credits
-        Catenis.db.collection.ServiceCredit.find({client_id: this.doc_id, srvCreditType: srvCreditType, 'fundingTx.confirmed': true, remainCredits: {$gt: 0}}, {fields: {_id: 1, remainCredits: 1}, sort: {createdDate: 1}}).fetch().some((doc) => {
-            if (doc.remainCredits <= remainCount) {
-                srvCreditIdsToZero.push(doc._id);
-                remainCount -= doc.remainCredits;
-            }
-            else {
-                doc.remainCredits -= remainCount;
-                docSrvCreditsToUpdate = doc;
-                remainCount = 0;
-            }
-
-            return remainCount === 0;
-        });
-
-        const updateDate = new Date(Date.now());
-
-        if (srvCreditIdsToZero.length > 0) {
-            try {
-                Catenis.db.collection.ServiceCredit.update({_id: {$in: srvCreditIdsToZero}}, {$set: {remainCredits: 0, latestCreditUpdatedDate: updateDate}}, {multi: true});
-            }
-            catch (err) {
-                Catenis.logger.ERROR('Error trying to set remaining credits of ServiceCredit docs/recs to zero.', err);
-                throw new Meteor.Error('ctn_client_srv_credit_update_error', 'Error trying to set remaining credits of ServiceCredit docs/recs to zero', err.stack);
-            }
-        }
-
-        if (docSrvCreditsToUpdate !== undefined) {
-            try {
-                Catenis.db.collection.ServiceCredit.update({_id: docSrvCreditsToUpdate._id}, {$set: {remainCredits: docSrvCreditsToUpdate.remainCredits, latestCreditUpdatedDate: updateDate}})
-            }
-            catch (err) {
-                Catenis.logger.ERROR('Error trying to update remaining credits of ServiceCredit docs/recs.', err);
-                throw new Meteor.Error('ctn_client_srv_credit_update_error', 'Error trying to update remaining credits of ServiceCredit docs/recs', err.stack);
-            }
-        }
-
-        if (remainCount > 0) {
-            // Not all credits have been deleted. There were not enough remaining credits
-            Catenis.logger.WARN('Not all credits have been deleted; there were not enough remaining credits', {creditsToDelete: count, previouslyRemainCredits: count - remainCount});
-        }
-    });
-}
-
-// Arguments:
-//   srvCreditType: [String] // A property of Client.serviceCreditType
-//
-// Return:
-//   srvCreditCount: [Object of ServiceCreditsCounter]
-function availableServiceCredits(srvCreditType) {
-    return Catenis.db.collection.ServiceCredit.find({client_id: this.doc_id, srvCreditType: srvCreditType, remainCredits: {$gt: 0}}, {fields: {_id: 1, 'fundingTx.confirmed': 1, remainCredits: 1}}).fetch().reduce((sum, doc) => {
-        if (doc.fundingTx.confirmed) {
-            sum.addConfirmed(doc.remainCredits);
-        }
-        else {
-            sum.addUnconfirmed(doc.remainCredits);
-        }
-
-        return sum;
-    }, new ServiceCreditsCounter());
-}
-
-function confirmServiceCredits(txid) {
-    // Execute code in critical section to avoid DB concurrency
-    this.clnDbCS.execute(() => {
-        // Retrieve service credit doc/rec
-        const docSrvCredit = Catenis.db.collection.ServiceCredit.findOne({
-            'fundingTx.txid': txid,
-            'fundingTx.confirmed': false
-        }, {fields: {_id: 1, srvCreditType: 1, remainCredits: 1}});
-
-        if (docSrvCredit !== undefined) {
-            // Update service credit doc/rec indicating that it is already confirmed
-            Catenis.db.collection.ServiceCredit.update({_id: docSrvCredit._id}, {$set: {'fundingTx.confirmed': true}});
-        }
-        else {
-            // Could not find ServiceCredit doc/rec associated with given transaction ID.
-            //  Log inconsistent condition
-            Catenis.logger.ERROR('Could not find ServiceCredit doc/rec associated with transaction id', {txid: txid});
-        }
-    });
-}
-
 
 // Client function class (public) methods
 //
 
 Client.initialize = function () {
     Catenis.logger.TRACE('Client initialization');
-    // Set up handler for event notifying that funding transaction used to provision client service credits has been confirmed
-    TransactionMonitor.addEventHandler(TransactionMonitor.notifyEvent.funding_provision_client_srv_credit_tx_conf.name, serviceCreditsConfirmed);
 };
 
 Client.getClientByClientId = function (clientId, includeDeleted = true) {
@@ -1079,11 +832,6 @@ Client.checkDeviceDefaultRights = function () {
 
 Client.clientCtrl = {};
 
-Client.serviceCreditType = Object.freeze({
-    message: 'message',
-    asset: 'asset'
-});
-
 Client.status = Object.freeze({
     new: Object.freeze({
         name: 'new',
@@ -1108,35 +856,6 @@ Client.billingMode = Object.freeze({
 // Definition of module (private) functions
 //
 
-// NOTE: make sure that this method is called from code executed from the FundSource.utxoCS
-//  critical section object
-function fundClientServiceCredits(fundTransact) {
-    try {
-        // Try to allocate UTXOs to pay for transaction fee
-        if (fundTransact.addPayingSource()) {
-            // Now, issue (create and send) the transaction
-            return fundTransact.sendTransaction();
-        }
-        else {
-            // Could not allocated UTXOs to pay for transaction fee.
-            //  Throw exception
-            //noinspection ExceptionCaughtLocallyJS
-            throw new Meteor.Error('ctn_sys_no_fund', 'Could not allocate UTXOs from system funding addresses to pay for tx expense');
-        }
-    }
-    catch (err) {
-        // Error funding client service credits.
-        //  Log error condition
-        Catenis.logger.ERROR('Error processing transaction to fund client service credits.', err);
-
-        // Revert addresses of payees added to transaction
-        fundTransact.revertPayeeAddresses();
-
-        // Rethrows exception
-        throw err;
-    }
-}
-
 // Create new device ID dependent on Catenis node index, client index and device index
 function newDeviceId(ctnNodeIndex, clientIndex, deviceIndex) {
     let id = 'd' + Random.createWithSeeds(Array.from(Catenis.application.seed.toString() + ':ctnNodeIndex:' + ctnNodeIndex + ',clientIndex:' + clientIndex + ',deviceIndex:' + deviceIndex)).id(19);
@@ -1151,39 +870,9 @@ function newDeviceId(ctnNodeIndex, clientIndex, deviceIndex) {
     return id;
 }
 
-function isValidServiceCreditType(type) {
-    return Object.keys(Client.serviceCreditType).some((key) => {
-        return Client.serviceCreditType[key] === type;
-    });
-}
-
-function isValidServiceCreditCount(count) {
-    return typeof count === 'number' && Number.isInteger(count) && count > 0;
-}
-
-function serviceCreditsConfirmed(data) {
-    Catenis.logger.TRACE('Received notification of confirmed funding transaction used to provision client service credits', data);
-    try {
-        // Instantiate client and confirm service credits
-        confirmServiceCredits.call(Client.getClientByClientId(data.entityId), data.txid);
-    }
-    catch (err) {
-        // Just log error condition
-        Catenis.logger.ERROR('Error handling event notifying that service credits have been confirmed.', err);
-    }
-}
-
 
 // Module code
 //
-
-Object.defineProperty(Client, 'totalRemainingCredits', {
-    get: function () {
-        return Catenis.db.collection.ServiceCredit.find({remainCredits: {$gt: 0}}, {fields: {remainCredits: 1}}).fetch().reduce((sum, doc) => {
-            return sum + doc.remainCredits;
-        }, 0);
-    }
-});
 
 // Lock function class
 Object.freeze(Client);

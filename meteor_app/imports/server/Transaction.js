@@ -719,11 +719,10 @@ Transaction.prototype.serialize = function () {
 //    funding: {
 //      event: {
 //          name: [string],  // Identifies the event that triggered the funding action (from FundTransaction.fundingEvent).
-//                               Valid values: 'provision_system_device', 'provision_client_srv_credit', 'provision_client_device',
-//                               'add_extra_tx_pay_funds', 'add_extra_read_confirm_tx_pay_funds'
-//          entityId: [string]  // Id of the entity associated with the event. Should only exist for 'provision_client_srv_credit'
-//                                  and 'provision_client_device' events. For 'provision_client_srv_credit' events, it refers to the
-//                                  clientId; for 'provision_client_device' events, it refers to the deviceId
+//                               Valid values: 'provision_system_device', 'provision_client_device', 'add_extra_tx_pay_funds',
+//                               'add_extra_read_confirm_tx_pay_funds'
+//          entityId: [string]  // Id of the entity associated with the event. Should only exist for 'provision_client_device'
+//                                  events, and it refers to the deviceId
 //      },
 //      payees: [Array(string)] // Identifies the type of blockchain addresses that receive the funds. Valid values (from
 //                                  KeyStore.extKeyType): 'sys_dev_main_addr', 'sys_node_fund_pay_addr',
@@ -1499,12 +1498,6 @@ Transaction.fixMalleability = function (source, originalTxid, modifiedTxid) {
                 // Replace transaction id in all places withing the local database
 
                 if (source === Transaction.source.sent_tx) {
-                    Catenis.db.collection.ServiceCredit.update({'fundingTx.txid': originalTxid}, {
-                        $set: {
-                            'fundingTx.txid': modifiedTxid
-                        }
-                    }, {multi: true});
-
                     Catenis.db.collection.SentTransaction.update({txid: originalTxid}, {
                         $set: {
                             txid: modifiedTxid,
@@ -1698,16 +1691,6 @@ Transaction.ioToken = Object.freeze({
         name: 'p2_sys_read_conf_pay_tx_exp_addr',
         token: '<p2_sys_read_conf_pay_tx_exp_addr>',
         description: 'Output (or input spending such output) paying to a system read confirmation pay tx expense address'
-    }),
-    p2_cln_msg_crd_addr: Object.freeze({
-        name: 'p2_cln_msg_crd_addr',
-        token: '<p2_cln_msg_crd_addr>',
-        description: 'Output (or input spending such output) paying to a client message credit address'
-    }),
-    p2_cln_asst_crd_addr: Object.freeze({
-        name: 'p2_cln_asst_crd_addr',
-        token: '<p2_cln_asst_crd_addr>',
-        description: 'Output (or input spending such output) paying to a client asset credit address'
     }),
     p2_dev_read_conf_addr: Object.freeze({
         name: 'p2_dev_read_conf_addr',

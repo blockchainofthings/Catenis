@@ -128,6 +128,27 @@ Util.isValidBlockchainAddress = function (address) {
     return true;
 };
 
+Util.weightedAverage = function (values, weights) {
+    // Make sure that arguments are consistent
+    if (!Array.isArray(values) || !Array.isArray(weights) || values.length !== weights.length || values.length === 0) {
+        Catenis.logger.ERROR('Util.weightedAverage method call with in consistent arguments', {
+            value: values,
+            weights: weights
+        });
+        throw new Error('Util.weightedAverage method call with in consistent arguments');
+    }
+
+    let sum = 0;
+    let sumWeights = 0;
+
+    values.forEach((value, idx) => {
+        sum += value * weights[idx];
+        sumWeights += weights[idx];
+    });
+
+    return sum / sumWeights;
+};
+
 // Util function class (public) properties
 //
 

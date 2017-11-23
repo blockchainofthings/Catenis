@@ -13,7 +13,7 @@
 //  NOTE: the reference of these modules are done sing 'require()' instead of 'import' to
 //      to avoid annoying WebStorm warning message: 'default export is not defined in
 //      imported module'
-const util = require('util');
+//const util = require('util');
 // Third-party node modules
 //import config from 'config';
 // Meteor packages
@@ -22,11 +22,8 @@ import { Accounts } from 'meteor/accounts-base'
 
 // References code in other (Catenis) modules
 import { Catenis } from '../Catenis';
-import { Client } from '../Client';
 import { CatenisNode } from '../CatenisNode';
 
-
-const maxMsgCreditsCount = 100;
 
 // Definition of function classes
 //
@@ -59,15 +56,6 @@ export function ClientsUI() {
 ClientsUI.initialize = function () {
     // Declaration of RPC methods to be called from client
     Meteor.methods({
-        addMessageCredits: function (clientId, count) {
-            if (!Number.isInteger(count) || count < 0 || count > maxMsgCreditsCount) {
-                // Invalid number of message credits to add. Log error and throw exception
-                Catenis.logger.ERROR(util.format('Invalid number of message credits to add. Make sure that it is a positive integer not greater than %s', maxMsgCreditsCount.toString()), {count: count});
-                throw new Meteor.Error('clients.add-msg-credits.invalid-param', util.format('Invalid number of message credits to add. Make sure that it is a positive integer not greater than %s', maxMsgCreditsCount.toString()));
-            }
-
-            Client.getClientByClientId(clientId).addMessageCredit(count);
-        },
         createClient: function (ctnNodeIndex, clientInfo) {
             // Try to create meteor client user
             let user_id;
@@ -162,90 +150,6 @@ ClientsUI.initialize = function () {
             // Nothing to return
             return this.ready();
         }
-    });
-
-    Meteor.publish('clientMessageCredits', function (client_id) {
-        const messageCreditCount = {
-            unconfirmed: 0,
-            confirmed: 0
-        };
-        let initializing = true;
-
-        const observeHandle = Catenis.db.collection.ServiceCredit.find({
-            client_id: client_id,
-            srvCreditType: Client.serviceCreditType.message,
-            remainCredits: {$gt: 0}
-        },
-        {   fields: {
-                _id: 1,
-                'fundingTx.confirmed': 1,
-                remainCredits: 1
-            }
-        }).observe({
-            added: (doc) => {
-                // Adjust message credits
-                if (doc.fundingTx.confirmed) {
-                    messageCreditCount.confirmed += doc.remainCredits;
-                }
-                else {
-                    messageCreditCount.unconfirmed += doc.remainCredits;
-                }
-
-                if (!initializing) {
-                    this.changed('MessageCredits', 1, {
-                        unconfirmed: messageCreditCount.unconfirmed.toLocaleString(),
-                        confirmed: messageCreditCount.confirmed.toLocaleString()
-                    });
-                }
-            },
-
-            changed: (newDoc, oldDoc) => {
-                // Adjust message credits
-                if (oldDoc.fundingTx.confirmed) {
-                    messageCreditCount.confirmed -= oldDoc.remainCredits;
-                }
-                else {
-                    messageCreditCount.unconfirmed -= oldDoc.remainCredits;
-                }
-
-                if (newDoc.fundingTx.confirmed) {
-                    messageCreditCount.confirmed += newDoc.remainCredits;
-                }
-                else {
-                    messageCreditCount.unconfirmed += newDoc.remainCredits;
-                }
-
-                this.changed('MessageCredits', 1, {
-                    unconfirmed: messageCreditCount.unconfirmed.toLocaleString(),
-                    confirmed: messageCreditCount.confirmed.toLocaleString()
-                });
-            },
-
-            deleted: (oldDoc) => {
-                // Adjust message credits
-                if (oldDoc.fundingTx.confirmed) {
-                    messageCreditCount.confirmed -= oldDoc.remainCredits;
-                }
-                else {
-                    messageCreditCount.unconfirmed -= oldDoc.remainCredits;
-                }
-
-                this.changed('MessageCredits', 1, {
-                    unconfirmed: messageCreditCount.unconfirmed.toLocaleString(),
-                    confirmed: messageCreditCount.confirmed.toLocaleString()
-                });
-            }
-        });
-
-        initializing = false;
-
-        this.added('MessageCredits', 1, {
-            unconfirmed: messageCreditCount.unconfirmed.toLocaleString(),
-            confirmed: messageCreditCount.confirmed.toLocaleString()
-        });
-        this.ready();
-
-        this.onStop(() => observeHandle.stop());
     });
 };
 

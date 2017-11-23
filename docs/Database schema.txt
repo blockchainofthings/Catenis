@@ -82,20 +82,6 @@ Client {
   }
 }
 
-ServiceCredit {
-  _id: [string], // MongoDB internal document ID provided by Meteor
-  client_id: [string], // MongoDB internal ID of Client doc/rec with which this service credit entry is associated
-  srvCreditType: [string],  // Valid values: 'message' - message credit; 'asset' - asset credit
-  fundingTx: {
-    txid: [string],  // Blockchain attributed ID (hash) of funding transaction used to provision client service credit
-    confirmed: [boolean]  // Indicates whether funding transaction has already been confirmed
-  },
-  initCredits: [integer],  // Number of credits initially given
-  remainCredits: [integer],  // Number of credits remaining (not yet used)
-  createdDate: [date/time],  // Date and time when doc/rec has been created (credits initially given)
-  lastCreditUpdatedDate: [date/time]  // Date and time when remaining credits has been last updated
-} 
-
 Device {
   _id: [string], // MongoDB internal document ID provided by Meteor
   client_id: [string],  // MongoDB internal ID of Client doc/rec with which this device is associated

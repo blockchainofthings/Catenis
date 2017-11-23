@@ -21,7 +21,6 @@ import { Meteor } from 'meteor/meteor';
 
 // References code in other (Catenis) modules
 import { Catenis } from './Catenis';
-import { cfgSettings as deviceCfgSettings } from './Device';
 import { CatenisMessage } from './CatenisMessage';
 import { CatenisNode } from './CatenisNode';
 import { Device } from './Device';
@@ -128,33 +127,6 @@ SendMessageTransaction.prototype.buildTransaction = function () {
         // Add origin device main address input
         this.transact.addInput(origDevMainAddrAllocUtxo.txout, origDevMainAddrAllocUtxo.address, origDevMainAddrInfo);
 
-        // Prepare to add client message credit input
-        const clntMsgCreditAddrFundSource = new FundSource(this.originDevice.client.messageCreditAddr.listAddressesInUse(), {});
-        const clntMsgCreditAddrAllocResult = clntMsgCreditAddrFundSource.allocateFund(Service.clientServiceCreditAmount);
-
-        // Make sure that UTXOs have been correctly allocated
-        if (clntMsgCreditAddrAllocResult === null) {
-            // No UTXO available to be allocated. Log error condition and throw exception
-            Catenis.logger.ERROR(util.format('No UTXO available to be allocated for client (Id: %s) message credit addresses', this.originDevice.client.clientId));
-            throw new Meteor.Error('ctn_send_msg_no_utxo_msg_credit', util.format('No UTXO available to be allocated for client (Id: %s) message credit addresses', this.originDevice.client.clientId));
-        }
-
-        if (clntMsgCreditAddrAllocResult.utxos.length !== 1) {
-            // An unexpected number of UTXOs have been allocated.
-            // Log error condition and throw exception
-            Catenis.logger.ERROR(util.format('An unexpected number of UTXOs have been allocated for client (Id: %s) message credit addresses', this.originDevice.client.clientId), {
-                expected: 1,
-                allocated: clntMsgCreditAddrAllocResult.utxos.length
-            });
-            throw new Meteor.Error('ctn_send_msg_utxo_alloc_error', util.format('An unexpected number of UTXOs have been allocated for client (Id: %s) message credit addresses: expected: 1, allocated: %d', this.originDevice.client.clientId, clntMsgCreditAddrAllocResult.utxos.length));
-        }
-
-        const clntMsgCreditAddrAllocUtxo = clntMsgCreditAddrAllocResult.utxos[0];
-        const clntMsgCreditAddrInfo = Catenis.keyStore.getAddressInfo(clntMsgCreditAddrAllocUtxo.address);
-
-        // Add client message credit address input
-        this.transact.addInput(clntMsgCreditAddrAllocUtxo.txout, clntMsgCreditAddrAllocUtxo.address, clntMsgCreditAddrInfo);
-
         // Add transaction outputs
 
         // Prepare to add target device main address output
@@ -207,14 +179,6 @@ SendMessageTransaction.prototype.buildTransaction = function () {
         if (origDevMainAddrAllocResult.changeAmount > 0) {
             // Add origin device main address change output
             this.transact.addP2PKHOutput(this.originDevice.mainAddr.newAddressKeys().getAddress(), origDevMainAddrAllocResult.changeAmount);
-        }
-
-        // NOTE: we do not care to check if change is not below dust amount because it is guaranteed
-        //      that the change amount be a multiple of the basic amount that is allocated to client
-        //      message credit addresses which in turn is guaranteed to not be below dust
-        if (clntMsgCreditAddrAllocResult.changeAmount > 0) {
-            // Add client message credit address change output
-            this.transact.addP2PKHOutput(this.originDevice.client.messageCreditAddr.newAddressKeys().getAddress(), clntMsgCreditAddrAllocResult.changeAmount);
         }
 
         // Now, allocate UTXOs to pay for tx expense
@@ -273,8 +237,7 @@ SendMessageTransaction.prototype.sendTransaction = function () {
 
         this.transact.saveSentTransaction(Transaction.type.send_message, info);
 
-        // Spend client message credit
-        this.originDevice.client.spendMessageCredit(deviceCfgSettings.creditsToSendMessage);
+        // TODO: issue either Spend Service Credit or Debit Service Account transaction to account for service payment
 
         // Check if system pay tx expense addresses need to be refunded
         Catenis.ctnHubNode.checkPayTxExpenseFundingBalance();
@@ -321,7 +284,6 @@ SendMessageTransaction.checkTransaction = function (transact) {
         //  NOTE: no need to check if the variables below are non-null because the transact.matches()
         //      result above already guarantees it
         const origDevMainAddr = getAddrAndAddrInfo(transact.getInputAt(0));
-        const clntMsgCreditAddr = getAddrAndAddrInfo(transact.getInputAt(1));
         const trgtDevMainAddr = getAddrAndAddrInfo(transact.getOutputAt(0).payInfo);
 
         // Determine if device read confirmation address output is present
@@ -337,9 +299,8 @@ SendMessageTransaction.checkTransaction = function (transact) {
 
         let origDevMainRefundChangeAddr1 = undefined;
         let origDevMainRefundChangeAddr2 = undefined;
-        let clntMsgCreditChangeAddr = undefined;
 
-        for (let pos = nextOutputPos, limit = nextOutputPos + 2; pos <= limit; pos++) {
+        for (let pos = nextOutputPos, limit = nextOutputPos + 1; pos <= limit; pos++) {
             const output = transact.getOutputAt(pos);
             if (output !== undefined) {
                 const outputAddr = getAddrAndAddrInfo(output.payInfo);
@@ -351,16 +312,12 @@ SendMessageTransaction.checkTransaction = function (transact) {
                         origDevMainRefundChangeAddr2 = outputAddr;
                     }
                 }
-                else if (outputAddr.addrInfo.type === KeyStore.extKeyType.cln_msg_crd_addr.name) {
-                    clntMsgCreditChangeAddr = outputAddr;
-                }
             }
         }
 
         if (trgtDevMainAddr.address !== origDevMainAddr.address &&
                 (origDevMainRefundChangeAddr1 === undefined || (origDevMainRefundChangeAddr1.address !== origDevMainAddr.address && areAddressesFromSameDevice(origDevMainRefundChangeAddr1.addrInfo, origDevMainAddr.addrInfo))) &&
-                (origDevMainRefundChangeAddr2 === undefined || (origDevMainRefundChangeAddr2.address !== origDevMainAddr.address && areAddressesFromSameDevice(origDevMainRefundChangeAddr2.addrInfo, origDevMainAddr.addrInfo))) &&
-                (clntMsgCreditChangeAddr === undefined || (clntMsgCreditChangeAddr.address !== clntMsgCreditAddr.address && areAddressesFromSameClient(clntMsgCreditChangeAddr.addrInfo, clntMsgCreditAddr.addrInfo)))) {
+                (origDevMainRefundChangeAddr2 === undefined || (origDevMainRefundChangeAddr2.address !== origDevMainAddr.address && areAddressesFromSameDevice(origDevMainRefundChangeAddr2.addrInfo, origDevMainAddr.addrInfo)))) {
             // Now, check if data in null data output is correctly formatted
             let ctnMessage = undefined;
 
@@ -429,16 +386,14 @@ SendMessageTransaction.checkTransaction = function (transact) {
 //
 
 SendMessageTransaction.matchingPattern = Object.freeze({
-    input: util.format('^(?:%s)(?:%s)(?:%s)+$',
+    input: util.format('^(?:%s)(?:%s)+$',
             Transaction.ioToken.p2_dev_main_addr.token,
-            Transaction.ioToken.p2_cln_msg_crd_addr.token,
             Transaction.ioToken.p2_sys_pay_tx_exp_addr.token),
-    output: util.format('^(?:%s)(?:%s)?(?:%s)(?:%s){0,2}(?:%s)?(?:%s)?$',
+    output: util.format('^(?:%s)(?:%s)?(?:%s)(?:%s){0,2}(?:%s)?$',
             Transaction.ioToken.p2_dev_main_addr.token,
             Transaction.ioToken.p2_dev_read_conf_addr.token,
             Transaction.ioToken.null_data.token,
             Transaction.ioToken.p2_dev_main_addr.token,
-            Transaction.ioToken.p2_cln_msg_crd_addr.token,
             Transaction.ioToken.p2_sys_pay_tx_exp_addr.token)
 });
 

@@ -94,7 +94,7 @@ export class TransactionMonitor extends events.EventEmitter {
         this.blockToReset = undefined;
 
         // Initialize in-memory database to hold Catenis transactions received/confirmed since
-        //  last processed block (retrieved by callin getsinceblock Bitcoin Core RPC method)
+        //  last processed block (retrieved by calling getsinceblock Bitcoin Core RPC method)
         //
         //  Structure of collCntTx collection: {
         //    amount: [number],
@@ -179,7 +179,7 @@ export class TransactionMonitor extends events.EventEmitter {
         }
 
         if (this.idCheckUnconfTxsInterval !== undefined) {
-            Catenis.logger.TRACE('Stop checking for old unconfirmed transctions');
+            Catenis.logger.TRACE('Stop checking for old unconfirmed transactions');
             Meteor.clearInterval(this.idCheckUnconfTxsInterval);
             this.idCheckUnconfTxsInterval = undefined;
         }
@@ -498,7 +498,7 @@ function pollBlockchain() {
                 }
 
                 // Wait to see if there are confirmed Catenis transactions before emitting
-                //  event indicating that new Caeenis transactions have arrived
+                //  event indicating that new Catenis transactions have arrived
                 let hasDependentBlocks = false;
 
                 // Make sure that last scanned block is different than last processed block
@@ -538,7 +538,7 @@ function pollBlockchain() {
                                     replacedTxids: {}
                                 };
 
-                                // Step through Catenis trnsactions in block
+                                // Step through Catenis transactions in block
                                 let newCtnTxsInBlock = {};
 
                                 for (let ctnTxid in ctnTxBlock.ctnTxs) {
@@ -1019,7 +1019,7 @@ function handleNewTransactions(data) {
                         }
                         // TODO: parse transaction (using Transaction.fromHex()) and try to identify Catenis transactions (using tx.matches())
                         else {
-                            // TODO: IMPORTANT - identify unrecognized transactions that send bitcoins to internal Cetenis addresses (any address other than sys_fund_addr) and spend the amount transferred  to a "gargage" addresss that should be defined so the bitcoins are gotten out of the way
+                            // TODO: IMPORTANT - identify unrecognized transactions that send bitcoins to internal Catenis addresses (any address other than sys_fund_addr) and spend the amount transferred  to a "garbage" addresss that should be defined so the bitcoins are gotten out of the way
                             // An unrecognized transaction had been received.
                             //  Log warning condition
                             // noinspection JSUnfilteredForInLoop
@@ -1116,8 +1116,8 @@ function validateNewTxsBatchDependency(blockInfo) {
         }).wait();
 
         if (timeout) {
-            Catenis.logger.ERROR(util.format('Timeout while waiting on new transactions batch (batchNumer: %s) to finish processing before proceeding with processing of dependent block (height: %s)', blockInfo.newTxsBatchDependency, blockInfo.height));
-            throw new Error(util.format('Timeout while waiting on new transactions batch (batchNumer: %s) to finish processing before proceeding with processing of dependent block (height: %s)', blockInfo.newTxsBatchDependency, blockInfo.height));
+            Catenis.logger.ERROR(util.format('Timeout while waiting on new transactions batch (batchNumber: %s) to finish processing before proceeding with processing of dependent block (height: %s)', blockInfo.newTxsBatchDependency, blockInfo.height));
+            throw new Error(util.format('Timeout while waiting on new transactions batch (batchNumber: %s) to finish processing before proceeding with processing of dependent block (height: %s)', blockInfo.newTxsBatchDependency, blockInfo.height));
         }
     }
     else {
@@ -1333,10 +1333,6 @@ TransactionMonitor.notifyEvent = Object.freeze({
     funding_provision_service_credit_issuance_tx_conf: Object.freeze({
         name: 'funding_provision_service_credit_issuance_tx_conf',
         description: 'Funding transaction sent for provisioning system service credit issuance has been confirmed'
-    }),
-    funding_provision_client_srv_credit_tx_conf: Object.freeze({
-        name: 'funding_provision_client_srv_credit_tx_conf',
-        description: 'Funding transaction sent for provisioning service credit for a client has been confirmed'
     }),
     funding_provision_client_device_tx_conf: Object.freeze({
         name: 'funding_provision_client_device_tx_conf',

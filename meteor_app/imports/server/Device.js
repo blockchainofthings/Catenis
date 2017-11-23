@@ -16,7 +16,6 @@
 const util = require('util');
 const crypto = require('crypto');
 // Third-party node modules
-import config from 'config';
 import _und from 'underscore';      // NOTE: we dot not use the underscore library provided by Meteor because we need
                                     //        a feature (_und.omit(obj,predicate)) that is not available in that version
 // Meteor packages
@@ -43,15 +42,6 @@ import { ReadConfirmation } from './ReadConfirmation';
 import { Permission } from './Permission';
 import { cfgSettings as clientCfgSettings } from './Client';
 import { Notification } from './Notification';
-
-// Config entries
-const deviceConfig = config.get('device');
-
-// Configuration settings
-export const cfgSettings = {
-    creditsToSendMessage: deviceConfig.get('creditsToSendMessage'),
-    creditsToLogMessage: deviceConfig.get('creditsToLogMessage')
-};
 
 
 // Definition of function classes
@@ -397,14 +387,7 @@ Device.prototype.sendMessage = function (targetDeviceId, message, readConfirmati
         throw new Meteor.Error('ctn_device_not_active', util.format('Cannot send message from a device that is not active (deviceId: %s)', this.deviceId));
     }
 
-    // Check if device's client has enough credits
-    const confirmedMsgCredits = this.client.availableMessageCredits().confirmed;
-
-    if (confirmedMsgCredits < cfgSettings.creditsToSendMessage) {
-        // Not enough credits to send message. Log error condition and throw exception
-        Catenis.logger.ERROR('Not enough credits to send message', {clientId: this.client.clientId, confirmedMsgCredits: confirmedMsgCredits, creditsToSendMessage: cfgSettings.creditsToSendMessage});
-        throw new Meteor.Error('ctn_device_no_credits', util.format('Not enough credits to send message (clientId: %s, confirmedMsgCredits: %d, creditsToSendMessage: %d)', this.client.clientId, confirmedMsgCredits, cfgSettings.creditsToSendMessage));
-    }
+    // TODO: check if client has enough credits to pay for service
 
     let targetDevice = undefined;
 
@@ -510,14 +493,7 @@ Device.prototype.logMessage = function (message, encryptMessage = true, storageS
         throw new Meteor.Error('ctn_device_not_active', util.format('Cannot log message for a device that is not active (deviceId: %s)', this.deviceId));
     }
 
-    // Check if device's client has enough credits
-    const confirmedMsgCredits = this.client.availableMessageCredits().confirmed;
-
-    if (confirmedMsgCredits < cfgSettings.creditsToLogMessage) {
-        // Not enough credits to log message. Log error condition and throw exception
-        Catenis.logger.ERROR('Not enough credits to log message', {clientId: this.client.clientId, confirmedMsgCredits: confirmedMsgCredits, creditsToLogMessage: cfgSettings.creditsToLogMessage});
-        throw new Meteor.Error('ctn_device_no_credits', util.format('Not enough credits to log message (clientId: %s, confirmedMsgCredits: %d, creditsToLogMessage: %d)', this.client.clientId, confirmedMsgCredits, cfgSettings.creditsToLogMessage));
-    }
+    // TODO: check if client has enough credits to pay for service
 
     let messageId = undefined;
 
@@ -1341,6 +1317,10 @@ Device.getDeviceByProductUniqueId = function (prodUniqueId, includeDeleted = tru
     }
 
     return new Device(docDevice, CatenisNode.getCatenisNodeByIndex(docDevice.index.ctnNodeIndex).getClientByIndex(docDevice.index.clientIndex));
+};
+
+Device.activeDevicesCount = function () {
+    return Catenis.db.collection.Device.find({status: Device.status.active.name}).count();
 };
 
 Device.checkDevicesToFund = function () {
