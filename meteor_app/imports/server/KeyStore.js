@@ -71,11 +71,11 @@
 //
 //      m/k/0/4/1 -> System multi-signature Colored Coins tx output signee root HD extended key
 //
-//      m/k/0/4/0/0 -> System service credit issuing root HD extended key (NOTE: each Catenis node shall have its own service credit asset)
+//      m/k/0/4/0/0 -> System service credit issuance root HD extended key (NOTE: each Catenis node shall have its own service credit asset)
 //
 //      m/k/0/4/0/1 -> System service credit pay tx expense root HD extended key
 //
-//      m/k/0/4/0/0/* -> System service credit issuing addresses HD extended key (NOTE: there should be only a single address generated)
+//      m/k/0/4/0/0/* -> System service credit issuance addresses HD extended key (NOTE: there should be only a single address generated)
 //
 //      m/k/0/4/0/1/* -> System service credit pay tx expense addresses HD extended keys (used to pay for fees of service credit related transactions)
 //
@@ -189,8 +189,8 @@ const clientServCredAddrRootTypes = [{
         root: 'cln_srv_acc_debt_ln_addr_root',
         address: 'cln_srv_acc_debt_ln_addr'
     }, {
-        root: 'cln_bcot_tok_pay_addr_root',
-        address: 'cln_bcot_tok_pay_addr'
+        root: 'cln_bcot_pay_addr_root',
+        address: 'cln_bcot_pay_addr'
     }
 ];
 
@@ -639,12 +639,12 @@ KeyStore.prototype.initCatenisNodeHDNodes = function (ctnNodeIndex) {
         // Save newly created HD extended key to store it later
         hdNodesToStore.push({type: 'sys_msig_sign_root', path: path, hdNode: sysMultiSigSigneeRootHDNode, isLeaf: false, isReserved: false});
 
-        // Create system service credit issuing root HD extended key
+        // Create system service credit issuance root HD extended key
         path = sysRootPath + '/4/0/0';
         const sysServCredIssueRootHDNode = sysServCreditRootHDNode.derive(0);
 
         if (sysServCredIssueRootHDNode.index !== 0) {
-            Catenis.logger.WARN(util.format('System service credit issuing root HD extended key (%s) derived with an unexpected index', path), {expectedIndex: 0, returnedIndex: sysServCredIssueRootHDNode.index});
+            Catenis.logger.WARN(util.format('System service credit issuance root HD extended key (%s) derived with an unexpected index', path), {expectedIndex: 0, returnedIndex: sysServCredIssueRootHDNode.index});
             return false;
         }
 
@@ -1567,39 +1567,39 @@ KeyStore.prototype.getSystemServiceCreditIssuingAddressKeys = function (ctnNodeI
         throw Error(util.format('Invalid %s argument%s', errArgs.join(', '), errArgs.length > 1 ? 's' : ''));
     }
 
-    // Try to retrieve system service credit issuing address HD extended key for given Catenis node with the given index
+    // Try to retrieve system service credit issuance address HD extended key for given Catenis node with the given index
     const sysServCredIssueAddrPath = util.format('m/%d/0/4/0/0/%d', ctnNodeIndex, addrIndex);
     let sysServCredIssueAddrHDNode = retrieveHDNode.call(this, sysServCredIssueAddrPath),
         sysServCredIssueAddrKeys = null;
 
     if (sysServCredIssueAddrHDNode === null) {
-        // System service credit issuing address HD extended key does not exist yet.
+        // System service credit issuance address HD extended key does not exist yet.
         //  Retrieve parent root HD extended key to create it
         const path = parentPath(sysServCredIssueAddrPath);
         let sysServCredIssueRootHDNode = retrieveHDNode.call(this, path);
 
         if (sysServCredIssueRootHDNode === null) {
-            // System service credit issuing root HD extended key does not exist yet.
+            // System service credit issuance root HD extended key does not exist yet.
             //  Try to initialize Catenis node HD extended keys
             if (! this.initCatenisNodeHDNodes(ctnNodeIndex)) {
                 Catenis.logger.ERROR(util.format('HD extended keys for Catenis node with index %d could not be initialized', ctnNodeIndex));
             }
             else {
                 // Catenis node HD extended keys successfully initialized.
-                //  Try to retrieve system service credit issuing root HD extended key again
+                //  Try to retrieve system service credit issuance root HD extended key again
                 sysServCredIssueRootHDNode = retrieveHDNode.call(this, path);
             }
         }
 
         if (sysServCredIssueRootHDNode === null) {
-            Catenis.logger.ERROR(util.format('System service credit issuing root HD extended key (%s) for Catenis node with index %d not found', path, ctnNodeIndex));
+            Catenis.logger.ERROR(util.format('System service credit issuance root HD extended key (%s) for Catenis node with index %d not found', path, ctnNodeIndex));
         }
         else {
-            // Try to create system service credit issuing address HD extended key now
+            // Try to create system service credit issuance address HD extended key now
             sysServCredIssueAddrHDNode = sysServCredIssueRootHDNode.derive(addrIndex);
 
             if (sysServCredIssueAddrHDNode.index !== addrIndex) {
-                Catenis.logger.WARN(util.format('System service credit issuing address HD extended key (%s) derived with an unexpected index', sysServCredIssueAddrPath), {expectedIndex: addrIndex, returnedIndex: sysServCredIssueAddrHDNode.index});
+                Catenis.logger.WARN(util.format('System service credit issuance address HD extended key (%s) derived with an unexpected index', sysServCredIssueAddrPath), {expectedIndex: addrIndex, returnedIndex: sysServCredIssueAddrHDNode.index});
                 sysServCredIssueAddrHDNode = null;
             }
             else {
@@ -1654,7 +1654,7 @@ KeyStore.prototype.listSystemServiceCreditIssuingAddresses = function (ctnNodeIn
         queryTerms.push({isObsolete: false});
     }
 
-    // Return existing system service credit issuing addresses within the specified range
+    // Return existing system service credit issuance addresses within the specified range
     let query;
 
     if (queryTerms.length > 1) {
@@ -2376,20 +2376,20 @@ KeyStore.prototype.listClientServiceAccountDebitLineAddressesInUse = function (c
     return this.listClientServiceCreditAddressesInUse(ctnNodeIndex, clientIndex, 3, fromAddrIndex, toAddrIndex);
 };
 
-KeyStore.prototype.getClientBcotTokenPaymentAddressKeys = function (ctnNodeIndex, clientIndex, addrIndex, isObsolete = false) {
+KeyStore.prototype.getClientBcotPaymentAddressKeys = function (ctnNodeIndex, clientIndex, addrIndex, isObsolete = false) {
     return this.getClientServiceCreditAddressKeys(ctnNodeIndex, clientIndex, 4, addrIndex, isObsolete);
 };
 
-KeyStore.prototype.listClientBcotTokenPaymentAddresses = function (ctnNodeIndex, clientIndex, fromAddrIndex, toAddrIndex, onlyInUse) {
+KeyStore.prototype.listClientBcotPaymentAddresses = function (ctnNodeIndex, clientIndex, fromAddrIndex, toAddrIndex, onlyInUse) {
     return this.listClientServiceCreditAddresses(ctnNodeIndex, clientIndex, 4, fromAddrIndex, toAddrIndex, onlyInUse);
 };
 
-KeyStore.prototype.listClientBcotTokenPaymentAddressesInUse = function (ctnNodeIndex, clientIndex, fromAddrIndex, toAddrIndex) {
+KeyStore.prototype.listClientBcotPaymentAddressesInUse = function (ctnNodeIndex, clientIndex, fromAddrIndex, toAddrIndex) {
     return this.listClientServiceCreditAddressesInUse(ctnNodeIndex, clientIndex, 4, fromAddrIndex, toAddrIndex);
 };
 
-KeyStore.prototype.listAllClientBcotTokenPaymentAddressesInUse = function () {
-    return this.collExtKey.find({$and: [{type: KeyStore.extKeyType.cln_bcot_tok_pay_addr.name}, {isObsolete: false}]}).map((docExtKey) => {
+KeyStore.prototype.listAllClientBcotPaymentAddressesInUse = function () {
+    return this.collExtKey.find({$and: [{type: KeyStore.extKeyType.cln_bcot_pay_addr.name}, {isObsolete: false}]}).map((docExtKey) => {
         return docExtKey.address;
     });
 };
@@ -3159,7 +3159,7 @@ KeyStore.clientServiceAccountDebitLineAddressRootPath = function (ctnNodeIndex, 
     return util.format('m/%d/%d/0/0/0/3', ctnNodeIndex, clientIndex);
 };
 
-KeyStore.clientBcotTokenPaymentAddressRootPath = function (ctnNodeIndex, clientIndex) {
+KeyStore.clientBcotPaymentAddressRootPath = function (ctnNodeIndex, clientIndex) {
     // Validate arguments
     const errArg = {};
 
@@ -3174,7 +3174,7 @@ KeyStore.clientBcotTokenPaymentAddressRootPath = function (ctnNodeIndex, clientI
     if (Object.keys(errArg).length > 0) {
         const errArgs = Object.keys(errArg);
 
-        Catenis.logger.ERROR(util.format('KeyStore.clientBcotTokenPaymentAddressRootPath method called with invalid argument%s', errArgs.length > 1 ? 's' : ''), errArg);
+        Catenis.logger.ERROR(util.format('KeyStore.clientBcotPaymentAddressRootPath method called with invalid argument%s', errArgs.length > 1 ? 's' : ''), errArg);
         throw Error(util.format('Invalid %s argument%s', errArgs.join(', '), errArgs.length > 1 ? 's' : ''));
     }
 
@@ -3544,7 +3544,7 @@ KeyStore.extKeyType = Object.freeze({
     }),
     sys_serv_cred_issu_root: Object.freeze({
         name: 'sys_serv_cred_issu_root',
-        description: 'system service credit issuing root',
+        description: 'system service credit issuance root',
         pathRegEx: /^m\/(\d+)\/0\/4\/0$/,
         pathParts: {
             1: 'ctnNodeIndex'
@@ -3560,7 +3560,7 @@ KeyStore.extKeyType = Object.freeze({
     }),
     sys_serv_cred_issu_addr: Object.freeze({
         name: 'sys_serv_cred_issu_addr',
-        description: 'system service credit issuing address',
+        description: 'system service credit issuance address',
         pathRegEx: /^m\/(\d+)\/0\/4\/0\/0\/(\d+)$/,
         pathParts: {
             1: 'ctnNodeIndex',
@@ -3666,8 +3666,8 @@ KeyStore.extKeyType = Object.freeze({
             2: 'clientIndex'
         }
     }),
-    cln_bcot_tok_pay_addr_root: Object.freeze({
-        name: 'cln_bcot_tok_pay_addr_root',
+    cln_bcot_pay_addr_root: Object.freeze({
+        name: 'cln_bcot_pay_addr_root',
         description: 'client BCOT token payment addresses root',
         pathRegEx: /^m\/(\d+)\/(\d+)\/0\/0\/0\/4$/,
         pathParts: {
@@ -3717,7 +3717,7 @@ KeyStore.extKeyType = Object.freeze({
     }),
     cln_srv_acc_debt_ln_addr: Object.freeze({
         name: 'cln_srv_acc_debt_ln_addr',
-        description: 'client service account debit line addresses',
+        description: 'client service account debit line address',
         pathRegEx: /^m\/(\d+)\/(\d+)\/0\/0\/0\/3\/(\d+)$/,
         pathParts: {
             1: 'ctnNodeIndex',
@@ -3725,9 +3725,9 @@ KeyStore.extKeyType = Object.freeze({
             3: 'addrIndex'
         }
     }),
-    cln_bcot_tok_pay_addr: Object.freeze({
-        name: 'cln_bcot_tok_pay_addr',
-        description: 'client BCOT toke payment addresses',
+    cln_bcot_pay_addr: Object.freeze({
+        name: 'cln_bcot_pay_addr',
+        description: 'client BCOT token payment address',
         pathRegEx: /^m\/(\d+)\/(\d+)\/0\/0\/0\/4\/(\d+)$/,
         pathParts: {
             1: 'ctnNodeIndex',

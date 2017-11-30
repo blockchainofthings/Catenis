@@ -17,6 +17,7 @@
 // Third-party node modules
 import config from 'config';
 import Loki from 'lokijs';
+// noinspection JSFileReferences
 import BigNumber from 'bignumber.js';
 // Meteor packages
 import { Meteor } from 'meteor/meteor';
@@ -107,7 +108,19 @@ export function FundSource(addresses, unconfUtxoInfo, excludeUtxos) {
     //      descendantsSize: [number]   // Should only exist for confirmations = 0
     //  }
     this.db = new Loki();
-    this.collUtxo = this.db.addCollection('UTXO', {indices: ['address', 'amount', 'confirmations', 'allocated', 'ancestorsCount', 'ancestorsSize', 'descendantsCount', 'descendantsSize']});
+    this.collUtxo = this.db.addCollection('UTXO', {
+        indices: [
+            'address',
+            'txid',
+            'amount',
+            'confirmations',
+            'allocated',
+            'ancestorsCount',
+            'ancestorsSize',
+            'descendantsCount',
+            'descendantsSize'
+        ]
+    });
 
     if (addresses.length > 0) {
         // Load UTXOs into local DB
@@ -152,6 +165,29 @@ FundSource.prototype.getBalance = function (includeUnconfirmed = true, includeAl
     return this.collUtxo.find(query).reduce((sum, docUtxo) => {
             return sum + docUtxo.amount;
         }, 0);
+};
+
+//  result: [{
+//    address: [string],
+//    txout: {
+//      txid: [string],
+//      vout: [number],
+//      amount: [number]      // Amount in satoshis
+//    },
+//    scriptPubKey: [string]
+//  }]
+FundSource.prototype.getUtxosOfTx = function (txid) {
+    return this.collUtxo.chain().find({txid: txid}).simplesort('vout').data().map((doc) => {
+        return {
+            address: doc.address,
+            txout: {
+                txid: doc.txid,
+                vout: doc.vout,
+                amount: doc.amount
+            },
+            scriptPubKey: doc.scriptPubKey
+        }
+    });
 };
 
 //  result: {
@@ -475,6 +511,7 @@ FundSource.prototype.allocateFundForTxExpense = function (txInfo, isFixedFeed, f
                 });
     
                 // Change amount (in satoshis)
+                // TODO: only return change if change >= dust amount
                 result.changeAmount = allocatedAmount - amount;
     
                 // Update local DB setting UTXOs as allocated

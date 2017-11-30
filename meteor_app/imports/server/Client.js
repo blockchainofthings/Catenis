@@ -29,12 +29,13 @@ import { CriticalSection } from './CriticalSection';
 import {
     ClientServiceAccountCreditLineAddress,
     ClientServiceAccountDebitLineAddress,
-    ClientBcotTokenPaymentAddress
+    ClientBcotPaymentAddress
 } from './BlockchainAddress';
 import { CatenisNode } from './CatenisNode';
 import { Device } from './Device';
 import { FundSource } from './FundSource';
 import { Permission } from './Permission';
+import { CCFundSource } from './CCFundSource';
 
 // Config entries
 const clientConfig = config.get('client');
@@ -74,6 +75,7 @@ export function Client(docClient, ctnNode, initializeDevices) {
     this.clientIndex = docClient.index.clientIndex;
     this.props = docClient.props;
     this.apiAccessGenKey = docClient.apiAccessGenKey;
+    this.billingMode = docClient.billingMode;
     this.status = docClient.status;
 
     Object.defineProperty(this, 'apiAccessSecret', {
@@ -86,7 +88,7 @@ export function Client(docClient, ctnNode, initializeDevices) {
     // Instantiate objects to manage blockchain addresses for client
     this.servAccCreditLineAddr = ClientServiceAccountCreditLineAddress.getInstance(this.ctnNode.ctnNodeIndex, this.clientIndex);
     this.servAccDebitLineAddr = ClientServiceAccountDebitLineAddress.getInstance(this.ctnNode.ctnNodeIndex, this.clientIndex);
-    this.bcotTokenPaymentAddr = ClientBcotTokenPaymentAddress.getInstance(this.ctnNode.ctnNodeIndex, this.clientIndex);
+    this.bcotPaymentAddr = ClientBcotPaymentAddress.getInstance(this.ctnNode.ctnNodeIndex, this.clientIndex);
 
     // Retrieve (HD node) index of last Device doc/rec created for this client
     const docDevice = Catenis.db.collection.Device.findOne({client_id: this.doc_id}, {fields: {'index.deviceIndex': 1}, sort: {'index.deviceIndex': -1}});
@@ -309,8 +311,38 @@ Client.prototype.delete = function (deletedDate) {
     }
 };
 
-Client.prototype.newBcotTokenPaymentAddress = function () {
-    return this.bcotTokenPaymentAddr.newAddressKeys().getAddress();
+Client.prototype.newBcotPaymentAddress = function () {
+    return this.bcotPaymentAddr.newAddressKeys().getAddress();
+};
+
+// Returns current balance of client's service account
+//
+//  Arguments:
+//   credFundSource: [Object(CCFundSource)] - (optional) Instance of CCFundSource containing UTXOs associated with client's service account credit addresses
+//   debtFundSource: [Object(CCFundSource)] - (optional) Instance of CCFundSource containing UTXOs associated with client's service account debit addresses
+//
+//  Return:
+//   balance: [Number] - Amount, in Catenis service credit lowest unit, corresponding to the current balance
+Client.prototype.serviceAccountBalance = function (credFundSource, debtFundSource) {
+    const servCredAsset = this.ctnNode.getServiceCreditAsset();
+
+    let balance = 0;
+
+    if (servCredAsset !== undefined) {
+        if (credFundSource === undefined) {
+            credFundSource = new CCFundSource(servCredAsset.ccAssetId, this.servAccCreditLineAddr.listAddressesInUse(), {});
+        }
+
+        balance = credFundSource.getBalance(false);
+
+        if (debtFundSource === undefined) {
+            debtFundSource = new CCFundSource(servCredAsset.ccAssetId, this.servAccDebitLineAddr.listAddressesInUse(), {})
+        }
+
+        balance -= debtFundSource.getBalance(false);
+    }
+
+    return balance;
 };
 
 Client.prototype.getDeviceByIndex = function (deviceIndex, includeDeleted = true) {
@@ -649,11 +681,11 @@ Client.activeClientsCount = function (billingMode) {
 };
 
 Client.activePrePaidClientsCount = function () {
-    return Client.activeClientsCount(Client.billingMode['pre-paid']);
+    return Client.activeClientsCount(Client.billingMode.prePaid);
 };
 
 Client.activePostPaidClientsCount = function () {
-    return Client.activeClientsCount(Client.billingMode['post-paid']);
+    return Client.activeClientsCount(Client.billingMode.postPaid);
 };
 
 // Check if a given client exists
@@ -848,8 +880,8 @@ Client.status = Object.freeze({
 });
 
 Client.billingMode = Object.freeze({
-    'pre-paid': 'pre-paid',
-    'post-paid': 'post-paid'
+    prePaid: 'pre-paid',
+    postPaid: 'post-paid'
 });
 
 

@@ -97,6 +97,13 @@ export function Application() {
         throw new Error('Application seed does not match seed currently recorded onto the database');
     }
 
+    // Identify test prefix if present
+    const matchResult = cfgSettings.seedFilename.match(/^seed(?:\.(\w+))?\.dat$/);
+
+    if (matchResult && matchResult.length > 1) {
+        this.testPrefix = matchResult[1];
+    }
+
     // Get crypto network
     this.cryptoNetworkName = cfgSettings.cryptoNetwork;
     this.cryptoNetwork = bitcoinLib.networks[this.cryptoNetworkName];
@@ -132,7 +139,7 @@ Application.prototype.startProcessing = function () {
 
         // Check if any devices still need to have their addresses funded
         Device.checkDevicesToFund();
-        Device.checkDevicesMainAddrFunding();
+        Device.checkDevicesAddrFunding();
     }
     catch (err) {
         if ((err instanceof Meteor.Error) && err.error === 'ctn_sys_no_fund') {
@@ -240,7 +247,7 @@ function pauseNoFunds() {
         //  are created to send funds to the system
         this.status = Application.processingStatus.paused_no_funds;
 
-        // Make sure that blockcahin transaction monitoring is on
+        // Make sure that blockchain transaction monitoring is on
         Catenis.txMonitor.startMonitoring();
     }
 }
@@ -283,7 +290,7 @@ function sysFundingTxConfirmed(data) {
 
         // Assume system already started. Check if there are devices to provision
         Device.checkDevicesToFund();
-        Device.checkDevicesMainAddrFunding();
+        Device.checkDevicesAddrFunding();
     }
 }
 

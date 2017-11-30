@@ -16,6 +16,8 @@
 //const util = require('util');
 // Third-party node modules
 import config from 'config';
+// noinspection JSFileReferences
+import BigNumber from 'bignumber.js';
 // Meteor packages
 //import { Meteor } from 'meteor/meteor';
 // noinspection NpmUsedModulesInstalled
@@ -29,11 +31,13 @@ import { RbfTransactionInfo } from './RbfTransactionInfo';
 import { Client } from './Client';
 import { Device } from './Device';
 import { Util } from './Util';
+import { BcotPayment } from './BcotPayment';
 
 // Config entries
 const serviceConfig = config.get('service');
 const servSysFundConfig = serviceConfig.get('systemFunding');
 const servServCreditIssueAddrFundConfig = serviceConfig.get('serviceCreditIssueAddrFunding');
+const servServAccFundConfig = serviceConfig.get('serviceAccountFunding');
 const servPayTxExpFundConfig = serviceConfig.get('payTxExpenseFunding');
 const servReadConfPayTxExpFundConfig = serviceConfig.get('readConfirmPayTxExpenseFunding');
 const srvSysMessageConfig = serviceConfig.get('sysMessage');
@@ -61,6 +65,8 @@ const srvServUseWeightConfig = serviceConfig.get('serviceUsageWeight');
 
 // Configuration settings
 const cfgSettings = {
+    priceMarkup: serviceConfig.get('priceMarkup'),
+    servicePriceResolution: serviceConfig.get('servicePriceResolution'),
     paymentResolution: serviceConfig.get('paymentResolution'),
     systemFunding: {
         clientsToFund: servSysFundConfig.get('clientsToFund'),
@@ -75,6 +81,11 @@ const cfgSettings = {
         unitsPerPostPaidClients: servServCreditIssueAddrFundConfig.get('unitsPerPostPaidClients'),
         prePaidClientsToFund: servServCreditIssueAddrFundConfig.get('prePaidClientsToFund'),
         postPaidClientsToFund: servServCreditIssueAddrFundConfig.get('postPaidClientsToFund')
+    },
+    serviceAccountFunding: {
+        unitAmountSafetyFactor: servServAccFundConfig.get('unitAmountSafetyFactor'),
+        maxUnitsPerAddr: servServAccFundConfig.get('maxUnitsPerAddr'),
+        minAddrsToFund: servServAccFundConfig.get('minAddrsToFund')
     },
     payTxExpenseFunding: {
         unitAmountSafetyFactor: servPayTxExpFundConfig.get('unitAmountSafetyFactor'),
@@ -244,7 +255,8 @@ Service.testFunctions = function () {
         typicalTerminalReadConfirmTxSize: typicalTerminalReadConfirmTxSize(),
         numInputsTerminalReadConfirmTx: numInputsTerminalReadConfirmTx(),
         numOutputsTerminalReadConfirmTx: numOutputsTerminalReadConfirmTx(),
-        averageReadConfirmTxCostPerMessage: averageReadConfirmTxCostPerMessage()
+        averageReadConfirmTxCostPerMessage: averageReadConfirmTxCostPerMessage(),
+        highestServicePrice: highestServicePrice()
     };
 };
 
@@ -263,7 +275,7 @@ Service.getExpectedReadConfirmPayTxExpenseBalance = function (unreadMessages) {
 };
 
 Service.distributeServiceCreditIssuanceFund = function (amount) {
-    let totalAmount = Math.ceil(amount / cfgSettings.serviceCreditIssueAddrFunding.unitAmount) * cfgSettings.serviceCreditIssueAddrFunding.unitAmount;
+    let totalAmount = Util.roundToResolution(amount, cfgSettings.serviceCreditIssueAddrFunding.unitAmount);
 
     // Make sure that amount to fund is not below minimum
     const minFundAmount = Service.minServiceCreditIssuanceFundAmount;
@@ -278,9 +290,32 @@ Service.distributeServiceCreditIssuanceFund = function (amount) {
     };
 };
 
+// NOTE 1: the amount argument should have a value expressed in Catenis service credit's lowest units (10^-7)
+// NOTE 2: if the given amount is not a multiple of the service price resolution, the amount is rounded down
+//        and the remainder is NOT accounted for
+Service.distributeServiceAccountFund = function (amount, maxAddresses) {
+    const fundUnitAmount = Service.serviceAccountUnitAmount;
+    let totalAmount = Util.roundDownToResolution(amount, cfgSettings.servicePriceResolution);
+
+    const distribResult = distributePayment(totalAmount, fundUnitAmount, cfgSettings.serviceAccountFunding.minAddrsToFund, cfgSettings.serviceAccountFunding.maxUnitsPerAddr, maxAddresses);
+
+    if (maxAddresses !== undefined) {
+        return {
+            totalAmount: distribResult.totalAmount,
+            amountPerAddress: distribResult.payments
+        }
+    }
+    else {
+        return {
+            totalAmount: totalAmount,
+            amountPerAddress: distribResult
+        };
+    }
+};
+
 Service.distributePayTxExpenseFund = function (amount) {
     const fundUnitAmount = Service.payTxExpFundUnitAmount;
-    let totalAmount = Math.ceil(amount / fundUnitAmount) * fundUnitAmount;
+    let totalAmount = Util.roundToResolution(amount, fundUnitAmount);
 
     // Make sure that amount to fund is not below minimum
     const minFundAmount = Service.minPayTxExpenseFundAmount;
@@ -297,7 +332,7 @@ Service.distributePayTxExpenseFund = function (amount) {
 
 Service.distributeReadConfirmPayTxExpenseFund = function (amount) {
     const fundUnitAmount = Service.readConfirmPayTxExpFundUnitAmount;
-    let totalAmount = Math.ceil(amount / fundUnitAmount) * fundUnitAmount;
+    let totalAmount = Util.roundToResolution(amount, fundUnitAmount);
 
     // Make sure that amount to fund is not below minimum
     const minFundAmount = Service.minReadConfirmPayTxExpenseFundAmount;
@@ -352,6 +387,36 @@ Service.distributeDeviceAssetIssuanceAddressFund = function () {
         amountPerAddress: distributePayment(totalAmount, cfgSettings.asset.issuance.assetIssueAddrFunding.unitAmount, cfgSettings.asset.issuance.assetIssueAddrFunding.minAddrsToFund, cfgSettings.asset.issuance.assetIssueAddrFunding.maxUnitsPerAddr)
     };
 };
+// This method should be used to fix the funding amount allocated to a device's main addresses due to the change
+//  of the 'messagesPerMinute' and/or 'minutesToConfirm' system configuration settings (and thus the total funding
+//  amount that should be allocated)
+Service.distributeDeviceAssetIssuanceAddressDeltaFund  = function (deltaAmount) {
+    return distributePayment(deltaAmount, cfgSettings.asset.issuance.assetIssueAddrFunding.unitAmount, cfgSettings.asset.issuance.assetIssueAddrFunding.minAddrsToFund, cfgSettings.asset.issuance.assetIssueAddrFunding.maxUnitsPerAddr)
+};
+
+Service.logMessageServicePrice = function () {
+    return getServicePrice(Service.clientPaidService.log_message.name);
+};
+
+Service.sendMessageServicePrice = function () {
+    return getServicePrice(Service.clientPaidService.send_message.name);
+};
+
+Service.sendMsgReadConfirmServicePrice = function () {
+    return getServicePrice(Service.clientPaidService.send_msg_read_confirm.name);
+};
+
+Service.issueLockedAssetServicePrice = function () {
+    return getServicePrice(Service.clientPaidService.issue_locked_asset.name);
+};
+
+Service.issueUnlockedAssetServicePrice = function () {
+    return getServicePrice(Service.clientPaidService.issue_unlocked_asset.name);
+};
+
+Service.transferAssetServicePrice = function () {
+    return getServicePrice(Service.clientPaidService.transfer_asset.name);
+};
 
 
 // Service function class (public) properties
@@ -361,6 +426,39 @@ Service.avrgReadConfirmTxCostPerMsgCtrl = {
     lastOptimumRate: undefined,
     lastCostPerMsg: undefined
 };
+
+Service.clientPaidService = Object.freeze({
+    log_message: Object.freeze({
+        name: 'log_message',
+        description: 'Record a message onto the blockchain',
+        costFunction: estimatedLogMessageTxCost
+    }),
+    send_message: Object.freeze({
+        name: 'send_message',
+        description: 'Record a message onto the blockchain addressing it to another device (with no read confirmation)',
+        costFunction: estimatedSendMessageTxCost
+    }),
+    send_msg_read_confirm: Object.freeze({
+        name: 'send_msg_read_confirm',
+        description: 'Record a message onto the blockchain addressing it to another device, requesting to receive a read confirm',
+        costFunction: estimatedSendMessageReadConfirmTxCost
+    }),
+    issue_locked_asset: Object.freeze({
+        name: 'issue_locked_asset',
+        description: 'Issue an amount of a new Catenis asset (no more units of this same asset can be issued later)',
+        costFunction: estimatedIssueLockedAssetTxCost
+    }),
+    issue_unlocked_asset: Object.freeze({
+        name: 'issue_unlocked_asset',
+        description: 'Issue an amount of a new or already existing Catenis asset',
+        costFunction: estimatedIssueUnlockedAssetTxCost
+    }),
+    transfer_asset: Object.freeze({
+        name: 'transfer_asset',
+        description: 'Transfer an amount of a Catenis asset to another device',
+        costFunction: estimatedTransferAssetTxCost
+    })
+});
 
 
 // Definition of module (private) functions
@@ -375,7 +473,7 @@ function numActiveSystemDeviceMainAddresses() {
 }
 
 function estimatedSendSystemMessageTxCost() {
-    return Math.ceil((typicalSendSystemMessageTxSize() * Catenis.bitcoinFees.getFeeRateByTime(cfgSettings.sysMessage.minutesToConfirm)) / cfgSettings.paymentResolution) * cfgSettings.paymentResolution;
+    return Util.roundToResolution(typicalSendSystemMessageTxSize() * Catenis.bitcoinFees.getFeeRateByTime(cfgSettings.sysMessage.minutesToConfirm), cfgSettings.paymentResolution);
 }
 
 function typicalSendSystemMessageTxSize() {
@@ -415,7 +513,7 @@ function highestEstimatedServiceTxCost() {
 }
 
 function averageEstimatedServiceTxCost() {
-    return Math.ceil(Util.weightedAverage([
+    return Util.roundToResolution(Util.weightedAverage([
         estimatedLogMessageTxCost(),
         estimatedSendMessageTxCost(),
         estimatedSendMessageReadConfirmTxCost(),
@@ -429,11 +527,11 @@ function averageEstimatedServiceTxCost() {
         cfgSettings.serviceUsageWeight.issueLockedAsset,
         cfgSettings.serviceUsageWeight.issueUnlockedAsset,
         cfgSettings.serviceUsageWeight.transferAsset
-    ]) / cfgSettings.paymentResolution) * cfgSettings.paymentResolution;
+    ]), cfgSettings.paymentResolution);
 }
 
 function estimatedLogMessageTxCost() {
-    return Math.ceil((typicalLogMessageTxSize() * Catenis.bitcoinFees.getFeeRateByTime(cfgSettings.message.minutesToConfirm)) / cfgSettings.paymentResolution) * cfgSettings.paymentResolution;
+    return Util.roundToResolution(typicalLogMessageTxSize() * Catenis.bitcoinFees.getFeeRateByTime(cfgSettings.message.minutesToConfirm), cfgSettings.paymentResolution);
 }
 
 function typicalLogMessageTxSize() {
@@ -441,7 +539,7 @@ function typicalLogMessageTxSize() {
 }
 
 function estimatedSendMessageTxCost() {
-    return Math.ceil((typicalSendMessageTxSize() * Catenis.bitcoinFees.getFeeRateByTime(cfgSettings.message.minutesToConfirm)) / cfgSettings.paymentResolution) * cfgSettings.paymentResolution;
+    return Util.roundToResolution(typicalSendMessageTxSize() * Catenis.bitcoinFees.getFeeRateByTime(cfgSettings.message.minutesToConfirm), cfgSettings.paymentResolution);
 }
 
 function typicalSendMessageTxSize() {
@@ -449,7 +547,7 @@ function typicalSendMessageTxSize() {
 }
 
 function estimatedSendMessageReadConfirmTxCost() {
-    return Math.ceil((typicalSendMessageReadConfirmTxSize() * Catenis.bitcoinFees.getFeeRateByTime(cfgSettings.message.minutesToConfirm)) / cfgSettings.paymentResolution) * cfgSettings.paymentResolution;
+    return Util.roundToResolution(typicalSendMessageReadConfirmTxSize() * Catenis.bitcoinFees.getFeeRateByTime(cfgSettings.message.minutesToConfirm), cfgSettings.paymentResolution);
 }
 
 function typicalSendMessageReadConfirmTxSize() {
@@ -457,7 +555,7 @@ function typicalSendMessageReadConfirmTxSize() {
 }
 
 function estimatedIssueLockedAssetTxCost() {
-    return Math.ceil((typicalIssueLockedAssetTxSize() * Catenis.bitcoinFees.getFeeRateByTime(cfgSettings.asset.issuance.minutesToConfirm)) / cfgSettings.paymentResolution) * cfgSettings.paymentResolution;
+    return Util.roundToResolution(typicalIssueLockedAssetTxSize() * Catenis.bitcoinFees.getFeeRateByTime(cfgSettings.asset.issuance.minutesToConfirm), cfgSettings.paymentResolution);
 }
 
 function typicalIssueLockedAssetTxSize() {
@@ -465,7 +563,7 @@ function typicalIssueLockedAssetTxSize() {
 }
 
 function estimatedIssueUnlockedAssetTxCost() {
-    return Math.ceil((typicalIssueUnlockedAssetTxSize() * Catenis.bitcoinFees.getFeeRateByTime(cfgSettings.asset.issuance.minutesToConfirm)) / cfgSettings.paymentResolution) * cfgSettings.paymentResolution;
+    return Util.roundToResolution(typicalIssueUnlockedAssetTxSize() * Catenis.bitcoinFees.getFeeRateByTime(cfgSettings.asset.issuance.minutesToConfirm), cfgSettings.paymentResolution);
 }
 
 function typicalIssueUnlockedAssetTxSize() {
@@ -473,7 +571,7 @@ function typicalIssueUnlockedAssetTxSize() {
 }
 
 function estimatedTransferAssetTxCost() {
-    return Math.ceil((typicalTransferAssetTxSize() * Catenis.bitcoinFees.getFeeRateByTime(cfgSettings.asset.transfer.minutesToConfirm)) / cfgSettings.paymentResolution) * cfgSettings.paymentResolution;
+    return Util.roundToResolution(typicalTransferAssetTxSize() * Catenis.bitcoinFees.getFeeRateByTime(cfgSettings.asset.transfer.minutesToConfirm), cfgSettings.paymentResolution);
 }
 
 function typicalTransferAssetTxSize() {
@@ -488,19 +586,19 @@ function highestEstimatedReadConfirmTxCostPerMessage() {
 }
 
 function averageEstimatedReadConfirmTxCostPerMessage() {
-    return Math.ceil(Util.weightedAverage([
+    return Util.roundToResolution(Util.weightedAverage([
         averageReadConfirmTxCostPerMessage(),
         estimatedTerminalReadConfirmTxCostPerMessage()
     ], [
         cfgSettings.message.readConfirmation.usageWeight.regular,
         cfgSettings.message.readConfirmation.usageWeight.terminal
-    ]) / cfgSettings.message.readConfirmation.paymentResolution) * cfgSettings.message.readConfirmation.paymentResolution;
+    ]), cfgSettings.message.readConfirmation.paymentResolution);
 }
 
 function estimatedTerminalReadConfirmTxCostPerMessage() {
-    const typicalTxCost = Math.ceil((typicalTerminalReadConfirmTxSize() * Catenis.bitcoinFees.getFeeRateByTime(cfgSettings.message.readConfirmation.terminalReadConfirmTx.minutesToConfirm)) / cfgSettings.message.readConfirmation.paymentResolution) * cfgSettings.message.readConfirmation.paymentResolution;
+    const typicalTxCost = Util.roundToResolution(typicalTerminalReadConfirmTxSize() * Catenis.bitcoinFees.getFeeRateByTime(cfgSettings.message.readConfirmation.terminalReadConfirmTx.minutesToConfirm), cfgSettings.message.readConfirmation.paymentResolution);
 
-    return Math.ceil((typicalTxCost / cfgSettings.message.readConfirmation.terminalReadConfirmTx.typicalTxConfig.numMessagesConfirmed) / cfgSettings.message.readConfirmation.paymentResolution) * cfgSettings.message.readConfirmation.paymentResolution;
+    return Util.roundToResolution(typicalTxCost / cfgSettings.message.readConfirmation.terminalReadConfirmTx.typicalTxConfig.numMessagesConfirmed, cfgSettings.message.readConfirmation.paymentResolution);
 }
 
 function typicalTerminalReadConfirmTxSize() {
@@ -591,47 +689,83 @@ function averageReadConfirmTxCostPerMessage() {
             lastTxFee = readConfirmTxInfo.getNewTxFee();
             readConfirmTxInfo.confirmTxFee();
 
-            sumFeePerMsg += Math.ceil((lastTxFee.fee / numMsgs) / cfgSettings.message.readConfirmation.paymentResolution) * cfgSettings.message.readConfirmation.paymentResolution;
+            sumFeePerMsg += Util.roundToResolution(lastTxFee.fee / numMsgs, cfgSettings.message.readConfirmation.paymentResolution);
         }
         while (lastTxFee.feeRate < optimumFeeRate);
 
-        Service.avrgReadConfirmTxCostPerMsgCtrl.lastCostPerMsg = Math.ceil((sumFeePerMsg / numMsgs) / cfgSettings.message.readConfirmation.paymentResolution) * cfgSettings.message.readConfirmation.paymentResolution;
+        Service.avrgReadConfirmTxCostPerMsgCtrl.lastCostPerMsg = Util.roundToResolution(sumFeePerMsg / numMsgs, cfgSettings.message.readConfirmation.paymentResolution);
     }
 
     return Service.avrgReadConfirmTxCostPerMsgCtrl.lastCostPerMsg;
 }
 
+function highestServicePrice() {
+    return _.max(Object.values(Service.clientPaidService).map((paidService) => {
+        return getServicePrice(paidService.name);
+    }));
+}
 
-// NOTE: totalAmount should be a multiple of payAmount
-function distributePayment(totalAmount, payAmount, addressesPerBatch, paysPerAddress) {
-    const maxBatchAmount = payAmount * addressesPerBatch * paysPerAddress,
-        payments = [];
+// Returns price for given service expressed in BCOT token "satoshis"
+function getServicePrice(serviceName) {
+    const paidService = Service.clientPaidService[serviceName];
+
+    if (paidService !== undefined) {
+        return Util.roundToResolution(new BigNumber(paidService.costFunction()).times(1 + cfgSettings.priceMarkup).dividedBy(Catenis.bcotExchRate.getLatestRate().exchangeRate).ceil().toNumber(), cfgSettings.servicePriceResolution);
+    }
+}
+
+// NOTE: totalAmount should be a multiple of payAmount, though the method will still
+//        work if it is not (the remainder shall be added to the last credited address)
+function distributePayment(totalAmount, payAmount, addressesPerBatch, paysPerAddress, totalAddresses) {
+    // Adjust total amount if necessary
+    if (totalAddresses !== undefined) {
+        const maxAmount = totalAddresses * paysPerAddress * payAmount;
+        totalAmount = totalAmount > maxAmount ? maxAmount : totalAmount;
+    }
+
+    const payments = [];
     let remainAmount = totalAmount;
+    let remainAddresses = totalAddresses;
 
-    for (let batchNum = 1, maxBatches = Math.ceil(totalAmount / maxBatchAmount); batchNum <= maxBatches; batchNum++) {
-        const workAmount = remainAmount > maxBatchAmount ? maxBatchAmount : remainAmount,
+    for (let batchNum = 1, maxBatches = Math.ceil(totalAmount / (payAmount * addressesPerBatch * paysPerAddress)); batchNum <= maxBatches; batchNum++) {
+        const addressesInBatch = remainAddresses === undefined || remainAddresses > addressesPerBatch ? addressesPerBatch : remainAddresses,
+            maxAmountInBatch = addressesInBatch * paysPerAddress * payAmount,
+            workAmount = remainAmount > maxAmountInBatch ? maxAmountInBatch : remainAmount,
             payIdxOffset = (batchNum - 1) * addressesPerBatch,
-            payPerAddress = Math.floor(workAmount / (payAmount * addressesPerBatch)),
-            extraPays = Math.ceil((workAmount % (payAmount * addressesPerBatch)) / payAmount);
+            payPerAddress = Math.floor(workAmount / (payAmount * addressesInBatch));
+        let extraPayAmount = workAmount % (payAmount * addressesInBatch);
 
         // Fill up pays by address for this batch
         if (payPerAddress > 0) {
-            for (let idx = 0; idx < addressesPerBatch; idx++) {
+            for (let idx = 0; idx < addressesInBatch; idx++) {
                 payments[payIdxOffset + idx] = payPerAddress * payAmount;
             }
         }
 
-        if (extraPays > 0) {
-            for (let idx = 0; idx < extraPays; idx++) {
-                payments[payIdxOffset + idx] = (payments[payIdxOffset + idx] !== undefined ? payments[payIdxOffset + idx] : 0) + payAmount;
+        if (extraPayAmount> 0) {
+            for (let idx = 0; extraPayAmount > 0; idx++, extraPayAmount -= payAmount) {
+                payments[payIdxOffset + idx] = (payments[payIdxOffset + idx] !== undefined ? payments[payIdxOffset + idx] : 0) + (extraPayAmount > payAmount ? payAmount : extraPayAmount);
             }
         }
 
         // Adjust remaining amount
         remainAmount -= workAmount;
+
+        if (remainAddresses !== undefined) {
+            // Adjust remaining addresses
+            remainAddresses -= addressesInBatch;
+        }
     }
 
-    return payments;
+    if (totalAddresses !== undefined) {
+        return {
+            totalAmount: totalAmount,
+            payments: payments
+        };
+    }
+    else {
+        return payments;
+    }
 }
 
 
@@ -670,9 +804,16 @@ Object.defineProperties(Service, {
         },
         enumerable: true
     },
+    // NOTE: this amount is expressed in Catenis service credit's lowest units (10^-7)
+    serviceAccountUnitAmount: {
+        get: function () {
+            return Util.roundToResolution(BcotPayment.bcotToServiceCredit(highestServicePrice() * (1 + cfgSettings.serviceAccountFunding.unitAmountSafetyFactor)), cfgSettings.servicePriceResolution);
+        },
+        enumerable: true
+    },
     payTxExpFundUnitAmount: {
         get: function () {
-            return Math.ceil((_.max([estimatedSendSystemMessageTxCost(), highestEstimatedServiceTxCost()]) * (1 + cfgSettings.payTxExpenseFunding.unitAmountSafetyFactor)) / cfgSettings.paymentResolution) * cfgSettings.paymentResolution;
+            return Util.roundToResolution(_.max([estimatedSendSystemMessageTxCost(), highestEstimatedServiceTxCost()]) * (1 + cfgSettings.payTxExpenseFunding.unitAmountSafetyFactor), cfgSettings.paymentResolution);
         },
         enumerable: true
     },
@@ -690,7 +831,7 @@ Object.defineProperties(Service, {
     },
     readConfirmPayTxExpFundUnitAmount: {
         get: function () {
-            return Math.ceil((highestEstimatedReadConfirmTxCostPerMessage() * (1 + cfgSettings.readConfirmPayTxExpenseFunding.unitAmountSafetyFactor)) / cfgSettings.message.readConfirmation.paymentResolution) * cfgSettings.message.readConfirmation.paymentResolution;
+            return Util.roundToResolution(highestEstimatedReadConfirmTxCostPerMessage() * (1 + cfgSettings.readConfirmPayTxExpenseFunding.unitAmountSafetyFactor), cfgSettings.message.readConfirmation.paymentResolution);
         },
         enumerable: true
     },
@@ -766,6 +907,18 @@ Object.defineProperties(Service, {
         },
         enumerable: true
     },
+    servicePriceResolution: {
+        get: function () {
+            return cfgSettings.servicePriceResolution;
+        },
+        enumerable: true
+    },
+    serviceCreditIssuanceAddrAmount: {
+        get: function () {
+            return cfgSettings.serviceCreditIssueAddrFunding.unitAmount;
+        },
+        enumerable: true
+    },
     minServiceCreditIssuanceFundAmount: {
         get: function () {
             return (Math.ceil(cfgSettings.serviceCreditIssueAddrFunding.prePaidClientsToFund * cfgSettings.serviceCreditIssueAddrFunding.unitsPerPrePaidClients)
@@ -778,9 +931,9 @@ Object.defineProperties(Service, {
         get: function () {
             const fundUnitAmount = Service.payTxExpFundUnitAmount;
 
-            return Math.ceil((estimatedSendSystemMessageTxCost() * cfgSettings.payTxExpenseFunding.sysMessagesToFund
-                + averageEstimatedServiceTxCost() * cfgSettings.payTxExpenseFunding.minBalanceServicesPerDevice * cfgSettings.payTxExpenseFunding.devicesToFund)
-                / fundUnitAmount) * fundUnitAmount;
+            return Util.roundToResolution(estimatedSendSystemMessageTxCost() * cfgSettings.payTxExpenseFunding.sysMessagesToFund
+                + averageEstimatedServiceTxCost() * cfgSettings.payTxExpenseFunding.minBalanceServicesPerDevice * cfgSettings.payTxExpenseFunding.devicesToFund,
+                fundUnitAmount);
         },
         enumerable: true
     },
@@ -788,7 +941,7 @@ Object.defineProperties(Service, {
         get: function () {
             const fundUnitAmount = Service.readConfirmPayTxExpFundUnitAmount;
 
-            return Math.ceil((averageEstimatedReadConfirmTxCostPerMessage() * cfgSettings.readConfirmPayTxExpenseFunding.messagesToConfirmToFund) / fundUnitAmount) * fundUnitAmount;
+            return Util.roundToResolution(averageEstimatedReadConfirmTxCostPerMessage() * cfgSettings.readConfirmPayTxExpenseFunding.messagesToConfirmToFund, fundUnitAmount);
         },
         enumerable: true
     }

@@ -387,7 +387,7 @@ function loadUtxos() {
                     scriptPubKey: utxo.scriptPubKey,
                     amount: new BigNumber(utxo.amount).times(100000000).toNumber(),
                     ccAssetId: this.ccAssetId,
-                    assetAmount: assetUtxoInfo.divisibility === 0 ? assetUtxoInfo.amount : new BigNumber(assetUtxoInfo.amount).times(Math.pow(10, assetUtxoInfo.divisibility)).toNumber(),
+                    assetAmount: assetUtxoInfo.amount,
                     assetDivisibility: assetUtxoInfo.divisibility,
                     isAggregatableAsset: isAggregatableAsset,
                     confirmations: utxo.confirmations,

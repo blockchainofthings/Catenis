@@ -48,6 +48,8 @@ import { MalleabilityEventEmitter } from './MalleabilityEventEmitter';
 import { CCFullNodeClient } from './CCFullNodeClient';
 import { CCMetadataClient } from './CCMetadataClient';
 import { OmniCore } from './OmniCore';
+import { BcotExchangeRate } from './BcotExchangeRate';
+import { BcotPayment } from './BcotPayment';
 
 // DEBUG - begin
 //import { resetBitcoinCore } from './Test/FundSourceTest';
@@ -82,6 +84,7 @@ Meteor.startup(function () {
         Application.initialize();
         MalleabilityEventEmitter.initialize();
         BitcoinFees.initialize();
+        BcotExchangeRate.initialize();
         KeyStore.initialize();
         BitcoinCore.initialize();
         OmniCore.initialize();
@@ -104,6 +107,7 @@ Meteor.startup(function () {
         Client.checkDeviceDefaultRights();
         Device.checkDeviceInitialRights();
 
+        BcotPayment.initialize();
         ReceiveMessage.initialize();
         ReadConfirmation.initialize();
         TransactionMonitor.initialize();
@@ -141,7 +145,7 @@ function CheckImportAddresses(fixMissingAddresses) {
     const omniAddresses = new Set(Catenis.omniCore.getAddresses());
 
     // Identify addresses currently in use that are not yet imported onto Omni Core
-    const notImportedOmniAddresses = Catenis.keyStore.listAllClientBcotTokenPaymentAddressesInUse().filter((addr) => {
+    const notImportedOmniAddresses = Catenis.keyStore.listAllClientBcotPaymentAddressesInUse().filter((addr) => {
         return !omniAddresses.has(addr);
     });
 
@@ -201,7 +205,7 @@ function CheckImportAddresses(fixMissingAddresses) {
                 //  that the blockchain be rescanned
                 Catenis.logger.TRACE('About to import public key onto Omni Core requesting blockchain to be rescanned');
 
-                Catenis.omniCore.importPublicKey(Catenis.keyStore.getCryptoKeysByAddress(lastAddressToImport).exportPublicKey(), true), (error) => {
+                Catenis.omniCore.importPublicKey(Catenis.keyStore.getCryptoKeysByAddress(lastAddressToImport).exportPublicKey(), true, (error) => {
                     importingOmniAddresses = false;
 
                     if (error) {
@@ -213,7 +217,7 @@ function CheckImportAddresses(fixMissingAddresses) {
                     if (!importingAddresses) {
                         fut.return();
                     }
-                };
+                });
             }
 
             fut.wait();

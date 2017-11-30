@@ -729,6 +729,13 @@ Transaction.prototype.serialize = function () {
 //                                  'sys_pay_tx_exp_addr', 'cln_msg_crd_addr', 'cln_asst_crd_addr', 'dev_read_conf_addr',
 //                                  'dev_main_addr', 'dev_asst_issu_addr'
 //    }
+//    creditServiceAccount: {
+//      clientId: [string], // External ID of client whose service account is being credited
+//      creditedAmount: [number]  // Amount, in Catenis service credit's lowest unit, to be credited to client's service account
+//    },
+//    storeBcot: { // Information for store BCOT transaction
+//      storedAmount: [number]  // Amount, in BCOT token "satoshis", stored
+//    },
 //    send_message: {
 //      originDeviceId: [string], // External ID of the device that sent the message
 //      targetDeviceId: [string], // External ID of the device that receives the message
@@ -1537,6 +1544,18 @@ Transaction.fixMalleability = function (source, originalTxid, modifiedTxid) {
                             }
                         })
                     });
+
+                    Catenis.db.collection.Billing.update({'serviceTx.txid': originalTxid}, {
+                        $set: {
+                            'serviceTx.txid': modifiedTxid
+                        }
+                    });
+
+                    Catenis.db.collection.Billing.update({'serviceCreditTx.txid': originalTxid}, {
+                        $set: {
+                            'serviceCreditTx.txid': modifiedTxid
+                        }
+                    });
                 }
 
                 Catenis.db.collection.Message.update({'blockchain.txid': originalTxid}, {
@@ -1593,11 +1612,28 @@ Transaction.type = Object.freeze({
     sys_funding: Object.freeze({
         name: 'sys_funding',
         description: 'Transaction issued from outside of the system used to send crypto currency funds to the system',
+        dbInfoEntryName: 'sysFunding'
     }),
     funding: Object.freeze({
         name: 'funding',
         description: 'Transaction used to transfer crypto currency funds to internal blockchain addresses controlled by the system',
         dbInfoEntryName: 'funding'
+    }),
+    bcot_payment: Object.freeze({
+        name: 'bcot_payment',
+        description: 'Transaction used to store away BCOT tokens received as payment in exchange for Catenis service credits',
+        dbInfoEntryName: 'bcotPayment'
+    }),
+    store_bcot: Object.freeze({
+        name: 'store_bcot',
+        description: 'Transaction issued from outside of the system used to send BCOT tokens as payment for services a given client',
+        dbInfoEntryName: 'storeBcot'
+    }),
+
+    credit_service_account: Object.freeze({
+        name: 'credit_service_account',
+        description: 'Transaction used to issue an amount of Catenis service credit and transferred it to a client\'s service account',
+        dbInfoEntryName: 'creditServiceAccount'
     }),
     send_message: Object.freeze({
         name: 'send_message',
@@ -1691,6 +1727,36 @@ Transaction.ioToken = Object.freeze({
         name: 'p2_sys_read_conf_pay_tx_exp_addr',
         token: '<p2_sys_read_conf_pay_tx_exp_addr>',
         description: 'Output (or input spending such output) paying to a system read confirmation pay tx expense address'
+    }),
+    p2_sys_serv_cred_issu_addr: Object.freeze({
+        name: 'p2_sys_serv_cred_issu_addr',
+        token: '<p2_sys_serv_cred_issu_addr>',
+        description: 'Output (or input spending such output) paying to a system service credit issuance address'
+    }),
+    p2_sys_serv_cred_pay_tx_exp_addr: Object.freeze({
+        name: 'p2_sys_serv_cred_pay_tx_exp_addr',
+        token: '<p2_sys_serv_cred_pay_tx_exp_addr>',
+        description: 'Output (or input spending such output) paying to a system service credit pay tx expense address'
+    }),
+    p2_sys_msig_sign_addr: Object.freeze({
+        name: 'p2_sys_msig_sign_addr',
+        token: '<p2_sys_msig_sign_addr>',
+        description: 'Output (or input spending such output) paying to a system multi-signature Colored Coins tx out signee address'
+    }),
+    p2_cln_srv_acc_cred_ln_addr: Object.freeze({
+        name: 'p2_cln_srv_acc_cred_ln_addr',
+        token: '<p2_cln_srv_acc_cred_ln_addr>',
+        description: 'Output (or input spending such output) paying to a client service account credit line address'
+    }),
+    p2_cln_srv_acc_debt_ln_addr: Object.freeze({
+        name: 'p2_cln_srv_acc_debt_ln_addr',
+        token: '<p2_cln_srv_acc_debt_ln_addr>',
+        description: 'Output (or input spending such output) paying to a client service account debit line address'
+    }),
+    p2_cln_bcot_pay_addr: Object.freeze({
+        name: 'p2_cln_bcot_pay_addr',
+        token: '<p2_cln_bcot_pay_addr>',
+        description: 'Output (or input spending such output) paying to a client BCOT token payment address'
     }),
     p2_dev_read_conf_addr: Object.freeze({
         name: 'p2_dev_read_conf_addr',

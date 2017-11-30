@@ -131,7 +131,7 @@ export class CCTransaction extends Transaction {
 
         this.isAssembled = false;
         this.includesMultiSigOutput = false;
-        this.numCCOutputs = 0;
+        this.numCcOutputs = 0;
     }
 }
 
@@ -228,14 +228,14 @@ CCTransaction.prototype.addTransferInputs = function (inputs, inputSeqStartPos) 
     }
 
     // Validate inputs making sure that they have Colored Coins info for the same asset
-    let lastCCAssetId;
+    let lastCcAssetId;
 
     inputs.forEach((input) => {
         if (input.txout.ccAssetId !== undefined) {
-            if (lastCCAssetId === undefined) {
-                lastCCAssetId = input.txout.ccAssetId;
+            if (lastCcAssetId === undefined) {
+                lastCcAssetId = input.txout.ccAssetId;
             }
-            else if (lastCCAssetId !== input.txout.ccAssetId) {
+            else if (lastCcAssetId !== input.txout.ccAssetId) {
                 // Input is for a different asset.
                 //  Log error condition, and return indicating error
                 Catenis.logger.ERROR('Trying to add one or more transfer inputs to Colored Coins transaction that contain info for different assets; no inputs added', {
@@ -406,10 +406,10 @@ CCTransaction.prototype.getTransferInputSeqAssetAmountInfo = function (startPos)
 // Sets one or more transfer output entries designating where Colored Coins assets should be transferred to
 //
 //  Arguments:
-//   outputs: { [Array(Object)|Object] - List of output objects
+//   outputs: [{ [Array(Object)|Object] - List of output objects
 //     address: [String] - Blockchain address to where assets should be sent
 //     assetAmount: [Number] - Amount of asset to transfer
-//   }
+//   }]
 //   inputSeqStartPos: [Number] - Start position of transfer input sequence from where assets should come
 //
 //  Return:
@@ -636,7 +636,7 @@ CCTransaction.prototype.pendingTransferInputSeqs = function () {
 //
 //  Arguments:
 //   ccMetadata: [Object(CCMetadata0] - The Colored Coins metadata
-CCTransaction.prototype.setCCMetadata = function (ccMetadata) {
+CCTransaction.prototype.setCcMetadata = function (ccMetadata) {
     // Reset transaction before performing task
     this.reset();
 
@@ -719,7 +719,7 @@ CCTransaction.prototype.assemble = function (spendMultiSigOutputAddress) {
                         amount: txCfgSettings.txOutputDustAmount,
                     }, assetInfo), outputPos++);
 
-                    this.numCCOutputs++;
+                    this.numCcOutputs++;
                 }
                 else {
                     // Burn asset. Add burn instruction
@@ -728,7 +728,25 @@ CCTransaction.prototype.assemble = function (spendMultiSigOutputAddress) {
             });
 
             // Now, encode Colored Coins
-            let ccResult = ccBuilder.encode();
+            let ccResult;
+
+            try {
+                ccResult = ccBuilder.encode();
+            }
+            catch (err) {
+                // Error encoding Colored Coins data.
+                //  Log error
+                Catenis.logger.ERROR('Error encoding Colored Coins data for transaction.', err);
+                if (isCcDataTooLargeError(err)) {
+                    // Colored Coins data will not fit into transaction's null data output (too many transfer outputs).
+                    //  Throw exception
+                    throw new Meteor.Error('ctn_cctx_ccdata_too_large', 'Colored Coins data will not fit into transaction\'s null data output');
+                }
+                else {
+                    // Generic error. Throw exception
+                    throw new Meteor.Error('ctn_cctx_ccdata_encode_error', 'Error encoding Colored Coins data for transaction');
+                }
+            }
 
             if (ccResult.leftover !== undefined && ccResult.leftover.length > 0) {
                 // Needs to store Colored Coins metadata hash onto multi-signature output.
@@ -739,7 +757,7 @@ CCTransaction.prototype.assemble = function (spendMultiSigOutputAddress) {
                 this.includesMultiSigOutput = true;
             }
 
-            // Add null data output with Colored Coins encode data
+            // Add null data output with Colored Coins encoded data
             this.addNullDataOutput(ccResult.codeBuffer, 0);
 
             if (this.includesMultiSigOutput) {
@@ -778,12 +796,12 @@ CCTransaction.prototype.reset = function () {
     // Make sure that Colored Coins transaction is already assembled
     if (this.isAssembled) {
         // Remove Colored Coins outputs
-        this.removeOutputs(0, this.numCCOutputs + (this.includesMultiSigOutput ? 2 : 1));
+        this.removeOutputs(0, this.numCcOutputs + (this.includesMultiSigOutput ? 2 : 1));
 
         // Reset control variables
         this.isAssembled = false;
         this.includesMultiSigOutput = false;
-        this.numCCOutputs = 0;
+        this.numCcOutputs = 0;
     }
 };
 
@@ -1141,7 +1159,7 @@ CCTransaction.fromTransaction = function (transact) {
                         assetAmount: payment.amount
                     });
 
-                    ccTransact.numCCOutputs++;
+                    ccTransact.numCcOutputs++;
 
                     // Add Colored Coins asset info to respective tx output
                     let assetInfo;
@@ -1358,6 +1376,10 @@ function checkColoredCoinsData(ccData) {
         }
         catch (err) {}
     }
+}
+
+function isCcDataTooLargeError(err) {
+    return /^data code.*bigger.*$/i.test(err.message);
 }
 
 

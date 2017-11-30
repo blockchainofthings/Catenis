@@ -92,7 +92,7 @@
       "systemMultiSigSignee": 900,
       "clientServAccCreditLine": 900,
       "clientServAccDebitLine": 900,
-      "clientBcotTokenPayment": 14400,
+      "clientBcotPayment": 14400,
       "deviceReadConfirm": 900,
       "deviceMain": 900,
       "deviceAsset": 900,
@@ -111,7 +111,9 @@
   },
   // Parameters pertaining to Service module
   "service": {
-    "paymentResolution": 1000,  // Resolution of amount that should be allocated to pay for tx expenses. In other words, the allocated amount should be a multiple of the amount
+    "priceMarkup": 0.35,  // Markup used to calculate the service price
+    "servicePriceResolution": 100,  // Resolution of service prices. In other words, the price of the services (expressed in Catenis service credit's lowest units) should be a multiple of that value
+    "paymentResolution": 1000,  // Resolution of amount that should be allocated to pay for tx expenses. In other words, the allocated amount should be a multiple of that amount
     "systemFunding": {
       "clientsToFund": 10,  // Number of clients to consider when calculating total amount to fund
       "devicesPerClientToFund": 10,  // Number of devices per client to consider when calculating total amount to fund
@@ -126,9 +128,15 @@
       "prePaidClientsToFund": 100,  // Number of pre-paid clients to consider when calculating total amount to fund
       "postPaidClientsToFund": 100  // Number of post-paid clients to consider when calculating total amount to fund
     },
+    "serviceAccountFunding": {
+      // NOTE: unitAmount (amount, in Catenis service credit's lowest unit, equivalent to one unit of funding) is dynamically calculated
+      "unitAmountSafetyFactor": 0.3,  // Safety factor to use when calculating funding unit amount
+      "maxUnitsPerAddr": 100,  // Maximum number of units of funding that should be accumulated into a single UTXO/address (there should be a single UTXO per address)
+      "minAddrsToFund": 4  // Number of UTXOs/addresses that should be funded before start accumulating funding units into a single UTXO/address (there should be a single UTXO per address)
+    },
     "payTxExpenseFunding": {
       // NOTE: unitAmount (amount, in satoshis, equivalent to one unit of funding) is dynamically calculated
-      "unitAmountSafetyFactor": 0.5,  // Safety factor to use when calculating funding unit amount
+      "unitAmountSafetyFactor": 0.3,  // Safety factor to use when calculating funding unit amount
       "maxUnitsPerAddr": 10,  // Maximum number of units of funding that should be accumulated into a single UTXO/address (there should be a single UTXO per address)
       "minAddrsToFund": 10,  // Number of UTXOs/addresses that should be funded before start accumulating funding units into a single UTXO/address (there should be a single UTXO per address)
       "balanceSafetyFactor": 0.15, // Safety factor to use when calculating balance
@@ -200,7 +208,7 @@
     "asset": {
       "issuance": {
         "unlockedAssetsPerMinute": 0.33,  // Number of unlocked assets issued per minute that is expected to be sustained
-        "minutesToConfirm": 30,  // Time, in minutes, within which asset issuance txs are expected to be confirmed
+        "minutesToConfirm": 300,  // Time, in minutes, within which asset issuance txs are expected to be confirmed
         "unconfAssetIssueAddrReuses": 10,  // Number of times an UTXO associated with a device asset issuance addr is expected to be reused
         "assetIssueAddrFunding": {
           "unitAmount": 600,  // Amount, in satoshis, equivalent to one unit of funding
@@ -209,7 +217,7 @@
         }
       },
       "transfer": {
-        "minutesToConfirm": 30  // Time, in minutes, within which asset transfer txs are expected to be confirmed
+        "minutesToConfirm": 300  // Time, in minutes, within which asset transfer txs are expected to be confirmed
       }
     },
     "serviceTxConfig": {
@@ -256,6 +264,18 @@
   // Parameters pertaining to BalanceInfo module
   "balanceInfo": {
     "defaultSafetyFactor": 0.1     // Safety factor used to check whether current balance is enough to cover current expect balance
+  },
+  // Parameters pertaining to CatenisNode module
+  "catenisNode": {
+    "serviceCreditAsset": {
+      "nameFormat": "Catenis Service Credit - %s%s",
+      "descriptionFormat": "Internal Catenis token used to pay for services consumed by devices of clients assigned to %s",
+      "issuingOpts": {
+        "type": "unlocked", // Issuing type of asset
+        "divisibility": 7,  // Number of decimal places allowed for representing quantities of this asset
+        "isAggregatable": true  // Indicates whether quantities of the asset from different UTXOs can be combined to allocate the necessary fund
+      }
+    }
   },
   // Parameters partaining to Client module
   "client": {
@@ -453,5 +473,28 @@
     "ccVersionByte": "02", // Hex encoded Colored Coins version byte
     "torrentHashSize": 20,  // Size, in number of bytes, of a torrent hash
     "sha2Size": 32  // Size, in number of bytes, of a SHA2 hash
+  },
+  // Parameters pertaining to CCTransaction module
+  "bcotExchangeRate": {
+    "initialExchangeRate": 0.00024585  // Inital bitcoin to BCOT token exchange rate (calculated in 2017-11-23, using BTC = $8,135, and BCOT = $2)
+  },
+  // Parameters pertaining to CreditServiceAccTransaction module
+  "creditServiceAccTransaction": {
+    "maxNumCcTransferOutputs": 31,  //  Maximum number of Colored Coins transaction outputs that can exist in this transaction
+    "safeNumCcTransferOutputs": 10,  // Maximum number of Colored Coins transaction outputs used to receive issued asset amount so it is guarranteed that encoded Colored Coins data will fit into transaction
+    "ccMetadata": {
+      "bcotPayTxidKey": "bcotPayTxid"  // Name (key) of Colored Coins free user metadata used to refer to BCOT Token Payment transaction
+    }
+  },
+  // Parameters pertaining to BcotPayment module
+  "bcotPayment": {
+    "bcotOmniPropertyId": 0,  // BCOT token Omni property ID (yet to be defined for production)
+    "storeBcotAddress": "????"  // Non-Catenis blockchain address to where BCOT tokens received as payment should be stored
+  },
+  // Parameters pertaining to StoreBcotTransaction module
+  "storeBcotTransaction": {
+    "bcotStoreAddrAmount": 600,  // Amount, in satohis, to be paid to BCOT store address output
+    "timeToConfirm": 300,  // Time, in minutes, that is expected the store BCOT transaction to be confirmed
+    "omniDataPrefix": 'omni'  // Prefix of Omni encoded data to be embedd in transaction
   }
 }

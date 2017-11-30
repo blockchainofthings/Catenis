@@ -1,3 +1,5 @@
+import { Asset } from './Asset';
+
 /**
  * Created by claudio on 25/11/16.
  */
@@ -16,6 +18,7 @@
 const util = require('util');
 const events = require('events');
 // Third-party node modules
+import config from 'config';
 import _und from 'underscore';     // NOTE: we dot not use the underscore library provided by Meteor because we need
                                    //        a feature (_und.omit(obj,predicate)) that is not available in that version
 
@@ -52,6 +55,25 @@ import { BitcoinFees } from './BitcoinFees'
 import { BalanceInfo } from './BalanceInfo';
 import { Permission } from './Permission';
 
+// Config entries
+const ctnNodeConfig = config.get('catenisNode');
+const ctnNodeServCreditAssetConfig = ctnNodeConfig.get('serviceCreditAsset');
+const ctnNodeSrvCredAsstIssueOptsConfig = ctnNodeServCreditAssetConfig.get('issuingOpts');
+
+// Configuration settings
+const cfgSettings = {
+    serviceCreditAsset: {
+        nameFormat: ctnNodeServCreditAssetConfig.get('nameFormat'),
+        descriptionFormat: ctnNodeServCreditAssetConfig.get('descriptionFormat'),
+        issuingOpts: {
+            type: ctnNodeSrvCredAsstIssueOptsConfig.get('type'),
+            divisibility: ctnNodeSrvCredAsstIssueOptsConfig.get('divisibility'),
+            isAggregatable: ctnNodeSrvCredAsstIssueOptsConfig.get('isAggregatable')
+        }
+    }
+};
+
+
 // Critical section object to avoid concurrent access to database at the
 //  module level (when creating new Catenis nodes basically)
 const dbCS = new CriticalSection();
@@ -71,6 +93,13 @@ export class CatenisNode extends events.EventEmitter {
         this.ctnNodeIndex = docCtnNode.ctnNodeIndex;
         this.props = docCtnNode.props;
         this.status = docCtnNode.status;
+
+        Object.defineProperty(this, 'internalName', {
+            get: function () {
+                return this.type === CatenisNode.nodeType.hub.name ? 'Catenis Hub node' : util.format('Catenis Gateway #%d node', this.ctnNodeIndex);
+            },
+            enumerable: true
+        });
 
         // Instantiate objects to manage blockchain addresses for Catenis node
         this.deviceMainAddr = SystemDeviceMainAddress.getInstance(this.ctnNodeIndex);
@@ -175,6 +204,27 @@ CatenisNode.prototype.startNode = function () {
     Catenis.bitcoinFees.on(BitcoinFees.notifyEvent.bitcoin_fees_changed.name, processBitcoinFeesChange.bind(this));
 };
 
+CatenisNode.prototype.serviceCreditAssetInfo = function () {
+    return {
+        name: util.format(cfgSettings.serviceCreditAsset.nameFormat, this.internalName,
+            Catenis.application.testPrefix !== undefined ? (' (' + Catenis.application.testPrefix + ')') : ''),
+        description: util.format(cfgSettings.serviceCreditAsset.descriptionFormat, this.internalName),
+        issuingOpts: cfgSettings.serviceCreditAsset.issuingOpts
+    }
+};
+
+CatenisNode.prototype.getServiceCreditAsset = function () {
+    try {
+        return Asset.getAssetByIssuanceAddressPath(Catenis.keyStore.getAddressInfo(this.servCredIssueAddr.lastAddressKeys().getAddress()).path);
+    }
+    catch (err) {
+        if (!((err instanceof Meteor.Error) && err.error === 'ctn_asset_not_found')) {
+            Catenis.logger.ERROR('Error retrieving Catenis service credit asset.', err);
+            throw new Meteor.Error('ctn_node_serv_cred_asset_error', 'Error retrieving Catenis service credit asset', err.stack);
+        }
+    }
+};
+
 CatenisNode.prototype.listFundingAddressesInUse = function () {
     return this.fundingPaymentAddr.listAddressesInUse().concat(this.fundingChangeAddr.listAddressesInUse());
 };
@@ -234,7 +284,7 @@ CatenisNode.prototype.checkServiceCreditIssuanceProvision = function () {
         // Distribute funds to be allocated
         const distribFund = Service.distributeServiceCreditIssuanceFund(servCredIssuanceBalanceInfo.getBalanceDifference());
 
-        // And try to fund system service credit issuing address
+        // And try to fund system service credit issuance address
         this.provisionServiceCreditIssuance(distribFund.amountPerAddress);
     }
 
@@ -435,10 +485,10 @@ CatenisNode.prototype.getIdentityInfo = function () {
 //      (any additional property)
 //    }
 //    user_id: [string] - (optional)
-//    billingMode: [String] - (optional) Identifies that billing mode to be used for this client. One of the properties of Client.billingMode object
+//    billingMode: [String] - (optional) Identifies that billing mode to be used for this client. The value of one of the properties of Client.billingMode object
 //    deviceDefaultRightsByEvent: [Object] - (optional) Default rights to be used when creating new devices. Object the keys of which should be the defined permission event names.
 //                                         -  The value for each event name key should be a rights object as defined for the Permission.setRights method
-CatenisNode.prototype.createClient = function (props, user_id, billingMode = Client.billingMode['pre-paid'], deviceDefaultRightsByEvent) {
+CatenisNode.prototype.createClient = function (props, user_id, billingMode = Client.billingMode.prePaid, deviceDefaultRightsByEvent) {
     props = typeof props === 'string' ? {name: props} : (typeof props === 'object' && props !== null ? props : {});
 
     // Validate (pre-defined) properties
@@ -1030,6 +1080,9 @@ CatenisNode.notifyEvent = Object.freeze({
         description: 'System funding balance info (either the current balance or the minimum balance) has changed'
     })
 });
+
+CatenisNode.serviceCreditAssetDivisibility = cfgSettings.serviceCreditAsset.issuingOpts.divisibility;
+
 
 // Definition of module (private) functions
 //

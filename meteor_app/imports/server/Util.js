@@ -149,6 +149,14 @@ Util.weightedAverage = function (values, weights) {
     return sum / sumWeights;
 };
 
+Util.roundToResolution = function (value, resolution) {
+    return Math.ceil(value / resolution) * resolution;
+};
+
+Util.roundDownToResolution = function (value, resolution) {
+    return Math.floor(value / resolution) * resolution;
+};
+
 // Util function class (public) properties
 //
 

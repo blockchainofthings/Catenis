@@ -339,12 +339,6 @@ Device.prototype.fixFundAddresses = function () {
                 });
                 devMainAddrDistribFund.totalAmount = devMainAddrDistribFund.totalAmount - devMainAddrBalance;
                 devMainAddrDistribFund.amountPerAddress = Service.distributeDeviceMainAddressDeltaFund(devMainAddrDistribFund.totalAmount);
-
-                // Fix funding of device main addresses
-                fundDeviceAddresses.call(this, devMainAddrDistribFund.amountPerAddress);
-
-                // Make sure that system is properly funded
-                Catenis.ctnHubNode.checkFundingBalance();
             }
             else {
                 // Expected funding amount lower than currently funded amount.
@@ -354,7 +348,62 @@ Device.prototype.fixFundAddresses = function () {
                     expectedFundingAmount: Util.formatCoins(devMainAddrDistribFund.totalAmount),
                     currentFundingAmount: Util.formatCoins(devMainAddrBalance)
                 });
+
+                // Indicates that no additional funding is necessary
+                devMainAddrDistribFund.amountPerAddress = undefined;
             }
+        }
+        else {
+            // Amount funded to device main addresses seems to be OK.
+            //  Indicates that no additional funding is necessary
+            devMainAddrDistribFund.amountPerAddress = undefined;
+        }
+
+        // Check if device asset issuance addresses are already funded
+        const devAssetIssueAddrs = this.assetIssuanceAddr.listAddressesInUse(),
+            devAssetIssueAddrDistribFund = Service.distributeDeviceAssetIssuanceAddressFund();
+
+        // If device asset issuance addresses already exist, check if their balance is as expected
+        const devAssetIssueAddrBalance = devAssetIssueAddrs.length > 0 ? (new FundSource(devAssetIssueAddrs, {})).getBalance(true) : undefined;
+
+        if (devAssetIssueAddrBalance !== undefined && devAssetIssueAddrBalance > 0 && devAssetIssueAddrBalance !== devAssetIssueAddrDistribFund.totalAmount) {
+            // Amount funded to device asset issuance addresses different than expected
+            if (devAssetIssueAddrDistribFund.totalAmount > devAssetIssueAddrBalance) {
+                // Expected funding amount is higher than currently funded amount.
+                //  Allocate amount difference to fix funding of device asset issuance addresses
+                Catenis.logger.WARN('Funding of device asset issuance addresses lower than expected; preparing to fix it', {
+                    deviceId: this.deviceId,
+                    expectedFundingAmount: Util.formatCoins(devAssetIssueAddrDistribFund.totalAmount),
+                    currentFundingAmount: Util.formatCoins(devAssetIssueAddrBalance)
+                });
+                devAssetIssueAddrDistribFund.totalAmount = devAssetIssueAddrDistribFund.totalAmount - devAssetIssueAddrBalance;
+                devAssetIssueAddrDistribFund.amountPerAddress = Service.distributeDeviceAssetIssuanceAddressDeltaFund(devAssetIssueAddrDistribFund.totalAmount);
+            }
+            else {
+                // Expected funding amount lower than currently funded amount.
+                //  Just log inconsistent condition
+                Catenis.logger.WARN('Funding of device asset issuance addresses higher than expected', {
+                    deviceId: this.deviceId,
+                    expectedFundingAmount: Util.formatCoins(devAssetIssueAddrDistribFund.totalAmount),
+                    currentFundingAmount: Util.formatCoins(devAssetIssueAddrBalance)
+                });
+
+                // Indicates that no additional funding is necessary
+                devAssetIssueAddrDistribFund.amountPerAddress = undefined;
+            }
+        }
+        else {
+            // Amount funded to device asset issuance addresses seems to be OK.
+            //  Indicates that no additional funding is necessary
+            devAssetIssueAddrDistribFund.amountPerAddress = undefined;
+        }
+
+        if (devMainAddrDistribFund.amountPerAddress !== undefined || devAssetIssueAddrDistribFund.amountPerAddress !== undefined) {
+            // Fix funding of device main addresses
+            fundDeviceAddresses.call(this, devMainAddrDistribFund.amountPerAddress, devAssetIssueAddrDistribFund.amountPerAddress);
+
+            // Make sure that system is properly funded
+            Catenis.ctnHubNode.checkFundingBalance();
         }
     });
 };
@@ -1337,7 +1386,7 @@ Device.checkDevicesToFund = function () {
     });
 };
 
-Device.checkDevicesMainAddrFunding = function () {
+Device.checkDevicesAddrFunding = function () {
     // Retrieve devices the status of which is neither 'new' nor 'deleted'
     Catenis.db.collection.Device.find({
         $and: [{
@@ -1347,12 +1396,12 @@ Device.checkDevicesMainAddrFunding = function () {
         }]
     }).forEach(doc => {
         try {
-            Catenis.logger.TRACE(util.format('Checking funding of main addresses of existing device (deviceId: %s)', doc.deviceId));
+            Catenis.logger.TRACE(util.format('Checking funding of main and asset issuance addresses of existing device (deviceId: %s)', doc.deviceId));
             (new Device(doc, CatenisNode.getCatenisNodeByIndex(doc.index.ctnNodeIndex).getClientByIndex(doc.index.clientIndex))).fixFundAddresses();
         }
         catch (err) {
             // Error trying to fund addresses of device. Log error condition
-            Catenis.logger.ERROR(util.format('Error checking/fixing funding of main addresses of device (deviceId: %s).', doc.deviceId), err);
+            Catenis.logger.ERROR(util.format('Error checking/fixing funding of main and asset issuance addresses of device (deviceId: %s).', doc.deviceId), err);
         }
     });
 };

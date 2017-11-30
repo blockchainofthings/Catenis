@@ -38,7 +38,7 @@ const cfgSettings = {
 //
 //  Constructor arguments:
 //    docAsset: [Object] - Asset database doc/rec
-function Asset(docAsset) {
+export function Asset(docAsset) {
     this.assetId = docAsset.assetId;
     this.ccAssetId = docAsset.ccAssetId;
     this.type = docAsset.type;
@@ -47,19 +47,19 @@ function Asset(docAsset) {
     this.issuingType = docAsset.issuingType;
 
     if (this.type === Asset.type.system) {
-        this.issuingCtnNode = CatenisNode.getCatenisNodeByIndex(this.issuance.entityId);
+        this.issuingCtnNode = CatenisNode.getCatenisNodeByIndex(docAsset.issuance.entityId);
     }
     else if (this.type === Asset.type.device) {
-        this.issuingDevice = Device.getDeviceByDeviceId(this.issuance.entityId);
+        this.issuingDevice = Device.getDeviceByDeviceId(docAsset.issuance.entityId);
     }
 
     if (this.issuingType === CCTransaction.issuingAssetType.unlocked) {
-        this.issuingAddress = Catenis.keyStore.getCryptoKeysByPath(this.issuance.addrPath).getAddress();
+        this.issuanceAddress = Catenis.keyStore.getCryptoKeysByPath(docAsset.issuance.addrPath).getAddress();
     }
 
     this.divisibility = docAsset.divisibility;
     this.isAggregatable = docAsset.isAggregatable;
-    this.createdData = docAsset.createdData;
+    this.createdDate = docAsset.createdDate;
 }
 
 
@@ -104,7 +104,8 @@ Asset.createAsset = function (ccTransact, name, description) {
         issuingType: ccTransact.issuingInfo.type,
         issuance: {},
         divisibility: ccTransact.issuingInfo.divisibility,
-        isAggregatable: ccTransact.issuingInfo.isAggregatable
+        isAggregatable: ccTransact.issuingInfo.isAggregatable,
+        createdDate: new Date()
     };
 
     docAsset.issuance.entityId = docAsset.type === Asset.type.system ? addrPathParts.ctnNodeIndex
@@ -121,13 +122,13 @@ Asset.createAsset = function (ccTransact, name, description) {
         // Error inserting new Asset database doc/rec.
         //  Log error and throw exception
         Catenis.logger.ERROR('Error trying to create new asset database doc: %j.', docAsset, err);
-        throw new Meteor.Error('ctn_asset_insert_error', util.format('Error trying to create new asset database doc: ', util.inspect(docAsset)), err.stack);
+        throw new Meteor.Error('ctn_asset_insert_error', 'Error trying to create new asset database doc', err.stack);
     }
 
     return docAsset.assetId;
 };
 
-Asset.getAssetIdFromCCTransaction = function (ccTransact) {
+Asset.getAssetIdFromCcTransaction = function (ccTransact) {
     if (ccTransact.issuingInfo) {
         return newAssetId(ccTransact.issuingInfo.ccAssetId);
     }
@@ -145,7 +146,7 @@ Asset.getAssetByAssetId = function (assetId) {
     return new Asset(docAsset);
 };
 
-Asset.getAssetByIssuingAddressPath = function (addrPath) {
+Asset.getAssetByIssuanceAddressPath = function (addrPath) {
     const docAsset = Catenis.db.collection.Asset.findOne({'issuance.addrPath': addrPath});
 
     if (docAsset === undefined) {

@@ -141,7 +141,7 @@ Message {
 
 SentTransaction {
   _id: [string], // MongoDB internal document ID provided by Meteor
-  type: [string], // Identifies the type of transaction that was sent. Valid values (from Catenis.Transaction.type): 'funding', 'send_message', 'log_message', 'read_confirmation', 'issue_locked_asset', 'issue_unlocked_asset', 'transfer_asset'
+  type: [string], // Identifies the type of transaction that was sent. Valid values (from Catenis.Transaction.type): 'funding', 'credit_service_account', 'store_bcot', 'send_message', 'log_message', 'read_confirmation', 'issue_locked_asset', 'issue_unlocked_asset', 'transfer_asset'
   txid: [string], // Blockchain attributed ID (hash) of the sent transaction
   sentDate: [date/time], // Date and time when transaction was sent to the blockchain network
   confirmation: {
@@ -157,6 +157,13 @@ SentTransaction {
         entityId: [string] // Id of the entity associated with the event. Should only exist for 'provision_client_srv_credit' and 'provision_client_device' events. For 'provision_client_srv_credit' events, it refers to the clientId; for 'provision_client_device' events, it refers to the deviceId
       },
       payees: [Array(string)] // Identifies the type of blockchain addresses that receive the funds. Valid values (from Catenis.KeyStore.extKeyType): 'sys_dev_main_addr', 'sys_pay_tx_exp_addr', 'sys_read_conf_pay_tx_exp_addr', 'sys_serv_cred_issu_addr', 'cln_msg_crd_addr', 'cln_asst_crd_addr', 'dev_main_addr', 'dev_asst_issu_addr'
+    },
+    creditServiceAccount: { // Information for credit service account transaction
+      clientId: [string], // External ID of client whose service account is being credited
+      creditedAmount: [number]  // Amount, in Catenis service credit "satoshis", to be credited to client's service account
+    },
+    storeBcot: { // Information for store BCOT transaction
+      storedAmount: [number]  // Amount, in BCOT token "satoshis", stored
     },
     sendMessage: { // Information for send message transactions
       originDeviceId: [string], // External ID of the device that sent the message
@@ -203,7 +210,7 @@ SentTransaction {
 
 ReceivedTransaction {
   _id: [string], // MongoDB internal document ID provided by Meteor
-  type: [string], // Identifies the type of transaction that was received. Valid values (from Catenis.Transaction.type): 'sys_funding', 'send_message', 'read_confirmation', 'transfer_asset'
+  type: [string], // Identifies the type of transaction that was received. Valid values (from Catenis.Transaction.type): 'sys_funding', 'bcot_payment', 'credit_service_account', 'send_message', 'read_confirmation', 'transfer_asset'
   txid: [string], // Blockchain attributed ID (hash) of the received transaction
   receivedDate: [date/time], // Date and time when transaction was received. This is derived from timereceived property returned by gettransaction RPC method
   sentTransaction_id: [string], // MongoDB internal ID of SentTransaction doc/rec which corresponds to this transaction. This field should be filled (exist) for all received transactions that have been sent by this Catenis node. Note that for transactions of the 'sys_funding' type this field must never be filled (exist) since those types of transactions are not sent by the system
@@ -218,6 +225,14 @@ ReceivedTransaction {
         path: [string],     // HD node path of the address
         amount: [number]    // Amount, in satoshis, of funds paid to the specified address
     }],
+    bcotPayment: { // Information for BCOT payment transaction
+      clientId: [string],  // External ID of client for which payment is made
+      paidAmount: [number]  // Amount, in BCOT token "satoshis", paid
+    },
+    creditServiceAccount: { // Information for credit service account transaction
+      clientId: [string], // External ID of client whose service account is being credited
+      creditedAmount: [number]  // Amount, in Catenis service credit "satoshis", to be credited to client's service account
+    },
     sendMessage: { // Information for send message transactions
       originDeviceId: [string], // External ID of the device that sent the message
       targetDeviceId: [string], // External ID of the device that receives the message
@@ -250,18 +265,18 @@ Malleability {
 }
 
 Permission {
-   _id: [string], // MongoDB internal document ID provided by Meteor
-   event: [string], // Name of event for which permission is being defined. Valid values (from Permission.event): 'receive_notify_new_msg', 'receive_notify_msg_read', 'send_read_msg_confirm', 'receive_msg'
-   subjectEntityType: [string],  // The type of the subject entity: either 'client' or 'device'
-   subjectEntityId: [string], // ID of device that functions as the subject of the action associated with the event for which permission is being defined (subjectEntityType = 'device'),
-                              //  or ID of client for which default permission for all its devices is being set (subjectEntityType = 'client')
-   level: [string], // Designates upon which devices the permission right should be applied. Valid values (from Permission.level): '1.device', '2.client', '3.catenis_node', '4.system'
-   objectEntityId: [string], // Identifies the device that functions as the object of the action associated with the event and upon which the permission right should be applied
-                             //  If level = 'device', it should contain a device ID, and the permission right applies to a given device.
-                             //  If level = 'client', it should contain a client ID, and the permission right applies to any devices that belongs to that client.
-                             //  If level = 'catenisNode', it should contain a Catenis Node index, and the permission right applies to any devices that belong to any clients that pertain to that Catenis node.
-                             //  If level = 'system', this field should not exist, and the permission right applies to any devices
-   right: [string]  // The permission right that should be applied: allow, deny
+  _id: [string], // MongoDB internal document ID provided by Meteor
+  event: [string], // Name of event for which permission is being defined. Valid values (from Permission.event): 'receive_notify_new_msg', 'receive_notify_msg_read', 'send_read_msg_confirm', 'receive_msg'
+  subjectEntityType: [string],  // The type of the subject entity: either 'client' or 'device'
+  subjectEntityId: [string], // ID of device that functions as the subject of the action associated with the event for which permission is being defined (subjectEntityType = 'device'),
+                             //  or ID of client for which default permission for all its devices is being set (subjectEntityType = 'client')
+  level: [string], // Designates upon which devices the permission right should be applied. Valid values (from Permission.level): '1.device', '2.client', '3.catenis_node', '4.system'
+  objectEntityId: [string], // Identifies the device that functions as the object of the action associated with the event and upon which the permission right should be applied
+                            //  If level = 'device', it should contain a device ID, and the permission right applies to a given device.
+                            //  If level = 'client', it should contain a client ID, and the permission right applies to any devices that belongs to that client.
+                            //  If level = 'catenisNode', it should contain a Catenis Node index, and the permission right applies to any devices that belong to any clients that pertain to that Catenis node.
+                            //  If level = 'system', this field should not exist, and the permission right applies to any devices
+  right: [string]  // The permission right that should be applied: allow, deny
 }
 
 Asset {
@@ -280,4 +295,41 @@ Asset {
   divisibility: [number],  // Number of decimal places allowed for representing quantities of this asset
   isAggregatable: [boolean],  // Indicates whether quantities of the asset from different UTXOs can be combined
   createdDate: [date/time],  // Date and time when doc/rec has been created
+}
+
+BcotExchangeRate {
+  _id: [string],  // MongoDB internal document ID provided by Meteor
+  exchangeRate: [number],  // Bitcoin to BCOT token exchange rate
+  date: [date/time],  // Date and time when exchange rate has been recorded
+  createdDate: [date/time]  // Date and time when doc/rec has been created
+}
+
+Billing {
+  _id: [string],  // MongoDB internal document ID provided by Meteor
+  clientId: [string],  // ID of client to which service is charged
+  deviceId: [string],  // ID of device that actually consumed the service
+  billingMode: [string],  // Billing mode used for charging the service. Available values (from Client.billingMode): 'pre-paid', 'post-paid'
+  service: [string],  // Name of the consumed service. Available values (from Service.clientPaidService): 'log_message', 'send_message', 'send_msg_read_confirm', 'issue_locked_asset', 'issue_unlocked_asset', 'transfer_asset'
+  serviceDate: [date/time],  // Date and time when service has been consumed
+  serviceTx: {  // Catenis transaction used to convey the consumed service
+    txid: [string],  // Blockchain attributed ID (hash) of service transaction
+    fee: [number]   // Amount, in satoshis, paid as fee for the service transaction
+    complementaryTx: {  // Catenis transaction that complements the service transaction. This field should only exist if the service transaction requires a complementary transaction, which is currently only true for 'send_msg_read_confirm' service.
+                        //  It is mainly used to record the read confirmation transaction for 'send_msg_read_confirm' service.
+      txid: [string],  // // Blockchain attributed ID (hash) of the complementary (read confirmation) transaction
+      confirmed: [boolean],  // Indicates whether complementary transaction has already been confirmed
+      fee: [number]  // Amount, in satoshis, paid as fee for the complementary (read confirmation) credit transaction.
+                     //  Note: since read confirmation transactions make use RBF (replace by fee), the actual fee spent is only obtained after the transaction is confirmed
+    }
+  },
+  serviceCost: [number],  // Cost, in satoshis, charged for the service
+  btcBcotExchangeRate: [number],  // Bitcoin to BCOT token exchange rate used
+  serviceCreditsCharged: [number],  // Amount, in Catenis service credits, charged for the service
+  serviceCreditTx: {  // Catenis transaction used to debit service credits from client's service account
+    txid: [string],  // Blockchain attributed ID (hash) of transaction created to record the message
+    confirmed: [boolean],  // Indicates whether service credit transaction has already been confirmed
+    fee: [number]  // Amount, in satoshis, paid as fee for the service credit transaction.
+                   //  Note: since service credit transactions make use RBF (replace by fee), the actual fee spent is only obtained after the transaction is confirmed
+  },
+  createdDate: [date/time]  // Date and time when doc/rec has been created
 }
