@@ -126,7 +126,7 @@ CCMetadataClient.prototype.shareMetadata = function (torrentHash) {
     const path = cfgSettings.methodPath.shareMetadata + '?torrentHash=' + torrentHash;
 
     try {
-        return getRequest.call(this, path);
+        getRequest.call(this, path);
     }
     catch (err) {
         handleError('shareMetadata', err);
@@ -284,6 +284,9 @@ function sendRequest(method, path, body, isPublic, callback) {
                         }
                         catch (err) {
                             // Error trying to parse returned data. Return error
+                            Catenis.logger.ERROR('CCMetadataClient - Error parsing data returned from request', {
+                                receivedData: receivedData
+                            });
                             callback(new Error(util.format('Error parsing returned data: [%s] - %s', err.name, err.message)));
                             return;
                         }

@@ -329,6 +329,15 @@ CCMetadata.prototype.store = function () {
             catch (err) {
                 Catenis.logger.ERROR('Error while storing Colored Coins metadata.', err);
             }
+
+            if (this.storeResult !== undefined) {
+                try {
+                    Catenis.ccMdClient.shareMetadata(this.storeResult.torrentHash);
+                }
+                catch (err) {
+                    Catenis.logger.ERROR('Error while sharing Colored Coins metadata.', err);
+                }
+            }
         }
         else {
             Catenis.logger.WARN('No Colored Coins metadata to store');
