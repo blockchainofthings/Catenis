@@ -153,10 +153,10 @@ SentTransaction {
   info: {  // Specific information about the transaction according to its type
     funding: {  // Information for funding transactions
       event: {
-        name: [string], // Identifies the event that triggered the funding action. Valid values (from Catenis.FundTransaction.fundingEvent): 'provision_system_device', 'provision_service_credit_issuance', 'provision_client_srv_credit', 'provision_client_device', 'add_extra_tx_pay_funds', 'add_extra_read_confirm_tx_pay_funds'
-        entityId: [string] // Id of the entity associated with the event. Should only exist for 'provision_client_srv_credit' and 'provision_client_device' events. For 'provision_client_srv_credit' events, it refers to the clientId; for 'provision_client_device' events, it refers to the deviceId
+        name: [string], // Identifies the event that triggered the funding action. Valid values (from Catenis.FundTransaction.fundingEvent): 'provision_system_device', 'provision_service_credit_issuance', 'provision_client_device', 'add_extra_service_payment_tx_pay_funds', 'add_extra_tx_pay_funds', 'add_extra_read_confirm_tx_pay_funds'
+        entityId: [string] // Id of the entity associated with the event. Should only exist for 'provision_client_device' events, and it refers to the deviceId
       },
-      payees: [Array(string)] // Identifies the type of blockchain addresses that receive the funds. Valid values (from Catenis.KeyStore.extKeyType): 'sys_dev_main_addr', 'sys_pay_tx_exp_addr', 'sys_read_conf_pay_tx_exp_addr', 'sys_serv_cred_issu_addr', 'cln_msg_crd_addr', 'cln_asst_crd_addr', 'dev_main_addr', 'dev_asst_issu_addr'
+      payees: [Array(string)] // Identifies the type of blockchain addresses that receive the funds. Valid values (from Catenis.KeyStore.extKeyType): 'sys_dev_main_addr', 'sys_pay_tx_exp_addr', 'sys_read_conf_pay_tx_exp_addr', 'sys_serv_cred_issu_addr', 'sys_serv_pymt_pay_tx_exp_addr', 'cln_msg_crd_addr', 'cln_asst_crd_addr', 'dev_main_addr', 'dev_asst_issu_addr'
     },
     creditServiceAccount: { // Information for credit service account transaction
       clientId: [string], // External ID of client whose service account is being credited
@@ -322,11 +322,13 @@ Billing {
                      //  Note: since read confirmation transactions make use RBF (replace by fee), the actual fee spent is only obtained after the transaction is confirmed
     }
   },
-  serviceCost: [number],  // Cost, in satoshis, charged for the service
-  btcBcotExchangeRate: [number],  // Bitcoin to BCOT token exchange rate used
-  serviceCreditsCharged: [number],  // Amount, in Catenis service credits, charged for the service
-  serviceCreditTx: {  // Catenis transaction used to debit service credits from client's service account
-    txid: [string],  // Blockchain attributed ID (hash) of transaction created to record the message
+  estimatedServiceCost: [number], - Estimated cost, in satoshis, of the service
+  priceMarkup: [number], - Markup used to calculate the price of the service
+  exchangeRate: [number], - Bitcoin to BCOT token exchange rate used to calculate final price
+  finalServicePrice: [number] - Price charged for the service expressed in Catenis service credit's lowest units
+  servicePaymentTx: {  // Catenis transaction used to pay for service
+    txid: [string],  // Blockchain attributed ID (hash) of transaction used to pay for service expense.
+                     //  Can be either a Spend Service Credit tx or a Debit Service Account tx, depending if the billing mode is 'pre-paid' or 'post-paid' respectively
     confirmed: [boolean],  // Indicates whether service credit transaction has already been confirmed
     fee: [number]  // Amount, in satoshis, paid as fee for the service credit transaction.
                    //  Note: since service credit transactions make use RBF (replace by fee), the actual fee spent is only obtained after the transaction is confirmed

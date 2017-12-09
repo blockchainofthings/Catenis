@@ -88,7 +88,7 @@
       "systemReadConfSpendNull": 900,
       "systemReadConfPayTxExpense": 900,
       "systemServCredIssuing": 0,   // Indicates that addresses of this type should never expire
-      "systemServCredPayTxExpense": 900,
+      "systemServPymtPayTxExpense": 900,
       "systemMultiSigSignee": 900,
       "clientServAccCreditLine": 900,
       "clientServAccDebitLine": 900,
@@ -113,7 +113,7 @@
   "service": {
     "priceMarkup": 0.35,  // Markup used to calculate the service price
     "servicePriceResolution": 100,  // Resolution of service prices. In other words, the price of the services (expressed in Catenis service credit's lowest units) should be a multiple of that value
-    "paymentResolution": 1000,  // Resolution of amount that should be allocated to pay for tx expenses. In other words, the allocated amount should be a multiple of that amount
+    "paymentResolution": 1000,  // Resolution of amount, in satoshis, that should be allocated to pay for tx expenses. In other words, the allocated amount should be a multiple of that amount
     "systemFunding": {
       "clientsToFund": 10,  // Number of clients to consider when calculating total amount to fund
       "devicesPerClientToFund": 10,  // Number of devices per client to consider when calculating total amount to fund
@@ -142,8 +142,8 @@
       "balanceSafetyFactor": 0.15, // Safety factor to use when calculating balance
       "minBalanceSysMessages": 30,  // Number of messages that system can send used to calculate minimum balance threshold
       "minBalanceServicesPerDevice": 30,  // Number of services a device can consume used to calculate minimum balance threshold
-      "sysMessagesToFund": 60,  // Number of messages that system can send to consider when calculating total amount to fund
-      "devicesToFund": 100  // Number of devices to consider when calculating total amount to fund
+      "sysMessagesToFund": 10,  // Number of messages that system can send to consider when calculating total amount to fund
+      "devicesToFund": 10  // Number of devices to consider when calculating total amount to fund
     },
     "readConfirmPayTxExpenseFunding": {
       // NOTE: unitAmount (amount, in satoshis, equivalent to one unit of funding) is dynamically calculated
@@ -153,6 +153,46 @@
       "balanceSafetyFactor": 0.15, // Safety factor to use when calculating balance
       "minBalanceMessagesToConfirm": 50,  // Number of messages to confirm used to calculate minimum balance threshold
       "messagesToConfirmToFund": 100  // Number of messages to confirm to consider when calculating total amount to fund
+    },
+    "servicePaymentPayTxExpenseFunding": {
+      // NOTE: unitAmount (amount, in satoshis, equivalent to one unit of funding) is dynamically calculated
+      "unitAmountSafetyFactor": 0,  // Safety factor to use when calculating funding unit amount
+      "maxUnitsPerAddr": 50,  // Maximum number of units of funding that should be accumulated into a single UTXO/address (there should be a single UTXO per address)
+      "minAddrsToFund": 10,  // Number of UTXOs/addresses that should be funded before start accumulating funding units into a single UTXO/address (there should be a single UTXO per address)
+      "balanceSafetyFactor": 0.15, // Safety factor to use when calculating balance
+      "minBalancePrePaidServices": 50,  // Number of services to be pre-paid used to calculate minimum balance threshold
+      "minBalancePostPaidServices": 100,  // Number of services to be post-paid used to calculate minimum balance threshold
+      "servicesToPayToFund": 300  // Number of services to pay to consider when calculating total amount to fund
+    },
+    "servicePayment": {
+      "paymentResolution": 10,  // Resolution of amount, in satoshis, that should be allocated to pay for the expenses of transactions realted to service payment. In other words, the allocated amount should be a multiple of this amount
+      // To be used with pre-paid clients
+      "spendServiceCredit": {
+        "initNumTxInputs": 2,         // Initial number of inputs of a spend service credit transaction (1 client service account credit line, 1 service payment pay tx expense)
+        "initNumTxOutputs": 2,        // Initial number of outputs of a spend service credit transaction (1 client service account credit line change, 1 service payment pay tx expense change)
+        "initNumPubKeysMultiSigTxOutputs": [],  // List with initial number of public keys per multi-signatures outputs in spend service credit transaction
+        "txNullDataPayloadSize": 80,  // Size, in bytes, of payload of null data output in spend service credit transaction
+        "maxNumClients": 12,  // Maximum number of clients for which services are paid in a spend service credit transaction
+        "servsDistribPerClient": 2,  // Number of services that should be assigned to same client before proceeding to next client
+        "maxServsPerClientInput": 25,  // Maximum number of services that can be paid for each client service account credit line address input
+        "numClientsMultiSigOutput": 4,  // Required number of clients for (the only) multi-signature output to be added to spend service credit transaction
+        "percMaxUnitsPayTxExp": 0.4,  // Percentage of max units per pay tx expense address input that should be considered available
+        "initTxFeeRate": 1,  // Amount, in satoshis/byte, for the initial fee rate for a spend service credit transaction
+        "txFeeRateIncrement": 1  // Amount, in satoshis/byte, that transaction feed rate should be incremented for the new replacement transaction
+      },
+      // To be used with post-paid clients
+      "debitServiceAccount": {
+        "initNumTxInputs": 2,         // Initial number of inputs of a debit service account transaction (1 service credit issuance, 1 service payment pay tx expense)
+        "initNumTxOutputs": 4,        // Initial number of outputs of a debit service account transaction (1 client service account debit line, 1 service credit issuance refund, 1 service credit issuance change, 1 service payment pay tx expense change)
+        "initNumPubKeysMultiSigTxOutputs": [],  // List with initial number of public keys per multi-signatures outputs in debit service account transaction
+        "txNullDataPayloadSize": 80,  // Size, in bytes, of payload of null data output in debit service account transaction
+        "maxNumClients": 11,  // Maximum number of clients for which services are paid in a debit service account transaction
+        "servsDistribPerClient": 2,  // Number of services that should be assigned to same client before proceeding to next client
+        "numClientsMultiSigOutput": 4,  // Required number of clients for (the only) multi-signature output to be added to debit service account transaction
+        "percMaxUnitsPayTxExp": 0.5,  // Percentage of max units per pay tx expense address input that should be considered available
+        "initTxFeeRate": 1,  // Amount, in satoshis/byte, for the initial fee rate for a debit service account transaction
+        "txFeeRateIncrement": 1  // Amount, in satoshis/byte, that transaction feed rate should be incremented for the new replacement transaction
+      }
     },
     "sysMessage": {
       "messagesPerMinute": 4,  // Number of system messages sents per minute that is expected to be sustained
@@ -182,12 +222,13 @@
         "minAddrsToFund": 10  // Number of UTXOs/addresses that should be funded before start accumulating funding units into a single UTXO/address (there should be a single UTXO per address)
       },
       "readConfirmation": {
-        "paymentResolution": 10,  // Resolution of amount that should be allocated to pay for read confirmation tx expenses. In other words, the allocated amount should be a multiple of the amount
+        "paymentResolution": 10,  // Resolution of amount, in satoshis, that should be allocated to pay for read confirmation tx expenses. In other words, the allocated amount should be a multiple of this amount
         "initNumTxInputs": 2,         // Initial number of inputs of a read confirmation transaction (1 to spend a read confirmation output, 1 to pay for tx expense)
         "initNumTxOutputs": 2,        // Initial number of outputs of a read confirmation transaction (1 to receive payment of read confirmation output spent, 1 to receive change)
         "txNullDataPayloadSize": 0,  // Size, in bytes, of payload of null data output in read confirmation transaction
         "txInputOutputGrowthRatio": 10, // Number representing how many additional inputs needs to be added to the a read confirmation tx for a new output to be added
                                         // NOTE: these additional outputs should account for read confirmation outputs spent to notify devices that belong to a different Catenis node
+        "percMaxUnitsPayTxExp": 0.5,  // Percentage of max units per pay tx expense address input that should be considered available
         "initTxFeeRate": 1,  // Amount, in satoshis/byte, for the initial fee rate for a read confirmation transaction
         "txFeeRateIncrement": 1,  // Amount, in satoshis/byte, that transaction feed rate should be incremented for the new replacement transaction
         "terminalReadConfirmTx": {

@@ -1378,6 +1378,10 @@ TransactionMonitor.notifyEvent = Object.freeze({
         name: 'funding_provision_client_device_tx_conf',
         description: 'Funding transaction sent for provisioning a device for a client has been confirmed'
     }),
+    funding_add_extra_service_payment_tx_pay_funds_tx_conf: Object.freeze({
+        name: 'funding_add_extra_service_payment_tx_pay_funds_tx_conf',
+        description: 'Funding transaction sent for adding funds to pay for service payment transaction expenses has been confirmed'
+    }),
     funding_add_extra_tx_pay_funds_tx_conf: Object.freeze({
         name: 'funding_add_extra_tx_pay_funds_tx_conf',
         description: 'Funding transaction sent for adding funds to pay for transaction expenses has been confirmed'

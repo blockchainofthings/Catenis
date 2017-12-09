@@ -1115,13 +1115,21 @@ Transaction.computeTransactionSize = function (nInputs, nOutputs, nullDataPayloa
         numPubKeysMultiSigOutputs = !Array.isArray(numPubKeysMultiSigOutputs) ? [numPubKeysMultiSigOutputs] : numPubKeysMultiSigOutputs;
 
         numPubKeysMultiSigOutputs.forEach((numPubKeys) => {
-            // Note: the last expression in parenthesis accounts for the number of bytes
-            //  required to express the size of the script itself
-            sizeMultiSigOutputs += 12 + (numPubKeys * (cfgSettings.pubKeySize + 1)) + (numPubKeys > 7 ? 1 : 0);
+            sizeMultiSigOutputs += Transaction.multiSigOutputSize(numPubKeys);
         });
     }
 
-    return nInputs * cfgSettings.txInputSize + nOutputs * cfgSettings.txOutputSize + (nullDataPayloadSize > 0 ? (nullDataPayloadSize <= 75 ? 11 :13) + nullDataPayloadSize : 0) + sizeMultiSigOutputs + 10;
+    return nInputs * cfgSettings.txInputSize + nOutputs * cfgSettings.txOutputSize + Transaction.nullDataOutputSize(nullDataPayloadSize) + sizeMultiSigOutputs + 10;
+};
+
+Transaction.multiSigOutputSize = function (numPubKeys) {
+    // Note: the last expression in parenthesis accounts for the number of bytes
+    //  required to express the size of the script itself
+    return 12 + (numPubKeys * (cfgSettings.pubKeySize + 1)) + (numPubKeys > 7 ? 1 : 0);
+};
+
+Transaction.nullDataOutputSize = function (payloadSize) {
+    return payloadSize > 0 ? (payloadSize <= 75 ? 11 :13) + payloadSize : 0;
 };
 
 // Reconstruct transaction object from a serialized string
@@ -1733,10 +1741,10 @@ Transaction.ioToken = Object.freeze({
         token: '<p2_sys_serv_cred_issu_addr>',
         description: 'Output (or input spending such output) paying to a system service credit issuance address'
     }),
-    p2_sys_serv_cred_pay_tx_exp_addr: Object.freeze({
-        name: 'p2_sys_serv_cred_pay_tx_exp_addr',
-        token: '<p2_sys_serv_cred_pay_tx_exp_addr>',
-        description: 'Output (or input spending such output) paying to a system service credit pay tx expense address'
+    p2_sys_serv_pymt_pay_tx_exp_addr: Object.freeze({
+        name: 'p2_sys_serv_pymt_pay_tx_exp_addr',
+        token: '<p2_sys_serv_pymt_pay_tx_exp_addr>',
+        description: 'Output (or input spending such output) paying to a system service payment pay tx expense address'
     }),
     p2_sys_msig_sign_addr: Object.freeze({
         name: 'p2_sys_msig_sign_addr',

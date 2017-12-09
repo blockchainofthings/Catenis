@@ -1718,6 +1718,12 @@ function fundingOfAddressesConfirmed(data) {
         if (device.status === Device.status.pending.name) {
             // Activate device
             activateDevice.call(device, data.txid);
+
+            // Execute code in critical section to avoid UTXOs concurrency
+            FundSource.utxoCS.execute(() => {
+                // Make sure that system pay tx expense addresses are properly funded
+                device.client.ctnNode.checkPayTxExpenseFundingBalance();
+            });
         }
         else {
             // Log unexpected condition

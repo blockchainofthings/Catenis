@@ -279,7 +279,7 @@ Client.prototype.delete = function (deletedDate) {
             delField = {};
 
         if (docClient.user_id !== undefined) {
-            del.user_id = docClient.user_id;
+            delField.user_id = docClient.user_id;
         }
 
         delField.status = docClient.status;
@@ -333,13 +333,13 @@ Client.prototype.serviceAccountBalance = function (credFundSource, debtFundSourc
             credFundSource = new CCFundSource(servCredAsset.ccAssetId, this.servAccCreditLineAddr.listAddressesInUse(), {});
         }
 
-        balance = credFundSource.getBalance(false);
+        balance = credFundSource.getBalance();
 
         if (debtFundSource === undefined) {
             debtFundSource = new CCFundSource(servCredAsset.ccAssetId, this.servAccDebitLineAddr.listAddressesInUse(), {})
         }
 
-        balance -= debtFundSource.getBalance(false);
+        balance -= debtFundSource.getBalance();
     }
 
     return balance;
@@ -686,6 +686,14 @@ Client.activePrePaidClientsCount = function () {
 
 Client.activePostPaidClientsCount = function () {
     return Client.activeClientsCount(Client.billingMode.postPaid);
+};
+
+// Returns total balance of all client's service account credit line
+//
+//  Return:
+//   balance: [Number] - Amount, in Catenis service credit lowest unit, corresponding to the current balance
+Client.allClientsServiceAccountCreditLineBalance = function () {
+    return new CCFundSource(Catenis.ctnHubNode.getServiceCreditAsset().ccAssetId, Catenis.keyStore.listAllClientServiceAccountCreditLineAddressesInUse(), {}).getBalance();
 };
 
 // Check if a given client exists

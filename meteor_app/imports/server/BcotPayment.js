@@ -189,6 +189,11 @@ function bcotPaymentConfirmed(data) {
                 // Rethrows exception
                 throw err;
             }
+
+            if (bcotPayTransact.client.billingMode === Client.billingMode.prePaid) {
+                // Make sure that system service payment pay tx expense addresses are properly funded
+                bcotPayTransact.client.ctnNode.checkServicePaymentPayTxExpenseFundingBalance();
+            }
         });
     }
     catch (err) {

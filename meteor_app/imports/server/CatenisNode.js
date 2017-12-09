@@ -39,7 +39,7 @@ import {
     SystemReadConfirmSpendNullAddress,
     SystemReadConfirmPayTxExpenseAddress,
     SystemServiceCreditIssuingAddress,
-    SystemServiceCreditPayTxExpenseAddress,
+    SystemServicePaymentPayTxExpenseAddress,
     SystemMultiSigSigneeAddress
 } from './BlockchainAddress';
 import {
@@ -111,7 +111,7 @@ export class CatenisNode extends events.EventEmitter {
         this.readConfirmSpendNullAddr = SystemReadConfirmSpendNullAddress.getInstance(this.ctnNodeIndex);
         this.readConfirmPayTxExpenseAddr = SystemReadConfirmPayTxExpenseAddress.getInstance(this.ctnNodeIndex);
         this.servCredIssueAddr = SystemServiceCreditIssuingAddress.getInstance(this.ctnNodeIndex);
-        this.servCredPayTxExpenseAddr = SystemServiceCreditPayTxExpenseAddress.getInstance(this.ctnNodeIndex);
+        this.servPymtPayTxExpenseAddr = SystemServicePaymentPayTxExpenseAddress.getInstance(this.ctnNodeIndex);
         this.multiSigSigneeAddr = SystemMultiSigSigneeAddress.getInstance(this.ctnNodeIndex);
 
         // Retrieve (HD node) index of last Client doc/rec created for this Catenis node
@@ -195,6 +195,12 @@ CatenisNode.prototype.startNode = function () {
 
         // Make sure that system service credit issuance is properly provisioned
         this.checkServiceCreditIssuanceProvision();
+
+        // Make sure that system service payment pay tx expense addresses are properly funded
+        this.checkServicePaymentPayTxExpenseFundingBalance();
+
+        // Make sure that system pay tx expense addresses are properly funded
+        this.checkPayTxExpenseFundingBalance();
 
         // Make sure that system read confirmation pay tx expense addresses are properly funded
         this.checkReadConfirmPayTxExpenseFundingBalance();
@@ -293,6 +299,27 @@ CatenisNode.prototype.checkServiceCreditIssuanceProvision = function () {
 
 // NOTE: make sure that this method is called from code executed from the FundSource.utxoCS
 //  critical section object
+CatenisNode.prototype.checkServicePaymentPayTxExpenseFundingBalance = function () {
+    const servPymtPayTxBalanceInfo = new BalanceInfo(Service.getExpectedServicePaymentPayTxExpenseBalance(),
+        this.servPymtPayTxExpenseAddr.listAddressesInUse(), {
+            safetyFactor: Service.servicePaymentPayTxExpBalanceSafetyFactor
+        });
+
+    if (servPymtPayTxBalanceInfo.hasLowBalance()) {
+        // Prepare to refund system service payment pay tx expense addresses
+
+        // Distribute funds to be allocated
+        const distribFund = Service.distributeServicePaymentPayTxExpenseFund(servPymtPayTxBalanceInfo.getBalanceDifference());
+
+        // And try to fund system service payment pay tx expense addresses
+        this.fundServicePaymentPayTxExpenseAddresses(distribFund.amountPerAddress);
+    }
+
+    return servPymtPayTxBalanceInfo.hasLowBalance();
+};
+
+// NOTE: make sure that this method is called from code executed from the FundSource.utxoCS
+//  critical section object
 CatenisNode.prototype.checkReadConfirmPayTxExpenseFundingBalance = function () {
     const readConfirmPayTxBalanceInfo = new BalanceInfo(Service.getExpectedReadConfirmPayTxExpenseBalance(this.currentUnreadMessagesCount()),
         this.readConfirmPayTxExpenseAddr.listAddressesInUse(), {
@@ -302,10 +329,10 @@ CatenisNode.prototype.checkReadConfirmPayTxExpenseFundingBalance = function () {
     if (readConfirmPayTxBalanceInfo.hasLowBalance()) {
         // Prepare to refund system read confirmation pay tx expense addresses
 
-        // Allocate system read confirmation pay tx expense addresses...
+        // Distribute funds to be allocated
         const distribFund = Service.distributeReadConfirmPayTxExpenseFund(readConfirmPayTxBalanceInfo.getBalanceDifference());
 
-        // ...and try to fund them
+        // And try to fund system read confirmation pay tx expense addresses
         this.fundReadConfirmPayTxExpenseAddresses(distribFund.amountPerAddress);
     }
 
@@ -681,6 +708,43 @@ CatenisNode.prototype.provisionServiceCreditIssuance = function (amountPerUtxo) 
         // Error provisioning system for service credit issuance.
         //  Log error condition
         Catenis.logger.ERROR('Error provisioning system for service credit issuance.', err);
+
+        // Rethrows exception
+        throw err;
+    }
+};
+
+// NOTE: make sure that this method is called from code executed from the FundSource.utxoCS
+//  critical section object
+CatenisNode.prototype.fundServicePaymentPayTxExpenseAddresses = function (amountPerAddress) {
+    let fundTransact = undefined;
+
+    try {
+        // Prepare transaction to fund system service payment pay tx expense addresses
+        fundTransact = new FundTransaction(FundTransaction.fundingEvent.add_extra_service_payment_tx_pay_funds);
+
+        fundTransact.addPayees(this.servPymtPayTxExpenseAddr, amountPerAddress);
+
+        if (fundTransact.addPayingSource()) {
+            // Now, issue (create and send) the transaction
+            fundTransact.sendTransaction();
+        }
+        else {
+            // Could not allocated UTXOs to pay for transaction fee.
+            //  Throw exception
+            //noinspection ExceptionCaughtLocallyJS
+            throw new Meteor.Error('ctn_sys_no_fund', 'Could not allocate UTXOs from system funding addresses to pay for tx expense');
+        }
+    }
+    catch (err) {
+        // Error funding system service payment pay tx expense addresses.
+        //  Log error condition
+        Catenis.logger.ERROR('Error funding system service payment pay tx expense addresses.', err);
+
+        if (fundTransact !== undefined) {
+            // Revert addresses of payees added to transaction
+            fundTransact.revertPayeeAddresses();
+        }
 
         // Rethrows exception
         throw err;

@@ -198,6 +198,10 @@ FundTransaction.fundingEvent = Object.freeze({
         name: 'provision_client_device',
         description: 'Provision of client device'
     }),
+    add_extra_service_payment_tx_pay_funds: Object.freeze({
+        name: 'add_extra_service_payment_tx_pay_funds',
+        description: 'Add extra fund for service payment pay tx expense'
+    }),
     add_extra_tx_pay_funds: Object.freeze({
         name: 'add_extra_tx_pay_funds',
         description: 'Add extra fund for pay tx expense'

@@ -1146,9 +1146,10 @@ function TransactIdChanged(data) {
 
 function initReadConfirmTxInfo() {
     const opts = {
+        paymentResolution: Service.readConfirmPaymentResolution,
         initNumTxInputs: this.transact.countInputs(),
         initNumTxOutputs: this.transact.countOutputs(),
-        txNullDataPayloadSize: Service.readConfirmTxNullDataPayloadSize,
+        initTxNullDataPayloadSize: Service.readConfirmTxNullDataPayloadSize,
         txFeeRateIncrement: Service.readConfirmTxFeeRateIncrement
     };
 

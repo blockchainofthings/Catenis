@@ -41,7 +41,7 @@ const cfgSettings = {
         systemReadConfSpendNull: configBcAddrValidity.get('systemReadConfSpendNull'),
         systemReadConfPayTxExpense: configBcAddrValidity.get('systemReadConfPayTxExpense'),
         systemServCredIssuing: configBcAddrValidity.get('systemServCredIssuing'),
-        systemServCredPayTxExpense: configBcAddrValidity.get('systemServCredPayTxExpense'),
+        systemServPymtPayTxExpense: configBcAddrValidity.get('systemServPymtPayTxExpense'),
         systemMultiSigSignee: configBcAddrValidity.get('systemMultiSigSignee'),
         deviceReadConfirm: configBcAddrValidity.get('deviceReadConfirm'),
         clientServAccCreditLine: configBcAddrValidity.get('clientServAccCreditLine'),
@@ -498,24 +498,24 @@ export class SystemServiceCreditIssuingAddress extends BlockchainAddress {
     }
 }
 
-// SystemServiceCreditPayTxExpenseAddress derived class
-export class SystemServiceCreditPayTxExpenseAddress extends BlockchainAddress {
+// SystemServicePaymentPayTxExpenseAddress derived class
+export class SystemServicePaymentPayTxExpenseAddress extends BlockchainAddress {
     constructor (ctnNodeIndex) {
         super();
-        this.type = KeyStore.extKeyType.sys_serv_cred_pay_tx_exp_addr.name;
-        this.parentPath = KeyStore.systemServiceCreditPayTxExpenseRootPath(ctnNodeIndex);
+        this.type = KeyStore.extKeyType.sys_serv_pymt_pay_tx_exp_addr.name;
+        this.parentPath = KeyStore.systemServicePaymentPayTxExpenseRootPath(ctnNodeIndex);
 
         // Make sure that an object of this class has not been instantiated yet
         if (hasInstantiatedObject(this.parentPath)) {
-            Catenis.logger.ERROR(util.format('SystemServiceCreditPayTxExpenseAddress object for the given Catenis node index (%d) has already been instantiated', ctnNodeIndex));
-            throw new Error(util.format('SystemServiceCreditPayTxExpenseAddress object for the given Catenis node index (%d) has already been instantiated', ctnNodeIndex));
+            Catenis.logger.ERROR(util.format('SystemServicePaymentPayTxExpenseAddress object for the given Catenis node index (%d) has already been instantiated', ctnNodeIndex));
+            throw new Error(util.format('SystemServicePaymentPayTxExpenseAddress object for the given Catenis node index (%d) has already been instantiated', ctnNodeIndex));
         }
 
-        this.addressValidity = cfgSettings.addressValidity.systemServCredPayTxExpense;
+        this.addressValidity = cfgSettings.addressValidity.systemServPymtPayTxExpense;
 
         // Assign address manipulation functions
-        this._getAddressKeys = Catenis.keyStore.getSystemServiceCreditPayTxExpenseAddressKeys.bind(Catenis.keyStore, ctnNodeIndex);
-        this._listAddressesInUse = Catenis.keyStore.listSystemServiceCreditPayTxExpenseAddressesInUse.bind(Catenis.keyStore, ctnNodeIndex);
+        this._getAddressKeys = Catenis.keyStore.getSystemServicePaymentPayTxExpenseAddressKeys.bind(Catenis.keyStore, ctnNodeIndex);
+        this._listAddressesInUse = Catenis.keyStore.listSystemServicePaymentPayTxExpenseAddressesInUse.bind(Catenis.keyStore, ctnNodeIndex);
 
         // Initialize bounding indices
         setBoundingIndices.call(this);
@@ -539,10 +539,10 @@ export class SystemServiceCreditPayTxExpenseAddress extends BlockchainAddress {
         }
 
         // Check if an instance of this class has already been instantiated
-        const parentPath = KeyStore.systemServiceCreditPayTxExpenseRootPath(ctnNodeIndex);
+        const parentPath = KeyStore.systemServicePaymentPayTxExpenseRootPath(ctnNodeIndex);
 
         return hasInstantiatedObject(parentPath) ? getInstantiatedObject(parentPath)
-            : new SystemServiceCreditPayTxExpenseAddress(ctnNodeIndex);
+            : new SystemServicePaymentPayTxExpenseAddress(ctnNodeIndex);
     }
 }
 
@@ -1763,7 +1763,7 @@ const classByType = {
     sys_read_conf_spnd_null_addr: SystemReadConfirmSpendNullAddress,
     sys_read_conf_pay_tx_exp_addr: SystemReadConfirmPayTxExpenseAddress,
     sys_serv_cred_issu_addr: SystemServiceCreditIssuingAddress,
-    sys_serv_cred_pay_tx_exp_addr: SystemServiceCreditPayTxExpenseAddress,
+    sys_serv_pymt_pay_tx_exp_addr: SystemServicePaymentPayTxExpenseAddress,
     sys_msig_sign_addr: SystemMultiSigSigneeAddress,
     cln_srv_acc_cred_ln_addr: ClientServiceAccountCreditLineAddress,
     cln_srv_acc_debt_ln_addr: ClientServiceAccountDebitLineAddress,
@@ -1801,7 +1801,7 @@ Object.freeze(SystemReadConfirmSpendOnlyAddress);
 Object.freeze(SystemReadConfirmSpendNullAddress);
 Object.freeze(SystemReadConfirmPayTxExpenseAddress);
 Object.freeze(SystemServiceCreditIssuingAddress);
-Object.freeze(SystemServiceCreditPayTxExpenseAddress);
+Object.freeze(SystemServicePaymentPayTxExpenseAddress);
 Object.freeze(SystemMultiSigSigneeAddress);
 Object.freeze(ClientServiceAccountCreditLineAddress);
 Object.freeze(ClientServiceAccountDebitLineAddress);

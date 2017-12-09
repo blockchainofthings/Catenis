@@ -73,11 +73,11 @@
 //
 //      m/k/0/4/0/0 -> System service credit issuance root HD extended key (NOTE: each Catenis node shall have its own service credit asset)
 //
-//      m/k/0/4/0/1 -> System service credit pay tx expense root HD extended key
+//      m/k/0/4/0/1 -> System service payment pay tx expense root HD extended key
 //
 //      m/k/0/4/0/0/* -> System service credit issuance addresses HD extended key (NOTE: there should be only a single address generated)
 //
-//      m/k/0/4/0/1/* -> System service credit pay tx expense addresses HD extended keys (used to pay for fees of service credit related transactions)
+//      m/k/0/4/0/1/* -> System service payment pay tx expense addresses HD extended keys (used to pay for fees of service credit related transactions)
 //
 //      m/k/0/4/1/* -> System multi-signature Colored Coins tx output signee addresses HD extended keys
 //
@@ -651,17 +651,17 @@ KeyStore.prototype.initCatenisNodeHDNodes = function (ctnNodeIndex) {
         // Save newly created HD extended key to store it later
         hdNodesToStore.push({type: 'sys_serv_cred_issu_root', path: path, hdNode: sysServCredIssueRootHDNode, isLeaf: false, isReserved: false});
         
-        // Create system service credit pay tx expense root HD extended key
+        // Create system service payment pay tx expense root HD extended key
         path = sysRootPath + '/4/0/1';
-        const sysServCredPayTxExpRootHDNode = sysServCreditRootHDNode.derive(1);
+        const sysServPymtPayTxExpRootHDNode = sysServCreditRootHDNode.derive(1);
 
-        if (sysServCredPayTxExpRootHDNode.index !== 1) {
-            Catenis.logger.WARN(util.format('System service credit pay tx expense root HD extended key (%s) derived with an unexpected index', path), {expectedIndex: 1, returnedIndex: sysServCredPayTxExpRootHDNode.index});
+        if (sysServPymtPayTxExpRootHDNode.index !== 1) {
+            Catenis.logger.WARN(util.format('System service payment pay tx expense root HD extended key (%s) derived with an unexpected index', path), {expectedIndex: 1, returnedIndex: sysServPymtPayTxExpRootHDNode.index});
             return false;
         }
 
         // Save newly created HD extended key to store it later
-        hdNodesToStore.push({type: 'sys_serv_cred_pay_tx_exp_root', path: path, hdNode: sysServCredPayTxExpRootHDNode, isLeaf: false, isReserved: false});
+        hdNodesToStore.push({type: 'sys_serv_pymt_pay_tx_exp_root', path: path, hdNode: sysServPymtPayTxExpRootHDNode, isLeaf: false, isReserved: false});
 
         // Store all newly created HD extended keys
         hdNodesToStore.forEach((hdNodeToStore) => {
@@ -1673,7 +1673,7 @@ KeyStore.prototype.listSystemServiceCreditIssuingAddressesInUse = function (ctnN
     return this.listSystemServiceCreditIssuingAddresses(ctnNodeIndex, fromAddrIndex, toAddrIndex);
 };
 
-KeyStore.prototype.getSystemServiceCreditPayTxExpenseAddressKeys = function (ctnNodeIndex, addrIndex, isObsolete = false) {
+KeyStore.prototype.getSystemServicePaymentPayTxExpenseAddressKeys = function (ctnNodeIndex, addrIndex, isObsolete = false) {
     // Validate arguments
     const errArg = {};
 
@@ -1688,60 +1688,60 @@ KeyStore.prototype.getSystemServiceCreditPayTxExpenseAddressKeys = function (ctn
     if (Object.keys(errArg).length > 0) {
         const errArgs = Object.keys(errArg);
 
-        Catenis.logger.ERROR(util.format('KeyStore.getSystemServiceCreditPayTxExpenseAddressKeys method called with invalid argument%s', errArgs.length > 1 ? 's' : ''), errArg);
+        Catenis.logger.ERROR(util.format('KeyStore.getSystemServicePaymentPayTxExpenseAddressKeys method called with invalid argument%s', errArgs.length > 1 ? 's' : ''), errArg);
         throw Error(util.format('Invalid %s argument%s', errArgs.join(', '), errArgs.length > 1 ? 's' : ''));
     }
 
-    // Try to retrieve system service credit pay tx expense address HD extended key for given Catenis node with the given index
-    const sysServCredPayTxExpenseAddrPath = util.format('m/%d/0/4/0/1/%d', ctnNodeIndex, addrIndex);
-    let sysServCredPayTxExpenseAddrHDNode = retrieveHDNode.call(this, sysServCredPayTxExpenseAddrPath),
-        sysServCredPayTxExpenseAddrKeys = null;
+    // Try to retrieve system service payment pay tx expense address HD extended key for given Catenis node with the given index
+    const sysServPymtPayTxExpenseAddrPath = util.format('m/%d/0/4/0/1/%d', ctnNodeIndex, addrIndex);
+    let sysServPymtPayTxExpenseAddrHDNode = retrieveHDNode.call(this, sysServPymtPayTxExpenseAddrPath),
+        sysServPymtPayTxExpenseAddrKeys = null;
 
-    if (sysServCredPayTxExpenseAddrHDNode === null) {
-        // System service credit pay tx expense address HD extended key does not exist yet.
+    if (sysServPymtPayTxExpenseAddrHDNode === null) {
+        // System service payment pay tx expense address HD extended key does not exist yet.
         //  Retrieve parent root HD extended key to create it
-        const path = parentPath(sysServCredPayTxExpenseAddrPath);
-        let sysServCredPayTxExpenseRootHDNode = retrieveHDNode.call(this, path);
+        const path = parentPath(sysServPymtPayTxExpenseAddrPath);
+        let sysServPymtPayTxExpenseRootHDNode = retrieveHDNode.call(this, path);
 
-        if (sysServCredPayTxExpenseRootHDNode === null) {
-            // System service credit pay tx expense root HD extended key does not exist yet.
+        if (sysServPymtPayTxExpenseRootHDNode === null) {
+            // System service payment pay tx expense root HD extended key does not exist yet.
             //  Try to initialize Catenis node HD extended keys
             if (! this.initCatenisNodeHDNodes(ctnNodeIndex)) {
                 Catenis.logger.ERROR(util.format('HD extended keys for Catenis node with index %d could not be initialized', ctnNodeIndex));
             }
             else {
                 // Catenis node HD extended keys successfully initialized.
-                //  Try to retrieve system service credit pay tx expense root HD extended key again
-                sysServCredPayTxExpenseRootHDNode = retrieveHDNode.call(this, path);
+                //  Try to retrieve system service payment pay tx expense root HD extended key again
+                sysServPymtPayTxExpenseRootHDNode = retrieveHDNode.call(this, path);
             }
         }
 
-        if (sysServCredPayTxExpenseRootHDNode === null) {
-            Catenis.logger.ERROR(util.format('System service credit pay tx expense root HD extended key (%s) for Catenis node with index %d not found', path, ctnNodeIndex));
+        if (sysServPymtPayTxExpenseRootHDNode === null) {
+            Catenis.logger.ERROR(util.format('System service payment pay tx expense root HD extended key (%s) for Catenis node with index %d not found', path, ctnNodeIndex));
         }
         else {
-            // Try to create system service credit pay tx expense address HD extended key now
-            sysServCredPayTxExpenseAddrHDNode = sysServCredPayTxExpenseRootHDNode.derive(addrIndex);
+            // Try to create system service payment pay tx expense address HD extended key now
+            sysServPymtPayTxExpenseAddrHDNode = sysServPymtPayTxExpenseRootHDNode.derive(addrIndex);
 
-            if (sysServCredPayTxExpenseAddrHDNode.index !== addrIndex) {
-                Catenis.logger.WARN(util.format('System service credit pay tx expense address HD extended key (%s) derived with an unexpected index', sysServCredPayTxExpenseAddrPath), {expectedIndex: addrIndex, returnedIndex: sysServCredPayTxExpenseAddrHDNode.index});
-                sysServCredPayTxExpenseAddrHDNode = null;
+            if (sysServPymtPayTxExpenseAddrHDNode.index !== addrIndex) {
+                Catenis.logger.WARN(util.format('System service payment pay tx expense address HD extended key (%s) derived with an unexpected index', sysServPymtPayTxExpenseAddrPath), {expectedIndex: addrIndex, returnedIndex: sysServPymtPayTxExpenseAddrHDNode.index});
+                sysServPymtPayTxExpenseAddrHDNode = null;
             }
             else {
                 // Store created HD extended key
-                storeHDNode.call(this, 'sys_serv_cred_pay_tx_exp_addr', sysServCredPayTxExpenseAddrPath, sysServCredPayTxExpenseAddrHDNode, true, false, isObsolete);
+                storeHDNode.call(this, 'sys_serv_pymt_pay_tx_exp_addr', sysServPymtPayTxExpenseAddrPath, sysServPymtPayTxExpenseAddrHDNode, true, false, isObsolete);
             }
         }
     }
 
-    if (sysServCredPayTxExpenseAddrHDNode !== null) {
-        sysServCredPayTxExpenseAddrKeys = new CryptoKeys(sysServCredPayTxExpenseAddrHDNode.keyPair);
+    if (sysServPymtPayTxExpenseAddrHDNode !== null) {
+        sysServPymtPayTxExpenseAddrKeys = new CryptoKeys(sysServPymtPayTxExpenseAddrHDNode.keyPair);
     }
 
-    return sysServCredPayTxExpenseAddrKeys;
+    return sysServPymtPayTxExpenseAddrKeys;
 };
 
-KeyStore.prototype.listSystemServiceCreditPayTxExpenseAddresses = function (ctnNodeIndex, fromAddrIndex, toAddrIndex, onlyInUse) {
+KeyStore.prototype.listSystemServicePaymentPayTxExpenseAddresses = function (ctnNodeIndex, fromAddrIndex, toAddrIndex, onlyInUse) {
     // Validate arguments
     const errArg = {},
         queryTerms = [{parentPath: util.format('m/%d/0/4/0/1', ctnNodeIndex)}];
@@ -1771,7 +1771,7 @@ KeyStore.prototype.listSystemServiceCreditPayTxExpenseAddresses = function (ctnN
     if (Object.keys(errArg).length > 0) {
         const errArgs = Object.keys(errArg);
 
-        Catenis.logger.ERROR(util.format('KeyStore.listSystemServiceCreditPayTxExpenseAddresses method called with invalid argument%s', errArgs.length > 1 ? 's' : ''), errArg);
+        Catenis.logger.ERROR(util.format('KeyStore.listSystemServicePaymentPayTxExpenseAddresses method called with invalid argument%s', errArgs.length > 1 ? 's' : ''), errArg);
         throw Error(util.format('Invalid %s argument%s', errArgs.join(', '), errArgs.length > 1 ? 's' : ''));
     }
 
@@ -1779,7 +1779,7 @@ KeyStore.prototype.listSystemServiceCreditPayTxExpenseAddresses = function (ctnN
         queryTerms.push({isObsolete: false});
     }
 
-    // Return existing system service credit pay tx expense addresses within the specified range
+    // Return existing system service payment pay tx expense addresses within the specified range
     let query;
 
     if (queryTerms.length > 1) {
@@ -1794,8 +1794,8 @@ KeyStore.prototype.listSystemServiceCreditPayTxExpenseAddresses = function (ctnN
     });
 };
 
-KeyStore.prototype.listSystemServiceCreditPayTxExpenseAddressesInUse = function (ctnNodeIndex, fromAddrIndex, toAddrIndex) {
-    return this.listSystemServiceCreditPayTxExpenseAddresses(ctnNodeIndex, fromAddrIndex, toAddrIndex);
+KeyStore.prototype.listSystemServicePaymentPayTxExpenseAddressesInUse = function (ctnNodeIndex, fromAddrIndex, toAddrIndex) {
+    return this.listSystemServicePaymentPayTxExpenseAddresses(ctnNodeIndex, fromAddrIndex, toAddrIndex);
 };
 
 KeyStore.prototype.getSystemMultiSigSigneeAddressKeys = function (ctnNodeIndex, addrIndex, isObsolete = false) {
@@ -2364,6 +2364,12 @@ KeyStore.prototype.listClientServiceAccountCreditLineAddressesInUse = function (
     return this.listClientServiceCreditAddressesInUse(ctnNodeIndex, clientIndex, 2, fromAddrIndex, toAddrIndex);
 };
 
+KeyStore.prototype.listAllClientServiceAccountCreditLineAddressesInUse = function () {
+    return this.collExtKey.find({$and: [{type: KeyStore.extKeyType.cln_srv_acc_cred_ln_addr.name}, {isObsolete: false}]}).map((docExtKey) => {
+        return docExtKey.address;
+    });
+};
+
 KeyStore.prototype.getClientServiceAccountDebitLineAddressKeys = function (ctnNodeIndex, clientIndex, addrIndex, isObsolete = false) {
     return this.getClientServiceCreditAddressKeys(ctnNodeIndex, clientIndex, 3, addrIndex, isObsolete);
 };
@@ -2454,7 +2460,7 @@ KeyStore.prototype.initDeviceHDNodes = function (ctnNodeIndex, clientIndex, devi
             let deviceIntRootHDNode = clientIntHierarchyRootHDNode.derive(deviceIndex);
 
             if (deviceIntRootHDNode.index !== deviceIndex) {
-                Catenis.logger.WARN(util.format('Device internal root HD extended key (%s) derived with an unexpected index', path), {
+                Catenis.logger.WARN(util.format('Device internal root HD extended key (%s) derived with an unexpected index', deviceIntRootPath), {
                     expectedIndex: deviceIndex,
                     returnedIndex: deviceIntRootHDNode.index
                 });
@@ -2487,7 +2493,7 @@ KeyStore.prototype.initDeviceHDNodes = function (ctnNodeIndex, clientIndex, devi
                     let devicePubRootHDNode = clientPubHierarchyRootHDNode.derive(deviceIndex);
 
                     if (devicePubRootHDNode.index !== deviceIndex) {
-                        Catenis.logger.WARN(util.format('Device public root HD extended key (%s) derived with an unexpected index', path), {
+                        Catenis.logger.WARN(util.format('Device public root HD extended key (%s) derived with an unexpected index', devicePubRootPath), {
                             expectedIndex: deviceIndex,
                             returnedIndex: devicePubRootHDNode.index
                         });
@@ -3085,10 +3091,10 @@ KeyStore.systemServiceCreditIssuingRootPath = function (ctnNodeIndex) {
     return util.format('m/%d/0/4/0/0', ctnNodeIndex);
 };
 
-KeyStore.systemServiceCreditPayTxExpenseRootPath = function (ctnNodeIndex) {
+KeyStore.systemServicePaymentPayTxExpenseRootPath = function (ctnNodeIndex) {
     // Validate Catenis node index
     if (!isValidCatenisNodeIndex(ctnNodeIndex)) {
-        Catenis.logger.ERROR('KeyStore.systemServiceCreditPayTxExpenseRootPath method called with invalid argument', {ctnNodeIndex: ctnNodeIndex});
+        Catenis.logger.ERROR('KeyStore.systemServicePaymentPayTxExpenseRootPath method called with invalid argument', {ctnNodeIndex: ctnNodeIndex});
         throw Error('Invalid ctnNodeIndex argument');
     }
 
@@ -3550,9 +3556,9 @@ KeyStore.extKeyType = Object.freeze({
             1: 'ctnNodeIndex'
         }
     }),
-    sys_serv_cred_pay_tx_exp_root: Object.freeze({
-        name: 'sys_serv_cred_pay_tx_exp_root',
-        description: 'system service credit pay tx expense root',
+    sys_serv_pymt_pay_tx_exp_root: Object.freeze({
+        name: 'sys_serv_pymt_pay_tx_exp_root',
+        description: 'system service payment pay tx expense root',
         pathRegEx: /^m\/(\d+)\/0\/4\/0\/1$/,
         pathParts: {
             1: 'ctnNodeIndex'
@@ -3567,9 +3573,9 @@ KeyStore.extKeyType = Object.freeze({
             2: 'addrIndex'
         }
     }),
-    sys_serv_cred_pay_tx_exp_addr: Object.freeze({
-        name: 'sys_serv_cred_pay_tx_exp_addr',
-        description: 'system service credit pay tx expense address',
+    sys_serv_pymt_pay_tx_exp_addr: Object.freeze({
+        name: 'sys_serv_pymt_pay_tx_exp_addr',
+        description: 'system service payment pay tx expense address',
         pathRegEx: /^m\/(\d+)\/0\/4\/0\/1\/(\d+)$/,
         pathParts: {
             1: 'ctnNodeIndex',
