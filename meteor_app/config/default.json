@@ -495,6 +495,6 @@
   "storeBcotTransaction": {
     "bcotStoreAddrAmount": 600,  // Amount, in satohis, to be paid to BCOT store address output
     "timeToConfirm": 300,  // Time, in minutes, that is expected the store BCOT transaction to be confirmed
-    "omniDataPrefix": 'omni'  // Prefix of Omni encoded data to be embedd in transaction
+    "omniDataPrefix": "omni"  // Prefix of Omni encoded data to be embedd in transaction
   }
 }

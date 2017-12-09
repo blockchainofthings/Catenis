@@ -96,6 +96,6 @@
   },
   // Parameters pertaining to BcotPayment module
   "bcotPayment": {
-    "bcotOmniPropertyId": 2147484804,  // BCOT token Omni property ID (yet to be defined for production)
+    "bcotOmniPropertyId": 2147484804  // BCOT token Omni property ID (yet to be defined for production)
   }
 }
