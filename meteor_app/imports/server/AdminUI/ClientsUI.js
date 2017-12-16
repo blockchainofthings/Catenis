@@ -363,6 +363,23 @@ ClientsUI.initialize = function () {
                 Catenis.logger.ERROR('User does not have permission to access method "updateLicenseConfig"');
                 throw new Meteor.Error('User does not have permission to access method "updateLicenseConfig"');
             }
+        },
+
+
+        renewClientAPIKey: function(userId, resetAllDeviceKey){
+
+            if(verifyUserRole()){
+
+                var client= Client.getClientByUserId(userId);
+                client.renewApiAccessGenKey(resetAllDeviceKey) ;
+                return client.apiAccessGenKey;
+
+            }else{
+
+                Catenis.logger.ERROR('User does not have permission to access method "renewClientAPIKey"');
+                throw new Meteor.Error('User does not have permission to access method "renewClientAPIKey"');
+            }
+
         }
 
     });

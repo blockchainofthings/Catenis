@@ -118,8 +118,6 @@ Template.adminLayout.events({
         }
 
         (event.currentTarget).style.backgroundColor ="#5555bb";
-
-        console.log( event.currentTarget);
         $(event.currentTarget).children()[0].style.color="white";
         $(event.currentTarget).children()[1].style.color="white";
 

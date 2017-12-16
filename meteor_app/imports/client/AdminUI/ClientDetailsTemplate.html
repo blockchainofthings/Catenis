@@ -248,6 +248,7 @@
                             <hr>
                             <div class="row">
                                 <div class="col-md-12">
+                                    <button type="button" id="updateUserLicense" class="btn-login btn paddedBtn fullWidth " data-toggle="modal" data-target="#resetClientAPIKey">Change Client API Key</button>
                                     <div>
                                         {{#if showDevices}}
                                             {{#if client._id}}
@@ -257,6 +258,32 @@
                                     </div>
                                 </div>
                             </div>
+                                <div class="modal fade" tabindex="-1" role="dialog" id="resetClientAPIKey">
+                                    <div class="modal-dialog" role="document">
+                                        <div class="modal-content">
+                                            <form id="resetAPIKey">
+                                                <div class="modal-header">
+                                                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                                                    <h4 class="modal-title">Reset Client API Key</h4>
+                                                </div>
+                                                <div class="modal-body">
+                                                    <p class="creditDetail">I would like to reset this Client's API access Key</p>
+                                                    <input type="text" id="resetSentence" name="resetSentence" placeholder="type the exact sentence above to reset API key" class="fullWidth text-center">
+                                                    <label class="radio-inline">
+                                                        <input type="radio" name="resetAll" id="true" value="true"> Reset All Devices Key
+                                                    </label>
+                                                    <label class="radio-inline">
+                                                        <input type="radio" name="resetAll" id="true" value="false"> Reset only Client Key
+                                                    </label>
+                                                </div>
+                                                <div class="modal-footer">
+                                                    <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                                                    <button type="submit" id="submitClientAPIkey" class="btn btn-primary">Change Client API Key</button>
+                                                </div>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
                             {{/unless}}
                         {{/unless}}
                         <div class="row">

@@ -350,8 +350,38 @@ Template.clientDetails.events({
                     $('.modal-backdrop').remove();
                 }
             });
-        }else {
+        } else {
             template.state.set('errMsgs', errMsgs);
+        }
+
+    },
+
+    'submit #resetClientAPIKey'(event, template){
+        event.preventDefault();
+        event.stopPropagation();
+        const form = event.target;
+        const sentence="I would like to reset this Client's API access Key";
+        var userInput= form.resetSentence.value;
+        var resetAll = form.resetAll.value;
+
+        if(userInput!=sentence){
+
+            alert("you typed in the wrong value");
+
+        }else{
+
+            Meteor.call('renewClientAPIKey',Template.instance().data.user_id , resetAll, (error, key) => {
+                if (error) {
+                    console.log('Error calling \'resetClientAPISeceret\' remote method: ' + error);
+                }
+                else {
+                    alert('New Client API access secret: ' + key);
+                    $('#resetClientAPIKey').modal('hide');
+                    $('body').removeClass('modal-open');
+                    $('.modal-backdrop').remove();
+                }
+            });
+
         }
 
     }

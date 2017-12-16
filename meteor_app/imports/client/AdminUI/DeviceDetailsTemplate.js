@@ -58,16 +58,33 @@ Template.deviceDetails.events({
         });
     },
 
+    'submit #resetDeviceAPIKey'(event, template){
+        event.preventDefault();
+        event.stopPropagation();
+        const form = event.target;
+        const sentence="I would like to reset this Device's API access Key";
+        var userInput= form.resetSentence.value;
 
-    'click #resetDeviceAPISecret'(event, template) {
-        Meteor.call('resetDeviceAPISecret', template.data.device_id, (error, key) => {
-            if (error) {
-                console.log('Error calling \'resetDeviceAPISecret\' remote method: ' + error);
-            }
-            else {
-                alert('New device API access secret: ' + key);
-            }
-        });
+        if(userInput!=sentence){
+
+            alert("you typed in the wrong value");
+
+        }else{
+
+            Meteor.call('resetDeviceAPISecret', template.data.device_id, (error, key) => {
+                if (error) {
+                    console.log('Error calling \'resetDeviceAPISecret\' remote method: ' + error);
+                }
+                else {
+                    alert('New device API access secret: ' + key);
+                    $('#resetAPIKey').modal('hide');
+                    $('body').removeClass('modal-open');
+                    $('.modal-backdrop').remove();
+                }
+            });
+
+        }
+
     }
 });
 

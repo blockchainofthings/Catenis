@@ -91,7 +91,7 @@ DevicesUI.initialize = function () {
             if(verifyUserRole()){
 
                 const docDevice = Catenis.db.collection.Device.findOne({_id: device_id}, {fields: {deviceId: 1}});
-                Device.prototype.renewApiAccessGenKey();
+                Device.getDeviceByDeviceId(docDevice.deviceId).renewApiAccessGenKey();
 
                 return docDevice !== undefined ? Device.getDeviceByDeviceId(docDevice.deviceId).apiAccessSecret : undefined;
 
@@ -106,13 +106,13 @@ DevicesUI.initialize = function () {
 
         //create device if the logged in user is creating a device for oneself or it's admin
         createDevice: function (client_id, deviceInfo) {
+            const userVerified= verifyUserRole();
 
-            const isSameUser = (  Catenis.db.collection.Client.findOne({user_id: this.userId})._id ===client_id);
+            var isSameUser=false;
+            if(!userVerified) isSameUser = (  Catenis.db.collection.Client.findOne({user_id: this.userId})._id ===client_id);
 
             if(verifyUserRole() || isSameUser ){
-
                 const docClient = Catenis.db.collection.Client.findOne({_id: client_id}, {fields: {clientId: 1, user_id: 1}});
-
                 const user= Meteor.users.findOne( {_id: docClient.user_id} );
 
                 let licenseType;

@@ -8,6 +8,27 @@
                         {{#unless Template.subscriptionsReady}}
                             <p style="color:lightgray; margin-top:1em">Loading...</p>
                         {{else}}
+                            <div class="modal fade" tabindex="-1" role="dialog" id="resetAPIKey">
+                                <div class="modal-dialog" role="document">
+                                    <div class="modal-content">
+                                        <form id="resetAPIKey">
+                                            <div class="modal-header">
+                                                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                                                <h4 class="modal-title">Reset API Key</h4>
+                                            </div>
+                                            <div class="modal-body">
+                                                <p class="creditDetail">I would like to reset this Device's API access Key</p>
+                                                <input type="text" id="resetSentence" name="resetSentence" placeholder="type the exact sentence above to reset API key" class="fullWidth text-center">
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                                                <button type="submit" id="submitDeviceAPIKeyChange" class="btn btn-primary">Change Device API Key</button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+
                             <div class="col-lg-12">
                                 <table class="table table-striped">
                                     <tbody>
@@ -46,7 +67,7 @@
                                     <a id="lnkShowAPIAccessSecret" href="#" role="button" class="btn-login btn paddedBtn fullWidth">Show API access secret</a>
                                 </div>
                                 <div class="col-md-4">
-                                    <a id="resetDeviceAPISecret" href="#" role="button" class="btn-login btn paddedBtn fullWidth">Reset device API secret</a>
+                                    <a id="resetDeviceAPISecret" href="#" data-toggle="modal" data-target="#resetAPIKey" role="button" class="btn-login btn paddedBtn fullWidth">Reset device API secret</a>
                                 </div>
                             </div>
                         {{/unless}}

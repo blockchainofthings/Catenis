@@ -97,8 +97,9 @@ Template.newDevice.events({
         let deviceInfo;
 
         if ((deviceInfo = validateFormData(form, errMsgs))) {
+            var clientId= Catenis.db.collection.Client.findOne({user_id: Template.instance().data.user_id})._id;
             // Call remote method to create client device
-            Meteor.call('createDevice', template.data.client_id, deviceInfo, (error, deviceId) => {
+            Meteor.call('createDevice', clientId, deviceInfo, (error, deviceId) => {
                 if (error) {
                     template.state.set('errMsgs', [
                         error.toString()

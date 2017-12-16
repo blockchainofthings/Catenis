@@ -4,20 +4,19 @@
 import './baseTemplate.html';
 import './UserNewDevice.js';
 import './infoLine.js';
+import './creditPrices.js';
 import { Catenis } from '../ClientCatenis';
 
-function changeNavStructures(width, height){
+function changeNavStructures(width){
+
     var toggled= "toggled" ==$("#wrapper").attr("class") ;
 
-    if(width<1090 && !toggled){
-
+    if(width<580 && !toggled){
         $("#wrapper").addClass("toggled");
     }
 
+
 }
-
-
-
 
 
 const onWindowResize = function() {
@@ -34,6 +33,7 @@ Template.baseTemplate.onCreated(function () {
 
     this.catenisClientsSubs = this.subscribe('catenisClients', Catenis.ctnHubNodeIndex);
 
+
 });
 
 Template.baseTemplate.onDestroyed(function(){
@@ -47,8 +47,8 @@ Template.baseTemplate.onDestroyed(function(){
 });
 
 Template.baseTemplate.onRendered(function(){
-    $(window).resize(throttledOnWindowResize);
 
+    $(window).resize(throttledOnWindowResize);
 
 
 });
@@ -61,44 +61,27 @@ Template.baseTemplate.events({
 
     'click .menu-toggle'(event, template){
         $("#wrapper").toggleClass("toggled");
-
-        var windowSize = $("window").offsetWidth;
-        console.log(windowSize);
-
-        //there are five sections in which things happen.
-
-        //1. windowsize: 1085~
-        //here we just toggle, don't worry about anything else.
-
-        //2. windowsize: 921~ 1085
-        //if the sidenav is small, we let the breadcrumb be. else we hide the breadcrumb
-        // if(windowSize > 921 and windowSize <= 1085){
-        //
-        // }
-
-
-        //3. windowsize: 862~921
-        // regardless of toggle, we display only the estimated fees.
-
-        //4. windowsize: 682~861
-        //if toggle, don't display infoline. if not, display only the fees.
-
-
-        //5. windowsize: ~681
-        //don't show infoline at all. we will handle this on CSS.
-
+        var sideNavSmall;
 
         if( "toggled" ==$("#wrapper").attr("class")){
-        //    side nav becomes smaller, check width to see if we want to make the thing re-appear.
-            console.log("inhere");
+            //    side nav becomes smaller, check width to see if we want to make the thing re-appear.
+            sideNavSmall= true;
+        }else{
+            sideNavSmall= false;
+        }
 
+
+        var windowSize = $(window).width();
+        if( windowSize <= 500 && !sideNavSmall ){
+            $(".infoLine").addClass("hidden");
         }else{
 
-            console.log(document.getElementById("page-content-wrapper").offsetWidth);
-            if( document.getElementById("page-content-wrapper").offsetWidth <= 812 ){
-                $("#breadCrumb").addClass("hidden");
-            }
+            $(".infoLine").removeClass("hidden");
+
         }
+
+
+
     },
 
     'click .sideNavButtons'(event, template){

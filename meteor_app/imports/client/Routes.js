@@ -56,6 +56,18 @@ FlowRouter.route('/devices', {
 });
 
 
+FlowRouter.route('/devices/:device_id', {
+    action: function (params) {
+        BlazeLayout.render('baseTemplate', {
+            page: 'deviceDetails',
+            dataContext: {
+                device_id: params.device_id
+            }
+        });
+    }
+});
+
+
 FlowRouter.route('/admin', {
     action: function () {
         BlazeLayout.render('adminLayout');
@@ -163,3 +175,14 @@ FlowRouter.route('/reset-password/:token', {
     }
 });
 
+
+
+
+
+FlowRouter.route('/credits', {
+    action: function (params, queryParams) {
+        BlazeLayout.render('baseTemplate', {
+            page: 'creditPrices'
+        });
+    }
+});

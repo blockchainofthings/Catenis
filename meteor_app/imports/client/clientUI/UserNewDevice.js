@@ -88,6 +88,29 @@ Template.userNewDevice.onCreated(function () {
 });
 
 
+Template.userNewDevice.onRendered(function () {
+    //this Template is not meant for the admin user.
+
+
+    // Subscribe to receive client updates
+    this.catenisClientsSubs = this.subscribe('catenisClients', Catenis.ctnHubNodeIndex);
+    const client= userClient();
+    console.log(client);
+    if(client){
+        this.clientRecordSubs = this.subscribe('clientRecord', client._id );
+        //this is here to allow for the table
+        // Subscribe to receive device updates
+        this.clientDevicesSubs = this.subscribe('clientDevices', Meteor.userId());
+    }
+
+
+});
+
+
+
+
+
+
 Template.userNewDevice.onDestroyed(function () {
 
     if(this.catenisClientsSubs){
