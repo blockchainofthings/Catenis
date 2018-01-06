@@ -1316,7 +1316,19 @@ Object.defineProperties(Service, {
             return Util.roundToResolution(averageEstimatedServicePaymentTxCostPerService() * cfgSettings.servicePaymentPayTxExpenseFunding.servicesToPayToFund, fundUnitAmount);
         },
         enumerable: true
-    }
+    },
+    spendServiceCreditInitTxFeeRate: {
+        get: function () {
+            return cfgSettings.message.readConfirmation.initTxFeeRate;
+        },
+        enumerable: true
+    },
+    spendServiceCreditTxFeeRateIncrement: {
+        get: function () {
+            return cfgSettings.message.readConfirmation.txFeeRateIncrement;
+        },
+        enumerable: true
+    },
 });
 
 // Lock function class

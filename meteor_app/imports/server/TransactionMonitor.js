@@ -450,7 +450,7 @@ function pollBlockchain() {
                 this.newBlockchainPollTick = false;
 
                 if (this.blockToReset) {
-                    Catenis.logger.WARN(util.format('Reseting blockchain block processing: last processed block height: %s, new block height to reset: %s)', this.lastBlock.height, this.blockToReset.height));
+                    Catenis.logger.WARN(util.format('Resetting blockchain block processing: last processed block height: %s, new block height to reset: %s)', this.lastBlock.height, this.blockToReset.height));
                     // Reset block height
                     this.lastBlock = this.blockToReset;
                     this.blockToReset = undefined;
@@ -1398,6 +1398,10 @@ TransactionMonitor.notifyEvent = Object.freeze({
         name: 'credit_service_account_tx_conf',
         description: 'Transaction sent for crediting the service account of a client has been confirmed'
     }),
+    spend_service_credit_tx_conf: Object.freeze({
+        name: 'spend_service_credit_tx_conf',
+        description: 'Transaction used to spend an amount of Catenis service credits from a client\'s service account to pay for a service has been confirmed'
+    }),
     read_confirmation_tx_conf: Object.freeze({
         name: 'read_confirmation_tx_conf',
         description: 'Transaction sent for marking and notifying that send message transactions have already been read has been confirmed'
@@ -1474,6 +1478,27 @@ function processConfirmedSentTransactions(doc, eventsToEmit) {
                     txid: doc.txid,
                     clientId: txInfo.clientId,
                     issuedAmount: txInfo.issuedAmount
+                }
+            });
+        }
+        else {
+            // Could not get notification event from transaction type.
+            //  Log error condition
+            Catenis.logger.ERROR('Could not get notification event from transaction type', {txType: doc.type});
+        }
+    }
+    else if (doc.type === Transaction.type.spend_service_credit.name) {
+        // Prepare to emit event notifying of confirmation of spend service credit transaction
+        const notifyEvent = getTxConfNotifyEventFromTxType(doc.type);
+
+        if (notifyEvent) {
+            const txInfo = doc.info[Transaction.type.spend_service_credit.dbInfoEntryName];
+
+            eventsToEmit.push({
+                name: notifyEvent.name,
+                data: {
+                    txid: doc.txid,
+                    serviceTxids: txInfo.serviceTxids
                 }
             });
         }

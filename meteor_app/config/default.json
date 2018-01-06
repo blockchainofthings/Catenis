@@ -421,10 +421,14 @@
   "message": {
     "maxQueryCount": 500  // Maximum number of messages entries that can be returned when querying for messages
   },
+  // Parameters pertaining to RbfTransactionInfo module
+  "rbfTransactionInfo": {
+    "minDeltaFeeRate": 1  // Minimum difference in transaction fee rate, in satoshis per byte, that is allowed for a new transaction to replace a previously sent one
+  },
   // Parameters pertaining to ReadConfirmation module
   "readConfirmation": {
     "unconfirmedTxTimeout": 10080,  // Timeout, in minutes, for waiting for latest read confirmation tx to be confirmed (set to 7 days, which is half the default mempool tx eviction time of 14 days)
-    "txSizeThresholdRatio": 0.5  // Ratio that should be applied to maximum tx size to calculate theshold for read confirmation tx size. Above that size the tx fee rate should be reset so that is is confirmed as soon as possible
+    "txSizeThresholdRatio": 0.9  // Ratio that should be applied to maximum tx size to calculate theshold for read confirmation tx size. Above that size the tx fee rate should be reset so that is is confirmed as soon as possible
   },
   // Parameters pertaining to RestApi module
   "restApi": {
@@ -468,6 +472,7 @@
     "password": "??????", // Password used to authenticate the client to the Colored Coins Full-Node server
     "connectionTimeout": 15000,  // Timeout, in miliseconds, for connection with the Colored Coins Full-Node server
     "methodPath": {
+      "parseNow": "/parseNow",
       "getAddressesUtxos": "/getAddressesUtxos",
       "getUtxos": "/getUtxos",
       "getTxouts": "/getTxouts",
@@ -489,7 +494,8 @@
     "methodPath": {
       "addMetadata": "/addMetadata",
       "getMetadata": "/getMetadata",
-      "shareMetadata": "/shareMetadata"
+      "shareMetadata": "/shareMetadata",
+      "removeMetadata": "/removeMetadata"
     }
   },
   // Parameters pertaining to CCMetadata module
@@ -506,7 +512,8 @@
     "signingCertificateFilePath": "/etc/ssl/sll_certificate.pem",  // Path to file (in PEM format) containing Blockchain of Things' owned SSL certificate used to sign message for asset verification
     "signingCertificateKeyFilePath": "/etc/ssl/encrypt_catenis.key",  // Path to file containing (password protected) key of SSL certificate used to sign message for asset verification
     "urlContentTimeout": 15000,  // Timeout, in miliseconds, fro retrieving content associated with a given URL
-    "encryptedUserDataKeyPrefix": "__enc_"  // Prefix that is prepended to user data key when its value is encrypted
+    "encryptedUserDataKeyPrefix": "__enc_",  // Prefix that is prepended to user data key when its value is encrypted
+    "shareAfterStoring": false  // Indicates whether metadata should be shared right after it is stored (added to Colored Coins metadata server)
   },
   // Parameters pertaining to CCTransaction module
   "ccTransaction": {
@@ -537,5 +544,14 @@
     "bcotStoreAddrAmount": 600,  // Amount, in satohis, to be paid to BCOT store address output
     "timeToConfirm": 300,  // Time, in minutes, that is expected the store BCOT transaction to be confirmed
     "omniDataPrefix": "omni"  // Prefix of Omni encoded data to be embedd in transaction
+  },
+  // Parameters pertaining to SpendServiceCreditTransaction module
+  "spendServiceCreditTransaction": {
+    "maxNumClients": 12,  // Maximum number of clients that can be assigned to a single spend service credit transaction
+    "ccMetadata": {
+      "servTxidsKey": "servTxids"  // Name (key) of Colored Coins free user metadata used to refer to BCOT Token Payment transaction
+    },
+    "unconfirmedTxTimeout": 10080,  // Timeout, in minutes, for waiting for latest sent spend service credit tx to be confirmed (set to 7 days, which is half the default mempool tx eviction time of 14 days)
+    "txSizeThresholdRatio": 0.9  // Ratio that should be applied to maximum tx size to calculate threshold for spend service credit tx size. Above that size the tx fee rate should be reset so that is is confirmed as soon as possible
   }
 }

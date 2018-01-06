@@ -82,7 +82,7 @@ StoreBcotTransaction.prototype.buildTransaction = function () {
         // Add transaction inputs
 
         // Prepare to add client BCOT payment address input
-        const clientBcotPayAddFundSource = new FundSource(this.sendingAddress, {});
+        const clientBcotPayAddFundSource = new FundSource(this.sendingAddress, {unconfUtxoInfo: {}});
 
         // Make sure we get the exact same UTXO that was used to send BCOT tokens in BCOT payment transaction
         const clientBcotPayAddrUtxos = clientBcotPayAddFundSource.getUtxosOfTx(this.bcotPayTxid);
@@ -118,7 +118,10 @@ StoreBcotTransaction.prototype.buildTransaction = function () {
         this.transact.addP2PKHOutput(BcotPayment.storeBcotAddress, cfgSettings.bcotStoreAddrAmount);
 
         // Now, allocate UTXOs to pay for tx expense
-        const payTxFundSource = new FundSource(this.client.ctnNode.listFundingAddressesInUse(), {});
+        const payTxFundSource = new FundSource(this.client.ctnNode.listFundingAddressesInUse(), {
+            unconfUtxoInfo: {},
+            smallestChange: true
+        });
         const payTxAllocResult = payTxFundSource.allocateFundForTxExpense({
             txSize: this.transact.estimateSize(),
             inputAmount: this.transact.totalInputsAmount(),

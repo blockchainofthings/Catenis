@@ -162,7 +162,7 @@ Message.createLocalMessage = function (msgTransact) {
     // Make sure that transaction had already been sent and saved
     if (!msgTransact.transact.txSaved) {
         Catenis.logger.ERROR('Cannot create message for a transaction that had not yet been saved', msgTransact.transact);
-        throw Meteor.Error('ctn_msg_tx_unsaved', 'Cannot create message for a transaction that had not yet been saved', msgTransact.transact);
+        throw new Meteor.Error('ctn_msg_tx_unsaved', 'Cannot create message for a transaction that had not yet been saved', msgTransact.transact);
     }
 
     const docMessage = {

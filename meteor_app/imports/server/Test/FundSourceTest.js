@@ -8,7 +8,6 @@
 import { Catenis } from '../Catenis';
 import { BitcoinCore } from '../BitcoinCore';
 
-    
 function testListUnspent(numConf, addresses) {
     if (!Array.isArray(addresses)) {
         addresses = [addresses];
@@ -21,17 +20,31 @@ function testListUnspent(numConf, addresses) {
     });
 }
 
+const testAddress = 'mrH6bWqKTyntpF9wi7mui4NYxo85frL9X6';
+
+function testListUnspent2(numConf, addresses) {
+    if ((Array.isArray(addresses) && addresses.length === 1 && addresses[0] === testAddress) || (typeof addresses === 'string' && addresses === testAddress)) {
+        return utxos.filter(function (utxo) {
+            return utxo.address === testAddress && utxo.confirmations >= numConf;
+        });
+    }
+    else {
+        return this.originalListUnspent(numConf, addresses);
+    }
+}
+
 function testGetRawMempool() {
     return mempool;
 }
 
 export function resetBitcoinCore() {
-    BitcoinCore.prototype.listUnspent = testListUnspent;
-    BitcoinCore.prototype.getRawMempool = testGetRawMempool;
+    BitcoinCore.prototype.originalListUnspent = BitcoinCore.prototype.listUnspent;
+    BitcoinCore.prototype.listUnspent = testListUnspent2;
+    //BitcoinCore.prototype.getRawMempool = testGetRawMempool;
 }
     
 const utxos = [
-    {
+    /*{
         "txid": "28aa78e054c8841f583853bb354cd08507b51da2b16cf17235ac54308ab58a0e",
         "vout": 0,
         "address": "mztU1SD5Faf5EovTrB6xH7aCSdEqqoFAiS",
@@ -299,7 +312,7 @@ const utxos = [
         "amount": 0.00001000,
         "confirmations": 142150,
         "spendable": true
-    },
+    },*/
 
     // Fabricated UTXO entries
     //
@@ -319,7 +332,7 @@ const utxos = [
         "address": "mrH6bWqKTyntpF9wi7mui4NYxo85frL9X6",
         "account": "",
         "scriptPubKey": "76a914d47bedbbd448fdaa61c4ecd250866f5c6be8980088ac",
-        "amount": 0.00007000,
+        "amount": 0.00006000,
         "confirmations": 142150,
         "spendable": true
     },

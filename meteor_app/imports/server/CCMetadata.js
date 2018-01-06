@@ -42,7 +42,8 @@ const cfgSettings = {
     signingCertificateFilePath: ccMetadataConfig.get('signingCertificateFilePath'),
     signingCertificateKeyFilePath: ccMetadataConfig.get('signingCertificateKeyFilePath'),
     urlContentTimeout: ccMetadataConfig.get('urlContentTimeout'),
-    encryptedUserDataKeyPrefix: ccMetadataConfig.get('encryptedUserDataKeyPrefix')
+    encryptedUserDataKeyPrefix: ccMetadataConfig.get('encryptedUserDataKeyPrefix'),
+    shareAfterStoring: ccMetadataConfig.get('shareAfterStoring')
 };
 
 const opensslSync = Meteor.wrapAsync(openssl);
@@ -330,7 +331,7 @@ CCMetadata.prototype.store = function () {
                 Catenis.logger.ERROR('Error while storing Colored Coins metadata.', err);
             }
 
-            if (this.storeResult !== undefined) {
+            if (this.storeResult !== undefined && cfgSettings.shareAfterStoring) {
                 try {
                     Catenis.ccMdClient.shareMetadata(this.storeResult.torrentHash);
                 }

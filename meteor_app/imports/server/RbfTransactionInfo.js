@@ -15,13 +15,23 @@
 //      imported module'
 //const util = require('util');
 // Third-party node modules
+import config from 'config';
 // Meteor packages
 //import { Meteor } from 'meteor/meteor';
 
 // References code in other (Catenis) modules
 import { Transaction } from './Transaction';
 import { Catenis } from './Catenis';
-import {Util} from './Util';
+import { Util } from './Util';
+
+// Config entries
+const rbfTransactInfoConfig = config.get('rbfTransactionInfo');
+
+// Configuration settings
+const cfgSettings = {
+    minDeltaFeeRate: rbfTransactInfoConfig.get('minDeltaFeeRate')
+};
+
 
 // Definition of classes
 //
@@ -151,7 +161,7 @@ export class RbfTransactionInfo {
             }
             else {
                 // Remove first multi-signature output that has the number of public keys specified
-                const absNumPubKeys = Math.abs(numPubKeys);
+                const absNumPubKeys = -numPubKeys;
 
                 this.numPubKeysMultiSigTxOutputs.some((numPubKeysOutput, idx, list) => {
                     if (numPubKeysOutput === absNumPubKeys) {
@@ -243,6 +253,7 @@ export class RbfTransactionInfo {
         }
     }
 
+    // DEPRECATED
     setRealTxSize(size, countInputs = 0) {
         size = parseInt(size);
 
@@ -250,9 +261,37 @@ export class RbfTransactionInfo {
 
         this.txSize.setRealSize(size, countInputs);
 
-        if (this.txSize.max > oldMaxTxSize) {
+        if (this.txSize.max !== oldMaxTxSize) {
             // Reset transaction fee
             this.feeRate = Math.floor(this.fee / this.txSize.max);
+        }
+    }
+
+    updateTxInfo(transact) {
+        const txRealSize = transact.realSize();
+
+        if (txRealSize !== undefined) {
+            this.txSize.checkRealSize(txRealSize);
+
+            this.numTxInputs = transact.countInputs();
+            this.numTxOutputs = transact.countP2PKHOutputs();
+            this.numPubKeysMultiSigTxOutputs = transact.getNumPubKeysMultiSigOutputs();
+            this.txNullDataPayloadSize = transact.nullDataPayloadSize;
+            this.fee = transact.feeAmount();
+            this.feeRate = Math.floor(this.fee / txRealSize);
+            this.txSize = new TxSize(this.txNullDataPayloadSize, this.numTxInputs, this.numTxOutputs, this.numPubKeysMultiSigTxOutputs);
+            this.newFee = this.fee;
+            this.newFeeRate = this.feeRate;
+            clearRecalculateFeeFlag.call(this);
+        }
+        else {
+            // Transaction real size not available.
+            //  Log error condition and throw exception
+            Catenis.logger.ERROR('Cannot update RBF transaction info: transaction real size not available', {
+                rbfTxInfo: this,
+                transact: transact
+            });
+            throw new Error('Cannot update RBF transaction info: transaction real size not available');
         }
     }
 }
@@ -337,6 +376,7 @@ class TxSize {
         this.max += sizeInc;
     }
 
+    // DEPRECATED
     setRealSize(size, countInputs = 0) {
         // Note: allow a variation of +/- countInputs if real size had already been set previously (min = max = avrg)
         if ((size >= this.min && size <= this.max) || (this.min === this.max && this.max === this.avrg
@@ -347,6 +387,18 @@ class TxSize {
             // Trying to set transaction real size to a value that is not within expected range.
             //  Log warning condition
             Catenis.logger.WARN('Trying to set transaction real size to a value that is not within expected range', {
+                txMinSize: this.min,
+                txMaxSize: this.max,
+                realSize: size
+            });
+        }
+    }
+
+    checkRealSize(size) {
+        if (size < this.min || size > this.max) {
+            // Transaction real size is not within expected range.
+            //  Log warning condition
+            Catenis.logger.WARN('RBF transaction info: transaction real size is not within expected range', {
                 txMinSize: this.min,
                 txMaxSize: this.max,
                 realSize: size
@@ -374,6 +426,13 @@ function calculateFee() {
     // Make sure that new fee is larger than latest confirmed fee
     if (this.newFee <= this.fee) {
         this.newFee =  Util.roundToResolution(this.fee + this.paymentResolution, this.paymentResolution);
+    }
+
+    // Make sure that difference in fee is not below minimum acceptable fee difference
+    const minDeltaFee = Math.ceil(this.txSize.max / cfgSettings.minDeltaFeeRate);
+
+    if (this.newFee - this.fee < minDeltaFee) {
+        this.newFee = Util.roundToResolution(this.fee + minDeltaFee, this.paymentResolution);
     }
 
     this.newFeeRate = Math.floor(this.newFee / this.txSize.max);

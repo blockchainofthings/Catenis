@@ -2,6 +2,7 @@
  * Created by claudio on 23/06/16.
  */
 
+
 //console.log('[Device.js]: This code just ran.');
 
 // Module variables
@@ -40,8 +41,13 @@ import { Util } from './Util';
 import { Message } from './Message';
 import { ReadConfirmation } from './ReadConfirmation';
 import { Permission } from './Permission';
-import { cfgSettings as clientCfgSettings } from './Client';
+import {
+    cfgSettings as clientCfgSettings,
+    Client
+} from './Client';
 import { Notification } from './Notification';
+import { CCFundSource } from './CCFundSource';
+import { Billing } from './Billing';
 
 
 // Definition of function classes
@@ -246,7 +252,7 @@ Device.prototype.fundAddresses = function () {
 
         // If device main addresses already exist, check if their
         //  balance is as expected
-        const devMainAddrBalance = devMainAddresses.length > 0 ? (new FundSource(devMainAddresses, {})).getBalance(true) : undefined;
+        const devMainAddrBalance = devMainAddresses.length > 0 ? new FundSource(devMainAddresses, {unconfUtxoInfo: {}}).getBalance(true) : undefined;
 
         if (devMainAddrBalance !== undefined && devMainAddrBalance > 0 && devMainAddrBalance !== devMainAddrDistribFund.totalAmount) {
             // Amount funded to device main addresses different than expected.
@@ -259,7 +265,7 @@ Device.prototype.fundAddresses = function () {
 
         // If device asset issuance addresses already exist, check if their
         //  balance is as expected
-        const assetIssuanceAddrBalance = assetIssuanceAddresses.length > 0 ? (new FundSource(assetIssuanceAddresses, {})).getBalance(true) : undefined;
+        const assetIssuanceAddrBalance = assetIssuanceAddresses.length > 0 ? new FundSource(assetIssuanceAddresses, {unconfUtxoInfo: {}}).getBalance(true) : undefined;
 
         if (assetIssuanceAddrBalance !== undefined && assetIssuanceAddrBalance > 0 && assetIssuanceAddrBalance !== assetIssuanceAddrDistribFund.totalAmount) {
             // Amount funded to device asset issuance addresses different than expected.
@@ -325,7 +331,7 @@ Device.prototype.fixFundAddresses = function () {
             devMainAddrDistribFund = Service.distributeDeviceMainAddressFund();
 
         // If device main addresses already exist, check if their balance is as expected
-        const devMainAddrBalance = devMainAddresses.length > 0 ? (new FundSource(devMainAddresses, {})).getBalance(true) : undefined;
+        const devMainAddrBalance = devMainAddresses.length > 0 ? new FundSource(devMainAddresses, {unconfUtxoInfo: {}}).getBalance(true) : undefined;
 
         if (devMainAddrBalance !== undefined && devMainAddrBalance > 0 && devMainAddrBalance !== devMainAddrDistribFund.totalAmount) {
             // Amount funded to device main addresses different than expected
@@ -364,7 +370,7 @@ Device.prototype.fixFundAddresses = function () {
             devAssetIssueAddrDistribFund = Service.distributeDeviceAssetIssuanceAddressFund();
 
         // If device asset issuance addresses already exist, check if their balance is as expected
-        const devAssetIssueAddrBalance = devAssetIssueAddrs.length > 0 ? (new FundSource(devAssetIssueAddrs, {})).getBalance(true) : undefined;
+        const devAssetIssueAddrBalance = devAssetIssueAddrs.length > 0 ? new FundSource(devAssetIssueAddrs, {unconfUtxoInfo: {}}).getBalance(true) : undefined;
 
         if (devAssetIssueAddrBalance !== undefined && devAssetIssueAddrBalance > 0 && devAssetIssueAddrBalance !== devAssetIssueAddrDistribFund.totalAmount) {
             // Amount funded to device asset issuance addresses different than expected
@@ -436,8 +442,6 @@ Device.prototype.sendMessage = function (targetDeviceId, message, readConfirmati
         throw new Meteor.Error('ctn_device_not_active', util.format('Cannot send message from a device that is not active (deviceId: %s)', this.deviceId));
     }
 
-    // TODO: check if client has enough credits to pay for service
-
     let targetDevice = undefined;
 
     try {
@@ -473,43 +477,93 @@ Device.prototype.sendMessage = function (targetDeviceId, message, readConfirmati
 
     let messageId = undefined;
 
-    // Execute code in critical section to avoid UTXOs concurrency
-    FundSource.utxoCS.execute(() => {
-        let sendMsgTransact;
-        let txid;
+    // Execute code in critical section to avoid Colored Coins UTXOs concurrency
+    CCFundSource.utxoCS.execute(() => {
+        const servicePriceInfo = Service.sendMessageServicePrice();
+
+        if (this.client.billingMode === Client.billingMode.prePaid) {
+            // Make sure that client has enough service credits to pay for service
+            const serviceAccountBalance = this.client.serviceAccountBalance();
+
+            if (serviceAccountBalance < servicePriceInfo.finalServicePrice) {
+                // Client does not have enough credits to pay for service.
+                //  Log error condition and throw exception
+                Catenis.logger.ERROR('Client does not have enough credits to pay for send message service', {
+                    serviceAccountBalance: serviceAccountBalance,
+                    servicePrice: servicePriceInfo.finalServicePrice
+                });
+                throw new Meteor.Error('ctn_device_low_service_acc_balance', 'Client does not have enough credits to pay for send message service');
+            }
+        }
+
+        let sendMsgTransact = undefined;
+
+        // Execute code in critical section to avoid UTXOs concurrency
+        FundSource.utxoCS.execute(() => {
+            try {
+                // Prepare transaction to send message to a device
+                sendMsgTransact = new SendMessageTransaction(this, targetDevice, message, {
+                    readConfirmation: readConfirmation,
+                    encrypted: encryptMessage,
+                    storageScheme: storageScheme,
+                    storageProvider: storageProvider
+                });
+
+                // Build and send transaction
+                sendMsgTransact.buildTransaction();
+
+                sendMsgTransact.sendTransaction();
+
+                // Force polling of blockchain so newly sent transaction is received and processed right away
+                Catenis.txMonitor.pollNow();
+
+                // Create message and save it to local database
+                messageId = Message.createLocalMessage(sendMsgTransact);
+            }
+            catch (err) {
+                // Error sending message to another device.
+                //  Log error condition
+                Catenis.logger.ERROR('Error sending message to another device.', err);
+
+                if (sendMsgTransact && !sendMsgTransact.txid) {
+                    // Revert output addresses added to transaction
+                    sendMsgTransact.revertOutputAddresses();
+                }
+
+                // Rethrows exception
+                throw err;
+            }
+        });
 
         try {
-            // Prepare transaction to send message to a device
-            sendMsgTransact = new SendMessageTransaction(this, targetDevice, message, {
-                readConfirmation: readConfirmation,
-                encrypted: encryptMessage,
-                storageScheme: storageScheme,
-                storageProvider: storageProvider
-            });
+            // Record billing info for service
+            const billing = Billing.createNew(this, sendMsgTransact, servicePriceInfo);
 
-            // Build and send transaction
-            sendMsgTransact.buildTransaction();
+            let servicePayTransact;
 
-            txid = sendMsgTransact.sendTransaction();
-
-            // Force polling of blockchain so newly sent transaction is received and processed right away
-            Catenis.txMonitor.pollNow();
-
-            // Create message and save it to local database
-            messageId = Message.createLocalMessage(sendMsgTransact);
-        }
-        catch (err) {
-            // Error sending message to another device.
-            //  Log error condition
-            Catenis.logger.ERROR('Error sending message to another device.', err);
-
-            if (sendMsgTransact && !txid) {
-                // Revert output addresses added to transaction
-                sendMsgTransact.revertOutputAddresses();
+            if (this.client.billingMode === Client.billingMode.prePaid) {
+                servicePayTransact = Catenis.spendServCredit.payForService(this.client, sendMsgTransact.txid, servicePriceInfo.finalServicePrice);
+            }
+            else if (this.client.billingMode === Client.billingMode.postPaid) {
+                // Not yet implemented
+                Catenis.logger.ERROR('Processing for postpaid billing mode not yet implemented');
+                // noinspection ExceptionCaughtLocallyJS
+                throw new Error('Processing for postpaid billing mode not yet implemented');
             }
 
-            // Rethrows exception
-            throw err;
+            billing.setServicePaymentTransaction(servicePayTransact);
+        }
+        catch (err) {
+            if ((err instanceof Meteor.Error) && err.error === 'ctn_spend_serv_cred_tx_rejected') {
+                // Spend service credit transaction has been rejected.
+                //  Log warning condition
+                Catenis.logger.WARN('Billing for send message service (serviceTxid: %s) recorded with no service payment transaction', sendMsgTransact.txid);
+            }
+            else {
+                // Error recording billing info for send message service.
+                //  Just log error condition
+                Catenis.logger.ERROR('Error recording billing info for send message service (serviceTxid: %s),', sendMsgTransact.txid, err);
+            }
         }
     });
 
@@ -542,46 +596,94 @@ Device.prototype.logMessage = function (message, encryptMessage = true, storageS
         throw new Meteor.Error('ctn_device_not_active', util.format('Cannot log message for a device that is not active (deviceId: %s)', this.deviceId));
     }
 
-    // TODO: check if client has enough credits to pay for service
-
     let messageId = undefined;
 
-    // Execute code in critical section to avoid UTXOs concurrency
-    FundSource.utxoCS.execute(() => {
-        let logMsgTransact;
-        let txid;
+    // Execute code in critical section to avoid Colored Coins UTXOs concurrency
+    CCFundSource.utxoCS.execute(() => {
+        const servicePriceInfo = Service.logMessageServicePrice();
+
+        if (this.client.billingMode === Client.billingMode.prePaid) {
+            // Make sure that client has enough service credits to pay for service
+            const serviceAccountBalance = this.client.serviceAccountBalance();
+
+            if (serviceAccountBalance < servicePriceInfo.finalServicePrice) {
+                // Client does not have enough credits to pay for service.
+                //  Log error condition and throw exception
+                Catenis.logger.ERROR('Client does not have enough credits to pay for log message service', {
+                    serviceAccountBalance: serviceAccountBalance,
+                    servicePrice: servicePriceInfo.finalServicePrice
+                });
+                throw new Meteor.Error('ctn_device_low_service_acc_balance', 'Client does not have enough credits to pay for log message service');
+            }
+        }
+
+        let logMsgTransact = undefined;
+
+        // Execute code in critical section to avoid UTXOs concurrency
+        FundSource.utxoCS.execute(() => {
+            try {
+                // Prepare transaction to log message
+                logMsgTransact = new LogMessageTransaction(this, message, {
+                    encrypted: encryptMessage,
+                    storageScheme: storageScheme,
+                    storageProvider: storageProvider
+                });
+
+                // Build and send transaction
+                logMsgTransact.buildTransaction();
+
+                logMsgTransact.sendTransaction();
+
+                // Force polling of blockchain so newly sent transaction is received and processed right away
+                Catenis.txMonitor.pollNow();
+
+                // Create message and save it to local database
+                messageId = Message.createLocalMessage(logMsgTransact);
+            }
+            catch (err) {
+                // Error logging message
+                //  Log error condition
+                Catenis.logger.ERROR('Error logging message.', err);
+
+                if (logMsgTransact && !logMsgTransact.txid) {
+                    // Revert output addresses added to transaction
+                    logMsgTransact.revertOutputAddresses();
+                }
+
+                // Rethrows exception
+                throw err;
+            }
+        });
 
         try {
-            // Prepare transaction to log message
-            logMsgTransact = new LogMessageTransaction(this, message, {
-                encrypted: encryptMessage,
-                storageScheme: storageScheme,
-                storageProvider: storageProvider
-            });
+            // Record billing info for service
+            const billing = Billing.createNew(this, logMsgTransact, servicePriceInfo);
 
-            // Build and send transaction
-            logMsgTransact.buildTransaction();
+            let servicePayTransact;
 
-            txid = logMsgTransact.sendTransaction();
-
-            // Force polling of blockchain so newly sent transaction is received and processed right away
-            Catenis.txMonitor.pollNow();
-
-            // Create message and save it to local database
-            messageId = Message.createLocalMessage(logMsgTransact);
-        }
-        catch (err) {
-            // Error logging message
-            //  Log error condition
-            Catenis.logger.ERROR('Error logging message.', err);
-
-            if (logMsgTransact && !txid) {
-                // Revert output addresses added to transaction
-                logMsgTransact.revertOutputAddresses();
+            if (this.client.billingMode === Client.billingMode.prePaid) {
+                servicePayTransact = Catenis.spendServCredit.payForService(this.client, logMsgTransact.txid, servicePriceInfo.finalServicePrice);
+            }
+            else if (this.client.billingMode === Client.billingMode.postPaid) {
+                // Not yet implemented
+                Catenis.logger.ERROR('Processing for postpaid billing mode not yet implemented');
+                // noinspection ExceptionCaughtLocallyJS
+                throw new Error('Processing for postpaid billing mode not yet implemented');
             }
 
-            // Rethrows exception
-            throw err;
+            billing.setServicePaymentTransaction(servicePayTransact);
+        }
+        catch (err) {
+            if ((err instanceof Meteor.Error) && err.error === 'ctn_spend_serv_cred_tx_rejected') {
+                // Spend service credit transaction has been rejected.
+                //  Log warning condition
+                Catenis.logger.WARN('Billing for log message service (serviceTxid: %s) recorded with no service payment transaction', logMsgTransact.txid);
+            }
+            else {
+                // Error recording billing info for log message service.
+                //  Just log error condition
+                Catenis.logger.ERROR('Error recording billing info for log message service (serviceTxid: %s),', logMsgTransact.txid, err);
+            }
         }
     });
 

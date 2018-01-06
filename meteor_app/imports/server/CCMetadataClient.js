@@ -38,7 +38,8 @@ const cfgSettings = {
     methodPath: {
         addMetadata: methodPathConfig.get('addMetadata'),
         getMetadata: methodPathConfig.get('getMetadata'),
-        shareMetadata: methodPathConfig.get('shareMetadata')
+        shareMetadata: methodPathConfig.get('shareMetadata'),
+        removeMetadata: methodPathConfig.get('removeMetadata')
     }
 };
 
@@ -130,6 +131,21 @@ CCMetadataClient.prototype.shareMetadata = function (torrentHash) {
     }
     catch (err) {
         handleError('shareMetadata', err);
+    }
+};
+
+// Call Colored Coins Metadata server removeMetadata method
+//
+//  Arguments:
+//   torrentHash: [String] - The hex encoded hash that identifies the torrent file that contains the metadata to be removed
+CCMetadataClient.prototype.removeMetadata = function (torrentHash) {
+    const path = cfgSettings.methodPath.removeMetadata + '?torrentHash=' + torrentHash;
+
+    try {
+        getRequest.call(this, path);
+    }
+    catch (err) {
+        handleError('removeMetadata', err);
     }
 };
 

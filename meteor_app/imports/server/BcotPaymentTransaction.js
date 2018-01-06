@@ -109,12 +109,12 @@ BcotPaymentTransaction.checkTransaction = function (txid) {
     let omniTxInfo;
 
     try {
-        omniTxInfo = Catenis.omniCore.omniGetTransaction(txid);
+        omniTxInfo = Catenis.omniCore.omniGetTransaction(txid, false);
     }
     catch (err) {
         if ((err instanceof Meteor.Error) && err.error === 'ctn_omcore_rpc_error' && err.details !== undefined && typeof err.details.code === 'number') {
             if (err.details.code !== OmniCore.rpcErrorCode.RPC_INVALID_ADDRESS_OR_KEY) {
-                Catenis.logger.ERROR(err.reason, err.details);
+                Catenis.logger.DEBUG(err.reason, err.details);
                 throw err;
             }
         }

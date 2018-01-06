@@ -141,7 +141,7 @@ Message {
 
 SentTransaction {
   _id: [string], // MongoDB internal document ID provided by Meteor
-  type: [string], // Identifies the type of transaction that was sent. Valid values (from Catenis.Transaction.type): 'funding', 'credit_service_account', 'store_bcot', 'send_message', 'log_message', 'read_confirmation', 'issue_locked_asset', 'issue_unlocked_asset', 'transfer_asset'
+  type: [string], // Identifies the type of transaction that was sent. Valid values (from Catenis.Transaction.type): 'funding', 'credit_service_account', 'store_bcot', 'spend_service_credit', 'send_message', 'log_message', 'read_confirmation', 'issue_locked_asset', 'issue_unlocked_asset', 'transfer_asset'
   txid: [string], // Blockchain attributed ID (hash) of the sent transaction
   sentDate: [date/time], // Date and time when transaction was sent to the blockchain network
   confirmation: {
@@ -149,7 +149,8 @@ SentTransaction {
     blockHash: [string], // Hash (ID) of blockchain block that contains this transaction
     confirmationDate: [date/time], // Date and time when transaction has been confirmed. This is derived from the block time
   },
-  replacedByTxid: [string], // Blockchain attributed ID (hash) of the transaction that replaces (by means of the RBF - Replace By Fee feature) this transaction (which in turn shall never make to the blockchain and thus shall never be confirmed). This is primarily intended for transactions of the 'read_confirmation' type. This field should only exist if the transaction has been replaced, and it will be set to null to indicate that the transaction that it replaced (directly or indirectly via its descendants) had actually been confirmed later
+  replacedByTxid: [string], // Blockchain attributed ID (hash) of the transaction that replaces (by means of the RBF - Replace By Fee feature) this transaction (which in turn shall never make to the blockchain and thus shall never be confirmed).
+                            //  This is primarily intended for transactions of the 'read_confirmation' and 'spend_service_credit' types. This field should only exist if the transaction has been replaced, and it will be set to null to indicate that the transaction that it replaced (directly or indirectly via its ancestors) had actually been confirmed later
   info: {  // Specific information about the transaction according to its type
     funding: {  // Information for funding transactions
       event: {
@@ -164,6 +165,9 @@ SentTransaction {
     },
     storeBcot: { // Information for store BCOT transaction
       storedAmount: [number]  // Amount, in BCOT token "satoshis", stored
+    },
+    spendServiceCredit: { // Information for spend service credit transaction
+      serviceTxids: [Array(string)]  // Blockchain assigned ID of transactions used to convey service that are paid by this tx
     },
     sendMessage: { // Information for send message transactions
       originDeviceId: [string], // External ID of the device that sent the message
@@ -306,6 +310,7 @@ BcotExchangeRate {
 
 Billing {
   _id: [string],  // MongoDB internal document ID provided by Meteor
+  type: [string],  // The type of billing doc/rec. Available values (from Billing.docType): 'original', 'complementary'
   clientId: [string],  // ID of client to which service is charged
   deviceId: [string],  // ID of device that actually consumed the service
   billingMode: [string],  // Billing mode used for charging the service. Available values (from Client.billingMode): 'pre-paid', 'post-paid'
@@ -313,13 +318,15 @@ Billing {
   serviceDate: [date/time],  // Date and time when service has been consumed
   serviceTx: {  // Catenis transaction used to convey the consumed service
     txid: [string],  // Blockchain attributed ID (hash) of service transaction
-    fee: [number]   // Amount, in satoshis, paid as fee for the service transaction
+    fee: [number],   // Amount, in satoshis, paid as fee for the service transaction
     complementaryTx: {  // Catenis transaction that complements the service transaction. This field should only exist if the service transaction requires a complementary transaction, which is currently only true for 'send_msg_read_confirm' service.
-                        //  It is mainly used to record the read confirmation transaction for 'send_msg_read_confirm' service.
-      txid: [string],  // // Blockchain attributed ID (hash) of the complementary (read confirmation) transaction
-      confirmed: [boolean],  // Indicates whether complementary transaction has already been confirmed
-      fee: [number]  // Amount, in satoshis, paid as fee for the complementary (read confirmation) credit transaction.
-                     //  Note: since read confirmation transactions make use RBF (replace by fee), the actual fee spent is only obtained after the transaction is confirmed
+                        //  It is mainly used to record the read confirmation transaction for 'send_msg_read_confirm' service, and will only be added after the read confirmation tx is confirmed.
+                        //  Note: it will only be included in the "original" billing doc/rec if read confirmation tx is issued from the same Catenis node that sent the message or if a read notification is actually sent.
+                        //         Otherwise, a "complementary" billing doc/rec shall be created at the Catenis node that issued the read confirmation tx to register the cost of the complementary (read confirmation) tx.
+                        //         This "complementary" doc/rec shall only include the following fields: type, clientId, deviceId, service, serviceTx.txid, serviceTx.complementaryTx.txid, serviceTx.complementaryTx.fee, createdDate
+      txid: [string],  // Blockchain attributed ID (hash) of the complementary (read confirmation) transaction
+      fee: [number],  // Amount, in satoshis, paid as fee for the complementary (read confirmation) transaction
+      feeShare: [number]  // Amount, in satoshis, that represents the portion of the fee paid for the complementary (read confirmation) transaction that applies this specific service (sent message)
     }
   },
   estimatedServiceCost: [number], - Estimated cost, in satoshis, of the service
@@ -329,9 +336,10 @@ Billing {
   servicePaymentTx: {  // Catenis transaction used to pay for service
     txid: [string],  // Blockchain attributed ID (hash) of transaction used to pay for service expense.
                      //  Can be either a Spend Service Credit tx or a Debit Service Account tx, depending if the billing mode is 'pre-paid' or 'post-paid' respectively
-    confirmed: [boolean],  // Indicates whether service credit transaction has already been confirmed
-    fee: [number]  // Amount, in satoshis, paid as fee for the service credit transaction.
-                   //  Note: since service credit transactions make use RBF (replace by fee), the actual fee spent is only obtained after the transaction is confirmed
+    confirmed: [boolean],  // Indicates whether service payment transaction has already been confirmed
+    fee: [number],  // Amount, in satoshis, paid as fee for the service payment transaction.
+                    //  Note: since service payment transactions make use RBF (replace by fee), the actual fee spent is only obtained after the transaction is confirmed
+    feeShare: [number]  // Amount, in satoshis, that represents the portion of the fee paid for the service payment transaction that applies this specific service
   },
   createdDate: [date/time]  // Date and time when doc/rec has been created
 }

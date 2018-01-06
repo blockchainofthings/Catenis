@@ -786,6 +786,7 @@ ReadConfirmTransaction.prototype.fundTransaction = function () {
 
                     if (newChange === 0) {
                         // Remove output to receive change
+                        this.transact.revertOutputAddresses(this.lastReadConfirmSpendOutputPos + 1, this.lastReadConfirmSpendOutputPos + 1);
                         this.transact.removeOutputAt(this.lastReadConfirmSpendOutputPos + 1);
                         this.readConfirmTxInfo.incrementNumTxOutputs(-1);
                     }
@@ -831,12 +832,14 @@ ReadConfirmTransaction.prototype.fundTransaction = function () {
                             //      is automatically not included (since that change UTXO is obviously not yet confirmed,
                             //      and we would be replacing a previous tx). However, we are keeping both conditions
                             //      just as an additional precaution
-                            readConfirmPayTxExpenseFundSource = new FundSource(Catenis.ctnHubNode.readConfirmPayTxExpenseAddr.listAddressesInUse(),
-                                this.lastTxid !== undefined ? undefined : {},
-                                this.lastTxChangeOutputPos >= 0 ? Util.txoutToString({
+                            readConfirmPayTxExpenseFundSource = new FundSource(Catenis.ctnHubNode.readConfirmPayTxExpenseAddr.listAddressesInUse(), {
+                                unconfUtxoInfo: this.lastTxid !== undefined ? undefined : {},
+                                higherAmountUtxos: true,
+                                excludeUtxos: this.lastTxChangeOutputPos >= 0 ? Util.txoutToString({
                                     txid: this.lastTxid,
                                     vout: this.lastTxChangeOutputPos
-                                }) : undefined);
+                                }) : undefined
+                            });
                         }
 
                         const allocResult = readConfirmPayTxExpenseFundSource.allocateFund(deltaFee);
@@ -877,8 +880,8 @@ ReadConfirmTransaction.prototype.fundTransaction = function () {
                                 // No change output needed
                                 if (this.change > 0) {
                                     // Transaction had a change output, remove it and try to discard its address
-                                    this.transact.removeOutputAt(this.lastReadConfirmSpendOutputPos + 1);
                                     this.transact.revertOutputAddresses(this.lastReadConfirmSpendOutputPos + 1, this.lastReadConfirmSpendOutputPos + 1);
+                                    this.transact.removeOutputAt(this.lastReadConfirmSpendOutputPos + 1);
                                 }
 
                                 // Remove change output from RBF tx info object

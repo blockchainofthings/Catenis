@@ -34,6 +34,7 @@ const cfgSettings = {
     password: ccFullNodeClientConfig.get('password'),
     connectionTimeout: ccFullNodeClientConfig.get('connectionTimeout'),
     methodPath: {
+        parseNow: methodPathConfig.get('parseNow'),
         getAddressesUtxos: methodPathConfig.get('getAddressesUtxos'),
         getUtxos: methodPathConfig.get('getUtxos'),
         getTxouts: methodPathConfig.get('getTxouts'),
@@ -69,18 +70,34 @@ export function CCFullNodeClient(network, host, inetAddr, username, password, ti
 // Public CCFullNodeClient object methods
 //
 
+
+// Call Colored Coins Full Node parseNow method
+//
+CCFullNodeClient.prototype.parseNow = function () {
+    try {
+        return getRequest.call(this, cfgSettings.methodPath.parseNow);
+    }
+    catch (err) {
+        handleError('parseNow', err);
+    }
+};
+
 // Call Colored Coins Full Node getAddressesUtxos method
 //
 //  Arguments:
 //   addresses [String|Array(String)] - Blockchain addresses for which to retrieve UTXOs
 //   numOfConfirmations [Number]      - Minimum number of confirmations for UTXO to be returned
-CCFullNodeClient.prototype.getAddressesUtxos = function (addresses, numOfConfirmations) {
+CCFullNodeClient.prototype.getAddressesUtxos = function (addresses, numOfConfirmations, waitForParsing = true) {
     const postData = {
         addresses: Array.isArray(addresses) ? addresses : [addresses]
     };
 
     if (numOfConfirmations !== undefined) {
         postData.numOfConfirmations = numOfConfirmations;
+    }
+
+    if (waitForParsing) {
+        postData.waitForParsing = true;
     }
 
     try {
@@ -99,13 +116,17 @@ CCFullNodeClient.prototype.getAddressesUtxos = function (addresses, numOfConfirm
 //     index: [Number]  - Output index (vout)
 //   }]
 //   numOfConfirmations [Number]  - Minimum number of confirmations for UTXO to be returned
-CCFullNodeClient.prototype.getUtxos = function (utxos, numOfConfirmations) {
+CCFullNodeClient.prototype.getUtxos = function (utxos, numOfConfirmations, waitForParsing = true) {
     const postData = {
         utxos: Array.isArray(utxos) ? utxos : [utxos]
     };
 
     if (numOfConfirmations !== undefined) {
         postData.numOfConfirmations = numOfConfirmations;
+    }
+
+    if (waitForParsing) {
+        postData.waitForParsing = true;
     }
 
     try {
@@ -123,27 +144,35 @@ CCFullNodeClient.prototype.getUtxos = function (utxos, numOfConfirmations) {
 //     txid: [String],  - Transaction ID
 //     vout: [Number]  - Output index
 //   }]
-CCFullNodeClient.prototype.getTxouts = function (txouts) {
-  const postData = {
-    txouts: Array.isArray(txouts) ? txouts : [txouts]
-  };
+CCFullNodeClient.prototype.getTxouts = function (txouts, waitForParsing = true) {
+    const postData = {
+        txouts: Array.isArray(txouts) ? txouts : [txouts]
+    };
 
-  try {
-    return postRequest.call(this, cfgSettings.methodPath.getTxouts, postData);
-  }
-  catch (err) {
-    handleError('getTxouts', err);
-  }
+    if (waitForParsing) {
+        postData.waitForParsing = true;
+    }
+    
+    try {
+        return postRequest.call(this, cfgSettings.methodPath.getTxouts, postData);
+    }
+    catch (err) {
+        handleError('getTxouts', err);
+    }
 };
 
 // Call Colored Coins Full Node getAddressesTransactions method
 //
 //  Arguments:
 //   addresses [String|Array(String)] - Blockchain addresses for which to retrieve transactions
-CCFullNodeClient.prototype.getAddressesTransactions = function (addresses) {
+CCFullNodeClient.prototype.getAddressesTransactions = function (addresses, waitForParsing = true) {
     const postData = {
         addresses: Array.isArray(addresses) ? addresses : [addresses]
     };
+
+    if (waitForParsing) {
+        postData.waitForParsing = true;
+    }
 
     try {
         return postRequest.call(this, cfgSettings.methodPath.getAddressesTransactions, postData);

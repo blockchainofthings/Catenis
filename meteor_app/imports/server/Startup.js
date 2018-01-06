@@ -50,6 +50,7 @@ import { CCMetadataClient } from './CCMetadataClient';
 import { OmniCore } from './OmniCore';
 import { BcotExchangeRate } from './BcotExchangeRate';
 import { BcotPayment } from './BcotPayment';
+import { SpendServiceCredit } from './SpendServiceCredit';
 
 // DEBUG - begin
 //import { resetBitcoinCore } from './Test/FundSourceTest';
@@ -81,6 +82,7 @@ Meteor.startup(function () {
         Catenis.logger.INFO('Starting initialization...');
         Database.initialize();
         Database.fillClientBillingModeField();
+        Database.fixSentTransactionReplacedByTxidIndex();
         Application.initialize();
         MalleabilityEventEmitter.initialize();
         BitcoinFees.initialize();
@@ -110,6 +112,7 @@ Meteor.startup(function () {
         BcotPayment.initialize();
         ReceiveMessage.initialize();
         ReadConfirmation.initialize();
+        SpendServiceCredit.initialize();
         TransactionMonitor.initialize();
 
         // Initialize all notification message dispatchers first

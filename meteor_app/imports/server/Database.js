@@ -983,6 +983,14 @@ Database.initialize = function() {
         Billing: {
             indices: [{
                 fields: {
+                    type: 1
+                },
+                opts: {
+                    background: true,
+                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                }
+            }, {
+                fields: {
                     clientId: 1
                 },
                 opts: {
@@ -1041,16 +1049,7 @@ Database.initialize = function() {
                 }
             }, {
                 fields: {
-                    'serviceTx.complementaryTx.confirmed': 1
-                },
-                opts: {
-                    sparse: true,
-                    background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
-                }
-            }, {
-                fields: {
-                    'serviceCreditTx.txid': 1
+                    'servicePaymentTx.txid': 1
                 },
                 opts: {
                     background: true,
@@ -1058,7 +1057,7 @@ Database.initialize = function() {
                 }
             }, {
                 fields: {
-                    'serviceCreditTx.confirmed': 1
+                    'servicePaymentTx.confirmed': 1
                 },
                 opts: {
                     background: true,
@@ -1209,6 +1208,94 @@ Database.fillClientBillingModeField = function () {
 
     if (numUpdatedDocs > 0) {
         Catenis.logger.INFO('****** Number of Client DB collection docs updated to fill new billingMode field: %d', numUpdatedDocs);
+    }
+};
+
+//** Temporary method used to fix indices of SentTransaction collection
+//   - index on replacedByTxid changed to be made NOT unique
+import Future from 'fibers/future';
+
+Database.fixSentTransactionReplacedByTxidIndex = function () {
+    let indicesChanged = false;
+    const fut1 = new Future();
+
+    Catenis.db.mongoCollection.SentTransaction.indexes(function (error, indices) {
+        if (!error) {
+            const replacedByTxidIndex = indices.find((index) => {
+                const keyFields = Object.keys(index.key);
+
+                return keyFields.length === 1 && keyFields[0] === 'replacedByTxid';
+            });
+
+            if (replacedByTxidIndex) {
+                if (replacedByTxidIndex.unique) {
+                    // Index currently has the unique constraint.
+                    //  So remove it and reinsert it
+                    // noinspection JSIgnoredPromiseFromCall
+                    Catenis.db.mongoCollection.SentTransaction.dropIndex(replacedByTxidIndex.name, function (error) {
+                        if (!error) {
+                            // Insert index
+                            // noinspection JSUnusedLocalSymbols, JSIgnoredPromiseFromCall
+                            Catenis.db.mongoCollection.SentTransaction.ensureIndex({
+                                replacedByTxid: 1
+                            }, {
+                                sparse: true,
+                                background: true,
+                                safe: true
+                            }, function (error, indexName) {
+                                if (!error) {
+                                    Catenis.logger.INFO('****** Index on replacedByTxid field of SentTransaction DB collection has been fixed');
+                                    indicesChanged = true;
+                                    fut1.return();
+                                }
+                                else {
+                                    // Error trying to insert index. Log error and throw exception
+                                    Catenis.logger.ERROR('Error trying to insert fixed index on replacedByTxid field of SentTransaction DB collection.', error);
+                                    throw new Error('Error trying to insert fixed index on replacedByTxid field of SentTransaction DB collection');
+                                }
+                            })
+                        }
+                        else {
+                            // Error trying to remove index. Log error and throw exception
+                            Catenis.logger.ERROR('Error trying to remove index on replacedByTxid field of SentTransaction DB collection.', error);
+                            throw new Error('Error trying to remove index on replacedByTxid field of SentTransaction DB collection');
+                        }
+                    })
+                }
+                else {
+                    fut1.return();
+                }
+            }
+            else {
+                fut1.return();
+            }
+        }
+        else {
+            // Error retrieving indices. Log error
+            Catenis.logger.ERROR('Error retrieving indices from SentTransaction DB collection.', error);
+            throw new Error('Error retrieving indices from SentTransaction DB collection');
+        }
+    });
+
+    fut1.wait();
+
+    if (indicesChanged) {
+        const fut2 = new Future();
+
+        // Reindex collection
+        // noinspection JSIgnoredPromiseFromCall, JSUnusedLocalSymbols
+        Catenis.db.mongoCollection.SentTransaction.reIndex(function (error, result) {
+            if (!error) {
+                Catenis.logger.INFO('****** SentTransaction DB collection successfully reindexed.');
+                fut2.return();
+            }
+            else {
+                Catenis.logger.ERROR('Error trying to reindex SentTransaction collection.', error);
+                throw new Error('Error trying to reindex SentTransaction collection');
+            }
+        });
+
+        fut2.wait();
     }
 };
 

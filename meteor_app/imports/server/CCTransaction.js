@@ -23,9 +23,11 @@ import { Meteor } from 'meteor/meteor';
 import { Catenis } from './Catenis';
 import {
     Transaction,
-    cfgSettings as txCfgSettings
+    cfgSettings as txCfgSettings,
+    fixClone as txFixClone
 } from './Transaction';
 import { CCMetadata } from './CCMetadata';
+import { Util } from './Util';
 
 // Config entries
 const ccTransactConfig = config.get('ccTransaction');
@@ -131,7 +133,22 @@ export class CCTransaction extends Transaction {
 
         this.isAssembled = false;
         this.includesMultiSigOutput = false;
-        this.numCcOutputs = 0;
+        this.numCcTransferOutputs = 0;
+
+        Object.defineProperties(this, {
+            numTotalCcInputs: {
+                get: function () {
+                    return this.countTransferInputs() + (this.issuingInfo ? 1 : 0);
+                },
+                enumerable: true
+            },
+            numTotalCcOutputs: {
+                get: function () {
+                    return this.numCcTransferOutputs + (this.includesMultiSigOutput ? 2 : 1);
+                },
+                enumerable: true
+            }
+        });
     }
 }
 
@@ -218,11 +235,13 @@ CCTransaction.prototype.addIssuingInput = function (txout, address, addrInfo, as
 //  Arguments:
 //   inputs: [Array(Object)|Object] - List of UTXOs containing Colored Coins asset info to be used as inputs for Colored Coins transaction
 //   inputSeqStartPos: [Number] - (optional) Position of first input of transfer input sequence into which inputs should be added
+//   insertBefore: [Boolean] - (optional, default = false) Indicates that inputs should actually be added to a new transfer input sequence that
+//                              should be inserted before the one referenced by the inputSeqStartPos argument
 //
 //  Return:
 //   inputSeqStartPos: [Number] - Input position of first input (startPos field) of transfer input sequence into which inputs have been added.
 //   undefined - if no inputs are added (due to an error)
-CCTransaction.prototype.addTransferInputs = function (inputs, inputSeqStartPos) {
+CCTransaction.prototype.addTransferInputs = function (inputs, inputSeqStartPos, insertBefore = false) {
     if (!Array.isArray(inputs)) {
         inputs = [inputs];
     }
@@ -259,36 +278,49 @@ CCTransaction.prototype.addTransferInputs = function (inputs, inputSeqStartPos) 
         const inputSeq = getTransferInputSeq.call(this, inputSeqStartPos);
 
         if (inputSeq !== undefined) {
-            // Make sure that inputs being added are for the same asset as the input sequence
-            //  and that the asset can be aggregated
-            const firstInputOfSeq = this.getInputAt(inputSeq.startPos);
+            if (insertBefore) {
+                // Add inputs to a new transfer input sequence with specified start position
+                const newInputSeq = addNewTransferInputSeq.call(this, inputs.length, inputSeqStartPos);
+                this.addInputs(inputs, newInputSeq.startPos);
 
-            if (firstInputOfSeq.txout.ccAssetId === inputs[0].txout.ccAssetId && firstInputOfSeq.txout.isAggregatableAsset) {
-                // Add new inputs to existing transfer input sequence
-                this.addInputs(inputs, inputSeq.startPos + inputSeq.nInputs);
-                incrementInputsOfTransferInputSeq.call(this, inputSeq, inputs.length);
-
-                return inputSeqStartPos;
+                return newInputSeq.startPos;
             }
             else {
-                // Inputs being added is for a different asset or asset cannot be aggregated.
-                //  Log waring condition
-                Catenis.logger.WARN('Transfer inputs to be added to existing transfer input sequence are for a different Colored Coins asset or asset cannot be aggregated; adding transfer inputs to a new transfer input sequence', {
-                    inputSeqStartPos: inputSeqStartPos,
-                    firstInputOfSeq: firstInputOfSeq,
-                    inputs: inputs
-                });
-                // Let processing to continue so inputs are added to a new transfer input sequence
+                // Make sure that inputs being added are for the same asset as the input sequence
+                //  and that the asset can be aggregated
+                const firstInputOfSeq = this.getInputAt(inputSeq.startPos);
+
+                if (firstInputOfSeq.txout.ccAssetId === inputs[0].txout.ccAssetId && firstInputOfSeq.txout.isAggregatableAsset) {
+                    // Add new inputs to existing transfer input sequence
+                    this.addInputs(inputs, inputSeq.startPos + inputSeq.nInputs);
+                    incrementInputsOfTransferInputSeq.call(this, inputSeq, inputs.length);
+
+                    return inputSeqStartPos;
+                }
+                else {
+                    // Inputs being added is for a different asset or asset cannot be aggregated.
+                    //  Log waring condition
+                    Catenis.logger.WARN('Transfer inputs to be added to existing transfer input sequence are for a different Colored Coins asset or asset cannot be aggregated; adding transfer inputs to a new transfer input sequence', {
+                        inputSeqStartPos: inputSeqStartPos,
+                        firstInputOfSeq: firstInputOfSeq,
+                        inputs: inputs
+                    });
+                    // Let processing to continue so inputs are added to a new transfer input sequence
+                }
             }
         }
         else {
-            // There is no transfer input sequence with specified start position.
-            //  Log warning condition
-            Catenis.logger.WARN('Specified transfer input sequence to add new transfer inputs does not exist; adding transfer inputs to a new transfer input sequence', {
-                transferInputSeqs: this.transferInputSeqs,
-                inputSeqStartPos: inputSeqStartPos
-            });
-            // Let processing to continue so inputs are added to a new transfer input sequence
+            // There is no transfer input sequence with specified start position
+            if (!insertBefore || this.transferInputSeqs.length > 0) {
+                // Log warning condition except if insert before is requested and there
+                //  are no transfer input sequences
+                Catenis.logger.WARN('Specified transfer input sequence to add new transfer inputs does not exist; adding transfer inputs to a new transfer input sequence', {
+                    transferInputSeqs: this.transferInputSeqs,
+                    inputSeqStartPos: inputSeqStartPos
+                });
+            }
+
+            // Let processing to continue so inputs are added to a new transfer input sequence at the end of the list
         }
     }
 
@@ -306,16 +338,51 @@ CCTransaction.prototype.addTransferInputs = function (inputs, inputSeqStartPos) 
 //   address: [String] - Blockchain address associated with UTXO
 //   addrInfo; [Object] - Object with info about blockchain address associated with UTXO
 //   inputSeqStartPos: [Number] - (optional) Position of first input of transfer input sequence into which inputs should be added
+//   insertBefore: [Boolean] - (optional, default = false) Indicates that inputs should actually be added to a new transfer input sequence that
+//                              should be inserted before the one reference by the inputSeqStartPos argument
 //
 //  Return:
 //   inputSeqStartPos: [Number] - Input position of first input (startPos field) of transfer input sequence into which inputs have been added
 //   undefined - If input is not added (due to an error)
-CCTransaction.prototype.addTransferInput = function (txout, address, addrInfo, inputSeqStartPos) {
+CCTransaction.prototype.addTransferInput = function (txout, address, addrInfo, inputSeqStartPos, insertBefore = false) {
     return this.addTransferInputs({
         txout: txout,
         address: address,
         addrInfo: addrInfo
-    }, inputSeqStartPos);
+    }, inputSeqStartPos, insertBefore);
+};
+
+// Remove transfer inputs sequence and all its related transfer outputs
+//
+//  Arguments:
+//   startPos: [Number] - Start position of transfer input sequence to remove
+//
+//  Return:
+//   success: [Boolean] - True if input sequence is successfully removed, or false if input sequence has not
+//                         been removed (possibly due to an error)
+CCTransaction.prototype.removeTransferInputSequence = function (startPos) {
+    // Try to retrieve transfer input sequence
+    const inputSeq = getTransferInputSeq.call(this, startPos);
+
+    if (inputSeq !== undefined) {
+        // Remove associated transfer outputs
+        this.removeTransferOutputs(inputSeq.startPos);
+
+        // Remove inputs from transaction
+        for (let pos = inputSeq.startPos, limit = inputSeq.startPos + inputSeq.nInputs; pos < limit; pos++) {
+            this.removeInputAt(pos);
+        }
+
+        // Now remove transfer input sequence entry...
+        this.transferInputSeqs.splice(getTransferInputSeqIndex.call(this, inputSeq.startPos), 1);
+
+        // and adjust start position of all subsequent input sequences
+        offsetTransferInputStartPos.call(this, inputSeq.startPos + inputSeq.nInputs, -inputSeq.nInputs);
+
+        return true;
+    }
+
+    return false;
 };
 
 // Get information about asset amount associated with a given transfer input sequence
@@ -403,12 +470,18 @@ CCTransaction.prototype.getTransferInputSeqAssetAmountInfo = function (startPos)
     return result;
 };
 
+CCTransaction.prototype.countTransferInputs = function () {
+    return this.transferInputSeqs.reduce((sum, inputSeq) => {
+        return sum + inputSeq.nInputs;
+    }, 0);
+};
+
 // Sets one or more transfer output entries designating where Colored Coins assets should be transferred to
 //
 //  Arguments:
 //   outputs: [{ [Array(Object)|Object] - List of output objects
 //     address: [String] - Blockchain address to where assets should be sent
-//     assetAmount: [Number] - Amount of asset to transfer
+//     assetAmount: [Number] - Amount of asset to transfer. It can be a negative value
 //   }]
 //   inputSeqStartPos: [Number] - Start position of transfer input sequence from where assets should come
 //
@@ -440,22 +513,47 @@ CCTransaction.prototype.setTransferOutputs = function (outputs, inputSeqStartPos
 
         // Make sure that specified transfer input sequence has enough asset amount to fulfill the transfer
         const assetAmountInfo = this.getTransferInputSeqAssetAmountInfo(inputSeqStartPos);
+        const finalInputRemainingAssetAmount = assetAmountInfo.assetAmount.remainingInput - totalTransferAssetAmount;
 
-        if (assetAmountInfo.assetAmount.remainingInput >= totalTransferAssetAmount) {
-            // Reset transaction before performing task
-            this.reset();
+        if (finalInputRemainingAssetAmount >= 0) {
+            let negativeAssetAmountToDiscard = 0;
 
             // Find right position to insert transfer output
             let idx = 0;
+            const transferOutputsToAdjust = []; // Entry = [idx, newAmount]
+            const transferOutputsToRemove = []; // Entry = [idx, count]
 
             for (let limit = this.transferOutputs.length; idx < limit; idx++) {
                 const transferOutput = this.transferOutputs[idx];
 
                 if (transferOutput.inputSeqStartPos === inputSeqStartPos) {
                     if (outputsByAddress.has(transferOutput.address)) {
-                        // Merge new output with transfer output that already exists and
-                        //  sends asset to same address
-                        transferOutput.assetAmount += outputsByAddress.get(transferOutput.address).assetAmount;
+                        // Prepare to merge new output with transfer output that already exists
+                        //  and sends asset to same address
+                        let adjustedAssetAmount = transferOutput.assetAmount + outputsByAddress.get(transferOutput.address).assetAmount;
+
+                        // Make sure that resulting asset amount is positive
+                        if (adjustedAssetAmount > 0) {
+                            transferOutputsToAdjust.push([idx, adjustedAssetAmount]);
+                        }
+                        else {
+                            // Set transfer output to be removed
+                            let length,
+                                lastEntry;
+
+                            if ((length = transferOutputsToRemove.length) > 0 && (lastEntry = transferOutputsToRemove[length - 1]) && lastEntry[0] + lastEntry[1] === idx) {
+                                lastEntry[1]++;
+                            }
+                            else {
+                                transferOutputsToRemove.push([idx, 1]);
+                            }
+
+                            if (adjustedAssetAmount < 0) {
+                                // Accumulate negative value to be discarded
+                                negativeAssetAmountToDiscard -= adjustedAssetAmount;
+                            }
+                        }
+
                         outputsByAddress.delete(transferOutput.address);
                     }
                 }
@@ -466,16 +564,64 @@ CCTransaction.prototype.setTransferOutputs = function (outputs, inputSeqStartPos
                 }
             }
 
-            if (outputsByAddress.size > 0) {
-                const newTransferOutputs = Array.from(outputsByAddress.values()).map((output) => {
-                    return {
-                        inputSeqStartPos: inputSeqStartPos,
-                        address: output.address,
-                        assetAmount: output.assetAmount
-                    };
-                });
+            // Identify new transfer outputs to be added and if there are more negative
+            //  values to be discarded
+            let transferOutputsToAdd = [];
 
-                Array.prototype.splice.apply(this.transferOutputs, [idx, 0].concat(newTransferOutputs));
+            if (outputsByAddress.size > 0) {
+                transferOutputsToAdd = Array.from(outputsByAddress.values()).reduce((list, output) => {
+                    if (output.assetAmount > 0) {
+                        list.push({
+                            inputSeqStartPos: inputSeqStartPos,
+                            address: output.address,
+                            assetAmount: output.assetAmount
+                        });
+                    }
+                    else if (output.assetAmount < 0) {
+                        negativeAssetAmountToDiscard -= output.assetAmount;
+                    }
+
+                    return list;
+                }, transferOutputsToAdd);
+            }
+
+            // Make sure that specified transfer input sequence still has enough asset amount to fulfill the transfer
+            if (finalInputRemainingAssetAmount >= negativeAssetAmountToDiscard && (transferOutputsToAdjust.length > 0
+                        || transferOutputsToRemove.length > 0 || transferOutputsToAdd.length > 0)) {
+                // Reset transaction before making changes
+                this.reset();
+
+                if (transferOutputsToAdjust.length > 0) {
+                    transferOutputsToAdjust.forEach((entry) => {
+                        this.transferOutputs[entry[0]].assetAmount = entry[1];
+                    })
+                }
+
+                if (transferOutputsToRemove.length > 0) {
+                    transferOutputsToRemove.forEach((entry) => {
+                        // Remove existing transfer outputs...
+                        Array.prototype.splice.apply(this.transferOutputs, entry);
+
+                        // and adjust insertion index
+                        idx -= entry[1];
+                    });
+                }
+
+                if (transferOutputsToAdd.length > 0) {
+                    Array.prototype.splice.apply(this.transferOutputs, [idx, 0].concat(transferOutputsToAdd));
+                }
+            }
+            else {
+                // Not enough asset amount at transfer input sequence to be transferred.
+                //  Log error condition, and return indicating error
+                Catenis.logger.ERROR('Transfer input sequence does not have enough remaining asset amount for setting transfer outputs for Colored Coins transaction; no outputs set', {
+                    inputSeqStartPos: inputSeqStartPos,
+                    outputs: outputs,
+                    transferInputSeqAssetAmountInfo: assetAmountInfo,
+                    totalTransferAssetAmount: totalTransferAssetAmount,
+                    negativeAssetAmountToDiscard: negativeAssetAmountToDiscard
+                });
+                return false;
             }
         }
         else {
@@ -610,6 +756,147 @@ CCTransaction.prototype.setChangeBurnOutput = function (inputSeqStartPos) {
     }
 };
 
+// Remove all transfer outputs for a given transfer input sequence
+//
+//  Arguments:
+//   inputSeqStartPos: [Number] - Start position of transfer input sequence for which outputs should be removed
+//
+//  Return:
+//   success: [Boolean] - True if outputs are successfully removed, or false if no outputs have been
+//                         removed (possibly due to an error)
+CCTransaction.prototype.removeTransferOutputs = function (inputSeqStartPos) {
+    // Try to retrieve transfer input sequence
+    const inputSeq = getTransferInputSeq.call(this, inputSeqStartPos);
+
+    if (inputSeq !== undefined || (inputSeqStartPos === 0 && this.issuingInfo !== undefined)) {
+        const transferOutputsToRemove = []; // Entry = [idx, count]
+
+        for (let idx = 0, limit = this.transferOutputs.length; idx < limit; idx++) {
+            const transferOutput = this.transferOutputs[idx];
+
+            if (transferOutput.inputSeqStartPos === inputSeqStartPos && transferOutput.address !== undefined) {
+                // Set transfer output to be removed
+                let length,
+                    lastEntry;
+
+                if ((length = transferOutputsToRemove.length) > 0 && (lastEntry = transferOutputsToRemove[length - 1]) && lastEntry[0] + lastEntry[1] === idx) {
+                    lastEntry[1]++;
+                }
+                else {
+                    transferOutputsToRemove.push([idx, 1]);
+                }
+            }
+        }
+
+        if (transferOutputsToRemove.length > 0) {
+            // Reset transaction before making changes
+            this.reset();
+
+            transferOutputsToRemove.forEach((entry) => {
+                // Remove existing transfer outputs...
+                Array.prototype.splice.apply(this.transferOutputs, entry);
+            });
+
+            return true;
+        }
+    }
+
+    return false;
+};
+
+// Return list of blockchain addresses used to transfer assets from a give input sequence
+//
+//  Arguments:
+//   inputSeqStartPos: [Number] - Position of first input of transfer input sequence
+//
+//  Return:
+//   outputAddresses: [Array(String)] - List of blockchain addresses associated with outputs used to transfer
+//                                       assets from input sequence, or undefined if transfer input sequence does not exist
+CCTransaction.prototype.getTransferOutputAddresses = function (inputSeqStartPos) {
+    const inputSeq = getTransferInputSeq.call(this, inputSeqStartPos);
+
+    if (inputSeq !== undefined || (inputSeqStartPos === 0 && this.issuingInfo !== undefined)) {
+        const outputAddresses = [];
+
+        for (let idx = 0, limit = this.transferOutputs.length; idx < limit; idx++) {
+            const transferOutput = this.transferOutputs[idx];
+
+            if (transferOutput.inputSeqStartPos === inputSeqStartPos) {
+                if (transferOutput.address !== undefined) {
+                    outputAddresses.push(transferOutput.address);
+                }
+            }
+            else if (transferOutput.inputSeqStartPos > inputSeqStartPos) {
+                break;
+            }
+        }
+
+        return outputAddresses;
+    }
+};
+
+// Get list of inputs for a given transfer input sequence
+//
+//  Arguments:
+//   inputSeqStartPos: [Number] - Position of first input of transfer input sequence
+//
+//  Return:
+//   transferInputs: [Array(Object)] - List of transaction input objects (the same as used by the inputs property of
+//                                      the CCTransaction object), or undefined if transfer input sequence does not exist
+CCTransaction.prototype.getTransferInputs = function (inputSeqStartPos) {
+    const inputSeq = getTransferInputSeq.call(this, inputSeqStartPos);
+
+    if (inputSeq !== undefined) {
+        const transferInputs = [];
+
+        for (let pos = inputSeq.startPos, limit = inputSeq.startPos + inputSeq.nInputs; pos < limit; pos++) {
+            transferInputs.push(this.getInputAt(pos));
+        }
+
+        return transferInputs;
+    }
+};
+
+// Get list of transaction outputs used to transfer assets for a given input sequence
+//
+//  Arguments:
+//   inputSeqStartPos: [Number] - Position of first input of transfer input sequence
+//
+//  Return:
+//   transferTxouts: [Array(String)] - List of transaction outputs in "txid:n" format, or undefined if
+//                                      transaction has not yet been sent or transfer input sequence does not exist
+//
+//  NOTE: this method should only be called after a Colored Coins transaction has been built and sent
+CCTransaction.prototype.getTransferTxOutputs = function (inputSeqStartPos) {
+    if (this.txid !== undefined) {
+        const inputSeq = getTransferInputSeq.call(this, inputSeqStartPos);
+
+        if (inputSeq !== undefined || (inputSeqStartPos === 0 && this.issuingInfo !== undefined)) {
+            let transferOutputPos = this.includesMultiSigOutput ? 2 : 1;
+            const transferTxouts = [];
+
+            for (let idx = 0, limit = this.transferOutputs.length; idx < limit; idx++) {
+                const transferOutput = this.transferOutputs[idx];
+
+                if (transferOutput.inputSeqStartPos < inputSeqStartPos) {
+                    transferOutputPos++;
+                }
+                else if (transferOutput.inputSeqStartPos === inputSeqStartPos) {
+                    transferTxouts.push(Util.txoutToString({
+                        txid: this.txid,
+                        vout: transferOutputPos++
+                    }));
+                }
+                else {
+                    break;
+                }
+            }
+
+            return transferTxouts;
+        }
+    }
+};
+
 // Identify transfer input sequences that still do not have all their asset amount set to be transferred/burnt
 //
 //  Return:
@@ -665,7 +952,7 @@ CCTransaction.prototype.assemble = function (spendMultiSigOutputAddress) {
             if (this.issuingInfo) {
                 ccBuilder.setLockStatus(this.issuingInfo.type === CCTransaction.issuingAssetType.locked);
                 ccBuilder.setAmount(this.issuingInfo.assetAmount, this.issuingInfo.divisibility);
-                ccBuilder.setAggregationPolicy(this.issuingInfo.isAggregatable ? CCTransaction.aggregationPolicy.aggregatable : CCTransaction.aggregationPolicy.hybrid);
+                ccBuilder.setAggregationPolicy(this.issuingInfo.isAggregatable ? CCTransaction.aggregationPolicy.aggregatable : CCTransaction.aggregationPolicy.dispersed);
             }
 
             // Process Colored Coins metadata if required
@@ -683,17 +970,28 @@ CCTransaction.prototype.assemble = function (spendMultiSigOutputAddress) {
                     this.ccMetadata.store();
                 }
 
-                // Set Colored Coins metadata storing info
-                ccBuilder.setHash(this.ccMetadata.storeResult.torrentHash, this.ccMetadata.storeResult.sha2);
+                if (this.ccMetadata.isStored()) {
+                    // Set Colored Coins metadata storing info
+                    ccBuilder.setHash(this.ccMetadata.storeResult.torrentHash, this.ccMetadata.storeResult.sha2);
+                }
             }
 
             // Set information about asset transfer/burn
-            let outputPos = 1;  // Note: first output is reserved for null data output
+
+            // Note: make sure that Colored Coins transfer tx outputs are placed before any other
+            //   non-Colored Coins tx outputs that might already exist. If we already set the start
+            //   position to 1 (since, in the end, the null data output shall occupy the first output
+            //   position), we might inadvertently leave a regular, non-Colored Coins output starting
+            //   before the Colored Coins transfer outputs.
+            let outputPos = 0;
 
             this.transferOutputs.forEach((transferOutput) => {
                 if (transferOutput.address !== undefined) {
                     // Asset transfer. Add payment and respective tx output
-                    ccBuilder.addPayment(transferOutput.inputSeqStartPos, transferOutput.assetAmount, outputPos);
+                    //  Note: we already increment the output position for the payment of one unit to account for
+                    //    the fact that, in the end, the transfer outputs shall be dislocated by one due to the
+                    //    null data output that shall occupy the first output position.
+                    ccBuilder.addPayment(transferOutput.inputSeqStartPos, transferOutput.assetAmount, outputPos + 1);
 
                     let assetInfo;
 
@@ -719,7 +1017,7 @@ CCTransaction.prototype.assemble = function (spendMultiSigOutputAddress) {
                         amount: txCfgSettings.txOutputDustAmount,
                     }, assetInfo), outputPos++);
 
-                    this.numCcOutputs++;
+                    this.numCcTransferOutputs++;
                 }
                 else {
                     // Burn asset. Add burn instruction
@@ -796,12 +1094,12 @@ CCTransaction.prototype.reset = function () {
     // Make sure that Colored Coins transaction is already assembled
     if (this.isAssembled) {
         // Remove Colored Coins outputs
-        this.removeOutputs(0, this.numCcOutputs + (this.includesMultiSigOutput ? 2 : 1));
+        this.removeOutputs(0, this.numTotalCcOutputs);
 
         // Reset control variables
         this.isAssembled = false;
         this.includesMultiSigOutput = false;
-        this.numCcOutputs = 0;
+        this.numCcTransferOutputs = 0;
     }
 };
 
@@ -929,6 +1227,15 @@ CCTransaction.prototype.totalBurnAssetAmount = function (startInputPos = 0, endI
     return Object.keys(result).length > 0 ? result : undefined;
 };
 
+CCTransaction.prototype.clone = function () {
+    const clone = txFixClone(Util.cloneObj(this));
+
+    clone.transferInputSeqs = _und.clone(clone.transferInputSeqs);
+    clone.transferOutputs = _und.clone(clone.transferOutputs);
+
+    return clone;
+};
+
 
 // Module functions used to simulate private CCTransaction object methods
 //  NOTE: these functions need to be bound to a CCTransaction object reference (this) before
@@ -942,35 +1249,58 @@ function nextTransferInputSeqStartPos() {
     }, this.issuingInfo !== undefined ? 1 : 0);
 }
 
-function addNewTransferInputSeq(nInputs) {
+function addNewTransferInputSeq(nInputs, startPos) {
+    let inputSeqIdx;
+    let replaceCurrentInputSeq = false;
+
+    if (startPos !== undefined && (inputSeqIdx = getTransferInputSeqIndex.call(this, startPos)) !== undefined) {
+        replaceCurrentInputSeq = true;
+    }
+
     const newTransferInputSeq = {
-        startPos: nextTransferInputSeqStartPos.call(this),
+        startPos: replaceCurrentInputSeq ? startPos : nextTransferInputSeqStartPos.call(this),
         nInputs: nInputs
     };
 
-    this.transferInputSeqs.push(newTransferInputSeq);
+    if (replaceCurrentInputSeq) {
+        // Adjust start position of current input sequence and all subsequent ones...
+        offsetTransferInputStartPos.call(this, startPos, nInputs);
+
+        // and add new entry at position occupied by current input sequence
+        this.transferInputSeqs.splice(inputSeqIdx, 0, newTransferInputSeq);
+    }
+    else {
+        // Add new entry at the end of the list
+        this.transferInputSeqs.push(newTransferInputSeq);
+    }
 
     return newTransferInputSeq;
 }
 
-function getTransferInputSeq(startPos) {
-    let foundInputSeq;
+function getTransferInputSeqIndex(startPos) {
+    let inputSeqIdx = undefined;
 
     for (let idx = 0, limit = this.transferInputSeqs.length; idx < limit; idx++) {
         const inputSeq = this.transferInputSeqs[idx];
 
         if (inputSeq.startPos === startPos) {
-            foundInputSeq = inputSeq;
+            inputSeqIdx = idx;
             break;
         }
         else if (inputSeq.startPos > startPos) {
             // We can stop search because it is guaranteed that the start
-            //  positions for each entry are order
+            //  positions for each entry are ordered
             break;
         }
     }
 
-    return foundInputSeq;
+    return inputSeqIdx;
+}
+
+function getTransferInputSeq(startPos) {
+    const inputSeqIdx = getTransferInputSeqIndex.call(this, startPos);
+
+    return inputSeqIdx !== undefined ? this.transferInputSeqs[inputSeqIdx] : undefined;
 }
 
 function incrementInputsOfTransferInputSeq(inputSeq, incInputs) {
@@ -1048,7 +1378,7 @@ CCTransaction.fromTransaction = function (transact) {
                     txInputTxout.ccAssetId = asset.assetId;
                     txInputTxout.assetAmount = asset.amount;
                     txInputTxout.assetDivisibility = asset.divisibility;
-                    txInputTxout.isAggregatableAsset = asset.aggregationPolicy === 'aggregatable';
+                    txInputTxout.isAggregatableAsset = asset.aggregationPolicy === CCTransaction.aggregationPolicy.aggregatable;
                 }
             });
 
@@ -1058,7 +1388,7 @@ CCTransaction.fromTransaction = function (transact) {
                 const issuingOpts = {
                     type: ccData.lockStatus ? CCTransaction.issuingAssetType.locked : CCTransaction.issuingAssetType.unlocked,
                     divisibility: ccData.divisibility,
-                    isAggregatable: ccData.aggregationPolicy === 'aggregatable'
+                    isAggregatable: ccData.aggregationPolicy === CCTransaction.aggregationPolicy.aggregatable
                 };
 
                 ccTransact.issuingInfo = {
@@ -1159,7 +1489,7 @@ CCTransaction.fromTransaction = function (transact) {
                         assetAmount: payment.amount
                     });
 
-                    ccTransact.numCcOutputs++;
+                    ccTransact.numCcTransferOutputs++;
 
                     // Add Colored Coins asset info to respective tx output
                     let assetInfo;

@@ -50,6 +50,24 @@ import { Transaction } from './Transaction';
 // NOTE: make sure that objects of this function class are instantiated and used (their methods
 //  called) from code executed from the FundSource.utxoCS critical section object
 export function SendMessageTransaction(originDevice, targetDevice, message, options) {
+    // Properties definition
+    Object.defineProperties(this, {
+        txid: {
+            get: function () {
+                // noinspection JSPotentiallyInvalidUsageOfThis
+                return this.transact.txid;
+            },
+            enumerable: true
+        },
+        innerTransact: {
+            get: function () {
+                // noinspection JSPotentiallyInvalidUsageOfThis
+                return this.transact;
+            },
+            enumerable: true
+        }
+    });
+
     if (originDevice !== undefined) {
         // Validate arguments
         const errArg = {};
@@ -97,7 +115,7 @@ SendMessageTransaction.prototype.buildTransaction = function () {
         // Add transaction inputs
 
         // Prepare to add origin device main address input
-        const origDevMainAddrFundSource = new FundSource(this.originDevice.mainAddr.listAddressesInUse(), {});
+        const origDevMainAddrFundSource = new FundSource(this.originDevice.mainAddr.listAddressesInUse(), {unconfUtxoInfo: {}});
         const origDevMainAddrBalance = origDevMainAddrFundSource.getBalance();
         const origDevMainAddrAllocResult = origDevMainAddrFundSource.allocateFund(Service.devMainAddrAmount);
 
@@ -182,7 +200,10 @@ SendMessageTransaction.prototype.buildTransaction = function () {
         }
 
         // Now, allocate UTXOs to pay for tx expense
-        const payTxFundSource = new FundSource(Catenis.ctnHubNode.payTxExpenseAddr.listAddressesInUse(), {});
+        const payTxFundSource = new FundSource(Catenis.ctnHubNode.payTxExpenseAddr.listAddressesInUse(), {
+            unconfUtxoInfo: {},
+            smallestChange: true
+        });
         const payTxAllocResult = payTxFundSource.allocateFundForTxExpense({
             txSize: this.transact.estimateSize(),
             inputAmount: this.transact.totalInputsAmount(),

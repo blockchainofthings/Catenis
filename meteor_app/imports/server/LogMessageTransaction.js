@@ -51,6 +51,24 @@ import {
 // NOTE: make sure that objects of this function class are instantiated and used (their methods
 //  called) from code executed from the FundSource.utxoCS critical section object
 export function LogMessageTransaction(device, message, options) {
+    // Properties definition
+    Object.defineProperties(this, {
+        txid: {
+            get: function () {
+                // noinspection JSPotentiallyInvalidUsageOfThis
+                return this.transact.txid;
+            },
+            enumerable: true
+        },
+        innerTransact: {
+            get: function () {
+                // noinspection JSPotentiallyInvalidUsageOfThis
+                return this.transact;
+            },
+            enumerable: true
+        }
+    });
+
     if (device !== undefined) {
         // Validate arguments
         const errArg = {};
@@ -93,7 +111,7 @@ LogMessageTransaction.prototype.buildTransaction = function () {
         // Add transaction inputs
 
         // Prepare to add device main address input
-        const devMainAddrFundSource = new FundSource(this.device.mainAddr.listAddressesInUse(), {});
+        const devMainAddrFundSource = new FundSource(this.device.mainAddr.listAddressesInUse(), {unconfUtxoInfo: {}});
         const devMainAddrBalance = devMainAddrFundSource.getBalance();
         const devMainAddrAllocResult = devMainAddrFundSource.allocateFund(Service.devMainAddrAmount);
 
@@ -164,7 +182,10 @@ LogMessageTransaction.prototype.buildTransaction = function () {
         }
 
         // Now, allocate UTXOs to pay for tx expense
-        const payTxFundSource = new FundSource(Catenis.ctnHubNode.payTxExpenseAddr.listAddressesInUse(), {});
+        const payTxFundSource = new FundSource(Catenis.ctnHubNode.payTxExpenseAddr.listAddressesInUse(), {
+            unconfUtxoInfo: {},
+            smallestChange: true
+        });
         const payTxAllocResult = payTxFundSource.allocateFundForTxExpense({
             txSize: this.transact.estimateSize(),
             inputAmount: this.transact.totalInputsAmount(),

@@ -54,6 +54,7 @@ import { Util } from './Util';
 import { BitcoinFees } from './BitcoinFees'
 import { BalanceInfo } from './BalanceInfo';
 import { Permission } from './Permission';
+import { TransactionMonitor } from './TransactionMonitor';
 
 // Config entries
 const ctnNodeConfig = config.get('catenisNode');
@@ -135,6 +136,9 @@ export class CatenisNode extends events.EventEmitter {
                 new Client(doc, this, true);
             });
         }
+
+        // Set up handler to process event indicating that credit service account tx has been confirmed
+        TransactionMonitor.addEventHandler(TransactionMonitor.notifyEvent.credit_service_account_tx_conf.name, creditServAccTxConfirmed);
     }
 }
 
@@ -157,7 +161,7 @@ CatenisNode.prototype.startNode = function () {
         if (devMainAddresses.length > 0) {
             // System device main addresses already exist. Check if
             //  balance is as expected
-            devMainAddrBalance = (new FundSource(devMainAddresses, {})).getBalance(true);
+            devMainAddrBalance = new FundSource(devMainAddresses, {unconfUtxoInfo: {}}).getBalance(true);
         }
 
         if (devMainAddrBalance !== undefined && devMainAddrBalance > 0) {
@@ -1163,6 +1167,20 @@ function newClientId(ctnNodeIndex, clientIndex) {
     }
 
     return id;
+}
+
+// Method used to process notification of confirmed credit service account transaction
+function creditServAccTxConfirmed(data) {
+    Catenis.logger.TRACE('Received notification of confirmation of credit service account transaction', data);
+    try {
+        // Force update of Colored Coins data associated with UTXOs
+        Catenis.ccFNClient.parseNow();
+    }
+    catch (err) {
+        // Error while processing notification of confirmed credit service account transaction.
+        //  Just log error condition
+        Catenis.logger.ERROR('Error while processing notification of confirmed credit service account transaction.', err);
+    }
 }
 
 

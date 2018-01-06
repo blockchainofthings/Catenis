@@ -67,7 +67,7 @@ export class BalanceInfo {
         }
 
         this.minimumBalance = useSafetyFactor ? expectedMinimumBalance * (1 + safetyFactor) : expectedMinimumBalance;
-        this.currentBalance = (new FundSource(addressList, includeUnconfirmedUtxos ? {} : undefined)).getBalance();
+        this.currentBalance = new FundSource(addressList, includeUnconfirmedUtxos ? {unconfUtxoInfo: {}} : undefined).getBalance();
     }
 
     hasLowBalance() {

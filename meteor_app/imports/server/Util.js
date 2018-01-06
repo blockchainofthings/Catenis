@@ -18,6 +18,7 @@ const util = require('util');
 // noinspection JSFileReferences
 import BigNumber from 'bignumber.js';
 import bitcoinLib from 'bitcoinjs-lib';
+import _und from 'underscore';
 // Meteor packages
 //import { Meteor } from 'meteor/meteor';
 
@@ -155,6 +156,65 @@ Util.roundToResolution = function (value, resolution) {
 
 Util.roundDownToResolution = function (value, resolution) {
     return Math.floor(value / resolution) * resolution;
+};
+
+// Return:
+//  diffResult: { - (only returned if arrays do not have the same elements (not necessarily in the same order))
+//    added: [Array], - (only exist if there are elements in array 2 that do not belong to array 1, or if the same element
+//                      is found in both arrays but there is a greater quantity of it in array 2 than in array 1)
+//    deleted: [Array], - (only exist if there are elements in array 1 that do not belong to array 2, or if the same element
+//                         is found in both arrays but there is a greater quantity of it in array 1 than in array 2)
+//  }
+Util.diffArrays = function (ar1, ar2) {
+    const cpAr1 = _und.clone(ar1);
+    const cpAr2 = _und.clone(ar2);
+
+    const addedElems = ar2.filter((elm2) => {
+        const foundAt = cpAr1.findIndex((elm1) => elm1 === elm2);
+
+        if (foundAt >= 0) {
+            cpAr1.splice(foundAt, 1);
+            return false;
+        }
+
+        return true;
+    });
+    const deletedElems = ar1.filter((elm1) => {
+        const foundAt = cpAr2.findIndex((elm2) => elm2 === elm1);
+
+        if (foundAt >= 0) {
+            cpAr2.splice(foundAt, 1);
+            return false;
+        }
+
+        return true;
+    });
+
+    const diffResult = {};
+
+    if (addedElems.length > 0) {
+        diffResult.added = addedElems;
+    }
+
+    if (deletedElems.length > 0) {
+        diffResult.deleted = deletedElems;
+    }
+
+    return Object.keys(diffResult).length > 0 ? diffResult : undefined;
+};
+
+// This method is to be used in place of underscore.js's clone() method to overcome a limitation
+//  of that method where accessor type properties (getter/setter) are copied as data properties
+Util.cloneObj = function (obj) {
+    const cloneObj = {};
+
+    Object.getOwnPropertyNames(obj).forEach((propName) => {
+        Object.defineProperty(cloneObj, propName, Object.getOwnPropertyDescriptor(obj, propName));
+    });
+
+    Object.setPrototypeOf(cloneObj, Object.getPrototypeOf(obj));
+
+    return cloneObj;
 };
 
 // Util function class (public) properties

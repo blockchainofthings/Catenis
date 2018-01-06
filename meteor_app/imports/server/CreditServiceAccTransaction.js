@@ -161,7 +161,7 @@ CreditServiceAccTransaction.prototype.buildTransaction = function () {
             //
 
             // Prepare to add Colored Coins asset issuing input
-            const servCredIssueAddrFundSource = new FundSource(servCredIssueAddr, {});
+            const servCredIssueAddrFundSource = new FundSource(servCredIssueAddr, {unconfUtxoInfo: {}});
             const servCredIssueAddrAllocResult = servCredIssueAddrFundSource.allocateFund(Service.serviceCreditIssuanceAddrAmount);
 
             // Make sure that UTXOs have been correctly allocated
@@ -240,7 +240,10 @@ CreditServiceAccTransaction.prototype.buildTransaction = function () {
             }
 
             // Now, allocate UTXOs to pay for tx expense
-            const payTxFundSource = new FundSource(this.client.ctnNode.listFundingAddressesInUse(), {});
+            const payTxFundSource = new FundSource(this.client.ctnNode.listFundingAddressesInUse(), {
+                unconfUtxoInfo: {},
+                smallestChange: true
+            });
             const payTxAllocResult = payTxFundSource.allocateFundForTxExpense({
                 txSize: this.ccTransact.estimateSize(),
                 inputAmount: this.ccTransact.totalInputsAmount(),
@@ -295,6 +298,9 @@ CreditServiceAccTransaction.prototype.sendTransaction = function () {
                 issuedAmount: this.issuingAmount
             });
 
+            // Force update of Colored Coins data associated with UTXOs
+            Catenis.ccFNClient.parseNow();
+
             // Check if system funding balance is still within safe limits
             Catenis.ctnHubNode.checkFundingBalance();
         }
@@ -345,25 +351,23 @@ CreditServiceAccTransaction.checkTransaction = function (ccTransact) {
             const servCredIssueAddr = getAddrAndAddrInfo(ccTransact.getInputAt(0));
 
             const servAccCredLineAddrs = [];
-            let nextOutPos = ccTransact.includesMultiSigOutput ? 2 : 1;
+            let nextOutPos = ccTransact.includesMultiSigOutput ? 1 : 0;
             let done = false,
                 error = false;
 
             do {
-                const output = ccTransact.getOutputAt(nextOutPos++);
+                const output = ccTransact.getOutputAt(++nextOutPos);
 
                 if (output !== undefined) {
                     const outputAddr = getAddrAndAddrInfo(output.payInfo);
 
                     if (outputAddr.addrInfo.type === KeyStore.extKeyType.cln_srv_acc_cred_ln_addr.name) {
-                        if (servAccCredLineAddrs.length > 0) {
-                            // Make sure that it is consistent with previous addresses
-                            if (areAddressesFromSameClient(servAccCredLineAddrs[0].addrInfo, outputAddr.addrInfo)) {
-                                servAccCredLineAddrs.push(outputAddr);
-                            }
-                            else {
-                                error = true;
-                            }
+                        // Make sure that it is consistent with previous addresses
+                        if (servAccCredLineAddrs.length === 0 || areAddressesFromSameClient(servAccCredLineAddrs[0].addrInfo, outputAddr.addrInfo)) {
+                            servAccCredLineAddrs.push(outputAddr);
+                        }
+                        else {
+                            error = true;
                         }
                     }
                     else {
@@ -377,13 +381,13 @@ CreditServiceAccTransaction.checkTransaction = function (ccTransact) {
             while (!done && !error);
 
             if (!error && servAccCredLineAddrs.length > 0) {
-                let servCredIssueRefundAddr = ccTransact.getOutputAt(nextOutPos++);
+                let servCredIssueRefundAddr = getAddrAndAddrInfo(ccTransact.getOutputAt(nextOutPos++).payInfo);
                 let servCredIssueChangeAddr = undefined;
 
                 const nextOutput = ccTransact.getOutputAt(nextOutPos);
 
                 if (nextOutput !== undefined) {
-                    const outputAddr = getAddrAndAddrInfo(output.payInfo);
+                    const outputAddr = getAddrAndAddrInfo(nextOutput.payInfo);
 
                     if (outputAddr.addrInfo.type === KeyStore.extKeyType.sys_serv_cred_issu_addr.name) {
                         servCredIssueChangeAddr = outputAddr;
@@ -404,6 +408,67 @@ CreditServiceAccTransaction.checkTransaction = function (ccTransact) {
     }
 
     return credServAccTransact;
+};
+
+// Get list of service account credit line address UTXOs for a given client from all unconfirmed
+//  credit service account transactions
+//
+//  Result:
+//   unconfUtxos [Array(String)] - List of unconfirmed UTXOs formatted as "txid:n", or undefined if no unconfirmed UTXOs have been found
+CreditServiceAccTransaction.clientServAccCredLineAddrsUnconfUtxos = function (clientId) {
+    // Retrieve unconfirmed credit service account transactions for the given client
+    const unconfUtxos = [];
+
+    Catenis.db.collection.SentTransaction.find({
+        type: Transaction.type.credit_service_account.name,
+        'confirmation.confirmed': false,
+        'info.creditServiceAccount.clientId': clientId
+    }, {
+        txid: 1,
+        info: 1
+    }).forEach((doc) => {
+        const ccTransact = CCTransaction.fromTransaction(Transaction.fromTxid(doc.txid));
+        const servAccCredLineAddrs = [];
+        let nextOutPos = ccTransact.includesMultiSigOutput ? 1 : 0;
+        let done = false,
+            error = false;
+
+        do {
+            const output = ccTransact.getOutputAt(++nextOutPos);
+
+            if (output !== undefined) {
+                const outputAddr = getAddrAndAddrInfo(output.payInfo);
+
+                if (outputAddr.addrInfo.type === KeyStore.extKeyType.cln_srv_acc_cred_ln_addr.name) {
+                    // Make sure that it is consistent with previous addresses
+                    if (servAccCredLineAddrs.length === 0 || areAddressesFromSameClient(servAccCredLineAddrs[0].addrInfo, outputAddr.addrInfo)) {
+                        servAccCredLineAddrs.push(outputAddr);
+                        unconfUtxos.push(Util.txoutToString({txid: doc.txid, vout: nextOutPos}));
+                    }
+                    else {
+                        error = true;
+                    }
+                }
+                else {
+                    done = true;
+                }
+            }
+            else {
+                error = true;
+            }
+        }
+        while (!done && !error);
+
+        if (error) {
+            // Sent unconfirmed credit service account transaction is not consistent.
+            //  Log error condition
+            Catenis.logger.ERROR('Sent unconfirmed credit service account transaction is not consistent', {
+                ccTransact: ccTransact
+            });
+        }
+    });
+
+    return unconfUtxos.length > 0 ? unconfUtxos : undefined;
 };
 
 

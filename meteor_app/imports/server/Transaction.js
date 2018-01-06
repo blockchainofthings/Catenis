@@ -23,6 +23,7 @@ import bitcoinLib from 'bitcoinjs-lib';
 import BigNumber from 'bignumber.js';
 // Meteor packages
 import { Meteor } from 'meteor/meteor';
+import { _ } from 'meteor/underscore';
 
 // References code in other (Catenis) modules
 import { Catenis } from './Catenis';
@@ -108,6 +109,8 @@ export function Transaction(useOptInRBF = false) {
     this.txSaved = false;
     this.useOptInRBF = useOptInRBF;     // Indicates whether opt-in Replace By Fee feature should be used when building transaction
 
+    this.savedSizeProfile = undefined;
+
     // Input and output sequence of tokens. Each token corresponds to an input/output
     //  of the transaction, and basically identifies what type of blockchain address
     //  that input/output is associated with (or if it is not associated with any address
@@ -183,6 +186,16 @@ Transaction.prototype.lastInputPosition = function () {
 
 Transaction.prototype.getInputAt = function (pos) {
     return this.inputs[pos];
+};
+
+Transaction.prototype.removeInputs = function (startPos, numInputs) {
+    const removedInputs = this.inputs.splice(startPos, numInputs).filter((input) => input !== undefined);
+
+    if (removedInputs.length > 0) {
+        invalidateTx.call(this);
+    }
+
+    return removedInputs;
 };
 
 Transaction.prototype.removeInputAt = function (pos) {
@@ -348,18 +361,34 @@ Transaction.prototype.resetOutputAmount = function (pos, amount) {
 };
 
 Transaction.prototype.addNullDataOutput = function (data, pos) {
-    if (!Buffer.isBuffer(data)) {
-        data = new Buffer(data);
-    }
-
     let result = false;
 
     if (!this.hasNullDataOutput) {
+        if (!Buffer.isBuffer(data)) {
+            data = new Buffer(data);
+        }
+
         this.addOutputs({
             type: Transaction.outputType.nullData,
             data: data
         }, pos);
         this.hasNullDataOutput = true;
+        this.nullDataPayloadSize = data.length;
+        result = true;
+    }
+
+    return result;
+};
+
+Transaction.prototype.resetNullDataOutput = function (data) {
+    let result = false;
+
+    if (this.hasNullDataOutput) {
+        if (!Buffer.isBuffer(data)) {
+            data = new Buffer(data);
+        }
+
+        this.getNullDataOutput().data = data;
         this.nullDataPayloadSize = data.length;
         result = true;
     }
@@ -378,7 +407,7 @@ Transaction.prototype.getOutputAt = function (pos) {
 Transaction.prototype.removeOutputs = function (startPos, numOutputs) {
     const nullDataOutputPos = this.getNullDataOutputPosition();
 
-    const removedOutputs = this.outputs.splice(startPos, numOutputs);
+    const removedOutputs = this.outputs.splice(startPos, numOutputs).filter((output) => output !== undefined);
 
     if (removedOutputs.length > 0) {
         // Adjust null data output info if necessary
@@ -515,6 +544,10 @@ Transaction.prototype.totalOutputsAmount = function (startPos = 0, endPos) {
     return sum;
 };
 
+Transaction.prototype.feeAmount = function () {
+    return this.totalInputsAmount() - this.totalOutputsAmount();
+};
+
 Transaction.prototype.countInputs = function (startPos = 0, endPos) {
     let count = 0;
 
@@ -569,6 +602,94 @@ Transaction.prototype.getNumPubKeysMultiSigOutputs = function (startPos = 0, end
 
 Transaction.prototype.estimateSize = function () {
     return Transaction.computeTransactionSize(this.countInputs(), this.countP2PKHOutputs(), this.nullDataPayloadSize, this.getNumPubKeysMultiSigOutputs());
+};
+
+// Used to save transaction parameters that are used to compute the (estimated) transaction size
+Transaction.prototype.saveSizeProfile = function () {
+    this.savedSizeProfile = {
+        numInputs: this.countInputs(),
+        numP2PKHOutputs: this.countP2PKHOutputs(),
+        numPubKeysMultiSigOutputs: this.getNumPubKeysMultiSigOutputs(),
+        nullDataPayloadSize: this.nullDataPayloadSize
+    };
+};
+
+// Compare the current values of the parameters that are used to compute the (estimated) transaction
+//  size with the values of previously saved parameters to account for differences in such parameters
+//
+// Return:
+//  diffResult: { - (only returned if the size profile of the transaction has changed)
+//    numInputs: {  - (only exists if there are differences in number of inputs)
+//      current: [Number]
+//      delta: [Number]
+//    },
+//    numP2PKHOutputs: {  - (only exists if there are differences in number of P2PK outputs)
+//      current: [Number]
+//      delta: [Number]
+//    },
+//    numPubKeysMultiSigOutputs: {  - (only exists if there are differences in number of multi-signature outputs)
+//      current: [Number]
+//      delta: {
+//        added: [Array(Number)],
+//        deleted: [Array(Number)]
+//    },
+//    nullDataPayloadSize: {  - (only exists if there are differences in size of payload of null data output)
+//      current: [Number]
+//      delta: [Number]
+//    }
+//  }
+Transaction.prototype.compareSizeProfile = function () {
+    const curSizeProfile = {
+        numInputs: this.countInputs(),
+        numP2PKHOutputs: this.countP2PKHOutputs(),
+        numPubKeysMultiSigOutputs: this.getNumPubKeysMultiSigOutputs(),
+        nullDataPayloadSize: this.nullDataPayloadSize
+    };
+
+    if (this.savedSizeProfile === undefined) {
+        this.savedSizeProfile = {
+            numInputs: 0,
+            numP2PKHOutputs: 0,
+            numPubKeysMultiSigOutputs: [],
+            nullDataPayloadSize: 0
+        };
+    }
+    const diffNumInputs = {
+        current: curSizeProfile.numInputs,
+        delta: curSizeProfile.numInputs - this.savedSizeProfile.numInputs
+    };
+    const diffNumP2PKHOutputs = {
+        current: curSizeProfile.numP2PKHOutputs,
+        delta: curSizeProfile.numP2PKHOutputs - this.savedSizeProfile.numP2PKHOutputs
+    };
+    const diffNumPubKeysMultiSigOutputs = {
+        current: curSizeProfile.numPubKeysMultiSigOutputs,
+        delta: Util.diffArrays(this.savedSizeProfile.numPubKeysMultiSigOutputs, curSizeProfile.numPubKeysMultiSigOutputs)
+    };
+    const diffNullDataPayloadSize = {
+        current: curSizeProfile.nullDataPayloadSize,
+        delta: curSizeProfile.nullDataPayloadSize - this.savedSizeProfile.nullDataPayloadSize
+    };
+
+    const diffResult = {};
+
+    if (diffNumInputs.delta !== 0) {
+        diffResult.numInputs = diffNumInputs;
+    }
+
+    if (diffNumP2PKHOutputs.delta !== 0) {
+        diffResult.numP2PKHOutputs = diffNumP2PKHOutputs;
+    }
+
+    if (diffNumPubKeysMultiSigOutputs.delta !== undefined) {
+        diffResult.numPubKeysMultiSigOutputs = diffNumPubKeysMultiSigOutputs;
+    }
+
+    if (diffNullDataPayloadSize.delta !== 0) {
+        diffResult.nullDataPayloadSize = diffNullDataPayloadSize;
+    }
+
+    return Object.keys(diffResult).length > 0 ? diffResult : undefined;
 };
 
 Transaction.prototype.realSize = function () {
@@ -999,6 +1120,10 @@ Transaction.prototype.diffTransaction = function (transact) {
     return diffResult;
 };
 
+Transaction.prototype.clone = function () {
+    return fixClone(Util.cloneObj(this));
+};
+
 
 // Module functions used to simulate private Transaction object methods
 //  NOTE: these functions need to be bound to a Transaction object reference (this) before
@@ -1129,7 +1254,7 @@ Transaction.multiSigOutputSize = function (numPubKeys) {
 };
 
 Transaction.nullDataOutputSize = function (payloadSize) {
-    return payloadSize > 0 ? (payloadSize <= 75 ? 11 :13) + payloadSize : 0;
+    return payloadSize > 0 ? (payloadSize <= 75 ? 11 : 12) + payloadSize : 0;
 };
 
 // Reconstruct transaction object from a serialized string
@@ -1559,9 +1684,9 @@ Transaction.fixMalleability = function (source, originalTxid, modifiedTxid) {
                         }
                     });
 
-                    Catenis.db.collection.Billing.update({'serviceCreditTx.txid': originalTxid}, {
+                    Catenis.db.collection.Billing.update({'servicePaymentTx.txid': originalTxid}, {
                         $set: {
-                            'serviceCreditTx.txid': modifiedTxid
+                            'servicePaymentTx.txid': modifiedTxid
                         }
                     });
                 }
@@ -1637,11 +1762,15 @@ Transaction.type = Object.freeze({
         description: 'Transaction issued from outside of the system used to send BCOT tokens as payment for services a given client',
         dbInfoEntryName: 'storeBcot'
     }),
-
     credit_service_account: Object.freeze({
         name: 'credit_service_account',
         description: 'Transaction used to issue an amount of Catenis service credit and transferred it to a client\'s service account',
         dbInfoEntryName: 'creditServiceAccount'
+    }),
+    spend_service_credit: Object.freeze({
+        name: 'spend_service_credit',
+        description: 'Transaction used to spend an amount of Catenis service credits from a client\'s service account to pay for a service',
+        dbInfoEntryName: 'spendServiceCredit'
     }),
     send_message: Object.freeze({
         name: 'send_message',
@@ -1735,6 +1864,11 @@ Transaction.ioToken = Object.freeze({
         name: 'p2_sys_read_conf_pay_tx_exp_addr',
         token: '<p2_sys_read_conf_pay_tx_exp_addr>',
         description: 'Output (or input spending such output) paying to a system read confirmation pay tx expense address'
+    }),
+    p2_sys_serv_pymt_pay_tx_exp_root: Object.freeze({
+        name: 'p2_sys_serv_pymt_pay_tx_exp_root',
+        token: '<p2_sys_serv_pymt_pay_tx_exp_root>',
+        description: 'Output (or input spending such output) paying to a system service payment pay tx expense address'
     }),
     p2_sys_serv_cred_issu_addr: Object.freeze({
         name: 'p2_sys_serv_cred_issu_addr',
@@ -1850,6 +1984,18 @@ function isTransactFuncClassToMatch(transactFuncClass) {
 function addressFromPublicKey(pubKey) {
     return bitcoinLib.address.toBase58Check(bitcoinLib.crypto.hash160(new Buffer(pubKey, 'hex')), Catenis.application.cryptoNetwork.pubKeyHash);
 }
+
+export function fixClone(clone) {
+    clone.inputs = _.clone(clone.inputs);
+    clone.outputs = _.clone(clone.outputs);
+
+    if (clone.savedSizeProfile !== undefined) {
+        clone.savedSizeProfile = _.clone(clone.savedSizeProfile);
+    }
+
+    return clone;
+}
+
 
 // Module code
 //

@@ -330,13 +330,13 @@ Client.prototype.serviceAccountBalance = function (credFundSource, debtFundSourc
 
     if (servCredAsset !== undefined) {
         if (credFundSource === undefined) {
-            credFundSource = new CCFundSource(servCredAsset.ccAssetId, this.servAccCreditLineAddr.listAddressesInUse(), {});
+            credFundSource = new CCFundSource(servCredAsset.ccAssetId, this.servAccCreditLineAddr.listAddressesInUse(), {unconfUtxoInfo: {}});
         }
 
         balance = credFundSource.getBalance();
 
         if (debtFundSource === undefined) {
-            debtFundSource = new CCFundSource(servCredAsset.ccAssetId, this.servAccDebitLineAddr.listAddressesInUse(), {})
+            debtFundSource = new CCFundSource(servCredAsset.ccAssetId, this.servAccDebitLineAddr.listAddressesInUse(), {unconfUtxoInfo: {}})
         }
 
         balance -= debtFundSource.getBalance();
@@ -693,7 +693,7 @@ Client.activePostPaidClientsCount = function () {
 //  Return:
 //   balance: [Number] - Amount, in Catenis service credit lowest unit, corresponding to the current balance
 Client.allClientsServiceAccountCreditLineBalance = function () {
-    return new CCFundSource(Catenis.ctnHubNode.getServiceCreditAsset().ccAssetId, Catenis.keyStore.listAllClientServiceAccountCreditLineAddressesInUse(), {}).getBalance();
+    return new CCFundSource(Catenis.ctnHubNode.getServiceCreditAsset().ccAssetId, Catenis.keyStore.listAllClientServiceAccountCreditLineAddressesInUse(), {unconfUtxoInfo: {}}).getBalance();
 };
 
 // Check if a given client exists

@@ -99,7 +99,10 @@ FundTransaction.prototype.addPayingSource = function () {
     let result = false;
 
     if (!this.fundsAllocated) {
-        const fundSrc = new FundSource(Catenis.ctnHubNode.listFundingAddressesInUse(), {});
+        const fundSrc = new FundSource(Catenis.ctnHubNode.listFundingAddressesInUse(), {
+            unconfUtxoInfo: {},
+            smallestChange: true
+        });
 
         // Try to allocate UTXOs to pay for tx expense using optimum fee rate and default
         //  payment resolution
