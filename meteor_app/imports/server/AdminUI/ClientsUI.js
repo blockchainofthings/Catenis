@@ -23,6 +23,8 @@ import { Accounts } from 'meteor/accounts-base'
 // References code in other (Catenis) modules
 import { Catenis } from '../Catenis';
 import { CatenisNode } from '../CatenisNode';
+import { Client } from '../Client';
+import { Util } from '../Util';
 
 
 // Definition of function classes
@@ -90,10 +92,161 @@ ClientsUI.initialize = function () {
             }
 
             return clientId;
+        },
+        newBcotPaymentAddress: function (client_id) {
+            Catenis.logger.TRACE('>>>>>> newBcotPaymentAddress() remote method called');
+            // Retrieve Client doc/rec
+            const docClient = Catenis.db.collection.Client.findOne({
+                _id: client_id
+            }, {
+                fields: {
+                    clientId: 1
+                }
+            });
+
+            let client = undefined;
+
+            if (docClient !== undefined) {
+                client = Client.getClientByClientId(docClient.clientId);
+            }
+
+            if (client === undefined) {
+                // Invalid client. Log error and throw exception
+                Catenis.logger.ERROR('Could not find client to get blockchain address to receive BCOT token payment', {client_id: client_id});
+                throw new Meteor.Error('clients.bcot-pay-addr.invalid-client', 'Could not find client to get blockchain address to receive BCOT token payment');
+            }
+
+            return client.newBcotPaymentAddress();
         }
     });
 
     // Declaration of publications
+    Meteor.publish('serviceAccountBalance', function (client_id) {
+        // Retrieve Client doc/rec
+        const docClient = Catenis.db.collection.Client.findOne({
+            _id: client_id
+        }, {
+            fields: {
+                clientId: 1
+            }
+        });
+
+        let client = undefined;
+
+        if (docClient !== undefined) {
+            client = Client.getClientByClientId(docClient.clientId);
+        }
+
+        if (client === undefined) {
+            // Subscription made with an invalid Client doc/rec ID. Log error and throw exception
+            Catenis.logger.ERROR('Subscription to method \'serviceAccountBalance\' made with an invalid client', {client_id: client_id});
+            throw new Meteor.Error('clients.subscribe.service-account-balance.invalid-param', 'Subscription to method \'serviceAccountBalance\' made with an invalid client');
+        }
+
+        const now = new Date();
+        this.added('ServiceAccountBalance', 1, {
+            balance: Util.formatCatenisServiceCredits(client.serviceAccountBalance())
+        });
+
+        const observeHandle = Catenis.db.collection.SentTransaction.find({
+            sentDate: {
+                $gte: now
+            },
+            $or: [{
+                type: 'credit_service_account',
+                'info.creditServiceAccount.clientId': client.clientId
+            }, {
+                type: 'spend_service_credit',
+                'info.spendServiceCredit.clientIds': client.clientId
+            }]
+        }, {
+            fields: {
+                _id: 1
+            }
+        }).observe({
+            added: (doc) => {
+                // Get updated service account balance
+                this.changed('ServiceAccountBalance', 1, {
+                    balance: Util.formatCatenisServiceCredits(client.serviceAccountBalance())
+                });
+            }
+        });
+
+        this.ready();
+
+        this.onStop(() => observeHandle.stop());
+    });
+
+    Meteor.publish('bcotPayment', function (bcotPayAddress) {
+        const typeAndPath = Catenis.keyStore.getTypeAndPathByAddress(bcotPayAddress);
+
+        if (typeAndPath === null) {
+            // Subscription made with an invalid address. Log error and throw exception
+            Catenis.logger.ERROR('Subscription to method \'bcotPayment\' made with an invalid address', {bcotPayAddress: bcotPayAddress});
+            throw new Meteor.Error('clients.subscribe.bcot-payment.invalid-param', 'Subscription to method \'bcotPayment\' made with an invalid address');
+        }
+
+        const receivedAmount = {
+            unconfirmed: 0,
+            confirmed: 0
+        };
+        let initializing = true;
+
+        const observeHandle = Catenis.db.collection.ReceivedTransaction.find({
+            'info.bcotPayment.bcotPayAddressPath': typeAndPath.path
+        }, {
+            fields: {
+                'confirmation.confirmed': 1,
+                info: 1
+            }
+        }).observe({
+            added: (doc) => {
+                // Get paid amount paid to address
+                if (doc.confirmation.confirmed) {
+                    receivedAmount.confirmed += doc.info.bcotPayment.paidAmount;
+                }
+                else {
+                    receivedAmount.unconfirmed += doc.info.bcotPayment.paidAmount;
+                }
+
+                if (!initializing) {
+                    this.changed('ReceivedBcotAmount', 1, {
+                        unconfirmed: Util.formatCoins(receivedAmount.unconfirmed),
+                        confirmed: Util.formatCoins(receivedAmount.confirmed)
+                    });
+                }
+            },
+
+            changed: (newDoc, oldDoc) => {
+                // Make sure that transaction is being confirmed
+                if (newDoc.confirmation.confirmed && !oldDoc.confirmation.confirmed) {
+                    // Get total amount paid to address
+                    receivedAmount.confirmed += newDoc.info.bcotPayment.paidAmount;
+                    receivedAmount.unconfirmed -= newDoc.info.bcotPayment.paidAmount;
+
+                    if (receivedAmount.unconfirmed < 0) {
+                        receivedAmount.unconfirmed = 0;
+                    }
+
+                    this.changed('ReceivedBcotAmount', 1, {
+                        unconfirmed: Util.formatCoins(receivedAmount.unconfirmed),
+                        confirmed: Util.formatCoins(receivedAmount.confirmed)
+                    });
+                }
+            }
+        });
+
+        initializing = false;
+
+        this.added('ReceivedBcotAmount', 1, {
+            unconfirmed: Util.formatCoins(receivedAmount.unconfirmed),
+            confirmed: Util.formatCoins(receivedAmount.confirmed)
+        });
+        this.ready();
+
+        this.onStop(() => observeHandle.stop());
+    });
+
     Meteor.publish('catenisClients', function (ctnNodeIndex) {
         ctnNodeIndex = ctnNodeIndex || Catenis.application.ctnHubNodeIndex;
 

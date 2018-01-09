@@ -795,6 +795,7 @@ SpendServiceCreditTransaction.prototype.sendTransaction = function (isTerminal =
 
             // Save sent transaction onto local database
             this.ccTransact.saveSentTransaction(Transaction.type.spend_service_credit, {
+                clientIds: this.clientIds,
                 serviceTxids: this.serviceTxids
             });
 

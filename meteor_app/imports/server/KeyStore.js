@@ -2364,8 +2364,27 @@ KeyStore.prototype.listClientServiceAccountCreditLineAddressesInUse = function (
     return this.listClientServiceCreditAddressesInUse(ctnNodeIndex, clientIndex, 2, fromAddrIndex, toAddrIndex);
 };
 
-KeyStore.prototype.listAllClientServiceAccountCreditLineAddressesInUse = function () {
-    return this.collExtKey.find({$and: [{type: KeyStore.extKeyType.cln_srv_acc_cred_ln_addr.name}, {isObsolete: false}]}).map((docExtKey) => {
+KeyStore.prototype.listAllClientServiceAccountCreditLineAddressesInUse = function (clientIndices) {
+    const selector = {
+        $and: [
+            {isObsolete: false}
+        ]
+    };
+
+    if (clientIndices !== undefined) {
+        selector.$and.push({
+            parentPath: {
+                $in: clientIndices.map((index) => KeyStore.clientServiceAccountCreditLineAddressRootPath(index.ctnNodeIndex, index.clientIndex))
+            }
+        })
+    }
+    else {
+        selector.$and.push({
+            type: KeyStore.extKeyType.cln_srv_acc_cred_ln_addr.name
+        })
+    }
+
+    return this.collExtKey.find(selector).map((docExtKey) => {
         return docExtKey.address;
     });
 };

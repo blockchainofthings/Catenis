@@ -29,6 +29,7 @@ import './ClientDetailsTemplate.html';
 
 // Import dependent templates
 import './DevicesTemplate.js';
+import './BcotPaymentAddressTemplate.js';
 
 
 // Module code
@@ -41,6 +42,7 @@ Template.clientDetails.onCreated(function () {
     // Subscribe to receive fund balance updates
     this.clientRecordSubs = this.subscribe('clientRecord', this.data.client_id);
     this.clientUserSubs = this.subscribe('clientUser', this.data.client_id);
+    this.serviceAccountBalanceSubs = this.subscribe('serviceAccountBalance', this.data.client_id);
 });
 
 Template.clientDetails.onDestroyed(function () {
@@ -51,15 +53,38 @@ Template.clientDetails.onDestroyed(function () {
     if (this.clientUserSubs) {
         this.clientUserSubs.stop();
     }
+
+    if (this.serviceAccountBalanceSubs) {
+        this.serviceAccountBalanceSubs.stop();
+    }
 });
 
 Template.clientDetails.events({
-    'click #lnkShowDevices'(events, template) {
+    'click #lnkNewBcotPayAddress'(event, template) {
+        Meteor.call('newBcotPaymentAddress', template.data.client_id, (error, addr) => {
+            if (error) {
+                console.log('Error calling \'newBcotPaymentAddress\' remote method: ' + error);
+            }
+            else {
+                template.state.set('bcotPayAddress', addr);
+            }
+        });
+
+        return false;
+    },
+    'click #lnkDiscardAddr'(event, template) {
+        if (confirm('Are you sure you want to discard this address?')) {
+            template.state.set('bcotPayAddress', undefined);
+        }
+
+        return false;
+    },
+    'click #lnkShowDevices'(event, template) {
         template.state.set('showDevices', true);
 
         return false;
     },
-    'click #lnkHideDevices'(events, template) {
+    'click #lnkHideDevices'(event, template) {
         template.state.set('showDevices', false);
 
         return false;
@@ -77,5 +102,11 @@ Template.clientDetails.helpers({
     },
     showDevices: function () {
         return Template.instance().state.get('showDevices');
+    },
+    serviceAccountBalance() {
+        return Catenis.db.collection.ServiceAccountBalance.findOne(1);
+    },
+    bcotPayAddress() {
+        return Template.instance().state.get('bcotPayAddress');
     }
 });

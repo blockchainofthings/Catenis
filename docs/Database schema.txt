@@ -167,6 +167,7 @@ SentTransaction {
       storedAmount: [number]  // Amount, in BCOT token "satoshis", stored
     },
     spendServiceCredit: { // Information for spend service credit transaction
+      clientIds: [Array(string)],  // External ID of clients that are the owners of the service account from where Catenis service credits are spent
       serviceTxids: [Array(string)]  // Blockchain assigned ID of transactions used to convey service that are paid by this tx
     },
     sendMessage: { // Information for send message transactions
@@ -231,6 +232,7 @@ ReceivedTransaction {
     }],
     bcotPayment: { // Information for BCOT payment transaction
       clientId: [string],  // External ID of client for which payment is made
+      bcotPayAddressPath: [string],  // HD node path of the address used to receive the BCOT payment
       paidAmount: [number]  // Amount, in BCOT token "satoshis", paid
     },
     creditServiceAccount: { // Information for credit service account transaction

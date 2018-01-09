@@ -34,6 +34,8 @@ Catenis.db = {
         FundingBalanceInfo: new Mongo.Collection('FundingBalanceInfo'),
         ReceivedAmount: new Mongo.Collection('ReceivedAmount'),
         Client: new Mongo.Collection('Client'),
-        Device: new Mongo.Collection('Device')
+        Device: new Mongo.Collection('Device'),
+        ServiceAccountBalance: new Mongo.Collection('ServiceAccountBalance'),
+        ReceivedBcotAmount: new Mongo.Collection('ReceivedBcotAmount')
     }
 };

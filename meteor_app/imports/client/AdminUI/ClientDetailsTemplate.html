@@ -19,6 +19,19 @@
             </tr>
         </table>
         <div style="margin-top:1em">
+            <label>Service account balance:</label>&nbsp;{{serviceAccountBalance.balance}}
+            <div style="margin-top:1em">
+                {{#unless bcotPayAddress}}
+                    <a id="lnkNewBcotPayAddress" href="#" role="button">Get address to send BCOT tokens to</a>
+                {{else}}
+                    <div>
+                        (<a id="lnkDiscardAddr" href="#" role="button">discard address</a>)
+                    </div>
+                    {{> bcotPaymentAddress bcotPayAddress=bcotPayAddress}}
+                {{/unless}}
+            </div>
+        </div>
+        <div style="margin-top:1em">
             {{#unless showDevices}}
                 <a id="lnkShowDevices" href="#">Show devices</a>
             {{else}}

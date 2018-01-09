@@ -1052,6 +1052,7 @@ function handleNewTransactions(data) {
                             };
                             rcvdTxDoc.info[Transaction.type.bcot_payment.dbInfoEntryName] = {
                                 clientId: bcotPayTransact.client.clientId,
+                                bcotPayAddressPath: Catenis.keyStore.getTypeAndPathByAddress(bcotPayTransact.payeeAddress).path,
                                 paidAmount: bcotPayTransact.paidAmount
                             };
 

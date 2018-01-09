@@ -26,6 +26,7 @@ import { FundSource } from './FundSource';
 import { BcotPaymentTransaction } from './BcotPaymentTransaction';
 import { CreditServiceAccTransaction } from './CreditServiceAccTransaction';
 import { StoreBcotTransaction } from './StoreBcotTransaction';
+import { Client } from './Client';
 
 // Config entries
 const bcotPayConfig = config.get('bcotPayment');

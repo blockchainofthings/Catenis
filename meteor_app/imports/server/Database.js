@@ -622,6 +622,16 @@ Database.initialize = function() {
             },
             {
                 fields: {
+                    'info.spendServiceCredit.clientIds': 1
+                },
+                opts: {
+                    sparse: true,
+                    background: true,
+                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                }
+            },
+            {
+                fields: {
                     'info.readConfirmation.serializedTx.inputs.txid': 1
                 },
                 opts: {
@@ -733,6 +743,16 @@ Database.initialize = function() {
             {
                 fields: {
                     'info.bcotPayment.clientId': 1
+                },
+                opts: {
+                    sparse: true,
+                    background: true,
+                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                }
+            },
+            {
+                fields: {
+                    'info.bcotPayment.bcotPayAddressPath': 1
                 },
                 opts: {
                     sparse: true,
@@ -1296,6 +1316,51 @@ Database.fixSentTransactionReplacedByTxidIndex = function () {
         });
 
         fut2.wait();
+    }
+};
+
+//** Temporary method used to add missing 'clientIds' field from info property of
+//  SentTransaction docs/recs of type 'spend_service_credit'
+Database.fixSentTransactionSpendServiceCreditInfo = function () {
+    let numUpdatedDocs = 0;
+
+    // Retrieve sent spend service credit transaction doc/recs the 'clientIds' field of which
+    //  is missing from its info property
+    Catenis.db.collection.SentTransaction.find({
+        type: 'spend_service_credit',
+        'info.spendServiceCredit.clientIds': {
+            $exists: false
+        }
+    }, {
+        fields: {
+            info: 1
+        }
+    }).forEach((doc) => {
+        // Look for Billing docs for the associated service transactions
+        const clientIds = Catenis.db.collection.Billing.find({
+            'serviceTx.txid': {
+                $in: doc.info.spendServiceCredit.serviceTxids
+            }
+        }, {
+            fields: {
+                clientId: 1
+            }
+        }).map((doc2) => doc2.clientId);
+
+        if (clientIds.length > 0) {
+            // Update SentTransaction doc/rec
+            numUpdatedDocs += Catenis.db.collection.SentTransaction.update({
+                _id: doc._id
+            }, {
+                $set: {
+                    'info.spendServiceCredit.clientIds': clientIds
+                }
+            });
+        }
+    });
+
+    if (numUpdatedDocs > 0) {
+        Catenis.logger.INFO('****** Number of SentTransaction DB collection docs updated to add missing \'info.spendServiceCredit.clientIds\' field: %d', numUpdatedDocs);
     }
 };
 

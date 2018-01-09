@@ -670,6 +670,7 @@ Client.getClientByUserId = function (user_id, includeDeleted = true) {
 
 Client.activeClientsCount = function (billingMode) {
     const selector = {
+        catenisNode_id: Catenis.ctnHubNode.doc_id,
         status: Client.status.active.name
     };
 
@@ -688,12 +689,33 @@ Client.activePostPaidClientsCount = function () {
     return Client.activeClientsCount(Client.billingMode.postPaid);
 };
 
-// Returns total balance of all client's service account credit line
+Client.allActiveClientIndices = function (billingMode) {
+    const selector = {
+        catenisNode_id: Catenis.ctnHubNode.doc_id,
+        status: Client.status.active.name
+    };
+
+    if (billingMode !== undefined) {
+        selector.billingMode = billingMode
+    }
+
+    return Catenis.db.collection.Client.find(selector, {fields: {_id: 0, index: 1}}).map((doc) => doc.index);
+};
+
+Client.allActivePrePaidClientIndices = function () {
+    return Client.allActiveClientIndices(Client.billingMode.prePaid);
+};
+
+Client.allActivePostPaidClientIndices = function () {
+    return Client.allActiveClientIndices(Client.billingMode.postPaid);
+};
+
+// Returns total balance of all pre-paid client's service account credit line
 //
 //  Return:
 //   balance: [Number] - Amount, in Catenis service credit lowest unit, corresponding to the current balance
-Client.allClientsServiceAccountCreditLineBalance = function () {
-    return new CCFundSource(Catenis.ctnHubNode.getServiceCreditAsset().ccAssetId, Catenis.keyStore.listAllClientServiceAccountCreditLineAddressesInUse(), {unconfUtxoInfo: {}}).getBalance();
+Client.allPrePaidClientsServiceAccountCreditLineBalance = function () {
+    return new CCFundSource(Catenis.ctnHubNode.getServiceCreditAsset().ccAssetId, Catenis.keyStore.listAllClientServiceAccountCreditLineAddressesInUse(Client.allActivePrePaidClientIndices()), {unconfUtxoInfo: {}}).getBalance();
 };
 
 // Check if a given client exists

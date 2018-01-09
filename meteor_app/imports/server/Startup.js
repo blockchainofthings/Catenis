@@ -83,6 +83,7 @@ Meteor.startup(function () {
         Database.initialize();
         Database.fillClientBillingModeField();
         Database.fixSentTransactionReplacedByTxidIndex();
+        Database.fixSentTransactionSpendServiceCreditInfo();
         Application.initialize();
         MalleabilityEventEmitter.initialize();
         BitcoinFees.initialize();

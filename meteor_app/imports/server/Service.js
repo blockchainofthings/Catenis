@@ -1030,7 +1030,7 @@ function averageDebitServAccountTxCostPerService() {
 }
 
 function numPrePaidServices () {
-    return Math.floor(Client.allClientsServiceAccountCreditLineBalance() / averageServicePrice());
+    return Math.floor(Client.allPrePaidClientsServiceAccountCreditLineBalance() / averageServicePrice());
 }
 
 // Returns price data for given service
