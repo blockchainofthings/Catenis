@@ -786,6 +786,7 @@ ReadConfirmTransaction.prototype.fundTransaction = function () {
 
                     if (newChange === 0) {
                         // Remove output to receive change
+                        this.transact.revertOutputAddresses(this.lastReadConfirmSpendOutputPos + 1, this.lastReadConfirmSpendOutputPos + 1);
                         this.transact.removeOutputAt(this.lastReadConfirmSpendOutputPos + 1);
                         this.readConfirmTxInfo.incrementNumTxOutputs(-1);
                     }
@@ -818,6 +819,9 @@ ReadConfirmTransaction.prototype.fundTransaction = function () {
                         // Do not indicate that tx has been funded so an new fee shall be recalculated
                     }
                     else {
+                        // Discount current change from fee difference to be allocated
+                        deltaFee -= this.change;
+
                         // Try to allocate UTXOs to pay for transaction additional fee
                         if (readConfirmPayTxExpenseFundSource === undefined) {
                             // Object used to allocate UTXOs is not instantiated yet. Instantiate it now,
@@ -828,12 +832,14 @@ ReadConfirmTransaction.prototype.fundTransaction = function () {
                             //      is automatically not included (since that change UTXO is obviously not yet confirmed,
                             //      and we would be replacing a previous tx). However, we are keeping both conditions
                             //      just as an additional precaution
-                            readConfirmPayTxExpenseFundSource = new FundSource(Catenis.ctnHubNode.readConfirmPayTxExpenseAddr.listAddressesInUse(),
-                                this.lastTxid !== undefined ? undefined : {},
-                                this.lastTxChangeOutputPos >= 0 ? Util.txoutToString({
+                            readConfirmPayTxExpenseFundSource = new FundSource(Catenis.ctnHubNode.readConfirmPayTxExpenseAddr.listAddressesInUse(), {
+                                unconfUtxoInfo: this.lastTxid !== undefined ? undefined : {},
+                                higherAmountUtxos: true,
+                                excludeUtxos: this.lastTxChangeOutputPos >= 0 ? Util.txoutToString({
                                     txid: this.lastTxid,
                                     vout: this.lastTxChangeOutputPos
-                                }) : undefined);
+                                }) : undefined
+                            });
                         }
 
                         const allocResult = readConfirmPayTxExpenseFundSource.allocateFund(deltaFee);
@@ -862,35 +868,43 @@ ReadConfirmTransaction.prototype.fundTransaction = function () {
                                 this.payFeeInputTxouts.push(input.txout);
                             });
 
-                            // Update transaction fee
-                            this.fee += deltaFee;
+                            let newChange = allocResult.changeAmount;
 
-                            if (allocResult.changeAmount === 0) {
+                            // Make sure that change amount is not below dust amount
+                            if (newChange > 0 && newChange < Transaction.txOutputDustAmount) {
+                                deltaFee += newChange;
+                                newChange = 0;
+                            }
+
+                            if (newChange === 0) {
                                 // No change output needed
                                 if (this.change > 0) {
                                     // Transaction had a change output, remove it and try to discard its address
-                                    this.transact.removeOutputAt(this.lastReadConfirmSpendOutputPos + 1);
                                     this.transact.revertOutputAddresses(this.lastReadConfirmSpendOutputPos + 1, this.lastReadConfirmSpendOutputPos + 1);
+                                    this.transact.removeOutputAt(this.lastReadConfirmSpendOutputPos + 1);
                                 }
 
-                                // Remove change output from RBF tx info object and adjust fee
+                                // Remove change output from RBF tx info object
                                 this.readConfirmTxInfo.incrementNumTxOutputs(-1);
-                                this.readConfirmTxInfo.adjustNewTxFee(this.fee);
                             }
                             else {
                                 // A change output is required
                                 if (this.change === 0) {
                                     // Transaction did not have a change output yet, so add a new one
-                                    this.transact.addP2PKHOutput(Catenis.ctnHubNode.readConfirmPayTxExpenseAddr.newAddressKeys().getAddress(), allocResult.changeAmount);
+                                    this.transact.addP2PKHOutput(Catenis.ctnHubNode.readConfirmPayTxExpenseAddr.newAddressKeys().getAddress(), newChange);
                                 }
                                 else {
                                     // Transaction already had change output, so just reset its amount
-                                    this.transact.resetOutputAmount(this.lastReadConfirmSpendOutputPos + 1, allocResult.changeAmount);
+                                    this.transact.resetOutputAmount(this.lastReadConfirmSpendOutputPos + 1, newChange);
                                 }
                             }
 
+                            // Update transaction fee and adjust it on RBF tx info object
+                            this.fee += deltaFee;
+                            this.readConfirmTxInfo.adjustNewTxFee(this.fee);
+
                             // Update transaction change
-                            this.change = allocResult.changeAmount;
+                            this.change = newChange;
 
                             // And indicate that tx has been funded
                             this.txFunded = true;
@@ -923,6 +937,10 @@ ReadConfirmTransaction.prototype.fundTransaction = function () {
             else {
                 // New fee is the same as transaction's previous fee.
                 //  Indicate that there is nothing to do
+                Catenis.logger.WARN('Newly retrieved fee for read confirmation (RBF) transaction not greater than current transaction fee; transaction funding is aborted', {
+                    currentTxFee: this.fee,
+                    newTxFee: txNewFee
+                });
                 nothingToDo = true;
             }
         }
@@ -1131,9 +1149,10 @@ function TransactIdChanged(data) {
 
 function initReadConfirmTxInfo() {
     const opts = {
+        paymentResolution: Service.readConfirmPaymentResolution,
         initNumTxInputs: this.transact.countInputs(),
         initNumTxOutputs: this.transact.countOutputs(),
-        txNullDataPayloadSize: Service.readConfirmTxNullDataPayloadSize,
+        initTxNullDataPayloadSize: Service.readConfirmTxNullDataPayloadSize,
         txFeeRateIncrement: Service.readConfirmTxFeeRateIncrement
     };
 

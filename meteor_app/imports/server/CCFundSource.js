@@ -1,8 +1,8 @@
 /**
- * Created by claudio on 17/06/16.
+ * Created by claudio on 05/10/17.
  */
 
-//console.log('[FundSource.js]: This code just ran.');
+//console.log('[CCFundSource.js]: This code just ran.');
 
 // Module variables
 //
@@ -12,7 +12,6 @@
 // Internal node modules
 //import util from 'util';
 // Third-party node modules
-import config from 'config';
 import Loki from 'lokijs';
 // noinspection JSFileReferences
 import BigNumber from 'bignumber.js';
@@ -22,29 +21,19 @@ import { Meteor } from 'meteor/meteor';
 // References code in other (Catenis) modules
 import { Catenis } from './Catenis';
 import { CriticalSection } from './CriticalSection';
-import { Service } from './Service';
-import { Transaction } from './Transaction';
 import { Util } from './Util';
 import { BitcoinCore } from './BitcoinCore';
-
-// Config entries
-const fundSourceConfig = config.get('fundSource');
-
-// Configuration settings
-export const cfgSettings = {
-    maxAncestorsCount: fundSourceConfig.get('maxAncestorsCount'),
-    maxAncestorsSize: fundSourceConfig.get('maxAncestorsSize'),
-    maxDescendantsCount: fundSourceConfig.get('maxDescendantsCount'),
-    maxDescendantsSize: fundSourceConfig.get('maxDescendantsSize')
-};
+import { cfgSettings } from './FundSource';
+import { CCTransaction } from './CCTransaction';
 
 
 // Definition of function classes
 //
 
-// FundSource function class
+// CCFundSource function class
 //
 //  Argument description:
+//    ccAssetId [String] - Colored Coins attributed ID of asset that should be used for the funding
 //    addresses [String|Array(String)] - Addresses to be used as the fund source
 //    options { - (optional)
 //      unconfUtxoInfo: {  - (optional) To be used in case unconfirmed UTXOs should be used as the fund source
@@ -83,15 +72,19 @@ export const cfgSettings = {
 //    }
 //
 // NOTE: make sure that objects of this function class are instantiated and used (their methods
-//  called) from code executed from the FundSource.utxoCS critical section object
-export function FundSource(addresses, options) {
+//  called) from code executed from the CCFundSource.utxoCS critical section object
+export function CCFundSource(ccAssetId, addresses, options) {
     // Initialize in-memory database to hold UTXOs
     //  Structure of collUtxo collection: {
     //      address: [string],
     //      txid: [string],
     //      vout: [number],
     //      scriptPubKey: [string],
-    //      amount: [number],   // Amount in satoshis
+    //      amount: [number],      - Bitcoin amount in satoshis
+    //      ccAssetId: [string],  - Colored Coins attributed ID of asset
+    //      assetAmount: [number], - Asset amount represented as an integer number of the asset's smallest division (according to the asset divisibility)
+    //      assetDivisibility: [number], - Number of decimal places allowed for representing quantities of this asset
+    //      isAggregatableAsset: [boolean], - Indicates whether quantities of the asset from different UTXOs can be combined to allocate the necessary fund
     //      confirmations: [number],
     //      allocated: [boolean],   // Local control
     //      ancestorsCount: [number],   // Should only exist for confirmations = 0
@@ -106,8 +99,7 @@ export function FundSource(addresses, options) {
         ],
         indices: [
             'address',
-            'txid',
-            'amount',
+            'assetAmount',
             'confirmations',
             'allocated',
             'ancestorsCount',
@@ -117,6 +109,7 @@ export function FundSource(addresses, options) {
         ]
     });
 
+    this.ccAssetId = ccAssetId;
     this.addresses = Array.isArray(addresses) ? addresses : [addresses];
 
     this.useUnconfirmedUtxo = false;
@@ -166,10 +159,10 @@ export function FundSource(addresses, options) {
 }
 
 
-// Public FundSource object methods
+// Public CCFundSource object methods
 //
 
-FundSource.prototype.getBalance = function (includeUnconfirmed = true, includeAllocated = false) {
+CCFundSource.prototype.getBalance = function (includeUnconfirmed = true, includeAllocated = false) {
     const conditions = [];
 
     if (includeUnconfirmed && this.loadedUnconfirmedUtxos) {
@@ -200,35 +193,23 @@ FundSource.prototype.getBalance = function (includeUnconfirmed = true, includeAl
     const query = conditions.length > 1 ? {$and: conditions} : conditions[0];
 
     return this.collUtxo.find(query).reduce((sum, docUtxo) => {
-            return sum + docUtxo.amount;
-        }, 0);
-};
-
-//  result: [{
-//    address: [String],
-//    txout: {
-//      txid: [String],
-//      vout: [Number],
-//      amount: [Number]      // Amount in satoshis
-//    },
-//    scriptPubKey: [String]
-//  }]
-FundSource.prototype.getUtxosOfTx = function (txid) {
-    return this.collUtxo.chain().find({txid: txid}).simplesort('vout').data().map((doc) => {
-        return {
-            address: doc.address,
-            txout: {
-                txid: doc.txid,
-                vout: doc.vout,
-                amount: doc.amount
-            },
-            scriptPubKey: doc.scriptPubKey
+        if (this.isAggregatableAsset) {
+            // Return the accumulated asset amount in all UTXOs
+            sum += docUtxo.assetAmount;
         }
-    });
+        else {
+            // Asset cannot be aggregated; return the highest asset amount from all UTXOs
+            if (docUtxo.assetAmount > sum) {
+                sum = docUtxo.assetAmount;
+            }
+        }
+
+        return sum;
+    }, 0);
 };
 
 //  Arguments:
-//   amount [Number] - Amount, in satoshis, to be allocated
+//   amount [Number] - Asset amount to be allocated represented as an integer number of the asset's smallest division (according to the asset divisibility)
 //
 //  result: {
 //    utxos: [{
@@ -236,16 +217,20 @@ FundSource.prototype.getUtxosOfTx = function (txid) {
 //      txout: {
 //        txid: [String],
 //        vout: [Number],
-//        amount: [Number]      // Amount in satoshis
+//        amount: [Number],      - Bitcoin amount in satoshis
+//        assetAmount: [Number], - Asset amount represented as an integer number of the asset's smallest division (according to the asset divisibility)
+//        assetDivisibility: [Number], - Number of decimal places allowed for representing quantities of this asset
+//        isAggregatableAsset: [Boolean] - Indicates whether quantities of the asset from different UTXOs can be combined to allocate the necessary fund
 //      },
 //      scriptPubKey: [String]
 //    }],
-//    changeAmount: [Number]  // Optional
+//    changeAssetAmount: [Number]  - Only returned if there is change from the allocated asset amount, also represented as an
+//                                    integer number of the asset's smallest division (according to the asset divisibility)
 //  }
 //
-FundSource.prototype.allocateFund = function (amount) {
+CCFundSource.prototype.allocateFund = function (amount) {
     let result = null;
-    
+
     if (amount > 0) {
         const utxoResultSets = [];
         let maxUtxoResultSetLength = 0;
@@ -260,7 +245,7 @@ FundSource.prototype.allocateFund = function (amount) {
                 }
             }]
         }).compoundsort([
-            ['amount', true],
+            ['assetAmount', true],
             ['confirmations', true]
         ]).data();
 
@@ -293,7 +278,7 @@ FundSource.prototype.allocateFund = function (amount) {
 
             const query = conditions.length > 1 ? {$and: conditions} : conditions[0],
                 unconfUtxoResultSet = this.collUtxo.chain().find(query).compoundsort([
-                    ['amount', true],
+                    ['assetAmount', true],
                     ['confirmations', true],
                     'ancestorsCount',
                     'ancestorsSize',
@@ -311,8 +296,11 @@ FundSource.prototype.allocateFund = function (amount) {
             let allocatedUtxos = undefined;
 
             // Try to allocate as little UTXOs as possible to fulfill requested amount, starting
-            //  with one UTXO, and going up to the number of UTXOs returned in result sets
-            for (let numWorkUtxos = 1; numWorkUtxos <= maxUtxoResultSetLength; numWorkUtxos++) {
+            //  with one UTXO, and going up to the number of UTXOs returned in result sets.
+            //  NOTE: for assets that cannot be aggregated, restrict that number of allocated UTXOs
+            //      to only ONE
+            for (let numWorkUtxos = 1, limitNumWorkUtxos = this.isAggregatableAsset ? maxUtxoResultSetLength : 1;
+                    numWorkUtxos <= limitNumWorkUtxos; numWorkUtxos++) {
                 if ((allocatedUtxos = allocateUtxos.call(this, amount, utxoResultSets, numWorkUtxos)) !== undefined) {
                     // UTXOs successfully allocated. Stop trying
                     break;
@@ -330,18 +318,23 @@ FundSource.prototype.allocateFund = function (amount) {
                         txout: {
                             txid: docUtxo.txid,
                             vout: docUtxo.vout,
-                            amount: docUtxo.amount
+                            amount: docUtxo.amount,
+                            ccAssetId: docUtxo.ccAssetId,
+                            assetAmount: docUtxo.assetAmount,
+                            assetDivisibility: docUtxo.assetDivisibility,
+                            isAggregatableAsset: docUtxo.isAggregatableAsset
                         },
                         scriptPubKey: docUtxo.scriptPubKey
                     });
-                    allocatedAmount += docUtxo.amount;
+                    allocatedAmount += docUtxo.assetAmount;
                     docUtxo.allocated = true;
                 });
 
-                // Change amount (in satoshis)
-                result.changeAmount = allocatedAmount - amount;
+                // Change asset amount (represented as an integer number of the asset's smallest division)
+                result.changeAssetAmount = allocatedAmount - amount;
 
                 // Update local DB setting UTXOs as allocated
+                // noinspection JSIgnoredPromiseFromCall
                 this.collUtxo.update(allocatedUtxos.docUtxos);
 
                 // NOTE: force the rebuild of the binary index on the 'allocated' property to work around
@@ -358,241 +351,7 @@ FundSource.prototype.allocateFund = function (amount) {
     return result;
 };
 
-// Arguments description:
-//   txInfo {
-//     txSize: [Number], - Current transaction size in bytes
-//     inputAmount: [Number], - Total amount of current inputs in the transaction, in satoshis
-//     outputAmount: [Number] - Total amount of current outputs in the transaction, in satoshis
-//   }
-//   isFixedFeed [Boolean] - Indicates whether the transaction fee is predetermined (by a fixed amount)
-//   fee [Number] - Amount, in satoshis, corresponding to the fee to be paid for the transaction. If fee is
-//                   not fixed (isFixedFeed = false), this should be interpreted as a fee rate, in satoshis/byte,
-//                   that should be used to calculate the actual transaction fee
-//  amountResolution: [Number] - The resolution, in satoshis, of the calculated amount to be allocated.
-//                                The allocated amount should be a multiple of that amount
-//
-//  result: {
-//    utxos: [{
-//      address: [String],
-//      txout: {
-//        txid: [String],
-//        vout: [Number],
-//        amount: [Number]      // Amount in satoshis
-//      },
-//      scriptPubKey: [String]
-//    }],
-//    changeAmount: [Number]  // Optional
-//  }
-//
-FundSource.prototype.allocateFundForTxExpense = function (txInfo, isFixedFeed, fee, amountResolution) {
-    // Check arguments
-    if (fee === undefined) {
-        if (!isFixedFeed) {
-            // Use default fee rate
-            fee = Catenis.bitcoinFees.getOptimumFeeRate();
-        }
-        else {
-            // No fixed fee specified for the transaction. Indicate error
-            Catenis.logger.ERROR('FundSource.allocateFundForTxExpense method called with undetermined fixed fee');
-            throw new Error('FundSource.allocateFundForTxExpense method called with undetermined fixed fee');
-        }
-    }
-
-    amountResolution = amountResolution || Service.paymentResolution;
-
-    // Calculate amount to be allocated (to pay for transaction expense)
-    const txDiffAmount = txInfo.inputAmount - txInfo.outputAmount;
-    let amount = undefined;
-    // NOTE: the following variables only apply to non-fixed fee
-    let txExpense = 0,
-        deltaFeePerInput = 0,
-        deltaFeePerOuput = 0;
-
-    if (isFixedFeed) {
-        // Using a fixed fee for transaction. Calculate amount to be allocated now (and only once).
-        //  If current tx input amount is already enough to pay for the required transaction fee,
-        //  set amount to zero to indicate that there is no need to allocate anything
-        amount = txDiffAmount < fee ? Math.ceil((fee - txDiffAmount) / amountResolution) * amountResolution : 0;
-    }
-    else {
-        // Not using a fixed fee for transaction. Interpret passed fee as a fee rate. For now,
-        //  calculate the transaction expense (amount required to balance the amount of the tx inputs
-        //  with the amount of the tx outputs plus the calculated fee), and check if it is needed.
-        //  The actual amount to be allocated (if required) shall be calculated afterwards
-        txExpense = (txInfo.txSize * fee) - txDiffAmount;
-
-        if (txExpense <= 0) {
-            // No need to allocated anything to cover transaction expense
-            amount = 0;
-        }
-        else {
-            // Prepare values to be used when adjusting tx expense later on
-            deltaFeePerInput = Transaction.txInputSize * fee;  // Increment in tx fee due to adding a new input to the tx
-            deltaFeePerOuput = Transaction.txOutputSize * fee; // Increment in tx fee due to adding a new output to the tx
-        }
-    }
-
-    let result = null;
-
-    if (amount === undefined || amount > 0) {
-        const utxoResultSets = [];
-        let maxUtxoResultSetLength = 0;
-    
-        // Retrieve only confirmed UTXOs sorting them by higher value, and higher confirmations
-        const confUtxoResultSet = this.collUtxo.chain().find({$and: [{allocated: false}, {confirmations: {$gt: 0}}]}).compoundsort([['amount', true], ['confirmations', true]]).data();
-    
-        if (confUtxoResultSet.length > 0) {
-            utxoResultSets.push(confUtxoResultSet);
-            maxUtxoResultSetLength = confUtxoResultSet.length;
-        }
-    
-        if (this.loadedUnconfirmedUtxos) {
-            // Retrieve both confirmed and unconfirmed UTXOs sorting them by higher value, higher confirmations,
-            //  lower ancestors count (for unconfirmed UTXOs), lower ancestors size (for unconfirmed UTXOs),
-            //  lower descendants count (for unconfirmed UTXOs), lower descendants size (for unconfirmed UTXOs)
-            const conditions = [{allocated: false}];
-
-            if (this.ancestorsCountUpperLimit !== undefined) {
-                conditions.push({ancestorsCount: {$lte: this.ancestorsCountUpperLimit}});
-            }
-
-            if (this.ancestorsSizeUpperLimit !== undefined) {
-                conditions.push({ancestorsSize: {$lte: this.ancestorsSizeUpperLimit}});
-            }
-
-            if (this.descendantsCountUpperLimit !== undefined) {
-                conditions.push({descendantsCount: {$lte: this.descendantsCountUpperLimit}});
-            }
-
-            if (this.descendantsSizeUpperLimit !== undefined) {
-                conditions.push({descendantsSize: {$lte: this.descendantsSizeUpperLimit}});
-            }
-
-            const query = conditions.length > 1 ? {$and: conditions} : conditions[0],
-                unconfUtxoResultSet = this.collUtxo.chain().find(query).compoundsort([['amount', true], ['confirmations', true], 'ancestorsCount', 'ancestorsSize', 'descendantsCount', 'descendantsSize']).data();
-
-            if (unconfUtxoResultSet.length > 0) {
-                utxoResultSets.push(unconfUtxoResultSet);
-                maxUtxoResultSetLength = unconfUtxoResultSet.length > maxUtxoResultSetLength ? unconfUtxoResultSet.length : maxUtxoResultSetLength;
-            }
-        }
-
-        if (maxUtxoResultSetLength > 0) {
-            let allocatedUtxos = undefined;
-    
-            // Try to allocate as little UTXOs as possible to fulfill requested amount, starting
-            //  with one UTXO, and going up to the number of UTXOs returned in result sets
-            for (let numWorkUtxos = 1; numWorkUtxos <= maxUtxoResultSetLength; numWorkUtxos++) {
-                if (!isFixedFeed) {
-                    // Not using fixed fee for transaction. Amount to be allocated depends on number
-                    //  of UTXO to allocate (numWorkUtxos), so it needs to be recalculated every time it changes
-    
-                    // Adjust the transaction expense by adding the amount corresponding to the increment
-                    //  in the tx fee due to adding a new input to the transaction (each UTXO counts as one input).
-                    //  For now, we assume that there will be no (additional tx output for) change
-                    txExpense += deltaFeePerInput;
-                    amount = Math.ceil((txExpense) / amountResolution) * amountResolution;
-                }
-
-                const work = {};
-    
-                if ((allocatedUtxos = allocateUtxos.call(this, amount, utxoResultSets, numWorkUtxos, work)) !== undefined) {
-                    // UTXOs successfully allocated
-                    if (isFixedFeed || allocatedUtxos.exactAmountAllocated) {
-                        // Stop trying
-                        break;
-                    }
-                    else {
-                        // Could not allocate exact amount (with no change). Recalculate amount,
-                        //  this time assuming there will be one additional tx out (for the change)
-                        const newAmount = Math.ceil((txExpense + deltaFeePerOuput) / amountResolution) * amountResolution;
-
-                        if (newAmount > amount) {
-                            // New amount is different (actually larger) than original amount. Reset amount
-                            //  and try to allocated UTXOs again
-                            amount = newAmount;
-
-                            if ((allocatedUtxos = allocateUtxos.call(this, amount, utxoResultSets, numWorkUtxos, work)) !== undefined) {
-                                // UTXOs successfully allocated. Stop trying
-                                break;
-                            }
-                            else {
-                                // Failed to allocated UTXOs. Check if we should keep trying by incrementing
-                                //  the number of UTXOs (and consequently of tx inputs) to use
-                                if (work.largestTriedDeltaAmount < deltaFeePerInput) {
-                                    // Largest delta amount used to allocated UTXOs in current try is smaller
-                                    //  than the delta amount that would be added to the amount to be allocated.
-                                    //  Since it is guaranteed that largest delta amount for next try is NOT going
-                                    //  to be larger than largest delta amount for current try, then it is
-                                    //  just a waste of time and processing resources to keep on trying.
-                                    //  So we stop processing now
-                                    break;
-                                }
-                            }
-                        }
-                        else {
-                            // There is no difference in the amount if a change output is added, so there is no
-                            //  need to try to allocate UTXOs again. Assume that previously allocated UTXOs
-                            //  are correct, and just stop processing
-                            break;
-                        }
-                    }
-                }
-                else {
-                    // Failed to allocated UTXOs. Check if we should keep trying by incrementing
-                    //  the number of UTXOs (and consequently of tx inputs) to use
-                    if (!isFixedFeed && work.largestTriedDeltaAmount < deltaFeePerInput) {
-                        // Largest delta amount used to allocated UTXOs in current try is smaller
-                        //  than the delta amount that would be added to the amount to be allocated.
-                        //  Since it is guaranteed that largest delta amount for next try is NOT going
-                        //  to be larger than largest delta amount for current try, then it is
-                        //  just a waste of time and processing resources to keep on trying.
-                        //  So we stop processing now
-                        break;
-                    }
-                }
-            }
-    
-            if (allocatedUtxos !== undefined) {
-                // UTXOs allocated. Prepared to return result
-                let allocatedAmount = 0;
-                result = {utxos: []};
-    
-                allocatedUtxos.docUtxos.forEach((docUtxo) => {
-                    result.utxos.push({
-                        address: docUtxo.address,
-                        txout: {
-                            txid: docUtxo.txid,
-                            vout: docUtxo.vout,
-                            amount: docUtxo.amount,
-                        },
-                        scriptPubKey: docUtxo.scriptPubKey
-                    });
-                    allocatedAmount += docUtxo.amount;
-                    docUtxo.allocated = true;
-                });
-    
-                // Change amount (in satoshis)
-                result.changeAmount = allocatedAmount - amount;
-    
-                // Update local DB setting UTXOs as allocated
-                this.collUtxo.update(allocatedUtxos.docUtxos);
-
-                // NOTE: force the rebuild of the binary index on the 'allocated' property to work around
-                //  an issue found with Lokijs (https://github.com/techfort/LokiJS/issues/639)
-                this.collUtxo.ensureIndex('allocated', true);
-            }
-        }
-    }
-    else {
-        // Indicate that there is no need to allocated additional UTXOs to pay for tx expense
-        result = {utxos: []};
-    }
-
-    return result;
-};
-
-FundSource.prototype.clearAllocatedUtxos = function () {
+CCFundSource.prototype.clearAllocatedUtxos = function () {
     const docAllocatedUtxos = this.collUtxo.find({allocated: true});
 
     if (docAllocatedUtxos.length > 0) {
@@ -600,13 +359,14 @@ FundSource.prototype.clearAllocatedUtxos = function () {
             docUtxo.allocated = false;
         });
 
+        // noinspection JSIgnoredPromiseFromCall
         this.collUtxo.update(docAllocatedUtxos);
     }
 };
 
 
-// Module functions used to simulate private FundSource object methods
-//  NOTE: these functions need to be bound to a FundSource object reference (this) before
+// Module functions used to simulate private CCFundSource object methods
+//  NOTE: these functions need to be bound to a CCFundSource object reference (this) before
 //      they are called, by means of one of the predefined function methods .call(), .apply()
 //      or .bind().
 //
@@ -615,48 +375,95 @@ function isExcludedUtxo(utxo) {
     const txout = Util.txoutToString(utxo);
 
     return (this.excludedUtxos !== undefined && this.excludedUtxos.has(txout))
-            || (utxo.confirmations === 0 && !this.useUnconfirmedUtxo && !this.selectUnconfUtxos.has(txout));
+        || (utxo.confirmations === 0 && !this.useUnconfirmedUtxo && !this.selectUnconfUtxos.has(txout));
 }
 
-function insertUtxo(utxo, unconfTxids) {
-    this.collUtxo.insert({
-        txout: Util.txoutToString(utxo),
-        address: utxo.address,
-        txid: utxo.txid,
-        vout: utxo.vout,
-        scriptPubKey: utxo.scriptPubKey,
-        amount: new BigNumber(utxo.amount).times(100000000).toNumber(),
-        confirmations: utxo.confirmations,
-        allocated: false
-    });
+function insertUtxo(utxo, assetUtxoInfo, unconfTxids) {
+    // Store relevant asset info
+    let inconsistentAssetUtxoInfo = false;
 
-    if (utxo.confirmations === 0) {
-        // Store unconfirmed transaction ID
-        unconfTxids.add(utxo.txid);
+    if (this.assetDivisibility === undefined) {
+        this.assetDivisibility = assetUtxoInfo.divisibility;
+    }
+    else if (this.assetDivisibility !== assetUtxoInfo.divisibility) {
+        // Asset divisibility info inconsistent amongst UTXOs.
+        //   Log warning condition and indicate that UTXO is inconsistent
+        Catenis.logger.WARN('Asset divisibility info inconsistent amongst UTXOs. Current UTXO being discarded', {
+            addresses: this.addresses,
+            expectedAssetDivisibility: this.assetDivisibility,
+            currentUtxo: utxo
+        });
+        inconsistentAssetUtxoInfo = true;
+    }
+
+    const isAggregatableAsset = assetUtxoInfo.aggregationPolicy === CCTransaction.aggregationPolicy.aggregatable;
+
+    if (this.isAggregatableAsset === undefined) {
+        this.isAggregatableAsset = isAggregatableAsset;
+    }
+    else if (this.isAggregatableAsset !== isAggregatableAsset) {
+        // Asset aggregation info inconsistent amongst UTXOs.
+        //   Log warning condition and indicate that UTXO is inconsistent
+        Catenis.logger.WARN('Asset aggregation info inconsistent amongst UTXOs. Current UTXO being discarded', {
+            addresses: this.addresses,
+            expectedIsAggregatableAsset:this.isAggregatableAsset,
+            currentUtxo: utxo
+        });
+        inconsistentAssetUtxoInfo = true;
+    }
+
+    if (!inconsistentAssetUtxoInfo) {
+        this.collUtxo.insert({
+            txout: Util.txoutToString(utxo),
+            address: utxo.address,
+            txid: utxo.txid,
+            vout: utxo.vout,
+            scriptPubKey: utxo.scriptPubKey,
+            amount: new BigNumber(utxo.amount).times(100000000).toNumber(),
+            ccAssetId: this.ccAssetId,
+            assetAmount: assetUtxoInfo.amount,
+            assetDivisibility: assetUtxoInfo.divisibility,
+            isAggregatableAsset: isAggregatableAsset,
+            confirmations: utxo.confirmations,
+            allocated: false
+        });
+
+        if (utxo.confirmations === 0) {
+            // Store unconfirmed transaction ID
+            unconfTxids.add(utxo.txid);
+        }
     }
 }
 
 function loadUtxos() {
     // Retrieve UTXOs associated with given addresses, including unconfirmed ones if requested
-    const utxos = Catenis.bitcoinCore.listUnspent(this.useUnconfirmedUtxo || this.selectUnconfUtxos !== undefined ? 0 : 1, this.addresses);
+    const utxos = Catenis.ccFNClient.getAddressesUtxos(this.addresses, this.useUnconfirmedUtxo || this.selectUnconfUtxos !== undefined ? 0 : 1);
 
-    // Store retrieved UTXOs onto local DB making sure that any excluded UTXOs are not included,
-    //  and converting amount from bitcoins to satoshis
+    // Store retrieved UTXOs onto local DB making sure that only UTXOs associated with
+    //  the specified asset are included, and that any excluded UTXOs are not included,
+    //  and converting bitcoin amount from bitcoins to satoshis and the asset amount to its
+    //  smallest division
     const unconfTxids = new Set();
 
     utxos.forEach((utxo) => {
-        // Make sure that UTXO is not excluded
-        if (!isExcludedUtxo.call(this, utxo)) {
-            insertUtxo.call(this, utxo, unconfTxids);
+        // Make sure that UTXO is not excluded, and has asset info that pertains
+        //  to the specified asset
+        let assetUtxoInfo;
+
+        if (!isExcludedUtxo.call(this, utxo) && (assetUtxoInfo = getAssetUtxoInfo.call(this, utxo)) !== undefined) {
+            insertUtxo.call(this, utxo, assetUtxoInfo, unconfTxids);
         }
     });
 
     // Check if there are additional UTXOs to be inserted
     if (this.additionalUtxos !== undefined) {
         this.additionalUtxos.forEach((utxo) => {
-            // Make sure that additional UTXO is not duplicated
-            if (this.collUtxo.by('txout', Util.txoutToString(utxo)) === undefined) {
-                insertUtxo.call(this, utxo, unconfTxids);
+            // Make sure that additional UTXO has asset info that pertains to the specified
+            //  asset and that it is not duplicated
+            let assetUtxoInfo;
+
+            if ((assetUtxoInfo = getAssetUtxoInfo.call(this, utxo)) !== undefined && this.collUtxo.by('txout', Util.txoutToString(utxo)) === undefined) {
+                insertUtxo.call(this, utxo, assetUtxoInfo, unconfTxids);
             }
         });
     }
@@ -686,7 +493,7 @@ function loadUtxos() {
                         // Error returned from calling Bitcoin Core API method
                         if (err.details.code === BitcoinCore.rpcErrorCode.RPC_INVALID_ADDRESS_OR_KEY) {
                             // Transaction of UTXO not in mempool; it must have been already confirmed
-                            //  (in the meantime between the calls to 'bitcoinCore.listUnspent()'
+                            //  (in the meantime between the calls to 'CCFullNodeClient.getAddressesUtxos()'
                             //  and 'bitcoinCore.getMempoolEntry()'). So retrieve transaction information to
                             //  get confirmation status
                             Catenis.logger.DEBUG('Transaction of UTXO not in mempool', {txid: txid, vout: doc.vout});
@@ -741,10 +548,10 @@ function loadUtxos() {
 }
 
 // Arguments:
-//  amount [Number] - Amount, in satoshis, to be allocated
+//  amount [Number] - Asset amount to be allocated represented as an integer number of the asset's smallest division (according to the asset divisibility)
 //  utxoResultSets [Array(Array(doc))] - Result sets containing UTXO entries from local DB. The first result set includes only confirmed UTXOs.
 //                                        The second result set contains both confirmed and unconfirmed UTXOs
-//  numWorkUtxos [Number] - Number of UTXOs that should be used for allocating the requested amount
+//  numWorkUtxos [Number] - Number of UTXOs that should be used for allocating the requested asset amount
 //  work [Object] - Object used to return the largest delta amount tried when allocation does not succeed
 function allocateUtxos(amount, utxoResultSets, numWorkUtxos, work) {
     let docAllocatedUtxos = undefined,
@@ -770,9 +577,9 @@ function allocateUtxos(amount, utxoResultSets, numWorkUtxos, work) {
         for (let utxoIdx = 0; utxoIdx < numWorkUtxos; utxoIdx++) {
             workUtxos.push({
                 utxoIdx: utxoIdx,
-                amount: docUtxos[utxoIdx].amount
+                assetAmount: docUtxos[utxoIdx].assetAmount
             });
-            totalWorkAmount += docUtxos[utxoIdx].amount;
+            totalWorkAmount += docUtxos[utxoIdx].assetAmount;
         }
 
         const lastWorkIdx = numWorkUtxos - 1;
@@ -815,19 +622,19 @@ function allocateUtxos(amount, utxoResultSets, numWorkUtxos, work) {
                     }
 
                     // ...proceed to try if exact amount can be allocated
-                    const prevEntriesAmount = totalWorkAmount - workUtxos[lastWorkIdx].amount;
+                    const prevEntriesAmount = totalWorkAmount - workUtxos[lastWorkIdx].assetAmount;
 
                     // Search for a UTXO with a lower amount for the last working entry, so the
                     //  total amount of working entries matches the requested amount
                     for (let utxoIdx = workUtxos[lastWorkIdx].utxoIdx + 1; utxoIdx < numUtxos; utxoIdx++) {
-                        let currentWorkAmount = prevEntriesAmount + docUtxos[utxoIdx].amount;
+                        let currentWorkAmount = prevEntriesAmount + docUtxos[utxoIdx].assetAmount;
 
                         if (currentWorkAmount === amount) {
                             // We managed to allocate the exact requested amount.
                             //  Save allocated UTXOs and finish processing
                             workUtxos[lastWorkIdx] = {
                                 utxoIdx: utxoIdx,
-                                amount: docUtxos[utxoIdx].amount
+                                assetAmount: docUtxos[utxoIdx].assetAmount
                             };
                             docAllocatedUtxos = workUtxos.map((workUtxo) => {
                                 return docUtxos[workUtxo.utxoIdx];
@@ -860,11 +667,11 @@ function allocateUtxos(amount, utxoResultSets, numWorkUtxos, work) {
                         // Work through all previous entries, starting with the one before
                         //  the last one, and going up to the first one (eventually)
                         for (let workIdx = lastWorkIdx - 1; workIdx >= 0; workIdx--) {
-                            let currentEntryAmount = workUtxos[workIdx].amount;
+                            let currentEntryAmount = workUtxos[workIdx].assetAmount;
 
                             // Search for a UTXO with an amount lower than the amount of the current entry
                             for (let utxoIdx = workUtxos[workIdx].utxoIdx + 1; utxoIdx < numUtxos - (numWorkUtxos - (workIdx + 1)); utxoIdx++) {
-                                if (docUtxos[utxoIdx].amount < currentEntryAmount) {
+                                if (docUtxos[utxoIdx].assetAmount < currentEntryAmount) {
                                     // UTXO found. Adjust working UTXO entries
                                     totalWorkAmount = 0;
 
@@ -877,11 +684,11 @@ function allocateUtxos(amount, utxoResultSets, numWorkUtxos, work) {
 
                                             workUtxos[workIdx2] = {
                                                 utxoIdx: entryUtxoIdx,
-                                                amount: docUtxos[entryUtxoIdx].amount
+                                                assetAmount: docUtxos[entryUtxoIdx].assetAmount
                                             }
                                         }
 
-                                        totalWorkAmount += workUtxos[workIdx2].amount;
+                                        totalWorkAmount += workUtxos[workIdx2].assetAmount;
                                     }
 
                                     // Indicate that previous entries have been adjusted
@@ -911,23 +718,40 @@ function allocateUtxos(amount, utxoResultSets, numWorkUtxos, work) {
         }
         else if (work !== undefined) {
             // Save largest delta amount tried to match (or surpass) the requested amount to be allocated
-            work.largestTriedDeltaAmount = work.largestTriedDeltaAmount === undefined || work.largestTriedDeltaAmount < workUtxos[lastWorkIdx].amount ? workUtxos[lastWorkIdx].amount : work.largestTriedDeltaAmount;
+            work.largestTriedDeltaAmount = work.largestTriedDeltaAmount === undefined || work.largestTriedDeltaAmount < workUtxos[lastWorkIdx].assetAmount ? workUtxos[lastWorkIdx].assetAmount : work.largestTriedDeltaAmount;
         }
     }
 
     return docAllocatedUtxos !== undefined ? {docUtxos: docAllocatedUtxos, exactAmountAllocated: exactAmountAllocated} : undefined;
 }
 
+// Return asset info from within UTXO for the specified asset if it exists
+function getAssetUtxoInfo(utxo) {
+    if (utxo.assets !== undefined) {
+        if (utxo.assets.length === 1) {
+            return utxo.assets[0].assetId === this.ccAssetId ? utxo.assets[0] : undefined;
+        }
+        else if (utxo.assets.length === 0) {
+            // No asset entry in UTXO. Discard it
+            Catenis.logger.WARN('UTXO has no Colored Coins asset entry. UTXO is being discarded', {utxo: utxo});
+        }
+        else {
+            // More than one asset entry in UTXO. This is not supported
+            Catenis.logger.WARN('UTXO has more than one Colored Coins asset entry. UTXO is being discarded', {utxo: utxo});
+        }
+    }
+}
 
-// FundSource function class (public) methods
+
+// CCFundSource function class (public) methods
 //
 
 
-// FundSource function class (public) properties
+// CCFundSource function class (public) properties
 //
 
 // Critical section object to avoid concurrent access to UTXOs
-FundSource.utxoCS = new CriticalSection();
+CCFundSource.utxoCS = new CriticalSection();
 
 
 // Definition of module (private) functions
@@ -946,7 +770,13 @@ function computeAdditionalUtxos(addUtxoTxInputs) {
             txid: txInput.txout.txid,
             vout: txInput.txout.vout,
             address: txInput.address,
-            amount: new BigNumber(txInput.txout.amount).dividedBy(100000000).toNumber()
+            amount: new BigNumber(txInput.txout.amount).dividedBy(100000000).toNumber(),
+            assets: [{
+                assetId: txInput.txout.ccAssetId,
+                amount: txInput.txout.assetAmount,
+                divisibility: txInput.txout.assetDivisibility,
+                aggregationPolicy: txInput.txout.isAggregatableAsset ? CCTransaction.aggregationPolicy.aggregatable : CCTransaction.aggregationPolicy.dispersed,
+            }]
         };
 
         if (txInput.scriptPubKey !== undefined) {
@@ -1005,4 +835,4 @@ function computeAdditionalUtxos(addUtxoTxInputs) {
 //
 
 // Lock function class
-Object.freeze(FundSource);
+Object.freeze(CCFundSource);

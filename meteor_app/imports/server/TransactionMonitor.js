@@ -44,6 +44,7 @@ import { _ } from 'meteor/underscore';
 import { Catenis } from './Catenis';
 import { KeyStore } from './KeyStore';
 import { Transaction } from './Transaction';
+import { BcotPaymentTransaction } from './BcotPaymentTransaction';
 
 // Config entries
 const txMonitorConfig = config.get('transactionMonitor');
@@ -94,7 +95,7 @@ export class TransactionMonitor extends events.EventEmitter {
         this.blockToReset = undefined;
 
         // Initialize in-memory database to hold Catenis transactions received/confirmed since
-        //  last processed block (retrieved by callin getsinceblock Bitcoin Core RPC method)
+        //  last processed block (retrieved by calling getsinceblock Bitcoin Core RPC method)
         //
         //  Structure of collCntTx collection: {
         //    amount: [number],
@@ -179,7 +180,7 @@ export class TransactionMonitor extends events.EventEmitter {
         }
 
         if (this.idCheckUnconfTxsInterval !== undefined) {
-            Catenis.logger.TRACE('Stop checking for old unconfirmed transctions');
+            Catenis.logger.TRACE('Stop checking for old unconfirmed transactions');
             Meteor.clearInterval(this.idCheckUnconfTxsInterval);
             this.idCheckUnconfTxsInterval = undefined;
         }
@@ -449,7 +450,7 @@ function pollBlockchain() {
                 this.newBlockchainPollTick = false;
 
                 if (this.blockToReset) {
-                    Catenis.logger.WARN(util.format('Reseting blockchain block processing: last processed block height: %s, new block height to reset: %s)', this.lastBlock.height, this.blockToReset.height));
+                    Catenis.logger.WARN(util.format('Resetting blockchain block processing: last processed block height: %s, new block height to reset: %s)', this.lastBlock.height, this.blockToReset.height));
                     // Reset block height
                     this.lastBlock = this.blockToReset;
                     this.blockToReset = undefined;
@@ -498,7 +499,7 @@ function pollBlockchain() {
                 }
 
                 // Wait to see if there are confirmed Catenis transactions before emitting
-                //  event indicating that new Caeenis transactions have arrived
+                //  event indicating that new Catenis transactions have arrived
                 let hasDependentBlocks = false;
 
                 // Make sure that last scanned block is different than last processed block
@@ -538,7 +539,7 @@ function pollBlockchain() {
                                     replacedTxids: {}
                                 };
 
-                                // Step through Catenis trnsactions in block
+                                // Step through Catenis transactions in block
                                 let newCtnTxsInBlock = {};
 
                                 for (let ctnTxid in ctnTxBlock.ctnTxs) {
@@ -798,7 +799,7 @@ function handleNewBlocks(data) {
                             txid: {$in: blockInfo.ctnTxids},
                             sentTransaction_id: {$exists: false},
                             'confirmation.confirmed': false
-                        }, {fields: {_id: 1, type: 1, txid: 1}}).map((doc) => {
+                        }, {fields: {_id: 1, type: 1, txid: 1, info: 1}}).map((doc) => {
                             const confTxid = blockInfo.replacedTxids[doc.txid];
 
                             if (confTxid) {
@@ -892,9 +893,10 @@ function handleNewTransactions(data) {
                 }, {fields: {_id: 1, type: 1, txid: 1, info: 1}}).forEach(doc => {
                     sentTxids.add(doc.txid);
 
-                    // Filter the type of transactions that should be processed as received transactions: 'send_message',
+                    // Filter the type of transactions that should be processed as received transactions: 'credit_service_account', 'send_message',
                     //  'read_confirmation', and 'transfer_asset' for now
-                    if (doc.type === Transaction.type.send_message.name || doc.type === Transaction.type.read_confirmation.name || doc.type === Transaction.type.transfer_asset.name) {
+                    if (doc.type === Transaction.type.credit_service_account.name || doc.type === Transaction.type.send_message.name
+                            || doc.type === Transaction.type.read_confirmation.name || doc.type === Transaction.type.transfer_asset.name) {
                         Catenis.logger.TRACE('Processing sent transaction as received transaction', doc);
 
                         // Get needed data from read confirmation tx
@@ -920,7 +922,11 @@ function handleNewTransactions(data) {
                                 txid: doc.txid
                             };
 
-                            if (doc.type === Transaction.type.send_message.name) {
+                            if (doc.type === Transaction.type.credit_service_account.name) {
+                                eventData.clientId = doc.info.creditServiceAccount.clientId;
+                                eventData.issuedAmount = doc.info.creditServiceAccount.issuedAmount;
+                            }
+                            else if (doc.type === Transaction.type.send_message.name) {
                                 eventData.originDeviceId = doc.info.sendMessage.originDeviceId;
                                 eventData.targetDeviceId = doc.info.sendMessage.targetDeviceId;
                             }
@@ -982,6 +988,7 @@ function handleNewTransactions(data) {
                         //noinspection JSUnfilteredForInLoop
                         const voutInfo = parseTxVouts(data.ctnTxs[txid].details);
                         let payments;
+                        let bcotPayTransact;
 
                         if ((payments = sysFundingPayments(voutInfo)).length > 0) {
                             // Transaction used to fund the system has been received
@@ -998,28 +1005,62 @@ function handleNewTransactions(data) {
 
                             // Prepared to save received tx to the local database
                             //noinspection JSUnfilteredForInLoop
-                            rcvdTxDocsToCreate.push({
+                            const rcvdTxDoc  = {
                                 type: Transaction.type.sys_funding.name,
                                 txid: txid,
                                 receivedDate: new Date(data.ctnTxs[txid].timereceived * 1000),
                                 confirmation: {
                                     confirmed: false
                                 },
-                                info: {
-                                    sysFunding: {
-                                        fundAddresses: payments.map((payment) => {
-                                            return {
-                                                path: payment.path,
-                                                amount: payment.amount
-                                            };
-                                        })
-                                    }
+                                info: {}
+                            };
+                            rcvdTxDoc.info[Transaction.type.sys_funding.dbInfoEntryName] = {
+                                fundAddresses: payments.map((payment) => {
+                                    return {
+                                        path: payment.path,
+                                        amount: payment.amount
+                                    };
+                                })
+                            };
+
+                            rcvdTxDocsToCreate.push(rcvdTxDoc);
+                        }
+                        else if (BcotPaymentTransaction.isValidTxVouts(voutInfo) && (bcotPayTransact = BcotPaymentTransaction.checkTransaction(txid)) !== undefined) {
+                            // BCOT payment transaction
+
+                            // Prepare to emit event notifying of new transaction received
+                            //noinspection JSUnfilteredForInLoop
+                            eventsToEmit.push({
+                                name: TransactionMonitor.notifyEvent.bcot_payment_tx_rcvd.name,
+                                data: {
+                                    txid: txid,
+                                    clientId: bcotPayTransact.client.clientId,
+                                    paidAmount: bcotPayTransact.paidAmount
                                 }
                             });
+
+                            // Prepared to save received tx to the local database
+                            //noinspection JSUnfilteredForInLoop
+                            const rcvdTxDoc = {
+                                type: Transaction.type.bcot_payment.name,
+                                txid: txid,
+                                receivedDate: new Date(data.ctnTxs[txid].timereceived * 1000),
+                                confirmation: {
+                                    confirmed: false
+                                },
+                                info: {}
+                            };
+                            rcvdTxDoc.info[Transaction.type.bcot_payment.dbInfoEntryName] = {
+                                clientId: bcotPayTransact.client.clientId,
+                                bcotPayAddressPath: Catenis.keyStore.getTypeAndPathByAddress(bcotPayTransact.payeeAddress).path,
+                                paidAmount: bcotPayTransact.paidAmount
+                            };
+
+                            rcvdTxDocsToCreate.push(rcvdTxDoc);
                         }
                         // TODO: parse transaction (using Transaction.fromHex()) and try to identify Catenis transactions (using tx.matches())
                         else {
-                            // TODO: IMPORTANT - identify unrecognized transactions that send bitcoins to internal Cetenis addresses (any address other than sys_fund_addr) and spend the amount transferred  to a "gargage" addresss that should be defined so the bitcoins are gotten out of the way
+                            // TODO: IMPORTANT - identify unrecognized transactions that send bitcoins to internal Catenis addresses (any address other than sys_fund_addr) and spend the amount transferred  to a "garbage" addresss that should be defined so the bitcoins are gotten out of the way
                             // An unrecognized transaction had been received.
                             //  Log warning condition
                             // noinspection JSUnfilteredForInLoop
@@ -1116,8 +1157,8 @@ function validateNewTxsBatchDependency(blockInfo) {
         }).wait();
 
         if (timeout) {
-            Catenis.logger.ERROR(util.format('Timeout while waiting on new transactions batch (batchNumer: %s) to finish processing before proceeding with processing of dependent block (height: %s)', blockInfo.newTxsBatchDependency, blockInfo.height));
-            throw new Error(util.format('Timeout while waiting on new transactions batch (batchNumer: %s) to finish processing before proceeding with processing of dependent block (height: %s)', blockInfo.newTxsBatchDependency, blockInfo.height));
+            Catenis.logger.ERROR(util.format('Timeout while waiting on new transactions batch (batchNumber: %s) to finish processing before proceeding with processing of dependent block (height: %s)', blockInfo.newTxsBatchDependency, blockInfo.height));
+            throw new Error(util.format('Timeout while waiting on new transactions batch (batchNumber: %s) to finish processing before proceeding with processing of dependent block (height: %s)', blockInfo.newTxsBatchDependency, blockInfo.height));
         }
     }
     else {
@@ -1328,15 +1369,19 @@ TransactionMonitor.notifyEvent = Object.freeze({
     }),
     funding_provision_system_device_tx_conf: Object.freeze({
         name: 'funding_provision_system_device_tx_conf',
-        description: 'Funding transaction sent for provisioning Catenis Hub device has been confirmed'
+        description: 'Funding transaction sent for provisioning system device has been confirmed'
     }),
-    funding_provision_client_srv_credit_tx_conf: Object.freeze({
-        name: 'funding_provision_client_srv_credit_tx_conf',
-        description: 'Funding transaction sent for provisioning service credit for a client has been confirmed'
+    funding_provision_service_credit_issuance_tx_conf: Object.freeze({
+        name: 'funding_provision_service_credit_issuance_tx_conf',
+        description: 'Funding transaction sent for provisioning system service credit issuance has been confirmed'
     }),
     funding_provision_client_device_tx_conf: Object.freeze({
         name: 'funding_provision_client_device_tx_conf',
         description: 'Funding transaction sent for provisioning a device for a client has been confirmed'
+    }),
+    funding_add_extra_service_payment_tx_pay_funds_tx_conf: Object.freeze({
+        name: 'funding_add_extra_service_payment_tx_pay_funds_tx_conf',
+        description: 'Funding transaction sent for adding funds to pay for service payment transaction expenses has been confirmed'
     }),
     funding_add_extra_tx_pay_funds_tx_conf: Object.freeze({
         name: 'funding_add_extra_tx_pay_funds_tx_conf',
@@ -1346,9 +1391,21 @@ TransactionMonitor.notifyEvent = Object.freeze({
         name: 'funding_add_extra_read_confirm_tx_pay_funds_tx_conf',
         description: 'Funding transaction sent for adding funds to pay for read confirmation transaction expenses has been confirmed'
     }),
+    bcot_payment_tx_conf: Object.freeze({
+        name: 'bcot_payment_tx_conf',
+        description: 'Transaction used to send BCOT tokens as payment for services for a client has been confirmed'
+    }),
+    credit_service_account_tx_conf: Object.freeze({
+        name: 'credit_service_account_tx_conf',
+        description: 'Transaction sent for crediting the service account of a client has been confirmed'
+    }),
+    spend_service_credit_tx_conf: Object.freeze({
+        name: 'spend_service_credit_tx_conf',
+        description: 'Transaction used to spend an amount of Catenis service credits from a client\'s service account to pay for a service has been confirmed'
+    }),
     read_confirmation_tx_conf: Object.freeze({
         name: 'read_confirmation_tx_conf',
-        description: 'Transaction sent for marking and notifying that send message transactions have already been read'
+        description: 'Transaction sent for marking and notifying that send message transactions have already been read has been confirmed'
     }),
     issue_locked_asset_tx_conf: Object.freeze({
         name: 'issue_locked_asset_tx_conf',
@@ -1362,6 +1419,14 @@ TransactionMonitor.notifyEvent = Object.freeze({
     sys_funding_tx_rcvd: Object.freeze({
         name: 'sys_funding_tx_rcvd',
         description: 'Transaction used to fund the system has been received'
+    }),
+    bcot_payment_tx_rcvd: Object.freeze({
+        name: 'bcot_payment_tx_rcvd',
+        description: 'Transaction used to send BCOT tokens as payment for services for a client has been received'
+    }),
+    credit_service_account_tx_rcvd: Object.freeze({
+        name: 'credit_service_account_tx_rcvd',
+        description: 'Transaction sent for crediting the service account of a client has been received'
     }),
     send_message_tx_rcvd: Object.freeze({
         name: 'send_message_tx_rcvd',
@@ -1391,7 +1456,7 @@ function processConfirmedSentTransactions(doc, eventsToEmit) {
                 name: notifyEvent.name,
                 data: {
                     txid: doc.txid,
-                    entityId: doc.info.funding.event.entityId
+                    entityId: doc.info[Transaction.type.funding.dbInfoEntryName].event.entityId
                 }
             });
         }
@@ -1399,6 +1464,49 @@ function processConfirmedSentTransactions(doc, eventsToEmit) {
             // Could not get notification event from funding event.
             //  Log error condition
             Catenis.logger.ERROR('Could not get notification event from funding transaction event', {fundingEvent: doc.info.funding.event.name});
+        }
+    }
+    else if (doc.type === Transaction.type.credit_service_account.name) {
+        // Prepare to emit event notifying of confirmation of credit service account transaction
+        const notifyEvent = getTxConfNotifyEventFromTxType(doc.type);
+
+        if (notifyEvent) {
+            const txInfo = doc.info[Transaction.type.credit_service_account.dbInfoEntryName];
+
+            eventsToEmit.push({
+                name: notifyEvent.name,
+                data: {
+                    txid: doc.txid,
+                    clientId: txInfo.clientId,
+                    issuedAmount: txInfo.issuedAmount
+                }
+            });
+        }
+        else {
+            // Could not get notification event from transaction type.
+            //  Log error condition
+            Catenis.logger.ERROR('Could not get notification event from transaction type', {txType: doc.type});
+        }
+    }
+    else if (doc.type === Transaction.type.spend_service_credit.name) {
+        // Prepare to emit event notifying of confirmation of spend service credit transaction
+        const notifyEvent = getTxConfNotifyEventFromTxType(doc.type);
+
+        if (notifyEvent) {
+            const txInfo = doc.info[Transaction.type.spend_service_credit.dbInfoEntryName];
+
+            eventsToEmit.push({
+                name: notifyEvent.name,
+                data: {
+                    txid: doc.txid,
+                    serviceTxids: txInfo.serviceTxids
+                }
+            });
+        }
+        else {
+            // Could not get notification event from transaction type.
+            //  Log error condition
+            Catenis.logger.ERROR('Could not get notification event from transaction type', {txType: doc.type});
         }
     }
     else if (doc.type === Transaction.type.read_confirmation.name) {
@@ -1414,7 +1522,7 @@ function processConfirmedSentTransactions(doc, eventsToEmit) {
             });
         }
         else {
-            // Could not get notification event from funding event.
+            // Could not get notification event from transaction type.
             //  Log error condition
             Catenis.logger.ERROR('Could not get notification event from transaction type', {txType: doc.type});
         }
@@ -1450,6 +1558,19 @@ function processConfirmedReceivedTransactions(doc, eventsToEmit) {
             name: TransactionMonitor.notifyEvent.sys_funding_tx_conf.name,
             data: {
                 txid: doc.txid
+            }
+        });
+    }
+    else if (doc.type === Transaction.type.bcot_payment.name) {
+        // Prepare to emit event notifying of confirmation of BCOT payment transaction
+        const txInfo = doc.info[Transaction.type.bcot_payment.dbInfoEntryName];
+
+        eventsToEmit.push({
+            name: TransactionMonitor.notifyEvent.bcot_payment_tx_conf.name,
+            data: {
+                txid: doc.txid,
+                clientId: txInfo.clientId,
+                paidAmount: txInfo.paidAmount
             }
         });
     }

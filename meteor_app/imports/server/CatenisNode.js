@@ -1,3 +1,5 @@
+import { Asset } from './Asset';
+
 /**
  * Created by claudio on 25/11/16.
  */
@@ -16,6 +18,7 @@
 const util = require('util');
 const events = require('events');
 // Third-party node modules
+import config from 'config';
 import _und from 'underscore';     // NOTE: we dot not use the underscore library provided by Meteor because we need
                                    //        a feature (_und.omit(obj,predicate)) that is not available in that version
 
@@ -26,7 +29,6 @@ import { Random } from 'meteor/random';
 // References code in other (Catenis) modules
 import { Catenis } from './Catenis';
 import { CriticalSection } from './CriticalSection';
-import { ServiceCreditsCounter } from './ServiceCreditsCounter';
 import {
     SystemDeviceMainAddress,
     SystemFundingPaymentAddress,
@@ -35,7 +37,10 @@ import {
     SystemReadConfirmSpendNotifyAddress,
     SystemReadConfirmSpendOnlyAddress,
     SystemReadConfirmSpendNullAddress,
-    SystemReadConfirmPayTxExpenseAddress
+    SystemReadConfirmPayTxExpenseAddress,
+    SystemServiceCreditIssuingAddress,
+    SystemServicePaymentPayTxExpenseAddress,
+    SystemMultiSigSigneeAddress
 } from './BlockchainAddress';
 import {
     Client,
@@ -49,6 +54,26 @@ import { Util } from './Util';
 import { BitcoinFees } from './BitcoinFees'
 import { BalanceInfo } from './BalanceInfo';
 import { Permission } from './Permission';
+import { TransactionMonitor } from './TransactionMonitor';
+
+// Config entries
+const ctnNodeConfig = config.get('catenisNode');
+const ctnNodeServCreditAssetConfig = ctnNodeConfig.get('serviceCreditAsset');
+const ctnNodeSrvCredAsstIssueOptsConfig = ctnNodeServCreditAssetConfig.get('issuingOpts');
+
+// Configuration settings
+const cfgSettings = {
+    serviceCreditAsset: {
+        nameFormat: ctnNodeServCreditAssetConfig.get('nameFormat'),
+        descriptionFormat: ctnNodeServCreditAssetConfig.get('descriptionFormat'),
+        issuingOpts: {
+            type: ctnNodeSrvCredAsstIssueOptsConfig.get('type'),
+            divisibility: ctnNodeSrvCredAsstIssueOptsConfig.get('divisibility'),
+            isAggregatable: ctnNodeSrvCredAsstIssueOptsConfig.get('isAggregatable')
+        }
+    }
+};
+
 
 // Critical section object to avoid concurrent access to database at the
 //  module level (when creating new Catenis nodes basically)
@@ -70,6 +95,13 @@ export class CatenisNode extends events.EventEmitter {
         this.props = docCtnNode.props;
         this.status = docCtnNode.status;
 
+        Object.defineProperty(this, 'internalName', {
+            get: function () {
+                return this.type === CatenisNode.nodeType.hub.name ? 'Catenis Hub node' : util.format('Catenis Gateway #%d node', this.ctnNodeIndex);
+            },
+            enumerable: true
+        });
+
         // Instantiate objects to manage blockchain addresses for Catenis node
         this.deviceMainAddr = SystemDeviceMainAddress.getInstance(this.ctnNodeIndex);
         this.fundingPaymentAddr = SystemFundingPaymentAddress.getInstance(this.ctnNodeIndex);
@@ -79,6 +111,9 @@ export class CatenisNode extends events.EventEmitter {
         this.readConfirmSpendOnlyAddr = SystemReadConfirmSpendOnlyAddress.getInstance(this.ctnNodeIndex);
         this.readConfirmSpendNullAddr = SystemReadConfirmSpendNullAddress.getInstance(this.ctnNodeIndex);
         this.readConfirmPayTxExpenseAddr = SystemReadConfirmPayTxExpenseAddress.getInstance(this.ctnNodeIndex);
+        this.servCredIssueAddr = SystemServiceCreditIssuingAddress.getInstance(this.ctnNodeIndex);
+        this.servPymtPayTxExpenseAddr = SystemServicePaymentPayTxExpenseAddress.getInstance(this.ctnNodeIndex);
+        this.multiSigSigneeAddr = SystemMultiSigSigneeAddress.getInstance(this.ctnNodeIndex);
 
         // Retrieve (HD node) index of last Client doc/rec created for this Catenis node
         const docClient = Catenis.db.collection.Client.findOne({catenisNode_id: this.doc_id}, {
@@ -101,6 +136,9 @@ export class CatenisNode extends events.EventEmitter {
                 new Client(doc, this, true);
             });
         }
+
+        // Set up handler to process event indicating that credit service account tx has been confirmed
+        TransactionMonitor.addEventHandler(TransactionMonitor.notifyEvent.credit_service_account_tx_conf.name, creditServAccTxConfirmed);
     }
 }
 
@@ -123,7 +161,7 @@ CatenisNode.prototype.startNode = function () {
         if (devMainAddresses.length > 0) {
             // System device main addresses already exist. Check if
             //  balance is as expected
-            devMainAddrBalance = (new FundSource(devMainAddresses, {})).getBalance(true);
+            devMainAddrBalance = new FundSource(devMainAddresses, {unconfUtxoInfo: {}}).getBalance(true);
         }
 
         if (devMainAddrBalance !== undefined && devMainAddrBalance > 0) {
@@ -138,7 +176,7 @@ CatenisNode.prototype.startNode = function () {
                         currentFundingAmount: Util.formatCoins(devMainAddrBalance)
                     });
                     distribFund.totalAmount = distribFund.totalAmount - devMainAddrBalance;
-                    distribFund.amountPerAddress = Service.distributeDeviceMainAddressDeltaFund(distribFund.totalAmount);
+                    distribFund.amountPerAddress = Service.distributeSystemMainAddressDeltaFund(distribFund.totalAmount);
 
                     // Fix funding of device main addresses
                     fundDeviceMainAddresses.call(this, distribFund.amountPerAddress);
@@ -159,12 +197,42 @@ CatenisNode.prototype.startNode = function () {
             fundDeviceMainAddresses.call(this, distribFund.amountPerAddress);
         }
 
+        // Make sure that system service credit issuance is properly provisioned
+        this.checkServiceCreditIssuanceProvision();
+
+        // Make sure that system service payment pay tx expense addresses are properly funded
+        this.checkServicePaymentPayTxExpenseFundingBalance();
+
+        // Make sure that system pay tx expense addresses are properly funded
+        this.checkPayTxExpenseFundingBalance();
+
         // Make sure that system read confirmation pay tx expense addresses are properly funded
         this.checkReadConfirmPayTxExpenseFundingBalance();
     });
 
     // Prepare to receive notification that bitcoin fee rates changed
     Catenis.bitcoinFees.on(BitcoinFees.notifyEvent.bitcoin_fees_changed.name, processBitcoinFeesChange.bind(this));
+};
+
+CatenisNode.prototype.serviceCreditAssetInfo = function () {
+    return {
+        name: util.format(cfgSettings.serviceCreditAsset.nameFormat, this.internalName,
+            Catenis.application.testPrefix !== undefined ? (' (' + Catenis.application.testPrefix + ')') : ''),
+        description: util.format(cfgSettings.serviceCreditAsset.descriptionFormat, this.internalName),
+        issuingOpts: cfgSettings.serviceCreditAsset.issuingOpts
+    }
+};
+
+CatenisNode.prototype.getServiceCreditAsset = function () {
+    try {
+        return Asset.getAssetByIssuanceAddressPath(Catenis.keyStore.getAddressInfo(this.servCredIssueAddr.lastAddressKeys().getAddress()).path);
+    }
+    catch (err) {
+        if (!((err instanceof Meteor.Error) && err.error === 'ctn_asset_not_found')) {
+            Catenis.logger.ERROR('Error retrieving Catenis service credit asset.', err);
+            throw new Meteor.Error('ctn_node_serv_cred_asset_error', 'Error retrieving Catenis service credit asset', err.stack);
+        }
+    }
 };
 
 CatenisNode.prototype.listFundingAddressesInUse = function () {
@@ -188,61 +256,70 @@ CatenisNode.prototype.checkFundingBalance = function () {
     }
 };
 
-CatenisNode.prototype.currentServiceCreditsCount = function () {
-    const counter = {};
-
-    counter[Client.serviceCreditType.message] = new ServiceCreditsCounter();
-    counter[Client.serviceCreditType.asset] = new ServiceCreditsCounter();
-
-    // Compute remaining service credits for all clients of this Catenis node
-    Catenis.db.collection.Client.find({catenisNode_id: this.doc_id}, {fields: {_id: 1}}).forEach(clientDoc => {
-        Catenis.db.collection.ServiceCredit.find({client_id: clientDoc._id, remainCredits: {$gt: 0}}, {fields: {_id: 1, remainCredits: 1, srvCreditType: 1, 'fundingTx.confirmed': 1}}).fetch().reduce((counter, doc) => {
-            if (doc.fundingTx.confirmed) {
-                counter[doc.srvCreditType].addConfirmed(doc.remainCredits);
-            }
-            else {
-                counter[doc.srvCreditType].addUnconfirmed(doc.remainCredits);
-            }
-
-            return counter;
-        }, counter);
-    });
-
-    return counter;
-};
-
 CatenisNode.prototype.currentUnreadMessagesCount = function () {
     return Catenis.db.collection.ReceivedTransaction.find({type: Transaction.type.send_message.name, 'info.sendMessage.readConfirmation.spent': false}, {fields: {_id: 1}}).count();
 };
 
 // NOTE: make sure that this method is called from code executed from the FundSource.utxoCS
 //  critical section object
-CatenisNode.prototype.checkPayTxExpenseFundingBalance = function (doFunding = true, extraBalanceAmount = 0) {
-    const currServiceCreditsCount = this.currentServiceCreditsCount();
-    const payTxBalanceInfo = new BalanceInfo(Service.getExpectedPayTxExpenseBalance(currServiceCreditsCount[Client.serviceCreditType.message].total, currServiceCreditsCount[Client.serviceCreditType.asset].total) + extraBalanceAmount,
-        this.payTxExpenseAddr.listAddressesInUse(), {
-            safetyFactor: Service.fundPayTxSafetyFactor
+CatenisNode.prototype.checkPayTxExpenseFundingBalance = function () {
+    const payTxBalanceInfo = new BalanceInfo(Service.getMinimumPayTxExpenseBalance(), this.payTxExpenseAddr.listAddressesInUse(), {
+            safetyFactor: Service.payTxExpBalanceSafetyFactor
     });
 
     if (payTxBalanceInfo.hasLowBalance()) {
         // Prepare to refund system pay tx expense addresses
 
-        // Allocate system pay tx expense addresses...
+        // Distribute funds to be allocated
         const distribFund = Service.distributePayTxExpenseFund(payTxBalanceInfo.getBalanceDifference());
 
-        if (doFunding) {
-            // ...and try to fund them
-            this.fundPayTxExpenseAddresses(distribFund.amountPerAddress);
-        }
-        else {
-            // No funding is actually done, but only return allocated addresses
-            return distribFund;
-        }
+        // And try to fund system pay tx expense addresses
+        this.fundPayTxExpenseAddresses(distribFund.amountPerAddress);
     }
 
-    if (doFunding) {
-        return payTxBalanceInfo.hasLowBalance();
+    return payTxBalanceInfo.hasLowBalance();
+};
+
+// NOTE: make sure that this method is called from code executed from the FundSource.utxoCS
+//  critical section object
+CatenisNode.prototype.checkServiceCreditIssuanceProvision = function () {
+    const servCredIssuanceBalanceInfo = new BalanceInfo(Service.getExpectedServiceCreditIssuanceBalance(),
+        this.servCredIssueAddr.lastAddressKeys().getAddress(), {
+            useSafetyFactor: false
+        });
+
+    if (servCredIssuanceBalanceInfo.hasLowBalance()) {
+        // Prepare to provision system for service credit issuance
+
+        // Distribute funds to be allocated
+        const distribFund = Service.distributeServiceCreditIssuanceFund(servCredIssuanceBalanceInfo.getBalanceDifference());
+
+        // And try to fund system service credit issuance address
+        this.provisionServiceCreditIssuance(distribFund.amountPerAddress);
     }
+
+    return servCredIssuanceBalanceInfo.hasLowBalance();
+};
+
+// NOTE: make sure that this method is called from code executed from the FundSource.utxoCS
+//  critical section object
+CatenisNode.prototype.checkServicePaymentPayTxExpenseFundingBalance = function () {
+    const servPymtPayTxBalanceInfo = new BalanceInfo(Service.getExpectedServicePaymentPayTxExpenseBalance(),
+        this.servPymtPayTxExpenseAddr.listAddressesInUse(), {
+            safetyFactor: Service.servicePaymentPayTxExpBalanceSafetyFactor
+        });
+
+    if (servPymtPayTxBalanceInfo.hasLowBalance()) {
+        // Prepare to refund system service payment pay tx expense addresses
+
+        // Distribute funds to be allocated
+        const distribFund = Service.distributeServicePaymentPayTxExpenseFund(servPymtPayTxBalanceInfo.getBalanceDifference());
+
+        // And try to fund system service payment pay tx expense addresses
+        this.fundServicePaymentPayTxExpenseAddresses(distribFund.amountPerAddress);
+    }
+
+    return servPymtPayTxBalanceInfo.hasLowBalance();
 };
 
 // NOTE: make sure that this method is called from code executed from the FundSource.utxoCS
@@ -250,16 +327,16 @@ CatenisNode.prototype.checkPayTxExpenseFundingBalance = function (doFunding = tr
 CatenisNode.prototype.checkReadConfirmPayTxExpenseFundingBalance = function () {
     const readConfirmPayTxBalanceInfo = new BalanceInfo(Service.getExpectedReadConfirmPayTxExpenseBalance(this.currentUnreadMessagesCount()),
         this.readConfirmPayTxExpenseAddr.listAddressesInUse(), {
-            safetyFactor: Service.fundReadConfirmPayTxSafetyFactor
+            safetyFactor: Service.readConfirmPayTxExpBalanceSafetyFactor
         });
 
     if (readConfirmPayTxBalanceInfo.hasLowBalance()) {
         // Prepare to refund system read confirmation pay tx expense addresses
 
-        // Allocate system read confirmation pay tx expense addresses...
+        // Distribute funds to be allocated
         const distribFund = Service.distributeReadConfirmPayTxExpenseFund(readConfirmPayTxBalanceInfo.getBalanceDifference());
 
-        // ...and try to fund them
+        // And try to fund system read confirmation pay tx expense addresses
         this.fundReadConfirmPayTxExpenseAddresses(distribFund.amountPerAddress);
     }
 
@@ -439,10 +516,10 @@ CatenisNode.prototype.getIdentityInfo = function () {
 //      (any additional property)
 //    }
 //    user_id: [string] - (optional)
+//    billingMode: [String] - (optional) Identifies that billing mode to be used for this client. The value of one of the properties of Client.billingMode object
 //    deviceDefaultRightsByEvent: [Object] - (optional) Default rights to be used when creating new devices. Object the keys of which should be the defined permission event names.
 //                                         -  The value for each event name key should be a rights object as defined for the Permission.setRights method
-//
-CatenisNode.prototype.createClient = function (props, user_id, deviceDefaultRightsByEvent) {
+CatenisNode.prototype.createClient = function (props, user_id, billingMode = Client.billingMode.prePaid, deviceDefaultRightsByEvent) {
     props = typeof props === 'string' ? {name: props} : (typeof props === 'object' && props !== null ? props : {});
 
     // Validate (pre-defined) properties
@@ -511,6 +588,7 @@ CatenisNode.prototype.createClient = function (props, user_id, deviceDefaultRigh
             },
             props: props,
             apiAccessGenKey: Random.secret(),
+            billingMode: billingMode,
             status: user_id !== undefined && docUser.services !== undefined && docUser.services.password !== undefined ? Client.status.active.name : Client.status.new.name,
             createdDate: new Date(Date.now())
         };
@@ -559,7 +637,15 @@ CatenisNode.prototype.createClient = function (props, user_id, deviceDefaultRigh
 
     // If we hit this point, a new Client doc (rec) has been successfully created
 
-    // Return ID of newly creadted client
+    if (docClient.status === Client.status.active.name) {
+        // Execute code in critical section to avoid UTXOs concurrency
+        FundSource.utxoCS.execute(() => {
+            // Make sure that system service credit issuance is properly provisioned
+            this.checkServiceCreditIssuanceProvision();
+        });
+    }
+
+    // Return ID of newly created client
     return docClient.clientId;
 };
 
@@ -589,6 +675,75 @@ CatenisNode.prototype.fundPayTxExpenseAddresses = function (amountPerAddress) {
         // Error funding system pay tx expense addresses.
         //  Log error condition
         Catenis.logger.ERROR('Error funding system pay tx expense addresses.', err);
+
+        if (fundTransact !== undefined) {
+            // Revert addresses of payees added to transaction
+            fundTransact.revertPayeeAddresses();
+        }
+
+        // Rethrows exception
+        throw err;
+    }
+};
+
+// NOTE: make sure that this method is called from code executed from the FundSource.utxoCS
+//  critical section object
+CatenisNode.prototype.provisionServiceCreditIssuance = function (amountPerUtxo) {
+    let fundTransact = undefined;
+
+    try {
+        // Prepare transaction to provision system for service credit issuance
+        fundTransact = new FundTransaction(FundTransaction.fundingEvent.provision_service_credit_issuance);
+
+        fundTransact.addPayees(this.servCredIssueAddr, amountPerUtxo, true);
+
+        if (fundTransact.addPayingSource()) {
+            // Now, issue (create and send) the transaction
+            fundTransact.sendTransaction();
+        }
+        else {
+            // Could not allocated UTXOs to pay for transaction fee.
+            //  Throw exception
+            //noinspection ExceptionCaughtLocallyJS
+            throw new Meteor.Error('ctn_sys_no_fund', 'Could not allocate UTXOs from system funding addresses to pay for tx expense');
+        }
+    }
+    catch (err) {
+        // Error provisioning system for service credit issuance.
+        //  Log error condition
+        Catenis.logger.ERROR('Error provisioning system for service credit issuance.', err);
+
+        // Rethrows exception
+        throw err;
+    }
+};
+
+// NOTE: make sure that this method is called from code executed from the FundSource.utxoCS
+//  critical section object
+CatenisNode.prototype.fundServicePaymentPayTxExpenseAddresses = function (amountPerAddress) {
+    let fundTransact = undefined;
+
+    try {
+        // Prepare transaction to fund system service payment pay tx expense addresses
+        fundTransact = new FundTransaction(FundTransaction.fundingEvent.add_extra_service_payment_tx_pay_funds);
+
+        fundTransact.addPayees(this.servPymtPayTxExpenseAddr, amountPerAddress);
+
+        if (fundTransact.addPayingSource()) {
+            // Now, issue (create and send) the transaction
+            fundTransact.sendTransaction();
+        }
+        else {
+            // Could not allocated UTXOs to pay for transaction fee.
+            //  Throw exception
+            //noinspection ExceptionCaughtLocallyJS
+            throw new Meteor.Error('ctn_sys_no_fund', 'Could not allocate UTXOs from system funding addresses to pay for tx expense');
+        }
+    }
+    catch (err) {
+        // Error funding system service payment pay tx expense addresses.
+        //  Log error condition
+        Catenis.logger.ERROR('Error funding system service payment pay tx expense addresses.', err);
 
         if (fundTransact !== undefined) {
             // Revert addresses of payees added to transaction
@@ -994,6 +1149,9 @@ CatenisNode.notifyEvent = Object.freeze({
     })
 });
 
+CatenisNode.serviceCreditAssetDivisibility = cfgSettings.serviceCreditAsset.issuingOpts.divisibility;
+
+
 // Definition of module (private) functions
 //
 
@@ -1009,6 +1167,20 @@ function newClientId(ctnNodeIndex, clientIndex) {
     }
 
     return id;
+}
+
+// Method used to process notification of confirmed credit service account transaction
+function creditServAccTxConfirmed(data) {
+    Catenis.logger.TRACE('Received notification of confirmation of credit service account transaction', data);
+    try {
+        // Force update of Colored Coins data associated with UTXOs
+        Catenis.ccFNClient.parseNow();
+    }
+    catch (err) {
+        // Error while processing notification of confirmed credit service account transaction.
+        //  Just log error condition
+        Catenis.logger.ERROR('Error while processing notification of confirmed credit service account transaction.', err);
+    }
 }
 
 

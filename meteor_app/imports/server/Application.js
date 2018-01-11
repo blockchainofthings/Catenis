@@ -47,7 +47,10 @@ export const ctnHubNodeIndex = 0;
 const statusRegEx = {
     stopped: /^stopped(?:$|_)/,
     started: /^started(?:$|_)/,
-    paused: /^paused(?:$|_)/
+    paused: /^paused(?:$|_)/,
+    rescan: /^.+_blockchain_rescan$/,
+    btc_rescan: /^.+_btc.*_blockchain_rescan$/,
+    omni_rescan: /^.+_omni.*_blockchain_rescan$/
 };
 
 
@@ -94,6 +97,13 @@ export function Application() {
         throw new Error('Application seed does not match seed currently recorded onto the database');
     }
 
+    // Identify test prefix if present
+    const matchResult = cfgSettings.seedFilename.match(/^seed(?:\.(\w+))?\.dat$/);
+
+    if (matchResult && matchResult.length > 1) {
+        this.testPrefix = matchResult[1];
+    }
+
     // Get crypto network
     this.cryptoNetworkName = cfgSettings.cryptoNetwork;
     this.cryptoNetwork = bitcoinLib.networks[this.cryptoNetworkName];
@@ -129,7 +139,7 @@ Application.prototype.startProcessing = function () {
 
         // Check if any devices still need to have their addresses funded
         Device.checkDevicesToFund();
-        Device.checkDevicesMainAddrFunding();
+        Device.checkDevicesAddrFunding();
     }
     catch (err) {
         if ((err instanceof Meteor.Error) && err.error === 'ctn_sys_no_fund') {
@@ -149,8 +159,30 @@ Application.prototype.setWaitingBitcoinCoreRescan = function (waiting) {
     if (waiting === undefined) {
         waiting = true;
     }
-    
-    this.status = waiting ? Application.processingStatus.stopped_blockchain_rescan : Application.processingStatus.stopped;
+
+    if (waiting) {
+        this.status = this.isOmniCoreRescanning() ? Application.processingStatus.stopped_btc_omni_blockchain_rescan
+                : Application.processingStatus.stopped_btc_blockchain_rescan;
+    }
+    else {
+        this.status = this.isOmniCoreRescanning() ? Application.processingStatus.stopped_omni_blockchain_rescan
+                : Application.processingStatus.stopped;
+    }
+};
+
+Application.prototype.setWaitingOmniCoreRescan = function (waiting) {
+    if (waiting === undefined) {
+        waiting = true;
+    }
+
+    if (waiting) {
+        this.status = this.isBitcoinCoreRescanning() ? Application.processingStatus.stopped_btc_omni_blockchain_rescan
+            : Application.processingStatus.stopped_omni_blockchain_rescan;
+    }
+    else {
+        this.status = this.isBitcoinCoreRescanning() ? Application.processingStatus.stopped_btc_blockchain_rescan
+            : Application.processingStatus.stopped;
+    }
 };
 
 Application.prototype.setSyncingBlocks = function (syncing) {
@@ -164,14 +196,18 @@ Application.prototype.setSyncingBlocks = function (syncing) {
         }
     }
     else {
-        if (this.status === Application.processingStatus.stopped_blockchain_rescan) {
+        if (this.status === Application.processingStatus.started_syncing_blocks) {
             this.status = Application.processingStatus.started;
         }
     }
 };
 
 Application.prototype.getWaitingBitcoinCoreRescan = function () {
-    return this.status === Application.processingStatus.stopped_blockchain_rescan;
+    return this.isBitcoinCoreRescanning();
+};
+
+Application.prototype.getWaitingOmniCoreRescan = function () {
+    return this.isOmniCoreRescanning();
 };
 
 Application.prototype.isRunning = function () {
@@ -184,6 +220,18 @@ Application.prototype.isStopped = function () {
 
 Application.prototype.isPaused = function () {
     return statusRegEx.paused.test(this.status.name);
+};
+
+Application.prototype.isRescanningBlockchain = function () {
+    return statusRegEx.rescan.test(this.status.name);
+};
+
+Application.prototype.isBitcoinCoreRescanning = function () {
+    return statusRegEx.btc_rescan.test(this.status.name);
+};
+
+Application.prototype.isOmniCoreRescanning = function () {
+    return statusRegEx.omni_rescan.test(this.status.name);
 };
 
 
@@ -199,7 +247,7 @@ function pauseNoFunds() {
         //  are created to send funds to the system
         this.status = Application.processingStatus.paused_no_funds;
 
-        // Make sure that blockcahin transaction monitoring is on
+        // Make sure that blockchain transaction monitoring is on
         Catenis.txMonitor.startMonitoring();
     }
 }
@@ -242,7 +290,7 @@ function sysFundingTxConfirmed(data) {
 
         // Assume system already started. Check if there are devices to provision
         Device.checkDevicesToFund();
-        Device.checkDevicesMainAddrFunding();
+        Device.checkDevicesAddrFunding();
     }
 }
 
@@ -269,9 +317,17 @@ Application.processingStatus = Object.freeze({
         name: 'stopped',
         description: 'Application has not started yet'
     }),
-    stopped_blockchain_rescan: Object.freeze({
-        name: 'stopped_blockchain_rescan',
-        description: 'Application has not started yet, and it is currently rescanning the blockchain'
+    stopped_btc_blockchain_rescan: Object.freeze({
+        name: 'stopped_btc_blockchain_rescan',
+        description: 'Application has not started yet, and Bitcoin Core is currently rescanning the blockchain'
+    }),
+    stopped_omni_blockchain_rescan: Object.freeze({
+        name: 'stopped_omni_blockchain_rescan',
+        description: 'Application has not started yet, and Omni Core is currently rescanning the blockchain'
+    }),
+    stopped_btc_omni_blockchain_rescan: Object.freeze({
+        name: 'stopped_btc_omni_blockchain_rescan',
+        description: 'Application has not started yet, and both Bitcoin Core and Omni Core are currently rescanning the blockchain'
     }),
     started: Object.freeze({
         name: 'started',

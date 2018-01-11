@@ -40,15 +40,19 @@ const cfgSettings = {
         systemReadConfSpendOnly: configBcAddrValidity.get('systemReadConfSpendOnly'),
         systemReadConfSpendNull: configBcAddrValidity.get('systemReadConfSpendNull'),
         systemReadConfPayTxExpense: configBcAddrValidity.get('systemReadConfPayTxExpense'),
-        clientMessageCredit: configBcAddrValidity.get('clientMessageCredit'),
-        clientAssetCredit: configBcAddrValidity.get('clientAssetCredit'),
+        systemServCredIssuing: configBcAddrValidity.get('systemServCredIssuing'),
+        systemServPymtPayTxExpense: configBcAddrValidity.get('systemServPymtPayTxExpense'),
+        systemMultiSigSignee: configBcAddrValidity.get('systemMultiSigSignee'),
         deviceReadConfirm: configBcAddrValidity.get('deviceReadConfirm'),
+        clientServAccCreditLine: configBcAddrValidity.get('clientServAccCreditLine'),
+        clientServAccDebitLine: configBcAddrValidity.get('clientServAccDebitLine'),
+        clientBcotPayment: configBcAddrValidity.get('clientBcotPayment'),
         deviceMain: configBcAddrValidity.get('deviceMain'),
         deviceAsset: configBcAddrValidity.get('deviceAsset'),
         deviceAssetIssuance: configBcAddrValidity.get('deviceAssetIssuance')
     },
     updateIssuedAddressesInterval: configBcAddress.get('updateIssuedAddressesInterval'),
-    inactivedObjectTime: configBcAddress.get('inactivedObjectTime'),
+    inactiveObjectTime: configBcAddress.get('inactiveObjectTime'),
     deleteInactiveObjectsInterval: configBcAddress.get('deleteInactiveObjectsInterval')
 };
 
@@ -398,7 +402,6 @@ export class SystemReadConfirmSpendNullAddress extends BlockchainAddress {
     }
 }
 
-/**Begin**/
 // SystemReadConfirmPayTxExpenseAddress derived class
 export class SystemReadConfirmPayTxExpenseAddress extends BlockchainAddress {
     constructor (ctnNodeIndex) {
@@ -446,26 +449,25 @@ export class SystemReadConfirmPayTxExpenseAddress extends BlockchainAddress {
             : new SystemReadConfirmPayTxExpenseAddress(ctnNodeIndex);
     }
 }
-/**End**/
 
-// ClientMessageCreditAddress derived class
-export class ClientMessageCreditAddress extends BlockchainAddress {
-    constructor (ctnNodeIndex, clientIndex) {
+// SystemServiceCreditIssuingAddress derived class
+export class SystemServiceCreditIssuingAddress extends BlockchainAddress {
+    constructor (ctnNodeIndex) {
         super();
-        this.type = KeyStore.extKeyType.cln_msg_crd_addr.name;
-        this.parentPath = KeyStore.clientMessageCreditAddressRootPath(ctnNodeIndex, clientIndex);
+        this.type = KeyStore.extKeyType.sys_serv_cred_issu_addr.name;
+        this.parentPath = KeyStore.systemServiceCreditIssuingRootPath(ctnNodeIndex);
 
         // Make sure that an object of this class has not been instantiated yet
         if (hasInstantiatedObject(this.parentPath)) {
-            Catenis.logger.ERROR(util.format('ClientMessageCreditAddress object for the given Catenis node and client indices (%d and %d, respectively) has already been instantiated', ctnNodeIndex, clientIndex));
-            throw new Error(util.format('ClientMessageCreditAddress object for the given Catenis node and client indices (%d and %d, respectively) has already been instantiated', ctnNodeIndex, clientIndex));
+            Catenis.logger.ERROR(util.format('SystemServiceCreditIssuingAddress object for the given Catenis node index (%d) has already been instantiated', ctnNodeIndex));
+            throw new Error(util.format('SystemServiceCreditIssuingAddress object for the given Catenis node index (%d) has already been instantiated', ctnNodeIndex));
         }
 
-        this.addressValidity = cfgSettings.addressValidity.clientMessageCredit;
+        this.addressValidity = cfgSettings.addressValidity.systemServCredIssuing;
 
         // Assign address manipulation functions
-        this._getAddressKeys = Catenis.keyStore.getClientMessageCreditAddressKeys.bind(Catenis.keyStore, ctnNodeIndex, clientIndex);
-        this._listAddressesInUse = Catenis.keyStore.listClientMessageCreditAddressesInUse.bind(Catenis.keyStore, ctnNodeIndex, clientIndex);
+        this._getAddressKeys = Catenis.keyStore.getSystemServiceCreditIssuingAddressKeys.bind(Catenis.keyStore, ctnNodeIndex);
+        this._listAddressesInUse = Catenis.keyStore.listSystemServiceCreditIssuingAddressesInUse.bind(Catenis.keyStore, ctnNodeIndex);
 
         // Initialize bounding indices
         setBoundingIndices.call(this);
@@ -479,44 +481,137 @@ export class ClientMessageCreditAddress extends BlockchainAddress {
     //  ctnNodeIndex: [integer]
     //                or
     //                {  // Options object
-    //      ctnNodeIndex: [integer],
-    //      clientIndex: [integer]
-    //  },
-    //  clientIndex: [integer]
+    //      ctnNodeIndex: [integer]
+    //  }
     //
-    static getInstance(ctnNodeIndex, clientIndex) {
+    static getInstance(ctnNodeIndex) {
         if (typeof ctnNodeIndex === 'object') {
             // Options object passed instead of plain arguments
-            clientIndex = ctnNodeIndex.clientIndex;
             ctnNodeIndex = ctnNodeIndex.ctnNodeIndex;
         }
 
         // Check if an instance of this class has already been instantiated
-        const parentPath = KeyStore.clientMessageCreditAddressRootPath(ctnNodeIndex, clientIndex);
+        const parentPath = KeyStore.systemServiceCreditIssuingRootPath(ctnNodeIndex);
 
         return hasInstantiatedObject(parentPath) ? getInstantiatedObject(parentPath)
-            : new ClientMessageCreditAddress(ctnNodeIndex, clientIndex);
+            : new SystemServiceCreditIssuingAddress(ctnNodeIndex);
     }
 }
 
-// ClientAssetCreditAddress derived class
-export class ClientAssetCreditAddress extends BlockchainAddress {
-    constructor (ctnNodeIndex, clientIndex) {
+// SystemServicePaymentPayTxExpenseAddress derived class
+export class SystemServicePaymentPayTxExpenseAddress extends BlockchainAddress {
+    constructor (ctnNodeIndex) {
         super();
-        this.type = KeyStore.extKeyType.cln_asst_crd_addr.name;
-        this.parentPath = KeyStore.clientAssetCreditAddressRootPath(ctnNodeIndex, clientIndex);
+        this.type = KeyStore.extKeyType.sys_serv_pymt_pay_tx_exp_addr.name;
+        this.parentPath = KeyStore.systemServicePaymentPayTxExpenseRootPath(ctnNodeIndex);
 
         // Make sure that an object of this class has not been instantiated yet
         if (hasInstantiatedObject(this.parentPath)) {
-            Catenis.logger.ERROR(util.format('ClientAssetCreditAddress object for the given Catenis node and client indices (%d and %d, respectively) has already been instantiated', ctnNodeIndex, clientIndex));
-            throw new Error(util.format('ClientAssetCreditAddress object for the given Catenis node and client indices (%d and %d, respectively) has already been instantiated', ctnNodeIndex, clientIndex));
+            Catenis.logger.ERROR(util.format('SystemServicePaymentPayTxExpenseAddress object for the given Catenis node index (%d) has already been instantiated', ctnNodeIndex));
+            throw new Error(util.format('SystemServicePaymentPayTxExpenseAddress object for the given Catenis node index (%d) has already been instantiated', ctnNodeIndex));
         }
 
-        this.addressValidity = cfgSettings.addressValidity.clientAssetCredit;
+        this.addressValidity = cfgSettings.addressValidity.systemServPymtPayTxExpense;
 
         // Assign address manipulation functions
-        this._getAddressKeys = Catenis.keyStore.getClientAssetCreditAddressKeys.bind(Catenis.keyStore, ctnNodeIndex, clientIndex);
-        this._listAddressesInUse = Catenis.keyStore.listClientAssetCreditAddressesInUse.bind(Catenis.keyStore, ctnNodeIndex, clientIndex);
+        this._getAddressKeys = Catenis.keyStore.getSystemServicePaymentPayTxExpenseAddressKeys.bind(Catenis.keyStore, ctnNodeIndex);
+        this._listAddressesInUse = Catenis.keyStore.listSystemServicePaymentPayTxExpenseAddressesInUse.bind(Catenis.keyStore, ctnNodeIndex);
+
+        // Initialize bounding indices
+        setBoundingIndices.call(this);
+
+        // Save this instance
+        setInstantiatedObject(this.parentPath, this);
+    }
+
+    // Get instance of this class
+    //
+    //  ctnNodeIndex: [integer]
+    //                or
+    //                {  // Options object
+    //      ctnNodeIndex: [integer]
+    //  }
+    //
+    static getInstance(ctnNodeIndex) {
+        if (typeof ctnNodeIndex === 'object') {
+            // Options object passed instead of plain arguments
+            ctnNodeIndex = ctnNodeIndex.ctnNodeIndex;
+        }
+
+        // Check if an instance of this class has already been instantiated
+        const parentPath = KeyStore.systemServicePaymentPayTxExpenseRootPath(ctnNodeIndex);
+
+        return hasInstantiatedObject(parentPath) ? getInstantiatedObject(parentPath)
+            : new SystemServicePaymentPayTxExpenseAddress(ctnNodeIndex);
+    }
+}
+
+// SystemMultiSigSigneeAddress derived class
+export class SystemMultiSigSigneeAddress extends BlockchainAddress {
+    constructor (ctnNodeIndex) {
+        super();
+        this.type = KeyStore.extKeyType.sys_msig_sign_addr.name;
+        this.parentPath = KeyStore.systemMultiSigSigneeRootPath(ctnNodeIndex);
+
+        // Make sure that an object of this class has not been instantiated yet
+        if (hasInstantiatedObject(this.parentPath)) {
+            Catenis.logger.ERROR(util.format('SystemMultiSigSigneeAddress object for the given Catenis node index (%d) has already been instantiated', ctnNodeIndex));
+            throw new Error(util.format('SystemMultiSigSigneeAddress object for the given Catenis node index (%d) has already been instantiated', ctnNodeIndex));
+        }
+
+        this.addressValidity = cfgSettings.addressValidity.systemMultiSigSignee;
+
+        // Assign address manipulation functions
+        this._getAddressKeys = Catenis.keyStore.getSystemMultiSigSigneeAddressKeys.bind(Catenis.keyStore, ctnNodeIndex);
+        this._listAddressesInUse = Catenis.keyStore.listSystemMultiSigSigneeAddressesInUse.bind(Catenis.keyStore, ctnNodeIndex);
+
+        // Initialize bounding indices
+        setBoundingIndices.call(this);
+
+        // Save this instance
+        setInstantiatedObject(this.parentPath, this);
+    }
+
+    // Get instance of this class
+    //
+    //  ctnNodeIndex: [integer]
+    //                or
+    //                {  // Options object
+    //      ctnNodeIndex: [integer]
+    //  }
+    //
+    static getInstance(ctnNodeIndex) {
+        if (typeof ctnNodeIndex === 'object') {
+            // Options object passed instead of plain arguments
+            ctnNodeIndex = ctnNodeIndex.ctnNodeIndex;
+        }
+
+        // Check if an instance of this class has already been instantiated
+        const parentPath = KeyStore.systemMultiSigSigneeRootPath(ctnNodeIndex);
+
+        return hasInstantiatedObject(parentPath) ? getInstantiatedObject(parentPath)
+            : new SystemMultiSigSigneeAddress(ctnNodeIndex);
+    }
+}
+
+// ClientServiceAccountCreditLineAddress derived class
+export class ClientServiceAccountCreditLineAddress extends BlockchainAddress {
+    constructor (ctnNodeIndex, clientIndex) {
+        super();
+        this.type = KeyStore.extKeyType.cln_srv_acc_cred_ln_addr.name;
+        this.parentPath = KeyStore.clientServiceAccountCreditLineAddressRootPath(ctnNodeIndex, clientIndex);
+
+        // Make sure that an object of this class has not been instantiated yet
+        if (hasInstantiatedObject(this.parentPath)) {
+            Catenis.logger.ERROR(util.format('ClientServiceAccountCreditLineAddress object for the given Catenis node and client indices (%d and %d, respectively) has already been instantiated', ctnNodeIndex, clientIndex));
+            throw new Error(util.format('ClientServiceAccountCreditLineAddress object for the given Catenis node and client indices (%d and %d, respectively) has already been instantiated', ctnNodeIndex, clientIndex));
+        }
+
+        this.addressValidity = cfgSettings.addressValidity.clientServAccCreditLine;
+
+        // Assign address manipulation functions
+        this._getAddressKeys = Catenis.keyStore.getClientServiceAccountCreditLineAddressKeys.bind(Catenis.keyStore, ctnNodeIndex, clientIndex);
+        this._listAddressesInUse = Catenis.keyStore.listClientServiceAccountCreditLineAddressesInUse.bind(Catenis.keyStore, ctnNodeIndex, clientIndex);
 
         // Initialize bounding indices
         setBoundingIndices.call(this);
@@ -543,10 +638,123 @@ export class ClientAssetCreditAddress extends BlockchainAddress {
         }
 
         // Check if an instance of this class has already been instantiated
-        const parentPath = KeyStore.clientAssetCreditAddressRootPath(ctnNodeIndex, clientIndex);
+        const parentPath = KeyStore.clientServiceAccountCreditLineAddressRootPath(ctnNodeIndex, clientIndex);
 
         return hasInstantiatedObject(parentPath) ? getInstantiatedObject(parentPath)
-            : new ClientAssetCreditAddress(ctnNodeIndex, clientIndex);
+            : new ClientServiceAccountCreditLineAddress(ctnNodeIndex, clientIndex);
+    }
+}
+
+// ClientServiceAccountDebitLineAddress derived class
+export class ClientServiceAccountDebitLineAddress extends BlockchainAddress {
+    constructor (ctnNodeIndex, clientIndex) {
+        super();
+        this.type = KeyStore.extKeyType.cln_srv_acc_debt_ln_addr.name;
+        this.parentPath = KeyStore.clientServiceAccountDebitLineAddressRootPath(ctnNodeIndex, clientIndex);
+
+        // Make sure that an object of this class has not been instantiated yet
+        if (hasInstantiatedObject(this.parentPath)) {
+            Catenis.logger.ERROR(util.format('ClientServiceAccountDebitLineAddress object for the given Catenis node and client indices (%d and %d, respectively) has already been instantiated', ctnNodeIndex, clientIndex));
+            throw new Error(util.format('ClientServiceAccountDebitLineAddress object for the given Catenis node and client indices (%d and %d, respectively) has already been instantiated', ctnNodeIndex, clientIndex));
+        }
+
+        this.addressValidity = cfgSettings.addressValidity.clientServAccDebitLine;
+
+        // Assign address manipulation functions
+        this._getAddressKeys = Catenis.keyStore.getClientServiceAccountDebitLineAddressKeys.bind(Catenis.keyStore, ctnNodeIndex, clientIndex);
+        this._listAddressesInUse = Catenis.keyStore.listClientServiceAccountDebitLineAddressesInUse.bind(Catenis.keyStore, ctnNodeIndex, clientIndex);
+
+        // Initialize bounding indices
+        setBoundingIndices.call(this);
+
+        // Save this instance
+        setInstantiatedObject(this.parentPath, this);
+    }
+
+    // Get instance of this class
+    //
+    //  ctnNodeIndex: [integer]
+    //                or
+    //                {  // Options object
+    //      ctnNodeIndex: [integer],
+    //      clientIndex: [integer]
+    //  },
+    //  clientIndex: [integer]
+    //
+    static getInstance(ctnNodeIndex, clientIndex) {
+        if (typeof ctnNodeIndex === 'object') {
+            // Options object passed instead of plain arguments
+            clientIndex = ctnNodeIndex.clientIndex;
+            ctnNodeIndex = ctnNodeIndex.ctnNodeIndex;
+        }
+
+        // Check if an instance of this class has already been instantiated
+        const parentPath = KeyStore.clientServiceAccountDebitLineAddressRootPath(ctnNodeIndex, clientIndex);
+
+        return hasInstantiatedObject(parentPath) ? getInstantiatedObject(parentPath)
+            : new ClientServiceAccountDebitLineAddress(ctnNodeIndex, clientIndex);
+    }
+}
+
+// ClientBcotPaymentAddress derived class
+export class ClientBcotPaymentAddress extends BlockchainAddress {
+    constructor (ctnNodeIndex, clientIndex) {
+        super();
+        this.type = KeyStore.extKeyType.cln_bcot_pay_addr.name;
+        this.parentPath = KeyStore.clientBcotPaymentAddressRootPath(ctnNodeIndex, clientIndex);
+
+        // Make sure that an object of this class has not been instantiated yet
+        if (hasInstantiatedObject(this.parentPath)) {
+            Catenis.logger.ERROR(util.format('ClientBcotPaymentAddress object for the given Catenis node and client indices (%d and %d, respectively) has already been instantiated', ctnNodeIndex, clientIndex));
+            throw new Error(util.format('ClientBcotPaymentAddress object for the given Catenis node and client indices (%d and %d, respectively) has already been instantiated', ctnNodeIndex, clientIndex));
+        }
+
+        this.addressValidity = cfgSettings.addressValidity.clientBcotPayment;
+
+        // Assign address manipulation functions
+        this._getAddressKeys = Catenis.keyStore.getClientBcotPaymentAddressKeys.bind(Catenis.keyStore, ctnNodeIndex, clientIndex);
+        this._listAddressesInUse = Catenis.keyStore.listClientBcotPaymentAddressesInUse.bind(Catenis.keyStore, ctnNodeIndex, clientIndex);
+
+        // Initialize bounding indices
+        setBoundingIndices.call(this);
+
+        // Save this instance
+        setInstantiatedObject(this.parentPath, this);
+    }
+
+    newAddressKeys() {
+        const addrKeys = Object.getPrototypeOf(ClientBcotPaymentAddress.prototype).newAddressKeys.call(this);
+
+        if (addrKeys !== null) {
+            // Import address public key onto Omni Core
+            Catenis.omniCore.importPublicKey(addrKeys.exportPublicKey());
+        }
+
+        return addrKeys;
+    }
+
+    // Get instance of this class
+    //
+    //  ctnNodeIndex: [integer]
+    //                or
+    //                {  // Options object
+    //      ctnNodeIndex: [integer],
+    //      clientIndex: [integer]
+    //  },
+    //  clientIndex: [integer]
+    //
+    static getInstance(ctnNodeIndex, clientIndex) {
+        if (typeof ctnNodeIndex === 'object') {
+            // Options object passed instead of plain arguments
+            clientIndex = ctnNodeIndex.clientIndex;
+            ctnNodeIndex = ctnNodeIndex.ctnNodeIndex;
+        }
+
+        // Check if an instance of this class has already been instantiated
+        const parentPath = KeyStore.clientBcotPaymentAddressRootPath(ctnNodeIndex, clientIndex);
+
+        return hasInstantiatedObject(parentPath) ? getInstantiatedObject(parentPath)
+            : new ClientBcotPaymentAddress(ctnNodeIndex, clientIndex);
     }
 }
 
@@ -833,8 +1041,15 @@ BlockchainAddress.prototype.newAddressKeys = function () {
             });
         }
 
-        const expirationDate = new Date(issuedDate.getTime());
-        expirationDate.setSeconds(expirationDate.getSeconds() + this.addressValidity);
+        let expirationDate;
+
+        if (this.addressValidity) {
+            expirationDate = new Date(issuedDate.getTime());
+            expirationDate.setSeconds(expirationDate.getSeconds() + this.addressValidity);
+        }
+        else {
+            expirationDate = null;
+        }
 
         Catenis.db.collection.IssuedBlockchainAddress.insert({
             type: this.type,
@@ -860,6 +1075,10 @@ BlockchainAddress.prototype.newAddressKeys = function () {
 
 BlockchainAddress.prototype.listAddressesInUse = function () {
     return this.firstInUseAddrIndex >= 0 && this.lastInUseAddrIndex >= 0 ? this._listAddressesInUse(this.firstInUseAddrIndex, this.lastInUseAddrIndex) : [];
+};
+
+BlockchainAddress.prototype.lastAddressKeys = function () {
+    return this.lastInUseAddrIndex >= 0 ? this._getAddressKeys(this.lastInUseAddrIndex) : this.newAddressKeys();
 };
 
 
@@ -1318,6 +1537,9 @@ BlockchainAddress.checkObsoleteAddress = function (addr) {
 };
 
 BlockchainAddress.revertAddressList = function (addrList) {
+    // Make sure that list has no repeated addresses
+    addrList = Array.from(new Set(addrList));
+
     const addressWithBalance = BlockchainAddress.checkAddressesWithBalance(addrList),
         addrsToRevertByClassInstance = new Map();
 
@@ -1382,15 +1604,15 @@ function deleteInactiveObjects() {
     Catenis.logger.TRACE('Executing process to delete inactive objects');
     // Calculate earliest date/time for instantiated object to have been accessed for it not to
     //  be considered inactive
-    const activeObjEarlietTime = new Date(Date.now());
-    activeObjEarlietTime.setSeconds(activeObjEarlietTime.getSeconds() - cfgSettings.obsoleteExtKeyTimeToPurge);
+    const activeObjEarliestTime = new Date(Date.now());
+    activeObjEarliestTime.setSeconds(activeObjEarliestTime.getSeconds() - cfgSettings.inactiveObjectTime);
 
-    const activeObjEarliestTimestamp = activeObjEarlietTime.getTime();
+    const activeObjEarliestTimestamp = activeObjEarliestTime.getTime();
 
     // Identify inactive objects and delete them
     for (let [parentPath, objEntry] of BlockchainAddress.instantiatedObjects.entries()) {
         if (objEntry.lastAccessTimestamp < activeObjEarliestTimestamp) {
-            deleteInstatiatedObject(parentPath);
+            deleteInstantiatedObject(parentPath);
         }
     }
 }
@@ -1516,7 +1738,7 @@ function getInstantiatedObject(parentPath) {
     return obj;
 }
 
-function deleteInstatiatedObject(parentPath) {
+function deleteInstantiatedObject(parentPath) {
     if (BlockchainAddress.instantiatedObjects.delete(parentPath)) {
         // Also remove all child addresses from local key storage
         Catenis.keyStore.removeExtKeysByParentPath(parentPath);
@@ -1540,8 +1762,12 @@ const classByType = {
     sys_read_conf_spnd_only_addr: SystemReadConfirmSpendOnlyAddress,
     sys_read_conf_spnd_null_addr: SystemReadConfirmSpendNullAddress,
     sys_read_conf_pay_tx_exp_addr: SystemReadConfirmPayTxExpenseAddress,
-    cln_msg_crd_addr: ClientMessageCreditAddress,
-    cln_asst_crd_addr: ClientAssetCreditAddress,
+    sys_serv_cred_issu_addr: SystemServiceCreditIssuingAddress,
+    sys_serv_pymt_pay_tx_exp_addr: SystemServicePaymentPayTxExpenseAddress,
+    sys_msig_sign_addr: SystemMultiSigSigneeAddress,
+    cln_srv_acc_cred_ln_addr: ClientServiceAccountCreditLineAddress,
+    cln_srv_acc_debt_ln_addr: ClientServiceAccountDebitLineAddress,
+    cln_bcot_pay_addr: ClientBcotPaymentAddress,
     dev_read_conf_addr: DeviceReadConfirmAddress,
     dev_main_addr: DeviceMainAddress,
     dev_asst_addr: DeviceAssetAddress,
@@ -1573,8 +1799,13 @@ Object.freeze(SystemPayTxExpenseAddress);
 Object.freeze(SystemReadConfirmSpendNotifyAddress);
 Object.freeze(SystemReadConfirmSpendOnlyAddress);
 Object.freeze(SystemReadConfirmSpendNullAddress);
-Object.freeze(ClientMessageCreditAddress);
-Object.freeze(ClientAssetCreditAddress);
+Object.freeze(SystemReadConfirmPayTxExpenseAddress);
+Object.freeze(SystemServiceCreditIssuingAddress);
+Object.freeze(SystemServicePaymentPayTxExpenseAddress);
+Object.freeze(SystemMultiSigSigneeAddress);
+Object.freeze(ClientServiceAccountCreditLineAddress);
+Object.freeze(ClientServiceAccountDebitLineAddress);
+Object.freeze(ClientBcotPaymentAddress);
 Object.freeze(DeviceReadConfirmAddress);
 Object.freeze(DeviceMainAddress);
 Object.freeze(DeviceAssetAddress);

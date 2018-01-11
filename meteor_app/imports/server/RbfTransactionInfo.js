@@ -15,13 +15,23 @@
 //      imported module'
 //const util = require('util');
 // Third-party node modules
+import config from 'config';
 // Meteor packages
 //import { Meteor } from 'meteor/meteor';
 
 // References code in other (Catenis) modules
-import { Service } from './Service';
 import { Transaction } from './Transaction';
 import { Catenis } from './Catenis';
+import { Util } from './Util';
+
+// Config entries
+const rbfTransactInfoConfig = config.get('rbfTransactionInfo');
+
+// Configuration settings
+const cfgSettings = {
+    minDeltaFeeRate: rbfTransactInfoConfig.get('minDeltaFeeRate')
+};
+
 
 // Definition of classes
 //
@@ -30,16 +40,20 @@ import { Catenis } from './Catenis';
 export class RbfTransactionInfo {
     // Arguments:
     //  opts [Object] {  - (optional)
+    //    paymentResolution: [number] - (option, default: 10) Resolution of amount, in satoshis, that should be allocated to pay for tx expenses. In other words, the allocated amount should be a multiple of this amount
     //    initNumTxInputs: [number, integer] - (optional, default: 1) Initial number of transaction inputs
     //    initNumTxOutputs: [number, integer] - (optional, default: 2) Initial number of transaction outputs
-    //    txNullDataPayloadSize: [number, integer] - (optional, default: 0) Size of payload of null data output of transaction
+    //    initNumPubKeysMultiSigTxOutputs: [Array(number)] - (optional, default: empty) List with number of public keys in each multi-signature output of the transaction
+    //    initTxNullDataPayloadSize: [number, integer] - (optional, default: 0) Initial size of payload of null data output of transaction
     //    txFeeRateIncrement: [number, integer] - (optional, default: 1) Fee rate increment to use, in satoshis
     //    initTxFee: [number, integer] - (option, default: 0) Initial transaction fee, in satoshis. If it is specified, it is used in place of the initTxFeeRate
     //    initTxFeeRate: [number, integer] - (optional, default: 0) Initial transaction fee rate that should be used to calculate tx fee, in satoshis per byte
     //  }
     constructor (opts) {
+        this.paymentResolution = 10;
         this.numTxInputs = 1;
         this.numTxOutputs = 2;
+        this.numPubKeysMultiSigTxOutputs = [];
         this.txNullDataPayloadSize = 0;
         this.fee = 0;
         this.feeRate = 0;
@@ -47,6 +61,10 @@ export class RbfTransactionInfo {
         this.initTxFeeRate = this.txFeeRateIncrement;
 
         if (typeof opts === 'object' && opts !== null) {
+            if (typeof opts.paymentResolution === 'number') {
+                this.paymentResolution = parseInt(opts.paymentResolution);
+            }
+
             if (typeof opts.initNumTxInputs === 'number') {
                 this.numTxInputs = parseInt(opts.initNumTxInputs);
             }
@@ -55,12 +73,16 @@ export class RbfTransactionInfo {
                 this.numTxOutputs = parseInt(opts.initNumTxOutputs);
             }
 
-            if (typeof opts.txNullDataPayloadSize === 'number') {
-                this.txNullDataPayloadSize = parseInt(opts.txNullDataPayloadSize);
+            if (Array.isArray(opts.initNumPubKeysMultiSigTxOutputs)) {
+                this.numPubKeysMultiSigTxOutputs = opts.initNumPubKeysMultiSigTxOutputs;
+            }
+
+            if (typeof opts.initTxNullDataPayloadSize === 'number') {
+                this.txNullDataPayloadSize = parseInt(opts.initTxNullDataPayloadSize);
             }
 
             if (typeof opts.initTxFee === 'number') {
-                this.fee = Math.ceil(opts.initTxFee / Service.readConfirmPaymentResolution) * Service.readConfirmPaymentResolution;
+                this.fee = opts.initTxFee;
             }
             else {
                 if (typeof opts.initTxFeeRate === 'number') {
@@ -74,7 +96,7 @@ export class RbfTransactionInfo {
         }
 
         // Compute initial transaction size
-        this.txSize = new TxSize(this.txNullDataPayloadSize, this.numTxInputs, this.numTxOutputs);
+        this.txSize = new TxSize(this.txNullDataPayloadSize, this.numTxInputs, this.numTxOutputs, this.numPubKeysMultiSigTxOutputs);
 
         if (this.fee !== 0) {
             // Use fee that had been initially set and calculate fee rate from it
@@ -82,6 +104,7 @@ export class RbfTransactionInfo {
         }
 
         // Make sure to calculate new fee next time getNewTxFee is called
+        this.recalculateFeeForced = false;
         this.feeRateChanged = true;
         this.txSizeChanged = false;
 
@@ -90,7 +113,7 @@ export class RbfTransactionInfo {
 
         Object.defineProperty(this, 'needRecalculateFee', {
             get: function () {
-                return this.txSizeChanged || this.feeRateChanged;
+                return this.recalculateFeeForced || this.txSizeChanged || this.feeRateChanged;
             },
             enumerable: false
         });
@@ -128,6 +151,52 @@ export class RbfTransactionInfo {
         }
     }
 
+    addMultiSigOutput(numPubKeys) {
+        if (numPubKeys !== 0) {
+            let numOutputsChanged = false;
+
+            if (numPubKeys > 0) {
+                this.numPubKeysMultiSigTxOutputs.push(numPubKeys);
+                numOutputsChanged = true;
+            }
+            else {
+                // Remove first multi-signature output that has the number of public keys specified
+                const absNumPubKeys = -numPubKeys;
+
+                this.numPubKeysMultiSigTxOutputs.some((numPubKeysOutput, idx, list) => {
+                    if (numPubKeysOutput === absNumPubKeys) {
+                        list.splice(idx, 1);
+                        numOutputsChanged = true;
+
+                        return true;
+                    }
+
+                    return false;
+                })
+            }
+
+            if (numOutputsChanged) {
+                // Adjust transaction size
+                this.txSize.addMultiSigOutput(numPubKeys);
+                this.txSizeChanged = true;
+            }
+        }
+    }
+
+    setNullDataPayloadSize(newPayloadSize) {
+        if (newPayloadSize !== this.txNullDataPayloadSize) {
+            this.txNullDataPayloadSize = newPayloadSize;
+
+            // Adjust transaction size
+            this.txSize.setNullDataPayloadSize(newPayloadSize);
+            this.txSizeChanged = true;
+        }
+    }
+
+    forceRecalculateFee() {
+        this.recalculateFeeForced = true;
+    }
+
     resetFeeRate(rate) {
         rate = parseInt(rate);
 
@@ -151,8 +220,6 @@ export class RbfTransactionInfo {
     }
 
     adjustNewTxFee(fee) {
-        fee = Math.ceil(fee / Service.readConfirmPaymentResolution) * Service.readConfirmPaymentResolution;
-
         if (fee >= this.newFee) {
             this.newFee = fee;
             this.newFeeRate = Math.floor(this.newFee / this.txSize.max);
@@ -186,6 +253,7 @@ export class RbfTransactionInfo {
         }
     }
 
+    // DEPRECATED
     setRealTxSize(size, countInputs = 0) {
         size = parseInt(size);
 
@@ -193,9 +261,37 @@ export class RbfTransactionInfo {
 
         this.txSize.setRealSize(size, countInputs);
 
-        if (this.txSize.max > oldMaxTxSize) {
+        if (this.txSize.max !== oldMaxTxSize) {
             // Reset transaction fee
             this.feeRate = Math.floor(this.fee / this.txSize.max);
+        }
+    }
+
+    updateTxInfo(transact) {
+        const txRealSize = transact.realSize();
+
+        if (txRealSize !== undefined) {
+            this.txSize.checkRealSize(txRealSize);
+
+            this.numTxInputs = transact.countInputs();
+            this.numTxOutputs = transact.countP2PKHOutputs();
+            this.numPubKeysMultiSigTxOutputs = transact.getNumPubKeysMultiSigOutputs();
+            this.txNullDataPayloadSize = transact.nullDataPayloadSize;
+            this.fee = transact.feeAmount();
+            this.feeRate = Math.floor(this.fee / txRealSize);
+            this.txSize = new TxSize(this.txNullDataPayloadSize, this.numTxInputs, this.numTxOutputs, this.numPubKeysMultiSigTxOutputs);
+            this.newFee = this.fee;
+            this.newFeeRate = this.feeRate;
+            clearRecalculateFeeFlag.call(this);
+        }
+        else {
+            // Transaction real size not available.
+            //  Log error condition and throw exception
+            Catenis.logger.ERROR('Cannot update RBF transaction info: transaction real size not available', {
+                rbfTxInfo: this,
+                transact: transact
+            });
+            throw new Error('Cannot update RBF transaction info: transaction real size not available');
         }
     }
 }
@@ -204,7 +300,7 @@ export class RbfTransactionInfo {
 //  the exact size of an input (that spends a P2PKH output) is not determinist,
 //  but can rather variate from -1 to +1 byte
 class TxSize {
-    constructor (nullDataPayloadSize, initNumInputs = 0, initNumOutputs = 0) {
+    constructor (nullDataPayloadSize, initNumInputs = 0, initNumOutputs = 0, numPubKeysMultiSigOutputs) {
         this.nullDataPayloadSize = nullDataPayloadSize;
         this.min = this.max = this.avrg = 0;
 
@@ -215,6 +311,10 @@ class TxSize {
         if (initNumOutputs !== 0) {
             this.addOutputs(initNumOutputs);
         }
+
+        numPubKeysMultiSigOutputs.forEach((numPubKeys) => {
+            this.addMultiSigOutput(numPubKeys);
+        })
     }
 
     addInputs(count) {
@@ -250,6 +350,33 @@ class TxSize {
         this.max += sizeInc;
     }
 
+    addMultiSigOutput(numPubKeys) {
+        if (this.avrg === 0) {
+            this.min = this.max = this.avrg = Transaction.computeTransactionSize(0, 0, this.nullDataPayloadSize);
+        }
+
+        const sizeInc = Math.sign(numPubKeys) * Transaction.multiSigOutputSize(Math.abs(numPubKeys));
+
+        this.avrg += sizeInc;
+        this.min += sizeInc;
+        this.max += sizeInc;
+    }
+
+    setNullDataPayloadSize(newPayloadSize) {
+        const sizeInc = Transaction.nullDataOutputSize(newPayloadSize) - Transaction.nullDataOutputSize(this.nullDataPayloadSize);
+
+        this.nullDataPayloadSize = newPayloadSize;
+
+        if (this.avrg === 0) {
+            this.min = this.max = this.avrg = Transaction.computeTransactionSize(0, 0, this.nullDataPayloadSize);
+        }
+
+        this.avrg += sizeInc;
+        this.min += sizeInc;
+        this.max += sizeInc;
+    }
+
+    // DEPRECATED
     setRealSize(size, countInputs = 0) {
         // Note: allow a variation of +/- countInputs if real size had already been set previously (min = max = avrg)
         if ((size >= this.min && size <= this.max) || (this.min === this.max && this.max === this.avrg
@@ -266,6 +393,18 @@ class TxSize {
             });
         }
     }
+
+    checkRealSize(size) {
+        if (size < this.min || size > this.max) {
+            // Transaction real size is not within expected range.
+            //  Log warning condition
+            Catenis.logger.WARN('RBF transaction info: transaction real size is not within expected range', {
+                txMinSize: this.min,
+                txMaxSize: this.max,
+                realSize: size
+            });
+        }
+    }
 }
 
 
@@ -276,17 +415,24 @@ class TxSize {
 //
 
 function clearRecalculateFeeFlag() {
-    this.txSizeChanged = this.feeRateChanged = false;
+    this.txSizeChanged = this.feeRateChanged = this.recalculateFeeForced = false;
 }
 
 function calculateFee() {
     // Calculate new fee
     this.newFeeRate = this.feeRate === 0 ? this.initTxFeeRate : this.feeRate + this.txFeeRateIncrement;
-    this.newFee = Math.ceil((this.newFeeRate * this.txSize.max) / Service.readConfirmPaymentResolution) * Service.readConfirmPaymentResolution;
+    this.newFee = Util.roundToResolution(this.newFeeRate * this.txSize.max, this.paymentResolution);
 
     // Make sure that new fee is larger than latest confirmed fee
     if (this.newFee <= this.fee) {
-        this.newFee = this.fee + Service.readConfirmPaymentResolution;
+        this.newFee =  Util.roundToResolution(this.fee + this.paymentResolution, this.paymentResolution);
+    }
+
+    // Make sure that difference in fee is not below minimum acceptable fee difference
+    const minDeltaFee = Math.ceil(this.txSize.max / cfgSettings.minDeltaFeeRate);
+
+    if (this.newFee - this.fee < minDeltaFee) {
+        this.newFee = Util.roundToResolution(this.fee + minDeltaFee, this.paymentResolution);
     }
 
     this.newFeeRate = Math.floor(this.newFee / this.txSize.max);

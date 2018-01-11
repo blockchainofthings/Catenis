@@ -156,8 +156,8 @@ CatenisMessage.prototype.isEmbedded = function () {
     return this.options.embedded;
 };
 
-CatenisMessage.prototype.isSystemMessage = function () {
-    return this.funcByte === CatenisMessage.functionByte.systemMessage;
+CatenisMessage.prototype.isSendSystemMessage = function () {
+    return this.funcByte === CatenisMessage.functionByte.sendSystemMessage;
 };
 
 CatenisMessage.prototype.isSendMessage = function () {
@@ -383,7 +383,7 @@ CatenisMessage.fromData = function (data, logError = true) {
 //
 
 CatenisMessage.functionByte = Object.freeze({
-    systemMessage: 0x00,
+    sendSystemMessage: 0x00,
     sendMessage: 0x01,
     logMessage: 0x02
 });

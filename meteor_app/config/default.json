@@ -66,6 +66,16 @@
     "rpcConnectionTimeout": 15000,  // Timeout, in miliseconds, for RPC connection with the Bitcoin Core server
     "rescanTimeout": 7200000 // Timeout, in miniseconds, for waiting on Bitcoin Core to finish rescanning the blockchain after importing private key
   },
+  // Parameters pertaining to OmniCore module
+  "omniCore": {
+    "serverHost": "catenis-omnicore", // Omni Core server host name/IP address
+    "mainRpcPort": 8332, // Port used to connect with Omni Core server via its RPC interface to interact with bitcoin's main blockchain
+    "testnetRpcPort": 18332, // Port used to connect with Omni Core server via its RPC interface to interact with bitcoin's testnet blockchain
+    "rpcUser": "??????", // Username used to connect with Omni Core server via its RPC interface
+    "rpcPassword": "??????", // Password used to connect with Omni Core server via its RPC interface
+    "rpcConnectionTimeout": 15000,  // Timeout, in miliseconds, for RPC connection with the Omni Core server
+    "rescanTimeout": 7200000 // Timeout, in miniseconds, for waiting on Omni Core to finish rescanning the blockchain after importing private key
+  },
   // Parameters pertaining to BlockchainAddress module
   "blockchainAddress": {
     "addressValidity": {  // Time, in seconds, before which a newly issued address expires
@@ -77,15 +87,19 @@
       "systemReadConfSpendOnly": 900,
       "systemReadConfSpendNull": 900,
       "systemReadConfPayTxExpense": 900,
-      "clientMessageCredit": 900,
-      "clientAssetCredit": 900,
+      "systemServCredIssuing": 0,   // Indicates that addresses of this type should never expire
+      "systemServPymtPayTxExpense": 900,
+      "systemMultiSigSignee": 900,
+      "clientServAccCreditLine": 900,
+      "clientServAccDebitLine": 900,
+      "clientBcotPayment": 14400,
       "deviceReadConfirm": 900,
       "deviceMain": 900,
       "deviceAsset": 900,
       "deviceAssetIssuance": 900
     },
     "updateIssuedAddressesInterval": 1800000, // Time interval, in miliseconds, for executing method to update issued addresses
-    "inactivedObjectTime": 345600,  // Time, in seconds, from the time when instantiated object has been last accessed before it is considered inactive
+    "inactiveObjectTime": 345600,  // Time, in seconds, from the time when instantiated object has been last accessed before it is considered inactive
     "deleteInactiveObjectsInterval": 43200000 // Time interval, in miliseconds, for executing method to delete inactive objects
   },
   // Parameters pertaining to FundSource module
@@ -97,106 +111,212 @@
   },
   // Parameters pertaining to Service module
   "service": {
-    "paymentResolution": 1000,  // Resolution of amount that should be allocated to pay for tx expenses. In other words, the allocated amount should be a multiple of the amount
-    "serviceCreditAmount": 600,   // Amount, in satoshis, that should be allocated to client service credit addresses
-    "serviceCreditMultiplyFactor": 10,  // Maximum number of service credit amount (serviceCreditAmount) that can be pre-allocated to a service credit address
-    "minFundClientsProvision": 10,  // Number of clients that minimum fund balance should be able to provision
-    "minFundDevicesProvision": 10,  // Number of devices per client that minimum fund balance should be able to provision
-    "minFundMessageCreditsProvision": 100,  // Message credit amount per device that mininum fund balance should be able to provision
-    "minFundAssetCreditsProvision": 100,  // Asset credit amount per device that mininum fund balance should be able to provision
-    "percSendMessageCredit": 60,  // Percentage of client message credit that should be accounted for send message service
-                                  //  NOTE: this value and the value below (percLogMessageCredit) must add up to 100
-    "percLogMessageCredit": 40,  // Percentage of client message credit that should be accounted for log message service
-                                 //  NOTE: this value and the value above (percSendMessageCredit) must add up to 100
-    "systemMessageCredits": 100,  // Credits that should be considered to be pre-allocated to system to send system messages
-    // NOTE: fundPayTxResolution (resolution of amount allocated to system pay tx expense addresses) is dynamically calculated
-    "fundPayTxResolutionSafetyFactor": 0.5,   // Safety factor used when calculating fundPayTxResolution (from highest tx cost)
-    "fundPayTxMultiplyFactor": 10,  // Maximum number of fund pay tx expense (fundPayTxResolution) that can be pre-allocated to a system pay tx expense addr
-    "minFundPayTxAmountMultiplyFactor": 10,  // Multiply factor used to determine mininum amount (x fundPayTxResolution) that should be used to fund system pay tx expense addresses
-    "fundPayTxSafetyFactor": 0.15,   // Safety factor used when funding and checking balance of system pay tx expense addresses
+    "priceMarkup": 0.35,  // Markup used to calculate the service price
+    "servicePriceResolution": 100,  // Resolution of service prices. In other words, the price of the services (expressed in Catenis service credit's lowest units) should be a multiple of that value
+    "paymentResolution": 1000,  // Resolution of amount, in satoshis, that should be allocated to pay for tx expenses. In other words, the allocated amount should be a multiple of that amount
+    "systemFunding": {
+      "clientsToFund": 10,  // Number of clients to consider when calculating total amount to fund
+      "devicesPerClientToFund": 10,  // Number of devices per client to consider when calculating total amount to fund
+      "multiplyFactor": 2  // Multiply factor to use when calculating total amount to fund
+    },
+    "serviceCreditIssueAddrFunding": {
+      "unitAmount": 600,  // Amount, in satoshis, equivalent to one unit of funding
+      "maxUnitsPerUtxo": 2,  // Maximum number of units of funding that should be accumulated into a single UTXO
+      "minUtxosToFund": 10,  // Number of UTXOs that should be funded before start accumulating funding units into a single UTXO
+      "unitsPerPrePaidClients": 0.1,  // Expected number of units of funding that there should exist per pre-paid clients
+      "unitsPerPostPaidClients": 0.1,  // Expected number of units of funding that there should exist per post-paid clients
+      "prePaidClientsToFund": 100,  // Number of pre-paid clients to consider when calculating total amount to fund
+      "postPaidClientsToFund": 100  // Number of post-paid clients to consider when calculating total amount to fund
+    },
+    "serviceAccountFunding": {
+      // NOTE: unitAmount (amount, in Catenis service credit's lowest unit, equivalent to one unit of funding) is dynamically calculated
+      "unitAmountSafetyFactor": 0.3,  // Safety factor to use when calculating funding unit amount
+      "maxUnitsPerAddr": 100,  // Maximum number of units of funding that should be accumulated into a single UTXO/address (there should be a single UTXO per address)
+      "minAddrsToFund": 4  // Number of UTXOs/addresses that should be funded before start accumulating funding units into a single UTXO/address (there should be a single UTXO per address)
+    },
+    "payTxExpenseFunding": {
+      // NOTE: unitAmount (amount, in satoshis, equivalent to one unit of funding) is dynamically calculated
+      "unitAmountSafetyFactor": 0.3,  // Safety factor to use when calculating funding unit amount
+      "maxUnitsPerAddr": 10,  // Maximum number of units of funding that should be accumulated into a single UTXO/address (there should be a single UTXO per address)
+      "minAddrsToFund": 10,  // Number of UTXOs/addresses that should be funded before start accumulating funding units into a single UTXO/address (there should be a single UTXO per address)
+      "balanceSafetyFactor": 0.15, // Safety factor to use when calculating balance
+      "minBalanceSysMessages": 30,  // Number of messages that system can send used to calculate minimum balance threshold
+      "minBalanceServicesPerDevice": 30,  // Number of services a device can consume used to calculate minimum balance threshold
+      "sysMessagesToFund": 10,  // Number of messages that system can send to consider when calculating total amount to fund
+      "devicesToFund": 10  // Number of devices to consider when calculating total amount to fund
+    },
+    "readConfirmPayTxExpenseFunding": {
+      // NOTE: unitAmount (amount, in satoshis, equivalent to one unit of funding) is dynamically calculated
+      "unitAmountSafetyFactor": 0,  // Safety factor to use when calculating funding unit amount
+      "maxUnitsPerAddr": 10,  // Maximum number of units of funding that should be accumulated into a single UTXO/address (there should be a single UTXO per address)
+      "minAddrsToFund": 10,  // Number of UTXOs/addresses that should be funded before start accumulating funding units into a single UTXO/address (there should be a single UTXO per address)
+      "balanceSafetyFactor": 0.15, // Safety factor to use when calculating balance
+      "minBalanceMessagesToConfirm": 50,  // Number of messages to confirm used to calculate minimum balance threshold
+      "messagesToConfirmToFund": 100  // Number of messages to confirm to consider when calculating total amount to fund
+    },
+    "servicePaymentPayTxExpenseFunding": {
+      // NOTE: unitAmount (amount, in satoshis, equivalent to one unit of funding) is dynamically calculated
+      "unitAmountSafetyFactor": 0,  // Safety factor to use when calculating funding unit amount
+      "maxUnitsPerAddr": 50,  // Maximum number of units of funding that should be accumulated into a single UTXO/address (there should be a single UTXO per address)
+      "minAddrsToFund": 10,  // Number of UTXOs/addresses that should be funded before start accumulating funding units into a single UTXO/address (there should be a single UTXO per address)
+      "balanceSafetyFactor": 0.15, // Safety factor to use when calculating balance
+      "minBalancePrePaidServices": 50,  // Number of services to be pre-paid used to calculate minimum balance threshold
+      "minBalancePostPaidServices": 100,  // Number of services to be post-paid used to calculate minimum balance threshold
+      "servicesToPayToFund": 300  // Number of services to pay to consider when calculating total amount to fund
+    },
+    "servicePayment": {
+      "paymentResolution": 10,  // Resolution of amount, in satoshis, that should be allocated to pay for the expenses of transactions realted to service payment. In other words, the allocated amount should be a multiple of this amount
+      // To be used with pre-paid clients
+      "spendServiceCredit": {
+        "initNumTxInputs": 2,         // Initial number of inputs of a spend service credit transaction (1 client service account credit line, 1 service payment pay tx expense)
+        "initNumTxOutputs": 2,        // Initial number of outputs of a spend service credit transaction (1 client service account credit line change, 1 service payment pay tx expense change)
+        "initNumPubKeysMultiSigTxOutputs": [],  // List with initial number of public keys per multi-signatures outputs in spend service credit transaction
+        "txNullDataPayloadSize": 80,  // Size, in bytes, of payload of null data output in spend service credit transaction
+        "maxNumClients": 12,  // Maximum number of clients for which services are paid in a spend service credit transaction
+        "servsDistribPerClient": 2,  // Number of services that should be assigned to same client before proceeding to next client
+        "maxServsPerClientInput": 25,  // Maximum number of services that can be paid for each client service account credit line address input
+        "numClientsMultiSigOutput": 4,  // Required number of clients for (the only) multi-signature output to be added to spend service credit transaction
+        "percMaxUnitsPayTxExp": 0.4,  // Percentage of max units per pay tx expense address input that should be considered available
+        "initTxFeeRate": 1,  // Amount, in satoshis/byte, for the initial fee rate for a spend service credit transaction
+        "txFeeRateIncrement": 1  // Amount, in satoshis/byte, that transaction feed rate should be incremented for the new replacement transaction
+      },
+      // To be used with post-paid clients
+      "debitServiceAccount": {
+        "initNumTxInputs": 2,         // Initial number of inputs of a debit service account transaction (1 service credit issuance, 1 service payment pay tx expense)
+        "initNumTxOutputs": 4,        // Initial number of outputs of a debit service account transaction (1 client service account debit line, 1 service credit issuance refund, 1 service credit issuance change, 1 service payment pay tx expense change)
+        "initNumPubKeysMultiSigTxOutputs": [],  // List with initial number of public keys per multi-signatures outputs in debit service account transaction
+        "txNullDataPayloadSize": 80,  // Size, in bytes, of payload of null data output in debit service account transaction
+        "maxNumClients": 11,  // Maximum number of clients for which services are paid in a debit service account transaction
+        "servsDistribPerClient": 2,  // Number of services that should be assigned to same client before proceeding to next client
+        "numClientsMultiSigOutput": 4,  // Required number of clients for (the only) multi-signature output to be added to debit service account transaction
+        "percMaxUnitsPayTxExp": 0.5,  // Percentage of max units per pay tx expense address input that should be considered available
+        "initTxFeeRate": 1,  // Amount, in satoshis/byte, for the initial fee rate for a debit service account transaction
+        "txFeeRateIncrement": 1  // Amount, in satoshis/byte, that transaction feed rate should be incremented for the new replacement transaction
+      }
+    },
+    "sysMessage": {
+      "messagesPerMinute": 4,  // Number of system messages sents per minute that is expected to be sustained
+      "minutesToConfirm": 300,  // Time, in minutes, within which send system message txs are expected to be confirmed
+      "unconfMainAddrReuses": 10,  // Number of times an UTXO associated with a system main addr is expected to be reused
+      "mainAddrFunding": {
+        "unitAmount": 600,  // Amount, in satoshis, equivalent to one unit of funding
+        "maxUnitsPerAddr": 10,  // Maximum number of units of funding that should be accumulated into a single UTXO/address (there should be a single UTXO per address)
+        "minAddrsToFund": 10  // Number of UTXOs/addresses that should be funded before start accumulating funding units into a single UTXO/address (there should be a single UTXO per address)
+      }
+    },
+    "sysTxConfig": {
+      "sendSysMessage": {  // Send system message transaction
+        "numInputs": 3,           // Number of inputs (that spend P2PKH outputs)
+        "numOutputs": 3,          // Number of (P2PKH) outputs
+        "nullDataPayloadSize": 80 // Size, in bytes, of payload of null data output
+      }
+    },
     "message": {
       "messagesPerMinute": 4,  // Number of messages sents per minute that is expected to be sustained
       "minutesToConfirm": 300,  // Time, in minutes, within which send message txs are expected to be confirmed
       "unconfMainAddrReuses": 10,  // Number of times an UTXO associated with a device main addr is expected to be reused
-      "fundMainAddrAmount": 600, // Amount, in satoshis, that should be allocated to a device main addr
-      "fundMainAddrMultiplyFactor": 10,  // Maximum number of fund amount (fundMainAddrAmount) that can be pre-allocated to a device main addr
       "readConfimAddrAmount": 600,  // Amount, in satoshis, that should be paid to read confirmation address output of send message tx
-      "typicalTxConfig": {  // Typical transaction configuration
-        "sysMessage": {     // System message transaction
-          "numInputs": 3,         // Number of inputs (that spend P2PKH outputs)
-          "numOutputs": 3,        // Number of (P2PKH) outputs
-          "nullDataPayloadSize": 80  // Size, in bytes, of payload of null data output
+      "mainAddrFunding": {
+        "unitAmount": 600,  // Amount, in satoshis, equivalent to one unit of funding
+        "maxUnitsPerAddr": 10,  // Maximum number of units of funding that should be accumulated into a single UTXO/address (there should be a single UTXO per address)
+        "minAddrsToFund": 10  // Number of UTXOs/addresses that should be funded before start accumulating funding units into a single UTXO/address (there should be a single UTXO per address)
+      },
+      "readConfirmation": {
+        "paymentResolution": 10,  // Resolution of amount, in satoshis, that should be allocated to pay for read confirmation tx expenses. In other words, the allocated amount should be a multiple of this amount
+        "initNumTxInputs": 2,         // Initial number of inputs of a read confirmation transaction (1 to spend a read confirmation output, 1 to pay for tx expense)
+        "initNumTxOutputs": 2,        // Initial number of outputs of a read confirmation transaction (1 to receive payment of read confirmation output spent, 1 to receive change)
+        "txNullDataPayloadSize": 0,  // Size, in bytes, of payload of null data output in read confirmation transaction
+        "txInputOutputGrowthRatio": 10, // Number representing how many additional inputs needs to be added to the a read confirmation tx for a new output to be added
+                                        // NOTE: these additional outputs should account for read confirmation outputs spent to notify devices that belong to a different Catenis node
+        "percMaxUnitsPayTxExp": 0.5,  // Percentage of max units per pay tx expense address input that should be considered available
+        "initTxFeeRate": 1,  // Amount, in satoshis/byte, for the initial fee rate for a read confirmation transaction
+        "txFeeRateIncrement": 1,  // Amount, in satoshis/byte, that transaction feed rate should be incremented for the new replacement transaction
+        "terminalReadConfirmTx": {
+          "minutesToConfirm": 300,  // Time, in minutes, within which terminal read confirmation txs are expected to be confirmed
+          "typicalTxConfig": {
+            "numMessagesConfirmed": 2,  // Number of send message txs confirmed by terminal read confirmation transactions
+            "numPayTxExpenseInputs": 2,  // Number of inputs used to pay for tx expense (fee)
+            "hasChangeOutput": true, // Indicates whether tx includes an output for receiving change
+            "nullDataPayloadSize": 0  // Size, in bytes, of payload of null data output
+          }
         },
-        "sendMessage": {        // Send message transaction
-          "numInputs": 4,         // Number of inputs (that spend P2PKH outputs)
-          "numOutputs": 4,        // Number of (P2PKH) outputs
-          "nullDataPayloadSize": 80  // Size, in bytes, of payload of null data output
-        },
-        "logMessage": {        // Log message transaction
-          "numInputs": 4,         // Number of inputs (that spend P2PKH outputs)
-          "numOutputs": 2,        // Number of (P2PKH) outputs
-          "nullDataPayloadSize": 80  // Size, in bytes, of payload of null data output
-        }
-      }
-    },
-    "readConfirmation": {
-      "paymentResolution": 10,  // Resolution of amount that should be allocated to pay for read confirmation tx expenses. In other words, the allocated amount should be a multiple of the amount
-      // NOTE: fundReadConfirmPayTxResolution (resolution of amount allocated to system read confirmation pay tx expense addresses) is dynamically calculated
-      "fundPayTxResolutionSafetyFactor": 0,   // Safety factor used when calculating fundReadConfirmPayTxResolution (from highest tx cost)
-      "fundPayTxMultiplyFactor": 10,  // Maximum number of fund read confirmation pay tx expense (fundReadConfrmPayTxResolution) that can be pre-allocated to a system read confirmation pay tx expense addr
-      "minFundPayTxAmountMultiplyFactor": 100,  // Multiply factor used to determine mininum amount (x fundReadConfirmPayTxResolution) that should be used to fund system pay tx expense addresses
-      "fundPayTxSafetyFactor": 0.15,   // Safety factor used when funding and checking balance of system read confirmation pay tx expense addresses
-      "initNumTxInputs": 2,         // Initial number of inputs of a read confirmation transaction (1 to spend a read confirmation output, 1 to pay for tx expense)
-      "initNumTxOutputs": 2,        // Initial number of outputs of a read confirmation transaction (1 to receive payment of read confirmation output spent, 1 to receive change)
-      "txNullDataPayloadSize": 0,  // Size, in bytes, of payload of null data output in read confirmation transaction
-      "txInputOutputGrowthRatio": 10, // Number representing how many additional inputs needs to be added to the a read confirmation tx for a new output to be added
-                                      // NOTE: these additional outputs should account for read confirmation outputs spent to notify devices that belong to a different Catenis node
-      "initTxFeeRate": 1,  // Amount, in satoshis/byte, for the initial fee rate for a read confirmation transaction
-      "txFeeRateIncrement": 1,  // Amount, in satoshis/byte, that transaction feed rate should be incremented for the new replacement transaction
-      "numReadConfirmTxsMinFundBalance": 10,  // Number of read confirmation txs the cost of which should be covered by the minimum expected balance amount of the system read confirmation pay tx expense addresses
-      "terminalReadConfirmTx": {
-        "minutesToConfirm": 300,  // Time, in minutes, within which terminal read confirmatino txs are expected to be confirmed
-        "typicalTxConfig": {
-          "numMessagesConfirmed": 2,  // Number of send message txs confirmed by terminal read confirmation transactions
-          "numPayTxExpenseInputs": 2,  // Number of inputs used to pay for tx expense (fee)
-          "hasChangeOutput": true, // Indicates whether tx includes an output for receiving change
-          "nullDataPayloadSize": 0  // Size, in bytes, of payload of null data output
+        "usageWeight": {
+          "regular": 1,   // Regular read confirmation tx (using RBF) usage weight
+          "terminal": 10  // Terminal read confirmation tx usage weight
         }
       }
     },
     "asset": {
-      "unlockedAssetsPerMinute": 0.33,  // Number of unlocked assets issued per minute that is expected to be sustained
-      "minutesToConfirm": 30,  // Time, in minutes, within which asset txs are expected to be confirmed
-      "unconfAssetIssueAddrReuses": 10,  // Number of times an UTXO associated with a device asset issuance addr is expected to be reused
-      "fundAssetIssueAddrAmount": 600, // Amount, in stoshis, that should be allocated to a device asset issuance addr
-      "fundAssetIssueAddrMultiplyFactor": 10,  // Maximum number of fund amount (fundAssetIssueAddrAmount) that can be pre-allocated to a device asset issuance addr
-      "txWeights": {  // Weight apply to each asset tx type for calculating average cost of asset service
-        "issueLockedAsset": 1,    // Issue locked asset tx weight
-        "issueUnlockedAsset": 1,  // Issue unlocked asset tx weight
-        "transferAsset": 100      // Transfer asset tx weight
-      },
-      "typicalTxConfig": {  // Typical transaction configuration
-        "issueLockedAsset": {   // Issue unlocked asset
-          "numInputs": 3,           // Number of inputs (that spend P2PKH outputs)
-          "numOutputs": 2,          // Number of (P2PKH) outputs
-          "nullDataPayloadSize": 65    // Size, in bytes, of payload of null data output
-        },
-        "issueUnlockedAsset": {   // Issue unlocked asset
-          "numInputs": 4,           // Number of inputs (that spend P2PKH outputs)
-          "numOutputs": 4,          // Number of (P2PKH) outputs
-          "nullDataPayloadSize": 65    // Size, in bytes, of payload of null data output
-        },
-        "transferAsset": {   // Issue unlocked asset
-          "numInputs": 4,           // Number of inputs (that spend P2PKH outputs)
-          "numOutputs": 3,          // Number of (P2PKH) outputs
-          "nullDataPayloadSize": 8     // Size, in bytes, of payload of null data output
+      "issuance": {
+        "unlockedAssetsPerMinute": 0.33,  // Number of unlocked assets issued per minute that is expected to be sustained
+        "minutesToConfirm": 300,  // Time, in minutes, within which asset issuance txs are expected to be confirmed
+        "unconfAssetIssueAddrReuses": 10,  // Number of times an UTXO associated with a device asset issuance addr is expected to be reused
+        "assetIssueAddrFunding": {
+          "unitAmount": 600,  // Amount, in satoshis, equivalent to one unit of funding
+          "maxUnitsPerAddr": 10,  // Maximum number of units of funding that should be accumulated into a single UTXO/address (there should be a single UTXO per address)
+          "minAddrsToFund": 10  // Number of UTXOs/addresses that should be funded before start accumulating funding units into a single UTXO/address (there should be a single UTXO per address)
         }
+      },
+      "transfer": {
+        "minutesToConfirm": 300  // Time, in minutes, within which asset transfer txs are expected to be confirmed
       }
+    },
+    "serviceTxConfig": {
+      "logMessage": {  // Log message
+        "numInputs": 3,           // Number of inputs (that spend P2PKH outputs)
+        "numOutputs": 2,          // Number of (P2PKH) outputs
+        "nullDataPayloadSize": 80 // Size, in bytes, of payload of null data output
+      },
+      "sendMessage": {  // Send message (without read confirmation)
+        "numInputs": 3,           // Number of inputs (that spend P2PKH outputs)
+        "numOutputs": 3,          // Number of (P2PKH) outputs
+        "nullDataPayloadSize": 80 // Size, in bytes, of payload of null data output
+      },
+      "sendMsgReadConfirm": {  // Send message with read confirmation
+        "numInputs": 3,           // Number of inputs (that spend P2PKH outputs)
+        "numOutputs": 4,          // Number of (P2PKH) outputs
+        "nullDataPayloadSize": 80 // Size, in bytes, of payload of null data output
+      },
+      "issueLockedAsset": {  // Issue locked asset
+        "numInputs": 2,           // Number of inputs (that spend P2PKH outputs)
+        "numOutputs": 2,          // Number of (P2PKH) outputs
+        "nullDataPayloadSize": 68 // Size, in bytes, of payload of null data output
+      },
+      "issueUnlockedAsset": {  // Issue unlocked asset
+        "numInputs": 3,           // Number of inputs (that spend P2PKH outputs)
+        "numOutputs": 3,          // Number of (P2PKH) outputs
+        "nullDataPayloadSize": 68 // Size, in bytes, of payload of null data output
+      },
+      "transferAsset": {  // Transfer asset
+        "numInputs": 4,           // Number of inputs (that spend P2PKH outputs)
+        "numOutputs": 3,          // Number of (P2PKH) outputs
+        "nullDataPayloadSize": 10 // Size, in bytes, of payload of null data output
+      }
+    },
+    "serviceUsageWeight": {
+      "logMessage": 100,          // Log message usage weight
+      "sendMessage": 100,         // Send message (without read confirmation) usage weight
+      "sendMsgReadConfirm": 100,  // Send message with read confirmation usage weight
+      "issueLockedAsset": 1,      // Issue locked asset usage weight
+      "issueUnlockedAsset": 10,   // Issue unlocked asset usage weight
+      "transferAsset": 100        // Transfer asset usage weight
     }
   },
   // Parameters pertaining to BalanceInfo module
   "balanceInfo": {
     "defaultSafetyFactor": 0.1     // Safety factor used to check whether current balance is enough to cover current expect balance
+  },
+  // Parameters pertaining to CatenisNode module
+  "catenisNode": {
+    "serviceCreditAsset": {
+      "nameFormat": "Catenis Service Credit - %s%s",
+      "descriptionFormat": "Internal Catenis token used to pay for services consumed by devices of clients assigned to %s",
+      "issuingOpts": {
+        "type": "unlocked", // Issuing type of asset
+        "divisibility": 7,  // Number of decimal places allowed for representing quantities of this asset
+        "isAggregatable": true  // Indicates whether quantities of the asset from different UTXOs can be combined to allocate the necessary fund
+      }
+    }
   },
   // Parameters partaining to Client module
   "client": {
@@ -258,21 +378,19 @@
       }
     }
   },
-  // Parameters pertaining to Device module
-  "device": {
-    "creditsToSendMessage": 1,  // Number of client service credits that is required for a device to send a message
-    "creditsToLogMessage": 1    // Number of client service credits that is required for a device to send a message
-  },
   // Parameters pertaining to Transaction module
   "transaction": {
-    "txOutputDustAmount": 600,  // Minimum amount that should be allocated to a transaction output
+    "txOutputDustAmount": 600,  // Minimum amount that should be allocated to a transaction output - (<output_size> + 148) * <dust_relay_fee>/1000 => (34+148)*3000/1000 = 546 satoshis/kb ~ 600
     "txInputSize": 148, // Size, in bytes, of typical transaction input (spending a P2PKH UTXO)
                         //  NOTE 1: IMPORTANT - this is an everage size for such inputs. The actual size can vary from 147 up to 149 (in other workds, the actual size is 148 +/- 1)
                         //  NOTE 2: this value should be reviewed for segwit transactions
     "txOutputSize": 34, // Size, in bytes, of a typical (P2PKH) transaction output
                        //  NOTE: this value should be reviewed for segwit transactions
-    "maxTxSize": 100000  // Maximum size, in bytes, of a transaction that is considered valid
+    "maxTxSize": 100000,  // Maximum size, in bytes, of a transaction that is considered valid
                          //  NOTE: this value should be reviewed for segwit transactions
+    "pubKeySize": 33,  // Size, in bytes, of blockchain key-pair public key
+    "oneOf2MultiSigTxOutputDustAmount": 700,  // Minimum amount that should be allocated to a 1-of-2 multisig transaction output - (<output_size> + 148) * <dust_relay_fee>/1000 => (80+148)*3000/1000 = 684 satoshis/kb ~ 700
+    "oneOf3multiSigTxOutputDustAmount": 800  // Minimum amount that should be allocated to a 1-of-3 multisig transaction output - (<output_size> + 148) * <dust_relay_fee>/1000 => (114+148)*3000/1000 = 786 satoshis/kb ~ 800
   },
   // Parameters pertaining to TransactionMonitor module
   "transactionMonitor": {
@@ -303,10 +421,14 @@
   "message": {
     "maxQueryCount": 500  // Maximum number of messages entries that can be returned when querying for messages
   },
+  // Parameters pertaining to RbfTransactionInfo module
+  "rbfTransactionInfo": {
+    "minDeltaFeeRate": 1  // Minimum difference in transaction fee rate, in satoshis per byte, that is allowed for a new transaction to replace a previously sent one
+  },
   // Parameters pertaining to ReadConfirmation module
   "readConfirmation": {
     "unconfirmedTxTimeout": 10080,  // Timeout, in minutes, for waiting for latest read confirmation tx to be confirmed (set to 7 days, which is half the default mempool tx eviction time of 14 days)
-    "txSizeThresholdRatio": 0.5  // Ratio that should be applied to maximum tx size to calculate theshold for read confirmation tx size. Above that size the tx fee rate should be reset so that is is confirmed as soon as possible
+    "txSizeThresholdRatio": 0.9  // Ratio that should be applied to maximum tx size to calculate theshold for read confirmation tx size. Above that size the tx fee rate should be reset so that is is confirmed as soon as possible
   },
   // Parameters pertaining to RestApi module
   "restApi": {
@@ -339,5 +461,97 @@
                                                  //    Thus the client needs to open one WebSocket connection for each notification event for which it wishes to receive notifications. There shall be an enpoint URI for each notification event
     "heartbeatInterval": 30000,  // Time interval, in miliseconds, for sending heartbeat ping package to client
     "authMsgTimeout": 5000   // Timeout, in miliseconds, for waiting on first message from client used to authenticate itself with the system
+  },
+  // Parameters pertaining to CCFullNodeClient module
+  "ccFullNodeClient": {
+    "serverHost": "catenis-btccore", // Colored Coins Full-Node server host name/IP address
+    "mainTcpPort": 8033, // TCP port used to connect with the Colored Coins Full-Node server to interact with bitcoin's main blockchain
+    "testnetTcpPort": 8043, // TCP port used to connect with the Colored Coins Full-Node server to interact with bitcoin's testnet blockchain
+    "inetAddress": "", // IP address of local network interface to use to connect with the Colored Coins Full-Node server. If not specified (empty string) the default network interface is used
+    "user": "??????", // Username used to authenticate the client to the Colored Coins Full-Node server. If not specified (empty string) assume that no authenticaiton is required
+    "password": "??????", // Password used to authenticate the client to the Colored Coins Full-Node server
+    "connectionTimeout": 15000,  // Timeout, in miliseconds, for connection with the Colored Coins Full-Node server
+    "methodPath": {
+      "parseNow": "/parseNow",
+      "getAddressesUtxos": "/getAddressesUtxos",
+      "getUtxos": "/getUtxos",
+      "getTxouts": "/getTxouts",
+      "getAddressesTransactions": "/getAddressesTransactions",
+      "transmit": "/transmit",
+      "getInfo": "/getInfo",
+      "importAddresses": "/importAddresses"
+    }
+  },
+  // Parameters pertaining to CCMetadataClient module
+  "ccMetadataClient": {
+    "serverHost": "catenis-ccmeta", // Colored Coins Metadata server host name/IP address
+    "tcpPort": 8180, // TCP port used to connect with the Colored Coins Metadata server
+    "inetAddress": "", // IP address of local network interface to use to connect with the Colored Coins Metadata server. If not specified (empty string) the default network interface is used
+    "user": "??????", // Username used to authenticate the client to the Colored Coins Metadata server. If not specified (empty string) assume that no authenticaiton is required
+    "jwtSecret": "??????", // JWT secret (128-bit hex encoded value) used to authenticate the clent to the Colorec Coins Metadata server
+    "tokenValidityDuration": 15, // Time, in seconds, within which JWT token is considered valid for authentication
+    "connectionTimeout": 15000,  // Timeout, in miliseconds, for connection with the Colored Coins Full-Node server
+    "methodPath": {
+      "addMetadata": "/addMetadata",
+      "getMetadata": "/getMetadata",
+      "shareMetadata": "/shareMetadata",
+      "removeMetadata": "/removeMetadata"
+    }
+  },
+  // Parameters pertaining to CCMetadata module
+  "ccMetadata": {
+    "ctnAssetsIssuer": "Catenis Enterprise",
+    "ctnAssetsDescription": "General purpose Catenis smart asset",
+    "ctnAssetsLogoUrl": "https://beta.catenis.io/logo/Catenis_small.png",  // URL to image file to be used as the logo image for all assets generated by Catenis
+    "ctnAssetsLogoMimeType": "image/png",  // MIME type of image file to be used as the logo image for all assets generated by Catenis
+    "ctnAssetsLogoHash": "dcde5882af4ee42617e5f9b1ff56d801be25c0c1af7ea8334eb46596616b15b2", // SHA256 hash of the logo image file
+    "ctnAssetsLargeLogoUrl": "https://beta.catenis.io/logo/Catenis_large.png", // URL to image file to be used as the large logo image for all assets generated by Catenis
+    "ctnAssetsLargeLogoMimeType": "image/png",  // MIME type of image file to be used as the large logo image for all assets generated by Catenis
+    "ctnAssetsLargeLogoHash": "0a5e3d326c0dfd1f87cebdd63fa214faebb9a3d48234a8c7352186985f838261", // SHA256 hash of the large logo image file
+    "signingMessageFormat": "Catenis generated asset on %s",  // Format string used to compose message that is to be signed for asset verification purpose
+    "signingCertificateFilePath": "/etc/ssl/sll_certificate.pem",  // Path to file (in PEM format) containing Blockchain of Things' owned SSL certificate used to sign message for asset verification
+    "signingCertificateKeyFilePath": "/etc/ssl/encrypt_catenis.key",  // Path to file containing (password protected) key of SSL certificate used to sign message for asset verification
+    "urlContentTimeout": 15000,  // Timeout, in miliseconds, fro retrieving content associated with a given URL
+    "encryptedUserDataKeyPrefix": "__enc_",  // Prefix that is prepended to user data key when its value is encrypted
+    "shareAfterStoring": false  // Indicates whether metadata should be shared right after it is stored (added to Colored Coins metadata server)
+  },
+  // Parameters pertaining to CCTransaction module
+  "ccTransaction": {
+    "ccProtocolPrefix": "4343",  // Hex encoded Colored Coins protocol data prefix
+    "ccVersionByte": "02", // Hex encoded Colored Coins version byte
+    "torrentHashSize": 20,  // Size, in number of bytes, of a torrent hash
+    "sha2Size": 32  // Size, in number of bytes, of a SHA2 hash
+  },
+  // Parameters pertaining to CCTransaction module
+  "bcotExchangeRate": {
+    "initialExchangeRate": 0.00024585  // Inital bitcoin to BCOT token exchange rate (calculated in 2017-11-23, using BTC = $8,135, and BCOT = $2)
+  },
+  // Parameters pertaining to CreditServiceAccTransaction module
+  "creditServiceAccTransaction": {
+    "maxNumCcTransferOutputs": 31,  //  Maximum number of Colored Coins transaction outputs that can exist in this transaction
+    "safeNumCcTransferOutputs": 10,  // Maximum number of Colored Coins transaction outputs used to receive issued asset amount so it is guarranteed that encoded Colored Coins data will fit into transaction
+    "ccMetadata": {
+      "bcotPayTxidKey": "bcotPayTxid"  // Name (key) of Colored Coins free user metadata used to refer to BCOT Token Payment transaction
+    }
+  },
+  // Parameters pertaining to BcotPayment module
+  "bcotPayment": {
+    "bcotOmniPropertyId": 0,  // BCOT token Omni property ID (yet to be defined for production)
+    "storeBcotAddress": "????"  // Non-Catenis blockchain address to where BCOT tokens received as payment should be stored
+  },
+  // Parameters pertaining to StoreBcotTransaction module
+  "storeBcotTransaction": {
+    "bcotStoreAddrAmount": 600,  // Amount, in satohis, to be paid to BCOT store address output
+    "timeToConfirm": 300,  // Time, in minutes, that is expected the store BCOT transaction to be confirmed
+    "omniDataPrefix": "omni"  // Prefix of Omni encoded data to be embedd in transaction
+  },
+  // Parameters pertaining to SpendServiceCreditTransaction module
+  "spendServiceCreditTransaction": {
+    "maxNumClients": 12,  // Maximum number of clients that can be assigned to a single spend service credit transaction
+    "ccMetadata": {
+      "servTxidsKey": "servTxids"  // Name (key) of Colored Coins free user metadata used to refer to BCOT Token Payment transaction
+    },
+    "unconfirmedTxTimeout": 10080,  // Timeout, in minutes, for waiting for latest sent spend service credit tx to be confirmed (set to 7 days, which is half the default mempool tx eviction time of 14 days)
+    "txSizeThresholdRatio": 0.9  // Ratio that should be applied to maximum tx size to calculate threshold for spend service credit tx size. Above that size the tx fee rate should be reset so that is is confirmed as soon as possible
   }
 }

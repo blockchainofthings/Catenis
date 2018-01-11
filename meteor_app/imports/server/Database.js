@@ -13,7 +13,6 @@
 //import util from 'util';
 // Third-party node modules
 //import config from 'config';
-import Future from 'fibers/future';
 // Meteor packages
 import { Meteor } from 'meteor/meteor';
 import { Mongo } from 'meteor/mongo';
@@ -281,6 +280,15 @@ Database.initialize = function() {
             },
             {
                 fields: {
+                    billingMode: 1
+                },
+                opts: {
+                    background: true,
+                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                }
+            },
+            {
+                fields: {
                     status: 1
                 },
                 opts: {
@@ -309,71 +317,6 @@ Database.initialize = function() {
             {
                 fields: {
                     lastApiAccessGenKeyModifiedDate: 1
-                },
-                opts: {
-                    background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
-                }
-            }]
-        },
-        ServiceCredit: {
-            indices: [{
-                fields: {
-                    client_id: 1
-                },
-                opts: {
-                    background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
-                }
-            },
-            {
-                fields: {
-                    srvCreditType: 1
-                },
-                opts: {
-                    background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
-                }
-            },
-            {
-                fields: {
-                    'fundingTx.txid': 1
-                },
-                opts: {
-                    background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
-                }
-            },
-            {
-                fields: {
-                    'fundingTx.confirmed': 1
-                },
-                opts: {
-                    background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
-                }
-            },
-            {
-                fields: {
-                    remainCredits: 1
-                },
-                opts: {
-                    background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
-                }
-            },
-            {
-                fields: {
-                    createdDate: 1
-                },
-                opts: {
-                    background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
-                }
-            },
-            {
-                fields: {
-                    lastCreditUpdatedDate: 1
                 },
                 opts: {
                     background: true,
@@ -669,6 +612,26 @@ Database.initialize = function() {
             },
             {
                 fields: {
+                    'info.creditServiceAccount.clientId': 1
+                },
+                opts: {
+                    sparse: true,
+                    background: true,
+                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                }
+            },
+            {
+                fields: {
+                    'info.spendServiceCredit.clientIds': 1
+                },
+                opts: {
+                    sparse: true,
+                    background: true,
+                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                }
+            },
+            {
+                fields: {
                     'info.readConfirmation.serializedTx.inputs.txid': 1
                 },
                 opts: {
@@ -777,6 +740,37 @@ Database.initialize = function() {
                     safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
                 }
             },
+            {
+                fields: {
+                    'info.bcotPayment.clientId': 1
+                },
+                opts: {
+                    sparse: true,
+                    background: true,
+                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                }
+            },
+            {
+                fields: {
+                    'info.bcotPayment.bcotPayAddressPath': 1
+                },
+                opts: {
+                    sparse: true,
+                    background: true,
+                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                }
+            },
+            {
+                fields: {
+                    'info.creditServiceAccount.clientId': 1
+                },
+                opts: {
+                    sparse: true,
+                    background: true,
+                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                }
+            },
+
             {
                 fields: {
                     'info.sendMessage.readConfirmation.spent': 1
@@ -906,6 +900,198 @@ Database.initialize = function() {
                     safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
                 }
             }]
+        },
+        Asset: {
+            indices: [{
+                fields: {
+                    assetId: 1
+                },
+                opts: {
+                    unique: true,
+                    background: true,
+                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                }
+            }, {
+                fields: {
+                    ccAssetId: 1
+                },
+                opts: {
+                    unique: true,
+                    background: true,
+                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                }
+            }, {
+                fields: {
+                    type: 1
+                },
+                opts: {
+                    background: true,
+                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                }
+            }, {
+                fields: {
+                    name: 1
+                },
+                opts: {
+                    sparse: true,
+                    background: true,
+                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                }
+            }, {
+                fields: {
+                    issuingType: 1
+                },
+                opts: {
+                    background: true,
+                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                }
+            }, {
+                fields: {
+                    entityId: 1
+                },
+                opts: {
+                    background: true,
+                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                }
+            }, {
+                fields: {
+                    addrPath: 1
+                },
+                opts: {
+                    unique: true,
+                    sparse: true,
+                    background: true,
+                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                }
+            }, {
+                fields: {
+                    createdDate: 1
+                },
+                opts: {
+                    background: true,
+                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                }
+            }]
+        },
+        BcotExchangeRate: {
+            indices: [{
+                fields: {
+                    exchangeRate: 1
+                },
+                opts: {
+                    background: true,
+                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                }
+            }, {
+                fields: {
+                    date: -1
+                },
+                opts: {
+                    background: true,
+                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                }
+            }, {
+                fields: {
+                    createdDate: 1
+                },
+                opts: {
+                    background: true,
+                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                }
+            }]
+        },
+        Billing: {
+            indices: [{
+                fields: {
+                    type: 1
+                },
+                opts: {
+                    background: true,
+                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                }
+            }, {
+                fields: {
+                    clientId: 1
+                },
+                opts: {
+                    background: true,
+                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                }
+            }, {
+                fields: {
+                    deviceId: 1
+                },
+                opts: {
+                    background: true,
+                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                }
+            }, {
+                fields: {
+                    billingMode: 1
+                },
+                opts: {
+                    background: true,
+                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                }
+            }, {
+                fields: {
+                    service: 1
+                },
+                opts: {
+                    background: true,
+                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                }
+            }, {
+                fields: {
+                    serviceDate: 1
+                },
+                opts: {
+                    background: true,
+                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                }
+            }, {
+                fields: {
+                    'serviceTx.txid': 1
+                },
+                opts: {
+                    unique: true,
+                    background: true,
+                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                }
+            }, {
+                fields: {
+                    'serviceTx.complementaryTx.txid': 1
+                },
+                opts: {
+                    sparse: true,
+                    background: true,
+                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                }
+            }, {
+                fields: {
+                    'servicePaymentTx.txid': 1
+                },
+                opts: {
+                    background: true,
+                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                }
+            }, {
+                fields: {
+                    'servicePaymentTx.confirmed': 1
+                },
+                opts: {
+                    background: true,
+                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                }
+            }, {
+                fields: {
+                    createdDate: 1
+                },
+                opts: {
+                    background: true,
+                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                }
+            }]
         }
     };
 
@@ -1021,6 +1207,160 @@ Database.fixMessageAddReadConfirmationEnabledField = function () {
 
     if (numUpdatedDocs > 0) {
         Catenis.logger.INFO('****** Number of Message DB collection docs updated to add readConfirmationEnabled field: %d', numUpdatedDocs);
+    }
+};
+
+//** Temporary method used to fill new billingMode field of Client docs/recs
+import { Client } from '/imports/server/Client';
+
+Database.fillClientBillingModeField = function () {
+    const numUpdatedDocs = Catenis.db.collection.Client.update({
+        billingMode: {
+            $exists: false
+        }
+    }, {
+        $set: {
+            billingMode: Client.billingMode.prePaid
+        }
+    }, {
+        multi: true
+    });
+
+    if (numUpdatedDocs > 0) {
+        Catenis.logger.INFO('****** Number of Client DB collection docs updated to fill new billingMode field: %d', numUpdatedDocs);
+    }
+};
+
+//** Temporary method used to fix indices of SentTransaction collection
+//   - index on replacedByTxid changed to be made NOT unique
+import Future from 'fibers/future';
+
+Database.fixSentTransactionReplacedByTxidIndex = function () {
+    let indicesChanged = false;
+    const fut1 = new Future();
+
+    Catenis.db.mongoCollection.SentTransaction.indexes(function (error, indices) {
+        if (!error) {
+            const replacedByTxidIndex = indices.find((index) => {
+                const keyFields = Object.keys(index.key);
+
+                return keyFields.length === 1 && keyFields[0] === 'replacedByTxid';
+            });
+
+            if (replacedByTxidIndex) {
+                if (replacedByTxidIndex.unique) {
+                    // Index currently has the unique constraint.
+                    //  So remove it and reinsert it
+                    // noinspection JSIgnoredPromiseFromCall
+                    Catenis.db.mongoCollection.SentTransaction.dropIndex(replacedByTxidIndex.name, function (error) {
+                        if (!error) {
+                            // Insert index
+                            // noinspection JSUnusedLocalSymbols, JSIgnoredPromiseFromCall
+                            Catenis.db.mongoCollection.SentTransaction.ensureIndex({
+                                replacedByTxid: 1
+                            }, {
+                                sparse: true,
+                                background: true,
+                                safe: true
+                            }, function (error, indexName) {
+                                if (!error) {
+                                    Catenis.logger.INFO('****** Index on replacedByTxid field of SentTransaction DB collection has been fixed');
+                                    indicesChanged = true;
+                                    fut1.return();
+                                }
+                                else {
+                                    // Error trying to insert index. Log error and throw exception
+                                    Catenis.logger.ERROR('Error trying to insert fixed index on replacedByTxid field of SentTransaction DB collection.', error);
+                                    throw new Error('Error trying to insert fixed index on replacedByTxid field of SentTransaction DB collection');
+                                }
+                            })
+                        }
+                        else {
+                            // Error trying to remove index. Log error and throw exception
+                            Catenis.logger.ERROR('Error trying to remove index on replacedByTxid field of SentTransaction DB collection.', error);
+                            throw new Error('Error trying to remove index on replacedByTxid field of SentTransaction DB collection');
+                        }
+                    })
+                }
+                else {
+                    fut1.return();
+                }
+            }
+            else {
+                fut1.return();
+            }
+        }
+        else {
+            // Error retrieving indices. Log error
+            Catenis.logger.ERROR('Error retrieving indices from SentTransaction DB collection.', error);
+            throw new Error('Error retrieving indices from SentTransaction DB collection');
+        }
+    });
+
+    fut1.wait();
+
+    if (indicesChanged) {
+        const fut2 = new Future();
+
+        // Reindex collection
+        // noinspection JSIgnoredPromiseFromCall, JSUnusedLocalSymbols
+        Catenis.db.mongoCollection.SentTransaction.reIndex(function (error, result) {
+            if (!error) {
+                Catenis.logger.INFO('****** SentTransaction DB collection successfully reindexed.');
+                fut2.return();
+            }
+            else {
+                Catenis.logger.ERROR('Error trying to reindex SentTransaction collection.', error);
+                throw new Error('Error trying to reindex SentTransaction collection');
+            }
+        });
+
+        fut2.wait();
+    }
+};
+
+//** Temporary method used to add missing 'clientIds' field from info property of
+//  SentTransaction docs/recs of type 'spend_service_credit'
+Database.fixSentTransactionSpendServiceCreditInfo = function () {
+    let numUpdatedDocs = 0;
+
+    // Retrieve sent spend service credit transaction doc/recs the 'clientIds' field of which
+    //  is missing from its info property
+    Catenis.db.collection.SentTransaction.find({
+        type: 'spend_service_credit',
+        'info.spendServiceCredit.clientIds': {
+            $exists: false
+        }
+    }, {
+        fields: {
+            info: 1
+        }
+    }).forEach((doc) => {
+        // Look for Billing docs for the associated service transactions
+        const clientIds = Catenis.db.collection.Billing.find({
+            'serviceTx.txid': {
+                $in: doc.info.spendServiceCredit.serviceTxids
+            }
+        }, {
+            fields: {
+                clientId: 1
+            }
+        }).map((doc2) => doc2.clientId);
+
+        if (clientIds.length > 0) {
+            // Update SentTransaction doc/rec
+            numUpdatedDocs += Catenis.db.collection.SentTransaction.update({
+                _id: doc._id
+            }, {
+                $set: {
+                    'info.spendServiceCredit.clientIds': clientIds
+                }
+            });
+        }
+    });
+
+    if (numUpdatedDocs > 0) {
+        Catenis.logger.INFO('****** Number of SentTransaction DB collection docs updated to add missing \'info.spendServiceCredit.clientIds\' field: %d', numUpdatedDocs);
     }
 };
 

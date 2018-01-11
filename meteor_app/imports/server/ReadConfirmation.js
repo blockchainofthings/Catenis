@@ -13,7 +13,7 @@
 //  NOTE: the reference of these modules are done using 'require()' instead of 'import' to
 //      to avoid annoying WebStorm warning message: 'default export is not defined in
 //      imported module'
-//const util = require('util');
+const util = require('util');
 // Third-party node modules
 import config from 'config';
 // Meteor packages
@@ -31,6 +31,7 @@ import { BlockchainAddress } from './BlockchainAddress';
 import { BitcoinCore } from './BitcoinCore';
 import { Message } from './Message';
 import { Device } from './Device';
+import { Billing } from './Billing';
 
 // Config entries
 const readConfirmConfig = config.get('readConfirmation');
@@ -261,21 +262,25 @@ function sendReadConfirmTransaction(isTerminal = false) {
                         && (err.details.code === BitcoinCore.rpcErrorCode.RPC_VERIFY_ERROR || err.details.code === BitcoinCore.rpcErrorCode.RPC_VERIFY_REJECTED)) {
                     // Transaction has been rejected
                     if (lastTxid) {
+                        let txInfo;
+
                         try {
                             // Check if it is due to the fact that previous tx that would have been replaced was confirmed
-                            const txInfo = Catenis.bitcoinCore.getTransaction(lastTxid, false);
-
-                            if (txInfo.confirmations > 0) {
-                                // Last sent read confirmation tx has been confirmed.
-                                //  Only log warning condition and expect that things will be fixed spontaneously
-                                Catenis.logger.WARN('Read confirmation transaction has been rejected when trying to send it', {
-                                    transact: this.activeReadConfirmTransact.transact
-                                });
-
-                                errorAddressed = true;
-                            }
+                            txInfo = Catenis.bitcoinCore.getTransaction(lastTxid, false);
                         }
-                        catch (err2) {}
+                        catch (err2) {
+                            Catenis.logger.ERROR('Error trying to get confirmation status of previously sent transaction (txid: %s) of read confirmation transaction that failed to be sent', lastTxid, err);
+                        }
+
+                        if (txInfo !== undefined && txInfo.confirmations !== 0) {
+                            // Last sent read confirmation tx has either been confirmed or replaced.
+                            //  Only log warning condition and expect that things will be fixed spontaneously
+                            Catenis.logger.WARN('Read confirmation transaction has been rejected when trying to send it', {
+                                transact: this.activeReadConfirmTransact.transact
+                            });
+
+                            errorAddressed = true;
+                        }
                     }
                 }
 
@@ -431,7 +436,15 @@ function readConfirmTxConfirmed(data) {
 
                         Catenis.db.collection.SentTransaction.update({txid: lastTxid}, modifier);
                     }
-                    else if (docSentTx.replacedByTxid === null) {
+                    else if (docSentTx.replacedByTxid === undefined) {
+                        if (lastTxid !== confirmedTransact.txid) {
+                            // A transaction that had replaced the one that is being confirmed (either directly or by means
+                            //  of its ancestors) but has not been replaced yet. Update its database entry to indicate that
+                            //  it is invalid (and thus shall never be confirmed)
+                            Catenis.db.collection.SentTransaction.update({txid: lastTxid}, {$set: {replacedByTxid: null}});
+                        }
+                    }
+                    else { // docSentTx.replacedByTxid === null
                         // Confirmed read confirmation transaction or any of the transactions that had been issued to
                         //  replace it had its database entry already marked as not having a replacement tx.
                         //  Log error condition and throw exception
@@ -545,6 +558,9 @@ function readConfirmTxConfirmed(data) {
                     // Send read confirmation transaction
                     sendReadConfirmTransaction.call(this);
                 }
+
+                // Record complementary read confirmation transaction for billing purpose
+                Billing.recordComplementaryReadConfirmTx(confirmedTransact);
             }
             else {
                 // Unable to find corresponding confirmed read confirmation transaction.

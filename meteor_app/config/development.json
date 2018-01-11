@@ -54,6 +54,15 @@
     "rpcConnectionTimeout": 30000,  // Timeout, in miliseconds, for RPC connection with the bitcoin server.
     "rescanTimeout": 900000 // Timeout, in miniseconds, for waiting on Bitcoin Core to finish rescanning the blockchain after importing private key
   },
+  // Parameters pertaining to OmniCore module
+  "omniCore": {
+    "serverHost": "10.8.0.1", // Omni Core server host name/IP address (access via VPN)
+    //"serverHost": "catenis-dev", // Omni Core server host name/IP address
+    "mainRpcPort": 7332, // Port used to connect with Omni Core server via its RPC interface to interact with bitcoin's main blockchain
+    "testnetRpcPort": 17332, // Port used to connect with Omni Core server via its RPC interface to interact with bitcoin's testnet blockchain
+    "rpcConnectionTimeout": 30000,  // Timeout, in miliseconds, for RPC connection with the Omni Core server
+    "rescanTimeout": 900000 // Timeout, in miniseconds, for waiting on Omni Core to finish rescanning the blockchain after importing private key
+  },
   // Parameter pertaining to IpfsClient module
   "ipfsClient": {
     "apiHost": "127.0.0.1",
@@ -64,5 +73,40 @@
   "ipfsServerMonitor": {
     "enabled": false,
     "checkInterval": 30  // Time, in seconds, defining the period within which IPFS server shall be checked to make sure it is still alive
+  },
+  // Parameters pertaining to CCFullNodeClient module
+  "ccFullNodeClient": {
+    "serverHost": "10.8.0.1", // Colored Coins Full-Node server host name/IP address (access via VPN)
+    //"serverHost": "localhost", // Colored Coins Full-Node server host name/IP address
+    "localAddress": "", // IP address of local network interface to use to connect with the Colored Coins Full-Node server. If not specified (empty string) the default network interface is used
+    "connectionTimeout": 30000  // Timeout, in miliseconds, for connection with the Colored Coins Full-Node server
+  },
+  // Parameters pertaining to CCFullNodeClient module
+  "ccMetadataClient": {
+    "serverHost": "10.8.0.1", // Colored Coins Metadata server host name/IP address (access via VPN)
+    //"serverHost": "localhost", // Colored Coins Metadata server host name/IP address
+    "tcpPort": 8180, // TCP port used to connect with the Colored Coins Metadata server
+    "tokenValidityDuration": 15, // Time, in seconds, within which JWT token is considered valid for authentication
+    "connectionTimeout": 30000  // Timeout, in miliseconds, for connection with the Colored Coins Full-Node server
+  },
+  // Parameters pertaining to CCMetadata module
+  "ccMetadata": {
+    "signingCertificateFilePath": "/Users/claudio/Documents/Híades/Clientes/Blockchain of Things/Projects/Catenis/Development/Test SSL certificate/Test_cert.pem",  // Filesystem path to Blockchain of Things' owned SSL certificate used to signed message for asset verification
+    "signingCertificateKeyFilePath": "/Users/claudio/Documents/Híades/Clientes/Blockchain of Things/Projects/Catenis/Development/Test SSL certificate/Test_encrypt_key.pem",  // Path to file containing (password protected) key of SSL certificate used to sign message for asset verification
+    "urlContentTimeout": 15000,  // Timeout, in miliseconds, fro retrieving content associated with a given URL
+    "shareAfterStoring": false  // Indicates whether metadata should be shared right after it is stored (added to Colored Coins metadata server)
+  },
+  // Parameters pertaining to BcotPayment module
+  "bcotPayment": {
+    "bcotOmniPropertyId": 2147484804  // BCOT token Omni property ID (yet to be defined for production)
+  },
+  // Parameters pertaining to SpendServiceCreditTransaction module
+  "spendServiceCreditTransaction": {
+    "maxNumClients": 12,  // Maximum number of clients that can be assigned to a single spend service credit transaction
+    "ccMetadata": {
+      "servTxidsKey": "servTxids"  // Name (key) of Colored Coins free user metadata used to refer to BCOT Token Payment transaction
+    },
+    "unconfirmedTxTimeout": 10080,  // Timeout, in minutes, for waiting for latest sent spend service credit tx to be confirmed (set to 7 days, which is half the default mempool tx eviction time of 14 days)
+    "txSizeThresholdRatio": 0.9  // Ratio that should be applied to maximum tx size to calculate threshold for spend service credit tx size. Above that size the tx fee rate should be reset so that is is confirmed as soon as possible
   }
 }

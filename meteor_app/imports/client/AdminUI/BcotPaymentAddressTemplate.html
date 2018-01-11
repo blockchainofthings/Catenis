@@ -1,0 +1,11 @@
+<template name="bcotPaymentAddress">
+    <canvas id="cnvQRCode"></canvas>
+    {{#unless Template.subscriptionsReady}}
+        <p style="color:lightgray; margin-top:1em">Loading...</p>
+    {{else}}
+        <p style="font-size:14pt; margin-top:0.5em">{{bcotPayAddress}}</p>
+        <p style="font-weight:bold; margin-bottom:0.5em">Received amount</p>
+        <label>Unconfirmed:</label> <span style="color:red">{{receivedBcotAmount.unconfirmed}}</span><br>
+        <label>Confirmed:</label> <span style="color:green">{{receivedBcotAmount.confirmed}}</span>
+    {{/unless}}
+</template>

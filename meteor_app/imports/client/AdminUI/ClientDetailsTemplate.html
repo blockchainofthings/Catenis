@@ -17,30 +17,20 @@
                 <td style="text-align:right; font-weight:bold"><label>Username:&nbsp;</label></td>
                 <td style="text-align:left">{{clientUsername client.user_id}}</td>
             </tr>
-            <tr>
-                <td style="text-align:right; vertical-align:top; font-weight:bold"><label>Message&nbsp;Credits:&nbsp;</label></td>
-                <td style="text-align:left; vertical-align:top">
-                    {{messageCredits.confirmed}}{{#if (hasUnconfirmedMessageCredits messageCredits)}}&nbsp;(<span style="color:red">{{messageCredits.unconfirmed}}</span>){{/if}}
-                    <div style="margin-top:5px">
-                        {{#if (checkAddMsgCreditsStatus 'idle')}}
-                            <a id="lnkAddMsgCredits" href="#" role="button">Add more credits</a>
-                        {{else if (checkAddMsgCreditsStatus 'data-enter')}}
-                            <input id="txiMsgCreditAmount" type="text"/>
-                            <br><button id="butAddMsgCredits" style="margin-top:0.5em">Add credits</button>
-                            &nbsp;&nbsp;<a id="lnkCancelAddMsgCredits" href="#" role="button">Cancel</a>
-                        {{else if (checkAddMsgCreditsStatus 'processing')}}
-                            <span style="color:blue">Processing. Please wait...</span>
-                        {{else if (checkAddMsgCreditsStatus 'success')}}
-                            <span>Done</span>
-                            &nbsp;&nbsp;<a id="lnkCancelAddMsgCredits" href="#" role="button">Close</a>
-                        {{else if (checkAddMsgCreditsStatus 'error')}}
-                            <span style="color:red">{{addMsgCreditsError}}</span>
-                            &nbsp;&nbsp;<a id="lnkCancelAddMsgCredits" href="#" role="button">Close</a>
-                        {{/if}}
-                    </div>
-                </td>
-            </tr>
         </table>
+        <div style="margin-top:1em">
+            <label>Service account balance:</label>&nbsp;{{serviceAccountBalance.balance}}
+            <div style="margin-top:1em">
+                {{#unless bcotPayAddress}}
+                    <a id="lnkNewBcotPayAddress" href="#" role="button">Get address to send BCOT tokens to</a>
+                {{else}}
+                    <div>
+                        (<a id="lnkDiscardAddr" href="#" role="button">discard address</a>)
+                    </div>
+                    {{> bcotPaymentAddress bcotPayAddress=bcotPayAddress}}
+                {{/unless}}
+            </div>
+        </div>
         <div style="margin-top:1em">
             {{#unless showDevices}}
                 <a id="lnkShowDevices" href="#">Show devices</a>

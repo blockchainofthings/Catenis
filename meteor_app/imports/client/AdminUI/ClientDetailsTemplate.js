@@ -29,6 +29,7 @@ import './ClientDetailsTemplate.html';
 
 // Import dependent templates
 import './DevicesTemplate.js';
+import './BcotPaymentAddressTemplate.js';
 
 
 // Module code
@@ -36,13 +37,12 @@ import './DevicesTemplate.js';
 
 Template.clientDetails.onCreated(function () {
     this.state = new ReactiveDict();
-    this.state.set('addMsgCreditsStatus', 'idle');  // Valid statuses: 'idle', 'data-enter', 'processing', 'error', 'success'
     this.state.set('showDevices', !!this.data.showDevices);
 
     // Subscribe to receive fund balance updates
     this.clientRecordSubs = this.subscribe('clientRecord', this.data.client_id);
     this.clientUserSubs = this.subscribe('clientUser', this.data.client_id);
-    this.clientMessageCreditsSubs = this.subscribe('clientMessageCredits', this.data.client_id);
+    this.serviceAccountBalanceSubs = this.subscribe('serviceAccountBalance', this.data.client_id);
 });
 
 Template.clientDetails.onDestroyed(function () {
@@ -54,52 +54,37 @@ Template.clientDetails.onDestroyed(function () {
         this.clientUserSubs.stop();
     }
 
-    if (this.clientMessageCreditsSubs) {
-        this.clientMessageCreditsSubs.stop();
+    if (this.serviceAccountBalanceSubs) {
+        this.serviceAccountBalanceSubs.stop();
     }
 });
 
 Template.clientDetails.events({
-    'click #lnkAddMsgCredits'(event, template) {
-        template.state.set('addMsgCreditsStatus', 'data-enter');
+    'click #lnkNewBcotPayAddress'(event, template) {
+        Meteor.call('newBcotPaymentAddress', template.data.client_id, (error, addr) => {
+            if (error) {
+                console.log('Error calling \'newBcotPaymentAddress\' remote method: ' + error);
+            }
+            else {
+                template.state.set('bcotPayAddress', addr);
+            }
+        });
 
         return false;
     },
-    'click #butAddMsgCredits'(event, template) {
-        const client = Catenis.db.collection.Client.findOne({_id: Template.instance().data.client_id});
-
-        const fieldCreditsCount = template.$('#txiMsgCreditAmount')[0];
-        const creditsCount = parseInt(fieldCreditsCount.value);
-
-        if (!isNaN(creditsCount)) {
-            // Call remote method to add message credits
-            Meteor.call('addMessageCredits', client.clientId, creditsCount, (error) => {
-                if (error) {
-                    template.state.set('addMsgCreditsError', error.toString());
-                    template.state.set('addMsgCreditsStatus', 'error');
-                }
-                else {
-                    template.state.set('addMsgCreditsStatus', 'success');
-                }
-            });
-
-            template.state.set('addMsgCreditsStatus', 'processing');
+    'click #lnkDiscardAddr'(event, template) {
+        if (confirm('Are you sure you want to discard this address?')) {
+            template.state.set('bcotPayAddress', undefined);
         }
-        else {
-            fieldCreditsCount.value = null;
-        }
-    },
-    'click #lnkCancelAddMsgCredits'(event, template) {
-        template.state.set('addMsgCreditsStatus', 'idle');
 
         return false;
     },
-    'click #lnkShowDevices'(events, template) {
+    'click #lnkShowDevices'(event, template) {
         template.state.set('showDevices', true);
 
         return false;
     },
-    'click #lnkHideDevices'(events, template) {
+    'click #lnkHideDevices'(event, template) {
         template.state.set('showDevices', false);
 
         return false;
@@ -115,41 +100,13 @@ Template.clientDetails.helpers({
 
         return user ? user.username : undefined;
     },
-    messageCredits: function () {
-        return Catenis.db.collection.MessageCredits.findOne(1);
-    },
-    hasUnconfirmedMessageCredits: function (messageCredits) {
-        return messageCredits && messageCredits.unconfirmed > 0;
-    },
-    // compareOper: valid values: 'equal'/'any-of', 'not-equal'/'none-of'
-    checkAddMsgCreditsStatus: function (status, compareOper) {
-        compareOper = compareOper && (Array.isArray(status) ? 'all-of' : 'equal');
-        const currentStatus = Template.instance().state.get('addMsgCreditsStatus');
-        let result = false;
-
-        if (compareOper === 'equal' || compareOper === 'any-of') {
-            if (Array.isArray(status)) {
-                result = status.some((stat) => stat === currentStatus);
-            }
-            else {
-                result = status === currentStatus;
-            }
-        }
-        else if (compareOper === 'not-equal' || compareOper === 'none-of') {
-            if (Array.isArray(status)) {
-                result = !status.some((stat) => stat === currentStatus);
-            }
-            else {
-                result = status !== currentStatus;
-            }
-        }
-
-        return result;
-    },
-    addMsgCreditsError: function () {
-        return Template.instance().state.get('addMsgCreditsError');
-    },
     showDevices: function () {
         return Template.instance().state.get('showDevices');
+    },
+    serviceAccountBalance() {
+        return Catenis.db.collection.ServiceAccountBalance.findOne(1);
+    },
+    bcotPayAddress() {
+        return Template.instance().state.get('bcotPayAddress');
     }
 });

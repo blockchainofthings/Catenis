@@ -684,12 +684,21 @@ BitcoinCore.prototype.listTransactions = function (count, from) {
     }
 };
 
-BitcoinCore.prototype.getMempoolEntry = function (txid) {
+BitcoinCore.prototype.getMempoolEntry = function (txid, logError = true) {
     try {
         return this.rpcApi.command('getmempoolentry', txid);
     }
     catch (err) {
-        handleError('getmempoolentry', err);
+        handleError('getmempoolentry', err, logError);
+    }
+};
+
+BitcoinCore.prototype.abandonTransaction = function (txid) {
+    try {
+        return this.rpcApi.command('abandontransaction', txid);
+    }
+    catch (err) {
+        handleError('abandontransaction', err);
     }
 };
 

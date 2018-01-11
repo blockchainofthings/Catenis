@@ -21,7 +21,6 @@ import { Meteor } from 'meteor/meteor';
 
 // References code in other (Catenis) modules
 import { Catenis } from './Catenis';
-import { cfgSettings as deviceCfgSettings } from './Device';
 import { CatenisMessage } from './CatenisMessage';
 import { CatenisNode } from './CatenisNode';
 import { Device } from './Device';
@@ -31,8 +30,7 @@ import { Service } from './Service';
 import { Transaction } from './Transaction';
 import {
     getAddrAndAddrInfo,
-    areAddressesFromSameDevice,
-    areAddressesFromSameClient
+    areAddressesFromSameDevice
 } from './SendMessageTransaction';
 
 // Definition of function classes
@@ -53,6 +51,24 @@ import {
 // NOTE: make sure that objects of this function class are instantiated and used (their methods
 //  called) from code executed from the FundSource.utxoCS critical section object
 export function LogMessageTransaction(device, message, options) {
+    // Properties definition
+    Object.defineProperties(this, {
+        txid: {
+            get: function () {
+                // noinspection JSPotentiallyInvalidUsageOfThis
+                return this.transact.txid;
+            },
+            enumerable: true
+        },
+        innerTransact: {
+            get: function () {
+                // noinspection JSPotentiallyInvalidUsageOfThis
+                return this.transact;
+            },
+            enumerable: true
+        }
+    });
+
     if (device !== undefined) {
         // Validate arguments
         const errArg = {};
@@ -95,7 +111,7 @@ LogMessageTransaction.prototype.buildTransaction = function () {
         // Add transaction inputs
 
         // Prepare to add device main address input
-        const devMainAddrFundSource = new FundSource(this.device.mainAddr.listAddressesInUse(), {});
+        const devMainAddrFundSource = new FundSource(this.device.mainAddr.listAddressesInUse(), {unconfUtxoInfo: {}});
         const devMainAddrBalance = devMainAddrFundSource.getBalance();
         const devMainAddrAllocResult = devMainAddrFundSource.allocateFund(Service.devMainAddrAmount);
 
@@ -124,33 +140,6 @@ LogMessageTransaction.prototype.buildTransaction = function () {
 
         // Add device main address input
         this.transact.addInput(devMainAddrAllocUtxo.txout, devMainAddrAllocUtxo.address, devMainAddrInfo);
-
-        // Prepare to add client message credit input
-        const clntMsgCreditAddrFundSource = new FundSource(this.device.client.messageCreditAddr.listAddressesInUse(), {});
-        const clntMsgCreditAddrAllocResult = clntMsgCreditAddrFundSource.allocateFund(Service.clientServiceCreditAmount);
-
-        // Make sure that UTXOs have been correctly allocated
-        if (clntMsgCreditAddrAllocResult === null) {
-            // No UTXO available to be allocated. Log error condition and throw exception
-            Catenis.logger.ERROR(util.format('No UTXO available to be allocated for client (Id: %s) message credit addresses', this.device.client.clientId));
-            throw new Meteor.Error('ctn_log_msg_no_utxo_msg_credit', util.format('No UTXO available to be allocated for client (Id: %s) message credit addresses', this.device.client.clientId));
-        }
-
-        if (clntMsgCreditAddrAllocResult.utxos.length !== 1) {
-            // An unexpected number of UTXOs have been allocated.
-            // Log error condition and throw exception
-            Catenis.logger.ERROR(util.format('An unexpected number of UTXOs have been allocated for client (Id: %s) message credit addresses', this.device.client.clientId), {
-                expected: 1,
-                allocated: clntMsgCreditAddrAllocResult.utxos.length
-            });
-            throw new Meteor.Error('ctn_log_msg_utxo_alloc_error', util.format('An unexpected number of UTXOs have been allocated for client (Id: %s) message credit addresses: expected: 1, allocated: %d', this.device.client.clientId, clntMsgCreditAddrAllocResult.utxos.length));
-        }
-
-        const clntMsgCreditAddrAllocUtxo = clntMsgCreditAddrAllocResult.utxos[0];
-        const clntMsgCreditAddrInfo = Catenis.keyStore.getAddressInfo(clntMsgCreditAddrAllocUtxo.address);
-
-        // Add client message credit address input
-        this.transact.addInput(clntMsgCreditAddrAllocUtxo.txout, clntMsgCreditAddrAllocUtxo.address, clntMsgCreditAddrInfo);
 
         // Add transaction outputs
 
@@ -192,16 +181,11 @@ LogMessageTransaction.prototype.buildTransaction = function () {
             this.transact.addP2PKHOutput(this.device.mainAddr.newAddressKeys().getAddress(), devMainAddrAllocResult.changeAmount);
         }
 
-        // NOTE: we do not care to check if change is not below dust amount because it is guaranteed
-        //      that the change amount be a multiple of the basic amount that is allocated to client
-        //      message credit addresses which in turn is guaranteed to not be below dust
-        if (clntMsgCreditAddrAllocResult.changeAmount > 0) {
-            // Add client message credit address change output
-            this.transact.addP2PKHOutput(this.device.client.messageCreditAddr.newAddressKeys().getAddress(), clntMsgCreditAddrAllocResult.changeAmount);
-        }
-
         // Now, allocate UTXOs to pay for tx expense
-        const payTxFundSource = new FundSource(Catenis.ctnHubNode.payTxExpenseAddr.listAddressesInUse(), {});
+        const payTxFundSource = new FundSource(Catenis.ctnHubNode.payTxExpenseAddr.listAddressesInUse(), {
+            unconfUtxoInfo: {},
+            smallestChange: true
+        });
         const payTxAllocResult = payTxFundSource.allocateFundForTxExpense({
             txSize: this.transact.estimateSize(),
             inputAmount: this.transact.totalInputsAmount(),
@@ -247,8 +231,7 @@ LogMessageTransaction.prototype.sendTransaction = function () {
             deviceId: this.device.deviceId
         });
 
-        // Spend client message credit
-        this.device.client.spendMessageCredit(deviceCfgSettings.creditsToLogMessage);
+        // TODO: issue either Spend Service Credit or Debit Service Account transaction to account for the service payment
 
         // Check if system pay tx expense addresses need to be refunded
         Catenis.ctnHubNode.checkPayTxExpenseFundingBalance();
@@ -295,13 +278,11 @@ LogMessageTransaction.checkTransaction = function (transact) {
         //  NOTE: no need to check if the variables below are non-null because the transact.matches()
         //      result above already guarantees it
         const devMainAddr = getAddrAndAddrInfo(transact.getInputAt(0));
-        const clntMsgCreditAddr = getAddrAndAddrInfo(transact.getInputAt(1));
 
         let devMainRefundChangeAddr1 = undefined;
         let devMainRefundChangeAddr2 = undefined;
-        let clntMsgCreditChangeAddr = undefined;
 
-        for (let pos = 1; pos <= 3; pos++) {
+        for (let pos = 1; pos <= 2; pos++) {
             const output = transact.getOutputAt(pos);
             if (output !== undefined) {
                 const outputAddr = getAddrAndAddrInfo(output.payInfo);
@@ -313,15 +294,11 @@ LogMessageTransaction.checkTransaction = function (transact) {
                         devMainRefundChangeAddr2 = outputAddr;
                     }
                 }
-                else if (outputAddr.addrInfo.type === KeyStore.extKeyType.cln_msg_crd_addr.name) {
-                    clntMsgCreditChangeAddr = outputAddr;
-                }
             }
         }
 
         if ((devMainRefundChangeAddr1 === undefined || (devMainRefundChangeAddr1.address !== devMainAddr.address && areAddressesFromSameDevice(devMainRefundChangeAddr1.addrInfo, devMainAddr.addrInfo))) &&
-                (devMainRefundChangeAddr2 === undefined || (devMainRefundChangeAddr2.address !== devMainAddr.address && areAddressesFromSameDevice(devMainRefundChangeAddr2.addrInfo, devMainAddr.addrInfo))) &&
-                (clntMsgCreditChangeAddr === undefined || (clntMsgCreditChangeAddr.address !== clntMsgCreditAddr.address && areAddressesFromSameClient(clntMsgCreditChangeAddr.addrInfo, clntMsgCreditAddr.addrInfo)))) {
+                (devMainRefundChangeAddr2 === undefined || (devMainRefundChangeAddr2.address !== devMainAddr.address && areAddressesFromSameDevice(devMainRefundChangeAddr2.addrInfo, devMainAddr.addrInfo)))) {
             // Now, check if data in null data output is correctly formatted
             let ctnMessage = undefined;
 
@@ -330,7 +307,7 @@ LogMessageTransaction.checkTransaction = function (transact) {
             }
             catch(err) {
                 if (!(err instanceof Meteor.Error) || err.error !== 'ctn_msg_data_parse_error') {
-                    // An exception other than an indication that null data is not correctedly formatted.
+                    // An exception other than an indication that null data is not correctly formatted.
                     //  Just re-throws it
                     throw err;
                 }
@@ -389,14 +366,12 @@ LogMessageTransaction.checkTransaction = function (transact) {
 //
 
 LogMessageTransaction.matchingPattern = Object.freeze({
-    input: util.format('^(?:%s)(?:%s)(?:%s)+$',
+    input: util.format('^(?:%s)(?:%s)+$',
         Transaction.ioToken.p2_dev_main_addr.token,
-        Transaction.ioToken.p2_cln_msg_crd_addr.token,
         Transaction.ioToken.p2_sys_pay_tx_exp_addr.token),
-    output: util.format('^(?:%s)(?:%s){0,2}(?:%s)?(?:%s)?$',
+    output: util.format('^(?:%s)(?:%s){0,2}(?:%s)?$',
         Transaction.ioToken.null_data.token,
         Transaction.ioToken.p2_dev_main_addr.token,
-        Transaction.ioToken.p2_cln_msg_crd_addr.token,
         Transaction.ioToken.p2_sys_pay_tx_exp_addr.token)
 });
 

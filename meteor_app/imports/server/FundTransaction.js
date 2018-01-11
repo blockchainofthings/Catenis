@@ -13,7 +13,7 @@
 //  NOTE: the reference of these modules are done sing 'require()' instead of 'import' to
 //      to avoid annoying WebStorm warning message: 'default export is not defined in
 //      imported module'
-const util = require('util');
+//const util = require('util');
 // Third-party node modules
 //import config from 'config';
 // Meteor packages
@@ -32,9 +32,8 @@ import { Transaction } from './Transaction';
 //
 //  Constructor arguments:
 //    fundingEvent: [Object] // Object of type FundTransaction.fundingEvent identifying the funding event
-//    entityId: [string] (optional) // Should be specified only for 'provision_client_srv_credit' and 'provision_client_device'
-//                                      funding events. For the first case, it must match a valid client Id, and, for the
-//                                      second case, it must match a valid device Id
+//    entityId: [string] (optional) // Should be specified only for 'provision_client_device' funding events,
+//                                      and it must match a valid device Id
 //
 // NOTE: make sure that objects of this function class are instantiated and used (their methods
 //  called) from code executed from the FundSource.utxoCS critical section object
@@ -46,28 +45,18 @@ export function FundTransaction(fundingEvent, entityId) {
     }
 
     // Validate entity ID argument
-    if (fundingEvent.name === FundTransaction.fundingEvent.provision_client_srv_credit || fundingEvent.name === FundTransaction.fundingEvent.provision_client_device) {
+    if (fundingEvent.name === FundTransaction.fundingEvent.provision_client_device) {
         if (entityId === undefined) {
             Catenis.logger.ERROR('FundTransaction function class constructor called with invalid argument; missing entity ID');
             throw Error('Invalid entityId argument');
         }
         else {
             // Make sure that entity ID is a valid reference to the right entity
-            if (fundingEvent.name === FundTransaction.fundingEvent.provision_client_srv_credit) {
-                const docClient = Catenis.db.collection.Client.find({clientId: entityId}, {fields: {_id: 1}}).fetch();
+            const docDevice = Catenis.db.collection.Device.find({deviceId: entityId}, {fields: {_id: 1}}).fetch();
 
-                if (docClient === undefined) {
-                    Catenis.logger.ERROR('FundTransaction function class constructor called with invalid argument; entity ID not a valid client Id', {entityId: entityId});
-                    throw Error('Invalid entityId argument');
-                }
-            }
-            else {
-                const docDevice = Catenis.db.collection.Client.find({deviceId: entityId}, {fields: {_id: 1}}).fetch();
-
-                if (docDevice === undefined) {
-                    Catenis.logger.ERROR('FundTransaction function class constructor called with invalid argument; entity ID not a valid client Id', {entityId: entityId});
-                    throw Error('Invalid entityId argument');
-                }
+            if (docDevice === undefined) {
+                Catenis.logger.ERROR('FundTransaction function class constructor called with invalid argument; entity ID not a valid device Id', {entityId: entityId});
+                throw Error('Invalid entityId argument');
             }
         }
     }
@@ -83,15 +72,19 @@ export function FundTransaction(fundingEvent, entityId) {
 // Public FundTransaction object methods
 //
 
-//  blockchainAddress: [BlockchainAddress object]    // Object used to generate addresses to receive payment
-//  amountPerAddress: [Array]    // List of amount to be assigned to each individual address
+//  Arguments:
+//   blockchainAddress: [BlockchainAddress object] - Object used to generate addresses to receive payment
+//   amountPerAddress: [Array] - List of amount to be assigned to each individual address
+//   singleAddress: [Boolean] - Indicates whether the last issued blockchain address should be used instead of issuing new ones
 //
-FundTransaction.prototype.addPayees = function (blockchainAddress, amountPerAddress) {
+FundTransaction.prototype.addPayees = function (blockchainAddress, amountPerAddress, useLastAddress = false) {
     // Prepare list of outputs to be added to transaction by generating
     //  new addresses and associating them with the respective amount
+    const lastAddress = useLastAddress ? blockchainAddress.lastAddressKeys().getAddress() : undefined;
+
     const payInfos = amountPerAddress.map((amount) => {
         return {
-            address: blockchainAddress.newAddressKeys().getAddress(),
+            address: useLastAddress ? lastAddress : blockchainAddress.newAddressKeys().getAddress(),
             amount: amount
         }
     });
@@ -106,7 +99,10 @@ FundTransaction.prototype.addPayingSource = function () {
     let result = false;
 
     if (!this.fundsAllocated) {
-        const fundSrc = new FundSource(Catenis.ctnHubNode.listFundingAddressesInUse(), {});
+        const fundSrc = new FundSource(Catenis.ctnHubNode.listFundingAddressesInUse(), {
+            unconfUtxoInfo: {},
+            smallestChange: true
+        });
 
         // Try to allocate UTXOs to pay for tx expense using optimum fee rate and default
         //  payment resolution
@@ -197,13 +193,17 @@ FundTransaction.fundingEvent = Object.freeze({
         name: 'provision_system_device',
         description: 'Provision system device'
     }),
-    provision_client_srv_credit: Object.freeze({
-        name: 'provision_client_srv_credit',
-        description: 'Provision of client service credit'
+    provision_service_credit_issuance: Object.freeze({
+        name: 'provision_service_credit_issuance',
+        description: 'Provision system for service credit issuance'
     }),
     provision_client_device: Object.freeze({
         name: 'provision_client_device',
         description: 'Provision of client device'
+    }),
+    add_extra_service_payment_tx_pay_funds: Object.freeze({
+        name: 'add_extra_service_payment_tx_pay_funds',
+        description: 'Add extra fund for service payment pay tx expense'
     }),
     add_extra_tx_pay_funds: Object.freeze({
         name: 'add_extra_tx_pay_funds',
