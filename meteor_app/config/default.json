@@ -24,7 +24,8 @@
       "active": true,
       "logLevel": "DEBUG", // Valid options: ALL, TRACE, DEBUG, INFO, WARN, ACTION, ERROR, FATAL
       "logDir": "log",
-      "logFilename": "catenis.log"
+      "logFilename": "catenis.log",
+      "maxDays": 90
     },
     "email": {
       "active": true,

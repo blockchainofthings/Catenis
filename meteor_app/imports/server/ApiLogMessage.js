@@ -110,7 +110,7 @@ export function logMessage() {
         let msg;
 
         try {
-            msg = new Buffer(this.bodyParams.message, optEncoding);
+            msg = Buffer.from(this.bodyParams.message, optEncoding);
         }
         catch (err) {
             let error;

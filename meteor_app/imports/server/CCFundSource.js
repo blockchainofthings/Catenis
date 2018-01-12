@@ -93,6 +93,7 @@ export function CCFundSource(ccAssetId, addresses, options) {
     //      descendantsSize: [number]   // Should only exist for confirmations = 0
     //  }
     this.db = new Loki();
+    // noinspection JSCheckFunctionSignatures
     this.collUtxo = this.db.addCollection('UTXO', {
         unique: [
             'txout'
@@ -355,6 +356,7 @@ CCFundSource.prototype.clearAllocatedUtxos = function () {
     const docAllocatedUtxos = this.collUtxo.find({allocated: true});
 
     if (docAllocatedUtxos.length > 0) {
+        // noinspection JSCheckFunctionSignatures
         docAllocatedUtxos.forEach((docUtxo) => {
             docUtxo.allocated = false;
         });

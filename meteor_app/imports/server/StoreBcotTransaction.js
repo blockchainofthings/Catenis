@@ -112,7 +112,7 @@ StoreBcotTransaction.prototype.buildTransaction = function () {
         const omniData = Catenis.omniCore.omniCreatePayloadSimpleSend(BcotPayment.bcotOmniPropertyId, new BigNumber(this.amount).dividedBy(100000000).toString());
 
         // Add null data output
-        this.transact.addNullDataOutput(Buffer.concat([new Buffer(cfgSettings.omniDataPrefix), new Buffer(omniData, 'hex')]));
+        this.transact.addNullDataOutput(Buffer.concat([Buffer.from(cfgSettings.omniDataPrefix), Buffer.from(omniData, 'hex')]));
 
         // Add BCOT store address output
         this.transact.addP2PKHOutput(BcotPayment.storeBcotAddress, cfgSettings.bcotStoreAddrAmount);

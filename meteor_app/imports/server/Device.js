@@ -2,7 +2,6 @@
  * Created by claudio on 23/06/16.
  */
 
-
 //console.log('[Device.js]: This code just ran.');
 
 // Module variables

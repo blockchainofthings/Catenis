@@ -72,7 +72,7 @@ ParseRequestBody.parser = function (req, res, next) {
             }
             else {
                 // Assume that request has no payload
-                req.rawBody = new Buffer('');
+                req.rawBody = Buffer.from('');
             }
 
             next();

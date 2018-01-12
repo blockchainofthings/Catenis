@@ -48,7 +48,7 @@ export class IpfsMessageStorage extends MessageStorage {
             let addResult = Catenis.ipfsClient.api.filesAdd(message)[0];
 
             // Prepare to return combined message reference
-            let msgRef = new Buffer(addResult.hash.length + msgHash.length + 2);
+            let msgRef = Buffer.allocUnsafe(addResult.hash.length + msgHash.length + 2);
 
             // Write size of IPFS hash onto message reference
             let bytesWritten = msgRef.writeUInt8(addResult.hash.length, 0);
@@ -104,7 +104,7 @@ export class IpfsMessageStorage extends MessageStorage {
             bytesRead++;
 
             // Read message hash itself
-            let msgHash = new Buffer(msgHashLength);
+            let msgHash = Buffer.allocUnsafe(msgHashLength);
             let bytesCopied = msgRef.copy(msgHash, 0, bytesRead, bytesRead + msgHashLength);
 
             if (bytesCopied !== msgHashLength) {
@@ -119,7 +119,7 @@ export class IpfsMessageStorage extends MessageStorage {
 
             dataReader.on('data', (data) => {
                 if (!Buffer.isBuffer(data)) {
-                    data = new Buffer(data);
+                    data = Buffer.from(data);
                 }
 
                 if (message === undefined) {

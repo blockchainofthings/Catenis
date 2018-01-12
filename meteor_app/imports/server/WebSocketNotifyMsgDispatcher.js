@@ -21,6 +21,7 @@ import config from 'config';
 import WebSocket from 'ws';
 // Meteor packages
 import { Meteor } from 'meteor/meteor';
+// noinspection NpmUsedModulesInstalled
 import { WebApp } from 'meteor/webapp';
 
 // References code in other (Catenis) modules
@@ -271,7 +272,7 @@ function processIncomingMessage(ws, message) {
                 connInfo.req.headers[Authentication.timestampHeader] = parsedData[Authentication.timestampHeader];
                 connInfo.req.headers[authHeader] = parsedData[authHeader];
                 // Make sure that required rawBody property exists
-                connInfo.req.rawBody = connInfo.req.rawBody || new Buffer('');
+                connInfo.req.rawBody = connInfo.req.rawBody || Buffer.from('');
 
                 const authResult = authenticateDevice(connInfo.req);
 

@@ -397,7 +397,7 @@ function getSignedMessage(message) {
             inkey: cfgSettings.signingCertificateKeyFilePath,
             passin: 'pass:' + this.certificateKeyPsw
         };
-        signedMsg = opensslSync('cms.sign', new Buffer(message), opts);
+        signedMsg = opensslSync('cms.sign', Buffer.from(message), opts);
     }
     catch (err) {
         Catenis.logger.ERROR('Error executing openssl to sign message for asset verification.', err);
@@ -452,7 +452,7 @@ function parseUserData(userData, decCryptoKeys) {
                 if (decCryptoKeys && key.startsWith(cfgSettings.encryptedUserDataKeyPrefix) && key.length > cfgSettings.encryptedUserDataKeyPrefix.length
                         && typeof data === 'string') {
                     try {
-                        data = decCryptoKeys.decryptData(decCryptoKeys, new Buffer(data, 'base64'));
+                        data = decCryptoKeys.decryptData(decCryptoKeys, Buffer.from(data, 'base64'));
                     }
                     catch (err) {
                         Catenis.logger.ERROR(util.format('Error trying to decrypt Colored Coins user data (key: %s, value: %s).', key, userData[key]), err);

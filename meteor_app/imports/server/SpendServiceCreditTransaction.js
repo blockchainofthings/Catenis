@@ -345,7 +345,7 @@ SpendServiceCreditTransaction.prototype.payForService = function (client, servic
         }
 
         const ccMetadata = new CCMetadata();
-        ccMetadata.setFreeUserData(cfgSettings.ccMetadata.servTxidsKey, new Buffer(JSON.stringify(newServiceTxids)), true);
+        ccMetadata.setFreeUserData(cfgSettings.ccMetadata.servTxidsKey, Buffer.from(JSON.stringify(newServiceTxids)), true);
         Catenis.logger.DEBUG('>>>>>> New spend service credit Colored Coins metadata', {
             newServiceTxids: newServiceTxids,
             ccMetadata: ccMetadata

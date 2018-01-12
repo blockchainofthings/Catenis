@@ -73,7 +73,7 @@ export function Application() {
     // TODO: IMPORTANT: avoid using this seed directly as the base for creating other cryptographically generated data, especially the one that shall be shared with other Catenis nodes. Instead, this seed should be used to generated other specific seeds by hashing it. Then only the specific seed shall be shared and not the base Catenis application see
     Object.defineProperty(this, 'seed', {
         get: function () {
-            return decryptSeed(new Buffer(encData, 'base64'));
+            return decryptSeed(Buffer.from(encData, 'base64'));
         }
     });
 
@@ -83,7 +83,7 @@ export function Application() {
             const seed = this.seed,
                 seedLength = seed.length,
                 pswLength = seedLength < cfgSettings.walletPswLength ? seedLength : cfgSettings.walletPswLength,
-                psw = new Buffer(pswLength);
+                psw = Buffer.allocUnsafe(pswLength);
 
             for (let idx = 0; idx < pswLength; idx++) {
                 psw[idx] = seed[idx % 2 === 0 ? idx / 2 : seedLength - Math.floor(idx / 2) - 1]
@@ -355,7 +355,7 @@ Application.processingStatus = Object.freeze({
 //  and returns a buffer with the deciphered data
 function decryptSeed(encData) {
     const x = [ 78, 87, 108, 79, 77, 49, 82, 65, 89, 122, 69, 122, 75, 71, 103, 104, 84, 121, 115, 61],
-        dec = crypto.createDecipher('des-ede3-cbc', (new Buffer((new Buffer(x)).toString(), 'base64')).toString());
+        dec = crypto.createDecipher('des-ede3-cbc', Buffer.from(Buffer.from(x).toString(), 'base64').toString());
 
     const decBuf1 = dec.update(encData),
         decBuf2 = dec.final();

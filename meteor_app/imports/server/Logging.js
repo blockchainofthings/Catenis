@@ -60,7 +60,8 @@ const cfgSettings = {
         active: logFileConfig.get('active'),
         logLevel: logFileConfig.has('logLevel') && (logFileConfig.get('logLevel') in log4jLevels) ? logFileConfig.get('logLevel') : 'ALL',
         logDir: logFileConfig.get('logDir'),
-        logFilename: logFileConfig.get('logFilename')
+        logFilename: logFileConfig.get('logFilename'),
+        maxDays: logFileConfig.get('maxDays')
     },
     email: {
         active: logEmailConfig.get('active'),
@@ -107,6 +108,7 @@ const consoleTranspParams = {
         exceptionsLevel: 'FATAL',
         humanReadableUnhandledException: true,
         filename: path.join(process.env.PWD, cfgSettings.file.logDir, cfgSettings.file.logFilename),
+        maxDays: cfgSettings.file.maxDays,
         json: false,
         prettyPrint: true
     },
@@ -129,7 +131,7 @@ const consoleTranspParams = {
 //
 
 // Complement logging transport parameters
-if (cfgSettings.email.secureProto != undefined) {
+if (cfgSettings.email.secureProto !== undefined) {
     if (cfgSettings.email.secureProto === 'ssl') {
         emailTranspParams.ssl = true;
     }
@@ -138,15 +140,15 @@ if (cfgSettings.email.secureProto != undefined) {
     }
 }
 
-if (cfgSettings.email.smtpPort != undefined && typeof cfgSettings.email.smtpPort === 'number') {
+if (cfgSettings.email.smtpPort !== undefined && typeof cfgSettings.email.smtpPort === 'number') {
     emailTranspParams.port = cfgSettings.email.smtpPort;
 }
 
-if (cfgSettings.email.username != undefined) {
+if (cfgSettings.email.username !== undefined) {
     emailTranspParams.username = cfgSettings.email.username;
 }
 
-if (cfgSettings.email.password != undefined) {
+if (cfgSettings.email.password !== undefined) {
     emailTranspParams.password = cfgSettings.email.password;
 }
 
@@ -189,7 +191,7 @@ Catenis.logger.filters.push(function (level, msg, meta, inst) {
                 prefix += ']';
             }
 
-            if (msg != undefined && msg != null && msg.length > 0) {
+            if (msg !== undefined && msg != null && msg.length > 0) {
                 // Get white spaces from beginning of message
                 let spaces = '';
                 const match = msg.match(/^\s*/);

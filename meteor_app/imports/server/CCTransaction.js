@@ -1061,11 +1061,11 @@ CCTransaction.prototype.assemble = function (spendMultiSigOutputAddress) {
             if (this.includesMultiSigOutput) {
                 // Add multi-signature output
                 const pubKeys = [
-                    spendMultiSigOutputAddress !== undefined ? spendMultiSigOutputAddress : Buffer.concat([new Buffer('03', 'hex'), Buffer.alloc(txCfgSettings.pubKeySize - 1, 0xff)]).toString('hex')
+                    spendMultiSigOutputAddress !== undefined ? spendMultiSigOutputAddress : Buffer.concat([Buffer.from('03', 'hex'), Buffer.allocUnsafe(txCfgSettings.pubKeySize - 1, 0xff)]).toString('hex')
                 ];
 
                 ccResult.leftover.forEach((buf) => {
-                    pubKeys.push(Buffer.concat([new Buffer('03', 'hex'), Buffer.alloc(txCfgSettings.pubKeySize - buf.length - 1, 0), buf]).toString('hex'));
+                    pubKeys.push(Buffer.concat([Buffer.from('03', 'hex'), Buffer.allocUnsafe(txCfgSettings.pubKeySize - buf.length - 1, 0), buf]).toString('hex'));
                 });
 
                 this.addMultiSigOutput(pubKeys, 1, pubKeys.length > 2 ? txCfgSettings.oneOf3multiSigTxOutputDustAmount : txCfgSettings.oneOf2MultiSigTxOutputDustAmount, 0);
@@ -1698,7 +1698,7 @@ function getAssetId(txout, address, issuingOpts) {
 //  Return:
 //   result: [Object(CCBuilder)] - CCBuilder object containing  decoded Colored Coins data or undefined if supplied data is not valid
 function checkColoredCoinsData(ccData) {
-    const ccHeader = new Buffer(cfgSettings.ccProtocolPrefix + cfgSettings.ccVersionByte, 'hex');
+    const ccHeader = Buffer.from(cfgSettings.ccProtocolPrefix + cfgSettings.ccVersionByte, 'hex');
 
     if (ccData.length > ccHeader.length && ccData.slice(0, ccHeader.length).equals(ccHeader)) {
         try {

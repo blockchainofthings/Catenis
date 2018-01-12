@@ -60,7 +60,7 @@ export function CatenisMessage(message, funcByte, options) {
         this.funcByte = funcByte;
         this.options = {};
 
-        this.data = new Buffer(cfgSettings.nullDataMaxSize);
+        this.data = Buffer.allocUnsafe(cfgSettings.nullDataMaxSize);
 
         // Write message prefix
         let bytesWritten = this.data.write(msgPrefix);
@@ -99,7 +99,7 @@ export function CatenisMessage(message, funcByte, options) {
             const msgStorage = CatenisMessage.getMessageStorageInstance(this.options.storageProvider);
             this.extMsgRef = msgStorage.store(message);
 
-            this.msgPayload = new Buffer(this.extMsgRef.length + 1);
+            this.msgPayload = Buffer.allocUnsafe(this.extMsgRef.length + 1);
 
             this.msgPayload.writeUInt8(this.options.storageProvider.byteCode, 0);
             this.extMsgRef.copy(this.msgPayload, 1);
@@ -113,7 +113,7 @@ export function CatenisMessage(message, funcByte, options) {
             if (bytesWritten < this.data.length) {
                 // Trim data buffer
                 this.msgPayload = this.data;
-                this.data = new Buffer(bytesWritten);
+                this.data = Buffer.allocUnsafe(bytesWritten);
                 this.msgPayload.copy(this.data, 0, 0, bytesWritten);
             }
         }
@@ -319,7 +319,7 @@ CatenisMessage.fromData = function (data, logError = true) {
         bytesRead++;
 
         // Read message payload
-        const msgPayload = new Buffer(data.length - bytesRead);
+        const msgPayload = Buffer.allocUnsafe(data.length - bytesRead);
 
         data.copy(msgPayload, 0, bytesRead);
 
@@ -344,7 +344,7 @@ CatenisMessage.fromData = function (data, logError = true) {
             options.storageProvider = storageProvider;
 
             // Read message reference
-            extMsgRef = new Buffer(msgPayload.length - 1);
+            extMsgRef = Buffer.allocUnsafe(msgPayload.length - 1);
 
             msgPayload.copy(extMsgRef, 0, 1);
 

@@ -206,7 +206,7 @@ CreditServiceAccTransaction.prototype.buildTransaction = function () {
                 });
 
                 // Add BCOT payment transaction ID to Colored Coins metadata
-                this.servCredCcMetadata.setFreeUserData(cfgSettings.ccMetadata.bcotPayTxidKey, new Buffer(this.bcotPayTxid), true);
+                this.servCredCcMetadata.setFreeUserData(cfgSettings.ccMetadata.bcotPayTxidKey, Buffer.from(this.bcotPayTxid), true);
             }
 
             // Add Colored Coins asset metadata

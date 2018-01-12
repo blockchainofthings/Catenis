@@ -365,7 +365,7 @@ Transaction.prototype.addNullDataOutput = function (data, pos) {
 
     if (!this.hasNullDataOutput) {
         if (!Buffer.isBuffer(data)) {
-            data = new Buffer(data);
+            data = Buffer.from(data);
         }
 
         this.addOutputs({
@@ -385,7 +385,7 @@ Transaction.prototype.resetNullDataOutput = function (data) {
 
     if (this.hasNullDataOutput) {
         if (!Buffer.isBuffer(data)) {
-            data = new Buffer(data);
+            data = Buffer.from(data);
         }
 
         this.getNullDataOutput().data = data;
@@ -722,7 +722,7 @@ Transaction.prototype.getTransaction = function () {
                     }
                     else {
                         // It is actually a public key. So, just return it
-                        return new Buffer(addrInfo, 'hex');
+                        return Buffer.from(addrInfo, 'hex');
                     }
                 });
 
@@ -1332,7 +1332,7 @@ Transaction.parse = function (serializedTx) {
             }
         }
         else if (output.type === Transaction.outputType.nullData) {
-            const dataBuf = new Buffer(output.data, 'base64');
+            const dataBuf = Buffer.from(output.data, 'base64');
 
             convOutput = {
                 type: output.type,
@@ -1513,7 +1513,7 @@ Transaction.fromHex = function (hexTx) {
                 }
                 else if (output.scriptPubKey.type === 'nulldata') {
                     txOutput.type = Transaction.outputType.nullData;
-                    txOutput.data = bitcoinLib.script.decompile(new Buffer(output.scriptPubKey.hex, 'hex'))[1];
+                    txOutput.data = bitcoinLib.script.decompile(Buffer.from(output.scriptPubKey.hex, 'hex'))[1];
 
                     // Add information about null data
                     tx.hasNullDataOutput = true;
@@ -1521,7 +1521,7 @@ Transaction.fromHex = function (hexTx) {
                 }
                 else if (output.scriptPubKey.type === 'multisig') {
                     // Multi-signature output. Decode scriptPubKey to get public keys
-                    const decodedScript = bitcoinLib.script.multisig.output.decode(new Buffer(output.scriptPubKey.hex, 'hex'));
+                    const decodedScript = bitcoinLib.script.multisig.output.decode(Buffer.from(output.scriptPubKey.hex, 'hex'), false);
 
                     txOutput.type = Transaction.outputType.multisig;
                     txOutput.payInfo = {
@@ -1982,7 +1982,7 @@ function isTransactFuncClassToMatch(transactFuncClass) {
 //        and adjusts the pubic key before importing it, and we would end up producing a
 //        blockchain address that did not match our fabricated public key.
 function addressFromPublicKey(pubKey) {
-    return bitcoinLib.address.toBase58Check(bitcoinLib.crypto.hash160(new Buffer(pubKey, 'hex')), Catenis.application.cryptoNetwork.pubKeyHash);
+    return bitcoinLib.address.toBase58Check(bitcoinLib.crypto.hash160(Buffer.from(pubKey, 'hex')), Catenis.application.cryptoNetwork.pubKeyHash);
 }
 
 export function fixClone(clone) {
