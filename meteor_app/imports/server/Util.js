@@ -45,7 +45,7 @@ Util.formatCoins = function (amountInSatoshis) {
 // Arguments:
 //  amount: [Number] - Catenis service credit asset amount represented as an integer number of the asset's smallest division (according to the asset divisibility)
 Util.formatCatenisServiceCredits = function (amount) {
-    const divisibility = Catenis.ctnHubNode.getServiceCreditAsset().divisibility;
+    const divisibility = Catenis.ctnHubNode.serviceCreditAssetInfo().issuingOpts.divisibility;
 
     return new BigNumber(amount).dividedBy(Math.pow(10, divisibility)).toFormat(divisibility);
 };
