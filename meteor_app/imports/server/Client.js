@@ -715,7 +715,14 @@ Client.allActivePostPaidClientIndices = function () {
 //  Return:
 //   balance: [Number] - Amount, in Catenis service credit lowest unit, corresponding to the current balance
 Client.allPrePaidClientsServiceAccountCreditLineBalance = function () {
-    return new CCFundSource(Catenis.ctnHubNode.getServiceCreditAsset().ccAssetId, Catenis.keyStore.listAllClientServiceAccountCreditLineAddressesInUse(Client.allActivePrePaidClientIndices()), {unconfUtxoInfo: {}}).getBalance();
+    let balance = 0;
+    const servCredAsset = Catenis.ctnHubNode.getServiceCreditAsset();
+
+    if (servCredAsset !== undefined) {
+        balance = new CCFundSource(servCredAsset.ccAssetId, Catenis.keyStore.listAllClientServiceAccountCreditLineAddressesInUse(Client.allActivePrePaidClientIndices()), {unconfUtxoInfo: {}}).getBalance();
+    }
+
+    return balance;
 };
 
 // Check if a given client exists
