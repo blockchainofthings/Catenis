@@ -1288,7 +1288,7 @@ Device.prototype.notifyMessageRead = function (message, targetDevice) {
         targetDevice = Device.getDeviceByDeviceId(message.targetDeviceId);
     }
 
-    _und.extend(msgInfo.from, targetDevice.discloseMainPropsTo(this));
+    _und.extend(msgInfo.to, targetDevice.discloseMainPropsTo(this));
 
     // Dispatch notification message
     Catenis.notification.dispatchNotifyMessage(this.deviceId, Notification.event.sent_msg_read.name, JSON.stringify(msgInfo));
