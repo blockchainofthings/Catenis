@@ -152,7 +152,7 @@ export function setPermissionRights() {
                     error = errorResponse.call(this, 400, 'Device is not active');
                 }
                 else if (err.error === 'ctn_permission_nonexistent_entities') {
-                    error = errorResponse.call(this, 400, parseNonexistentEntitiesError(err.details, deviceIdProdUniqueId));
+                    error = errorResponse.call(this, 400, 'Invalid entity ID: ' + parseNonexistentEntitiesError(err.details, deviceIdProdUniqueId));
                 }
                 else {
                     error = errorResponse.call(this, 500, 'Internal server error');
@@ -279,15 +279,13 @@ function parseNonexistentEntitiesError(errDetails, deviceIdProdUniqueId) {
 
     Object.keys(detailsObj).forEach((levelKey) => {
         const entity = Permission.entityFromLevelKey(levelKey);
-        let numNonexistentEntityIds;
         let nonexistentEntityIdsList;
 
         if (levelKey !== Permission.level.device.key) {
             const nonexistentEntityIds = new Set(detailsObj[levelKey]);
-            numNonexistentEntityIds = nonexistentEntityIds.size;
 
             nonexistentEntityIdsList = util.format('%s: %s',
-                    nonexistentEntityIds.size > 1 ? entity.idType.plural : entity.idType.singular,
+                    entity.idType.singular,
                     Array.from(nonexistentEntityIds).join(', '));
         }
         else {
@@ -308,15 +306,12 @@ function parseNonexistentEntitiesError(errDetails, deviceIdProdUniqueId) {
                 }
             });
 
-            numNonexistentEntityIds = 0;
             nonexistentEntityIdsList = '';
 
             if (nonexistentDeviceIds.size > 0) {
                 nonexistentEntityIdsList = util.format('%s: %s',
-                    nonexistentDeviceIds.size > 1 ? entity.idType.plural : entity.idType.singular,
+                    entity.idType.singular,
                     Array.from(nonexistentDeviceIds).join(', '));
-
-                numNonexistentEntityIds = nonexistentDeviceIds.size;
             }
 
             if (nonexistentProdUniqueIds.size > 0) {
@@ -325,10 +320,8 @@ function parseNonexistentEntitiesError(errDetails, deviceIdProdUniqueId) {
                 }
 
                 nonexistentEntityIdsList += util.format('%s: %s',
-                    nonexistentProdUniqueIds.size > 1 ? 'prodUniqueIds' : 'prodUniqueId',
+                    'prodUniqueId',
                     Array.from(nonexistentProdUniqueIds).join(', '));
-
-                numNonexistentEntityIds += nonexistentProdUniqueIds.size;
             }
         }
 
@@ -336,10 +329,7 @@ function parseNonexistentEntitiesError(errDetails, deviceIdProdUniqueId) {
             errMsg += '; ';
         }
 
-        errMsg += util.format('%s %s (%s)',
-                errMsg.length > 0 ? 'invalid' : 'Invalid',
-                numNonexistentEntityIds > 1 ? entity.name.plural : entity.name.singular,
-                nonexistentEntityIdsList);
+        errMsg += nonexistentEntityIdsList;
     });
 
     return errMsg;

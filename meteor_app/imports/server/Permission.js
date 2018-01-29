@@ -583,8 +583,8 @@ Permission.level = Object.freeze({
                 plural: 'Catenis nodes'
             },
             idType: {
-                singular: 'index',
-                plural: 'indices'
+                singular: 'ctnNodeIndex',
+                plural: 'ctnNodeIndices'
             }
         },
     }),
