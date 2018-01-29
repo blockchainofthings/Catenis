@@ -539,7 +539,12 @@
   // Parameters pertaining to BcotPayment module
   "bcotPayment": {
     "bcotOmniPropertyId": 0,  // BCOT token Omni property ID (yet to be defined for production)
-    "storeBcotAddress": "????"  // Non-Catenis blockchain address to where BCOT tokens received as payment should be stored
+    "storeBcotAddress": "????",  // Non-Catenis blockchain address to where BCOT tokens received as payment should be stored
+    "usageReportHeaders": [  // List of names to be used as headers for the colomns of the usage report
+      "address",
+      "amount",
+      "date"
+    ]
   },
   // Parameters pertaining to StoreBcotTransaction module
   "storeBcotTransaction": {
@@ -555,5 +560,55 @@
     },
     "unconfirmedTxTimeout": 10080,  // Timeout, in minutes, for waiting for latest sent spend service credit tx to be confirmed (set to 7 days, which is half the default mempool tx eviction time of 14 days)
     "txSizeThresholdRatio": 0.9  // Ratio that should be applied to maximum tx size to calculate threshold for spend service credit tx size. Above that size the tx fee rate should be reset so that is is confirmed as soon as possible
+  },
+  // Parameters pertaining to BcotUsageReportUI module
+  "bcotUsageReportUI": {
+    "baseFilename": "bcot_usage_report",  // Base name of the generated file containing the produced report
+    "fileExtension": "csv",  // File extension to be used in the report filename
+    "timeZones": [{
+      "value": "local",
+      "name": "Local time"
+    }, {
+      "value": "UTC",
+      "name": "UTC"
+    }, {
+      "value": "US/PST",
+      "name": "US/PST (UTC-08:00)"
+    }, {
+      "value": "US/MST",
+      "name": "US/MST (UTC-07:00)"
+    }, {
+      "value": "US/CST",
+      "name": "US/CST (UTC-06:00)"
+    }, {
+      "value": "US/EST",
+      "name": "US/EST (UTC-05:00)"
+    }, {
+      "value": "Europe/GMT",
+      "name": "Europe/GMT (UTC+00:00)"
+    }, {
+      "value": "Europe/WET",
+      "name": "Europe - Portugal/WET (UTC+00:00)"
+    }, {
+      "value": "Europe/CET",
+      "name": "Europe/CET (UTC+01:00)"
+    }, {
+      "value": "Europe/EET",
+      "name": "Europe/EET (UTC+02:00)"
+    }, {
+      "value": "Europe/MSK",
+      "name": "Europe - Russia/MSK (UTC+03:00)"
+    }, {
+      "value": "Asia/IST",
+      "name": "Asia - India/IST (UTC+05:30)"
+    }, {
+      "value": "Asia/CST",
+      "name": "Asia - China/CST (UTC+08:00)"
+    }, {
+      "value": "Asia/JST (UTC+09:00)",
+      "name": "Asia - Japan/JST (UTC+09:00)"
+    }],
+    "defaultTimeZone": "UTC",
+    "includeHeaders": true  // Indicates whether report should include a first line with column headers
   }
 }

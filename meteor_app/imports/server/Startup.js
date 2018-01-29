@@ -51,6 +51,7 @@ import { OmniCore } from './OmniCore';
 import { BcotExchangeRate } from './BcotExchangeRate';
 import { BcotPayment } from './BcotPayment';
 import { SpendServiceCredit } from './SpendServiceCredit';
+import { BcotUsageReportUI } from './AdminUI/BcotUsageReportUI';
 
 // DEBUG - begin
 //import { resetBitcoinCore } from './Test/FundSourceTest';
@@ -107,6 +108,8 @@ Meteor.startup(function () {
         Client.checkDeviceDefaultRights();
         Device.checkDeviceInitialRights();
 
+        Database.fixReceivedTransactionBcotPaymentInfo();
+
         BcotPayment.initialize();
         ReceiveMessage.initialize();
         ReadConfirmation.initialize();
@@ -122,6 +125,7 @@ Meteor.startup(function () {
 
         // UI support initialization
         SystemFundingUI.initialize();
+        BcotUsageReportUI.initialize();
         ClientsUI.initialize();
         DevicesUI.initialize();
 

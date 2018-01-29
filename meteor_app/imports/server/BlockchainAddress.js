@@ -1377,7 +1377,7 @@ BlockchainAddress.getAddressOfIssuedBlockchainAddress = function (docIssuedAddr)
 };
 
 // Place obsolete address back onto local key storage
-BlockchainAddress.retrieveObsoleteAddress = function (addr) {
+BlockchainAddress.retrieveObsoleteAddress = function (addr, checkAddressInUse = false) {
     // Try to retrieve obsolete address from database
     const docIssuedAddrs = Catenis.db.collection.IssuedBlockchainAddress.find({addrHash: hashAddress(addr), status: 'obsolete'}, {fields: {type: 1, path: 1, addrIndex: 1}}).fetch();
     let result = false;
@@ -1404,7 +1404,7 @@ BlockchainAddress.retrieveObsoleteAddress = function (addr) {
                             result = true;
 
                             // Check if address is in use
-                            if (BlockchainAddress.isAddressWithBalance(addr)) {
+                            if (checkAddressInUse && BlockchainAddress.isAddressWithBalance(addr)) {
                                 // If so, reset address status back to expired
                                 resetObsoleteAddress.call(classInstance, addr, docIssuedAddr);
                             }
@@ -1441,7 +1441,7 @@ BlockchainAddress.retrieveObsoleteAddress = function (addr) {
                                     found = true;
 
                                     // Check if address is in use
-                                    if (BlockchainAddress.isAddressWithBalance(addr)) {
+                                    if (checkAddressInUse && BlockchainAddress.isAddressWithBalance(addr)) {
                                         // If so, reset address status back to expired
                                         resetObsoleteAddress.call(classInstance, addr, docIssuedAddr);
                                     }
@@ -1465,7 +1465,7 @@ BlockchainAddress.retrieveObsoleteAddress = function (addr) {
 };
 
 // Place obsolete address back onto local key storage
-BlockchainAddress.retrieveObsoleteAddressByPath = function (addrPath) {
+BlockchainAddress.retrieveObsoleteAddressByPath = function (addrPath, checkAddressInUse = false) {
     let result = false;
 
     // Try to retrieve obsolete address from database
@@ -1489,8 +1489,23 @@ BlockchainAddress.retrieveObsoleteAddressByPath = function (addrPath) {
             let classInstance = BlockchainAddress.getInstance({type: docIssuedAddr.type, pathParts: KeyStore.getPathParts(docIssuedAddr)});
 
             if (classInstance !== null) {
-                // Store address in local key storage making sure that it is set as obsolete
-                result = classInstance._getAddressKeys(docIssuedAddr.addrIndex, true) !== null;
+                // Store address in local key storage making sure that it is set as obsolete,
+                //  and get its corresponding crypto keys
+                const addrKeys = classInstance._getAddressKeys(docIssuedAddr.addrIndex, true);
+
+                if (addrKeys !== null) {
+                    result = true;
+
+                    if (checkAddressInUse) {
+                        const addr = addrKeys.getAddress();
+
+                        // Check if address is in use
+                        if (BlockchainAddress.isAddressWithBalance(addr)) {
+                            // If so, reset address status back to expired
+                            resetObsoleteAddress.call(classInstance, addr, docIssuedAddr);
+                        }
+                    }
+                }
             }
         }
     }

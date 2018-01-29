@@ -721,6 +721,7 @@ CatenisNode.prototype.provisionServiceCreditIssuance = function (amountPerUtxo) 
 // NOTE: make sure that this method is called from code executed from the FundSource.utxoCS
 //  critical section object
 CatenisNode.prototype.fundServicePaymentPayTxExpenseAddresses = function (amountPerAddress) {
+
     let fundTransact = undefined;
 
     try {

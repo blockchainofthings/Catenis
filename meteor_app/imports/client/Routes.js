@@ -2,7 +2,7 @@
  * Created by claudio on 12/05/17.
  */
 
-//console.log('[Module_name.js]: This code just ran.');
+//console.log('[Routes.js]: This code just ran.');
 
 // Module variables
 //
@@ -40,6 +40,14 @@ FlowRouter.route('/admin/sysfunding', {
     action: function () {
         BlazeLayout.render('adminLayout', {
             page: 'systemFunding'
+        });
+    }
+});
+
+FlowRouter.route('/admin/bcotusagereport', {
+    action: function () {
+        BlazeLayout.render('adminLayout', {
+            page: 'bcotUsageReport'
         });
     }
 });

@@ -2,7 +2,6 @@
  * Created by claudio on 19/01/17.
  */
 
-
 //console.log('[RestApi.js]: This code just ran.');
 
 // Module variables

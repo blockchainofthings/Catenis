@@ -52,6 +52,13 @@ export function BcotPaymentTransaction(client, omniTxInfo) {
             },
             enumerable: true
         },
+        payingAddress: {
+            get: function () {
+                // noinspection JSPotentiallyInvalidUsageOfThis
+                return this.omniTxInfo.sendingaddress;
+            },
+            enumerable: true
+        },
         txid: {
             get: function () {
                 // noinspection JSPotentiallyInvalidUsageOfThis

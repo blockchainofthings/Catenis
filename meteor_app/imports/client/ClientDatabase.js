@@ -2,7 +2,7 @@
  * Created by claudio on 15/05/17.
  */
 
-//console.log('[Module_name.js]: This code just ran.');
+//console.log('[ClientDatabase.js]: This code just ran.');
 
 // Module variables
 //

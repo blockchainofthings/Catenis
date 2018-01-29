@@ -232,6 +232,8 @@ ReceivedTransaction {
     }],
     bcotPayment: { // Information for BCOT payment transaction
       clientId: [string],  // External ID of client for which payment is made
+      encSentFromAddress: [string],  // Base-64 formatted encrypted blockchain address from where the BCOT tokens used for the payment were sent.
+                                     //  Note: this address is encrypted using the bcotPayAddress's crypto keys
       bcotPayAddressPath: [string],  // HD node path of the address used to receive the BCOT payment
       paidAmount: [number]  // Amount, in BCOT token "satoshis", paid
     },

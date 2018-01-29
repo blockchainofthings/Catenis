@@ -273,8 +273,9 @@ KeyStore.prototype.getTypeAndPathByAddress = function (addr) {
     return docExtKey !== undefined ? {type: docExtKey.type, path: docExtKey.path} : null;
 };
 
-KeyStore.prototype.getAddressInfo = function (addr, retrieveObsolete = false) {
+KeyStore.prototype.getAddressInfo = function (addr, retrieveObsolete = false, checkAddressInUse = true) {
     let addrInfo = null,
+        obsoleteAddressRetrieved = false,
         tryAgain;
 
     do {
@@ -283,7 +284,7 @@ KeyStore.prototype.getAddressInfo = function (addr, retrieveObsolete = false) {
         const docExtKey = this.collExtKey.by('address', addr);
 
         if (docExtKey !== undefined) {
-            if (retrieveObsolete && docExtKey.isObsolete) {
+            if (retrieveObsolete && docExtKey.isObsolete && !obsoleteAddressRetrieved && checkAddressInUse) {
                 // Check if address marked as obsolete is in use and reset its status if so
                 if (BlockchainAddress.checkObsoleteAddress(addr)) {
                     // Address status has been reset (address is not obsolete anymore)
@@ -305,7 +306,8 @@ KeyStore.prototype.getAddressInfo = function (addr, retrieveObsolete = false) {
                 addrInfo.pathParts = pathParts;
             }
         }
-        else if (retrieveObsolete && BlockchainAddress.retrieveObsoleteAddress(addr)) {
+        else if (retrieveObsolete && BlockchainAddress.retrieveObsoleteAddress(addr, checkAddressInUse)) {
+            obsoleteAddressRetrieved = true;
             tryAgain = true;
         }
     }
@@ -314,8 +316,9 @@ KeyStore.prototype.getAddressInfo = function (addr, retrieveObsolete = false) {
     return addrInfo;
 };
 
-KeyStore.prototype.getAddressInfoByPath = function (path, retrieveObsolete = false) {
+KeyStore.prototype.getAddressInfoByPath = function (path, retrieveObsolete = false, checkAddressInUse = true) {
     let addrInfo = null,
+        obsoleteAddressRetrieved = false,
         tryAgain;
 
     do {
@@ -324,7 +327,7 @@ KeyStore.prototype.getAddressInfoByPath = function (path, retrieveObsolete = fal
         const docExtKey = this.collExtKey.by('path', path);
 
         if (docExtKey !== undefined) {
-            if (retrieveObsolete && docExtKey.isObsolete) {
+            if (retrieveObsolete && docExtKey.isObsolete && !obsoleteAddressRetrieved && checkAddressInUse) {
                 // Check if address marked as obsolete is in use and reset its status if so
                 if (BlockchainAddress.checkObsoleteAddress(docExtKey.address)) {
                     // Address status has been reset (address is not obsolete anymore)
@@ -346,7 +349,8 @@ KeyStore.prototype.getAddressInfoByPath = function (path, retrieveObsolete = fal
                 addrInfo.pathParts = pathParts;
             }
         }
-        else if (retrieveObsolete && BlockchainAddress.retrieveObsoleteAddressByPath(path)) {
+        else if (retrieveObsolete && BlockchainAddress.retrieveObsoleteAddressByPath(path, checkAddressInUse)) {
+            obsoleteAddressRetrieved = true;
             tryAgain = true;
         }
     }

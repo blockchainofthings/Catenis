@@ -10,7 +10,7 @@
 // References to external code
 //
 // Internal node modules
-//import util from 'util';
+import util from 'util';
 // Third-party node modules
 import config from 'config';
 // noinspection JSFileReferences
@@ -34,7 +34,8 @@ const bcotPayConfig = config.get('bcotPayment');
 // Configuration settings
 const cfgSettings = {
     bcotOmniPropertyId: bcotPayConfig.get('bcotOmniPropertyId'),
-    storeBcotAddress: bcotPayConfig.get('storeBcotAddress')
+    storeBcotAddress: bcotPayConfig.get('storeBcotAddress'),
+    usageReportHeaders: bcotPayConfig.get('usageReportHeaders')
 };
 
 const bcotTokenDivisibility = 8;
@@ -68,10 +69,69 @@ BcotPayment.initialize = function () {
     TransactionMonitor.addEventHandler(TransactionMonitor.notifyEvent.bcot_payment_tx_conf.name, bcotPaymentConfirmed);
 };
 
-BcotPayment.bcotToServiceCredit = function(bcotAmount) {
+BcotPayment.bcotToServiceCredit = function (bcotAmount) {
     return new BigNumber(bcotAmount).dividedToIntegerBy(Math.pow(10, (bcotTokenDivisibility - CatenisNode.serviceCreditAssetDivisibility))).toNumber();
 };
 
+BcotPayment.encryptSentFromAddress = function (payingAddress, bcotPayAddrInfo) {
+    return bcotPayAddrInfo.cryptoKeys.encryptData(bcotPayAddrInfo.cryptoKeys, Buffer.from(payingAddress)).toString('base64');
+};
+
+BcotPayment.decryptSentFromAddress = function (encSentFromAddress, bcotPayAddrInfo) {
+    return bcotPayAddrInfo.cryptoKeys.decryptData(bcotPayAddrInfo.cryptoKeys, Buffer.from(encSentFromAddress, 'base64')).toString();
+};
+
+// Returns a CSV-formatted text document containing a list of BCOT payments within a given time frame
+//
+//  Arguments:
+//   startDate: [Object(Date)] - Only BCOT payment transactions received on or after this date and time should be included
+//   endDate: [Object(Date)] - Only BCOT payment transaction receive BEFORE this date should be included
+//   addHeaders: [Boolean] - Indicates whether generated report should include a line with column headers as its first line
+BcotPayment.generateBcotPaymentReport = function (startDate, endDate, addHeaders = false) {
+    const filter = {
+        type: 'bcot_payment'
+    };
+
+    const andOperands = [];
+
+    if (startDate) {
+        andOperands.push({
+            receivedDate: {
+                $gte: startDate
+            }
+        });
+    }
+
+    if (endDate) {
+        andOperands.push({
+            receivedDate: {
+                $lt: endDate
+            }
+        });
+    }
+
+    if (andOperands.length > 0) {
+        filter.$and = andOperands;
+    }
+
+    const reportLines = Catenis.db.collection.ReceivedTransaction.find(filter, {
+        receivedDate: 1,
+        info: 1
+    }).map((doc) => {
+        const bcotPayAddrInfo = Catenis.keyStore.getAddressInfoByPath(doc.info.bcotPayment.bcotPayAddressPath, true, false);
+
+        return util.format('"%s","%s","%s"\n',
+            BcotPayment.decryptSentFromAddress(doc.info.bcotPayment.encSentFromAddress, bcotPayAddrInfo),
+            doc.info.bcotPayment.paidAmount,
+            doc.receivedDate.toISOString());
+    });
+
+    if (addHeaders && reportLines.length > 0) {
+        reportLines.unshift(cfgSettings.usageReportHeaders.map(header => '"' + header + '"').join(',') + '\n');
+    }
+
+    return reportLines.join('');
+};
 
 
 // BcotPayment function class (public) properties

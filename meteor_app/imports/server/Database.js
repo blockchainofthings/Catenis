@@ -1098,6 +1098,62 @@ Database.initialize = function() {
     Catenis.db = new Database(collections);
 };
 
+//** Temporary method used to add missing 'encSentFromAddress' and 'bcotPayAddressPath' fields
+//   from info property of ReceivedTransaction docs/recs of type 'bcot_payment'
+import { BcotPaymentTransaction } from './BcotPaymentTransaction';
+import { BcotPayment } from './BcotPayment';
+
+Database.fixReceivedTransactionBcotPaymentInfo = function () {
+    let numUpdatedDocs = 0;
+
+    // Retrieve received bcot payment transaction doc/recs the 'encSentFromAddress' field of which
+    //  is missing from its info property
+    Catenis.db.collection.ReceivedTransaction.find({
+        type: 'bcot_payment',
+        $or: [{
+            'info.bcotPayment.encSentFromAddress': {
+                $exists: false
+            }
+        }, {
+            'info.bcotPayment.bcotPayAddressPath': {
+                $exists: false
+            }
+        }]
+    }, {
+        fields: {
+            txid: 1,
+            info: 1
+        }
+    }).forEach((doc) => {
+        const bcotPayTransact = BcotPaymentTransaction.checkTransaction(doc.txid);
+
+        if (bcotPayTransact !== undefined) {
+            const bcotPayAddrInfo = Catenis.keyStore.getAddressInfo(bcotPayTransact.payeeAddress);
+
+            // Update ReceivedTransaction doc/rec
+            const modifier = {
+                $set: {}
+            };
+
+            if (doc.info.bcotPayment.encSentFromAddress === undefined) {
+                modifier.$set['info.bcotPayment.encSentFromAddress'] = BcotPayment.encryptSentFromAddress(bcotPayTransact.payingAddress, bcotPayAddrInfo);
+            }
+
+            if (doc.info.bcotPayment.bcotPayAddressPath === undefined) {
+                modifier.$set['info.bcotPayment.bcotPayAddressPath'] = bcotPayAddrInfo.path;
+            }
+
+            numUpdatedDocs += Catenis.db.collection.ReceivedTransaction.update({
+                _id: doc._id
+            }, modifier);
+        }
+    });
+
+    if (numUpdatedDocs > 0) {
+        Catenis.logger.INFO('****** Number of ReceivedTransaction DB collection docs updated to add missing \'info.bcotPayment.encSentFromAddress\' and/or \'info.bcotPayment.bcotPayAddressPath\' field: %d', numUpdatedDocs);
+    }
+};
+
 
 // Module functions used to simulate private Database object methods
 //  NOTE: these functions need to be bound to a Database object reference (this) before

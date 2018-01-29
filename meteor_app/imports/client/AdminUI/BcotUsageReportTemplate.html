@@ -1,0 +1,55 @@
+<template name="bcotUsageReport">
+    <h2>BCOT Token Usage Report</h2>
+    {{#unless isUIReady}}
+        <p style="color:lightgray; margin-top:1em">Loading...</p>
+    {{else}}
+        {{#if hasError}}
+            <p style="color:red">{{{errorMessage}}}</p>
+        {{/if}}
+        <form id="frmBcotUsageReport">
+            <table cellpadding="2" style="margin-left:auto; margin-right:auto; margin-top:1em; margin-bottom:0.5em">
+                <tr>
+                    <td style="text-align:right; font-weight:bold">
+                        <label for="selTimeZone">Start date</label>
+                    </td>
+                    <td style="text-align:left">
+                        <select id="selTimeZone" name="timeZone">
+                        {{#each tz in timeZones}}
+                            <option value="{{tz.value}}" {{tz.selectedAttribute}}>{{tz.name}}</option>
+                        {{/each}}
+                        </select>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="text-align:right; font-weight:bold">
+                        <label for="txtStartDate">Start date</label>
+                    </td>
+                    <td style="text-align:left">
+                        <input id="txtStartDate" name="startDate" type="text" placeholder="YYYY-MM-DD" maxlength="20"/>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding-top:5px; text-align:right; font-weight:bold; vertical-align:top">
+                        <label for="txtEndDate">End date</label>
+                    </td>
+                    <td style="text-align:left; vertical-align:top">
+                        <input id="txtEndDate" name="endDate" type="text" placeholder="YYYY-MM-DD" maxlength="20"/>
+                        <p style="margin-top:5px; color:gray; font-size:11pt"><b>Note</b>: by setting the end date, the report will include BCOT token<br> payments received up to this date, but <b>not</b> including it</p>
+                    </td>
+                </tr>
+            </table>
+            {{#if canGenerateReport}}
+                <input type="submit" value="Generate Report"/>
+            {{/if}}
+            {{#if generatingReport}}
+                <p style="color:lightgray">Generating report...</p>
+            {{/if}}
+            {{#if reportData}}
+                <a id="lnkDownload" href="data:text/plain;base64,{{reportData}}" download="{{reportFilename}}">Download report</a>
+            {{/if}}
+            {{#if emptyReport}}
+                <p style="color:red">Nothing to download; report is empty</p>
+            {{/if}}
+        </form>
+    {{/unless}}
+</template>

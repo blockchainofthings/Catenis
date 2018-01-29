@@ -45,6 +45,7 @@ import { Catenis } from './Catenis';
 import { KeyStore } from './KeyStore';
 import { Transaction } from './Transaction';
 import { BcotPaymentTransaction } from './BcotPaymentTransaction';
+import { BcotPayment } from './BcotPayment';
 
 // Config entries
 const txMonitorConfig = config.get('transactionMonitor');
@@ -1050,9 +1051,11 @@ function handleNewTransactions(data) {
                                 },
                                 info: {}
                             };
+                            const bcotPayAddrInfo = Catenis.keyStore.getAddressInfo(bcotPayTransact.payeeAddress);
                             rcvdTxDoc.info[Transaction.type.bcot_payment.dbInfoEntryName] = {
                                 clientId: bcotPayTransact.client.clientId,
-                                bcotPayAddressPath: Catenis.keyStore.getTypeAndPathByAddress(bcotPayTransact.payeeAddress).path,
+                                encSentFromAddress: BcotPayment.encryptSentFromAddress(bcotPayTransact.payingAddress, bcotPayAddrInfo),
+                                bcotPayAddressPath: bcotPayAddrInfo.path,
                                 paidAmount: bcotPayTransact.paidAmount
                             };
 
