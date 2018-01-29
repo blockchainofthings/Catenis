@@ -81,9 +81,6 @@ Meteor.startup(function () {
         // Normal processing
         Catenis.logger.INFO('Starting initialization...');
         Database.initialize();
-        Database.fillClientBillingModeField();
-        Database.fixSentTransactionReplacedByTxidIndex();
-        Database.fixSentTransactionSpendServiceCreditInfo();
         Application.initialize();
         MalleabilityEventEmitter.initialize();
         BitcoinFees.initialize();
