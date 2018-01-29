@@ -72,6 +72,7 @@ const cfgSettings = {
     priceMarkup: serviceConfig.get('priceMarkup'),
     servicePriceResolution: serviceConfig.get('servicePriceResolution'),
     paymentResolution: serviceConfig.get('paymentResolution'),
+    maxNumAddrsPerFundingTx: serviceConfig.get('maxNumAddrsPerFundingTx'),
     systemFunding: {
         clientsToFund: servSysFundConfig.get('clientsToFund'),
         devicesPerClientToFund: servSysFundConfig.get('devicesPerClientToFund'),
@@ -376,9 +377,14 @@ Service.distributePayTxExpenseFund = function (amount) {
         totalAmount = minFundAmount;
     }
 
+    // Make sure that required number of addresses to receive total amount to be
+    //  paid does not exceed practical limit (so they can fit in a single funding transaction).
+    //  If it does, readjust total amount
+    const distribResult = distributePayment(totalAmount, fundUnitAmount, cfgSettings.payTxExpenseFunding.minAddrsToFund, cfgSettings.payTxExpenseFunding.maxUnitsPerAddr, cfgSettings.maxNumAddrsPerFundingTx);
+
     return {
-        totalAmount: totalAmount,
-        amountPerAddress: distributePayment(totalAmount, fundUnitAmount, cfgSettings.payTxExpenseFunding.minAddrsToFund, cfgSettings.payTxExpenseFunding.maxUnitsPerAddr)
+        totalAmount: distribResult.totalAmount,
+        amountPerAddress: distribResult.payments
     };
 };
 
@@ -393,9 +399,14 @@ Service.distributeReadConfirmPayTxExpenseFund = function (amount) {
         totalAmount = minFundAmount;
     }
 
+    // Make sure that required number of addresses to receive total amount to be
+    //  paid does not exceed practical limit (so they can fit in a single funding transaction).
+    //  If it does, readjust total amount
+    const distribResult = distributePayment(totalAmount, fundUnitAmount, cfgSettings.readConfirmPayTxExpenseFunding.minAddrsToFund, cfgSettings.readConfirmPayTxExpenseFunding.maxUnitsPerAddr, cfgSettings.maxNumAddrsPerFundingTx);
+
     return {
-        totalAmount: totalAmount,
-        amountPerAddress: distributePayment(totalAmount, fundUnitAmount, cfgSettings.readConfirmPayTxExpenseFunding.minAddrsToFund, cfgSettings.readConfirmPayTxExpenseFunding.maxUnitsPerAddr)
+        totalAmount: distribResult.totalAmount,
+        amountPerAddress: distribResult.payments
     };
 };
 
@@ -410,9 +421,14 @@ Service.distributeServicePaymentPayTxExpenseFund = function (amount) {
         totalAmount = minFundAmount;
     }
 
+    // Make sure that required number of addresses to receive total amount to be
+    //  paid does not exceed practical limit (so they can fit in a single funding transaction).
+    //  If it does, readjust total amount
+    const distribResult = distributePayment(totalAmount, fundUnitAmount, cfgSettings.servicePaymentPayTxExpenseFunding.minAddrsToFund, cfgSettings.servicePaymentPayTxExpenseFunding.maxUnitsPerAddr, cfgSettings.maxNumAddrsPerFundingTx);
+
     return {
-        totalAmount: totalAmount,
-        amountPerAddress: distributePayment(totalAmount, fundUnitAmount, cfgSettings.servicePaymentPayTxExpenseFunding.minAddrsToFund, cfgSettings.servicePaymentPayTxExpenseFunding.maxUnitsPerAddr)
+        totalAmount: distribResult.totalAmount,
+        amountPerAddress: distribResult.payments
     };
 };
 
