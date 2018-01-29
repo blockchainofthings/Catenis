@@ -1644,7 +1644,7 @@ Device.checkExist = function (deviceId, selfReferenceAccepted = false, wildcardA
 // Check if one or more devices exist
 //
 //  Argument:
-//   deviceIds [Array(String)|String] - List of device IDs (or a single device ID) of devices to check existence
+//   deviceIds [Array(String)|String] - List of UNIQUE device IDs (or a single device ID) of devices to check existence
 //   selfReferenceAccepted [Boolean] - Indicate whether 'self' token should be accepted for device ID
 //   wildcardAccepted [Boolean] - Indicate whether wildcard ('*') should be accepted for device ID
 //   includeDeleted [Boolean] - Indicate whether deleted devices should also be included in the check

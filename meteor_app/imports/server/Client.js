@@ -763,7 +763,7 @@ Client.checkExist = function (clientId, selfReferenceAccepted = false, wildcardA
 // Check if one or more clients exist
 //
 //  Argument:
-//   clientIds [Array(String)|String] - List of client IDs (or a single client ID) of clients to check existence
+//   clientIds [Array(String)|String] - List of UNIQUE client IDs (or a single client ID) of clients to check existence
 //   selfReferenceAccepted [Boolean] - Indicate whether 'self' token should be accepted for client ID
 //   wildcardAccepted [Boolean] - Indicate whether wildcard ('*') should be accepted for client ID
 //   includeDeleted [Boolean] - Indicate whether deleted clients should also be included in the check

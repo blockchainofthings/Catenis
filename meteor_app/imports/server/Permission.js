@@ -190,6 +190,10 @@ Permission.prototype.setRights = function (eventName, subjectEntity, rights) {
                     if (!Array.isArray(entityIds)) {
                         entityIds = [entityIds];
                     }
+                    else {
+                        // Make sure that there are no duplicate IDs (IDs are unique)
+                        entityIds = Array.from(new Set(entityIds));
+                    }
 
                     // Make sure that entities are valid
                     // noinspection JSUnfilteredForInLoop

@@ -1032,7 +1032,7 @@ CatenisNode.checkExist = function (ctnNodeIndex, selfReferenceAccepted = false, 
 // Check if one or more Catenis nodes exist
 //
 //  Argument:
-//   ctnNodeIndices [Array(Number)|Number] - List of indices (or a single index) of Catenis nodes to check existence
+//   ctnNodeIndices [Array(Number|String)|Number|String] - List of UNIQUE indices (or a single index) of Catenis nodes to check existence
 //   selfReferenceAccepted [Boolean] - Indicate whether 'self' token should be accepted for Catenis node index
 //   wildcardAccepted [Boolean] - Indicate whether wildcard ('*') should be accepted for Catenis node index
 //   includeDeleted [Boolean] - Indicate whether deleted Catenis nodes should also be included in the check
@@ -1062,6 +1062,21 @@ CatenisNode.checkExistMany = function (ctnNodeIndices, selfReferenceAccepted = f
                 }
             }
         }
+
+        // Try to convert indices to integer if not yet an integer
+        ctnNodeIndices = ctnNodeIndices.map((ctnNodeIndex) => {
+            let result = ctnNodeIndex;
+
+            if (!Number.isInteger(ctnNodeIndex)) {
+                const parsedIndex = parseInt(ctnNodeIndex);
+
+                if (!Number.isNaN(parsedIndex)) {
+                    result = parsedIndex;
+                }
+            }
+
+            return result;
+        });
 
         const selector = {
             ctnNodeIndex: {
