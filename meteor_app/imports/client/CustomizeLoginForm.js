@@ -25,7 +25,12 @@ import { AccountsTemplates } from 'meteor/useraccounts:core';
 //
 
 const pwd = AccountsTemplates.removeField('password');
-AccountsTemplates.removeField('email');
+
+//it used to just remove the whole email field, let's change that for send email.
+// AccountsTemplates.removeField('email');
+
+
+
 AccountsTemplates.addFields([
     {
         _id: "username",

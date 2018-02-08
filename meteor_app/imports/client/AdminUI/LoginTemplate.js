@@ -22,6 +22,8 @@
 // Import template UI
 import './LoginTemplate.html';
 
-
-// Module code
-//
+Template.login.events({
+    'click #reset':function(){
+        document.location.reload(true);
+    }
+});

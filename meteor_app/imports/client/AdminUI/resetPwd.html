@@ -1,0 +1,29 @@
+<template name="resetPwd">
+    <div class="container">
+        <div class="row paddingTop90px">
+            <div class="col-md-6 col-md-offset-3">
+                <div class="panel panel-login minWidthElement">
+                    <div class="panel-body">
+                        <div class="row">
+                            <div class="col-lg-12">
+                                <!--this is where the page title goes-->
+                                <h2>RESET PASSWORD</h2>
+                                {{> atForm state='resetPwd'}}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="panel-heading">
+                        <div class="row">
+                                <div class="col-xs-6 tabs">
+                                    <a href="/admin" class="active" id="login-form-link"><div class="login">LOGIN</div></a>
+                                </div>
+                                <div class="col-xs-6 tabs">
+                                    <a href="/admin" id="register-form-link"><div class="register">REGISTER</div></a>
+                                </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</template>

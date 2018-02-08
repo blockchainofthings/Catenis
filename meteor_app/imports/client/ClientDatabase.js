@@ -28,14 +28,16 @@ import { Catenis } from './ClientCatenis';
 // Module code
 //
 
+
 // References to database collections used on the client
 Catenis.db = {
     collection: {
         FundingBalanceInfo: new Mongo.Collection('FundingBalanceInfo'),
         ReceivedAmount: new Mongo.Collection('ReceivedAmount'),
         Client: new Mongo.Collection('Client'),
+        MessageCredits: new Mongo.Collection('MessageCredits'),
         Device: new Mongo.Collection('Device'),
-        ServiceAccountBalance: new Mongo.Collection('ServiceAccountBalance'),
-        ReceivedBcotAmount: new Mongo.Collection('ReceivedBcotAmount')
+        // Added by Peter
+        License: new Mongo.Collection('License')
     }
 };

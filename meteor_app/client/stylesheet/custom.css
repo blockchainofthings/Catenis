@@ -1,0 +1,746 @@
+/*Added by andre*/
+@import url(https://fonts.googleapis.com/css?family=Roboto:400,300,100,700,500);
+
+/*Misc*/
+
+html, body{
+    height: 100%;
+    font-family: 'Roboto', sans-serif;
+    font-weight:100;
+}
+body{
+    overflow-x: hidden;
+}
+
+.center {
+    margin: auto;
+    width: 80%;
+    padding: 10px;
+}
+
+
+.topNavCustom{
+    background-color: rgb(232,233,236);
+    width:100%;
+    position:fixed;
+    z-index: 1000;
+
+}
+
+
+
+.fill{
+    height:100%;
+    width:100%;
+}
+
+.noPadding{
+    padding:0;
+}
+
+/*word colors*/
+
+.white{
+    color:white;
+}
+.blue{
+    color:#333399;
+}
+
+.gray{
+    color: rgb(144, 144, 144);
+}
+
+.green{
+    color: rgb(102, 204, 51);
+}
+
+/*bg colors*/
+.blueBG{
+    background-color: #333399;
+}
+
+.greenBG{
+    background-color:rgb(102, 204, 51);
+}
+
+.whiteBg{
+    margin-top: 150px;
+    background-color: #ffffff;
+    box-shadow: 5px 5px 3px #888888;
+}
+
+
+
+
+/*
+Login Form Box
+currently using useraccounts:unstyled
+-> refer to https://github.com/meteor-useraccounts/core/blob/master/Guide.md#css-rules to see relevant classes & ids
+*/
+
+.form-group>.at-input>input,
+.form-group>input{
+    width:100%;
+}
+
+#frmNewClient>.form-group>input,
+#frmNewDevice>.form-group>input{
+    width:100%;
+}
+
+
+.at-error{
+    color: red;
+    text-emphasis: black;
+    font-size: 20px;
+    background-color: yellow;
+    border-style: solid;
+    border-width:1px;
+    border-color: transparent;
+    border-radius: 3px;
+}
+.at-error>p{
+    margin-bottom:0;
+}
+
+.at-result{
+
+    text-align: center;
+    font-size: 20px;
+    margin-bottom: 5px;
+    color: #333399
+
+}
+
+
+/* Side Navigation Toggle Styles */
+
+#wrapper {
+    height: 100%;
+    padding-left: 0px;
+    -webkit-transition: all 0.5s ease;
+    -moz-transition: all 0.5s ease;
+    -o-transition: all 0.5s ease;
+    transition: all 0.5s ease;
+}
+
+
+#sidebar-wrapper {
+    z-index: 1000;
+    position: fixed;
+    top: 50px;
+    left: 0px;
+    width: 250px;
+    height: 100%;
+    margin-left: 0px;
+    overflow-x: hidden;
+
+    background: #E8E9EC;
+
+    -webkit-transition: all 0.5s ease;
+    -moz-transition: all 0.5s ease;
+    -o-transition: all 0.5s ease;
+    transition: all 0.5s ease;
+}
+#sidebar-wrapper>ul{
+    position: absolute;
+    /*this value should change depending on the navbar height setting.*/
+
+}
+
+#wrapper.toggled #sidebar-wrapper {
+    width: 80px;
+}
+
+#page-content-wrapper {
+    /*above should change according to the size of the header.*/
+    position:absolute;
+    left: 250px;
+    width: calc(100% - 250px);
+    height: 100%;
+    background-color: #f2faff
+
+}
+
+#wrapper.toggled #page-content-wrapper {
+    /*position: relative;*/
+    position:absolute;
+    left: 80px;
+    width: calc(100% - 80px);
+}
+
+
+/*                 */
+/* Sidebar Styles  */
+/*                 */
+.logoImage{
+    margin-top:15px;
+    margin-left: 15px;
+    max-width: 100%;
+    max-height: 100%;
+}
+
+.sidebar-nav {
+    width: 250px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.sidebar-nav li {
+    text-indent: 20px;
+    line-height: 40px;
+}
+
+.sidebar-nav li a {
+    display: block;
+    text-decoration: none;
+    color: #333399;
+    text-transform: uppercase;
+}
+
+.sidebar-nav li a:hover {
+    text-decoration: none;
+    color: #fff;
+    background: #333399;
+}
+
+.sidebar-nav li a:active,
+.sidebar-nav li a:focus {
+    text-decoration: none;
+}
+
+.sidebar-nav > .sidebar-brand {
+    height: 65px;
+    font-size: 18px;
+    line-height: 60px;
+    font-style: italic;
+}
+
+.sidebar-nav > .sidebar-brand a {
+    color: #999999;
+}
+
+.sidebar-nav > .sidebar-brand a:hover {
+    color: #fff;
+    background: none;
+}
+
+/*change the words on sidebar to icon when collapsed*/
+/*note that we are overriding some qualities from twbs*/
+#wrapper>#sidebar-wrapper>.sidebar-nav>li>.show{
+    display: block!important;
+}
+
+#wrapper>#sidebar-wrapper>.sidebar-nav>li>.notshow{
+    display: none!important;
+}
+
+#wrapper.toggled>#sidebar-wrapper>.sidebar-nav>li>.show{
+    display: none!important;
+}
+
+#wrapper.toggled>#sidebar-wrapper>.sidebar-nav>li>.notshow{
+    display: block!important;
+}
+
+
+
+@media(min-width:768px) {
+    #wrapper {
+        padding-left: 0;
+    }
+
+    #sidebar-wrapper {
+        width: 250px;
+    }
+
+    #wrapper.toggled #sidebar-wrapper {
+        width: 80px;
+    }
+
+    #page-content-wrapper {
+        /*margin-left: 250px;*/
+        padding: 0px;
+        /*position: absolute;*/
+        left: 250px;
+        width: calc(100% - 250px);
+        position: relative;
+    }
+
+    #wrapper.toggled #page-content-wrapper {
+        /*position: absolute;*/
+        position: relative;
+        left: 80px;
+        width: calc(100% - 80px);
+
+        /*margin-right: 0;*/
+    }
+}
+
+
+
+
+/*top Navbar*/
+.navbar-menus{
+    text-align: left;
+    font-size: 16px;
+}
+
+
+.top-navBar{
+    background-color: #E8E9EC;
+
+}
+
+.navbar-default .navbar-brand {
+    color: #333399;
+    font-family: "myriad-pro",sans-serif;
+    font-weight: 700;
+}
+.gray{
+    color: #868686;
+}
+
+/*overwriting some bootstrap defaults for dropdown menu*/
+.navbar{
+    border: 0px;
+}
+.navbar-default .navbar-nav>li>a{
+    color: #333399;
+
+
+}
+.navbar-default .navbar-nav>.open>a,
+.navbar-default .navbar-nav>.open>a:focus,
+.navbar-default .navbar-nav>.open>a:hover{
+    background-color: #999;
+    color: #333399;
+}
+.navbar-default .navbar-nav>li>a:focus,
+.navbar-default .navbar-nav>li>a:hover{
+    color: #fff;
+    background-color: #333399;
+}
+.navbar-nav>li>.dropdown-menu{
+    border-width: 1px;
+    border-color: #333399;
+}
+.dropdown-menu>li>a{
+    padding-top: 5px;
+    padding-bottom: 5px;
+    padding-left: 25px;
+    padding-right: 15px;
+    font-weight: 100;
+    color: #333399;
+}
+
+@media (max-width: 767px){
+    .navbar-nav .open .dropdown-menu
+    {
+        background-color: white;
+        position:absolute;
+        border-width: 2px;
+        border-color: rgb(102, 204,51);
+        border-style: solid;
+        left:auto;
+        right:0;
+    }
+    .navbar-nav>li>a{
+        padding-top:15px;
+        padding-bottom:15px;
+    }
+    /*above single one is for the menu size discrepancy in smaller sizes*/
+    .navbar-default .navbar-nav .open .dropdown-menu>li>a{
+        color: black;
+    }
+
+}
+@media (min-width: 768px){
+    .container-fluid>.navbar-collapse,
+    .container-fluid>.navbar-header,
+    .container>.navbar-collapse,
+    .container>.navbar-header{
+        width: 100%;
+    }
+}
+
+
+.navbar-nav{
+    margin-top:0;
+    margin-bottom:0;
+}
+
+
+
+
+.paddingTop90px{
+    padding-top: 90px;
+}
+.paddingTop40px{
+    padding-top: 40px;
+}
+.panel {
+    border-radius: 5px;
+}
+label {
+    font-weight: 300;
+}
+.login {
+    padding: 20px 30px;
+    background: #333399;
+
+    border-bottom-left-radius: 5px;
+    color: #fff;
+}
+.login:hover,
+.login:focus{
+    background-color: #E8E9EC;
+    color: #333399;
+
+}
+
+.register {
+    padding: 20px 30px;
+    background: #E8E9EC;
+    border-bottom-right-radius: 5px;
+    /* start Andre aded this line below */
+    color: #333399;
+    /* end Andre aded  */
+}
+.register:hover,
+.register:focus{
+    background-color: #333399;
+    color: #E8E9EC;
+
+}
+
+.panel-login {
+    border: none;
+    -webkit-box-shadow: 0px 0px 49px 14px rgba(188,190,194,0.39);
+    -moz-box-shadow: 0px 0px 49px 14px rgba(188,190,194,0.39);
+    box-shadow: 0px 0px 49px 14px rgba(188,190,194,0.39);
+}
+.panel-login .checkbox input[type=checkbox]{
+    margin-left: 0px;
+}
+.panel-login .checkbox label {
+    padding-left: 25px;
+    font-weight: 300;
+    display: inline-block;
+    position: relative;
+}
+.panel-login .checkbox {
+    padding-left: 20px;
+}
+.panel-login .checkbox label::before {
+    content: "";
+    display: inline-block;
+    position: absolute;
+    width: 17px;
+    height: 17px;
+    left: 0;
+    margin-left: 0px;
+    border: 1px solid #cccccc;
+    border-radius: 3px;
+    background-color: #fff;
+    -webkit-transition: border 0.15s ease-in-out, color 0.15s ease-in-out;
+    -o-transition: border 0.15s ease-in-out, color 0.15s ease-in-out;
+    transition: border 0.15s ease-in-out, color 0.15s ease-in-out;
+}
+.panel-login .checkbox label::after {
+    display: inline-block;
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    left: 0;
+    top: 0;
+    margin-left: 0px;
+    padding-left: 3px;
+    padding-top: 1px;
+    font-size: 11px;
+    color: #555555;
+}
+.panel-login .checkbox input[type="checkbox"] {
+    opacity: 0;
+}
+.panel-login .checkbox input[type="checkbox"]:focus + label::before {
+    outline: thin dotted;
+    outline: 5px auto -webkit-focus-ring-color;
+    outline-offset: -2px;
+}
+.panel-login .checkbox input[type="checkbox"]:checked + label::after {
+    font-family: 'FontAwesome';
+    content: "\f00c";
+}
+.panel-login>.panel-heading .tabs{
+    padding: 0;
+}
+.panel-login h2{
+    font-size: 20px;
+    font-weight: 300;
+    margin: 30px;
+}
+.panel-login>.panel-heading {
+    color: #848c9d;
+    background-color: #e8e9ec;
+    border-color: #fff;
+    text-align:center;
+    border-bottom-left-radius: 5px;
+    border-bottom-right-radius: 5px;
+    border-top-left-radius: 0px;
+    border-top-right-radius: 0px;
+    border-bottom: 0px;
+    padding: 0px 15px;
+}
+.panel-login .form-group {
+    padding: 0 30px;
+}
+.panel-login>.panel-heading .login {
+    padding: 20px 30px;
+    border-bottom-leftt-radius: 5px;
+}
+
+
+.panel-login>.panel-heading a{
+    text-decoration: none;
+    color: #666;
+    font-weight: 300;
+    font-size: 16px;
+    -webkit-transition: all 0.1s linear;
+    -moz-transition: all 0.1s linear;
+    transition: all 0.1s linear;
+}
+.panel-login>.panel-heading a#register-form-link {
+    width: 100%;
+    text-align: right;
+}
+
+.panel-login>.panel-heading a#reset {
+    width: 100%;
+    text-align: right;
+}
+.panel-login>.panel-heading a#forgotPwd-form-link{
+    width: 100%;
+    text-align:left;
+}
+
+.panel-login>.panel-heading a#login-form-link {
+    width: 100%;
+    text-align: left;
+}
+
+.panel-login input[type="text"],.panel-login input[type="email"],.panel-login input[type="password"] {
+    height: 45px;
+    border: 0;
+    font-size: 16px;
+    -webkit-transition: all 0.1s linear;
+    -moz-transition: all 0.1s linear;
+    transition: all 0.1s linear;
+    -webkit-box-shadow: none;
+    box-shadow: none;
+    border-bottom: 1px solid #e7e7e7;
+    border-radius: 0px;
+    padding: 6px 0px;
+}
+.panel-login input:hover,
+.panel-login input:focus {
+    outline:none;
+    -webkit-box-shadow: none;
+    -moz-box-shadow: none;
+    box-shadow: none;
+    border-color: #ccc;
+}
+.btn-login {
+    background-color: #E8E9EC;
+    outline: none;
+    color: #333399;
+    font-size: 14px;
+    height: auto;
+    font-weight: normal;
+    padding: 14px 0;
+    text-transform: uppercase;
+    border: none;
+    border-radius: 0px;
+    box-shadow: none;
+}
+.btn-login:hover,
+.btn-login:focus {
+    color: #fff;
+    background-color: #333399;
+}
+.forgot-password {
+    text-decoration: underline;
+    color: #888;
+}
+.forgot-password:hover,
+.forgot-password:focus {
+    text-decoration: underline;
+    color: #666;
+}
+
+.btn-register {
+    background-color: #E8E9EC;
+    outline: none;
+    color: #333399;
+    font-size: 14px;
+    height: auto;
+    font-weight: normal;
+    padding: 14px 0;
+    text-transform: uppercase;
+    border: none;
+    border-radius: 0px;
+    box-shadow: none;
+}
+.btn-register:hover,
+.btn-register:focus {
+    color: #fff;
+    background-color: #333399;
+}
+
+
+btn:hover,
+btn:active{
+    text-decoration:none;
+}
+
+.paddedBtn{
+    padding-left: 10px;
+    padding-right: 10px;
+    margin-bottom: 10px;
+    text-align:center;
+}
+
+.topMargin05{
+    margin-top: 0.5em;
+}
+
+.noBoxShadow{
+    box-shadow: none;
+}
+
+
+
+/*changing bootstrap table settings to align words to center*/
+.table > thead > tr > th{
+    text-align:center;
+}
+.table> tbody> tr> th{
+    text-align:center;
+}
+
+
+/*font Awesome set up so that we can have */
+
+.navbar-header>.pull-left>.menu-toggle>i{
+    padding-top: 12px;
+    padding-left: 3px;
+    font-size: 25px;
+    color: #333399;
+}
+
+
+#wrapper>.navbar{
+    margin-bottom:0px;
+}
+
+.breadCrumbs{
+    width: 100%;
+    font-size: 16px;
+    display: inline-block;
+}
+
+
+
+.infoLine{
+    z-index:4;
+    display: block;
+}
+
+@media(max-width: 300px){
+    .infoLine{
+        display:none;
+    }
+
+}
+
+.infoLineBox{
+    padding-left: 20px;
+    padding-right: 20px;
+    background-color: white;
+    border-bottom-color: rgba(236,255,255,0.26);
+    border-bottom-style: solid;
+    border-bottom-width: 2px;
+}
+
+.block{
+  margin: 30px;
+  background-color: #ffffff;
+    /*border-color:rgba(0,0,0,0.15);*/
+    /*border-style: solid;*/
+    /*border-width: 2px;*/
+}
+
+.breadCrumb_Current{
+    color: #333399;
+    text-align: left;
+    margin-bottom: 0px;
+    text-transform: capitalize;
+
+}
+.breadCrumb_List{
+    font-weight: bold;
+    background-color: white;
+    margin-bottom: 0px;
+    padding-left:0px;
+}
+
+.addMoreCredit{
+    color: darkgrey;
+}
+
+
+.minWidthElement{
+    min-width: 650px;
+}
+
+.credit{
+    height: 50px;
+    margin: auto;
+
+}
+
+.creditDetail{
+    text-align: center;
+    padding-top: 15px;
+    padding-right: 10px;
+    font-weight: bold;
+    color: #333399;
+    font-size: 1.4rem;
+}
+
+@media(max-width: 520px){
+
+    .creditDetail{
+        display:none;
+    }
+
+}
+
+.fees{
+    font-size: 1.5rem;
+    text-align: center;
+    padding-bottom: 0.2rem;
+}
+
+
+.hidden{
+    display:none;
+}
+
+
+.fullWidth{
+    width:100%;
+}
+

@@ -60,8 +60,8 @@
   // Parameters pertaining to BitcoinCore module
   "bitcoinCore": {
     "serverHost": "catenis-btccore", // Bitcoin Core server host name/IP address
-    "mainRpcPort": 8332, // Port used to connect with Bitcoin Core server via its RPC interface to interact with bitcoin's main blockchain
-    "testnetRpcPort": 18332, // Port used to connect with Bitcoin Core server via its RPC interface to interact with bitcoin's testnet blockchain
+    "mainRpcPort": 9332, // Port used to connect with Bitcoin Core server via its RPC interface to interact with bitcoin's main blockchain
+    "testnetRpcPort": 19332, // Port used to connect with Bitcoin Core server via its RPC interface to interact with bitcoin's testnet blockchain
     "rpcUser": "??????", // Username used to connect with Bitcoin Core server via its RPC interface
     "rpcPassword": "??????", // Password used to connect with Bitcoin Core server via its RPC interface
     "rpcConnectionTimeout": 15000,  // Timeout, in miliseconds, for RPC connection with the Bitcoin Core server

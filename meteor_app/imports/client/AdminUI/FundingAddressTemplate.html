@@ -5,7 +5,27 @@
     {{else}}
         <p style="font-size:14pt; margin-top:0.5em">{{fundAddress}}</p>
         <p style="font-weight:bold; margin-bottom:0.5em">Received amount</p>
-        <label>Unconfirmed:</label> <span style="color:red">{{receivedAmount.unconfirmed}}</span><br>
-        <label>Confirmed:</label> <span style="color:green">{{receivedAmount.confirmed}}</span>
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>
+                        <label>Unconfirmed:</label>
+                    </th>
+                    <th>
+                        <label>Confirmed:</label>
+                    </th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <th>
+                        <span style="color:red">{{receivedAmount.unconfirmed}}</span>
+                    </th>
+                    <th>
+                        <span style="color:green">{{receivedAmount.confirmed}}</span>
+                    </th>
+                </tr>
+            </tbody>
+        </table>
     {{/unless}}
 </template>

@@ -32,7 +32,7 @@ import './DeviceDetailsTemplate.html';
 
 Template.deviceDetails.onCreated(function () {
     // Subscribe to receive client and device updates
-    this.clientRecordSubs = this.subscribe('clientRecord', this.data.client_id);
+    this.clientRecordSubs = this.subscribe('clientRecord', this.data.user_id);
     this.deviceRecordSubs = this.subscribe('deviceRecord', this.data.device_id);
 });
 
@@ -56,12 +56,41 @@ Template.deviceDetails.events({
                 alert('Device API access secret: ' + key);
             }
         });
+    },
+
+    'submit #resetDeviceAPIKey'(event, template){
+        event.preventDefault();
+        event.stopPropagation();
+        const form = event.target;
+        const sentence="I would like to reset this Device's API access Key";
+        var userInput= form.resetSentence.value;
+
+        if(userInput!=sentence){
+
+            alert("you typed in the wrong value");
+
+        }else{
+
+            Meteor.call('resetDeviceAPISecret', template.data.device_id, (error, key) => {
+                if (error) {
+                    console.log('Error calling \'resetDeviceAPISecret\' remote method: ' + error);
+                }
+                else {
+                    alert('New device API access secret: ' + key);
+                    $('#resetAPIKey').modal('hide');
+                    $('body').removeClass('modal-open');
+                    $('.modal-backdrop').remove();
+                }
+            });
+
+        }
+
     }
 });
 
 Template.deviceDetails.helpers({
     client: function () {
-        return Catenis.db.collection.Client.findOne({_id: Template.instance().data.client_id});
+        return Catenis.db.collection.Client.findOne({user_id: Template.instance().data.user_id});
     },
     device: function () {
         return Catenis.db.collection.Device.findOne({_id: Template.instance().data.device_id});
@@ -77,5 +106,9 @@ Template.deviceDetails.helpers({
     },
     publicStatus: function (device) {
         return device && device.props && device.props.public !== undefined ? (device.props.public ? 'true' : 'false') : undefined;
+    },
+    user_id: function(){
+        return Template.instance().data.user_id;
     }
+
 });

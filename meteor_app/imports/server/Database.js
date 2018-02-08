@@ -91,6 +91,18 @@ Database.initialize = function() {
                 }
             }]
         },
+        License: {
+            indices: [{
+                fields: {
+                    licenseType: 1
+                },
+                opts: {
+                    unique: true,
+                    background: true,
+                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                }
+            }]
+        },
         IssuedBlockchainAddress: {
             indices: [{
                 fields: {

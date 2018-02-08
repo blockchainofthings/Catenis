@@ -7,6 +7,13 @@ Application {
   lastBlockHeight: [number]  // Height of last blockchain block that has already been processed by the application
 }
 
+// Added by Peter (UI)
+License {
+  _id: [string], // MongoDB internal document ID provided by Meteor
+  licenseType: [string],  // Type of the license offered to the clients. Right now there are four ( Starter, Basic, Professional, Enterprise)
+  numAllowedDevices: [integer]  // Number of devices allowed for this specific license type. (currently, Starter: 2, Basic: 20, Professional: 200, Enterprise: Unlimited(will put as 1000000 for now) )
+}
+
 BitcoinFees {
   _id: [string],  / MongoDB internal document ID provided by Meteor
   recommended: {

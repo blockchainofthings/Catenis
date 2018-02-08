@@ -1,19 +1,58 @@
 <template name="systemFunding">
-    <h2>System Funding</h2>
-    {{#unless Template.subscriptionsReady}}
-        <p style="color:lightgray; margin-top:1em">Loading...</p>
-    {{else}}
-        <label>Current system funding balance:</label>&nbsp;<scan style="color:{{#if (lowBalance balanceInfo)}}red{{else}}black{{/if}}">{{balanceInfo.currentBalance}}</scan><br>
-        <label>Minimum funding balance:</label>&nbsp;{{balanceInfo.minimumBalance}}
-        <div style="margin-top:1em">
-            {{#unless fundAddress}}
-                <a id="lnkNewAddressToFund" href="#" role="button">Get address to fund system</a>
-            {{else}}
-                <div>
-                    (<a id="lnkDiscardAddr" href="#" role="button">discard address</a>)
+    <div>
+        <div class="panel panel-login minWidthElement noBoxShadow">
+            <div class="panel-body">
+                <div class="row">
+                    <div class="col-lg-12">
+                        <h2>SYSTEM FUNDING </h2>
+                        {{#unless Template.subscriptionsReady}}
+                            <p style="color:lightgray; margin-top:1em">Loading...</p>
+                        {{else}}
+                            <div>
+                                <table class="table table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>
+                                                <label>Minimum funding balance:</label>
+                                            </th>
+                                            <th>
+                                                <label>Current system funding balance:</label>
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                    <tr>
+                                        <th>
+                                            <span> {{balanceInfo.minimumBalance}} </span>
+                                        </th>
+                                        <th>
+                                            <span style="color:{{#if (lowBalance balanceInfo)}}red{{else}}green{{/if}}">{{balanceInfo.currentBalance}}</span>
+                                        </th>
+                                    </tr>
+                                    </tbody>
+                                </table>
+                                <div>
+                                    {{#if (lowBalance balanceInfo)}}
+                                        <h5 style="color: red"> System has insufficient funds, please add more credit </h5>
+                                    {{else}}
+                                        <h5 style="color: green"> System has sufficient funds </h5>
+                                    {{/if}}
+                                </div>
+                            </div>
+                            <div style="margin-top:1em">
+                                {{#unless fundAddress}}
+                                    <a id="lnkNewAddressToFund" href="#" role="button" class="btn-login btn paddedBtn">Get address to fund system</a>
+                                {{else}}
+                                    <div>
+                                        <a id="lnkDiscardAddr" href="#" role="button" class="btn-login btn paddedBtn">discard address</a>
+                                    </div>
+                                    {{> fundingAddress fundAddress=fundAddress}}
+                                {{/unless}}
+                            </div>
+                        {{/unless}}
+                    </div>
                 </div>
-                {{> fundingAddress fundAddress=fundAddress}}
-            {{/unless}}
+            </div>
         </div>
-    {{/unless}}
+    </div>
 </template>

@@ -19,7 +19,6 @@
 // Meteor packages
 import { Meteor } from 'meteor/meteor';
 import { Accounts } from 'meteor/accounts-base'
-import { Roles } from 'meteor/alanning:roles';
 
 // References code in other (Catenis) modules
 import { Catenis } from '../Catenis';
@@ -60,236 +59,339 @@ ClientsUI.initialize = function () {
     Catenis.logger.TRACE('ClientsUI initialization');
     // Declaration of RPC methods to be called from client
     Meteor.methods({
-        createClient: function (ctnNodeIndex, clientInfo) {
-            if (Roles.userIsInRole(this.userId, 'sys-admin')) {
-                // Try to create meteor client user
-                let user_id;
+        addMessageCredits: function (clientId, count) {
+            if(verifyUserRole()) {
+                if (!Number.isInteger(count) || count < 0 || count > maxMsgCreditsCount) {
+                    // Invalid number of message credits to add. Log error and throw exception
+                    Catenis.logger.ERROR(util.format('Invalid number of message credits to add. Make sure that it is a positive integer not greater than %s', maxMsgCreditsCount.toString()), {count: count});
+                    throw new Meteor.Error('clients.add-msg-credits.invalid-param', util.format('Invalid number of message credits to add. Make sure that it is a positive integer not greater than %s', maxMsgCreditsCount.toString()));
+                }
 
+                Client.getClientByClientId(clientId).addMessageCredit(count);
+            }else{
+
+                Catenis.logger.ERROR('User does not have permission to access method "addMessageCredits"');
+                throw new Meteor.Error('User does not have permission to access method "addMessageCredits"');
+
+            }
+        },
+
+
+        //added by peter to allow for resending enrollment email.
+        resendEnrollmentEmail: function(clientId){
+            if(verifyUserRole()) {
                 try {
+                    Accounts.sendEnrollmentEmail(clientId);
+                }catch(err){
+                    Catenis.logger.ERROR('Failure trying to resend enrollment Email to client.', err);
+                    throw new Meteor.Error('client.resendEnrollmentEmail.failure', 'Failure trying to resend enrollment Email: ' + err.toString());
+                }
+            }else{
+                Catenis.logger.ERROR('User does not have permission to access method "resendEnrollmentEmail"');
+                throw new Meteor.Error('User does not have permission to access method "resendEnrollmentEmail"');
+            }
+
+        },
+
+        //added by peter to allow Meteor account activation on enrollment. called from ../both/ConfigLoginForm.js
+
+        activateCurrentUser: function(){
+            if( Meteor.user().profile.status!=="Pending" ){
+                Catenis.logger.ERROR('Failure trying to activate Meteor user. User is not "pending". ');
+                throw new Meteor.Error('client.activateCurrentUser.failure', 'Failure trying to activate current user: User is not "pending"');
+            }else{
+                try{
+                    Meteor.users.update(Meteor.userId(), {$set: {'profile.status': "Activated"}});
+                }catch(err){
+
+                    Catenis.logger.ERROR('Failure trying to activate Meteor user.', err);
+                    throw new Meteor.Error('client.activateCurrentUser.failure', 'Failure trying to activate current user: ' + err.toString());
+                }
+            }
+        },
+
+        //added by peter to allow admin Meteor account deactivation and activation. called from ClientDetailsTemplate
+        changeUserStatus: function(user_id, newStatus){
+            let user;
+            if(verifyUserRole()){
+                try{
+                    user=Meteor.users.findOne({"_id": user_id});
+                    Meteor.users.update( user, {$set: {'profile.status': newStatus}});
+                }catch(err){
+                    Catenis.logger.ERROR('Failure trying to change user Status Meteor user.', err);
+                    throw new Meteor.Error('client.changeUserStatus.failure', 'Failure trying to change user active status: ' + err.toString());
+                }
+            }else{
+                Catenis.logger.ERROR('User does not have permission to access method "changeUserStatus"');
+                throw new Meteor.Error('User does not have permission to access method "changeUserStatus"');
+            }
+
+        },
+
+
+        //create user from admin side.
+        createUserToEnroll: function (ctnNodeIndex, clientInfo) {
+            // Try to create meteor client user
+            let user_id;
+            let currTime= new Date();
+
+            if(verifyUserRole()){
+                try {
+
                     const opts = {
                         username: clientInfo.username,
-                        password: clientInfo.psw,
+                        //got rid of this, as the users will be setting this on their own.
+                        // password: clientInfo.psw,
+
+                        // below email and status were added by peter
+                        //added this field to send emails.
+                        email: clientInfo.email,
+
                         profile: {
-                            name: 'User for Catenis client ' + clientInfo.name
-                        }
+                            name: 'User for Catenis client ' + clientInfo.name,
+                            status: "Pending",
+                            firstname: clientInfo.firstName,
+                            lastname: clientInfo.lastName,
+                            company: clientInfo.companyName,
+                            license: {
+                                licenseType: "Starter",
+                                licenseRenewedDate: currTime,
+                            },
+                            ctnNodeIndex: ctnNodeIndex
+
+                        },
+
+
                     };
 
                     user_id = Accounts.createUser(opts);
+                    // peter:  adding this to allow for enrollment email when meteor account is created.
+                    Accounts.sendEnrollmentEmail(user_id);
                 }
+
                 catch (err) {
                     // Error trying to create meteor user for client. Log error and throw exception
                     Catenis.logger.ERROR('Failure trying to create new user for client.', err);
                     throw new Meteor.Error('client.create-user.failure', 'Failure trying to create new user for client: ' + err.toString());
                 }
 
-                // Try to create Catenis client
-                let clientId;
+                return user_id;
 
-                try {
-                    clientId = CatenisNode.getCatenisNodeByIndex(ctnNodeIndex).createClient(clientInfo.name, user_id);
-                }
-                catch (err) {
-                    // Error trying to create Catenis client. Log error and throw exception
-                    Catenis.logger.ERROR('Failure trying to create new Catenis client.', err);
-                    throw new Meteor.Error('client.create.failure', 'Failure trying to create new Catenis client: ' + err.toString());
-                }
-
-                return clientId;
-            }
-            else {
-                // User not logged in or not a system administrator.
-                //  Throw exception
-                throw new Meteor.Error('ctn_admin_no_permission', 'No permission; must be logged in as a system administrator to perform this task');
+            }else{
+                Catenis.logger.ERROR('User does not have permission to access method "createClient"');
+                throw new Meteor.Error('User does not have permission to access method "createClient"');
             }
         },
-        newBcotPaymentAddress: function (client_id) {
-            if (Roles.userIsInRole(this.userId, 'sys-admin')) {
-                Catenis.logger.TRACE('>>>>>> newBcotPaymentAddress() remote method called');
-                // Retrieve Client doc/rec
-                const docClient = Catenis.db.collection.Client.findOne({
-                    _id: client_id
-                }, {
-                    fields: {
-                        clientId: 1
-                    }
-                });
 
-                let client = undefined;
 
-                if (docClient !== undefined) {
-                    client = Client.getClientByClientId(docClient.clientId);
-                }
+        //create Client on enrollment
+        createClient: function(user_id){
 
-                if (client === undefined) {
-                    // Invalid client. Log error and throw exception
-                    Catenis.logger.ERROR('Could not find client to get blockchain address to receive BCOT token payment', {client_id: client_id});
-                    throw new Meteor.Error('clients.bcot-pay-addr.invalid-client', 'Could not find client to get blockchain address to receive BCOT token payment');
-                }
 
-                return client.newBcotPaymentAddress();
+            // Try to create Catenis client
+            let clientId;
+
+            //initially set clientName as user's first&lastName, then later set it to companyName
+            let clientName=  Meteor.users.findOne({_id: user_id}).profile.firstName;
+            let ctnNodeIndex= Meteor.users.findOne({_id: user_id}).profile.ctnNodeIndex;
+
+            try {
+                clientId = CatenisNode.getCatenisNodeByIndex(ctnNodeIndex).createClient(clientName, user_id);
             }
-            else {
-                // User not logged in or not a system administrator.
-                //  Throw exception
-                throw new Meteor.Error('ctn_admin_no_permission', 'No permission; must be logged in as a system administrator to perform this task');
-            }
-        }
-    });
-
-    // Declaration of publications
-    Meteor.publish('serviceAccountBalance', function (client_id) {
-        if (Roles.userIsInRole(this.userId, 'sys-admin')) {
-            // Retrieve Client doc/rec
-            const docClient = Catenis.db.collection.Client.findOne({
-                _id: client_id
-            }, {
-                fields: {
-                    clientId: 1
-                }
-            });
-
-            let client = undefined;
-
-            if (docClient !== undefined) {
-                client = Client.getClientByClientId(docClient.clientId);
+            catch (err) {
+                // Error trying to create Catenis client. Log error and throw exception
+                Catenis.logger.ERROR('Failure trying to create new Catenis client.', err);
+                throw new Meteor.Error('client.create.failure', 'Failure trying to create new Catenis client: ' + err.toString());
             }
 
-            if (client === undefined) {
-                // Subscription made with an invalid Client doc/rec ID. Log error and throw exception
-                Catenis.logger.ERROR('Subscription to method \'serviceAccountBalance\' made with an invalid client', {client_id: client_id});
-                throw new Meteor.Error('clients.subscribe.service-account-balance.invalid-param', 'Subscription to method \'serviceAccountBalance\' made with an invalid client');
-            }
+            // return clientId;
 
-            const now = new Date();
-            this.added('ServiceAccountBalance', 1, {
-                balance: Util.formatCatenisServiceCredits(client.serviceAccountBalance())
-            });
+        },
 
-            const observeHandle = Catenis.db.collection.SentTransaction.find({
-                sentDate: {
-                    $gte: now
-                },
-                $or: [{
-                    type: 'credit_service_account',
-                    'info.creditServiceAccount.clientId': client.clientId
-                }, {
-                    type: 'spend_service_credit',
-                    'info.spendServiceCredit.clientIds': client.clientId
-                }]
-            }, {
-                fields: {
-                    _id: 1
-                }
-            }).observe({
-                added: (doc) => {
-                    // Get updated service account balance
-                    this.changed('ServiceAccountBalance', 1, {
-                        balance: Util.formatCatenisServiceCredits(client.serviceAccountBalance())
-                    });
-                }
-            });
 
-            this.ready();
 
-            this.onStop(() => observeHandle.stop());
-        }
-        else {
-            // User not logged in or not a system administrator
-            //  Make sure that publication is not started and throw exception
-            this.stop();
-            throw new Meteor.Error('ctn_admin_no_permission', 'No permission; must be logged in as a system administrator to perform this task');
-        }
-    });
+        //update user's information including the password, email, first and last name, as well as company name.
+        //license information is handled on a separate function at updateLicenseAdmin, which is right below this function.
+        updateUser: function (clientInfo) {
 
-    Meteor.publish('bcotPayment', function (bcotPayAddress) {
-        if (Roles.userIsInRole(this.userId, 'sys-admin')) {
-            const typeAndPath = Catenis.keyStore.getTypeAndPathByAddress(bcotPayAddress);
+            const userValue=Meteor.user();
 
-            if (typeAndPath === null) {
-                // Subscription made with an invalid address. Log error and throw exception
-                Catenis.logger.ERROR('Subscription to method \'bcotPayment\' made with an invalid address', {bcotPayAddress: bcotPayAddress});
-                throw new Meteor.Error('clients.subscribe.bcot-payment.invalid-param', 'Subscription to method \'bcotPayment\' made with an invalid address');
-            }
+            //    Either has to be in sys-admin role, or the user has to be changing his or her own profile
+            const superUser= verifyUserRole();
+            const ownProfile= (userValue.username===clientInfo.username);
 
-            const receivedAmount = {
-                unconfirmed: 0,
-                confirmed: 0
-            };
-            let initializing = true;
+            if( superUser || ownProfile) {
 
-            const observeHandle = Catenis.db.collection.ReceivedTransaction.find({
-                'info.bcotPayment.bcotPayAddressPath': typeAndPath.path
-            }, {
-                fields: {
-                    'confirmation.confirmed': 1,
-                    info: 1
-                }
-            }).observe({
-                added: (doc) => {
-                    // Get paid amount paid to address
-                    if (doc.confirmation.confirmed) {
-                        receivedAmount.confirmed += doc.info.bcotPayment.paidAmount;
-                    }
-                    else {
-                        receivedAmount.unconfirmed += doc.info.bcotPayment.paidAmount;
-                    }
+                try{
+                    const user = Meteor.users.findOne({username: clientInfo.username});
+                    if (clientInfo.pwd) {
+                        //    update client Password
+                        try {
+                            Accounts.setPassword(user._id, clientInfo.pwd, {logout: !ownProfile});
 
-                    if (!initializing) {
-                        this.changed('ReceivedBcotAmount', 1, {
-                            unconfirmed: Util.formatCoins(receivedAmount.unconfirmed),
-                            confirmed: Util.formatCoins(receivedAmount.confirmed)
-                        });
-                    }
-                },
-
-                changed: (newDoc, oldDoc) => {
-                    // Make sure that transaction is being confirmed
-                    if (newDoc.confirmation.confirmed && !oldDoc.confirmation.confirmed) {
-                        // Get total amount paid to address
-                        receivedAmount.confirmed += newDoc.info.bcotPayment.paidAmount;
-                        receivedAmount.unconfirmed -= newDoc.info.bcotPayment.paidAmount;
-
-                        if (receivedAmount.unconfirmed < 0) {
-                            receivedAmount.unconfirmed = 0;
+                        } catch (err) {
+                            Catenis.logger.ERROR('Failure trying to update Catenis user pwd', err);
+                            throw new Meteor.Error('client.update.failure', 'Failure trying to update user pwd: ' + err.toString());
                         }
 
-                        this.changed('ReceivedBcotAmount', 1, {
-                            unconfirmed: Util.formatCoins(receivedAmount.unconfirmed),
-                            confirmed: Util.formatCoins(receivedAmount.confirmed)
-                        });
                     }
+                    //assuming one email per user. ensure that user does not attempt to set email to an email that already exists.
+                    if(user.emails && user.emails[0]){
+
+                        if (user.emails && clientInfo.email !== user.emails[0].address) {
+
+                            //update user email
+                            let pastEmail = user.emails[0].address;
+
+                            try {
+                                Accounts.addEmail(user._id, clientInfo.email);
+                            } catch (err) {
+                                Catenis.logger.ERROR('Failure trying to update Catenis user email', err);
+                                throw new Meteor.Error('client.update.failure', 'Failure trying to update user email: ' + err.toString());
+                            }
+                            //    if the email was succesfully added, remove the past email
+                            try {
+                                Accounts.removeEmail(user._id, pastEmail);
+                            } catch (err) {
+                                Catenis.logger.ERROR('Failure trying to update Catenis user email (delete)', err);
+                                throw new Meteor.Error('client.update.failure', 'Failure trying to update user email(delete): ' + err.toString());
+                            }
+                        }
+
+                    }else{
+                        try {
+
+                            Accounts.addEmail(user._id, clientInfo.email);
+                        } catch (err) {
+                            Catenis.logger.ERROR('Failure trying to update Catenis user email', err);
+                            throw new Meteor.Error('client.update.failure', 'Failure trying to update user email: ' + err.toString());
+                        }
+
+                    }
+                    Meteor.users.update
+                    (user,
+                        {
+                            $set: {
+                                'profile.name': clientInfo.name, 'profile.firstname': clientInfo.firstName,
+                                'profile.lastname': clientInfo.lastName, 'profile.company': clientInfo.companyName
+                            }
+                        }
+                    );
+
+
+                }catch(err){
+                    Catenis.logger.ERROR('Failure trying to update Catenis user', err);
+                    throw new Meteor.Error('client.update.failure', 'Failure trying to update user: ' + err.toString());
                 }
-            });
+            }else{
+                Catenis.logger.ERROR('User does not have permission to access method "updateUser"');
+                throw new Meteor.Error('User does not have permission to access method "updateUser"');
+            }
+        },
 
-            initializing = false;
+        //update user license. At this time, it is designed so that only the admin user can update this.
+        //this means that users have to request via call/messaging, which will be handled by the admin who logs in and manually changes it.
+        //integration with Payment must also be considered in the future.
 
-            this.added('ReceivedBcotAmount', 1, {
-                unconfirmed: Util.formatCoins(receivedAmount.unconfirmed),
-                confirmed: Util.formatCoins(receivedAmount.confirmed)
-            });
-            this.ready();
+        updateLicenseAdmin: function(client, newLicenseState){
 
-            this.onStop(() => observeHandle.stop());
-        }
-        else {
-            // User not logged in or not a system administrator
-            //  Make sure that publication is not started and throw exception
-            this.stop();
-            throw new Meteor.Error('ctn_admin_no_permission', 'No permission; must be logged in as a system administrator to perform this task');
+            if(verifyUserRole()){
+
+                //verify that the user has less devices then would be given by the new license.
+                const numUserDevices= Catenis.db.collection.Device.find( {"client_id": {$eq: client._id } } ).count();
+                const numDevicesforLicense= Catenis.db.collection.License.findOne({licenseType: newLicenseState}).numAllowedDevices;
+                if( numUserDevices > numDevicesforLicense){
+
+                    Catenis.logger.ERROR('Client has too many devices to be reverted into license type: '+ newLicenseState);
+                    throw new Meteor.Error('Client has too many devices to be reverted into license type: '+ newLicenseState);
+
+                }else{
+
+                    try{
+                        Meteor.users.update(client.user_id,
+                            {
+                                $set: {
+                                    'profile.license.licenseType': newLicenseState,
+                                    'profile.license.licenseRenewedDate': new Date(),
+                                }
+                            }
+                        );
+
+                        //    this would be a good place to make corresponding change to the amount of devices that the user can hold.
+                        //    Need to discuss what retroactive actions can be taken to remove devices should the user downgrade the license
+
+                    }catch(err){
+                        Catenis.logger.ERROR('Failure trying to update user License ', err);
+                        throw new Meteor.Error('client.updateLicenseAdmin.failure', 'Failure trying to update user License: ' + err.toString());
+                    }
+
+                }
+            }else{
+                Catenis.logger.ERROR('User does not have permission to access method "updateLicenseAdmin"');
+                throw new Meteor.Error('User does not have permission to access method "updateLicenseAdmin"');
+            }
+
+        },
+
+        updateLicenseConfig: function(newConfiguration){
+            if(verifyUserRole()){
+
+                Catenis.db.collection.License.update({licenseType: "Starter"}, {$set:{numAllowedDevices:newConfiguration.starter}});
+                Catenis.db.collection.License.update({licenseType: "Basic"}, {$set:{numAllowedDevices:newConfiguration.basic}});
+                Catenis.db.collection.License.update({licenseType: "Professional"}, {$set:{numAllowedDevices:newConfiguration.professional}});
+                Catenis.db.collection.License.update({licenseType: "Enterprise"}, {$set:{numAllowedDevices:newConfiguration.enterprise}});
+
+            }else{
+
+                Catenis.logger.ERROR('User does not have permission to access method "updateLicenseConfig"');
+                throw new Meteor.Error('User does not have permission to access method "updateLicenseConfig"');
+            }
+        },
+
+
+        renewClientAPIKey: function(userId, resetAllDeviceKey){
+
+            if(verifyUserRole()){
+
+                var client= Client.getClientByUserId(userId);
+                client.renewApiAccessGenKey(resetAllDeviceKey) ;
+                return client.apiAccessGenKey;
+
+            }else{
+
+                Catenis.logger.ERROR('User does not have permission to access method "renewClientAPIKey"');
+                throw new Meteor.Error('User does not have permission to access method "renewClientAPIKey"');
+            }
+
         }
     });
 
+
+    // Declaration of publications
     Meteor.publish('catenisClients', function (ctnNodeIndex) {
-        if (Roles.userIsInRole(this.userId, 'sys-admin')) {
-            ctnNodeIndex = ctnNodeIndex || Catenis.application.ctnHubNodeIndex;
+        ctnNodeIndex = ctnNodeIndex || Catenis.application.ctnHubNodeIndex;
 
-            const docCtnNode = Catenis.db.collection.CatenisNode.findOne({ctnNodeIndex: ctnNodeIndex}, {fields: {_id: 1}});
+        const docCtnNode = Catenis.db.collection.CatenisNode.findOne({ctnNodeIndex: ctnNodeIndex}, {fields: {_id: 1}});
 
-            if (docCtnNode === undefined) {
-                // Subscription made with an invalid Catenis node index. Log error and throw exception
-                Catenis.logger.ERROR('Subscription to method \'catenisClients\' made with an invalid Catenis node index', {ctnNodeIndex: ctnNodeIndex});
-                throw new Meteor.Error('clients.subscribe.catenis-clients.invalid-param', 'Subscription to method \'catenisClients\' made with an invalid Catenis node index');
-            }
+        if (docCtnNode === undefined) {
+            // Subscription made with an invalid Catenis node index. Log error and throw exception
+            Catenis.logger.ERROR('Subscription to method \'catenisClients\' made with an invalid Catenis node index', {ctnNodeIndex: ctnNodeIndex});
+            throw new Meteor.Error('clients.subscribe.catenis-clients.invalid-param', 'Subscription to method \'catenisClients\' made with an invalid Catenis node index');
+        }
+
+        let isAdminUser;
+        let userId=this.userId;
+        let user= Meteor.users.findOne({_id: userId});
+
+
+        //check if the user is Admin
+        if(user && user.roles && user.roles.includes('sys-admin') ){
+            isAdminUser= true;
+        }else{
+            isAdminUser= false;
+        }
+        //user is Admin. Return every data there is.
+        if(isAdminUser){
 
             return Catenis.db.collection.Client.find({
                 catenisNode_id: docCtnNode._id,
@@ -304,61 +406,170 @@ ClientsUI.initialize = function () {
                     status: 1
                 }
             });
-        }
-        else {
-            // User not logged in or not a system administrator
-            //  Make sure that publication is not started and throw exception
-            this.stop();
-            throw new Meteor.Error('ctn_admin_no_permission', 'No permission; must be logged in as a system administrator to perform this task');
+
+        }else{
+
+            //    user is just a normal person, we return only their client id.
+            //    alternatively, we could look into having client_id be coupled with user
+            return Catenis.db.collection.Client.find({
+                    catenisNode_id: docCtnNode._id,
+                    status: {$ne: 'deleted'},
+                    user_id: this.userId
+                },
+                {
+                    fields:{
+                        _id: 1,
+                        clientId: 1,
+                        user_id:1
+                    }
+                })
         }
     });
 
-    Meteor.publish('clientRecord', function (client_id) {
-        if (Roles.userIsInRole(this.userId, 'sys-admin')) {
-            return Catenis.db.collection.Client.find({
-                _id: client_id
-            }, {
+    Meteor.publish('clientRecord', function (user_id) {
+        return Catenis.db.collection.Client.find({
+            user_id: user_id
+        }, {
+            fields: {
+                _id: 1,
+                user_id: 1,
+                clientId: 1,
+                index: 1,
+                props: 1,
+                status: 1
+            }
+        });
+    });
+
+    Meteor.publish('clientUser', function (user_id) {
+        const client = Catenis.db.collection.Client.findOne({user_id: user_id}, {fields: {user_id: 1}});
+
+        if (client && client.user_id) {
+            return Meteor.users.find({_id: client.user_id}, {
                 fields: {
                     _id: 1,
-                    user_id: 1,
-                    clientId: 1,
-                    index: 1,
-                    props: 1,
-                    status: 1
+                    username: 1,
+                    //below added to allow user activation status access.
+                    profile:1,
+                    //below added to allow license information access.
                 }
             });
         }
         else {
-            // User not logged in or not a system administrator
-            //  Make sure that publication is not started and throw exception
-            this.stop();
-            throw new Meteor.Error('ctn_admin_no_permission', 'No permission; must be logged in as a system administrator to perform this task');
+            // Nothing to return
+            return this.ready();
         }
+
     });
+    //userList returns the information of all user details the user has access to.
+    //currently, only differentiates if the user is super user or not.
+    Meteor.publish('userList', function(userInfo){
 
-    Meteor.publish('clientUser', function (client_id) {
-        if (Roles.userIsInRole(this.userId, 'sys-admin')) {
-            const client = Catenis.db.collection.Client.findOne({_id: client_id}, {fields: {user_id: 1}});
-
-            if (client && client.user_id) {
-                return Meteor.users.find({_id: client.user_id}, {
-                    fields: {
-                        _id: 1,
-                        username: 1
-                    }
-                });
-            }
-            else {
-                // Nothing to return
-                return this.ready();
+        const user = userInfo;
+        if (user) {
+            if(user.roles && user.roles.includes('sys-admin')){
+                return Meteor.users.find();
+            }else{
+                return user;
             }
         }
         else {
-            // User not logged in or not a system administrator
-            //  Make sure that publication is not started and throw exception
-            this.stop();
-            throw new Meteor.Error('ctn_admin_no_permission', 'No permission; must be logged in as a system administrator to perform this task');
+            // Nothing to return
+            return this.ready();
         }
+    });
+
+    Meteor.publish('license', function(){
+
+        return Catenis.db.collection.License.find({});
+
+    });
+
+    Meteor.publish('clientMessageCredits', function (user_id) {
+
+        let client_id= Catenis.db.collection.Client.findOne({user_id: user_id}).client_id;
+
+        const messageCreditCount = {
+            unconfirmed: 0,
+            confirmed: 0
+        };
+        let initializing = true;
+
+        const observeHandle = Catenis.db.collection.ServiceCredit.find({
+                client_id: client_id,
+                srvCreditType: Client.serviceCreditType.message,
+                remainCredits: {$gt: 0}
+            },
+            {   fields: {
+                    _id: 1,
+                    'fundingTx.confirmed': 1,
+                    remainCredits: 1
+                }
+            }).observe({
+            added: (doc) => {
+                // Adjust message credits
+                if (doc.fundingTx.confirmed) {
+                    messageCreditCount.confirmed += doc.remainCredits;
+                }
+                else {
+                    messageCreditCount.unconfirmed += doc.remainCredits;
+                }
+
+                if (!initializing) {
+                    this.changed('MessageCredits', 1, {
+                        unconfirmed: messageCreditCount.unconfirmed.toLocaleString(),
+                        confirmed: messageCreditCount.confirmed.toLocaleString()
+                    });
+                }
+            },
+
+            changed: (newDoc, oldDoc) => {
+                // Adjust message credits
+                if (oldDoc.fundingTx.confirmed) {
+                    messageCreditCount.confirmed -= oldDoc.remainCredits;
+                }
+                else {
+                    messageCreditCount.unconfirmed -= oldDoc.remainCredits;
+                }
+
+                if (newDoc.fundingTx.confirmed) {
+                    messageCreditCount.confirmed += newDoc.remainCredits;
+                }
+                else {
+                    messageCreditCount.unconfirmed += newDoc.remainCredits;
+                }
+
+                this.changed('MessageCredits', 1, {
+                    unconfirmed: messageCreditCount.unconfirmed.toLocaleString(),
+                    confirmed: messageCreditCount.confirmed.toLocaleString()
+                });
+            },
+
+            deleted: (oldDoc) => {
+                // Adjust message credits
+                if (oldDoc.fundingTx.confirmed) {
+                    messageCreditCount.confirmed -= oldDoc.remainCredits;
+                }
+                else {
+                    messageCreditCount.unconfirmed -= oldDoc.remainCredits;
+                }
+
+                this.changed('MessageCredits', 1, {
+                    unconfirmed: messageCreditCount.unconfirmed.toLocaleString(),
+                    confirmed: messageCreditCount.confirmed.toLocaleString()
+                });
+            }
+        });
+
+        initializing = false;
+
+        this.added('MessageCredits', 1, {
+            unconfirmed: messageCreditCount.unconfirmed.toLocaleString(),
+            confirmed: messageCreditCount.confirmed.toLocaleString()
+        });
+        this.ready();
+
+        this.onStop(() => observeHandle.stop());
     });
 };
 
@@ -371,6 +582,24 @@ ClientsUI.initialize = function () {
 
 // Definition of module (private) functions
 //
+
+// Ensure user is in sys-admin role to call certain functions.
+function verifyUserRole() {
+    try{
+        const user = Meteor.user();
+        if (user && user.roles && user.roles.includes('sys-admin')) {
+            return true;
+        }
+        else {
+            return false;
+        }
+
+    }
+    catch (err) {
+        Catenis.logger.ERROR('Failure trying to verify Meteor user role.', err);
+        throw new Meteor.Error('client.verifyUserRole.failure', 'Failure trying to verify role of current user: ' + err.toString());
+    }
+}
 
 
 // Module code

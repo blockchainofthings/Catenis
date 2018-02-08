@@ -30,7 +30,6 @@ import './SystemFundingTemplate.html';
 // Import dependent templates
 import './FundingAddressTemplate.js';
 
-
 // Module code
 //
 
@@ -78,5 +77,10 @@ Template.systemFunding.helpers({
     },
     lowBalance(balanceInfo) {
         return balanceInfo && balanceInfo.currentBalance < balanceInfo.minimumBalance;
-    }
+    },
+
+});
+
+
+Template.systemFunding.onRendered(function(){
 });

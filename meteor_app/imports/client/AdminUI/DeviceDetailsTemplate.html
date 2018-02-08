@@ -1,33 +1,79 @@
 <template name="deviceDetails">
-    <h2>Device #{{device.index.deviceIndex}}</h2>
-    {{#unless Template.subscriptionsReady}}
-        <p style="color:lightgray; margin-top:1em">Loading...</p>
-    {{else}}
-        <a href="/admin/clients/{{device.client_id}}?showDevices=1">Back to client {{client.props.name}}</a>
-        <table cellpadding="2" style="margin-left:auto; margin-right:auto; margin-top:1em; margin-bottom:1em; max-width: 70%">
-            <tr>
-                <td style="text-align:right; font-weight:bold"><label>Device&nbsp;ID:&nbsp;</label></td>
-                <td style="text-align:left">{{device.deviceId}}</td>
-            </tr>
-            {{#if (hasName device)}}
-                <tr>
-                    <td style="text-align:right; font-weight:bold"><label>Device&nbsp;Name:&nbsp;</label></td>
-                    <td style="text-align:left">{{device.props.name}}</td>
-                </tr>
-            {{/if}}
-            {{#if (hasProdUniqueId device)}}
-                <tr>
-                    <td style="text-align:right; font-weight:bold"><label>Product Unique ID:&nbsp;</label></td>
-                    <td style="text-align:left">{{device.props.prodUniqueId}}</td>
-                </tr>
-            {{/if}}
-            {{#if (hasPublic device)}}
-                <tr>
-                    <td style="text-align:right; font-weight:bold"><label>Public:&nbsp;</label></td>
-                    <td style="text-align:left">{{publicStatus device}}</td>
-                </tr>
-            {{/if}}
-        </table>
-        <a id="lnkShowAPIAccessSecret" href="#">Show API access secret</a>
-    {{/unless}}
+    <div>
+        <div class="panel panel-login minWidthElement noBoxShadow">
+            <div class="panel-body">
+                <div class="row">
+                    <div class="col-lg-12">
+                        <h2>Device #{{device.index.deviceIndex}}</h2>
+                        {{#unless Template.subscriptionsReady}}
+                            <p style="color:lightgray; margin-top:1em">Loading...</p>
+                        {{else}}
+                            <div class="modal fade" tabindex="-1" role="dialog" id="resetAPIKey">
+                                <div class="modal-dialog" role="document">
+                                    <div class="modal-content">
+                                        <form id="resetAPIKey">
+                                            <div class="modal-header">
+                                                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                                                <h4 class="modal-title">Reset API Key</h4>
+                                            </div>
+                                            <div class="modal-body">
+                                                <p class="creditDetail">I would like to reset this Device's API access Key</p>
+                                                <input type="text" id="resetSentence" name="resetSentence" placeholder="type the exact sentence above to reset API key" class="fullWidth text-center">
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                                                <button type="submit" id="submitDeviceAPIKeyChange" class="btn btn-primary">Change Device API Key</button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-lg-12">
+                                <table class="table table-striped">
+                                    <tbody>
+                                    <tr>
+                                        <td><label>Device&nbsp;ID:&nbsp;</label></td>
+                                        <td>{{device.deviceId}}</td>
+                                    </tr>
+
+                                    {{#if (hasName device)}}
+                                        <tr>
+                                            <td><label>Device&nbsp;Name:&nbsp;</label></td>
+                                            <td>{{device.props.name}}</td>
+                                        </tr>
+                                    {{/if}}
+                                    {{#if (hasProdUniqueId device)}}
+                                        <tr>
+                                            <td><label>Product Unique ID:&nbsp;</label></td>
+                                            <td>{{device.props.prodUniqueId}}</td>
+                                        </tr>
+                                    {{/if}}
+                                    {{#if (hasPublic device)}}
+                                        <tr>
+                                            <td><label>Public:&nbsp;</label></td>
+                                            <td>{{publicStatus device}}</td>
+                                        </tr>
+                                    {{/if}}
+                                    </tbody>
+                                </table>
+
+                            </div>
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <a href="/admin/clients/{{user_id}}?showDevices=1" role="button" class="btn-login btn paddedBtn fullWidth">Back to {{client.props.name}}</a>
+                                </div>
+                                <div class="col-md-4">
+                                    <a id="lnkShowAPIAccessSecret" href="#" role="button" class="btn-login btn paddedBtn fullWidth">Show API access secret</a>
+                                </div>
+                                <div class="col-md-4">
+                                    <a id="resetDeviceAPISecret" href="#" data-toggle="modal" data-target="#resetAPIKey" role="button" class="btn-login btn paddedBtn fullWidth">Reset device API secret</a>
+                                </div>
+                            </div>
+                        {{/unless}}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </template>

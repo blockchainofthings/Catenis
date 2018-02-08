@@ -3,26 +3,35 @@
     {{#unless Template.subscriptionsReady}}
         <p style="color:lightgray; margin-top:1em">Loading...</p>
     {{else}}
-        <a href="/admin/clients/{{docClientId}}/newdevice">Add new device</a>
-        <table cellpadding="5" style="margin-left:auto; margin-right:auto; margin-top:1em">
-            <tr>
-                <th style="text-align:left">Index</th>
-                <th style="text-align:left">Device ID</th>
-                <th>Status</th>
-            </tr>
-            {{#each device in listDevices}}
+        <div class="col-md-4 col-md-offset-4">
+            <a href="/admin/clients/{{docUserId}}/newdevice" class="btn-login btn paddedBtn fullWidth">Add new device</a>
+        </div>
+
+        <table class="table table-striped">
+            <thead>
                 <tr>
-                    <td style="text-align:left">
-                        {{#if (isDeviceActive device)}}
-                            <a href="/admin/clients/{{docClientId}}/devices/{{device._id}}">Device #{{device.index.deviceIndex}}</a>
-                        {{else}}
-                            Device #{{device.index.deviceIndex}}
-                        {{/if}}
-                    </td>
-                    <td>{{device.deviceId}}</td>
-                    <td>{{device.status}}</td>
+                    <th>Index</th>
+                    <th>Device ID</th>
+                    <th>Status</th>
                 </tr>
-            {{/each}}
+            </thead>
+            <tbody>
+               {{#each device in listDevices}}
+                   <tr>
+                       <td>
+                           {{#if (isDeviceActive device)}}
+                               <a href="/admin/clients/{{docUserId}}/devices/{{device._id}}">Device #{{device.index.deviceIndex}}</a>
+                           {{else}}
+                               Device #{{device.index.deviceIndex}}
+                           {{/if}}
+                       </td>
+                       <td>{{device.deviceId}}</td>
+                       <td>{{device.status}}</td>
+                   </tr>
+               {{/each}}
+           </tbody>
         </table>
+
+
     {{/unless}}
 </template>

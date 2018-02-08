@@ -53,6 +53,8 @@ import { BcotPayment } from './BcotPayment';
 import { SpendServiceCredit } from './SpendServiceCredit';
 import { BcotUsageReportUI } from './AdminUI/BcotUsageReportUI';
 
+import './Email.js';
+
 // DEBUG - begin
 //import { resetBitcoinCore } from './Test/FundSourceTest';
 // DEBUG - end
@@ -93,7 +95,6 @@ Meteor.startup(function () {
         IpfsServerMonitor.initialize();
         CCFullNodeClient.initialize();
         CCMetadataClient.initialize();
-        //ColoredCoins.initialize();
         Permission.initialize();
         CatenisNode.initialize();
 

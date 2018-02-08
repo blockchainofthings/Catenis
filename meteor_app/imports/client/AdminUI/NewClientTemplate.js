@@ -16,6 +16,7 @@
 //const util = require('util');
 // Third-party node modules
 //import config from 'config';
+
 // Meteor packages
 import { Meteor } from 'meteor/meteor';
 import { Template } from 'meteor/templating';
@@ -27,9 +28,7 @@ import { Catenis } from '../ClientCatenis';
 // Import template UI
 import './NewClientTemplate.html';
 
-
 // Definition of module (private) functions
-//
 
 function validateFormData(form, errMsgs) {
     const clientInfo = {};
@@ -51,23 +50,69 @@ function validateFormData(form, errMsgs) {
         hasError = true;
     }
 
-    clientInfo.psw = form.password.value ? form.password.value.trim() : '';
+    clientInfo.email = form.email.value ? form.email.value.trim() : '';
 
-    if (clientInfo.psw.length === 0) {
-        // Password not supplied. Report error
-        errMsgs.push('Please enter a password');
+    if (clientInfo.email.length === 0) {
+        // Email not supplied. Report error
+        errMsgs.push('Please enter an email address');
         hasError = true;
     }
     else {
-        const confPsw = form.confirmPassword.value ? form.confirmPassword.value.trim() : '';
+        const confEmail = form.confirmEmail.value ? form.confirmEmail.value.trim() : '';
 
-        if (clientInfo.psw !== confPsw) {
-            // Confirmation password does not match. Report error
-            errMsgs.push('Confirmation password does not match');
+        if (clientInfo.email !== confEmail) {
+            // Confirmation email does not match. Report error
+            errMsgs.push('Confirmation email does not match');
             hasError = true;
         }
     }
 
+    clientInfo.firstName = form.firstName.value? form.firstName.value.trim() : '';
+    if (clientInfo.firstName.length === 0) {
+        // firstName not supplied. Report error
+        errMsgs.push("Please enter client's first name");
+        hasError = true;
+    }
+
+    clientInfo.lastName = form.lastName.value? form.lastName.value.trim() : '';
+    if (clientInfo.lastName.length === 0) {
+        // firstName not supplied. Report error
+        errMsgs.push("Please enter client's last name");
+        hasError = true;
+    }
+    clientInfo.companyName= form.companyName.value? form.companyName.value.trim() : '';
+    if (clientInfo.companyName.length === 0) {
+        // firstName not supplied. Report error
+        errMsgs.push("Please enter client's company name");
+        hasError = true;
+    }
+
+
+    //check if the validation on the form has been completed. If this works, the above email check is redundant.
+
+    if(form.emailValidation && form.emailValidation.value!=="Validated"){
+        errMsgs.push('Email was not validated');
+        hasError =true;
+    }
+
+    // password will be filled in by the users, except when we're updating it ourselves
+    if(form.password){
+
+        //this method is being called in the update form
+        clientInfo.pwd = form.password.value ? form.password.value.trim() : '';
+
+        if (clientInfo.pwd.length === 0) {
+            // Password not supplied. We're not changing the password
+        }
+        else {
+            const confPsw = form.confirmPassword.value ? form.confirmPassword.value.trim() : '';
+            if (clientInfo.pwd !== confPsw) {
+                // Confirmation password does not match. Report error
+                errMsgs.push('Confirmation password does not match');
+                hasError = true;
+            }
+        }
+    }
     return !hasError ? clientInfo : undefined;
 }
 
@@ -78,6 +123,7 @@ function validateFormData(form, errMsgs) {
 Template.newClient.onCreated(function () {
     this.state = new ReactiveDict();
     this.state.set('errMsgs', []);
+    this.state.set('emailValidated', false);
 });
 
 Template.newClient.onDestroyed(function () {
@@ -92,6 +138,34 @@ Template.newClient.events({
             usernameCtrl.value = clientName.replace(/(\s|[^\w])+/g,'_');
         }
     },
+    //null the email Validation if the email value is changed after validation.
+    'change #txtEmail'(event, template){
+        template.$('#emailValidation')[0].value="notValidated";
+        template.state.set('emailValidated',false);
+    },
+    'change #txtConfirmEmail'(event, template){
+        template.$('#emailValidation')[0].value="notValidated";
+        template.state.set('emailValidated',false);
+    },
+
+    //check if the email is 'valid' in that the two emails match. Potentially, could be made to check if the email exists in the db already.
+    'click #checkEmailValidity'(event, template){
+        if(template.$('#txtEmail')[0].value.length===0){
+            template.$('#resultEmailConfirmation')[0].innerHTML="Are you sure the original form has an email? Please enter client's email again";
+        }else if( template.$('#txtEmail')[0].value===template.$('#txtConfirmEmail')[0].value){
+            template.$('#emailValidation')[0].value="Validated";
+            template.$('#resultEmailConfirmation')[0].innerHTML="please validate client's email";
+            template.state.set('emailValidated',true);
+            //close modal form backdrop
+            $('#confirmEmail').modal('hide');
+            // $('body').removeClass('modal-open');
+            // $('.modal-backdrop').remove();
+        }else{
+            template.$('#resultEmailConfirmation')[0].innerHTML="The two emails provided doesn't match. Please enter client's email again";
+        }
+    },
+
+
     'submit #frmNewClient'(event, template) {
         event.preventDefault();
 
@@ -104,7 +178,7 @@ Template.newClient.events({
 
         if ((clientInfo = validateFormData(form, errMsgs))) {
             // Call remote method to create client
-            Meteor.call('createClient', Catenis.ctnHubNodeIndex, clientInfo, (error, clientId) => {
+            Meteor.call('createUserToEnroll', Catenis.ctnHubNodeIndex, clientInfo, (error, userId) => {
                 if (error) {
                     template.state.set('errMsgs', [
                         error.toString()
@@ -112,14 +186,20 @@ Template.newClient.events({
                 }
                 else {
                     // Catenis client successfully created
-                    template.state.set('newClientId', clientId);
+                    template.state.set('newUserId', userId);
+                    template.state.set('clientInfo', clientInfo);
                 }
             });
         }
         else {
             template.state.set('errMsgs', errMsgs);
         }
-    }
+    },
+
+    //to clear inputs, we just reload the page. in the future, consider removing the element contents separately.
+    'click #reset':function(){
+        document.location.reload(true);
+    },
 });
 
 Template.newClient.helpers({
@@ -131,11 +211,28 @@ Template.newClient.helpers({
             if (compMsg.length > 0) {
                 compMsg += '<br>';
             }
-
             return compMsg + errMsg;
         }, '');
     },
-    newClientId: function () {
-        return Template.instance().state.get('newClientId');
+
+    newUserId: function () {
+        return Template.instance().state.get('newUserId');
+    },
+    clientInfo: function() {
+        return Template.instance().state.get('clientInfo');
+    },
+    successfulUpdate: function(){
+        return Template.instance().state.get('successfulUpdate');
+    },
+    emailValidated: function(){
+        return Template.instance().state.get('emailValidated');
+    },
+    ValidateEmailMessage: function(){
+        if(Template.instance().state.get('emailValidated')){
+            return "Email Successfully Validated";
+        }else{
+            return "Validate Email";
+        }
     }
+
 });

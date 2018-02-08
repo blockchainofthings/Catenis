@@ -1,0 +1,14 @@
+<template name="infoLine">
+    <div class="infoLine" id="infoLine">
+        <div class="breadCrumbs" id="breadCrumb">
+            <h3 class="breadCrumb_Current">{{lastCrumb}}</h3>
+            <ol class="breadcrumb breadCrumb_List">
+                {{#each crumb in breadCrumbs}}
+                    <li>
+                        <a href="">{{crumb}}</a>
+                    </li>
+                {{/each}}
+            </ol>
+        </div>
+    </div>
+</template>
