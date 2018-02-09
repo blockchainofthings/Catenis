@@ -30,7 +30,6 @@ import './AdminLayout.html';
 // Import dependent templates
 import './LoginTemplate.js';
 import './SystemFundingTemplate.js';
-import './BcotUsageReportTemplate.js';
 import './ClientsTemplate.js';
 import './DeviceDetailsTemplate.js';
 import './NewClientTemplate.js';

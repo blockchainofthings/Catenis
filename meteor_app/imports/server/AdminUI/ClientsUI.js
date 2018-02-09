@@ -27,6 +27,8 @@ import { Client } from '../Client';
 import { Util } from '../Util';
 
 
+const maxMsgCreditsCount = 100;
+
 // Definition of function classes
 //
 
@@ -412,17 +414,17 @@ ClientsUI.initialize = function () {
             //    user is just a normal person, we return only their client id.
             //    alternatively, we could look into having client_id be coupled with user
             return Catenis.db.collection.Client.find({
-                    catenisNode_id: docCtnNode._id,
-                    status: {$ne: 'deleted'},
-                    user_id: this.userId
-                },
-                {
-                    fields:{
-                        _id: 1,
-                        clientId: 1,
-                        user_id:1
-                    }
-                })
+                catenisNode_id: docCtnNode._id,
+                status: {$ne: 'deleted'},
+                user_id: this.userId
+            },
+            {
+                fields:{
+                    _id: 1,
+                    clientId: 1,
+                    user_id:1
+                }
+            })
         }
     });
 
@@ -496,16 +498,16 @@ ClientsUI.initialize = function () {
         let initializing = true;
 
         const observeHandle = Catenis.db.collection.ServiceCredit.find({
-                client_id: client_id,
-                srvCreditType: Client.serviceCreditType.message,
-                remainCredits: {$gt: 0}
-            },
-            {   fields: {
-                    _id: 1,
-                    'fundingTx.confirmed': 1,
-                    remainCredits: 1
-                }
-            }).observe({
+            client_id: client_id,
+            srvCreditType: Client.serviceCreditType.message,
+            remainCredits: {$gt: 0}
+        },
+        {   fields: {
+                _id: 1,
+                'fundingTx.confirmed': 1,
+                remainCredits: 1
+            }
+        }).observe({
             added: (doc) => {
                 // Adjust message credits
                 if (doc.fundingTx.confirmed) {

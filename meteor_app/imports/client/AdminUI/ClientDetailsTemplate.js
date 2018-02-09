@@ -29,7 +29,6 @@ import './ClientDetailsTemplate.html';
 
 // Import dependent templates
 import './DevicesTemplate.js';
-import './BcotPaymentAddressTemplate.js';
 
 function validateFormData(form, errMsgs) {
     const clientInfo = {};
@@ -135,11 +134,11 @@ function licenseViolation(numDevices, user_id) {
 Template.clientDetails.onCreated(function () {
 
     this.state = new ReactiveDict();
+    this.state.set('addMsgCreditsStatus', 'idle');  // Valid statuses: 'idle', 'data-enter', 'processing', 'error', 'success'
     this.state.set('showDevices', !!this.data.showDevices);
     //added by peter to check whether enrollment email was sent.
     this.state.set('haveResentEnrollmentEmail', false);
     this.state.set('errMsgs', []);
-
     // Subscribe to receive fund balance updates
     this.clientRecordSubs = this.subscribe('clientRecord', this.data.user_id);
     // this.clientUserSubs = this.subscribe('clientUser', this.data.user_id);
@@ -161,8 +160,8 @@ Template.clientDetails.onDestroyed(function () {
         this.clientUserSubs.stop();
     }
 
-    if (this.serviceAccountBalanceSubs) {
-        this.serviceAccountBalanceSubs.stop();
+    if (this.clientMessageCreditsSubs) {
+        this.clientMessageCreditsSubs.stop();
     }
 
     //added to allow device number count.
@@ -206,6 +205,12 @@ Template.clientDetails.events({
 
             template.state.set('addMsgCreditsStatus', 'processing');
         }
+        else {
+            fieldCreditsCount.value = null;
+        }
+    },
+    'click #lnkCancelAddMsgCredits'(event, template) {
+        template.state.set('addMsgCreditsStatus', 'idle');
 
         return false;
     },

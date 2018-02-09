@@ -18,7 +18,6 @@
 //import config from 'config';
 // Meteor packages
 import { Meteor } from 'meteor/meteor';
-import { Roles } from 'meteor/alanning:roles';
 
 // References code in other (Catenis) modules
 import { Catenis } from '../Catenis';
@@ -229,26 +228,18 @@ DevicesUI.initialize = function () {
     });
 
     Meteor.publish('deviceRecord', function (device_id) {
-        if (Roles.userIsInRole(this.userId, 'sys-admin')) {
-            return Catenis.db.collection.Device.find({
-                _id: device_id
-            }, {
-                fields: {
-                    _id: 1,
-                    client_id: 1,
-                    deviceId: 1,
-                    index: 1,
-                    props: 1,
-                    status: 1
-                }
-            });
-        }
-        else {
-            // User not logged in or not a system administrator
-            //  Make sure that publication is not started and throw exception
-            this.stop();
-            throw new Meteor.Error('ctn_admin_no_permission', 'No permission; must be logged in as a system administrator to perform this task');
-        }
+        return Catenis.db.collection.Device.find({
+            _id: device_id
+        }, {
+            fields: {
+                _id: 1,
+                client_id: 1,
+                deviceId: 1,
+                index: 1,
+                props: 1,
+                status: 1
+            }
+        });
     });
 };
 
