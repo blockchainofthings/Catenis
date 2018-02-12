@@ -30,6 +30,7 @@ import { CatenisNode } from './CatenisNode';
 export function Database(collections) {
     this.collection = {};
     this.mongoCollection = {};
+    this.mongoDb = undefined;
 
     const initFuncs = [];
 
@@ -41,12 +42,22 @@ export function Database(collections) {
         //noinspection JSUnfilteredForInLoop
         this.collection[collName] = new Mongo.Collection(collName);
         //noinspection JSUnfilteredForInLoop
-        let thisMongoCollection = this.mongoCollection[collName] = this.collection[collName].rawCollection();
+        const thisMongoCollection = this.mongoCollection[collName] = this.collection[collName].rawCollection();
+
+        if (!this.mongoDb) {
+            // noinspection JSUnfilteredForInLoop
+            this.mongoDb = this.collection[collName].rawDatabase();
+        }
+
+        let createIndex;
+        let dropIndex;
+
+        // Make sure that (old) indices containing the 'safe' property are removed so they
+        //  can be re-created without that property
+        dropSafeIndices(thisMongoCollection);
 
         // Create indices for the collection
         if ('indices' in collection) {
-            let createIndex = Meteor.wrapAsync(thisMongoCollection.ensureIndex, thisMongoCollection);
-
             collection.indices.forEach((index) => {
                 let args = [index.fields];
 
@@ -54,7 +65,38 @@ export function Database(collections) {
                     args.push(index.opts);
                 }
 
-                createIndex.apply(thisMongoCollection, args);
+                let tryAgain;
+
+                if (!createIndex) {
+                    createIndex = Meteor.wrapAsync(thisMongoCollection.createIndex, thisMongoCollection);
+                }
+
+                do {
+                    tryAgain = false;
+
+                    try {
+                        createIndex.apply(thisMongoCollection, args);
+                    }
+                    catch (err) {
+                        let matchResult;
+
+                        if (err.name === 'MongoError' && (matchResult = err.message.match(/^Index with name: ([^\s].+) already exists with different options$/))) {
+                            // Index already exists with a different configuration.
+                            //  So delete it and re-create it
+                            const indexName = matchResult[1];
+                            // noinspection JSUnfilteredForInLoop
+                            Catenis.logger.INFO('Fixing index \'%s\' of %s collection', indexName, collName);
+
+                            if (!dropIndex) {
+                                dropIndex = Meteor.wrapAsync(thisMongoCollection.dropIndex, thisMongoCollection);
+                            }
+
+                            dropIndex(indexName);
+                            tryAgain = true;
+                        }
+                    }
+                }
+                while (tryAgain);
             });
         }
 
@@ -87,7 +129,7 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                    w: 1
                 }
             }]
         },
@@ -99,7 +141,7 @@ Database.initialize = function() {
                 opts: {
                     unique: true,
                     background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                    w: 1
                 }
             }]
         },
@@ -110,7 +152,7 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                    w: 1
                 }
             },
             {
@@ -121,7 +163,7 @@ Database.initialize = function() {
                 opts: {
                     unique: true,
                     background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                    w: 1
                 }
             },
             {
@@ -130,7 +172,7 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                    w: 1
                 }
             },
             {
@@ -140,7 +182,7 @@ Database.initialize = function() {
                 opts: {
                     unique: true,
                     background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                    w: 1
                 }
             },
             {
@@ -149,7 +191,7 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                    w: 1
                 }
             },
             {
@@ -159,7 +201,7 @@ Database.initialize = function() {
                 opts: {
                     sparse: true,
                     background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                    w: 1
                 }
             },
             {
@@ -168,7 +210,7 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                    w: 1
                 }
             },
             {
@@ -177,7 +219,7 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                    w: 1
                 }
             },
             {
@@ -186,7 +228,7 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                    w: 1
                 }
             },
             {
@@ -195,7 +237,7 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                    w: 1
                 }
             }]
         },
@@ -207,7 +249,7 @@ Database.initialize = function() {
                 opts: {
                     unique: true,
                     background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                    w: 1
                 }
             },
             {
@@ -216,7 +258,7 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                    w: 1
                 }
             },
             {
@@ -225,7 +267,7 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                    w: 1
                 }
             },
             {
@@ -234,7 +276,7 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                    w: 1
                 }
             }],
             initFunc: initCatenisNode
@@ -248,7 +290,7 @@ Database.initialize = function() {
                     unique: true,
                     sparse: true,
                     background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                    w: 1
                 }
             },
             {
@@ -257,7 +299,7 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                    w: 1
                 }
             },
             {
@@ -267,7 +309,7 @@ Database.initialize = function() {
                 opts: {
                     unique: true,
                     background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                    w: 1
                 }
             },
             {
@@ -278,7 +320,7 @@ Database.initialize = function() {
                 opts: {
                     unique: true,
                     background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                    w: 1
                 }
             },
             {
@@ -287,7 +329,7 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                    w: 1
                 }
             },
             {
@@ -296,7 +338,7 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                    w: 1
                 }
             },
             {
@@ -305,7 +347,7 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                    w: 1
                 }
             },
             {
@@ -314,7 +356,7 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                    w: 1
                 }
             },
             {
@@ -323,7 +365,7 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                    w: 1
                 }
             },
             {
@@ -332,7 +374,7 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                    w: 1
                 }
             }]
         },
@@ -343,7 +385,7 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                    w: 1
                 }
             },
             {
@@ -353,7 +395,7 @@ Database.initialize = function() {
                 opts: {
                     unique: true,
                     background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                    w: 1
                 }
             },
             {
@@ -365,7 +407,7 @@ Database.initialize = function() {
                 opts: {
                     unique: true,
                     background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                    w: 1
                 }
             },
             {
@@ -376,7 +418,7 @@ Database.initialize = function() {
                     unique: true,
                     sparse: true,
                     background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                    w: 1
                 }
             },
             {
@@ -385,7 +427,7 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                    w: 1
                 }
             },
             {
@@ -394,7 +436,7 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                    w: 1
                 }
             },
             {
@@ -403,7 +445,7 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                    w: 1
                 }
             },
             {
@@ -412,7 +454,7 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                    w: 1
                 }
             },
             {
@@ -421,7 +463,7 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                    w: 1
                 }
             }]
         },
@@ -433,7 +475,7 @@ Database.initialize = function() {
                 opts: {
                     unique: true,
                     background: true,
-                    safe: true      // Should be replaced with 'w: 1' for new mongodb drivers
+                    w: 1
                 }
             },
             {
@@ -442,7 +484,7 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                    w: 1
                 }
             },
             {
@@ -451,7 +493,7 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                    w: 1
                 }
             },
             {
@@ -460,7 +502,7 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                    w: 1
                 }
             },
             {
@@ -470,7 +512,7 @@ Database.initialize = function() {
                 opts: {
                     sparse: true,
                     background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                    w: 1
                 }
             },
             {
@@ -480,7 +522,7 @@ Database.initialize = function() {
                 opts: {
                     unique: true,
                     background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                    w: 1
                 }
             },
             {
@@ -489,7 +531,7 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                    w: 1
                 }
             },
             {
@@ -500,7 +542,7 @@ Database.initialize = function() {
                 opts: {
                     sparse: true,
                     background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                    w: 1
                 }
             },
             {
@@ -509,7 +551,7 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                    w: 1
                 }
             },
             {
@@ -519,7 +561,7 @@ Database.initialize = function() {
                 opts: {
                     sparse: true,
                     background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                    w: 1
                 }
             },
             {
@@ -529,7 +571,7 @@ Database.initialize = function() {
                 opts: {
                     sparse: true,
                     background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                    w: 1
                 }
             },
             {
@@ -539,7 +581,7 @@ Database.initialize = function() {
                 opts: {
                     sparse: true,
                     background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                    w: 1
                 }
             },
             {
@@ -549,7 +591,7 @@ Database.initialize = function() {
                 opts: {
                     sparse: true,
                     background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                    w: 1
                 }
             },
             {
@@ -559,7 +601,7 @@ Database.initialize = function() {
                 opts: {
                     sparse: true,
                     background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                    w: 1
                 }
             }]
         },
@@ -570,7 +612,7 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                    w: 1
                 }
             },
             {
@@ -580,7 +622,7 @@ Database.initialize = function() {
                 opts: {
                     unique: true,
                     background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                    w: 1
                 }
             },
             {
@@ -589,7 +631,7 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                    w: 1
                 }
             },
             {
@@ -598,7 +640,7 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                    w: 1
                 }
             },
             {
@@ -608,7 +650,7 @@ Database.initialize = function() {
                 opts: {
                     sparse: true,
                     background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                    w: 1
                 }
             },
             {
@@ -619,7 +661,7 @@ Database.initialize = function() {
                     unique: true,
                     sparse: true,
                     background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                    w: 1
                 }
             },
             {
@@ -629,7 +671,7 @@ Database.initialize = function() {
                 opts: {
                     sparse: true,
                     background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                    w: 1
                 }
             },
             {
@@ -639,7 +681,7 @@ Database.initialize = function() {
                 opts: {
                     sparse: true,
                     background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                    w: 1
                 }
             },
             {
@@ -649,7 +691,7 @@ Database.initialize = function() {
                 opts: {
                     sparse: true,
                     background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                    w: 1
                 }
             },
             {
@@ -659,7 +701,7 @@ Database.initialize = function() {
                 opts: {
                     sparse: true,
                     background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                    w: 1
                 }
             },
             {
@@ -669,7 +711,7 @@ Database.initialize = function() {
                 opts: {
                     sparse: true,
                     background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                    w: 1
                 }
             },
             {
@@ -679,7 +721,7 @@ Database.initialize = function() {
                 opts: {
                     sparse: true,
                     background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                    w: 1
                 }
             }]
         },
@@ -690,7 +732,7 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                    w: 1
                 }
             },
             {
@@ -700,7 +742,7 @@ Database.initialize = function() {
                 opts: {
                     unique: true,
                     background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                    w: 1
                 }
             },
             {
@@ -709,7 +751,7 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                    w: 1
                 }
             },
             {
@@ -719,7 +761,7 @@ Database.initialize = function() {
                 opts: {
                     sparse: true,
                     background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                    w: 1
                 }
             },
             {
@@ -729,7 +771,7 @@ Database.initialize = function() {
                 opts: {
                     sparse: true,
                     background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                    w: 1
                 }
             },
             {
@@ -739,7 +781,7 @@ Database.initialize = function() {
                 opts: {
                     sparse: true,
                     background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                    w: 1
                 }
             },
             {
@@ -749,7 +791,7 @@ Database.initialize = function() {
                 opts: {
                     sparse: true,
                     background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                    w: 1
                 }
             },
             {
@@ -759,7 +801,7 @@ Database.initialize = function() {
                 opts: {
                     sparse: true,
                     background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                    w: 1
                 }
             },
             {
@@ -769,7 +811,7 @@ Database.initialize = function() {
                 opts: {
                     sparse: true,
                     background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                    w: 1
                 }
             },
             {
@@ -779,7 +821,7 @@ Database.initialize = function() {
                 opts: {
                     sparse: true,
                     background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                    w: 1
                 }
             },
 
@@ -790,7 +832,7 @@ Database.initialize = function() {
                 opts: {
                     sparse: true,
                     background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                    w: 1
                 }
             },
             {
@@ -800,7 +842,7 @@ Database.initialize = function() {
                 opts: {
                     sparse: true,
                     background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                    w: 1
                 }
             },
             {
@@ -810,7 +852,7 @@ Database.initialize = function() {
                 opts: {
                     sparse: true,
                     background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                    w: 1
                 }
             },
             {
@@ -820,7 +862,7 @@ Database.initialize = function() {
                 opts: {
                     sparse: true,
                     background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                    w: 1
                 }
             }]
         },
@@ -831,7 +873,7 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                    w: 1
                 }
             },
             {
@@ -841,7 +883,7 @@ Database.initialize = function() {
                 opts: {
                     unique: true,
                     background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                    w: 1
                 }
             },
             {
@@ -851,7 +893,7 @@ Database.initialize = function() {
                 opts: {
                     unique: true,
                     background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                    w: 1
                 }
             }]
         },
@@ -868,7 +910,7 @@ Database.initialize = function() {
                     unique: true,
                     sparse: true,
                     background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                    w: 1
                 }
             }, {
                 fields: {
@@ -876,7 +918,7 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                    w: 1
                 }
             }, {
                 fields: {
@@ -884,7 +926,7 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                    w: 1
                 }
             }, {
                 fields: {
@@ -892,7 +934,7 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                    w: 1
                 }
             }, {
                 fields: {
@@ -900,7 +942,7 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                    w: 1
                 }
             }, {
                 fields: {
@@ -909,7 +951,7 @@ Database.initialize = function() {
                 opts: {
                     sparse: true,
                     background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                    w: 1
                 }
             }]
         },
@@ -921,7 +963,7 @@ Database.initialize = function() {
                 opts: {
                     unique: true,
                     background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                    w: 1
                 }
             }, {
                 fields: {
@@ -930,7 +972,7 @@ Database.initialize = function() {
                 opts: {
                     unique: true,
                     background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                    w: 1
                 }
             }, {
                 fields: {
@@ -938,7 +980,7 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                    w: 1
                 }
             }, {
                 fields: {
@@ -947,7 +989,7 @@ Database.initialize = function() {
                 opts: {
                     sparse: true,
                     background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                    w: 1
                 }
             }, {
                 fields: {
@@ -955,7 +997,7 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                    w: 1
                 }
             }, {
                 fields: {
@@ -963,7 +1005,7 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                    w: 1
                 }
             }, {
                 fields: {
@@ -973,7 +1015,7 @@ Database.initialize = function() {
                     unique: true,
                     sparse: true,
                     background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                    w: 1
                 }
             }, {
                 fields: {
@@ -981,7 +1023,7 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                    w: 1
                 }
             }]
         },
@@ -992,7 +1034,7 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                    w: 1
                 }
             }, {
                 fields: {
@@ -1000,7 +1042,7 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                    w: 1
                 }
             }, {
                 fields: {
@@ -1008,7 +1050,7 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                    w: 1
                 }
             }]
         },
@@ -1019,7 +1061,7 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                    w: 1
                 }
             }, {
                 fields: {
@@ -1027,7 +1069,7 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                    w: 1
                 }
             }, {
                 fields: {
@@ -1035,7 +1077,7 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                    w: 1
                 }
             }, {
                 fields: {
@@ -1043,7 +1085,7 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                    w: 1
                 }
             }, {
                 fields: {
@@ -1051,7 +1093,7 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                    w: 1
                 }
             }, {
                 fields: {
@@ -1059,7 +1101,7 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                    w: 1
                 }
             }, {
                 fields: {
@@ -1068,7 +1110,7 @@ Database.initialize = function() {
                 opts: {
                     unique: true,
                     background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                    w: 1
                 }
             }, {
                 fields: {
@@ -1077,7 +1119,7 @@ Database.initialize = function() {
                 opts: {
                     sparse: true,
                     background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                    w: 1
                 }
             }, {
                 fields: {
@@ -1085,7 +1127,7 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                    w: 1
                 }
             }, {
                 fields: {
@@ -1093,7 +1135,7 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                    w: 1
                 }
             }, {
                 fields: {
@@ -1101,7 +1143,7 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    safe: true      // Should be replaced with 'w: 1' for newer mongodb drivers
+                    w: 1
                 }
             }]
         }
@@ -1222,6 +1264,54 @@ function initCatenisNode() {
 
 // Definition of module (private) functions
 //
+
+//** Temporary method used to drop any index of a given collection if the 'safe' property is present
+import Future from 'fibers/future';
+
+function dropSafeIndices (collection) {
+    const fut1 = new Future();
+
+    collection.indexes(function (error, indices) {
+        Future.task(() => {
+            if (!error) {
+                const safeIndicesToDrop = indices.filter((index) => {
+                    return index.safe !== undefined;
+                });
+
+                if (safeIndicesToDrop.length > 0) {
+                    for (let idx = 0, limit = safeIndicesToDrop.length; idx < limit; idx++) {
+                        const index = safeIndicesToDrop[idx];
+                        const fut2 = new Future();
+
+                        collection.dropIndex(index.name, function (error) {
+                            if (!error) {
+                                // Safe index successfully removed.
+                                Catenis.logger.DEBUG('Index \'%s\', which had the \'safe\' property, had been removed from %s DB collection', index.name, collection.s.name);
+                                fut2.return();
+                            }
+                            else {
+                                // Error trying to remove index. Log error and throw exception
+                                Catenis.logger.ERROR('Error trying to remove index \'%s\' of %s DB collection.', index.name, collection.s.name, error);
+                                throw new Error('Error trying to remove index from DB collection');
+                            }
+                        });
+
+                        fut2.wait();
+                    }
+                }
+
+                fut1.return();
+            }
+            else {
+                // Error retrieving indices. Log error
+                Catenis.logger.ERROR('Error retrieving indices from %s DB collection.', collection.s.name, error);
+                throw new Error('Error retrieving indices from %DB collection');
+            }
+        }).detach();
+    });
+
+    fut1.wait();
+}
 
 
 // Module code
