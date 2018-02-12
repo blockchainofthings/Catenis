@@ -21,7 +21,7 @@ import { Mongo } from 'meteor/mongo';
 import { Catenis } from './Catenis';
 import { ctnHubNodeIndex } from './Application';
 import { CatenisNode } from './CatenisNode';
-
+import { cfgSettings as licenseCfgSettings } from './License';
 
 // Definition of function classes
 //
@@ -131,7 +131,8 @@ Database.initialize = function() {
                     background: true,
                     w: 1
                 }
-            }]
+            }],
+            initFunc: initLicense
         },
         License: {
             indices: [{
@@ -1261,6 +1262,20 @@ function initCatenisNode() {
     }
 }
 
+function initLicense() {
+    const docLicense = this.collection.License.findOne({});
+
+    if (!docLicense) {
+        // No client account licenses yet configured. Populate database with default license types
+        licenseCfgSettings.defaultLicenses.forEach((license) => {
+            this.collection.License.insert({
+                licenseType: license.type,
+                numberOfDevices: license.numberOfDevices,
+                createdDate: new Date()
+            })
+        });
+    }
+}
 
 // Definition of module (private) functions
 //

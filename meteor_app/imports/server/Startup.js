@@ -52,8 +52,7 @@ import { BcotExchangeRate } from './BcotExchangeRate';
 import { BcotPayment } from './BcotPayment';
 import { SpendServiceCredit } from './SpendServiceCredit';
 import { BcotUsageReportUI } from './AdminUI/BcotUsageReportUI';
-
-import './Email.js';
+import { LoginFlow } from './UI/LoginFlow';
 
 // DEBUG - begin
 //import { resetBitcoinCore } from './Test/FundSourceTest';
@@ -125,6 +124,7 @@ Meteor.startup(function () {
         RestApi.initialize();
 
         // UI support initialization
+        LoginFlow.initialize();
         SystemFundingUI.initialize();
         BcotUsageReportUI.initialize();
         ClientsUI.initialize();

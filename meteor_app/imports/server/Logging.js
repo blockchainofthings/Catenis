@@ -25,6 +25,7 @@ import winstonTransportMail from 'winston-mail';
 
 // References code in other (Catenis) modules
 import { Catenis } from './Catenis';
+import { cfgSettings as emailCfgSettings } from './ConfigEmail';
 
 // Config entries
 const loggingConfig = config.get('logging');
@@ -66,11 +67,6 @@ const cfgSettings = {
     email: {
         active: logEmailConfig.get('active'),
         logLevel: logEmailConfig.has('logLevel') && (logEmailConfig.get('logLevel') in log4jLevels) ? logEmailConfig.get('logLevel') : 'WARN',
-        smtpHost: logEmailConfig.get('smtpHost'),
-        secureProto: logEmailConfig.has('secureProto') && (logEmailConfig.get('secureProto') in emailSecureProtocols) ? logEmailConfig.get('secureProto') : undefined,
-        smtpPort: logEmailConfig.has('smtpPort') ? logEmailConfig.get('smtpPort') : undefined,
-        username: logEmailConfig.has('username') ? logEmailConfig.get('username') : undefined,
-        password: logEmailConfig.has('password') ? logEmailConfig.get('password') : undefined,
         toAddresses: logEmailConfig.get('toAddresses'),
         fromAddress: logEmailConfig.get('fromAddress'),
         subject: logEmailConfig.get('subject')
@@ -115,7 +111,7 @@ const consoleTranspParams = {
     emailTranspParams = {
         level: cfgSettings.email.logLevel,
         silent: !cfgSettings.email.active,
-        host: cfgSettings.email.smtpHost,
+        host: emailCfgSettings.smtpHost,
         to: cfgSettings.email.toAddresses,
         from: cfgSettings.email.fromAddress,
         subject: cfgSettings.email.subject,
@@ -131,25 +127,25 @@ const consoleTranspParams = {
 //
 
 // Complement logging transport parameters
-if (cfgSettings.email.secureProto !== undefined) {
-    if (cfgSettings.email.secureProto === 'ssl') {
+if (emailCfgSettings.secureProto !== undefined) {
+    if (emailCfgSettings.secureProto === 'ssl') {
         emailTranspParams.ssl = true;
     }
-    else if (emailTranspParams === 'tls') {
+    else if (emailCfgSettings.secureProto === 'tls') {
         emailTranspParams.tls = true;
     }
 }
 
-if (cfgSettings.email.smtpPort !== undefined && typeof cfgSettings.email.smtpPort === 'number') {
-    emailTranspParams.port = cfgSettings.email.smtpPort;
+if (emailCfgSettings.smtpPort !== undefined && typeof emailCfgSettings.smtpPort === 'number') {
+    emailTranspParams.port = emailCfgSettings.smtpPort;
 }
 
-if (cfgSettings.email.username !== undefined) {
-    emailTranspParams.username = cfgSettings.email.username;
+if (emailCfgSettings.username !== undefined) {
+    emailTranspParams.username = emailCfgSettings.username;
 }
 
-if (cfgSettings.email.password !== undefined) {
-    emailTranspParams.password = cfgSettings.email.password;
+if (emailCfgSettings.password !== undefined) {
+    emailTranspParams.password = emailCfgSettings.password;
 }
 
 // Instantiate Logger object

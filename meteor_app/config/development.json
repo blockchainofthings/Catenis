@@ -12,6 +12,13 @@
     "bypassProcessing": false     // NOTE: this option is for DEBUG ONLY. Bypass all processing, so the app starts but does not do anything. This allows
                                   //  for debuging via 'meteor shell' or 'meteor mongo'
   },
+  // Parameters pertaining to e-mail server configuration
+  "email": {
+    "smtpHost": "smtphostname",
+    "secureProto": "ssl", // Valid options: none, ssl or tls
+    "username": "username", // To be set only if required by SMTP host
+    "password": "password" // To be set only if required by SMTP host
+  },
   // Parameters pertaining to logging mechanism
   "logging": {
     "console": {
@@ -25,10 +32,6 @@
     "email": {
       "active": false,
       "logLevel": "ACTION",
-      "smtpHost": "smtphostname",
-      "secureProto": "ssl", // Valid options: none, ssl or tls
-      "username": "username", // To be set only if required by SMTP host
-      "password": "password", // To be set only if required by SMTP host
       "toAddresses": "noone@nothing.com", // Can be set to a comma separated list of e-mail addresses
       "fromAddress": "Catenis <noone@nothing.com>"
     }

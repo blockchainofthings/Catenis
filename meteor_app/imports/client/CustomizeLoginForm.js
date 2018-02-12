@@ -17,8 +17,9 @@
 // Third-party node modules
 //import config from 'config';
 // Meteor packages
-//import { Meteor } from 'meteor/meteor';
+import { Meteor } from 'meteor/meteor';
 import { AccountsTemplates } from 'meteor/useraccounts:core';
+import { FlowRouter } from 'meteor/kadira:flow-router';
 
 
 // Module code
@@ -26,18 +27,77 @@ import { AccountsTemplates } from 'meteor/useraccounts:core';
 
 const pwd = AccountsTemplates.removeField('password');
 
-//it used to just remove the whole email field, let's change that for send email.
-// AccountsTemplates.removeField('email');
+AccountsTemplates.addFields([{
+    _id: "username",
+    type: "text",
+    displayName: "Username",
+    required: true,
+    minLength: 5,
+}, pwd]);
 
-
-
-AccountsTemplates.addFields([
-    {
-        _id: "username",
-        type: "text",
-        displayName: "Username",
-        required: true,
-        minLength: 5,
+AccountsTemplates.configure({
+    forbidClientAccountCreation: true,
+    //this below all was added by peter just to incorporate Andre's design.
+    showLabels: false,
+    hideSignInLink: true,
+    hideSignUpLink: true,
+    texts: {
+        title: {
+            //get rid of their titles
+            signIn: "",
+            signUp: "",
+            forgotPwd:"",
+            enrollAccount:"",
+            resetPwd:"",
+        },
+        button: {
+            changePwd: "Change Password",
+            enrollAccount: "Enroll Account",
+            forgotPwd: "Send Email Link",
+            resetPwd: "Reset Password",
+            signIn: "Log In",
+            signUp: "Register",
+        }
     },
-    pwd
-]);
+    enablePasswordChange: true,
+    onSubmitHook: onSubmitFunc,
+});
+
+AccountsTemplates.configureRoute('resetPwd', {template: 'resetPwd'});
+AccountsTemplates.configureRoute('enrollAccount', {template: 'enrollAccount'});
+
+// Function that runs on submit of at-pwd-form. "state" is the AccountTemplates internal state
+function onSubmitFunc(error, state) {
+    //runs on successful at-pwd-form submit. Use this to allow for client activation and banning disabled users
+    if (!error) {
+        // Successfully enrolled client, change client status to "ACTIVE"
+        if (state === 'enrollAccount') {
+            //check if user is actually a first time user.
+            if (Meteor.user().profile.status === 'Pending') {
+                //activate user
+                Meteor.call('activateCurrentUser', (error) => {
+                });
+
+                //createClient
+                Meteor.call('createClient', Meteor.user()._id, (error))
+            }
+
+            //Successful Activation, now going to log this person out and redirect them to a new page with a link to login.
+            Meteor.logout();
+            FlowRouter.go('/');
+        }
+        if (state === 'signIn') {
+            // Ensure that the meteor account of the client is activated. Otherwise logout
+            const userAccount = Meteor.user();
+            if (userAccount.profile.status !== 'Activated') {
+                Meteor.logout();
+            }
+        }
+
+        if (state === 'resetPwd') {
+            // Ensure that this user is activated. Otherwise refuse login
+            Meteor.logout();
+            FlowRouter.go('/');
+        }
+    }
+}
