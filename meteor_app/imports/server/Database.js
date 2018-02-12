@@ -1153,6 +1153,376 @@ Database.initialize = function() {
     Catenis.db = new Database(collections);
 };
 
+// Old temporary methods used to fix database - Start
+//
+
+// Temporary method used to adjust the Message collection
+Database.fixMessageCollection = function () {
+    // Update sentDate field on Message documents as necessary
+    let docsUpdated = 0;
+
+    Catenis.db.collection.SentTransaction.find({
+        type: {$in: ['send_message', 'log_message']}
+    }, {
+        fields: {
+            txid: 1,
+            sentDate: 1
+        }
+    }).forEach((doc) => {
+        docsUpdated += Catenis.db.collection.Message.update({
+            'blockchain.txid': doc.txid,
+            sentDate: {$ne: doc.sentDate}
+        }, {
+            $set: {
+                sentDate: doc.sentDate
+            }
+        })
+    });
+
+    console.log('Message docs that had their sentDate field update: ' + docsUpdated);
+
+    // Update receivedDate field on Message documents as necessary
+    docsUpdated = 0;
+
+    Catenis.db.collection.ReceivedTransaction.find({
+        type: 'send_message'
+    }, {
+        fields: {
+            txid: 1,
+            receivedDate: 1
+        }
+    }).forEach((doc) => {
+        docsUpdated += Catenis.db.collection.Message.update({
+            'blockchain.txid': doc.txid,
+            receivedDate: {$ne: doc.receivedDate}
+        }, {
+            $set: {
+                receivedDate: doc.receivedDate
+            }
+        })
+    });
+
+    console.log('Message docs that had their receivedDate field update: ' + docsUpdated);
+};
+
+// Temporary method used to replace Message source field
+Database.replaceMessageSource = function () {
+    // Update source field on Message documents as necessary
+    const docsUpdated = Catenis.db.collection.Message.update({
+        source: 'sent_msg'
+    }, {
+        $set: {
+            source: 'local'
+        }
+    }, {
+        multi: true
+    });
+
+    console.log('Message docs that had their source field update: ' + docsUpdated);
+};
+
+//** Temporary method used to fill in (new) 'firstReadDate' field of Message collection docs
+Database.fixMessageFirstReadDate = function () {
+    let updatedDocsCount = 0;
+
+    // Retrieve Message docs that have lastReadDate field but not firstReadDate field
+    Catenis.db.collection.Message.find({
+        lastReadDate: {
+            exists: true
+        },
+        firstReadDate: {
+            exists: false
+        }
+    }, {
+        fields: {
+            _id: 1,
+            lastReadDate: 1
+        }
+    }).forEach((doc) => {
+        // Update Message doc setting firstReadDate the same as lastReadDate
+        updatedDocsCount += Catenis.db.collection.Message.update({
+            _id: doc._id
+        }, {
+            $set: {
+                firstReadDate: doc.lastReadDate
+            }
+        })
+    });
+
+    if (updatedDocsCount > 0)
+        Catenis.logger.INFO(util.format('>>>>>> Number of Message docs that had their firstReadDate field filled: ' + updatedDocsCount));
+};
+
+//** Temporary method used to fix Message collection by adding new readConfirmationEnabled field
+Database.fixMessageAddReadConfirmationEnabledField = function () {
+    // Identify send message docs/recs in which readConfirmationEnabled field in missing
+    const sentTxids = [];
+    const rcvdTxids = [];
+
+    Catenis.db.collection.Message.find({
+        action: 'send',
+        readConfirmationEnabled: {
+            $exists: false
+        }
+    }, {
+        fields: {
+            _id: 1,
+            source: 1,
+            'blockchain.txid': 1
+        }
+    }).forEach((doc) => {
+        if (doc.source === 'local') {
+            sentTxids.push(doc.blockchain.txid);
+        }
+        else {
+            rcvdTxids.push(doc.blockchain.txid);
+        }
+    });
+
+    Catenis.logger.DEBUG('>>>>>> SentTransaction DB collection docs found', {
+        sentTxids: sentTxids
+    });
+    Catenis.logger.DEBUG('>>>>>> ReceivedTransaction DB collection docs found', {
+        sentTxids: rcvdTxids
+    });
+
+    const readConfirmTxids = [];
+    const noReadConfirmTxids = [];
+
+    if (sentTxids.length > 0) {
+        Catenis.db.collection.SentTransaction.find({
+            txid: {
+                $in: sentTxids
+            }
+        }, {
+            txid: 1,
+            'info.sendMessage.readConfirmation': 1
+        }).forEach((doc) => {
+            if (doc.info.sendMessage.readConfirmation !== undefined) {
+                readConfirmTxids.push(doc.txid);
+            }
+            else {
+                noReadConfirmTxids.push(doc.txid);
+            }
+        });
+    }
+
+    if (rcvdTxids.length > 0) {
+        Catenis.db.collection.ReceivedTransaction.find({
+            txid: {
+                $in: rcvdTxids
+            }
+        }, {
+            txid: 1,
+            'info.sendMessage.readConfirmation': 1
+        }).forEach((doc) => {
+            if (doc.info.sendMessage.readConfirmation !== undefined) {
+                readConfirmTxids.push(doc.txid);
+            }
+            else {
+                noReadConfirmTxids.push(doc.txid);
+            }
+        });
+    }
+
+    Catenis.logger.DEBUG('>>>>>> Message DB collection docs to update', {
+        readConfirmTxids: readConfirmTxids,
+        noReadConfirmTxids: noReadConfirmTxids
+    });
+
+    let numUpdatedDocs = 0;
+
+    if (readConfirmTxids.length > 0) {
+        numUpdatedDocs += Catenis.db.collection.Message.update({
+            'blockchain.txid': {
+                $in: readConfirmTxids
+            }
+        }, {
+            $set: {
+                readConfirmationEnabled: true
+            }
+        }, {
+            multi: true
+        });
+    }
+
+    if (noReadConfirmTxids.length > 0) {
+        numUpdatedDocs += Catenis.db.collection.Message.update({
+            'blockchain.txid': {
+                $in: readConfirmTxids
+            }
+        }, {
+            $set: {
+                readConfirmationEnabled: false
+            }
+        }, {
+            multi: true
+        });
+    }
+
+    if (numUpdatedDocs > 0) {
+        Catenis.logger.INFO('****** Number of Message DB collection docs updated to add readConfirmationEnabled field: %d', numUpdatedDocs);
+    }
+};
+
+//** Temporary method used to fill new billingMode field of Client docs/recs
+import { Client } from '/imports/server/Client';
+
+Database.fillClientBillingModeField = function () {
+    const numUpdatedDocs = Catenis.db.collection.Client.update({
+        billingMode: {
+            $exists: false
+        }
+    }, {
+        $set: {
+            billingMode: Client.billingMode.prePaid
+        }
+    }, {
+        multi: true
+    });
+
+    if (numUpdatedDocs > 0) {
+        Catenis.logger.INFO('****** Number of Client DB collection docs updated to fill new billingMode field: %d', numUpdatedDocs);
+    }
+};
+
+//** Temporary method used to fix indices of SentTransaction collection
+//   - index on replacedByTxid changed to be made NOT unique
+import Future from 'fibers/future';
+
+Database.fixSentTransactionReplacedByTxidIndex = function () {
+    let indicesChanged = false;
+    const fut1 = new Future();
+
+    Catenis.db.mongoCollection.SentTransaction.indexes(function (error, indices) {
+        if (!error) {
+            const replacedByTxidIndex = indices.find((index) => {
+                const keyFields = Object.keys(index.key);
+
+                return keyFields.length === 1 && keyFields[0] === 'replacedByTxid';
+            });
+
+            if (replacedByTxidIndex) {
+                if (replacedByTxidIndex.unique) {
+                    // Index currently has the unique constraint.
+                    //  So remove it and reinsert it
+                    // noinspection JSIgnoredPromiseFromCall
+                    Catenis.db.mongoCollection.SentTransaction.dropIndex(replacedByTxidIndex.name, function (error) {
+                        if (!error) {
+                            // Insert index
+                            // noinspection JSUnusedLocalSymbols, JSIgnoredPromiseFromCall
+                            Catenis.db.mongoCollection.SentTransaction.ensureIndex({
+                                replacedByTxid: 1
+                            }, {
+                                sparse: true,
+                                background: true,
+                                safe: true
+                            }, function (error, indexName) {
+                                if (!error) {
+                                    Catenis.logger.INFO('****** Index on replacedByTxid field of SentTransaction DB collection has been fixed');
+                                    indicesChanged = true;
+                                    fut1.return();
+                                }
+                                else {
+                                    // Error trying to insert index. Log error and throw exception
+                                    Catenis.logger.ERROR('Error trying to insert fixed index on replacedByTxid field of SentTransaction DB collection.', error);
+                                    throw new Error('Error trying to insert fixed index on replacedByTxid field of SentTransaction DB collection');
+                                }
+                            })
+                        }
+                        else {
+                            // Error trying to remove index. Log error and throw exception
+                            Catenis.logger.ERROR('Error trying to remove index on replacedByTxid field of SentTransaction DB collection.', error);
+                            throw new Error('Error trying to remove index on replacedByTxid field of SentTransaction DB collection');
+                        }
+                    })
+                }
+                else {
+                    fut1.return();
+                }
+            }
+            else {
+                fut1.return();
+            }
+        }
+        else {
+            // Error retrieving indices. Log error
+            Catenis.logger.ERROR('Error retrieving indices from SentTransaction DB collection.', error);
+            throw new Error('Error retrieving indices from SentTransaction DB collection');
+        }
+    });
+
+    fut1.wait();
+
+    if (indicesChanged) {
+        const fut2 = new Future();
+
+        // Reindex collection
+        // noinspection JSIgnoredPromiseFromCall, JSUnusedLocalSymbols
+        Catenis.db.mongoCollection.SentTransaction.reIndex(function (error, result) {
+            if (!error) {
+                Catenis.logger.INFO('****** SentTransaction DB collection successfully reindexed.');
+                fut2.return();
+            }
+            else {
+                Catenis.logger.ERROR('Error trying to reindex SentTransaction collection.', error);
+                throw new Error('Error trying to reindex SentTransaction collection');
+            }
+        });
+
+        fut2.wait();
+    }
+};
+
+//** Temporary method used to add missing 'clientIds' field from info property of
+//  SentTransaction docs/recs of type 'spend_service_credit'
+Database.fixSentTransactionSpendServiceCreditInfo = function () {
+    let numUpdatedDocs = 0;
+
+    // Retrieve sent spend service credit transaction doc/recs the 'clientIds' field of which
+    //  is missing from its info property
+    Catenis.db.collection.SentTransaction.find({
+        type: 'spend_service_credit',
+        'info.spendServiceCredit.clientIds': {
+            $exists: false
+        }
+    }, {
+        fields: {
+            info: 1
+        }
+    }).forEach((doc) => {
+        // Look for Billing docs for the associated service transactions
+        const clientIds = Catenis.db.collection.Billing.find({
+            'serviceTx.txid': {
+                $in: doc.info.spendServiceCredit.serviceTxids
+            }
+        }, {
+            fields: {
+                clientId: 1
+            }
+        }).map((doc2) => doc2.clientId);
+
+        if (clientIds.length > 0) {
+            // Update SentTransaction doc/rec
+            numUpdatedDocs += Catenis.db.collection.SentTransaction.update({
+                _id: doc._id
+            }, {
+                $set: {
+                    'info.spendServiceCredit.clientIds': clientIds
+                }
+            });
+        }
+    });
+
+    if (numUpdatedDocs > 0) {
+        Catenis.logger.INFO('****** Number of SentTransaction DB collection docs updated to add missing \'info.spendServiceCredit.clientIds\' field: %d', numUpdatedDocs);
+    }
+};
+
+//
+// Old temporary methods used to fix database - End
+
+
 //** Temporary method used to add missing 'encSentFromAddress' and 'bcotPayAddressPath' fields
 //   from info property of ReceivedTransaction docs/recs of type 'bcot_payment'
 import { BcotPaymentTransaction } from './BcotPaymentTransaction';
@@ -1281,7 +1651,7 @@ function initLicense() {
 //
 
 //** Temporary method used to drop any index of a given collection if the 'safe' property is present
-import Future from 'fibers/future';
+//import Future from 'fibers/future';}
 
 function dropSafeIndices (collection) {
     const fut1 = new Future();
