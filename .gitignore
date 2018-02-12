@@ -9,3 +9,4 @@ Debug.js
 ModuleTemplate.txt
 mongodb_dump
 deploy
+meteor_app/config/development-*.json
