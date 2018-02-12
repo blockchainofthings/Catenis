@@ -487,7 +487,7 @@ ClientsUI.initialize = function () {
 
     });
 
-    Meteor.publish('clientMessageCredits', function (user_id) {
+    /*Meteor.publish('clientMessageCredits', function (user_id) {
 
         let client_id= Catenis.db.collection.Client.findOne({user_id: user_id}).client_id;
 
@@ -572,7 +572,7 @@ ClientsUI.initialize = function () {
         this.ready();
 
         this.onStop(() => observeHandle.stop());
-    });
+    });*/
 };
 
 

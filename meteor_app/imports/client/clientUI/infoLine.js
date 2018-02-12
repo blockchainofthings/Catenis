@@ -17,7 +17,7 @@ Template.infoLine.onCreated(function(){
         client_id= null;
     }
 
-    this.clientMessageCreditsSubs = this.subscribe('clientMessageCredits', Meteor.user()._id);
+    //this.clientMessageCreditsSubs = this.subscribe('clientMessageCredits', Meteor.user()._id);
 
 });
 
@@ -43,7 +43,7 @@ Template.infoLine.onDestroyed(function(){
 Template.infoLine.helpers({
     messageCredits: function () {
 
-        return Catenis.db.collection.MessageCredits.findOne(1);
+        return 0;//Catenis.db.collection.MessageCredits.findOne(1);
     },
 
     hasUnconfirmedMessageCredits: function (messageCredits) {

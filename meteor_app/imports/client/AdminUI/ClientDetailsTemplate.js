@@ -142,7 +142,7 @@ Template.clientDetails.onCreated(function () {
     // Subscribe to receive fund balance updates
     this.clientRecordSubs = this.subscribe('clientRecord', this.data.user_id);
     // this.clientUserSubs = this.subscribe('clientUser', this.data.user_id);
-    this.clientMessageCreditsSubs = this.subscribe('clientMessageCredits', this.data.user_id);
+    //this.clientMessageCreditsSubs = this.subscribe('clientMessageCredits', this.data.user_id);
     this.userListSubs = this.subscribe('userList', Meteor.user());
 
     //added to allow device number count.
@@ -397,7 +397,7 @@ Template.clientDetails.helpers({
         return user ? user.username : undefined;
     },
     messageCredits: function () {
-        return Catenis.db.collection.MessageCredits.findOne(1);
+        return 0;//Catenis.db.collection.MessageCredits.findOne(1);
     },
     hasUnconfirmedMessageCredits: function (messageCredits) {
         return messageCredits && messageCredits.unconfirmed > 0;

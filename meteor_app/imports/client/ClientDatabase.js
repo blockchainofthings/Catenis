@@ -35,7 +35,7 @@ Catenis.db = {
         FundingBalanceInfo: new Mongo.Collection('FundingBalanceInfo'),
         ReceivedAmount: new Mongo.Collection('ReceivedAmount'),
         Client: new Mongo.Collection('Client'),
-        MessageCredits: new Mongo.Collection('MessageCredits'),
+        //MessageCredits: new Mongo.Collection('MessageCredits'),
         Device: new Mongo.Collection('Device'),
         // Added by Peter
         License: new Mongo.Collection('License')
