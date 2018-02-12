@@ -20,6 +20,7 @@
 import { Meteor } from 'meteor/meteor';
 import { AccountsTemplates } from 'meteor/useraccounts:core';
 import { FlowRouter } from 'meteor/kadira:flow-router';
+import { Roles } from 'meteor/alanning:roles';
 
 
 // Module code
@@ -86,15 +87,16 @@ function onSubmitFunc(error, state) {
             Meteor.logout();
             FlowRouter.go('/');
         }
-        if (state === 'signIn') {
-            // Ensure that the meteor account of the client is activated. Otherwise logout
-            const userAccount = Meteor.user();
-            if (userAccount.profile.status !== 'Activated') {
-                Meteor.logout();
+        else if (state === 'signIn') {
+            const user = Meteor.user();
+            if (!Roles.userIsInRole(user._id, 'sys-admin')) {
+                // Ensure that the meteor account of the client is activated. Otherwise logout
+                if (user.profile.status !== 'Activated') {
+                    Meteor.logout();
+                }
             }
         }
-
-        if (state === 'resetPwd') {
+        else if (state === 'resetPwd') {
             // Ensure that this user is activated. Otherwise refuse login
             Meteor.logout();
             FlowRouter.go('/');
