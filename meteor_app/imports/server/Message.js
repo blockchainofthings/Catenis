@@ -64,6 +64,7 @@ export function Message(docMessage) {
     this.blocked = docMessage.blocked !== undefined;
     this.firstReadDate = docMessage.firstReadDate;
     this.lastReadDate = docMessage.lastReadDate;
+    this.readConfirmed = docMessage.readConfirmed;
 }
 
 
@@ -479,9 +480,10 @@ Message.query = function (issuerDeviceId, filter) {
             }
 
             if (filter.readState === Message.readState.read || filter.readState === Message.readState.unread) {
-                // Make that only messages that had been sent with read confirmation enabled are included
+                // Make that only messages that had been sent with read confirmation enabled are included,
+                //  and consider message read only if read confirmation has already been received
                 outboundSelector.readConfirmationEnabled = true;
-                outboundSelector.firstReadDate = {
+                outboundSelector.readConfirmed = {
                     $exists: filter.readState === Message.readState.read
                 };
             }

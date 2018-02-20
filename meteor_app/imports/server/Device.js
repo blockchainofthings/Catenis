@@ -972,9 +972,10 @@ Device.prototype.listMessages = function(filter) {
                 msgEntry.toDevice = Device.getDeviceByDeviceId(message.targetDeviceId);
                 msgEntry.readConfirmationEnabled = message.readConfirmationEnabled;
 
-                // Make sure that 'message read' info is only shown if message was sent with read confirmation enabled
+                // Make sure that 'message read' info is only shown if message was sent with read confirmation enabled,
+                //  and consider message read only if read confirmation has already been received
                 if (message.readConfirmationEnabled) {
-                    msgEntry.read = message.firstReadDate !== undefined;
+                    msgEntry.read = message.readConfirmed !== undefined;
                 }
 
                 msgEntry.date = message.sentDate;
