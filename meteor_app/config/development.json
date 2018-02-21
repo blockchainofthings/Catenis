@@ -93,7 +93,7 @@
   "ccMetadata": {
     "signingCertificateFilePath": "/Users/claudio/Documents/Híades/Clientes/Blockchain of Things/Projects/Catenis/Development/Test SSL certificate/Test_cert.pem",  // Filesystem path to Blockchain of Things' owned SSL certificate used to signed message for asset verification
     "signingCertificateKeyFilePath": "/Users/claudio/Documents/Híades/Clientes/Blockchain of Things/Projects/Catenis/Development/Test SSL certificate/Test_key.pem",  // Path to file containing key of SSL certificate used to sign message for asset verification
-    "urlContentTimeout": 15000,  // Timeout, in miliseconds, fro retrieving content associated with a given URL
+    "urlContentTimeout": 15000,  // Timeout, in miliseconds, for retrieving content associated with a given URL
     "shareAfterStoring": false  // Indicates whether metadata should be shared right after it is stored (added to Colored Coins metadata server)
   },
   // Parameters pertaining to BcotPayment module

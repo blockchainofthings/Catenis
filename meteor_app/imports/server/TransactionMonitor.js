@@ -175,7 +175,7 @@ export class TransactionMonitor extends events.EventEmitter {
 
     stopMonitoring() {
         if (this.idPurgeFoundNewCtnTxsInterval !== undefined) {
-            Catenis.logger.TRACE('Stop purging transactions fro list of found new Catenis transactions');
+            Catenis.logger.TRACE('Stop purging transactions from list of found new Catenis transactions');
             Meteor.clearInterval(this.idPurgeFoundNewCtnTxsInterval);
             this.idPurgeFoundNewCtnTxsInterval = undefined;
         }

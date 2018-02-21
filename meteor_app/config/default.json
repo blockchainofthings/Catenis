@@ -512,7 +512,7 @@
     "signingMessageFormat": "Catenis generated asset on %s",  // Format string used to compose message that is to be signed for asset verification purpose
     "signingCertificateFilePath": "/etc/letsencrypt/live/beta.catenis.io/cert.pem",  // Path to file (in PEM format) containing Blockchain of Things' owned SSL certificate used to sign message for asset verification
     "signingCertificateKeyFilePath": "/etc/letsencrypt/live/beta.catenis.io/privkey.pem",  // Path to file containing key of SSL certificate used to sign message for asset verification
-    "urlContentTimeout": 15000,  // Timeout, in miliseconds, fro retrieving content associated with a given URL
+    "urlContentTimeout": 15000,  // Timeout, in miliseconds, for retrieving content associated with a given URL
     "encryptedUserDataKeyPrefix": "__enc_",  // Prefix that is prepended to user data key when its value is encrypted
     "shareAfterStoring": false  // Indicates whether metadata should be shared right after it is stored (added to Colored Coins metadata server)
   },
