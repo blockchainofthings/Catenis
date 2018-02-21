@@ -4,7 +4,6 @@
   "application": {
     "appName": "Catenis",
     "seedFilename": "seed.dat",
-    "walletPswLength": 16,
     "cryptoNetwork": "testnet",  // Available values: 'bitcoin' (for Bitcoin's production blockchain), 'testnet' (for Bitcoin's test blockchain)
     "shutdownTimeout": 30000   // Time, in miliseconds, that the application should wait after it receives a terminate request before it actually terminates
   },

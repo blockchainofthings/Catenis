@@ -36,7 +36,6 @@ const appConfig = config.get('application');
 const cfgSettings = {
     appName: appConfig.get('appName'),
     seedFilename: appConfig.get('seedFilename'),
-    walletPswLength: appConfig.get('walletPswLength'),
     cryptoNetwork: appConfig.get('cryptoNetwork'),
     shutdownTimeout: appConfig.get('shutdownTimeout')
 };
@@ -74,22 +73,6 @@ export function Application() {
     Object.defineProperty(this, 'seed', {
         get: function () {
             return decryptSeed(Buffer.from(encData, 'base64'));
-        }
-    });
-
-    Object.defineProperty(this, 'walletPsw', {
-        get: function () {
-            //noinspection JSPotentiallyInvalidUsageOfThis
-            const seed = this.seed,
-                seedLength = seed.length,
-                pswLength = seedLength < cfgSettings.walletPswLength ? seedLength : cfgSettings.walletPswLength,
-                psw = Buffer.allocUnsafe(pswLength);
-
-            for (let idx = 0; idx < pswLength; idx++) {
-                psw[idx] = seed[idx % 2 === 0 ? idx / 2 : seedLength - Math.floor(idx / 2) - 1]
-            }
-
-            return psw;
         }
     });
 
