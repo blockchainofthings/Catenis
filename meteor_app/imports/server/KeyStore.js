@@ -3021,7 +3021,7 @@ function retrieveHDNode(path) {
 KeyStore.initialize = function () {
     Catenis.logger.TRACE('KeyStore initialization');
     // Instantiate KeyStore object
-    Catenis.keyStore = new KeyStore(Catenis.application.ctnHubNodeIndex, Catenis.application.seed, Catenis.application.cryptoNetwork);
+    Catenis.keyStore = new KeyStore(Catenis.application.ctnHubNodeIndex, Catenis.application.masterSeed, Catenis.application.cryptoNetwork);
 
     // Execute process to purge unused HD extended keys from local key storage now,
     //  and set recurring timer to execute it periodically

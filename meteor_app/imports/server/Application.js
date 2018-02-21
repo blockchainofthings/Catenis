@@ -69,15 +69,14 @@ export function Application() {
     const appSeedPath = path.join(process.env.PWD, cfgSettings.seedFilename),
         encData = fs.readFileSync(appSeedPath, {encoding: 'utf8'});
 
-    // TODO: IMPORTANT: avoid using this seed directly as the base for creating other cryptographically generated data, especially the one that shall be shared with other Catenis nodes. Instead, this seed should be used to generated other specific seeds by hashing it. Then only the specific seed shall be shared and not the base Catenis application see
-    Object.defineProperty(this, 'seed', {
+    Object.defineProperty(this, 'masterSeed', {
         get: function () {
-            return decryptSeed(Buffer.from(encData, 'base64'));
+            return conformSeed(Buffer.from(encData, 'base64'));
         }
     });
 
-    if (! isSeedValid(this.seed)) {
-        throw new Error('Application seed does not match seed currently recorded onto the database');
+    if (! isSeedValid(this.masterSeed)) {
+        throw new Error('Application (master) seed does not match seed currently recorded onto the database');
     }
 
     // Identify test prefix if present
@@ -86,6 +85,14 @@ export function Application() {
     if (matchResult && matchResult.length > 1) {
         this.testPrefix = matchResult[1];
     }
+
+    const encCommonSeed = generateCommonSeed(this.testPrefix);
+
+    Object.defineProperty(this, 'commonSeed', {
+        get: function () {
+            return conformSeed(encCommonSeed, true, false);
+        }
+    });
 
     // Get crypto network
     this.cryptoNetworkName = cfgSettings.cryptoNetwork;
@@ -334,16 +341,20 @@ Application.processingStatus = Object.freeze({
 // Definition of module (private) functions
 //
 
-// Receives a buffer with the ciphered seed data,
-//  and returns a buffer with the deciphered data
-function decryptSeed(encData) {
+// Method used to cipher/decipher application seed (both master and common seed)
+//
+//  Arguments:
+//   data [Object(Buffer)] - Buffer containing the plain/ciphered seed
+//   decrypt [Boolean] - True if seed should be deciphered, false if seed should be ciphered
+//   master [Boolean] - True if master seed, false if common seed
+//
+//  Return: [Object(Buffer)] - Buffer with ciphered/deciphered seed
+function conformSeed(data, decrypt = true, master = true) {
     const x = [ 78, 87, 108, 79, 77, 49, 82, 65, 89, 122, 69, 122, 75, 71, 103, 104, 84, 121, 115, 61],
-        dec = crypto.createDecipher('des-ede3-cbc', Buffer.from(Buffer.from(x).toString(), 'base64').toString());
+        y = [97, 69, 65, 120, 77, 50, 77, 119, 75, 121, 104, 48, 100, 48, 53, 120, 74, 106, 85, 61],
+        cryptoObj = (decrypt ? crypto.createDecipher : crypto.createCipher)('des-ede3-cbc', Buffer.from(Buffer.from(master ? x : y).toString(), 'base64').toString());
 
-    const decBuf1 = dec.update(encData),
-        decBuf2 = dec.final();
-
-    return Buffer.concat([decBuf1, decBuf2]);
+    return Buffer.concat([cryptoObj.update(data), cryptoObj.final()]);
 }
 
 function isSeedValid(seed) {
@@ -369,6 +380,11 @@ function isSeedValid(seed) {
     }
 
     return isValid;
+}
+
+function generateCommonSeed(testPrefix) {
+    return conformSeed(Random.createWithSeeds(this.masterSeed + ': This is the seed to be used by all Catenis Hubs').id(36) +
+        (testPrefix ? ':' + testPrefix.toUpperCase() : ''), false, false);
 }
 
 function shutdown() {

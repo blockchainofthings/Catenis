@@ -1173,7 +1173,7 @@ CatenisNode.serviceCreditAssetDivisibility = cfgSettings.serviceCreditAsset.issu
 
 // Create new client ID dependent on Catenis node index and client index
 function newClientId(ctnNodeIndex, clientIndex) {
-    let id = 'c' + Random.createWithSeeds(Array.from(Catenis.application.seed.toString() + ':ctnNodeIndex:' + ctnNodeIndex + ',clientIndex:' + clientIndex)).id(19);
+    let id = 'c' + Random.createWithSeeds(Array.from(Catenis.application.commonSeed.toString() + ':ctnNodeIndex:' + ctnNodeIndex + ',clientIndex:' + clientIndex)).id(19);
     let doc;
 
     if ((doc = Catenis.db.collection.Client.findOne({clientId: id}, {fields:{_id: 1, index: 1}}))) {

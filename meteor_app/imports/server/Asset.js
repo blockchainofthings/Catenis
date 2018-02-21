@@ -173,7 +173,7 @@ Asset.type = Object.freeze({
 
 // Synthesize new asset ID from the Colored Coins ID
 function newAssetId(ccAssetId) {
-    const seed = Catenis.application.seed.toString() + ',Colored Coins asset ID:' + ccAssetId;
+    const seed = Catenis.application.commonSeed.toString() + ',Colored Coins asset ID:' + ccAssetId;
 
     return 'a' + Random.createWithSeeds(seed).id(19);
 }

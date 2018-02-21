@@ -676,7 +676,7 @@ function newMessageId(tx) {
     // We compose a unique seed from the blockchain addresses of the transaction's inputs
     //  We can guarantee that it will be unique because Catenis blockchain  addresses
     //  are only used once
-    const seed = Catenis.application.seed.toString() + ':' + tx.inputs.reduce((acc, input, index) => {
+    const seed = Catenis.application.commonSeed.toString() + ':' + tx.inputs.reduce((acc, input, index) => {
         if (acc.length > 0) {
             acc += ',';
         }

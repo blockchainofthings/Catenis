@@ -927,7 +927,7 @@ Client.billingMode = Object.freeze({
 
 // Create new device ID dependent on Catenis node index, client index and device index
 function newDeviceId(ctnNodeIndex, clientIndex, deviceIndex) {
-    let id = 'd' + Random.createWithSeeds(Array.from(Catenis.application.seed.toString() + ':ctnNodeIndex:' + ctnNodeIndex + ',clientIndex:' + clientIndex + ',deviceIndex:' + deviceIndex)).id(19);
+    let id = 'd' + Random.createWithSeeds(Array.from(Catenis.application.commonSeed.toString() + ':ctnNodeIndex:' + ctnNodeIndex + ',clientIndex:' + clientIndex + ',deviceIndex:' + deviceIndex)).id(19);
     let doc;
 
     if ((doc = Catenis.db.collection.Device.findOne({deviceId: id}, {fields:{_id: 1, index: 1}}))) {
