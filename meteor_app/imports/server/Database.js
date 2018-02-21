@@ -133,18 +133,6 @@ Database.initialize = function() {
                 }
             }]
         },
-        License: {
-            indices: [{
-                fields: {
-                    licenseType: 1
-                },
-                opts: {
-                    unique: true,
-                    background: true,
-                    w: 1
-                }
-            }]
-        },
         IssuedBlockchainAddress: {
             indices: [{
                 fields: {
@@ -1305,7 +1293,7 @@ function dropSafeIndices (collection) {
             else {
                 // Error retrieving indices. Log error
                 Catenis.logger.ERROR('Error retrieving indices from %s DB collection.', collection.s.name, error);
-                throw new Error('Error retrieving indices from %DB collection');
+                throw new Error('Error retrieving indices from DB collection');
             }
         }).detach();
     });
