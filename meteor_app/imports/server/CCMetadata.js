@@ -95,11 +95,6 @@ export function CCMetadata(metadata, decCryptoKeys) {
             get: function () {
                 return util.format(cfgSettings.signingMessageFormat, new Date().toString());
             }
-        },
-        certificateKeyPsw: {
-            get: function () {
-                return generateCertificateKeyPsw();
-            }
         }
     });
 }
@@ -394,8 +389,7 @@ function getSignedMessage(message) {
             nocerts: true,
             outform: 'PEM',
             signer: cfgSettings.signingCertificateFilePath,
-            inkey: cfgSettings.signingCertificateKeyFilePath,
-            passin: 'pass:' + this.certificateKeyPsw
+            inkey: cfgSettings.signingCertificateKeyFilePath
         };
         signedMsg = opensslSync('cms.sign', Buffer.from(message), opts);
     }
@@ -518,10 +512,6 @@ CCMetadata.fromTorrent = function (torrentHash, sha2, decCryptoKeys) {
 
 // Definition of module (private) functions
 //
-
-function generateCertificateKeyPsw() {
-    return crypto.createHmac("sha256", Catenis.application.seed).update('BlockchainOfThingsSSLCertKey').digest().toString('hex');
-}
 
 // Arguments:
 //  url: {
