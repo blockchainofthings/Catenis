@@ -1688,9 +1688,16 @@ function dropSafeIndices (collection) {
                 fut1.return();
             }
             else {
-                // Error retrieving indices. Log error
-                Catenis.logger.ERROR('Error retrieving indices from %s DB collection.', collection.s.name, error);
-                throw new Error('Error retrieving indices from %DB collection');
+                if (!(error.name === 'MongoError' && error.message.match(/^Collection [A-Za-z0-9_\-\.]+ doesn't exist$/)) ) {
+                    // Error retrieving indices. Log error
+                    Catenis.logger.ERROR('Error retrieving indices from %s DB collection.', collection.s.name, error);
+                    throw new Error('Error retrieving indices from DB collection');
+                }
+                else {
+                    // Error was due to the fact that collection does not exist yet.
+                    //  So, just proceed with processing
+                    fut1.return();
+                }
             }
         }).detach();
     });
