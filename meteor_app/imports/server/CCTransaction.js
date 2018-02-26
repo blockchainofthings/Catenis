@@ -1616,12 +1616,12 @@ CCTransaction.fromTransaction = function (transact) {
 
                 ccTransact.includesMultiSigOutput = true;
             }
-            else {
+            else if (ccData.multiSig.length > 0) {
                 // Inconsistent Colored Coins data; multiSig length different than expected
                 //  Log error condition and throw exception
                 Catenis.logger.ERROR('Invalid Colored Coins transaction: inconsistent Colored Coins data; multiSig length different than expected', {
                     ccData: ccData,
-                    expectedMultiSigLength: 2
+                    expectedMultiSigLength: 0
                 });
                 // noinspection ExceptionCaughtLocallyJS
                 throw new Meteor.Error('ctn_cc_tx_inconsistent_cc_data', 'Invalid Colored Coins transaction: inconsistent Colored Coins data; multiSig length different than expected');
