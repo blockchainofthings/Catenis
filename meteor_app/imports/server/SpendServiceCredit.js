@@ -512,6 +512,7 @@ function spendServCredTxConfirmed(data) {
                     throw new Error(util.format('Last found spend service credit transaction (txid: %s) does not match last sent spend service credit transaction (txid: %s)', lastTxid, spendServCredTransact.lastSentCcTransact.txid));
                 }
 
+                let confirmedSpendServiceCreditTransact;
                 let missingServTxids = [];
 
                 if (confirmedCcTransact.txid !== spendServCredTransact.lastSentCcTransact.txid || spendServCredTransact.txChanged) {
@@ -524,7 +525,9 @@ function spendServCredTxConfirmed(data) {
                     });
 
                     // Retrieve service transaction IDs that are missing from confirmed spend service credit transaction
-                    missingServTxids = spendServCredTransact.missingServiceTxids(new SpendServiceCreditTransaction(undefined, confirmedCcTransact, false));
+                    confirmedSpendServiceCreditTransact = new SpendServiceCreditTransaction(undefined, confirmedCcTransact, false);
+
+                    missingServTxids = spendServCredTransact.missingServiceTxids(confirmedSpendServiceCreditTransact);
                 }
 
                 if (confirmedCcTransact.txid !== spendServCredTransact.lastSentCcTransact.txid) {
@@ -561,7 +564,7 @@ function spendServCredTxConfirmed(data) {
                 disposeSpendServCredTransaction.call(this, spendServCredTransact);
 
                 // Record service payment transaction for billing purpose
-                Billing.recordServicePaymentTransaction(spendServCredTransact);
+                Billing.recordServicePaymentTransaction(confirmedSpendServiceCreditTransact !== undefined ? confirmedSpendServiceCreditTransact : spendServCredTransact);
 
                 if (missingServTxids.length > 0) {
                     // Reprocess missing service transactions
