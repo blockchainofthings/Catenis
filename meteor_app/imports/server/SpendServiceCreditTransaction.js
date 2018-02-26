@@ -119,21 +119,41 @@ export class SpendServiceCreditTransaction extends events.EventEmitter {
 
             // Identify blockchain assigned ID of service transaction for which payments
             //  have been made by this transaction
-            if (this.ccTransact.ccMetadata === undefined || this.ccTransact.ccMetadata.userData === undefined
-                    || this.ccTransact.ccMetadata.userData[cfgSettings.ccMetadata.servTxidsKey] === undefined) {
-                // Missing list of service transaction IDs from Colored Coins metadata.
-                //  Log error condition, and throw exception
-                Catenis.logger.ERROR('Inconsistent Colored Coins metadata for spend service credit transaction: missing list of service transaction IDs', {
-                    ccMetadata: this.ccTransact.ccMetadata
+            if (this.ccTransact.ccMetadata !== undefined && this.ccTransact.ccMetadata.userData !== undefined
+                    && this.ccTransact.ccMetadata.userData[cfgSettings.ccMetadata.servTxidsKey] !== undefined) {
+                Catenis.logger.DEBUG('>>>>>> Spend service credit Colored Coins metadata', {
+                    raw: this.ccTransact.ccMetadata.userData[cfgSettings.ccMetadata.servTxidsKey],
+                    string: this.ccTransact.ccMetadata.userData[cfgSettings.ccMetadata.servTxidsKey].toString()
                 });
-                throw new Error('Inconsistent Colored Coins metadata for spend service credit transaction: missing list of service transaction IDs');
+                this.serviceTxids = JSON.parse(this.ccTransact.ccMetadata.userData[cfgSettings.ccMetadata.servTxidsKey].toString());
             }
+            else {
+                // Colored Coins metadata missing. Try to get service transactions from
+                //  local database
+                Catenis.logger.WARN('No Colored Coins metadata associated with spend service credit transaction; trying to retrieve associated service transaction IDs from local database.', {
+                    'ccTransact.txid': ccTransact.txid
+                });
+                const docSpendServCredTx = Catenis.db.collection.SentTransaction.findOne({
+                    txid: ccTransact.txid,
+                    type: 'spend_service_credit'
+                }, {
+                    fields: {
+                        info: 1
+                    }
+                });
 
-            Catenis.logger.DEBUG('>>>>>> Spend service credit Colored Coins metadata', {
-                raw: this.ccTransact.ccMetadata.userData[cfgSettings.ccMetadata.servTxidsKey],
-                string: this.ccTransact.ccMetadata.userData[cfgSettings.ccMetadata.servTxidsKey].toString()
-            });
-            this.serviceTxids = JSON.parse(this.ccTransact.ccMetadata.userData[cfgSettings.ccMetadata.servTxidsKey].toString());
+                if (docSpendServCredTx !== undefined) {
+                    this.serviceTxids = docSpendServCredTx.info.spendServiceCredit.serviceTxids;
+                }
+                else {
+                    // Unable to retrieve spend service credit transaction from local database.
+                    //  Log error condition, and throw exception
+                    Catenis.logger.ERROR('Could not find spend service credit transaction; unable to retrieve associated service transaction IDs', {
+                        'ccTransact.txid': ccTransact.txid
+                    });
+                    throw new Error(util.format('Could not find spend service credit transaction (txid: %s); unable to retrieve associated service transaction IDs', ccTransact.txid));
+                }
+            }
 
             this.fee = this.ccTransact.feeAmount();
 
