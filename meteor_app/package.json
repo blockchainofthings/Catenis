@@ -5,7 +5,7 @@
   "main": "Catenis.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "pre-deploy": "if [ -f ../deploy/Catenis.tar.gz ]; then t=`stat -t %C%y-%m-%d -f %Sm ../deploy/Catenis.tar.gz`; mv ../deploy/Catenis.tar.gz \"../deploy/Catenis.$t.tar.gz\"; fi; (cd ..; tar -czf deploy/Catenis.tar.gz --exclude '.*DS_Store' --exclude '.meteor/local' --exclude '*.log' --exclude '*.log.????-??-??' --exclude 'local.json' --exclude 'node_modules' --exclude 'seed*.dat' meteor_app)"
+    "pre-deploy": "if [ -f ../deploy/Catenis.tar.gz ]; then t=`stat -t %C%y-%m-%d -f %Sm ../deploy/Catenis.tar.gz`; mv ../deploy/Catenis.tar.gz \"../deploy/Catenis.$t.tar.gz\"; fi; (cd ..; tar -czf deploy/Catenis.tar.gz --exclude '.*DS_Store' --exclude '.meteor/local' --exclude '*.log' --exclude '*.log.????-??-??' --exclude 'local.json' --exclude 'development-claudio.json' --exclude 'node_modules' --exclude 'seed*.dat' meteor_app)"
   },
   "author": "Cláudio Sá de Castro",
   "license": "ISC",
