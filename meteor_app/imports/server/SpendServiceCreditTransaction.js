@@ -902,7 +902,7 @@ SpendServiceCreditTransaction.prototype.getFeeInfo = function () {
         const lastSentTxFee = this.lastSentCcTransact.feeAmount();
 
         if (lastSentTxFee !== this.fee) {
-            Catenis.logger.WARN('Inconsistent fee for spend service credit transaction transaction', {
+            Catenis.logger.WARN('Inconsistent fee for spend service credit transaction', {
                 spendServCredTxFee: this.fee,
                 lastSentTxFee: lastSentTxFee
             });
