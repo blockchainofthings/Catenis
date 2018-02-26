@@ -85,6 +85,8 @@ export function SpendServiceCredit() {
     TransactionMonitor.addEventHandler(TransactionMonitor.notifyEvent.spend_service_credit_tx_conf.name, spendServCredTxConfirmed.bind(this));
 
     // Retrieve unconfirmed spend service credit transactions
+    let numRetDocs;
+
     Catenis.db.collection.SentTransaction.find({
         type: Transaction.type.spend_service_credit.name,
         'confirmation.confirmed': false,
@@ -100,11 +102,15 @@ export function SpendServiceCredit() {
             sentDate: 1,
             'info.spendServiceCredit': 1
         }
-    }).forEach((doc) => {
+    }).forEach((doc, docIdx, cursor) => {
+        if (numRetDocs === undefined) {
+            numRetDocs = cursor.count();
+        }
+
         const transact = Transaction.fromTxid(doc.txid);
         transact.sentDate = doc.sentDate;
 
-        const spendServCredTransact = newSpendServCredTransaction.call(this, CCTransaction.fromTransaction(transact));
+        const spendServCredTransact = newSpendServCredTransaction.call(this, CCTransaction.fromTransaction(transact), docIdx === numRetDocs - 1);
 
         this.unconfSpendServCredTxs.add(spendServCredTransact);
 
@@ -203,8 +209,8 @@ SpendServiceCredit.prototype.payForService = function (client, serviceTxid, pric
 //      or .bind().
 //
 
-function newSpendServCredTransaction(ccTransact) {
-    const spendServCredTransact = new SpendServiceCreditTransaction(this, ccTransact, true);
+function newSpendServCredTransaction(ccTransact, addNoBillingServTxs) {
+    const spendServCredTransact = new SpendServiceCreditTransaction(this, ccTransact, true, addNoBillingServTxs);
 
     // Set up event handler to receive notification of tx unconfirmed for too long
     spendServCredTransact.on(SpendServiceCreditTransaction.notifyEvent.tx_unconfirmed_too_long.name, this.txUnconfirmedTooLongEventHandler);

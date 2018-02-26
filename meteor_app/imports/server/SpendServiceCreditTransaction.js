@@ -54,7 +54,7 @@ const cfgSettings = {
 
 // SpendServiceCreditTransaction function class
 export class SpendServiceCreditTransaction extends events.EventEmitter {
-    constructor (spendServCredCtrl, ccTransact, unconfirmed) {
+    constructor (spendServCredCtrl, ccTransact, unconfirmed, addNoBillingServTxs) {
         super();
 
         // Properties definition
@@ -153,6 +153,10 @@ export class SpendServiceCreditTransaction extends events.EventEmitter {
                     });
                     throw new Error(util.format('Could not find spend service credit transaction (txid: %s); unable to retrieve associated service transaction IDs', ccTransact.txid));
                 }
+            }
+
+            if (addNoBillingServTxs) {
+                this.serviceTxids = this.serviceTxids.concat(getServiceTxsWithNoBilling());
             }
 
             this.fee = this.ccTransact.feeAmount();
@@ -1153,6 +1157,17 @@ function checkSystemFunding() {
     Catenis.ctnHubNode.checkServicePaymentPayTxExpenseFundingBalance();
 }
 
+function getServiceTxsWithNoBilling() {
+    return Catenis.db.collection.Billing.find({
+        servicePaymentTx: {
+            $exists: false
+        }
+    }, {
+        fields: {
+            'serviceTx.txid': 1
+        }
+    }).map((doc) => doc.serviceTx.txid);
+}
 
 // Module code
 //
