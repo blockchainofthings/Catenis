@@ -155,16 +155,22 @@ export class SpendServiceCreditTransaction extends events.EventEmitter {
                 }
             }
 
-            if (addNoBillingServTxs) {
-                this.serviceTxids = this.serviceTxids.concat(getServiceTxsWithNoBilling());
-            }
-
             this.fee = this.ccTransact.feeAmount();
 
             const changeOutputPos = getChangeOutputPos.call(this);
             this.change = changeOutputPos >= 0 ? this.ccTransact.totalOutputsAmount(changeOutputPos) : 0;
 
             this.txChanged = false;
+
+            if (addNoBillingServTxs) {
+                const extServTxids = Util.mergeArrays(this.serviceTxids, getServiceTxsWithNoBilling());
+
+                if (extServTxids.length > this.serviceTxids.length) {
+                    this.serviceTxids = extServTxids;
+                    this.txChanged = true;
+                }
+            }
+
             this.txFunded = false;
             this.noMorePaymentsAccepted = this.ccTransact.realSize() > Transaction.maxTxSize * cfgSettings.txSizeThresholdRatio;
 

@@ -211,6 +211,19 @@ Util.diffArrays = function (ar1, ar2) {
     return Object.keys(diffResult).length > 0 ? diffResult : undefined;
 };
 
+// Concatenate two arrays making sure that common values are not duplicated
+Util.mergeArrays = function (ar1, ar2) {
+    const resultAr = ar1.concat([]);
+
+    ar2.forEach((element) => {
+        if (resultAr.indexOf(element) === -1) {
+            resultAr.push(element);
+        }
+    });
+
+    return resultAr;
+};
+
 // This method is to be used in place of underscore.js's clone() method to overcome a limitation
 //  of that method where accessor type properties (getter/setter) are copied as data properties
 Util.cloneObj = function (obj) {
@@ -224,6 +237,7 @@ Util.cloneObj = function (obj) {
 
     return cloneObj;
 };
+
 
 // Util function class (public) properties
 //
