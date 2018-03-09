@@ -480,7 +480,12 @@
       "getAddressesTransactions": "/getAddressesTransactions",
       "transmit": "/transmit",
       "getInfo": "/getInfo",
-      "importAddresses": "/importAddresses"
+      "importAddresses": "/importAddresses",
+      "getAssetHolders": "/getAssetHolders",
+      "getAssetBalance": "/getAssetBalance",
+      "getAssetIssuance": "/getAssetIssuance",
+      "getAssetIssuingAddress": "/getAssetIssuingAddress",
+      "getOwningAssets": "/getOwningAssets"
     }
   },
   // Parameters pertaining to CCMetadataClient module

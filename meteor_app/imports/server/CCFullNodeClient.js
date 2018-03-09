@@ -41,7 +41,12 @@ const cfgSettings = {
         getAddressesTransactions: methodPathConfig.get('getAddressesTransactions'),
         transmit: methodPathConfig.get('transmit'),
         getInfo: methodPathConfig.get('getInfo'),
-        importAddresses: methodPathConfig.get('importAddresses')
+        importAddresses: methodPathConfig.get('importAddresses'),
+        getAssetHolders: methodPathConfig.get('getAssetHolders'),
+        getAssetBalance: methodPathConfig.get('getAssetBalance'),
+        getAssetIssuance: methodPathConfig.get('getAssetIssuance'),
+        getAssetIssuingAddress: methodPathConfig.get('getAssetIssuingAddress'),
+        getOwningAssets: methodPathConfig.get('getOwningAssets')
     }
 };
 
@@ -87,6 +92,8 @@ CCFullNodeClient.prototype.parseNow = function () {
 //  Arguments:
 //   addresses [String|Array(String)] - Blockchain addresses for which to retrieve UTXOs
 //   numOfConfirmations [Number]      - Minimum number of confirmations for UTXO to be returned
+//   waitForParsing [Boolean] - (optional) Indicates whether processing of request should wait until parsing of assets
+//                               is complete
 CCFullNodeClient.prototype.getAddressesUtxos = function (addresses, numOfConfirmations, waitForParsing = true) {
     const postData = {
         addresses: Array.isArray(addresses) ? addresses : [addresses]
@@ -116,6 +123,8 @@ CCFullNodeClient.prototype.getAddressesUtxos = function (addresses, numOfConfirm
 //     index: [Number]  - Output index (vout)
 //   }]
 //   numOfConfirmations [Number]  - Minimum number of confirmations for UTXO to be returned
+//   waitForParsing [Boolean] - (optional) Indicates whether processing of request should wait until parsing of assets
+//                               is complete
 CCFullNodeClient.prototype.getUtxos = function (utxos, numOfConfirmations, waitForParsing = true) {
     const postData = {
         utxos: Array.isArray(utxos) ? utxos : [utxos]
@@ -144,6 +153,8 @@ CCFullNodeClient.prototype.getUtxos = function (utxos, numOfConfirmations, waitF
 //     txid: [String],  - Transaction ID
 //     vout: [Number]  - Output index
 //   }]
+//   waitForParsing [Boolean] - (optional) Indicates whether processing of request should wait until parsing of assets
+//                               is complete
 CCFullNodeClient.prototype.getTxouts = function (txouts, waitForParsing = true) {
     const postData = {
         txouts: Array.isArray(txouts) ? txouts : [txouts]
@@ -165,6 +176,8 @@ CCFullNodeClient.prototype.getTxouts = function (txouts, waitForParsing = true) 
 //
 //  Arguments:
 //   addresses [String|Array(String)] - Blockchain addresses for which to retrieve transactions
+//   waitForParsing [Boolean] - (optional) Indicates whether processing of request should wait until parsing of assets
+//                               is complete
 CCFullNodeClient.prototype.getAddressesTransactions = function (addresses, waitForParsing = true) {
     const postData = {
         addresses: Array.isArray(addresses) ? addresses : [addresses]
@@ -229,6 +242,144 @@ CCFullNodeClient.prototype.importAddresses = function (addresses, reindex) {
     }
     catch (err) {
         handleError('importAddresses', err);
+    }
+};
+
+// Call Colored Coins Full Node getAssetHolders method
+//
+//  Arguments:
+//   ccAssetId [String] - Colored Coins asset ID
+//   numOfConfirmations [Number] - (optional) Minimum number of confirmations to include UTXO amount in accumulated
+//                                  asset amount balance per holding address
+//   waitForParsing [Boolean] - (optional) Indicates whether processing of request should wait until parsing of assets
+//                               is complete
+CCFullNodeClient.prototype.getAssetHolders = function (ccAssetId, numOfConfirmations, waitForParsing = true) {
+    const postData = {
+        assetId: ccAssetId
+    };
+
+    if (numOfConfirmations !== undefined) {
+        postData.numOfConfirmations = numOfConfirmations;
+    }
+
+    if (waitForParsing) {
+        postData.waitForParsing = true;
+    }
+
+    try {
+        return postRequest.call(this, cfgSettings.methodPath.getAssetHolders, postData);
+    }
+    catch (err) {
+        handleError('getAssetHolders', err);
+    }
+};
+
+// Call Colored Coins Full Node getAssetBalance method
+//
+//  Arguments:
+//   ccAssetId [String] - Colored Coins asset ID
+//   addresses [String|Array(String)] - (optional) List of addresses (or a single address) used to restrict the balance computation
+//   numOfConfirmations [Number] - (optional) Minimum number of confirmations to include UTXO amount in accumulated asset amount balance
+//   waitForParsing [Boolean] - (optional) Indicates whether processing of request should wait until parsing of assets
+//                               is complete
+CCFullNodeClient.prototype.getAssetBalance = function (ccAssetId, addresses, numOfConfirmations, waitForParsing = true) {
+    const postData = {
+        assetId: ccAssetId
+    };
+
+    if (addresses) {
+        postData.addresses = Array.isArray(addresses) ? addresses : [addresses];
+    }
+
+    if (numOfConfirmations !== undefined) {
+        postData.numOfConfirmations = numOfConfirmations;
+    }
+
+    if (waitForParsing) {
+        postData.waitForParsing = true;
+    }
+
+    try {
+        return postRequest.call(this, cfgSettings.methodPath.getAssetBalance, postData);
+    }
+    catch (err) {
+        handleError('getAssetBalance', err);
+    }
+};
+
+// Call Colored Coins Full Node getAssetIssuance method
+//
+//  Arguments:
+//   ccAssetId [String] - Colored Coins asset ID
+//   waitForParsing [Boolean] - (optional) Indicates whether processing of request should wait until parsing of assets
+//                               is complete
+CCFullNodeClient.prototype.getAssetIssuance = function (ccAssetId, waitForParsing = true) {
+    const postData = {
+        assetId: ccAssetId
+    };
+
+    if (waitForParsing) {
+        postData.waitForParsing = true;
+    }
+
+    try {
+        return postRequest.call(this, cfgSettings.methodPath.getAssetIssuance, postData);
+    }
+    catch (err) {
+        handleError('getAssetIssuance', err);
+    }
+};
+
+// Call Colored Coins Full Node getAssetIssuingAddress method
+//
+//  Arguments:
+//   ccAssetId [String] - Colored Coins asset ID
+//   waitForParsing [Boolean] - (optional) Indicates whether processing of request should wait until parsing of assets
+//                               is complete
+CCFullNodeClient.prototype.getAssetIssuingAddress = function (ccAssetId, waitForParsing = true) {
+    const postData = {
+        assetId: ccAssetId
+    };
+
+    if (waitForParsing) {
+        postData.waitForParsing = true;
+    }
+
+    try {
+        return postRequest.call(this, cfgSettings.methodPath.getAssetIssuingAddress, postData);
+    }
+    catch (err) {
+        handleError('getAssetIssuingAddress', err);
+    }
+};
+
+// Call Colored Coins Full Node getOwningAssets method
+//
+//  Arguments:
+//   addresses [String|Array(String)] - List of addresses (or a single address) for which to retrieve the assets
+//                                       owned by them
+//   numOfConfirmations [Number] - (optional) Minimum number of confirmations to include UTXO amount in accumulated
+//                                  asset amount balance
+//   waitForParsing [Boolean] - (optional) Indicates whether processing of request should wait until parsing of assets
+//                               is complete
+CCFullNodeClient.prototype.getOwningAssets = function (addresses, numOfConfirmations, waitForParsing = true) {
+    const postData = {
+        addresses: Array.isArray(addresses) ? addresses : [addresses]
+    };
+
+    if (numOfConfirmations !== undefined) {
+        postData.numOfConfirmations = numOfConfirmations;
+    }
+
+    if (waitForParsing) {
+        postData.waitForParsing = true;
+    }
+
+    try {
+        return postRequest.call(this, cfgSettings.methodPath.getOwningAssets, postData);
+    }
+    catch (err) {
+        handleError('getOwningAssets', err);
     }
 };
 
