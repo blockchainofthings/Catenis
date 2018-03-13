@@ -1410,13 +1410,9 @@ TransactionMonitor.notifyEvent = Object.freeze({
         name: 'read_confirmation_tx_conf',
         description: 'Transaction sent for marking and notifying that send message transactions have already been read has been confirmed'
     }),
-    issue_locked_asset_tx_conf: Object.freeze({
-        name: 'issue_locked_asset_tx_conf',
-        description: 'Transaction sent for issuing (Colored Coins) assets (of a given type) that cannot be reissued has been confirmed'
-    }),
-    issue_unlocked_asset_tx_conf: Object.freeze({
-        name: 'issue_unlocked_asset_tx_conf',
-        description: 'Transaction sent for issuing or reissuing (Colored Coins) assets (of a given type) has been confirmed'
+    issue_asset_tx_conf: Object.freeze({
+        name: 'issue_asset_tx_conf',
+        description: 'Transaction sent for issuing (Colored Coins) assets (of a given type) has been confirmed'
     }),
     // Events used to notify when a transaction of a given type is received
     sys_funding_tx_rcvd: Object.freeze({
@@ -1530,7 +1526,7 @@ function processConfirmedSentTransactions(doc, eventsToEmit) {
             Catenis.logger.ERROR('Could not get notification event from transaction type', {txType: doc.type});
         }
     }
-    else if (doc.type === Transaction.type.issue_locked_asset.name || doc.type === Transaction.type.issue_unlocked_asset.name) {
+    else if (doc.type === Transaction.type.issue_asset.name) {
         // Prepare to emit event notifying of confirmation of asset issuance transaction
         const notifyEvent = getTxConfNotifyEventFromTxType(doc.type);
 

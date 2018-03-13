@@ -249,7 +249,7 @@
     },
     "asset": {
       "issuance": {
-        "unlockedAssetsPerMinute": 0.33,  // Number of unlocked assets issued per minute that is expected to be sustained
+        "assetsPerMinute": 1,  // Number of assets issued per minute that is expected to be sustained
         "minutesToConfirm": 300,  // Time, in minutes, within which asset issuance txs are expected to be confirmed
         "unconfAssetIssueAddrReuses": 10,  // Number of times an UTXO associated with a device asset issuance addr is expected to be reused
         "assetIssueAddrFunding": {
@@ -278,14 +278,9 @@
         "numOutputs": 4,          // Number of (P2PKH) outputs
         "nullDataPayloadSize": 80 // Size, in bytes, of payload of null data output
       },
-      "issueLockedAsset": {  // Issue locked asset
-        "numInputs": 2,           // Number of inputs (that spend P2PKH outputs)
-        "numOutputs": 2,          // Number of (P2PKH) outputs
-        "nullDataPayloadSize": 68 // Size, in bytes, of payload of null data output
-      },
-      "issueUnlockedAsset": {  // Issue unlocked asset
+      "issueAsset": {  // Issue asset
         "numInputs": 3,           // Number of inputs (that spend P2PKH outputs)
-        "numOutputs": 3,          // Number of (P2PKH) outputs
+        "numOutputs": 4,          // Number of (P2PKH) outputs
         "nullDataPayloadSize": 68 // Size, in bytes, of payload of null data output
       },
       "transferAsset": {  // Transfer asset
@@ -298,8 +293,7 @@
       "logMessage": 100,          // Log message usage weight
       "sendMessage": 100,         // Send message (without read confirmation) usage weight
       "sendMsgReadConfirm": 100,  // Send message with read confirmation usage weight
-      "issueLockedAsset": 1,      // Issue locked asset usage weight
-      "issueUnlockedAsset": 10,   // Issue unlocked asset usage weight
+      "issueAsset": 10,           // Issue asset usage weight
       "transferAsset": 100        // Transfer asset usage weight
     }
   },

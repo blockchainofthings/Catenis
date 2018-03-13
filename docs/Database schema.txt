@@ -196,12 +196,8 @@ SentTransaction {
       },
       spentReadConfirmTxOutCount: [number]  // Number of send message tx read confirmation address outputs that had been spent by this tx
     },
-    issueLockedAsset: {
-      assetId: [string], // ID that uniquely identifies the Colored Coins asset that is issued
-      deviceId: [string] // External ID of the device that is issuing the asset
-    },
-    issueUnlockedAsset: {
-      assetId: [string], // ID that uniquely identifies the coloredCoin asset that is issued
+    issueAsset: {
+      assetId: [string], // ID that uniquely identifies the Catenis asset that is issued
       deviceId: [string] // External ID of the device that is issuing the asset
     },
     transferAsset: {

@@ -62,8 +62,7 @@ const srvServTxCfgConfig = serviceConfig.get('serviceTxConfig');
 const srvServTxCfgLogMsgConfig = srvServTxCfgConfig.get('logMessage');
 const srvServTxCfgSendMsgConfig = srvServTxCfgConfig.get('sendMessage');
 const srvServTxCfgSendMsgRdCfConfig = srvServTxCfgConfig.get('sendMsgReadConfirm');
-const srvServTxCfgIssueLockAssetConfig = srvServTxCfgConfig.get('issueLockedAsset');
-const srvServTxCfgIssueUnlockAssetConfig = srvServTxCfgConfig.get('issueUnlockedAsset');
+const srvServTxCfgIssueAssetConfig = srvServTxCfgConfig.get('issueAsset');
 const srvServTxCfgTransfAssetConfig = srvServTxCfgConfig.get('transferAsset');
 const srvServUseWeightConfig = serviceConfig.get('serviceUsageWeight');
 
@@ -200,7 +199,7 @@ const cfgSettings = {
     },
     asset: {
         issuance: {
-            unlockedAssetsPerMinute: srvAssetIssuanceConfig.get('unlockedAssetsPerMinute'),
+            assetsPerMinute: srvAssetIssuanceConfig.get('assetsPerMinute'),
             minutesToConfirm: srvAssetIssuanceConfig.get('minutesToConfirm'),
             unconfAssetIssueAddrReuses: srvAssetIssuanceConfig.get('unconfAssetIssueAddrReuses'),
             assetIssueAddrFunding: {
@@ -229,15 +228,10 @@ const cfgSettings = {
             numOutputs: srvServTxCfgSendMsgRdCfConfig.get('numOutputs'),
             nullDataPayloadSize: srvServTxCfgSendMsgRdCfConfig.get('nullDataPayloadSize')
         },
-        issueLockedAsset: {
-            numInputs: srvServTxCfgIssueLockAssetConfig.get('numInputs'),
-            numOutputs: srvServTxCfgIssueLockAssetConfig.get('numOutputs'),
-            nullDataPayloadSize: srvServTxCfgIssueLockAssetConfig.get('nullDataPayloadSize')
-        },
-        issueUnlockedAsset: {
-            numInputs: srvServTxCfgIssueUnlockAssetConfig.get('numInputs'),
-            numOutputs: srvServTxCfgIssueUnlockAssetConfig.get('numOutputs'),
-            nullDataPayloadSize: srvServTxCfgIssueUnlockAssetConfig.get('nullDataPayloadSize')
+        issueAsset: {
+            numInputs: srvServTxCfgIssueAssetConfig.get('numInputs'),
+            numOutputs: srvServTxCfgIssueAssetConfig.get('numOutputs'),
+            nullDataPayloadSize: srvServTxCfgIssueAssetConfig.get('nullDataPayloadSize')
         },
         transferAsset: {
             numInputs: srvServTxCfgTransfAssetConfig.get('numInputs'),
@@ -249,8 +243,7 @@ const cfgSettings = {
         logMessage: srvServUseWeightConfig.get('logMessage'),
         sendMessage: srvServUseWeightConfig.get('sendMessage'),
         sendMsgReadConfirm: srvServUseWeightConfig.get('sendMsgReadConfirm'),
-        issueLockedAsset: srvServUseWeightConfig.get('issueLockedAsset'),
-        issueUnlockedAsset: srvServUseWeightConfig.get('issueUnlockedAsset'),
+        issueAsset: srvServUseWeightConfig.get('issueAsset'),
         transferAsset: srvServUseWeightConfig.get('transferAsset')
     },
 };
@@ -286,10 +279,8 @@ Service.testFunctions = function () {
         typicalSendMessageTxSize: typicalSendMessageTxSize(),
         estimatedSendMessageReadConfirmTxCost: estimatedSendMessageReadConfirmTxCost(),
         typicalSendMessageReadConfirmTxSize: typicalSendMessageReadConfirmTxSize(),
-        estimatedIssueLockedAssetTxCost: estimatedIssueLockedAssetTxCost(),
-        typicalIssueLockedAssetTxSize: typicalIssueLockedAssetTxSize(),
-        estimatedIssueUnlockedAssetTxCost: estimatedIssueUnlockedAssetTxCost(),
-        typicalIssueUnlockedAssetTxSize: typicalIssueUnlockedAssetTxSize(),
+        estimatedIssueAssetTxCost: estimatedIssueAssetTxCost(),
+        typicalIssueAssetTxSize: typicalIssueAssetTxSize(),
         estimatedTransferAssetTxCost: estimatedTransferAssetTxCost(),
         typicalTransferAssetTxSize: typicalTransferAssetTxSize(),
         highestEstimatedReadConfirmTxCostPerMessage: highestEstimatedReadConfirmTxCostPerMessage(),
@@ -518,7 +509,7 @@ Service.sendMsgReadConfirmServicePrice = function () {
     return getServicePrice(Service.clientPaidService.send_msg_read_confirm);
 };
 
-// Returns price data for Issue Locked Asset service
+// Returns price data for Issue Asset service
 //
 //  Return: {
 //    estimatedServiceCost: [Number], - Estimated cost, in satoshis, of the service
@@ -527,21 +518,8 @@ Service.sendMsgReadConfirmServicePrice = function () {
 //    exchangeRate: [Number], - Bitcoin to BCOT token exchange rate used to calculate final price
 //    finalServicePrice: [Number] - Price charged for the service expressed in Catenis service credit's lowest units
 //  }
-Service.issueLockedAssetServicePrice = function () {
-    return getServicePrice(Service.clientPaidService.issue_locked_asset);
-};
-
-// Returns price data for Issue Unlocked Asset service
-//
-//  Return: {
-//    estimatedServiceCost: [Number], - Estimated cost, in satoshis, of the service
-//    priceMarkup: [Number], - Markup used to calculate the price of the service
-//    btcServicePrice: [Number], - Price of the service expressed in (bitcoin) satoshis
-//    exchangeRate: [Number], - Bitcoin to BCOT token exchange rate used to calculate final price
-//    finalServicePrice: [Number] - Price charged for the service expressed in Catenis service credit's lowest units
-//  }
-Service.issueUnlockedAssetServicePrice = function () {
-    return getServicePrice(Service.clientPaidService.issue_unlocked_asset);
+Service.issueAssetServicePrice = function () {
+    return getServicePrice(Service.clientPaidService.issue_asset);
 };
 
 // Returns price data for Transfer Asset service
@@ -592,15 +570,10 @@ Service.clientPaidService = Object.freeze({
         description: 'Record a message onto the blockchain addressing it to another device, requesting to receive a read confirm',
         costFunction: estimatedSendMessageReadConfirmTxCost
     }),
-    issue_locked_asset: Object.freeze({
-        name: 'issue_locked_asset',
-        description: 'Issue an amount of a new Catenis asset (no more units of this same asset can be issued later)',
-        costFunction: estimatedIssueLockedAssetTxCost
-    }),
-    issue_unlocked_asset: Object.freeze({
-        name: 'issue_unlocked_asset',
-        description: 'Issue an amount of a new or already existing Catenis asset',
-        costFunction: estimatedIssueUnlockedAssetTxCost
+    issue_asset: Object.freeze({
+        name: 'issue_asset',
+        description: 'Issue an amount of a new Catenis asset',
+        costFunction: estimatedIssueAssetTxCost
     }),
     transfer_asset: Object.freeze({
         name: 'transfer_asset',
@@ -647,7 +620,7 @@ function numActiveDeviceMainAddresses() {
 }
 
 function numActiveDeviceAssetIssuanceAddresses() {
-    return Math.ceil((cfgSettings.asset.issuance.unlockedAssetsPerMinute * cfgSettings.asset.issuance.minutesToConfirm) / cfgSettings.asset.issuance.unconfAssetIssueAddrReuses);
+    return Math.ceil((cfgSettings.asset.issuance.assetsPerMinute * cfgSettings.asset.issuance.minutesToConfirm) / cfgSettings.asset.issuance.unconfAssetIssueAddrReuses);
 }
 
 function highestEstimatedServiceTxCost() {
@@ -655,8 +628,7 @@ function highestEstimatedServiceTxCost() {
         estimatedLogMessageTxCost(),
         estimatedSendMessageTxCost(),
         estimatedSendMessageReadConfirmTxCost(),
-        estimatedIssueLockedAssetTxCost(),
-        estimatedIssueUnlockedAssetTxCost(),
+        estimatedIssueAssetTxCost(),
         estimatedTransferAssetTxCost()
     ]);
 }
@@ -666,15 +638,13 @@ function averageEstimatedServiceTxCost() {
         estimatedLogMessageTxCost(),
         estimatedSendMessageTxCost(),
         estimatedSendMessageReadConfirmTxCost(),
-        estimatedIssueLockedAssetTxCost(),
-        estimatedIssueUnlockedAssetTxCost(),
+        estimatedIssueAssetTxCost(),
         estimatedTransferAssetTxCost()
     ], [
         cfgSettings.serviceUsageWeight.logMessage,
         cfgSettings.serviceUsageWeight.sendMessage,
         cfgSettings.serviceUsageWeight.sendMsgReadConfirm,
-        cfgSettings.serviceUsageWeight.issueLockedAsset,
-        cfgSettings.serviceUsageWeight.issueUnlockedAsset,
+        cfgSettings.serviceUsageWeight.issueAsset,
         cfgSettings.serviceUsageWeight.transferAsset
     ]), cfgSettings.paymentResolution);
 }
@@ -703,20 +673,12 @@ function typicalSendMessageReadConfirmTxSize() {
     return Transaction.computeTransactionSize(cfgSettings.serviceTxConfig.sendMsgReadConfirm.numInputs, cfgSettings.serviceTxConfig.sendMsgReadConfirm.numOutputs, cfgSettings.serviceTxConfig.sendMsgReadConfirm.nullDataPayloadSize);
 }
 
-function estimatedIssueLockedAssetTxCost() {
-    return Util.roundToResolution(typicalIssueLockedAssetTxSize() * Catenis.bitcoinFees.getFeeRateByTime(cfgSettings.asset.issuance.minutesToConfirm), cfgSettings.paymentResolution);
+function estimatedIssueAssetTxCost() {
+    return Util.roundToResolution(typicalIssueAssetTxSize() * Catenis.bitcoinFees.getFeeRateByTime(cfgSettings.asset.issuance.minutesToConfirm), cfgSettings.paymentResolution);
 }
 
-function typicalIssueLockedAssetTxSize() {
-    return Transaction.computeTransactionSize(cfgSettings.serviceTxConfig.issueLockedAsset.numInputs, cfgSettings.serviceTxConfig.issueLockedAsset.numOutputs, cfgSettings.serviceTxConfig.issueLockedAsset.nullDataPayloadSize);
-}
-
-function estimatedIssueUnlockedAssetTxCost() {
-    return Util.roundToResolution(typicalIssueUnlockedAssetTxSize() * Catenis.bitcoinFees.getFeeRateByTime(cfgSettings.asset.issuance.minutesToConfirm), cfgSettings.paymentResolution);
-}
-
-function typicalIssueUnlockedAssetTxSize() {
-    return Transaction.computeTransactionSize(cfgSettings.serviceTxConfig.issueUnlockedAsset.numInputs, cfgSettings.serviceTxConfig.issueUnlockedAsset.numOutputs, cfgSettings.serviceTxConfig.issueUnlockedAsset.nullDataPayloadSize);
+function typicalIssueAssetTxSize() {
+    return Transaction.computeTransactionSize(cfgSettings.serviceTxConfig.issueAsset.numInputs, cfgSettings.serviceTxConfig.issueAsset.numOutputs, cfgSettings.serviceTxConfig.issueAsset.nullDataPayloadSize);
 }
 
 function estimatedTransferAssetTxCost() {
@@ -861,15 +823,13 @@ function averageServicePrice() {
         getServicePrice(Service.clientPaidService.log_message).finalServicePrice,
         getServicePrice(Service.clientPaidService.send_message).finalServicePrice,
         getServicePrice(Service.clientPaidService.send_msg_read_confirm).finalServicePrice,
-        getServicePrice(Service.clientPaidService.issue_locked_asset).finalServicePrice,
-        getServicePrice(Service.clientPaidService.issue_unlocked_asset).finalServicePrice,
+        getServicePrice(Service.clientPaidService.issue_asset).finalServicePrice,
         getServicePrice(Service.clientPaidService.transfer_asset).finalServicePrice
     ], [
         cfgSettings.serviceUsageWeight.logMessage,
         cfgSettings.serviceUsageWeight.sendMessage,
         cfgSettings.serviceUsageWeight.sendMsgReadConfirm,
-        cfgSettings.serviceUsageWeight.issueLockedAsset,
-        cfgSettings.serviceUsageWeight.issueUnlockedAsset,
+        cfgSettings.serviceUsageWeight.issueAsset,
         cfgSettings.serviceUsageWeight.transferAsset
     ]), cfgSettings.servicePriceResolution);
 }
@@ -1345,6 +1305,12 @@ Object.defineProperties(Service, {
         },
         enumerable: true
     },
+    deviceAssetProvisionCost: {
+        get: function () {
+            return deviceAssetProvisionCost();
+        },
+        enumerable: true
+    }
 });
 
 // Lock function class

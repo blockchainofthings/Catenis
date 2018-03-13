@@ -205,6 +205,50 @@ FundSource.prototype.getBalance = function (includeUnconfirmed = true, includeAl
         }, 0);
 };
 
+FundSource.prototype.getBalancePerAddress = function (includeUnconfirmed = true, includeAllocated = false) {
+    const conditions = [];
+
+    if (includeUnconfirmed && this.loadedUnconfirmedUtxos) {
+        if (this.ancestorsCountUpperLimit !== undefined) {
+            conditions.push({ancestorsCount: {$lte: this.ancestorsCountUpperLimit}});
+        }
+
+        if (this.ancestorsSizeUpperLimit !== undefined) {
+            conditions.push({ancestorsSize: {$lte: this.ancestorsSizeUpperLimit}});
+        }
+
+        if (this.descendantsCountUpperLimit !== undefined) {
+            conditions.push({descendantsCount: {$lte: this.descendantsCountUpperLimit}});
+        }
+
+        if (this.descendantsSizeUpperLimit !== undefined) {
+            conditions.push({descendantsSize: {$lte: this.descendantsSizeUpperLimit}});
+        }
+    }
+    else {
+        conditions.push({confirmations: {$gt: 0}});
+    }
+
+    if (!includeAllocated) {
+        conditions.push({allocated: false});
+    }
+
+    const query = conditions.length > 1 ? {$and: conditions} : conditions[0];
+
+    const addressBalance = {};
+
+    this.collUtxo.find(query).forEach((docUtxo) => {
+        if (Object.keys(addressBalance).findIndex(docUtxo.address) !== -1) {
+            addressBalance[docUtxo.address] += docUtxo.amount;
+        }
+        else {
+            addressBalance[docUtxo.address] = docUtxo.amount;
+        }
+    });
+
+    return addressBalance;
+};
+
 //  result: [{
 //    address: [String],
 //    txout: {

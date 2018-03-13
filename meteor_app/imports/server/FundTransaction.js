@@ -95,6 +95,19 @@ FundTransaction.prototype.addPayees = function (blockchainAddress, amountPerAddr
     this.payees.push(blockchainAddress.type);
 };
 
+//  Arguments:
+//   blockchainAddressType: [String] - Type of blockchain address
+//   address: [String] - Blockchain address to which amount should be paid
+//   amount: [Number] - Amount to be assigned to address
+//
+FundTransaction.prototype.addSingleAddressPayee = function (blockchainAddressType, address, amount) {
+    // Add transaction output paying the specified amount to the specific address
+    this.transact.addP2PKHOutput(address, amount);
+
+    // Save type of payee
+    this.payees.push(blockchainAddressType);
+};
+
 FundTransaction.prototype.addPayingSource = function () {
     let result = false;
 

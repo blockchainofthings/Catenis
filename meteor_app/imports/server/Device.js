@@ -47,6 +47,8 @@ import {
 import { Notification } from './Notification';
 import { CCFundSource } from './CCFundSource';
 import { Billing } from './Billing';
+import { Asset } from './Asset';
+import { CCTransaction } from './CCTransaction';
 
 
 // Definition of function classes
@@ -364,6 +366,50 @@ Device.prototype.fixFundAddresses = function () {
             devMainAddrDistribFund.amountPerAddress = undefined;
         }
 
+        // First, check if funding of device asset issuance addresses allocated to unlocked assets are OK
+        const devUnlockedAssetIssueAddrs = getUnlockedAssetIssuanceAddresses.call(this);
+        let devUnlockedAssetIssueAddrAmount = {};
+
+        if (devUnlockedAssetIssueAddrs.length > 0) {
+            const addressBalance = new FundSource(devUnlockedAssetIssueAddrs, {unconfUtxoInfo: {}}).getBalancePerAddress(true);
+
+            const expectAddrBalance = Service.deviceAssetProvisionCost;
+
+            devUnlockedAssetIssueAddrs.forEach((unlockedAssetIssueAddr) => {
+                let balance = addressBalance[unlockedAssetIssueAddr];
+
+                if (balance === undefined) {
+                    balance = 0;
+                }
+
+                if (expectAddrBalance > balance) {
+                    // Expected funding amount is higher than currently funded amount.
+                    //  Allocate amount difference to fix funding of device asset issuance address allocated to unlocked asset
+                    Catenis.logger.WARN('Funding of device asset issuance address allocated to unlocked asset lower than expected; preparing to fix it', {
+                        deviceId: this.deviceId,
+                        unlockedAssetIssueAddr: unlockedAssetIssueAddr,
+                        expectedFundingAmount: Util.formatCoins(expectAddrBalance),
+                        currentFundingAmount: Util.formatCoins(balance)
+                    });
+                    devUnlockedAssetIssueAddrAmount[unlockedAssetIssueAddr] = expectAddrBalance - balance;
+                }
+                else {
+                    // Expected funding amount lower than currently funded amount.
+                    //  Just log inconsistent condition
+                    Catenis.logger.WARN('Funding of device asset issuance address allocated to unlocked asset higher than expected', {
+                        deviceId: this.deviceId,
+                        unlockedAssetIssueAddr: unlockedAssetIssueAddr,
+                        expectedFundingAmount: Util.formatCoins(expectAddrBalance),
+                        currentFundingAmount: Util.formatCoins(balance)
+                    });
+                }
+            });
+        }
+
+        if (Object.keys(devUnlockedAssetIssueAddrAmount).length === 0) {
+            devUnlockedAssetIssueAddrAmount = undefined;
+        }
+
         // Check if device asset issuance addresses are already funded
         const devAssetIssueAddrs = this.assetIssuanceAddr.listAddressesInUse(),
             devAssetIssueAddrDistribFund = Service.distributeDeviceAssetIssuanceAddressFund();
@@ -403,9 +449,9 @@ Device.prototype.fixFundAddresses = function () {
             devAssetIssueAddrDistribFund.amountPerAddress = undefined;
         }
 
-        if (devMainAddrDistribFund.amountPerAddress !== undefined || devAssetIssueAddrDistribFund.amountPerAddress !== undefined) {
+        if (devMainAddrDistribFund.amountPerAddress !== undefined || devAssetIssueAddrDistribFund.amountPerAddress !== undefined || devUnlockedAssetIssueAddrAmount !== undefined) {
             // Fix funding of device main addresses
-            fundDeviceAddresses.call(this, devMainAddrDistribFund.amountPerAddress, devAssetIssueAddrDistribFund.amountPerAddress);
+            fundDeviceAddresses.call(this, devMainAddrDistribFund.amountPerAddress, devAssetIssueAddrDistribFund.amountPerAddress, devUnlockedAssetIssueAddrAmount);
 
             // Make sure that system is properly funded
             Catenis.ctnHubNode.checkFundingBalance();
@@ -1296,7 +1342,7 @@ Device.prototype.notifyMessageRead = function (message, targetDevice) {
 };
 /** End of notification related methods **/
 
-// TODO: add methods to: issue asset (both locked and unlocked), register/import asset issued elsewhere, transfer asset, etc.
+// TODO: add methods to: issue asset, transfer asset, etc.
 
 
 // Module functions used to simulate private Device object methods
@@ -1305,13 +1351,31 @@ Device.prototype.notifyMessageRead = function (message, targetDevice) {
 //      or .bind().
 //
 
+// Return list of device asset issuance addresses allocated to unlocked assets
+function getUnlockedAssetIssuanceAddresses() {
+    return Catenis.db.collection.Asset.find({
+        type: Asset.type.device,
+        issuingType: CCTransaction.issuingAssetType.unlocked,
+        'issuance.entityId': this.deviceId
+    }, {
+        fields: {
+            'issuance.addrPath': 1
+        }
+    }).map((doc) => {
+        const addrInfo = Catenis.keyStore.getAddressInfoByPath(doc.issuance.addrPath);
+
+        return addrInfo !== null ? addrInfo.cryptoKeys.getAddress() : undefined;
+    }).filter(addr => addr !== undefined);
+}
+
 // NOTE: make sure that this method is called from code executed from the FundSource.utxoCS
 //  critical section object
-function fundDeviceAddresses(amountPerDevMainAddress, amountPerAssetIssuanceAddress) {
+function fundDeviceAddresses(amountPerDevMainAddress, amountPerAssetIssuanceAddress, unlockedAssetIssueAddressAmount) {
     Catenis.logger.TRACE('Funding device addresses', {
         deviceId: this.deviceId,
         amountPerDevMainAddress: amountPerDevMainAddress,
-        amountPerAssetIssuanceAddress: amountPerAssetIssuanceAddress
+        amountPerAssetIssuanceAddress: amountPerAssetIssuanceAddress,
+        unlockedAssetIssueAddressAmount: unlockedAssetIssueAddressAmount
     });
     let fundTransact = undefined;
 
@@ -1325,6 +1389,12 @@ function fundDeviceAddresses(amountPerDevMainAddress, amountPerAssetIssuanceAddr
 
         if (amountPerAssetIssuanceAddress !== undefined) {
             fundTransact.addPayees(this.assetIssuanceAddr, amountPerAssetIssuanceAddress);
+        }
+
+        if (unlockedAssetIssueAddressAmount !== undefined) {
+            Object.keys(unlockedAssetIssueAddressAmount).forEach((address) => {
+                fundTransact.addSingleAddressPayee(this.assetIssuanceAddr.type, address, unlockedAssetIssueAddressAmount[address]);
+            });
         }
 
         if (fundTransact.addPayingSource()) {
