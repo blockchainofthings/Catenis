@@ -238,7 +238,7 @@ FundSource.prototype.getBalancePerAddress = function (includeUnconfirmed = true,
     const addressBalance = {};
 
     this.collUtxo.find(query).forEach((docUtxo) => {
-        if (Object.keys(addressBalance).findIndex(docUtxo.address) !== -1) {
+        if (Object.keys(addressBalance).findIndex(addr => addr === docUtxo.address) !== -1) {
             addressBalance[docUtxo.address] += docUtxo.amount;
         }
         else {

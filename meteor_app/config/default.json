@@ -608,5 +608,9 @@
     }],
     "defaultTimeZone": "UTC",
     "includeHeaders": true  // Indicates whether report should include a first line with column headers
+  },
+  // Parameters pertaining to IssueAssetTransaction module
+  "issueAssetTransaction": {
+    "largestAssetAmount": 9007199254740991 // (2^53 - 1) Largest amount of assets (expressed in asset's smalles division) that can be issued
   }
 }

@@ -49,6 +49,7 @@ import { CCFundSource } from './CCFundSource';
 import { Billing } from './Billing';
 import { Asset } from './Asset';
 import { CCTransaction } from './CCTransaction';
+import { IssueAssetTransaction } from './IssueAssetTransaction';
 
 
 // Definition of function classes
@@ -382,26 +383,31 @@ Device.prototype.fixFundAddresses = function () {
                     balance = 0;
                 }
 
-                if (expectAddrBalance > balance) {
-                    // Expected funding amount is higher than currently funded amount.
-                    //  Allocate amount difference to fix funding of device asset issuance address allocated to unlocked asset
-                    Catenis.logger.WARN('Funding of device asset issuance address allocated to unlocked asset lower than expected; preparing to fix it', {
-                        deviceId: this.deviceId,
-                        unlockedAssetIssueAddr: unlockedAssetIssueAddr,
-                        expectedFundingAmount: Util.formatCoins(expectAddrBalance),
-                        currentFundingAmount: Util.formatCoins(balance)
-                    });
-                    devUnlockedAssetIssueAddrAmount[unlockedAssetIssueAddr] = expectAddrBalance - balance;
-                }
-                else {
-                    // Expected funding amount lower than currently funded amount.
-                    //  Just log inconsistent condition
-                    Catenis.logger.WARN('Funding of device asset issuance address allocated to unlocked asset higher than expected', {
-                        deviceId: this.deviceId,
-                        unlockedAssetIssueAddr: unlockedAssetIssueAddr,
-                        expectedFundingAmount: Util.formatCoins(expectAddrBalance),
-                        currentFundingAmount: Util.formatCoins(balance)
-                    });
+                if (expectAddrBalance !== balance) {
+                    if (expectAddrBalance > balance) {
+                        // Expected funding amount is higher than currently funded amount.
+                        //  Allocate amount difference to fix funding of device asset issuance address allocated to unlocked asset
+                        Catenis.logger.WARN('Funding of device asset issuance address allocated to unlocked asset lower than expected; preparing to fix it', {
+                            deviceId: this.deviceId,
+                            unlockedAssetIssueAddr: unlockedAssetIssueAddr,
+                            expectAddrBalance: expectAddrBalance,
+                            balance: balance,
+                            expectedFundingAmount: Util.formatCoins(expectAddrBalance),
+                            currentFundingAmount: Util.formatCoins(balance)
+                        });
+                        devUnlockedAssetIssueAddrAmount[unlockedAssetIssueAddr] = expectAddrBalance - balance;
+                        Catenis.logger.DEBUG('>>>>>> devUnlockedAssetIssueAddrAmount:', devUnlockedAssetIssueAddrAmount);
+                    }
+                    else {
+                        // Expected funding amount lower than currently funded amount.
+                        //  Just log inconsistent condition
+                        Catenis.logger.WARN('Funding of device asset issuance address allocated to unlocked asset higher than expected', {
+                            deviceId: this.deviceId,
+                            unlockedAssetIssueAddr: unlockedAssetIssueAddr,
+                            expectedFundingAmount: Util.formatCoins(expectAddrBalance),
+                            currentFundingAmount: Util.formatCoins(balance)
+                        });
+                    }
                 }
             });
         }
@@ -411,7 +417,7 @@ Device.prototype.fixFundAddresses = function () {
         }
 
         // Check if device asset issuance addresses are already funded
-        const devAssetIssueAddrs = this.assetIssuanceAddr.listAddressesInUse(),
+        const devAssetIssueAddrs = this.getAssetIssuanceAddressesInUseExcludeUnlocked(),
             devAssetIssueAddrDistribFund = Service.distributeDeviceAssetIssuanceAddressFund();
 
         // If device asset issuance addresses already exist, check if their balance is as expected
@@ -1341,6 +1347,27 @@ Device.prototype.notifyMessageRead = function (message, targetDevice) {
     Catenis.notification.dispatchNotifyMessage(this.deviceId, Notification.event.sent_msg_read.name, JSON.stringify(msgInfo));
 };
 /** End of notification related methods **/
+
+Device.prototype.getAssetIssuanceAddressesInUseExcludeUnlocked = function () {
+    const unlockedAssetIssueAddrs = getUnlockedAssetIssuanceAddresses.call(this);
+
+    if (unlockedAssetIssueAddrs.length > 0) {
+        let unlockedAssetIssueAddrsSet;
+
+        if (unlockedAssetIssueAddrs.length > 20) {
+            unlockedAssetIssueAddrsSet = new Set(unlockedAssetIssueAddrs);
+        }
+
+        function isUnlockedAssetIssueAddr(addr) {
+            return unlockedAssetIssueAddrsSet ? unlockedAssetIssueAddrsSet.has(addr) : unlockedAssetIssueAddrs.some(addr2 => addr2 === addr);
+        }
+
+        return this.assetIssuanceAddr.listAddressesInUse().filter(addr => !isUnlockedAssetIssueAddr(addr));
+    }
+    else {
+        return this.assetIssuanceAddr.listAddressesInUse();
+    }
+};
 
 // TODO: add methods to: issue asset, transfer asset, etc.
 

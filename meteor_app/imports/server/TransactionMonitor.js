@@ -74,6 +74,7 @@ export class TransactionMonitor extends events.EventEmitter {
         this.monitoringOn = false;
         this.doingBlockchainPoll = false;
         this.newBlockchainPollTick = false;
+        this.blockchainPollPaused = false;
         this.syncingBlocks = false;
         this.foundNewCtnTxids = new Map();
         this.processingNewBlocks = false;
@@ -203,6 +204,24 @@ export class TransactionMonitor extends events.EventEmitter {
             Meteor.defer(pollBlockchain.bind(this));
         }
     }
+
+    pausePoll() {
+        if (this.monitoringOn) {
+            this.blockchainPollPaused = true;
+        }
+    }
+
+    unpausePoll() {
+        if (this.blockchainPollPaused) {
+            this.blockchainPollPaused = false;
+
+            if (!this.doingBlockchainPoll && this.newBlockchainPollTick) {
+                this.pollNow();
+            }
+        }
+    }
+
+    unpauseBlockchainPoll
 
     // Populate collCtnTx in-memory database collection with transactions received/confirmed
     //  since a given block (not including that block)
@@ -443,7 +462,7 @@ function persistLastBlockHeight() {
 function pollBlockchain() {
     Catenis.logger.TRACE('Executing process to poll blockchain');
     // Make sure it's not yet doing blockchain poll to do it once more
-    if (!this.doingBlockchainPoll) {
+    if (!this.blockchainPollPaused && !this.doingBlockchainPoll) {
         try {
             this.doingBlockchainPoll = true;
 
@@ -897,15 +916,18 @@ function handleNewTransactions(data) {
                     // Filter the type of transactions that should be processed as received transactions: 'credit_service_account', 'send_message',
                     //  'read_confirmation', and 'transfer_asset' for now
                     if (doc.type === Transaction.type.credit_service_account.name || doc.type === Transaction.type.send_message.name
-                            || doc.type === Transaction.type.read_confirmation.name || doc.type === Transaction.type.transfer_asset.name) {
+                            || doc.type === Transaction.type.read_confirmation.name || doc.type === Transaction.type.issue_asset.name
+                            || doc.type === Transaction.type.transfer_asset.name) {
                         Catenis.logger.TRACE('Processing sent transaction as received transaction', doc);
 
                         // Get needed data from read confirmation tx
                         const spentReadConfirmTxOuts = [];
 
                         if (doc.type === Transaction.type.read_confirmation.name) {
-                            doc.info.readConfirmation.serializedTx.inputs.forEach((input, idx) => {
-                                if (idx < doc.info.readConfirmation.spentReadConfirmTxOutCount) {
+                            const txInfo = doc.info[Transaction.type.read_confirmation.dbInfoEntryName];
+
+                            txInfo.serializedTx.inputs.forEach((input, idx) => {
+                                if (idx < txInfo.spentReadConfirmTxOutCount) {
                                     spentReadConfirmTxOuts.push({
                                         txid: input.txid,
                                         vout: input.vout
@@ -924,20 +946,35 @@ function handleNewTransactions(data) {
                             };
 
                             if (doc.type === Transaction.type.credit_service_account.name) {
-                                eventData.clientId = doc.info.creditServiceAccount.clientId;
-                                eventData.issuedAmount = doc.info.creditServiceAccount.issuedAmount;
+                                const txInfo = doc.info[Transaction.type.credit_service_account.dbInfoEntryName];
+
+                                eventData.clientId = txInfo.clientId;
+                                eventData.issuedAmount = txInfo.issuedAmount;
                             }
                             else if (doc.type === Transaction.type.send_message.name) {
-                                eventData.originDeviceId = doc.info.sendMessage.originDeviceId;
-                                eventData.targetDeviceId = doc.info.sendMessage.targetDeviceId;
+                                const txInfo = doc.info[Transaction.type.send_message.dbInfoEntryName];
+
+                                eventData.originDeviceId = txInfo.originDeviceId;
+                                eventData.targetDeviceId = txInfo.targetDeviceId;
                             }
                             else if (doc.type === Transaction.type.read_confirmation.name) {
                                 eventData.spentReadConfirmTxOuts = spentReadConfirmTxOuts;
                             }
+                            else if (doc.type === Transaction.type.issue_asset.name) {
+                                const txInfo = doc.info[Transaction.type.issue_asset.dbInfoEntryName];
+
+                                eventData.assetId = txInfo.assetId;
+                                eventData.issuingDeviceId = txInfo.issuingDeviceId;
+                                eventData.holdingDeviceId = txInfo.holdingDeviceId;
+                                eventData.amount = txInfo.amount;
+                            }
                             else if (doc.type === Transaction.type.transfer_asset.name) {
-                                eventData.assetId = doc.info.transferAsset.assetId;
-                                eventData.originDeviceId = doc.info.transferAsset.originDeviceId;
-                                eventData.targetDeviceId = doc.info.transferAsset.targetDeviceId;
+                                const txInfo = doc.info[Transaction.type.transfer_asset.dbInfoEntryName];
+
+                                eventData.assetId = txInfo.assetId;
+                                eventData.sendingDeviceId = txInfo.sendingDeviceId;
+                                eventData.receivingDeviceId = txInfo.receivingDeviceId;
+                                eventData.amount = txInfo.amount;
                             }
 
                             eventsToEmit.push({
@@ -955,14 +992,14 @@ function handleNewTransactions(data) {
                         const docInfo = doc.info;
 
                         if (doc.type === Transaction.type.send_message.name) {
-                            if (doc.info.sendMessage.readConfirmation !== undefined) {
+                            if (doc.info[Transaction.type.send_message.dbInfoEntryName].readConfirmation !== undefined) {
                                 // Add field that indicates whether read confirmation output has been spent
                                 //  (in other words, if the message has been read)
-                                docInfo.sendMessage.readConfirmation.spent = false;
+                                docInfo[Transaction.type.send_message.dbInfoEntryName].readConfirmation.spent = false;
                             }
                         }
                         else if (doc.type === Transaction.type.read_confirmation.name) {
-                            docInfo.readConfirmation = {
+                            docInfo[Transaction.type.read_confirmation.dbInfoEntryName] = {
                                 spentReadConfirmTxOuts: spentReadConfirmTxOuts
                             };
                         }
@@ -1412,7 +1449,11 @@ TransactionMonitor.notifyEvent = Object.freeze({
     }),
     issue_asset_tx_conf: Object.freeze({
         name: 'issue_asset_tx_conf',
-        description: 'Transaction sent for issuing (Colored Coins) assets (of a given type) has been confirmed'
+        description: 'Transaction sent for issuing an amount of a Catenis asset has been confirmed'
+    }),
+    transfer_asset_tx_conf: Object.freeze({
+        name: 'transfer_asset_tx_conf',
+        description: 'Transaction used to transfer an amount of a Catenis asset between devices has been confirmed'
     }),
     // Events used to notify when a transaction of a given type is received
     sys_funding_tx_rcvd: Object.freeze({
@@ -1435,9 +1476,13 @@ TransactionMonitor.notifyEvent = Object.freeze({
         name: 'read_confirmation_tx_rcvd',
         description: 'Transaction used to confirm that messages have been read by receiving devices has been received'
     }),
+    issue_asset_tx_rcvd: Object.freeze({
+        name: 'issue_asset_tx_rcvd',
+        description: 'Transaction sent for issuing an amount of a Catenis asset has been received'
+    }),
     transfer_asset_tx_rcvd: Object.freeze({
         name: 'transfer_asset_tx_rcvd',
-        description: 'Transaction used to transfer (Colored Coins) assets between devices has been received'
+        description: 'Transaction used to transfer an amount of a Catenis asset between devices has been received'
     })
 });
 
@@ -1527,7 +1572,7 @@ function processConfirmedSentTransactions(doc, eventsToEmit) {
         }
     }
     else if (doc.type === Transaction.type.issue_asset.name) {
-        // Prepare to emit event notifying of confirmation of asset issuance transaction
+        // Prepare to emit event notifying of confirmation of issue asset transaction
         const notifyEvent = getTxConfNotifyEventFromTxType(doc.type);
 
         if (notifyEvent) {
@@ -1538,7 +1583,33 @@ function processConfirmedSentTransactions(doc, eventsToEmit) {
                 data: {
                     txid: doc.txid,
                     assetId: txInfo.assetId,
-                    deviceId: txInfo.deviceId
+                    issuingDeviceId: txInfo.issuingDeviceId,
+                    holdingDeviceId: txInfo.holdingDeviceId,
+                    amount: txInfo.amount
+                }
+            });
+        }
+        else {
+            // Could not get notification event from transaction type.
+            //  Log error condition
+            Catenis.logger.ERROR('Could not get notification event from transaction type', {txType: doc.type});
+        }
+    }
+    else if (doc.type === Transaction.type.transfer_asset.name) {
+        // Prepare to emit event notifying of confirmation of transfer asset transaction
+        const notifyEvent = getTxConfNotifyEventFromTxType(doc.type);
+
+        if (notifyEvent) {
+            const txInfo = doc.info[Transaction.type[doc.type].dbInfoEntryName];
+
+            eventsToEmit.push({
+                name: notifyEvent.name,
+                data: {
+                    txid: doc.txid,
+                    assetId: txInfo.assetId,
+                    sendingDeviceId: txInfo.sendingDeviceId,
+                    receivingDeviceId: txInfo.receivingDeviceId,
+                    amount: txInfo.amount
                 }
             });
         }

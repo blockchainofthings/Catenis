@@ -1785,12 +1785,12 @@ Transaction.type = Object.freeze({
     }),
     issue_asset: Object.freeze({
         name: 'issue_asset',
-        description: 'Transaction used to issue (Colored Coins) assets (of a given type) for a device',
-        dbInfoEntryName: 'issueLockedAsset'
+        description: 'Transaction used to issue an amount of a Catenis assets for a device',
+        dbInfoEntryName: 'issueAsset'
     }),
     transfer_asset: Object.freeze({
         name: 'transfer_asset',
-        description: 'Transaction used to transfer an amount of (Colored Coins) assets (of a given type) owned by a device to another device',
+        description: 'Transaction used to transfer an amount of Catenis asset owned by a device to another device',
         dbInfoEntryName: 'transferAsset'
     })
 });

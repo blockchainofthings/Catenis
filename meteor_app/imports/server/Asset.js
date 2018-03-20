@@ -83,6 +83,14 @@ export function Asset(docAsset) {
 // Asset function class (public) methods
 //
 
+// Create new Asset local database entry
+//
+//  Arguments:
+//   ccTransaction: [Object(CCTransaction)] - A Colored Coin transaction object used to issued asset
+//   name: [String] - (optional) The asset name. If not defined, the asset name is gotten from the Colored Coins
+//                     metadata (if any) in the Colored Coins transaction
+//   description: [String] - (optional) The asset description. If not defined, the asset name is gotten from the Colored Coins
+//                            metadata (if any) in the Colored Coins transaction
 Asset.createAsset = function (ccTransact, name, description) {
     // Make sure that Colored Coins transaction is used to issued new assets
     if (ccTransact.issuingInfo === undefined) {
@@ -91,6 +99,17 @@ Asset.createAsset = function (ccTransact, name, description) {
             ccTransact: ccTransact
         });
         new Meteor.Error('ctn_asset_cannot_create', 'Cannot create asset from Colored Coins transaction that does not issue new assets');
+    }
+
+    if ((name === undefined || description === undefined) && ccTransact.ccMetadata !== undefined) {
+        // Get asset name and/or description from Colored Coins metadata
+        if (name === undefined) {
+            name = ccTransact.ccMetadata.assetName;
+        }
+
+        if (description === undefined) {
+            description = ccTransact.ccMetadata.assetDescription;
+        }
     }
 
     const addrPathParts = ccTransact.inputs[0].addrInfo.pathParts;
@@ -134,8 +153,16 @@ Asset.getAssetIdFromCcTransaction = function (ccTransact) {
     }
 };
 
-Asset.getAssetByAssetId = function (assetId) {
-    const docAsset = Catenis.db.collection.Asset.findOne({assetId: assetId});
+Asset.getAssetByAssetId = function (assetId, restrictToDeviceAsset = false) {
+    const selector = {
+        assetId: assetId
+    };
+
+    if (restrictToDeviceAsset) {
+        selector.type = Asset.type.device
+    }
+
+    const docAsset = Catenis.db.collection.Asset.findOne(selector);
 
     if (docAsset === undefined) {
         // No asset available with the given asset ID. Log error and throw exception

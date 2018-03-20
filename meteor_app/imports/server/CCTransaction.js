@@ -1670,6 +1670,7 @@ CCTransaction.aggregationPolicy = Object.freeze({
     dispersed: 'dispersed'
 });
 
+CCTransaction.largestDivisibility = 7;
 
 // Definition of module (private) functions
 //

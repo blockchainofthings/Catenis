@@ -602,8 +602,7 @@ Database.initialize = function() {
                     background: true,
                     w: 1
                 }
-            },
-            {
+            }, {
                 fields: {
                     txid: 1
                 },
@@ -612,8 +611,7 @@ Database.initialize = function() {
                     background: true,
                     w: 1
                 }
-            },
-            {
+            }, {
                 fields: {
                     sentDate: 1
                 },
@@ -621,8 +619,7 @@ Database.initialize = function() {
                     background: true,
                     w: 1
                 }
-            },
-            {
+            }, {
                 fields: {
                     'confirmation.confirmed': 1
                 },
@@ -630,8 +627,7 @@ Database.initialize = function() {
                     background: true,
                     w: 1
                 }
-            },
-            {
+            }, {
                 fields: {
                     'confirmation.confirmationDate': 1
                 },
@@ -640,8 +636,7 @@ Database.initialize = function() {
                     background: true,
                     w: 1
                 }
-            },
-            {
+            }, {
                 fields: {
                     replacedByTxid: 1
                 },
@@ -651,8 +646,7 @@ Database.initialize = function() {
                     background: true,
                     w: 1
                 }
-            },
-            {
+            }, {
                 fields: {
                     'info.creditServiceAccount.clientId': 1
                 },
@@ -661,8 +655,7 @@ Database.initialize = function() {
                     background: true,
                     w: 1
                 }
-            },
-            {
+            }, {
                 fields: {
                     'info.spendServiceCredit.clientIds': 1
                 },
@@ -671,8 +664,7 @@ Database.initialize = function() {
                     background: true,
                     w: 1
                 }
-            },
-            {
+            }, {
                 fields: {
                     'info.readConfirmation.serializedTx.inputs.txid': 1
                 },
@@ -681,8 +673,7 @@ Database.initialize = function() {
                     background: true,
                     w: 1
                 }
-            },
-            {
+            }, {
                 fields: {
                     'info.sendMessage.originDeviceId': 1
                 },
@@ -691,8 +682,7 @@ Database.initialize = function() {
                     background: true,
                     w: 1
                 }
-            },
-            {
+            }, {
                 fields: {
                     'info.sendMessage.targetDeviceId': 1
                 },
@@ -701,10 +691,63 @@ Database.initialize = function() {
                     background: true,
                     w: 1
                 }
-            },
-            {
+            }, {
                 fields: {
                     'info.logMessage.deviceId': 1
+                },
+                opts: {
+                    sparse: true,
+                    background: true,
+                    w: 1
+                }
+            }, {
+                fields: {
+                    'info.issueAsset.assetId': 1
+                },
+                opts: {
+                    sparse: true,
+                    background: true,
+                    w: 1
+                }
+            }, {
+                fields: {
+                    'info.issueAsset.issuingDeviceId': 1
+                },
+                opts: {
+                    sparse: true,
+                    background: true,
+                    w: 1
+                }
+            }, {
+                fields: {
+                    'info.issueAsset.holdingDeviceId': 1
+                },
+                opts: {
+                    sparse: true,
+                    background: true,
+                    w: 1
+                }
+            }, {
+                fields: {
+                    'info.transferAsset.assetId': 1
+                },
+                opts: {
+                    sparse: true,
+                    background: true,
+                    w: 1
+                }
+            }, {
+                fields: {
+                    'info.transferAsset.sendingDeviceId': 1
+                },
+                opts: {
+                    sparse: true,
+                    background: true,
+                    w: 1
+                }
+            }, {
+                fields: {
+                    'info.transferAsset.receivingDeviceId': 1
                 },
                 opts: {
                     sparse: true,
@@ -722,8 +765,7 @@ Database.initialize = function() {
                     background: true,
                     w: 1
                 }
-            },
-            {
+            }, {
                 fields: {
                     txid: 1
                 },
@@ -732,8 +774,7 @@ Database.initialize = function() {
                     background: true,
                     w: 1
                 }
-            },
-            {
+            }, {
                 fields: {
                     receivedDate: 1
                 },
@@ -741,8 +782,7 @@ Database.initialize = function() {
                     background: true,
                     w: 1
                 }
-            },
-            {
+            }, {
                 fields: {
                     sentTransaction_id: 1
                 },
@@ -751,8 +791,7 @@ Database.initialize = function() {
                     background: true,
                     w: 1
                 }
-            },
-            {
+            }, {
                 fields: {
                     'confirmation.confirmed': 1
                 },
@@ -761,8 +800,7 @@ Database.initialize = function() {
                     background: true,
                     w: 1
                 }
-            },
-            {
+            }, {
                 fields: {
                     'confirmation.confirmationDate': 1
                 },
@@ -771,8 +809,7 @@ Database.initialize = function() {
                     background: true,
                     w: 1
                 }
-            },
-            {
+            }, {
                 fields: {
                     'info.sysFunding.fundAddresses.path': 1
                 },
@@ -781,8 +818,7 @@ Database.initialize = function() {
                     background: true,
                     w: 1
                 }
-            },
-            {
+            }, {
                 fields: {
                     'info.bcotPayment.clientId': 1
                 },
@@ -791,8 +827,7 @@ Database.initialize = function() {
                     background: true,
                     w: 1
                 }
-            },
-            {
+            }, {
                 fields: {
                     'info.bcotPayment.bcotPayAddressPath': 1
                 },
@@ -801,8 +836,7 @@ Database.initialize = function() {
                     background: true,
                     w: 1
                 }
-            },
-            {
+            }, {
                 fields: {
                     'info.creditServiceAccount.clientId': 1
                 },
@@ -811,9 +845,7 @@ Database.initialize = function() {
                     background: true,
                     w: 1
                 }
-            },
-
-            {
+            }, {
                 fields: {
                     'info.sendMessage.readConfirmation.spent': 1
                 },
@@ -822,8 +854,7 @@ Database.initialize = function() {
                     background: true,
                     w: 1
                 }
-            },
-            {
+            }, {
                 fields: {
                     'info.readConfirmation.spentReadConfirmTxOuts.txid': 1
                 },
@@ -832,8 +863,7 @@ Database.initialize = function() {
                     background: true,
                     w: 1
                 }
-            },
-            {
+            }, {
                 fields: {
                     'info.sendMessage.originDeviceId': 1
                 },
@@ -842,10 +872,63 @@ Database.initialize = function() {
                     background: true,
                     w: 1
                 }
-            },
-            {
+            }, {
                 fields: {
                     'info.sendMessage.targetDeviceId': 1
+                },
+                opts: {
+                    sparse: true,
+                    background: true,
+                    w: 1
+                }
+            }, {
+                fields: {
+                    'info.issueAsset.assetId': 1
+                },
+                opts: {
+                    sparse: true,
+                    background: true,
+                    w: 1
+                }
+            }, {
+                fields: {
+                    'info.issueAsset.issuingDeviceId': 1
+                },
+                opts: {
+                    sparse: true,
+                    background: true,
+                    w: 1
+                }
+            }, {
+                fields: {
+                    'info.issueAsset.holdingDeviceId': 1
+                },
+                opts: {
+                    sparse: true,
+                    background: true,
+                    w: 1
+                }
+            }, {
+                fields: {
+                    'info.transferAsset.assetId': 1
+                },
+                opts: {
+                    sparse: true,
+                    background: true,
+                    w: 1
+                }
+            }, {
+                fields: {
+                    'info.transferAsset.sendingDeviceId': 1
+                },
+                opts: {
+                    sparse: true,
+                    background: true,
+                    w: 1
+                }
+            }, {
+                fields: {
+                    'info.transferAsset.receivingDeviceId': 1
                 },
                 opts: {
                     sparse: true,
