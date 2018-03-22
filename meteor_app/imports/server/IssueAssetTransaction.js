@@ -12,8 +12,7 @@
 // Internal node modules
 import util from 'util';
 // Third-party node modules
-import config from 'config';
-import BigNumber from 'bignumber.js';
+//import config from 'config';
 // Meteor packages
 import { Meteor } from 'meteor/meteor';
 
@@ -21,7 +20,10 @@ import { Meteor } from 'meteor/meteor';
 import { Device } from './Device';
 import { Catenis } from './Catenis';
 import { CCTransaction } from './CCTransaction';
-import { Asset } from './Asset';
+import {
+    Asset,
+    cfgSettings as assetCfgSetting
+} from './Asset';
 import { CCMetadata } from './CCMetadata';
 import { BlockchainAddress } from './BlockchainAddress';
 import { Service } from './Service';
@@ -35,12 +37,12 @@ import {
 import { CatenisNode } from './CatenisNode';
 
 // Config entries
-const issueAssetTxConfig = config.get('issueAssetTransaction');
+/*const config_entryConfig = config.get('config_entry');
 
 // Configuration settings
 const cfgSettings = {
-    largestAssetAmount: issueAssetTxConfig.get('largestAssetAmount')
-};
+    property: config_entryConfig.get('property_name')
+};*/
 
 
 // Definition of function classes
@@ -52,12 +54,12 @@ const cfgSettings = {
 //    issuingDevice: [Object(Device)] - Object of type Device identifying the device that is issuing the asset
 //    holdingDevice: [Object(Device)] - Object of type Device identifying the device for which the asset is being issued
 //                                       and that shall hold the total amount of asset issued
-//    amount: [Number]      - Amount of asset to be issued
+//    amount: [Number]      - Amount of asset to be issued (expressed as a fractional amount)
 //    assetInfo: [Object|String] { - An object describing the new asset to be created, or the ID of an existing (unlocked) asset
 //      name: [String], - The name of the asset
 //      description: [String], - (optional) The description of the asset
 //      canReissue: [Boolean], - Indicates whether more units of this asset can be issued at another time (an unlocked asset)
-//      decimalPlaces: [Number] - The number of decimal places that are used to specify an amount of this asset
+//      decimalPlaces: [Number] - The number of decimal places that are used to specify a fractional amount of this asset
 //    }
 //
 // NOTE: make sure that objects of this function class are instantiated and used (their methods
@@ -94,7 +96,7 @@ export function IssueAssetTransaction(issuingDevice, holdingDevice, amount, asse
         }
 
         this.assetId = undefined;
-        let asset;
+        this.asset = undefined;
 
         if (typeof assetInfo === 'object') {
             if (assetInfo === null || (typeof assetInfo.description !== 'string' && assetInfo.description !== undefined)
@@ -107,7 +109,7 @@ export function IssueAssetTransaction(issuingDevice, holdingDevice, amount, asse
             // The assetInfo argument is actually an asset ID. Try to retrieve it
             this.assetId = assetInfo;
 
-            asset = Asset.getAssetByAssetId(this.assetId, true);
+            this.asset = Asset.getAssetByAssetId(this.assetId, true);
 
             // Asset exists (otherwise ctn_asset_not_found exception is thrown)
         }
@@ -115,7 +117,7 @@ export function IssueAssetTransaction(issuingDevice, holdingDevice, amount, asse
             errArg.assetInfo = assetInfo;
         }
 
-        if (typeof amount !== 'number' || amount <= 0 || Number.isNaN(amount = amountToSmallestDivisionAmount(amount, asset ? asset.divisibility : assetInfo.decimalPlaces))) {
+        if (typeof amount !== 'number' || amount <= 0 || Number.isNaN(amount = Asset.amountToSmallestDivisionAmount(amount, this.asset ? this.asset.divisibility : assetInfo.decimalPlaces))) {
             errArg.amount = amount;
         }
 
@@ -133,46 +135,46 @@ export function IssueAssetTransaction(issuingDevice, holdingDevice, amount, asse
         this.holdingDevice = holdingDevice;
         this.amount = amount;
         
-        if (asset) {
+        if (this.asset) {
             // Request to reissue an amount of an existing asset
 
             // Make sure that asset can be reissued and that the issuing device is the original issuing device
-            if (asset.issuingType !== CCTransaction.issuingAssetType.unlocked) {
+            if (this.asset.issuingType !== CCTransaction.issuingAssetType.unlocked) {
                 Catenis.logger.ERROR('Trying to reissue a locked asset', {
-                    assetId: asset.assetId
+                    assetId: this.assetId
                 });
-                throw new Meteor.Error('ctn_issue_asset_reissue_locked', util.format('Trying to reissue a locked asset (assetId: %s)', asset.assetId));
+                throw new Meteor.Error('ctn_issue_asset_reissue_locked', util.format('Trying to reissue a locked asset (assetId: %s)', this.assetId));
             }
 
-            if (asset.issuingDevice.deviceId !== this.issuingDevice.deviceId) {
+            if (this.asset.issuingDevice.deviceId !== this.issuingDevice.deviceId) {
                 Catenis.logger.ERROR('Device trying to reissue asset is not the same as the original issuing device', {
-                    assetId: asset.assetId,
-                    assetIssuingDeviceId: asset.issuingDevice.deviceId,
+                    assetId: this.assetId,
+                    assetIssuingDeviceId: this.asset.issuingDevice.deviceId,
                     issuingDeviceId: this.issuingDevice.deviceId
                 });
-                throw new Meteor.Error('ctn_issue_asset_invalid_issuer', util.format('Device (deviceId %s) trying to reissue asset (assetId: %s) is not the same as the original issuing device (deviceId: %s)', this.issuingDevice.deviceId, asset.assetId, asset.issuingDevice.deviceId));
+                throw new Meteor.Error('ctn_issue_asset_invalid_issuer', util.format('Device (deviceId %s) trying to reissue asset (assetId: %s) is not the same as the original issuing device (deviceId: %s)', this.issuingDevice.deviceId, this.assetId, this.asset.issuingDevice.deviceId));
             }
 
             // Make sure that total amount of asset issued does not surpass the largest allowed asset amount
-            const assetBalance = Catenis.ccFNClient.getAssetBalance(asset.ccAssetId);
+            const assetBalance = Catenis.ccFNClient.getAssetBalance(this.asset.ccAssetId);
 
-            if (assetBalance !== undefined && amountToSmallestDivisionAmount(assetBalance.balance, asset.divisibility, true).plus(this.amount).greaterThan(cfgSettings.largestAssetAmount)) {
+            if (assetBalance !== undefined && this.asset.amountToSmallestDivisionAmount(assetBalance.balance, true).plus(this.amount).greaterThan(assetCfgSetting.largestAssetAmount)) {
                 // Amount to be issued is too large. Log error and throw exception
                 Catenis.logger.ERROR('Amount requested to be issued would exceed maximum allowed total asset amount', {
-                    assetId: asset.assetId
+                    assetId: this.assetId
                 });
-                throw new Meteor.Error('ctn_issue_asset_amount_too_large', util.format('Amount requested to be issued would exceed maximum allowed total asset (assetId: %s) amount', asset.assetId));
+                throw new Meteor.Error('ctn_issue_asset_amount_too_large', util.format('Amount requested to be issued would exceed maximum allowed total asset (assetId: %s) amount', this.assetId));
             }
 
             // OK to reissue asset. Save asset issuance address and the asset info
-            this.assetIssuanceAddr = asset.issuanceAddress;
+            this.assetIssuanceAddr = this.asset.issuanceAddress;
             this.assetInfo = {
-                name: asset.name,
-                description: asset.description,
+                name: this.asset.name,
+                description: this.asset.description,
                 issuingOpts: {
-                    type: asset.issuingType,
-                    divisibility: asset.divisibility,
-                    isAggregatable: asset.isAggregatable
+                    type: this.asset.issuingType,
+                    divisibility: this.asset.divisibility,
+                    isAggregatable: this.asset.isAggregatable
                 }
             };
         }
@@ -267,11 +269,11 @@ IssueAssetTransaction.prototype.buildTransaction = function () {
 
         // Add additional required outputs
 
-        if (this.assetId || this.assetInfo.issuingOpts.type === CCTransaction.issuingAssetType.unlocked) {
+        if (this.asset || this.assetInfo.issuingOpts.type === CCTransaction.issuingAssetType.unlocked) {
             // Issuing an unlocked asset. Add issuing device asset issuance address #1 refund output
             this.ccTransact.addP2PKHOutput(devAssetIssueAddrAllocUtxo.address, Service.devAssetIssuanceAddrAmount);
 
-            const changeAmount = this.assetId ? devAssetIssueAddrAllocResult.changeAmount : Service.deviceAssetProvisionCost - Service.devAssetIssuanceAddrAmount;
+            const changeAmount = this.asset ? devAssetIssueAddrAllocResult.changeAmount : Service.deviceAssetProvisionCost - Service.devAssetIssuanceAddrAmount;
 
             // NOTE: we do not care to check if change is not below dust amount because it is guaranteed
             //      that the change amount be a multiple of the basic amount that is allocated to device
@@ -282,7 +284,7 @@ IssueAssetTransaction.prototype.buildTransaction = function () {
             }
         }
 
-        if (!this.assetId) {
+        if (!this.asset) {
             // Not reissuing an asset. Add issuing device asset issuance address #2 refund output
             this.ccTransact.addP2PKHOutput(this.issuingDevice.assetIssuanceAddr.newAddressKeys().getAddress(), Service.devAssetIssuanceAddrAmount);
 
@@ -313,15 +315,13 @@ IssueAssetTransaction.prototype.buildTransaction = function () {
         }
 
         // Add inputs spending the allocated UTXOs to the transaction
-        const inputs = payTxAllocResult.utxos.map((utxo) => {
+        this.ccTransact.addInputs(payTxAllocResult.utxos.map((utxo) => {
             return {
                 txout: utxo.txout,
                 address: utxo.address,
                 addrInfo: Catenis.keyStore.getAddressInfo(utxo.address)
             }
-        });
-
-        this.ccTransact.addInputs(inputs);
+        }));
 
         if (payTxAllocResult.changeAmount >= Transaction.txOutputDustAmount) {
             // Add new output to receive change
@@ -333,7 +333,7 @@ IssueAssetTransaction.prototype.buildTransaction = function () {
     }
 };
 
-// Return value:
+// Return:
 //   txid: [String] - Blockchain ID of sent transaction
 IssueAssetTransaction.prototype.sendTransaction = function () {
     // Make sure that transaction is already built
@@ -341,15 +341,21 @@ IssueAssetTransaction.prototype.sendTransaction = function () {
         // Check if transaction has not yet been created and sent
         if (this.ccTransact.txid === undefined) {
             // Make sure that blockchain is not polled and processing of newly sent tx is
-            //  not done until sent transaction is properly recorded into the local database
+            //  not done until sent transaction is properly recorded into the local database.
+            //
+            //  NOTE: the main reason why we do this for this specific case (and not for most of
+            //      the other transactions we send) is that it may required to do other database
+            //      access tasks (to create new Asset doc/rec) before the transaction is saved
+            //      onto the database.
             try {
                 Catenis.txMonitor.pausePoll();
 
                 this.ccTransact.sendTransaction();
 
                 // Create Asset database doc/rec if it does not yet exist (newly issued asset)
-                if (!this.assetId) {
+                if (!this.asset) {
                     this.assetId = Asset.createAsset(this.ccTransact, this.assetInfo.name, this.assetInfo.description);
+                    this.asset = Asset.getAssetByAssetId(this.assetId);
                 }
 
                 // Save sent transaction onto local database
@@ -409,22 +415,24 @@ IssueAssetTransaction.checkTransaction = function (ccTransact) {
 
     // First, check if pattern of transaction's inputs and outputs is consistent
     if (ccTransact.matches(IssueAssetTransaction)) {
-        // Make sure that this is a Colored Coins asset issuing transaction
-        if (ccTransact.issuingInfo !== undefined && (ccTransact.ccMetadata === undefined || ccTransact.ccMetadata.ctnAssetId !== undefined)) {
+        // Make sure that this is a Colored Coins transaction that issues asset, with no transfer input sequences
+        //  and exactly one transfer output, and with a valid metadata if present
+        if (ccTransact.issuingInfo !== undefined && ccTransact.transferInputSeqs.length === 0 && ccTransact.transferOutputs.length === 1
+                && (ccTransact.ccMetadata === undefined || ccTransact.ccMetadata.ctnAssetId !== undefined)) {
             // Validate and identify input and output addresses
             //  NOTE: no need to check if the variables below are non-null because the transact.matches()
             //      result above already guarantees it
             const devAssetIssueAddr = getAddrAndAddrInfo(ccTransact.getInputAt(0));
 
-            let nextOutPos = ccTransact.includesMultiSigOutput ? 1 : 0;
-            const holdDevAssetAddr = getAddrAndAddrInfo(ccTransact.getOutputAt(++nextOutPos).payInfo);
+            let nextOutPos = ccTransact.includesMultiSigOutput ? 2 : 1;
+            const holdDevAssetAddr = getAddrAndAddrInfo(ccTransact.getOutputAt(nextOutPos++).payInfo);
 
             const devAssetIssueRefundChangeAddrs = [];
             let done = false,
                 error = false;
 
             do {
-                const output = ccTransact.getOutputAt(++nextOutPos);
+                const output = ccTransact.getOutputAt(nextOutPos++);
 
                 if (output !== undefined) {
                     const outputAddr = getAddrAndAddrInfo(output.payInfo);
@@ -443,7 +451,7 @@ IssueAssetTransaction.checkTransaction = function (ccTransact) {
                     }
                 }
                 else {
-                    error = true;
+                    done = true;
                 }
             }
             while (!done && !error);
@@ -466,11 +474,11 @@ IssueAssetTransaction.checkTransaction = function (ccTransact) {
                 issueAssetTransact.holdingDevice = CatenisNode.getCatenisNodeByIndex(holdDevAssetAddr.addrInfo.pathParts.ctnNodeIndex).getClientByIndex(holdDevAssetAddr.addrInfo.pathParts.clientIndex).getDeviceByIndex(holdDevAssetAddr.addrInfo.pathParts.deviceIndex);
                 issueAssetTransact.amount = ccTransact.issuingInfo.assetAmount;
                 issueAssetTransact.assetId = Asset.getAssetIdFromCcTransaction(ccTransact);
-                
-                let asset;
+
+                issueAssetTransact.asset = undefined;
                 
                 try {
-                    asset = Asset.getAssetByAssetId(issueAssetTransact.assetId);
+                    issueAssetTransact.asset = Asset.getAssetByAssetId(issueAssetTransact.assetId);
                 }
                 catch (err) {
                     if (!((err instanceof Meteor.Error) && err.error === 'ctn_asset_not_found')) {
@@ -478,15 +486,15 @@ IssueAssetTransaction.checkTransaction = function (ccTransact) {
                     }
                 }
                 
-                if (asset) {
+                if (issueAssetTransact.asset) {
                     // Asset already defined in local database, so used to get asset info
                     issueAssetTransact.assetInfo = {
-                        name: asset.name,
-                        description: asset.description,
+                        name: issueAssetTransact.asset.name,
+                        description: issueAssetTransact.asset.description,
                         issuingOpts: {
-                            type: asset.issuingType,
-                            divisibility: asset.divisibility,
-                            isAggregatable: asset.isAggregatable
+                            type: issueAssetTransact.asset.issuingType,
+                            divisibility: issueAssetTransact.asset.divisibility,
+                            isAggregatable: issueAssetTransact.asset.isAggregatable
                         }
                     };
                 }
@@ -544,11 +552,8 @@ IssueAssetTransaction.matchingPattern = Object.freeze({
 // Definition of module (private) functions
 //
 
-function amountToSmallestDivisionAmount(amount, precision, returnBigNumber = false) {
-    const bnAmount =  new BigNumber(amount).times(Math.pow(10, precision)).floor();
-
-    return bnAmount.greaterThan(cfgSettings.largestAssetAmount) ? NaN : (returnBigNumber ? bnAmount : bnAmount.toNumber());
-}
+/*function module_func() {
+}*/
 
 
 // Module code

@@ -50,6 +50,7 @@ import { Billing } from './Billing';
 import { Asset } from './Asset';
 import { CCTransaction } from './CCTransaction';
 import { IssueAssetTransaction } from './IssueAssetTransaction';
+import { TransferAssetTransaction } from './TransferAssetTransaction';
 
 
 // Definition of function classes
@@ -1348,6 +1349,7 @@ Device.prototype.notifyMessageRead = function (message, targetDevice) {
 };
 /** End of notification related methods **/
 
+/** Asset related methods **/
 Device.prototype.getAssetIssuanceAddressesInUseExcludeUnlocked = function () {
     const unlockedAssetIssueAddrs = getUnlockedAssetIssuanceAddresses.call(this);
 
@@ -1368,6 +1370,34 @@ Device.prototype.getAssetIssuanceAddressesInUseExcludeUnlocked = function () {
         return this.assetIssuanceAddr.listAddressesInUse();
     }
 };
+
+// Retrieve the current balance of a given asset held by this device
+//
+//  Arguments:
+//    asset: [Object(Asset)|String] - An object of type Asset or the asset ID
+//
+//  Return:
+//    balance: {
+//      total: [Number] - Total asset balance represented as an integer number of the asset's smallest division (according to the asset divisibility)
+//      unconfirmed: [Number] - The unconfirmed asset balance represented as an integer number of the asset's smallest division (according to the asset divisibility)
+//    }
+Device.prototype.assetBalance = function (asset) {
+    if (typeof asset === 'string') {
+        // Asset ID passed instead, so to retrieve asset
+        asset = Asset.getAssetByAssetId(asset, true);
+    }
+
+    const balance = Catenis.ccFNClient.getAssetBalance(asset.ccAssetId, this.assetAddr.listAddressesInUse());
+
+    if (balance !== undefined) {
+        // Convert amounts into asset's smallest division
+        balance.total = asset.amountToSmallestDivisionAmount(balance.total);
+        balance.unconfirmed = asset.amountToSmallestDivisionAmount(balance.unconfirmed);
+    }
+
+    return balance;
+};
+/** End of asset related methods **/
 
 // TODO: add methods to: issue asset, transfer asset, etc.
 

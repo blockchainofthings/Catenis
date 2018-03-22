@@ -12,7 +12,8 @@
 // Internal node modules
 import util from 'util';
 // Third-party node modules
-//import config from 'config';
+import config from 'config';
+import BigNumber from 'bignumber.js';
 // Meteor packages
 import { Meteor } from 'meteor/meteor';
 
@@ -23,12 +24,12 @@ import { Device } from './Device';
 import { CCTransaction } from './CCTransaction';
 
 // Config entries
-/*const config_entryConfig = config.get('config_entry');
+const assetConfig = config.get('asset');
 
 // Configuration settings
-const cfgSettings = {
-    property: config_entryConfig.get('property_name')
-};*/
+export const cfgSettings = {
+    largestAssetAmount: assetConfig.get('largestAssetAmount')
+};
 
 
 // Definition of function classes
@@ -66,8 +67,29 @@ export function Asset(docAsset) {
 // Public Asset object methods
 //
 
-/*Asset.prototype.pub_func = function () {
-};*/
+// Converts asset amount expressed as a fractional number into an integer number of the asset's smallest division
+//  (according to the asset divisibility)
+//
+//  Arguments:
+//    amount: [Number] - Fractional asset amount
+//    returnBigNumber: [Boolean] - Indicates whether a big number (instead of a regular number) should be returned
+//
+//  Return:
+//    convAmount: [Number|Object(BigNumber)]
+Asset.prototype.amountToSmallestDivisionAmount = function (amount, returnBigNumber = false) {
+    return Asset.amountToSmallestDivisionAmount(amount, this.divisibility, returnBigNumber);
+};
+
+// Format asset amount to be displayed
+//
+//  Arguments:
+//    amount: [Number] - Asset amount represented as an integer number of the asset's smallest division (according to the asset divisibility)
+//
+//  Return:
+//    strAmount: [String]
+Asset.prototype.formatAmount = function (amount) {
+    return new BigNumber(amount).dividedBy(Math.pow(10, this.divisibility)).toFormat(this.divisibility);
+};
 
 
 // Module functions used to simulate private Asset object methods
@@ -148,8 +170,13 @@ Asset.createAsset = function (ccTransact, name, description) {
 };
 
 Asset.getAssetIdFromCcTransaction = function (ccTransact) {
-    if (ccTransact.issuingInfo) {
-        return newAssetId(ccTransact.issuingInfo.ccAssetId);
+    // Get Colored Coins asset ID either from issuing asset or from asset associated with
+    //  first asset transfer input sequence
+    const ccAssetId = ccTransact.issuingInfo ? ccTransact.issuingInfo.ccAssetId
+        : (ccTransact.transferInputSeqs.length > 0 ? ccTransact.getTransferInputs(ccTransact.transferInputSeqs[0].startPos)[0].txout.ccAssetId : undefined);
+
+    if (ccAssetId !== undefined) {
+        return newAssetId(ccAssetId);
     }
 };
 
@@ -173,6 +200,26 @@ Asset.getAssetByAssetId = function (assetId, restrictToDeviceAsset = false) {
     return new Asset(docAsset);
 };
 
+Asset.getAssetByCCAssetId = function (ccAssetId, restrictToDeviceAsset = false) {
+    const selector = {
+        ccAssetId: ccAssetId
+    };
+
+    if (restrictToDeviceAsset) {
+        selector.type = Asset.type.device
+    }
+
+    const docAsset = Catenis.db.collection.Asset.findOne(selector);
+
+    if (docAsset === undefined) {
+        // No asset available with the given Colore Coins asset ID. Log error and throw exception
+        Catenis.logger.ERROR('Could not find asset with given Colored Coins asset ID', {ccAssetId: ccAssetId});
+        throw new Meteor.Error('ctn_asset_not_found', util.format('Could not find asset with given Colored Coins asset ID (%s)', ccAssetId));
+    }
+
+    return new Asset(docAsset);
+};
+
 Asset.getAssetByIssuanceAddressPath = function (addrPath) {
     const docAsset = Catenis.db.collection.Asset.findOne({'issuance.addrPath': addrPath});
 
@@ -183,6 +230,19 @@ Asset.getAssetByIssuanceAddressPath = function (addrPath) {
     }
 
     return new Asset(docAsset);
+};
+
+// Converts asset amount expressed as a fractional number into an integer amount expressed in the asset's
+//  smallest division (according to the asset divisibility
+//
+//  Arguments:
+//    amount: [Number] - Fractional asset amount
+//    precision: [Number] - The number of decimal places that are used to specify a fractional amount of this asset
+//    returnBigNumber: [Boolean] - Indicates whether a big number (instead of a regular number) should be returned
+Asset.amountToSmallestDivisionAmount = function (amount, precision, returnBigNumber = false) {
+    const bnAmount =  new BigNumber(amount).times(Math.pow(10, precision)).floor();
+
+    return bnAmount.greaterThan(cfgSettings.largestAssetAmount) ? NaN : (returnBigNumber ? bnAmount : bnAmount.toNumber());
 };
 
 
