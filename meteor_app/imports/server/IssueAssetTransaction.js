@@ -190,8 +190,6 @@ export function IssueAssetTransaction(issuingDevice, holdingDevice, amount, asse
                 }
             };
         }
-
-        // TODO: check permission setting to make sure that holding device can receive assets issued by issuing device
     }
 }
 

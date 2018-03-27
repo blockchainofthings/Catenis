@@ -44,6 +44,7 @@ const cfgSettings = {
         importAddresses: methodPathConfig.get('importAddresses'),
         getAssetHolders: methodPathConfig.get('getAssetHolders'),
         getAssetBalance: methodPathConfig.get('getAssetBalance'),
+        getMultiAssetBalance: methodPathConfig.get('getMultiAssetBalance'),
         getAssetIssuance: methodPathConfig.get('getAssetIssuance'),
         getAssetIssuingAddress: methodPathConfig.get('getAssetIssuingAddress'),
         getOwningAssets: methodPathConfig.get('getOwningAssets')
@@ -304,6 +305,39 @@ CCFullNodeClient.prototype.getAssetBalance = function (ccAssetId, addresses, num
     }
     catch (err) {
         handleError('getAssetBalance', err);
+    }
+};
+
+// Call Colored Coins Full Node getMultiAssetBalance method
+//
+//  Arguments:
+//   ccAssetIds [String|Array(String)] - List of Colored Coins asset IDs (or a single ID)
+//   addresses [String|Array(String)] - (optional) List of addresses (or a single address) used to restrict the balance computation
+//   numOfConfirmations [Number] - (optional) Minimum number of confirmations to include UTXO amount in accumulated asset amount balance
+//   waitForParsing [Boolean] - (optional) Indicates whether processing of request should wait until parsing of assets
+//                               is complete
+CCFullNodeClient.prototype.getMultiAssetBalance = function (ccAssetIds, addresses, numOfConfirmations, waitForParsing = true) {
+    const postData = {
+        assetIds: Array.isArray(ccAssetIds) ? ccAssetIds : [ccAssetIds]
+    };
+
+    if (addresses) {
+        postData.addresses = Array.isArray(addresses) ? addresses : [addresses];
+    }
+
+    if (numOfConfirmations !== undefined) {
+        postData.numOfConfirmations = numOfConfirmations;
+    }
+
+    if (waitForParsing) {
+        postData.waitForParsing = true;
+    }
+
+    try {
+        return postRequest.call(this, cfgSettings.methodPath.getMultiAssetBalance, postData);
+    }
+    catch (err) {
+        handleError('getMultiAssetBalance', err);
     }
 };
 

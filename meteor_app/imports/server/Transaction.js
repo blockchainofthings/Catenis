@@ -1387,11 +1387,18 @@ Transaction.parse = function (serializedTx) {
     return tx;
 };
 
-Transaction.fromTxid = function (txid) {
-    return Transaction.fromHex(Catenis.bitcoinCore.getRawTransactionCheck(txid, false));
+Transaction.fromTxid = function (txid, getTxTime = false) {
+    if (getTxTime) {
+        const txInfo = Catenis.bitcoinCore.getTransaction(txid, false, false);
+
+        return Transaction.fromHex(txInfo.hex, txInfo.time);
+    }
+    else {
+        return Transaction.fromHex(Catenis.bitcoinCore.getRawTransactionCheck(txid, false));
+    }
 };
 
-Transaction.fromHex = function (hexTx) {
+Transaction.fromHex = function (hexTx, txTime) {
     // Try to decode transaction
     try {
         const decodedTx = Catenis.bitcoinCore.decodeRawTransaction(hexTx, false);
@@ -1403,6 +1410,10 @@ Transaction.fromHex = function (hexTx) {
             tx.rawTransaction = hexTx;
             tx.txid = decodedTx.txid;
             tx.useOptInRBF = true;
+
+            if (txTime) {
+                tx.date = new Date(txTime * 1000);
+            }
 
             // Get inputs
             const txidTxouts = new Map();

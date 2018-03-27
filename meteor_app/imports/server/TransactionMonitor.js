@@ -221,8 +221,6 @@ export class TransactionMonitor extends events.EventEmitter {
         }
     }
 
-    unpauseBlockchainPoll
-
     // Populate collCtnTx in-memory database collection with transactions received/confirmed
     //  since a given block (not including that block)
     //
@@ -901,7 +899,7 @@ function handleNewTransactions(data) {
             let procError = undefined;
 
             try {
-                // TODO: identify different transaction types, and emit events for each type separately
+                // Identify different transaction types, and emit events for each type separately
                 const eventsToEmit = [];
 
                 // Identify received transactions that had been sent by this Catenis node
@@ -975,6 +973,7 @@ function handleNewTransactions(data) {
                                 eventData.sendingDeviceId = txInfo.sendingDeviceId;
                                 eventData.receivingDeviceId = txInfo.receivingDeviceId;
                                 eventData.amount = txInfo.amount;
+                                eventData.changeAmount = txInfo.changeAmount;
                             }
 
                             eventsToEmit.push({
@@ -1609,7 +1608,8 @@ function processConfirmedSentTransactions(doc, eventsToEmit) {
                     assetId: txInfo.assetId,
                     sendingDeviceId: txInfo.sendingDeviceId,
                     receivingDeviceId: txInfo.receivingDeviceId,
-                    amount: txInfo.amount
+                    amount: txInfo.amount,
+                    changeAmount: txInfo.changeAmount
                 }
             });
         }

@@ -113,6 +113,7 @@ export function TransferAssetTransaction(sendingDevice, receivingDevice, amount,
         this.sendingDevice = sendingDevice;
         this.receivingDevice = receivingDevice;
         this.amount = amount;
+        this.changeAmount = undefined;
 
         // Make sure that sending device has enough of the specified amount to send
         const devAssetBalance = this.sendingDevice.assetBalance(this.assetId);
@@ -127,8 +128,6 @@ export function TransferAssetTransaction(sendingDevice, receivingDevice, amount,
             });
             throw new Meteor.Error('ctn_transf_asset_low_balance', 'Insufficient balance to transfer asset');
         }
-
-        // TODO: check permission setting to make sure that receiving device can receive assets issued by asset's issuing device and sent by sending device
     }
 }
 
@@ -157,6 +156,9 @@ TransferAssetTransaction.prototype.buildTransaction = function () {
             throw new Meteor.Error('ctn_transf_asset_ccutxo_alloc_error', util.format('Unable to allocate Colored Coins (ccAssetId: %d) UTXOs for device (deviceId: %s) asset addresses', this.asset.ccAssetId, this.sendingDevice.deviceId));
         }
 
+        // Save asset change amount
+        this.changeAmount = devAssetAddrAllocResult.changeAssetAmount;
+
         // Add sending device asset address inputs
         this.ccTransact.addTransferInputs(devAssetAddrAllocResult.utxos.map((utxo) => {
             return {
@@ -171,9 +173,9 @@ TransferAssetTransaction.prototype.buildTransaction = function () {
         // Receiving device asset address output
         this.ccTransact.setTransferOutput(this.receivingDevice.assetAddr.newAddressKeys().getAddress(), this.amount, 0);
 
-        if (devAssetAddrAllocResult.changeAssetAmount > 0) {
+        if (this.changeAmount > 0) {
             // Sending device asset address change output
-            this.ccTransact.setTransferOutput(this.sendingDevice.assetAddr.newAddressKeys().getAddress(), devAssetAddrAllocResult.changeAssetAmount, 0);
+            this.ccTransact.setTransferOutput(this.sendingDevice.assetAddr.newAddressKeys().getAddress(), this.changeAmount, 0);
         }
 
         // Pre-allocate multi-signature signee address
@@ -242,7 +244,8 @@ TransferAssetTransaction.prototype.sendTransaction = function () {
                 assetId: this.assetId,
                 sendingDeviceId: this.sendingDevice.deviceId,
                 receivingDeviceId: this.receivingDevice.deviceId,
-                amount: this.amount
+                amount: this.amount,
+                changeAmount: this.changeAmount
             });
 
             // Force update of Colored Coins data associated with UTXOs
@@ -324,11 +327,11 @@ TransferAssetTransaction.checkTransaction = function (ccTransact) {
                 let nextOutPos = ccTransact.includesMultiSigOutput ? 2 : 1;
                 const receiveDevAssetAddr = getAddrAndAddrInfo(ccTransact.getOutputAt(nextOutPos++).payInfo);
 
-                const output = ccTransact.getOutputAt(nextOutPos);
+                const changeOutput = ccTransact.getOutputAt(nextOutPos);
                 let sendDevAssetAddrChange;
 
-                if (output !== undefined) {
-                    const outputAddr = getAddrAndAddrInfo(output.payInfo);
+                if (changeOutput !== undefined) {
+                    const outputAddr = getAddrAndAddrInfo(changeOutput.payInfo);
 
                     if (outputAddr.addrInfo.type === KeyStore.extKeyType.dev_asst_addr.name) {
                         sendDevAssetAddrChange = outputAddr;
@@ -343,6 +346,7 @@ TransferAssetTransaction.checkTransaction = function (ccTransact) {
                     transferAssetTransact.sendingDevice = CatenisNode.getCatenisNodeByIndex(sendDevAssetAddrs[0].addrInfo.pathParts.ctnNodeIndex).getClientByIndex(sendDevAssetAddrs[0].addrInfo.pathParts.clientIndex).getDeviceByIndex(sendDevAssetAddrs[0].addrInfo.pathParts.deviceIndex);
                     transferAssetTransact.receivingDevice = CatenisNode.getCatenisNodeByIndex(receiveDevAssetAddr.addrInfo.pathParts.ctnNodeIndex).getClientByIndex(receiveDevAssetAddr.addrInfo.pathParts.clientIndex).getDeviceByIndex(receiveDevAssetAddr.addrInfo.pathParts.deviceIndex);
                     transferAssetTransact.amount = ccTransact.transferOutputs[0].assetAmount;
+                    transferAssetTransact.changeAmount = changeOutput !== undefined ? changeOutput.payInfo.assetAmount : 0;
                     transferAssetTransact.assetId = Asset.getAssetIdFromCcTransaction(ccTransact);
 
                     transferAssetTransact.asset = undefined;

@@ -1072,7 +1072,7 @@ Database.initialize = function() {
                 }
             }, {
                 fields: {
-                    entityId: 1
+                    'issuance.entityId': 1
                 },
                 opts: {
                     background: true,
@@ -1080,7 +1080,7 @@ Database.initialize = function() {
                 }
             }, {
                 fields: {
-                    addrPath: 1
+                    'issuance.addrPath': 1
                 },
                 opts: {
                     unique: true,
@@ -1390,6 +1390,36 @@ function dropSafeIndices (collection) {
 
     fut1.wait();
 }
+
+//** Temporary method used to remove indices on (non-existent) fields 'entityId' and 'addrPath' of Asset collection
+Database.removeInconsistentAssetIndices = function () {
+    Catenis.db.mongoCollection.Asset.indexes(function (error, indices) {
+        if (!error) {
+            const indicesToRemove = indices.filter((index) => {
+                const keyFields = Object.keys(index.key);
+
+                return keyFields.length === 1 && (keyFields[0] === 'entityId' || keyFields[0] === 'addrPath');
+            });
+
+            indicesToRemove.forEach((index) => {
+                Catenis.db.mongoCollection.Asset.dropIndex(index.name, function (error) {
+                    if (error) {
+                        // Error trying to remove index. Log error and throw exception
+                        Catenis.logger.ERROR('Error trying to remove inconsistent index (\'%s\') of Asset DB collection.', index.name,  error);
+                        throw new Error('Error trying to remove inconsistent index of Asset DB collection');
+                    }
+
+                    Catenis.logger.INFO('****** Inconsistent index (\'%s\') of Asset DB collection successfully removed.', index.name);
+                });
+            });
+        }
+        else {
+            // Error retrieving indices. Log error
+            Catenis.logger.ERROR('Error retrieving indices from Asset DB collection.', error);
+            throw new Error('Error retrieving indices from Asset DB collection');
+        }
+    });
+};
 
 
 // Module code

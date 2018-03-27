@@ -204,9 +204,10 @@ SentTransaction {
     },
     transferAsset: {
       assetId: [string], // ID that uniquely identifies the Catenis asset that is transferred
-      sendingDeviceId: [string], // External ID of the device that sent the assets
-      receivingDeviceId: [string] // External ID of the device that receives the assets
-      amount: [number]           // Amount of asset transferred
+      sendingDeviceId: [string],   // External ID of the device that sent the assets
+      receivingDeviceId: [string], // External ID of the device that receives the assets
+      amount: [number],            // Amount of asset transferred
+      changeAmount: [number]       // Amount of asset sent back to sending device as change
     }
   },
   originalTxid: [string]  // Blockchain attributed ID (hash) that had been originally assigned to the transaction. If this field exists, it means that this transaction's ID had been modified due to malleability, and the txid field has the modified tx id.
@@ -262,9 +263,10 @@ ReceivedTransaction {
     },
     transferAsset: {
       assetId: [string], // ID that uniquely identifies the Catenis asset that is transferred
-      sendingDeviceId: [string], // External ID of the device that sent the assets
-      receivingDeviceId: [string] // External ID of the device that receives the assets
-      amount: [number]           // Amount of asset transferred
+      sendingDeviceId: [string],   // External ID of the device that sent the assets
+      receivingDeviceId: [string], // External ID of the device that receives the assets
+      amount: [number],            // Amount of asset transferred
+      changeAmount: [number]       // Amount of asset sent back to sending device as change
     }
   },
   originalTxid: [string]  // Blockchain attributed ID (hash) that had been originally assigned to the transaction. If this field exists, it means that this transaction's ID had been modified due to malleability, and the txid field has the modified tx id.
@@ -280,7 +282,7 @@ Malleability {
 
 Permission {
   _id: [string], // MongoDB internal document ID provided by Meteor
-  event: [string], // Name of event for which permission is being defined. Valid values (from Permission.event): 'receive_notify_new_msg', 'receive_notify_msg_read', 'send_read_msg_confirm', 'receive_msg'
+  event: [string], // Name of event for which permission is being defined. Valid values (from Permission.event): 'receive-notify-new-msg', 'receive-notify-msg-read', 'receive-notify-asset-of', 'receive-notify-asset-from', 'receive-notify-confirm-asset-of', 'receive-notify-confirm-asset-from', 'send-read-msg-confirm', 'receive-msg', 'disclose-main-props', 'disclose-identity-info', 'receive-asset-of', 'receive-asset-from'
   subjectEntityType: [string],  // The type of the subject entity: either 'client' or 'device'
   subjectEntityId: [string], // ID of device that functions as the subject of the action associated with the event for which permission is being defined (subjectEntityType = 'device'),
                              //  or ID of client for which default permission for all its devices is being set (subjectEntityType = 'client')

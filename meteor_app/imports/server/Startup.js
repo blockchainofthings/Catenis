@@ -52,6 +52,7 @@ import { BcotExchangeRate } from './BcotExchangeRate';
 import { BcotPayment } from './BcotPayment';
 import { SpendServiceCredit } from './SpendServiceCredit';
 import { BcotUsageReportUI } from './AdminUI/BcotUsageReportUI';
+import { IncomeAsset } from './IncomeAsset';
 
 // DEBUG - begin
 //import { resetBitcoinCore } from './Test/FundSourceTest';
@@ -82,6 +83,7 @@ Meteor.startup(function () {
         // Normal processing
         Catenis.logger.INFO('Starting initialization...');
         Database.initialize();
+        Database.removeInconsistentAssetIndices();
         Application.initialize();
         MalleabilityEventEmitter.initialize();
         BitcoinFees.initialize();
@@ -113,6 +115,7 @@ Meteor.startup(function () {
         BcotPayment.initialize();
         ReceiveMessage.initialize();
         ReadConfirmation.initialize();
+        IncomeAsset.initialize();
         SpendServiceCredit.initialize();
         TransactionMonitor.initialize();
 
@@ -168,7 +171,7 @@ function CheckImportAddresses(fixMissingAddresses) {
                 const lastAddressToImport = notImportedAddresses.pop();
 
                 // TODO: replace this loop with a call to the new (as of Bitcoin Core ver. 0.14.0) importmulti JSON-RPC command, which takes an array of objects to import
-                // TODO: today we do not store the date and time when the address was created, which can be used in the importnulti call, so we would need to make change to the KeyStore module to include that info
+                // TODO: today we do not store the date and time when the address was created, which can be used in the importmulti call, so we would need to make change to the KeyStore module to include that info
                 notImportedAddresses.forEach((addr) => {
                     // Get public key associated with address and import it onto Bitcoin Core
                     //  without rescanning the blockchain

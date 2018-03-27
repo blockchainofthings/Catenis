@@ -527,6 +527,22 @@ Permission.event = Object.freeze({
         name: 'receive-notify-msg-read',
         description: 'Receive notification of message read by a device'
     }),
+    receive_notify_income_asset_of: Object.freeze({
+        name: 'receive-notify-asset-of',
+        description: 'Receive notification of income asset issued by a device'
+    }),
+    receive_notify_income_asset_from: Object.freeze({
+        name: 'receive-notify-asset-from',
+        description: 'Receive notification of income asset from a device'
+    }),
+    receive_notify_confirm_asset_of: Object.freeze({
+        name: 'receive-notify-confirm-asset-of',
+        description: 'Receive notification of confirmation of pending asset issued by a device'
+    }),
+    receive_notify_confirm_asset_from: Object.freeze({
+        name: 'receive-notify-confirm-asset-from',
+        description: 'Receive notification of confirmation of pending asset transferred by a device'
+    }),
     send_read_msg_confirm: Object.freeze({
         name: 'send-read-msg-confirm',
         description: 'Send read message confirmation to a device'
@@ -542,6 +558,14 @@ Permission.event = Object.freeze({
     disclose_identity_info: Object.freeze({
         name: 'disclose-identity-info',
         description: 'Disclose device\'s basic identification information to a device'
+    }),
+    receive_asset_of: Object.freeze({
+        name: 'receive-asset-of',
+        description: 'Receive an amount of an asset issued by a device'
+    }),
+    receive_asset_from: Object.freeze({
+        name: 'receive-asset-from',
+        description: 'Receive an amount of an asset from a device'
     })
 });
 

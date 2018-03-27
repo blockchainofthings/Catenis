@@ -335,6 +335,42 @@
           "deny": "self"
         }
       },
+      "receive-notify-asset-of": {
+        "system": "deny",
+        "client": {
+          "allow": "self"
+        },
+        "device": {
+          "deny": "self"
+        }
+      },
+      "receive-notify-asset-from": {
+        "system": "deny",
+        "client": {
+          "allow": "self"
+        },
+        "device": {
+          "deny": "self"
+        }
+      },
+      "receive-notify-confirm-asset-of": {
+        "system": "deny",
+        "client": {
+          "allow": "self"
+        },
+        "device": {
+          "deny": "self"
+        }
+      },
+      "receive-notify-confirm-asset-from": {
+        "system": "deny",
+        "client": {
+          "allow": "self"
+        },
+        "device": {
+          "deny": "self"
+        }
+      },
       "send-read-msg-confirm": {
         "system": "deny",
         "client": {
@@ -363,6 +399,24 @@
         }
       },
       "disclose-identity-info": {
+        "system": "deny",
+        "client": {
+          "allow": "self"
+        },
+        "device": {
+          "allow": "self"
+        }
+      },
+      "receive-asset-of": {
+        "system": "deny",
+        "client": {
+          "allow": "self"
+        },
+        "device": {
+          "allow": "self"
+        }
+      },
+      "receive-asset-from": {
         "system": "deny",
         "client": {
           "allow": "self"
@@ -477,6 +531,7 @@
       "importAddresses": "/importAddresses",
       "getAssetHolders": "/getAssetHolders",
       "getAssetBalance": "/getAssetBalance",
+      "getMultiAssetBalance": "/getMultiAssetBalance",
       "getAssetIssuance": "/getAssetIssuance",
       "getAssetIssuingAddress": "/getAssetIssuingAddress",
       "getOwningAssets": "/getOwningAssets"
@@ -611,6 +666,7 @@
   },
   // Parameters pertaining to Asset module
   "asset": {
-    "largestAssetAmount": 9007199254740991 // (2^53 - 1) Largest amount of assets (expressed in asset's smalles division) that can be issued
+    "largestAssetAmount": 9007199254740991, // (2^53 - 1) Largest amount of assets (expressed in asset's smalles division) that can be issued
+    "maxQueryIssuanceCount": 500  // Maximum number of aaset issuance entries that can be returned when retrieving asset issuance history
   }
 }
