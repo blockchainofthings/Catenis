@@ -2,6 +2,7 @@
  * Created by claudio on 19/01/17.
  */
 
+
 //console.log('[RestApi.js]: This code just ran.');
 
 // Module variables
@@ -40,6 +41,15 @@ import { setPermissionRights } from './ApiPostPermissionRights';
 import { listNotificationEvents } from './ApiListNotificationEvents';
 import { checkEffectivePermissionRight } from './ApiEffectivePermissionRight';
 import { retrieveDeviceIdentifyInfo } from './ApiDeviceIdentityInfo';
+import { issueAsset } from './ApiIssueAsset';
+import { reissueAsset } from './ApiReissueAsset';
+import { transferAsset } from './ApiTransferAsset';
+import { retrieveAssetInfo } from './ApiAssetInfo';
+import { getAssetBalance } from './ApiAssetBalance';
+import { listOwnedAssets } from './ApiOwnedAssets';
+import { listIssuedAssets } from './ApiIssuedAssets';
+import { retrieveAssetIssuanceHistory } from './ApiAssetIssuance';
+import { listAssetHolders } from './ApiAssetHolders';
 
 // Config entries
 const restApiConfig = config.get('restApi');
@@ -185,6 +195,89 @@ export function RestApi(apiVersion) {
             }
         });
     }
+
+    if (this.apiVer.gte('0.6')) {
+        this.api.addRoute('assets/issue', {authRequired: true}, {
+            // Issue an amount of a new asset
+            //
+            //  Refer to the source file where the action function is defined for a detailed description of the endpoint
+            post: {
+                action: issueAsset
+            }
+        });
+
+        this.api.addRoute('assets/:assetId/issue', {authRequired: true}, {
+            // Issue more amount of an existing asset
+            //
+            //  Refer to the source file where the action function is defined for a detailed description of the endpoint
+            post: {
+                action: reissueAsset
+            }
+        });
+
+        this.api.addRoute('assets/:assetId/transfer', {authRequired: true}, {
+            // Transfer an amount of an asset to a device
+            //
+            //  Refer to the source file where the action function is defined for a detailed description of the endpoint
+            post: {
+                action: transferAsset
+            }
+        });
+
+        this.api.addRoute('assets/:assetId', {authRequired: true}, {
+            // Retrieve information about a given asset
+            //
+            //  Refer to the source file where the action function is defined for a detailed description of the endpoint
+            get: {
+                action: retrieveAssetInfo
+            }
+        });
+
+        this.api.addRoute('assets/:assetId/balance', {authRequired: true}, {
+            // Get the current balance of a given asset held by the device
+            //
+            //  Refer to the source file where the action function is defined for a detailed description of the endpoint
+            get: {
+                action: getAssetBalance
+            }
+        });
+
+        this.api.addRoute('assets/owned', {authRequired: true}, {
+            // List assets owned by the device
+            //
+            //  Refer to the source file where the action function is defined for a detailed description of the endpoint
+            get: {
+                action: listOwnedAssets
+            }
+        });
+
+        this.api.addRoute('assets/issued', {authRequired: true}, {
+            // List assets issued by the device
+            //
+            //  Refer to the source file where the action function is defined for a detailed description of the endpoint
+            get: {
+                action: listIssuedAssets
+            }
+        });
+
+        this.api.addRoute('assets/:assetId/issuance', {authRequired: true}, {
+            // Retrieve issuance history for a given asset
+            //
+            //  Refer to the source file where the action function is defined for a detailed description of the endpoint
+            get: {
+                action: retrieveAssetIssuanceHistory
+            }
+        });
+
+        this.api.addRoute('assets/:assetId/holders', {authRequired: true}, {
+            // List devices that currently hold any amount of a given asset
+            //
+            //  Refer to the source file where the action function is defined for a detailed description of the endpoint
+            get: {
+                action: listAssetHolders
+            }
+        });
+    }
 }
 
 
@@ -215,7 +308,8 @@ RestApi.initialize = function () {
         'ver0.2': new RestApi('0.2'),
         'ver0.3': new RestApi('0.3'),
         'ver0.4': new RestApi('0.4'),
-        'ver0.5': new RestApi('0.5')
+        'ver0.5': new RestApi('0.5'),
+        'ver0.6': new RestApi('0.6')
     };
 };
 

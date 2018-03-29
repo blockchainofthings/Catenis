@@ -96,7 +96,7 @@ export function TransferAssetTransaction(sendingDevice, receivingDevice, amount,
 
         // Asset exists (otherwise ctn_asset_not_found exception is thrown).
 
-        if (typeof amount !== 'number' || amount <= 0 || Number.isNaN(amount = Asset.amountToSmallestDivisionAmount(amount, this.asset.divisibility))) {
+        if (typeof amount !== 'number' || amount <= 0) {
             errArg.amount = amount;
         }
 
@@ -112,16 +112,25 @@ export function TransferAssetTransaction(sendingDevice, receivingDevice, amount,
         this.txBuilt = false;
         this.sendingDevice = sendingDevice;
         this.receivingDevice = receivingDevice;
-        this.amount = amount;
+        this.amount = Asset.amountToSmallestDivisionAmount(amount, this.asset.divisibility);
         this.changeAmount = undefined;
+
+        if (Number.isNaN(this.amount)) {
+            // Amount to be transferred is too large. Log error and throw exception
+            Catenis.logger.ERROR('Amount requested to be transferred is larger than maximum allowed total asset amount', {
+                amount: amount
+            });
+            throw new Meteor.Error('ctn_transf_asset_amount_too_large', util.format('Amount requested to be transferred (%d) is larger than maximum allowed total asset amount', amount));
+        }
 
         // Make sure that sending device has enough of the specified amount to send
         const devAssetBalance = this.sendingDevice.assetBalance(this.assetId);
+        this.prevTotalBalance = 0;
 
-        if (devAssetBalance === undefined || devAssetBalance.total < this.amount) {
+        if (devAssetBalance === undefined || (this.prevTotalBalance = devAssetBalance.total) < this.amount) {
             // Insufficient balance to transfer asset
             Catenis.logger.ERROR('Insufficient balance to transfer asset', {
-                sendindDeviceId: this.sendingDevice.deviceId,
+                sendingDeviceId: this.sendingDevice.deviceId,
                 assetId: this.assetId,
                 amountToTransfer: this.asset.formatAmount(this.amount),
                 balance: devAssetBalance !== undefined ? this.asset.formatAmount(devAssetBalance.total) : undefined

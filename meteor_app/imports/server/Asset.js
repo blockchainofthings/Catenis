@@ -29,9 +29,17 @@ const assetConfig = config.get('asset');
 // Configuration settings
 export const cfgSettings = {
     largestAssetAmount: assetConfig.get('largestAssetAmount'),
-    maxQueryIssuanceCount: assetConfig.get('maxQueryIssuanceCount')
+    maxQueryIssuanceCount: assetConfig.get('maxQueryIssuanceCount'),
+    maxRetListEntries: assetConfig.get('maxRetListEntries')
 };
 
+// NOTE: this is necessary because the current version of the bignumber.js library that we are using (5.0.0)
+//      does not support the isBigNumber class method, which was introduced in version 6.0.0 only.
+if (!BigNumber.isBigNumber) {
+    BigNumber.isBigNumber = function (v) {
+        return v instanceof BigNumber || v && v.isBigNumber === true || false;
+    };
+}
 
 // Definition of function classes
 //
@@ -72,7 +80,7 @@ export function Asset(docAsset) {
 //  (according to the asset divisibility)
 //
 //  Arguments:
-//    amount: [Number] - Fractional asset amount
+//    amount: [Object(BigNumber)|Number] - Fractional asset amount
 //    returnBigNumber: [Boolean] - Indicates whether a big number (instead of a regular number) should be returned
 //
 //  Return:
@@ -85,7 +93,7 @@ Asset.prototype.amountToSmallestDivisionAmount = function (amount, returnBigNumb
 //  the asset divisibility) into a fractional number
 //
 //  Arguments:
-//    amount: [Number] - Asset amount represented as an integer number of the asset's smallest division (according to the asset divisibility)
+//    amount: [Object(BigNumber)|Number] - Asset amount represented as an integer number of the asset's smallest division (according to the asset divisibility)
 //    returnBigNumber: [Boolean] - Indicates whether a big number (instead of a regular number) should be returned
 //
 //  Return:
@@ -97,7 +105,7 @@ Asset.prototype.smallestDivisionAmountToAmount = function (amount, returnBigNumb
 // Format asset amount to be displayed
 //
 //  Arguments:
-//    amount: [Number] - Asset amount represented as an integer number of the asset's smallest division (according to the asset divisibility)
+//    amount: [Object(BigNumber)|Number] - Asset amount represented as an integer number of the asset's smallest division (according to the asset divisibility)
 //
 //  Return:
 //    strAmount: [String]
@@ -254,14 +262,14 @@ Asset.getAssetByIssuanceAddressPath = function (addrPath) {
 //  smallest division (according to the asset divisibility
 //
 //  Arguments:
-//    amount: [Number] - Fractional asset amount
+//    amount: [Object(BigNumber)|Number] - Fractional asset amount
 //    precision: [Number] - The number of decimal places that are used to specify a fractional amount of this asset
 //    returnBigNumber: [Boolean] - Indicates whether a big number (instead of a regular number) should be returned
 //
 //  Return:
 //    convAmount: [Number|Object(BigNumber)]
 Asset.amountToSmallestDivisionAmount = function (amount, precision, returnBigNumber = false) {
-    const bnAmount =  new BigNumber(amount).times(Math.pow(10, precision)).floor();
+    const bnAmount =  (BigNumber.isBigNumber(amount) ? amount : new BigNumber(amount)).times(Math.pow(10, precision)).floor();
 
     return bnAmount.greaterThan(cfgSettings.largestAssetAmount) ? NaN : (returnBigNumber ? bnAmount : bnAmount.toNumber());
 };
@@ -270,13 +278,13 @@ Asset.amountToSmallestDivisionAmount = function (amount, precision, returnBigNum
 //  the asset divisibility) into a fractional number
 //
 //  Arguments:
-//    amount: [Number] - Asset amount represented as an integer number of the asset's smallest division (according to the asset divisibility)
+//    amount: [Object(BigNumber)|Number] - Asset amount represented as an integer number of the asset's smallest division (according to the asset divisibility)
 //    returnBigNumber: [Boolean] - Indicates whether a big number (instead of a regular number) should be returned
 //
 //  Return:
 //    convAmount: [Number|Object(BigNumber)]
 Asset.smallestDivisionAmountToAmount = function (amount, precision, returnBigNumber = false) {
-    const bnAmount = new BigNumber(amount).dividedBy(Math.pow(10, precision));
+    const bnAmount = (BigNumber.isBigNumber(amount) ? amount : new BigNumber(amount)).dividedBy(Math.pow(10, precision));
 
     return returnBigNumber ? bnAmount : bnAmount.toNumber();
 };

@@ -13,6 +13,7 @@
 import util from 'util';
 // Third-party node modules
 //import config from 'config';
+import BigNumber from 'bignumber.js';
 // Meteor packages
 import { Meteor } from 'meteor/meteor';
 
@@ -117,7 +118,7 @@ export function IssueAssetTransaction(issuingDevice, holdingDevice, amount, asse
             errArg.assetInfo = assetInfo;
         }
 
-        if (typeof amount !== 'number' || amount <= 0 || Number.isNaN(amount = Asset.amountToSmallestDivisionAmount(amount, this.asset ? this.asset.divisibility : assetInfo.decimalPlaces))) {
+        if (typeof amount !== 'number' || amount <= 0) {
             errArg.amount = amount;
         }
 
@@ -133,7 +134,15 @@ export function IssueAssetTransaction(issuingDevice, holdingDevice, amount, asse
         this.txBuilt = false;
         this.issuingDevice = issuingDevice;
         this.holdingDevice = holdingDevice;
-        this.amount = amount;
+        this.amount = Asset.amountToSmallestDivisionAmount(amount, this.asset ? this.asset.divisibility : assetInfo.decimalPlaces);
+
+        if (Number.isNaN(this.amount)) {
+            // Amount to be issued is too large. Log error and throw exception
+            Catenis.logger.ERROR('Amount requested to be issued is larger than maximum allowed total asset amount', {
+                amount: amount
+            });
+            throw new Meteor.Error('ctn_issue_asset_amount_too_large', util.format('Amount requested to be issued (%d) is larger than maximum allowed total asset amount', amount));
+        }
         
         if (this.asset) {
             // Request to reissue an amount of an existing asset
@@ -157,8 +166,9 @@ export function IssueAssetTransaction(issuingDevice, holdingDevice, amount, asse
 
             // Make sure that total amount of asset issued does not surpass the largest allowed asset amount
             const assetBalance = Catenis.ccFNClient.getAssetBalance(this.asset.ccAssetId);
+            this.bnPrevTotalExistentBalance = new BigNumber(0);
 
-            if (assetBalance !== undefined && this.asset.amountToSmallestDivisionAmount(assetBalance.balance, true).plus(this.amount).greaterThan(assetCfgSetting.largestAssetAmount)) {
+            if (assetBalance !== undefined && (this.bnPrevTotalExistentBalance = this.asset.amountToSmallestDivisionAmount(assetBalance.total, true)).plus(this.amount).greaterThan(assetCfgSetting.largestAssetAmount)) {
                 // Amount to be issued is too large. Log error and throw exception
                 Catenis.logger.ERROR('Amount requested to be issued would exceed maximum allowed total asset amount', {
                     assetId: this.assetId
