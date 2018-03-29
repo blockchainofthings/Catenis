@@ -42,6 +42,9 @@ import {
 
 // Method used to process POST 'permission/events/:eventName/rights' endpoint of Rest API
 //
+//  URL parameters:
+//    eventName [String] - Name of permission event
+//
 //  JSON payload: {
 //    "system": [String] - (optional) Permission right to be attributed at system level for the specified event. Must be one of the following values: "allow", "deny"
 //    "catenisNode": {   - (optional) Permission rights to be attributed at the Catenis node level for the specified event
