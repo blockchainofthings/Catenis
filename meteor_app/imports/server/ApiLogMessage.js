@@ -150,8 +150,8 @@ export function logMessage() {
                 else if (err.error === 'ctn_device_not_active') {
                     error = errorResponse.call(this, 400, 'Device is not active');
                 }
-                else if (err.error === 'ctn_device_no_credits') {
-                    error = errorResponse.call(this, 400, 'No credit to log message');
+                else if (err.error === 'ctn_device_low_service_acc_balance') {
+                    error = errorResponse.call(this, 400, 'Not enough credits to pay for log message service');
                 }
                 else if (err.error === 'ctn_msg_data_too_long') {
                     error = errorResponse.call(this, 400, 'Message too long to be embedded');
