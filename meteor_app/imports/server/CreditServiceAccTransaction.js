@@ -174,7 +174,7 @@ CreditServiceAccTransaction.prototype.buildTransaction = function () {
             if (servCredIssueAddrAllocResult.utxos.length !== 1) {
                 // An unexpected number of UTXOs have been allocated.
                 // Log error condition and throw exception
-                Catenis.logger.ERROR('An unexpected number of UTXOs have been allocated for Catenis node (ctnNodeIndex: %d) service credit issuance address', this.device.deviceId, {
+                Catenis.logger.ERROR('An unexpected number of UTXOs have been allocated for Catenis node (ctnNodeIndex: %d) service credit issuance address', this.client.ctnNode.ctnNodeIndex, {
                     expected: 1,
                     allocated: servCredIssueAddrAllocResult.utxos.length
                 });

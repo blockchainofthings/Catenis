@@ -81,7 +81,7 @@ Notification.prototype.dispatchNotifyMessage = function (deviceId, eventName, da
 //
 
 Notification.initialize = function () {
-    Catenis.logger.TRACE('Notificaiton initialization');
+    Catenis.logger.TRACE('Notification initialization');
     // Instantiate Notification object passing all currently registered notification message dispatchers
     Catenis.notification = new Notification(Notification.registeredNotifyMsgDispatcherInfos);
 };
@@ -126,6 +126,14 @@ Notification.event = Object.freeze({
     sent_msg_read: Object.freeze({
         name: 'sent-msg-read',
         description: 'Previously sent message has been read by intended receiver (target device)'
+    }),
+    income_asset: Object.freeze({
+        name: 'income-asset',
+        description: 'An amount of an asset has been received'
+    }),
+    confirmed_asset: Object.freeze({
+        name: 'confirmed-asset',
+        description: 'An amount of an asset that was pending due to an asset transfer has been confirmed'
     })
 });
 

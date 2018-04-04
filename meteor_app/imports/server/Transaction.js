@@ -875,12 +875,8 @@ Transaction.prototype.serialize = function () {
 //      feeAmount: [integer], // Amount, in satoshis, paid as fee for this transaction
 //      txSize: [integer] // Transaction size, in bytes. Used to calculate fee rate
 //    }
-//    issue_locked_asset: {
-//      assetId: [string], // ID that uniquely identifies the Colored Coins asset that is issued
-//      deviceId: [string] // External ID of the device that is issuing the asset
-//    }
-//    issue_unlocked_asset: {
-//      assetId: [string], // ID that uniquely identifies the coloredCoin asset that is issued
+//    issue_asset: {
+//      assetId: [string], // ID that uniquely identifies the Catenis asset that is issued
 //      deviceId: [string] // External ID of the device that is issuing the asset
 //    }
 //    transfer_asset: {
@@ -1391,11 +1387,18 @@ Transaction.parse = function (serializedTx) {
     return tx;
 };
 
-Transaction.fromTxid = function (txid) {
-    return Transaction.fromHex(Catenis.bitcoinCore.getRawTransactionCheck(txid, false));
+Transaction.fromTxid = function (txid, getTxTime = false) {
+    if (getTxTime) {
+        const txInfo = Catenis.bitcoinCore.getTransaction(txid, false, false);
+
+        return Transaction.fromHex(txInfo.hex, txInfo.time);
+    }
+    else {
+        return Transaction.fromHex(Catenis.bitcoinCore.getRawTransactionCheck(txid, false));
+    }
 };
 
-Transaction.fromHex = function (hexTx) {
+Transaction.fromHex = function (hexTx, txTime) {
     // Try to decode transaction
     try {
         const decodedTx = Catenis.bitcoinCore.decodeRawTransaction(hexTx, false);
@@ -1407,6 +1410,10 @@ Transaction.fromHex = function (hexTx) {
             tx.rawTransaction = hexTx;
             tx.txid = decodedTx.txid;
             tx.useOptInRBF = true;
+
+            if (txTime) {
+                tx.date = new Date(txTime * 1000);
+            }
 
             // Get inputs
             const txidTxouts = new Map();
@@ -1787,19 +1794,14 @@ Transaction.type = Object.freeze({
         description: 'Transaction used to spend read confirmation output(s) from send message transactions thus indicating that message has been read by target device',
         dbInfoEntryName: 'readConfirmation'
     }),
-    issue_locked_asset: Object.freeze({
-        name: 'issue_locked_asset',
-        description: 'Transaction used to issue (Colored Coins) assets (of a given type) that cannot be reissued for a device',
-        dbInfoEntryName: 'issueLockedAsset'
-    }),
-    issue_unlocked_asset: Object.freeze({
-        name: 'issue_unlocked_asset',
-        description: 'Transaction used to issue or reissue (Colored Coins) assets (of a given type) for a device',
-        dbInfoEntryName: 'issueUnlockedAsset'
+    issue_asset: Object.freeze({
+        name: 'issue_asset',
+        description: 'Transaction used to issue an amount of a Catenis assets for a device',
+        dbInfoEntryName: 'issueAsset'
     }),
     transfer_asset: Object.freeze({
         name: 'transfer_asset',
-        description: 'Transaction used to transfer an amount of (Colored Coins) assets (of a given type) owned by a device to another device',
+        description: 'Transaction used to transfer an amount of Catenis asset owned by a device to another device',
         dbInfoEntryName: 'transferAsset'
     })
 });

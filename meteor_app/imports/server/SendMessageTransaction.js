@@ -258,8 +258,6 @@ SendMessageTransaction.prototype.sendTransaction = function () {
 
         this.transact.saveSentTransaction(Transaction.type.send_message, info);
 
-        // TODO: issue either Spend Service Credit or Debit Service Account transaction to account for service payment
-
         // Check if system pay tx expense addresses need to be refunded
         Catenis.ctnHubNode.checkPayTxExpenseFundingBalance();
     }

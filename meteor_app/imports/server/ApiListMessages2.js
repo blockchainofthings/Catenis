@@ -234,6 +234,10 @@ export function listMessages2() {
             if (mt.isValid()) {
                 filter.startDate = mt.toDate();
             }
+            else {
+                Catenis.logger.DEBUG('Invalid \'startDate\' parameter for GET \'messages\' API request', this.queryParams);
+                return errorResponse.call(this, 400, 'Invalid parameters');
+            }
         }
 
         // endDate param
@@ -242,6 +246,10 @@ export function listMessages2() {
 
             if (mt.isValid()) {
                 filter.endDate = mt.toDate();
+            }
+            else {
+                Catenis.logger.DEBUG('Invalid \'endDate\' parameter for GET \'messages\' API request', this.queryParams);
+                return errorResponse.call(this, 400, 'Invalid parameters');
             }
         }
 

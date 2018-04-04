@@ -18,6 +18,7 @@ const crypto = require('crypto');
 // Third-party node modules
 import _und from 'underscore';      // NOTE: we dot not use the underscore library provided by Meteor because we need
                                     //        a feature (_und.omit(obj,predicate)) that is not available in that version
+import BigNumber from 'bignumber.js';
 // Meteor packages
 import { Meteor } from 'meteor/meteor';
 // noinspection NpmUsedModulesInstalled
@@ -47,6 +48,14 @@ import {
 import { Notification } from './Notification';
 import { CCFundSource } from './CCFundSource';
 import { Billing } from './Billing';
+import {
+    cfgSettings as assetCfgSetting,
+    Asset
+} from './Asset';
+import { CCTransaction } from './CCTransaction';
+import { IssueAssetTransaction } from './IssueAssetTransaction';
+import { TransferAssetTransaction } from './TransferAssetTransaction';
+import { KeyStore } from './KeyStore';
 
 
 // Definition of function classes
@@ -364,8 +373,57 @@ Device.prototype.fixFundAddresses = function () {
             devMainAddrDistribFund.amountPerAddress = undefined;
         }
 
+        // First, check if funding of device asset issuance addresses allocated to unlocked assets are OK
+        const devUnlockedAssetIssueAddrs = getUnlockedAssetIssuanceAddresses.call(this);
+        let devUnlockedAssetIssueAddrAmount = {};
+
+        if (devUnlockedAssetIssueAddrs.length > 0) {
+            const addressBalance = new FundSource(devUnlockedAssetIssueAddrs, {unconfUtxoInfo: {}}).getBalancePerAddress(true);
+
+            const expectAddrBalance = Service.deviceAssetProvisionCost;
+
+            devUnlockedAssetIssueAddrs.forEach((unlockedAssetIssueAddr) => {
+                let balance = addressBalance[unlockedAssetIssueAddr];
+
+                if (balance === undefined) {
+                    balance = 0;
+                }
+
+                if (expectAddrBalance !== balance) {
+                    if (expectAddrBalance > balance) {
+                        // Expected funding amount is higher than currently funded amount.
+                        //  Allocate amount difference to fix funding of device asset issuance address allocated to unlocked asset
+                        Catenis.logger.WARN('Funding of device asset issuance address allocated to unlocked asset lower than expected; preparing to fix it', {
+                            deviceId: this.deviceId,
+                            unlockedAssetIssueAddr: unlockedAssetIssueAddr,
+                            expectAddrBalance: expectAddrBalance,
+                            balance: balance,
+                            expectedFundingAmount: Util.formatCoins(expectAddrBalance),
+                            currentFundingAmount: Util.formatCoins(balance)
+                        });
+                        devUnlockedAssetIssueAddrAmount[unlockedAssetIssueAddr] = expectAddrBalance - balance;
+                        Catenis.logger.DEBUG('>>>>>> devUnlockedAssetIssueAddrAmount:', devUnlockedAssetIssueAddrAmount);
+                    }
+                    else {
+                        // Expected funding amount lower than currently funded amount.
+                        //  Just log inconsistent condition
+                        Catenis.logger.WARN('Funding of device asset issuance address allocated to unlocked asset higher than expected', {
+                            deviceId: this.deviceId,
+                            unlockedAssetIssueAddr: unlockedAssetIssueAddr,
+                            expectedFundingAmount: Util.formatCoins(expectAddrBalance),
+                            currentFundingAmount: Util.formatCoins(balance)
+                        });
+                    }
+                }
+            });
+        }
+
+        if (Object.keys(devUnlockedAssetIssueAddrAmount).length === 0) {
+            devUnlockedAssetIssueAddrAmount = undefined;
+        }
+
         // Check if device asset issuance addresses are already funded
-        const devAssetIssueAddrs = this.assetIssuanceAddr.listAddressesInUse(),
+        const devAssetIssueAddrs = this.getAssetIssuanceAddressesInUseExcludeUnlocked(),
             devAssetIssueAddrDistribFund = Service.distributeDeviceAssetIssuanceAddressFund();
 
         // If device asset issuance addresses already exist, check if their balance is as expected
@@ -403,9 +461,9 @@ Device.prototype.fixFundAddresses = function () {
             devAssetIssueAddrDistribFund.amountPerAddress = undefined;
         }
 
-        if (devMainAddrDistribFund.amountPerAddress !== undefined || devAssetIssueAddrDistribFund.amountPerAddress !== undefined) {
+        if (devMainAddrDistribFund.amountPerAddress !== undefined || devAssetIssueAddrDistribFund.amountPerAddress !== undefined || devUnlockedAssetIssueAddrAmount !== undefined) {
             // Fix funding of device main addresses
-            fundDeviceAddresses.call(this, devMainAddrDistribFund.amountPerAddress, devAssetIssueAddrDistribFund.amountPerAddress);
+            fundDeviceAddresses.call(this, devMainAddrDistribFund.amountPerAddress, devAssetIssueAddrDistribFund.amountPerAddress, devUnlockedAssetIssueAddrAmount);
 
             // Make sure that system is properly funded
             Catenis.ctnHubNode.checkFundingBalance();
@@ -1025,7 +1083,7 @@ Device.prototype.retrieveDeviceIdentityInfo = function (device) {
     // Make sure that device has permission to retrieve that other device's identification information
     if (!device.shouldDiscloseIdentityInfoTo(this)) {
         // Device has no permission rights to retrieve that other device's identification info
-        Catenis.logger.INFO('Device has no permission to retrieve that other device\'s identification information', {
+        Catenis.logger.INFO('Device has no permission to retrieve the other device\'s identification information', {
             deviceId: this.deviceId,
             otherDeviceId: device.deviceId
         });
@@ -1033,6 +1091,354 @@ Device.prototype.retrieveDeviceIdentityInfo = function (device) {
     }
 
     return device.getIdentityInfo();
+};
+
+// Issue an amount of an asset
+//
+//  Arguments:
+//    amount: [Number]      - Amount of asset to be issued (expressed as a fractional amount)
+//    assetInfo: [Object|String] { - An object describing the new asset to be created, or the ID of an existing (unlocked) asset
+//      name: [String], - The name of the asset
+//      description: [String], - (optional) The description of the asset
+//      canReissue: [Boolean], - Indicates whether more units of this asset can be issued at another time (an unlocked asset)
+//      decimalPlaces: [Number] - The maximum number of decimal places that can be used to represent a fractional amount of this asset
+//    }
+//    holdingDeviceId: [String] - (optional) Device ID identifying the device for which the asset is being issued and that shall
+//                                 hold the total amount of asset issued. If that specified, the amount of asset issued shall
+//                                 be held by this device
+//
+//  Return value: - If issuing a new asset
+//    assetId: [String]  - ID of issued asset
+//  or: - If reissuing an existing asset
+//    totalExistentBalance: [Number]  - Total balance of the asset that there is after specified amount has been reissued
+Device.prototype.issueAsset = function (amount, assetInfo, holdingDeviceId) {
+    // Make sure that device is not deleted
+    if (this.status === Device.status.deleted.name) {
+        // Cannot issue asset from a deleted device. Log error and throw exception
+        Catenis.logger.ERROR('Cannot issue asset from a deleted device', {deviceId: this.deviceId});
+        throw new Meteor.Error('ctn_device_deleted', util.format('Cannot issue asset from a deleted device (deviceId: %s)', this.deviceId));
+    }
+
+    // Make sure that device is active
+    if (this.status !== Device.status.active.name) {
+        // Cannot issue asset from a device that is not active. Log error and throw exception
+        Catenis.logger.ERROR('Cannot issue asset from a device that is not active', {deviceId: this.deviceId});
+        throw new Meteor.Error('ctn_device_not_active', util.format('Cannot issue asset from a device that is not active (deviceId: %s)', this.deviceId));
+    }
+
+    let holdingDevice;
+
+    if (holdingDeviceId !== undefined && holdingDeviceId !== this.deviceId) {
+        try {
+            holdingDevice = Device.getDeviceByDeviceId(holdingDeviceId);
+
+            // Make sure that holding device is not deleted
+            if (holdingDevice.status === Device.status.deleted.name) {
+                // Cannot assign issued asset to a deleted device. Log error and throw exception
+                Catenis.logger.ERROR('Cannot assign issued asset to a deleted device', {deviceId: holdingDeviceId});
+                //noinspection ExceptionCaughtLocallyJS
+                throw new Meteor.Error('ctn_device_hold_dev_deleted', util.format('Cannot assign issued asset to a deleted device (deviceId: %s)', holdingDeviceId));
+            }
+
+            // Make sure that holding device is active
+            if (holdingDevice.status !== Device.status.active.name) {
+                // Cannot assign issued asset to a device that is not active. Log error condition and throw exception
+                Catenis.logger.ERROR('Cannot assign issued asset to a device that is not active', {deviceId: holdingDeviceId});
+                //noinspection ExceptionCaughtLocallyJS
+                throw new Meteor.Error('ctn_device_hold_dev_not_active', util.format('Cannot assign issued asset to a device that is not active (deviceId: %s)', holdingDeviceId));
+            }
+        }
+        catch (err) {
+            if ((err instanceof Meteor.Error) && err.error === 'ctn_device_not_found') {
+                // No holding device available with given device ID. Log error and throw exception
+                Catenis.logger.ERROR('Could not find holding device with given device ID', {deviceId: holdingDeviceId});
+                throw new Meteor.Error('ctn_device_hold_dev_not_found', util.format('Could not find holding device with given device ID (%s)', holdingDeviceId));
+            }
+            else {
+                // Otherwise, just re-throws exception
+                throw err;
+            }
+        }
+    }
+
+    if (holdingDevice === undefined) {
+        holdingDevice = this;
+    }
+
+    // Make sure that device has permission to assign asset to be issued to holding device
+    if (!holdingDevice.shouldAcceptAssetOf(this) || (holdingDevice.deviceId !== this.deviceId && !holdingDevice.shouldAcceptAssetFrom(this))) {
+        // Device has no permission rights to assign asset to be issued to holding device
+        Catenis.logger.INFO('Device has no permission rights to assign asset to be issued to holding device', {
+            deviceId: this.deviceId,
+            holdingDeviceId: holdingDevice.deviceId
+        });
+        throw new Meteor.Error('ctn_device_no_permission', util.format('Device has no permission rights to assign asset to be issued to holding device (deviceId: %s, holdingDeviceId: %s)', this.deviceId, holdingDevice.deviceId));
+    }
+
+    let assetId;
+    let totalExistentBalance;
+
+    // Execute code in critical section to avoid Colored Coins UTXOs concurrency
+    CCFundSource.utxoCS.execute(() => {
+        const servicePriceInfo = Service.issueAssetServicePrice();
+
+        if (this.client.billingMode === Client.billingMode.prePaid) {
+            // Make sure that client has enough service credits to pay for service
+            const serviceAccountBalance = this.client.serviceAccountBalance();
+
+            if (serviceAccountBalance < servicePriceInfo.finalServicePrice) {
+                // Client does not have enough credits to pay for service.
+                //  Log error condition and throw exception
+                Catenis.logger.ERROR('Client does not have enough credits to pay for issue asset service', {
+                    serviceAccountBalance: serviceAccountBalance,
+                    servicePrice: servicePriceInfo.finalServicePrice
+                });
+                throw new Meteor.Error('ctn_device_low_service_acc_balance', 'Client does not have enough credits to pay for issue asset service');
+            }
+        }
+
+        let issueAssetTransact = undefined;
+
+        // Execute code in critical section to avoid UTXOs concurrency
+        FundSource.utxoCS.execute(() => {
+            try {
+                // Prepare transaction to issue asset
+                issueAssetTransact = new IssueAssetTransaction(this, holdingDevice, amount, assetInfo);
+
+                // Build and send transaction
+                issueAssetTransact.buildTransaction();
+
+                issueAssetTransact.sendTransaction();
+
+                // Force polling of blockchain so newly sent transaction is received and processed right away
+                Catenis.txMonitor.pollNow();
+            }
+            catch (err) {
+                // Error issuing asset. Log error condition
+                Catenis.logger.ERROR('Error issuing asset.', err);
+
+                if (issueAssetTransact && !issueAssetTransact.txid) {
+                    // Revert output addresses added to transaction
+                    issueAssetTransact.revertOutputAddresses();
+                }
+
+                // Rethrows exception
+                throw err;
+            }
+        });
+
+        assetId = issueAssetTransact.assetId;
+
+        if (issueAssetTransact.bnPrevTotalExistentBalance) {
+            // Add final total existent asset balance to result
+            totalExistentBalance = issueAssetTransact.asset.smallestDivisionAmountToAmount(issueAssetTransact.bnPrevTotalExistentBalance.plus(issueAssetTransact.amount));
+        }
+
+        try {
+            // Record billing info for service
+            const billing = Billing.createNew(this, issueAssetTransact, servicePriceInfo);
+
+            let servicePayTransact;
+
+            if (this.client.billingMode === Client.billingMode.prePaid) {
+                servicePayTransact = Catenis.spendServCredit.payForService(this.client, issueAssetTransact.txid, servicePriceInfo.finalServicePrice);
+            }
+            else if (this.client.billingMode === Client.billingMode.postPaid) {
+                // Not yet implemented
+                Catenis.logger.ERROR('Processing for postpaid billing mode not yet implemented');
+                // noinspection ExceptionCaughtLocallyJS
+                throw new Error('Processing for postpaid billing mode not yet implemented');
+            }
+
+            billing.setServicePaymentTransaction(servicePayTransact);
+        }
+        catch (err) {
+            if ((err instanceof Meteor.Error) && err.error === 'ctn_spend_serv_cred_tx_rejected') {
+                // Spend service credit transaction has been rejected.
+                //  Log warning condition
+                Catenis.logger.WARN('Billing for issue asset service (serviceTxid: %s) recorded with no service payment transaction', issueAssetTransact.txid);
+            }
+            else {
+                // Error recording billing info for issue asset service.
+                //  Just log error condition
+                Catenis.logger.ERROR('Error recording billing info for issue asset service (serviceTxid: %s),', issueAssetTransact.txid, err);
+            }
+        }
+    });
+
+    // noinspection JSUnusedAssignment
+    return totalExistentBalance !== undefined ? totalExistentBalance : assetId;
+};
+
+// Transfer an amount of an asset to a device
+//
+//  Arguments:
+//    receivingDeviceId: [String] - Device ID identifying the device to which the assets are sent
+//    amount: [Number]      - Amount of asset to be sent (expressed as a fractional amount)
+//    assetId: [String]     - The ID of the asset to transfer
+//
+//  Return value: - If issuing a new asset
+//    remainingBalance: [Number]  - The total balance of the asset held by this device after the transfer
+Device.prototype.transferAsset = function (receivingDeviceId, amount, assetId) {
+    // Make sure that device is not deleted
+    if (this.status === Device.status.deleted.name) {
+        // Cannot transfer asset from a deleted device. Log error and throw exception
+        Catenis.logger.ERROR('Cannot transfer asset from a deleted device', {deviceId: this.deviceId});
+        throw new Meteor.Error('ctn_device_deleted', util.format('Cannot transfer asset from a deleted device (deviceId: %s)', this.deviceId));
+    }
+
+    // Make sure that device is active
+    if (this.status !== Device.status.active.name) {
+        // Cannot transfer asset from a device that is not active. Log error and throw exception
+        Catenis.logger.ERROR('Cannot transfer asset from a device that is not active', {deviceId: this.deviceId});
+        throw new Meteor.Error('ctn_device_not_active', util.format('Cannot transfer asset from a device that is not active (deviceId: %s)', this.deviceId));
+    }
+
+    let receivingDevice;
+
+    if (receivingDeviceId !== this.deviceId) {
+        try {
+            receivingDevice = Device.getDeviceByDeviceId(receivingDeviceId);
+
+            // Make sure that receiving device is not deleted
+            if (receivingDevice.status === Device.status.deleted.name) {
+                // Cannot transfer asset to a deleted device. Log error and throw exception
+                Catenis.logger.ERROR('Cannot transfer asset to a deleted device', {deviceId: receivingDeviceId});
+                //noinspection ExceptionCaughtLocallyJS
+                throw new Meteor.Error('ctn_device_recv_dev_deleted', util.format('Cannot transfer asset to a deleted device (deviceId: %s)', receivingDeviceId));
+            }
+
+            // Make sure that receiving device is active
+            if (receivingDevice.status !== Device.status.active.name) {
+                // Cannot transfer asset to a device that is not active. Log error condition and throw exception
+                Catenis.logger.ERROR('Cannot transfer asset to a device that is not active', {deviceId: receivingDeviceId});
+                //noinspection ExceptionCaughtLocallyJS
+                throw new Meteor.Error('ctn_device_recv_dev_not_active', util.format('Cannot transfer asset to a device that is not active (deviceId: %s)', receivingDeviceId));
+            }
+        }
+        catch (err) {
+            if ((err instanceof Meteor.Error) && err.error === 'ctn_device_not_found') {
+                // No receiving device available with given device ID. Log error and throw exception
+                Catenis.logger.ERROR('Could not find receiving device with given device ID', {deviceId: receivingDeviceId});
+                throw new Meteor.Error('ctn_device_recv_dev_not_found', util.format('Could not find receiving device with given device ID (%s)', receivingDeviceId));
+            }
+            else {
+                // Otherwise, just re-throws exception
+                throw err;
+            }
+        }
+    }
+
+    // Identify asset issuing device
+    let issuingDevice;
+
+    try {
+        issuingDevice = Asset.getAssetByAssetId(assetId, true).issuingDevice;
+    }
+    catch (err) {
+        if (!((err instanceof Meteor.Error) && err.error === 'ctn_asset_not_found')) {
+            // Error trying to identify asset issuing device
+            Catenis.logger.ERROR('Error trying to identify asset issuing device', err);
+        }
+    }
+
+    // Make sure that device has permission to send asset to receiving device
+    if ((issuingDevice !== undefined && !receivingDevice.shouldAcceptAssetOf(issuingDevice)) || !receivingDevice.shouldAcceptAssetFrom(this)) {
+        // Device has no permission rights to sent asset to receiving device
+        Catenis.logger.INFO('Device has no permission rights to send asset to receiving device', {
+            deviceId: this.deviceId,
+            receivingDeviceId: receivingDevice.deviceId
+        });
+        throw new Meteor.Error('ctn_device_no_permission', util.format('Device has no permission rights to send asset to receiving device (deviceId: %s, receivingDeviceId: %s)', this.deviceId, receivingDevice.deviceId));
+    }
+
+    let remainingBalance;
+
+    // Execute code in critical section to avoid Colored Coins UTXOs concurrency
+    CCFundSource.utxoCS.execute(() => {
+        const servicePriceInfo = Service.transferAssetServicePrice();
+
+        if (this.client.billingMode === Client.billingMode.prePaid) {
+            // Make sure that client has enough service credits to pay for service
+            const serviceAccountBalance = this.client.serviceAccountBalance();
+
+            if (serviceAccountBalance < servicePriceInfo.finalServicePrice) {
+                // Client does not have enough credits to pay for service.
+                //  Log error condition and throw exception
+                Catenis.logger.ERROR('Client does not have enough credits to pay for transfer asset service', {
+                    serviceAccountBalance: serviceAccountBalance,
+                    servicePrice: servicePriceInfo.finalServicePrice
+                });
+                throw new Meteor.Error('ctn_device_low_service_acc_balance', 'Client does not have enough credits to pay for transfer asset service');
+            }
+        }
+
+        let transferAssetTransact = undefined;
+
+        // Execute code in critical section to avoid UTXOs concurrency
+        FundSource.utxoCS.execute(() => {
+            try {
+                // Prepare transaction to transfer asset
+                transferAssetTransact = new TransferAssetTransaction(this, receivingDevice, amount, assetId);
+
+                // Build and send transaction
+                transferAssetTransact.buildTransaction();
+
+                transferAssetTransact.sendTransaction();
+
+                // Force polling of blockchain so newly sent transaction is received and processed right away
+                Catenis.txMonitor.pollNow();
+            }
+            catch (err) {
+                // Error transferring asset. Log error condition
+                Catenis.logger.ERROR('Error transferring asset.', err);
+
+                if (transferAssetTransact && !transferAssetTransact.txid) {
+                    // Revert output addresses added to transaction
+                    transferAssetTransact.revertOutputAddresses();
+                }
+
+                // Rethrows exception
+                throw err;
+            }
+        });
+
+        remainingBalance = transferAssetTransact.asset.smallestDivisionAmountToAmount(new BigNumber(transferAssetTransact.prevTotalBalance).minus(transferAssetTransact.amount));
+
+        try {
+            // Record billing info for service
+            const billing = Billing.createNew(this, transferAssetTransact, servicePriceInfo);
+
+            let servicePayTransact;
+
+            if (this.client.billingMode === Client.billingMode.prePaid) {
+                servicePayTransact = Catenis.spendServCredit.payForService(this.client, transferAssetTransact.txid, servicePriceInfo.finalServicePrice);
+            }
+            else if (this.client.billingMode === Client.billingMode.postPaid) {
+                // Not yet implemented
+                Catenis.logger.ERROR('Processing for postpaid billing mode not yet implemented');
+                // noinspection ExceptionCaughtLocallyJS
+                throw new Error('Processing for postpaid billing mode not yet implemented');
+            }
+
+            billing.setServicePaymentTransaction(servicePayTransact);
+        }
+        catch (err) {
+            if ((err instanceof Meteor.Error) && err.error === 'ctn_spend_serv_cred_tx_rejected') {
+                // Spend service credit transaction has been rejected.
+                //  Log warning condition
+                Catenis.logger.WARN('Billing for transfer asset service (serviceTxid: %s) recorded with no service payment transaction', transferAssetTransact.txid);
+            }
+            else {
+                // Error recording billing info for transfer asset service.
+                //  Just log error condition
+                Catenis.logger.ERROR('Error recording billing info for transfer asset service (serviceTxid: %s),', transferAssetTransact.txid, err);
+            }
+        }
+    });
+
+    // noinspection JSUnusedAssignment
+    return remainingBalance;
 };
 
 // Update device properties
@@ -1168,6 +1574,22 @@ Device.prototype.shouldBeNotifiedOfMessageReadBy = function (device) {
     return Catenis.permission.hasRight(Permission.event.receive_notify_msg_read.name, this, device);
 };
 
+Device.prototype.shouldBeNotifiedOfIncomeAssetOf = function (device) {
+    return Catenis.permission.hasRight(Permission.event.receive_notify_income_asset_of.name, this, device);
+};
+
+Device.prototype.shouldBeNotifiedOfIncomeAssetFrom = function (device) {
+    return Catenis.permission.hasRight(Permission.event.receive_notify_income_asset_from.name, this, device);
+};
+
+Device.prototype.shouldBeNotifiedOfConfirmedAssetOf = function (device) {
+    return Catenis.permission.hasRight(Permission.event.receive_notify_confirm_asset_of.name, this, device);
+};
+
+Device.prototype.shouldBeNotifiedOfConfirmedAssetFrom = function (device) {
+    return Catenis.permission.hasRight(Permission.event.receive_notify_confirm_asset_from.name, this, device);
+};
+
 Device.prototype.shouldSendReadMsgConfirmationTo = function (device) {
     return Catenis.permission.hasRight(Permission.event.send_read_msg_confirm.name, this, device);
 };
@@ -1182,6 +1604,14 @@ Device.prototype.shouldDiscloseMainPropsTo = function (device) {
 
 Device.prototype.shouldDiscloseIdentityInfoTo = function (device) {
     return Catenis.permission.hasRight(Permission.event.disclose_identity_info.name, this, device);
+};
+
+Device.prototype.shouldAcceptAssetOf = function (device) {
+    return Catenis.permission.hasRight(Permission.event.receive_asset_of.name, this, device);
+};
+
+Device.prototype.shouldAcceptAssetFrom = function (device) {
+    return Catenis.permission.hasRight(Permission.event.receive_asset_from.name, this, device);
 };
 
 Device.prototype.checkEffectiveRight = function (eventName, device) {
@@ -1294,9 +1724,698 @@ Device.prototype.notifyMessageRead = function (message, targetDevice) {
     // Dispatch notification message
     Catenis.notification.dispatchNotifyMessage(this.deviceId, Notification.event.sent_msg_read.name, JSON.stringify(msgInfo));
 };
+
+Device.prototype.notifyIncomeAsset = function (asset, amount, sendingDevice, receivedDate) {
+    // Prepare information about received asset to be sent by notification
+    const msgInfo = {
+        assetId: asset.assetId,
+        amount: asset.smallestDivisionAmountToAmount(amount),
+        issuer: {
+            deviceId: asset.issuingDevice.deviceId,
+        },
+        from: {
+            deviceId: sendingDevice.deviceId,
+        },
+        receivedDate: receivedDate
+    };
+
+    // Add device public properties
+    _und.extend(msgInfo.issuer, asset.issuingDevice.discloseMainPropsTo(this));
+    _und.extend(msgInfo.issuer, sendingDevice.discloseMainPropsTo(this));
+
+    // Dispatch notification message
+    Catenis.notification.dispatchNotifyMessage(this.deviceId, Notification.event.income_asset.name, JSON.stringify(msgInfo));
+};
+
+Device.prototype.notifyConfirmedAsset = function (asset, amount, sendingDevice, confirmedDate) {
+    // Prepare information about confirmed asset to be sent by notification
+    const msgInfo = {
+        assetId: asset.assetId,
+        amount: asset.smallestDivisionAmountToAmount(amount),
+        issuer: {
+            deviceId: asset.issuingDevice.deviceId,
+        },
+        from: {
+            deviceId: sendingDevice.deviceId,
+        },
+        confirmedDate: confirmedDate
+    };
+
+    // Add device public properties
+    _und.extend(msgInfo.issuer, asset.issuingDevice.discloseMainPropsTo(this));
+    _und.extend(msgInfo.issuer, sendingDevice.discloseMainPropsTo(this));
+
+    // Dispatch notification message
+    Catenis.notification.dispatchNotifyMessage(this.deviceId, Notification.event.confirmed_asset.name, JSON.stringify(msgInfo));
+};
 /** End of notification related methods **/
 
-// TODO: add methods to: issue asset (both locked and unlocked), register/import asset issued elsewhere, transfer asset, etc.
+/** Asset related methods **/
+Device.prototype.getAssetIssuanceAddressesInUseExcludeUnlocked = function () {
+    const unlockedAssetIssueAddrs = getUnlockedAssetIssuanceAddresses.call(this);
+
+    if (unlockedAssetIssueAddrs.length > 0) {
+        let unlockedAssetIssueAddrsSet;
+
+        if (unlockedAssetIssueAddrs.length > 20) {
+            unlockedAssetIssueAddrsSet = new Set(unlockedAssetIssueAddrs);
+        }
+
+        function isUnlockedAssetIssueAddr(addr) {
+            return unlockedAssetIssueAddrsSet ? unlockedAssetIssueAddrsSet.has(addr) : unlockedAssetIssueAddrs.some(addr2 => addr2 === addr);
+        }
+
+        return this.assetIssuanceAddr.listAddressesInUse().filter(addr => !isUnlockedAssetIssueAddr(addr));
+    }
+    else {
+        return this.assetIssuanceAddr.listAddressesInUse();
+    }
+};
+
+// Retrieve the current balance of a given asset held by this device
+//
+//  Arguments:
+//    asset: [Object(Asset)|String] - An object of type Asset or the asset ID
+//    convertAmount: [Boolean] - Indicate whether balance amount should be converted from a fractional amount to an
+//                                an integer number of the asset's smallest division (according to the asset divisibility)
+//
+//  Return:
+//    balance: {
+//      total: [Number], - Total asset balance represented as an integer number of the asset's smallest division (according to the asset divisibility)
+//      unconfirmed: [Number] - The unconfirmed asset balance represented as an integer number of the asset's smallest division (according to the asset divisibility)
+//    }
+Device.prototype.assetBalance = function (asset, convertAmount = true) {
+    if (typeof asset === 'string') {
+        // Asset ID passed instead, so to retrieve asset
+        asset = Asset.getAssetByAssetId(asset, true);
+    }
+
+    const balance = Catenis.ccFNClient.getAssetBalance(asset.ccAssetId, this.assetAddr.listAddressesInUse());
+
+    if (balance !== undefined) {
+        if (convertAmount) {
+            // Convert amounts into asset's smallest division
+            balance.total = asset.amountToSmallestDivisionAmount(balance.total);
+            balance.unconfirmed = asset.amountToSmallestDivisionAmount(balance.unconfirmed);
+        }
+    }
+    else {
+        // Unable to retrieve Colored Coins asset balance. Log error condition and throw exception
+        Catenis.logger.ERROR('Unable to retrieve Colored Coins asset balance', {
+            ccAssetId: asset.ccAssetId
+        });
+    }
+
+    return balance;
+};
+
+// Get the current balance of a given asset held by this device
+//  (method used by Get Asset Balance API method)
+//
+//  Arguments:
+//   assetId: [String] - ID of asset the balance of which is requested
+//
+//  Return value:
+//   assetBalance: {
+//     total: [Number], - The current balance of the asset held by this device, expressed as a fractional number
+//     unconfirmed: [Number] - The amount from of the balance that is not yet confirmed
+//   }
+Device.prototype.getAssetBalance = function (assetId) {
+    // Make sure that device is not deleted
+    if (this.status === Device.status.deleted.name) {
+        // Cannot get asset balance for deleted device. Log error and throw exception
+        Catenis.logger.ERROR('Cannot get asset balance for a deleted device', {deviceId: this.deviceId});
+        throw new Meteor.Error('ctn_device_deleted', util.format('Cannot get asset balance for a deleted device (deviceId: %s)', this.deviceId));
+    }
+
+    // Make sure that device is active
+    if (this.status !== Device.status.active.name) {
+        // Cannot get asset balance for a device that is not active. Log error and throw exception
+        Catenis.logger.ERROR('Cannot get asset balance for a device that is not active', {deviceId: this.deviceId});
+        throw new Meteor.Error('ctn_device_not_active', util.format('Cannot get asset balance for a device that is not active (deviceId: %s)', this.deviceId));
+    }
+
+    const assetBalance = this.assetBalance(assetId, false);
+
+    if (assetBalance === undefined) {
+        // Unable to retrieve Colored Coins asset balance. Throw exception
+        throw new Meteor.Error('ctn_device_no_asset_balance', 'Unable to retrieve Colored Coins asset balance');
+    }
+
+    return assetBalance;
+};
+
+// Return information about a given asset
+//  (method used by Retrieve Asset Info API method)
+//
+//  Arguments:
+//   assetId: [String] - ID of the asset the information of which is requested
+//
+//  Return value:
+//   assetInfo: {
+//     assetId: [String],     - The ID of the asset
+//     name: [String],        - The name of the asset
+//     description: [String], - The description of the asset
+//     canReissue: [Boolean], - Indicates whether more amount of this asset can be reissued
+//     decimalPlaces: [Number],  - The maximum number of decimal places that can be used to represent a fractional amount of this asset
+//     issuer: {
+//       deviceId: [String],  - The ID of the device that issued this asset
+//       name: [String],      - (optional) The name of the device
+//       prodUniqueId: [String] - (optional) The product unique ID of the device
+//     },
+//     totalExistentBalance: [Number] - The current total balance of the asset that there is, expressed as a fractional amount
+//   }
+Device.prototype.retrieveAssetInfo = function (assetId) {
+    // Make sure that device is not deleted
+    if (this.status === Device.status.deleted.name) {
+        // Cannot retrieve asset info for deleted device. Log error and throw exception
+        Catenis.logger.ERROR('Cannot retrieve asset info for a deleted device', {deviceId: this.deviceId});
+        throw new Meteor.Error('ctn_device_deleted', util.format('Cannot retrieve asset info for a deleted device (deviceId: %s)', this.deviceId));
+    }
+
+    // Make sure that device is active
+    if (this.status !== Device.status.active.name) {
+        // Cannot retrieve asset info for a device that is not active. Log error and throw exception
+        Catenis.logger.ERROR('Cannot retrieve asset info for a device that is not active', {deviceId: this.deviceId});
+        throw new Meteor.Error('ctn_device_not_active', util.format('Cannot retrieve asset info for a device that is not active (deviceId: %s)', this.deviceId));
+    }
+
+    const asset = Asset.getAssetByAssetId(assetId, true);
+
+    let hasAccess = false;
+
+    if (this.deviceId !== asset.issuingDevice.deviceId) {
+        // Device is not the issuer of this asset. Check if it currently holds it
+        const balance = Catenis.ccFNClient.getAssetBalance(asset.ccAssetId, this.assetAddr.listAddressesInUse());
+
+        if (balance !== undefined && balance.total > 0) {
+            hasAccess = true;
+        }
+    }
+    else {
+        hasAccess = true;
+    }
+
+    if (!hasAccess) {
+        // Device is neither the issuer nor a current holder of that asset, thus it is not allowed
+        //  to retrieve the asset info. Throw exception
+        throw new Meteor.Error('ctn_device_asset_no_access', 'Device has no access rights to retrieve asset info');
+    }
+
+    // Get total existent asset balance
+    const assetBalance = Catenis.ccFNClient.getAssetBalance(asset.ccAssetId);
+
+    if (assetBalance === undefined) {
+        // Unable to retrieve Colored Coins asset balance. Log error condition
+        Catenis.logger.ERROR('Unable to retrieve Colored Coins asset balance', {
+            ccAssetId: asset.ccAssetId
+        });
+    }
+
+    // Return asset info
+    const assetInfo = {
+        assetId: assetId,
+        name: asset.name,
+        description: asset.description,
+        canReissue: asset.issuingType === CCTransaction.issuingAssetType.unlocked,
+        decimalPlaces: asset.divisibility,
+        issuer: {
+            deviceId: asset.issuingDevice.deviceId
+        },
+        totalExistentBalance: assetBalance.total
+    };
+
+    _und.extend(assetInfo.issuer, asset.issuingDevice.discloseMainPropsTo(this));
+
+    return assetInfo;
+};
+
+// Return list of all assets currently owned by this device
+//  (method used by List Owned Assets API method)
+//
+//  Arguments:
+//   limit: [Number] - (optional, default = 'maxRetListEntries') Maximum number of list items that should be returned
+//   skip: [Number] - (optional, default = 0) Number of list items that should be skipped (from beginning of list) and not returned
+//
+//  Return value:
+//   result: {
+//     ownedAssets: [{ - A list of owned asset objects
+//       assetId: [String] - The ID of the asset
+//       balance: {
+//         total: [Number], - The current balance of that asset held by this device, expressed as a fractional number
+//         unconfirmed: [Number] - The amount from of the balance that is not yet confirmed
+//       }
+//     }],
+//     hasMore: [Boolean] - Indicates whether there are more entries that have not been included in the return list
+//   }
+Device.prototype.listOwnedAssets = function (limit, skip) {
+    // Make sure that device is not deleted
+    if (this.status === Device.status.deleted.name) {
+        // Cannot list owned assets for deleted device. Log error and throw exception
+        Catenis.logger.ERROR('Cannot list owned assets for a deleted device', {deviceId: this.deviceId});
+        throw new Meteor.Error('ctn_device_deleted', util.format('Cannot list owned assets for a deleted device (deviceId: %s)', this.deviceId));
+    }
+
+    // Make sure that device is active
+    if (this.status !== Device.status.active.name) {
+        // Cannot list owned assets for a device that is not active. Log error and throw exception
+        Catenis.logger.ERROR('Cannot list owned assets for a device that is not active', {deviceId: this.deviceId});
+        throw new Meteor.Error('ctn_device_not_active', util.format('Cannot list owned assets for a device that is not active (deviceId: %s)', this.deviceId));
+    }
+
+    if (!Number.isInteger(limit) || limit <= 0 || limit > assetCfgSetting.maxRetListEntries) {
+        limit = assetCfgSetting.maxRetListEntries;
+    }
+
+    if (!Number.isInteger(skip) || skip < 0) {
+        skip = 0;
+    }
+
+    const ccAssetIdBalance = Catenis.ccFNClient.getOwningAssets(this.assetAddr.listAddressesInUse());
+    const result = {
+        ownedAssets: [],
+        hasMore: false
+    };
+
+    if (ccAssetIdBalance !== undefined) {
+        const ccAssetIds =  Object.keys(ccAssetIdBalance);
+        let endIdx = skip + limit;
+
+        if (endIdx > ccAssetIds.length) {
+            endIdx = ccAssetIds.length;
+        }
+
+        for (let idx = skip; idx < endIdx; idx++) {
+            const ccAssetId = ccAssetIds[idx];
+
+            // Try to get asset from local database
+            let asset;
+
+            try {
+                asset = Asset.getAssetByCcAssetId(ccAssetId);
+            }
+            catch (err) {
+                if ((err instanceof Meteor.Error) && err.error === 'ctn_asset_not_found') {
+                    // Could not find asset with returned Colored Coins asset ID. Log error condition
+                    Catenis.logger.ERROR('Could not find asset with returned Colored Coins asset ID', {
+                        ccAssetId: ccAssetId
+                    });
+                }
+                else {
+                    // Just rethrow exception
+                    throw err;
+                }
+            }
+
+            result.ownedAssets.push({
+                assetId: asset !== undefined ? asset.assetId : null,
+                balance: {
+                    total: ccAssetIdBalance[ccAssetId].totalBalance,
+                    unconfirmed: ccAssetIdBalance[ccAssetId].unconfirmedBalance
+                }
+            });
+        }
+
+        result.hasMore = endIdx < ccAssetIds.length;
+    }
+
+    return result;
+};
+
+// Returned a list of all the assets issued by this device
+//  (method used by List Issued Assets API method)
+//
+//  Arguments:
+//   limit: [Number] - (optional, default = 'maxRetListEntries') Maximum number of list items that should be returned
+//   skip: [Number] - (optional, default = 0) Number of list items that should be skipped (from beginning of list) and not returned
+//
+//  Return value:
+//   result: {
+//     issuedAssets: [{ - A list of issued asset objects
+//       assetId: [String] - The ID of the asset
+//       totalExistentBalance: [Number] - The current total balance of that asset that there is, expressed as a fractional amount
+//     }],
+//     hasMore: [Boolean] - Indicates whether there are more entries that have not been included in the return list
+//   }
+Device.prototype.listIssuedAssets = function (limit, skip) {
+    // Make sure that device is not deleted
+    if (this.status === Device.status.deleted.name) {
+        // Cannot list issued assets for deleted device. Log error and throw exception
+        Catenis.logger.ERROR('Cannot list issued assets for a deleted device', {deviceId: this.deviceId});
+        throw new Meteor.Error('ctn_device_deleted', util.format('Cannot list issued assets for a deleted device (deviceId: %s)', this.deviceId));
+    }
+
+    // Make sure that device is active
+    if (this.status !== Device.status.active.name) {
+        // Cannot list issued assets for a device that is not active. Log error and throw exception
+        Catenis.logger.ERROR('Cannot list issued assets for a device that is not active', {deviceId: this.deviceId});
+        throw new Meteor.Error('ctn_device_not_active', util.format('Cannot list issued assets for a device that is not active (deviceId: %s)', this.deviceId));
+    }
+
+    if (!Number.isInteger(limit) || limit <= 0 || limit > assetCfgSetting.maxRetListEntries) {
+        limit = assetCfgSetting.maxRetListEntries;
+    }
+
+    if (!Number.isInteger(skip) || skip < 0) {
+        skip = 0;
+    }
+
+    const result = {
+        issuedAssets: [],
+        hasMore: false
+    };
+
+    // Retrieve assets issued by this device
+    Catenis.db.collection.Asset.find({
+        type: Asset.type.device,
+        'issuance.entityId': this.deviceId
+    }, {
+        fields: {
+            assetId: 1,
+            ccAssetId: 1
+        },
+        sort: {
+            createdDate: 1
+        },
+        limit: limit + 1,
+        skip: skip
+    }).forEach((docAsset, idx) => {
+        if (idx < limit) {
+            // Retrieve total existent asset balance
+            const assetBalance = Catenis.ccFNClient.getAssetBalance(docAsset.ccAssetId);
+
+            if (assetBalance === undefined) {
+                // No balance returned for Colored Coins asset. Log error condition
+                Catenis.logger.ERROR('No balance returned for Colored Coins asset', {
+                    ccAssetId: docAsset.ccAssetId
+                })
+            }
+
+            result.issuedAssets.push({
+                assetId: docAsset.assetId,
+                totalExistentBalance: assetBalance !== undefined ? assetBalance.total : null
+            });
+        }
+        else {
+            result.hasMore = true;
+        }
+    });
+
+    return result;
+};
+
+// Return a list of issuance events for this asset that took place in a given time frame
+//  (method used by Retrieve Asset Issuance History API method)
+//
+//  Arguments:
+//   assetId: [String] - The ID of the asset the issuance history of which is requested
+//   startDate: [Date] - (optional) Date and time specifying the start of the filtering time frame. The returned
+//                        issuance events must have occurred not before that date/time
+//   endDate: [Date] - (optional) Date and time specifying the end of the filtering time frame. The returned
+//                        issuance events must have occurred not after that date/time
+//
+//  Return value:
+//   issuanceHistory: {
+//     issuanceEvents: [{ - A list of issuance event objects
+//       amount: [Number],  - The amount of the asset issued, expressed as a fractional number
+//       holdingDevice: {
+//         deviceId: [String],    - The ID of the device to which the issued asset amount was assigned
+//         name: [String],        - (optional) The name of the device
+//         prodUniqueId: [String] - (optional) The product unique ID of the device
+//       },
+//       date: [Date] - Date end time when asset issuance took place
+//     }],
+//     countExceeded: [Boolean] - Indicates whether the number of asset issuance events that should have been returned
+//                                 is larger than maximum number of asset issuance events that can be returned
+//   }
+Device.prototype.retrieveAssetIssuanceHistory = function (assetId, startDate, endDate) {
+    // Make sure that device is not deleted
+    if (this.status === Device.status.deleted.name) {
+        // Cannot retrieve asset issuance history for deleted device. Log error and throw exception
+        Catenis.logger.ERROR('Cannot retrieve asset issuance history for a deleted device', {deviceId: this.deviceId});
+        throw new Meteor.Error('ctn_device_deleted', util.format('Cannot retrieve asset issuance history for a deleted device (deviceId: %s)', this.deviceId));
+    }
+
+    // Make sure that device is active
+    if (this.status !== Device.status.active.name) {
+        // Cannot retrieve asset issuance history for a device that is not active. Log error and throw exception
+        Catenis.logger.ERROR('Cannot retrieve asset issuance history for a device that is not active', {deviceId: this.deviceId});
+        throw new Meteor.Error('ctn_device_not_active', util.format('Cannot retrieve asset issuance history for a device that is not active (deviceId: %s)', this.deviceId));
+    }
+
+    const asset = Asset.getAssetByAssetId(assetId, true);
+
+    if (this.deviceId !== asset.issuingDevice.deviceId) {
+        // Device is not the issuer of this asset, thus it is not allowed to retrieve asset issuance history.
+        //  Throw exception
+        throw new Meteor.Error('ctn_device_asset_no_access', 'Device has no access rights to retrieve asset issuance history');
+    }
+
+    // Retrieve asset issuance info
+    const txidAssetIssuance = Catenis.ccFNClient.getAssetIssuance(asset.ccAssetId, false);
+
+    const issuanceEvents = [];
+    let countExceeded = false;
+
+    if (txidAssetIssuance !== undefined) {
+        const assetIssuanceTxids = Object.keys(txidAssetIssuance);
+
+        // Retrieve asset issuance transactions from local database
+        const querySelector = {
+            type: 'issue_asset',
+            txid: {
+                $in: assetIssuanceTxids
+            }
+        };
+
+        let sentDateConds = [];
+
+        if (startDate !== undefined) {
+            sentDateConds.push({
+                $gte: startDate
+            });
+        }
+
+        if (endDate !== undefined) {
+            sentDateConds.push({
+                $lte: endDate
+            });
+        }
+
+        if (sentDateConds.length > 0) {
+            if (sentDateConds.length === 1) {
+                querySelector.sentDate = sentDateConds[0];
+            }
+            else {
+                querySelector.$and = sentDateConds.map((cond) => {
+                    return {
+                        sentDate: cond
+                    }
+                });
+            }
+        }
+
+        const docSentAssetIssueTxs = Catenis.db.collection.SentTransaction.find(querySelector, {
+            fields: {
+                txid: 1,
+                sentDate: 1,
+                info: 1
+            },
+            sort: {
+                sentDate: 1
+            },
+            limit: assetCfgSetting.maxQueryIssuanceCount + 1
+        });
+
+        if (docSentAssetIssueTxs.length < assetIssuanceTxids.length) {
+            // Not all asset issuance transactions could be retrieved from local database.
+            //  Log error condition
+            Catenis.logger.ERROR('Not all asset issuance transactions could be retrieved from local database', {
+                numAssetIssuanceTxs: assetIssuanceTxids.length,
+                numRetrievedAssetIssuanceTxs: docSentAssetIssueTxs.length,
+                missingTxids: assetIssuanceTxids.filter(txid => docSentAssetIssueTxs.findIndex(doc => doc.txid === txid) === -1)
+            });
+        }
+
+        docSentAssetIssueTxs.forEach((doc, idx) => {
+            if (idx < assetCfgSetting.maxQueryIssuanceCount) {
+                const issuance = {
+                    amount: asset.smallestDivisionAmountToAmount(doc.info.issueAsset.amount),
+                    holdingDevice: {
+                        deviceId: doc.info.issueAsset.holdingDeviceId
+                    }
+                };
+
+                _und.extend(issuance.holdingDevice, Device.getDeviceByDeviceId(doc.info.issueAsset.holdingDeviceId).discloseMainPropsTo(this));
+
+                issuance.date = doc.sentDate;
+
+                issuanceEvents.push(issuance);
+            }
+        });
+
+        countExceeded = docSentAssetIssueTxs.length > assetCfgSetting.maxQueryIssuanceCount;
+    }
+    else {
+        // Unable to retrieve Colored Coins asset issuance. Log error condition
+        Catenis.logger.ERROR('Unable to retrieve Colored Coins asset issuance', {
+            ccAssetId: asset.ccAssetId
+        });
+    }
+
+    // Return asset issuance history
+    return {
+        issuanceEvents: issuanceEvents,
+        countExceeded: countExceeded
+    }
+};
+
+// Return list of devices that currently own an amount of a given asset
+//  (method used by List Asset Holders API method)
+//
+//  Arguments:
+//   assetId: [String] - The ID of the asset the list of holders of which is requested
+//   limit: [Number] - (optional, default = 'maxRetListEntries') Maximum number of list items that should be returned
+//   skip: [Number] - (optional, default = 0) Number of list items that should be skipped (from beginning of list) and not returned
+//
+//  Return values:
+//   result: {
+//     assetHolders: [{ - A list of asset holder objects
+//       holder: {
+//         deviceId: [String]   - ID of device that holds an amount of the asset
+//         name: [String],        - (optional) The name of the device
+//         prodUniqueId: [String] - (optional) The product unique ID of the device
+//       },
+//       balance: {
+//         total: [Number],      - The current balance of that asset held by this device, expressed as a fractional number
+//         unconfirmed: [Number] - The amount from of the balance that is not yet confirmed
+//       }
+//     }],
+//     hasMore: [Boolean] - Indicates whether there are more entries that have not been included in the return list
+//   }
+Device.prototype.listAssetHolders = function (assetId, limit, skip) {
+    // Make sure that device is not deleted
+    if (this.status === Device.status.deleted.name) {
+        // Cannot list asset holders for deleted device. Log error and throw exception
+        Catenis.logger.ERROR('Cannot list asset holders for a deleted device', {deviceId: this.deviceId});
+        throw new Meteor.Error('ctn_device_deleted', util.format('Cannot list asset holders for a deleted device (deviceId: %s)', this.deviceId));
+    }
+
+    // Make sure that device is active
+    if (this.status !== Device.status.active.name) {
+        // Cannot list asset holders for a device that is not active. Log error and throw exception
+        Catenis.logger.ERROR('Cannot list asset holders for a device that is not active', {deviceId: this.deviceId});
+        throw new Meteor.Error('ctn_device_not_active', util.format('Cannot list asset holders for a device that is not active (deviceId: %s)', this.deviceId));
+    }
+
+    const asset = Asset.getAssetByAssetId(assetId, true);
+
+    if (this.deviceId !== asset.issuingDevice.deviceId) {
+        // Device is not the issuer of this asset, thus it is not allowed to list the asset holders.
+        //  Throw exception
+        throw new Meteor.Error('ctn_device_asset_no_access', 'Device has no access rights to list asset holders');
+    }
+
+    if (!Number.isInteger(limit) || limit <= 0 || limit > assetCfgSetting.maxRetListEntries) {
+        limit = assetCfgSetting.maxRetListEntries;
+    }
+
+    if (!Number.isInteger(skip) || skip < 0) {
+        skip = 0;
+    }
+
+    const result = {
+        assetHolders: [],
+        hasMore: false
+    };
+
+    // Retrieve asset holders (blockchain addresses)
+    const addressAssetBalance = Catenis.ccFNClient.getAssetHolders(asset.ccAssetId);
+    const deviceAssetHolder = new Map();
+    const skippedDevices = new Set();
+    const discardedDevices = new Set();
+
+    if (addressAssetBalance !== undefined) {
+        Object.keys(addressAssetBalance).forEach((address) => {
+            const assetBalance = addressAssetBalance[address];
+
+            // Try to get device associated with address
+            const addrInfo = Catenis.keyStore.getAddressInfo(address);
+
+            if (addrInfo !== null || addrInfo.type !== KeyStore.extKeyType.dev_asst_addr) {
+                const holdingDevice = CatenisNode.getCatenisNodeByIndex(addrInfo.pathParts.ctnNodeIndex).getClientByIndex(addrInfo.pathParts.clientIndex).getDeviceByIndex(addrInfo.pathParts.deviceIndex);
+
+                if (!deviceAssetHolder.has(holdingDevice.deviceId)) {
+                    // Not one of the accepted devices. Check if it is not one of the skipped or discarded devices
+                    if (!skippedDevices.has(holdingDevice.deviceId) && !discardedDevices.has(holdingDevice.deviceId)) {
+                        // A new device. Check if it should be accepted
+                        if (skippedDevices.size < skip) {
+                            // Skip device
+                            skippedDevices.add(holdingDevice.deviceId);
+                        }
+                        else if (deviceAssetHolder.size === limit) {
+                            // Discard device
+                            discardedDevices.add(holdingDevice.deviceId);
+                        }
+                        else {
+                            // Device good to be accepted
+                            const assetHolder = {
+                                holder: {
+                                    deviceId: holdingDevice.deviceId
+                                },
+                                balance: {
+                                    total: new BigNumber(assetBalance.totalBalance),
+                                    unconfirmed: new BigNumber(assetBalance.unconfirmedBalance)
+                                }
+                            };
+
+                            _und.extend(assetHolder.holder, holdingDevice.discloseMainPropsTo(this));
+
+                            deviceAssetHolder.set(holdingDevice.deviceId, assetHolder);
+                        }
+                    }
+                }
+                else {
+                    // Device already accepted. Adjust its balance
+                    const balance = deviceAssetHolder.get(holdingDevice.deviceId).balance;
+
+                    balance.total = balance.total.plus(assetBalance.totalBalance);
+                    balance.unconfirmed = balance.unconfirmed.plus(assetBalance.unconfirmedBalance);
+                }
+            }
+            else {
+                // Unrecognized asset holding address. Log error condition
+                Catenis.logger.ERROR('Unrecognized asset holding address', {
+                    assetId: assetId,
+                    address: address,
+                    addrInfo: addrInfo
+                })
+            }
+        });
+    }
+    else {
+        // Unable to retrieve Colored Coins asset holders. Log error condition
+        Catenis.logger.ERROR('Unable to retrieve Colored Coins asset holders', {
+            ccAssetId: asset.ccAssetId
+        });
+    }
+
+    // Prepare to return result
+    if (deviceAssetHolder.size > 0) {
+        deviceAssetHolder.forEach((assetHolder) => {
+            // Convert balance amount to number
+            assetHolder.balance.total = assetHolder.balance.total.toNumber();
+            assetHolder.balance.unconfirmed = assetHolder.balance.unconfirmed.toNumber();
+
+            result.assetHolders.push(assetHolder);
+        });
+
+        result.hasMore = discardedDevices.size > 0;
+    }
+
+    return result;
+};
+/** End of asset related methods **/
 
 
 // Module functions used to simulate private Device object methods
@@ -1305,13 +2424,31 @@ Device.prototype.notifyMessageRead = function (message, targetDevice) {
 //      or .bind().
 //
 
+// Return list of device asset issuance addresses allocated to unlocked assets
+function getUnlockedAssetIssuanceAddresses() {
+    return Catenis.db.collection.Asset.find({
+        type: Asset.type.device,
+        issuingType: CCTransaction.issuingAssetType.unlocked,
+        'issuance.entityId': this.deviceId
+    }, {
+        fields: {
+            'issuance.addrPath': 1
+        }
+    }).map((doc) => {
+        const addrInfo = Catenis.keyStore.getAddressInfoByPath(doc.issuance.addrPath);
+
+        return addrInfo !== null ? addrInfo.cryptoKeys.getAddress() : undefined;
+    }).filter(addr => addr !== undefined);
+}
+
 // NOTE: make sure that this method is called from code executed from the FundSource.utxoCS
 //  critical section object
-function fundDeviceAddresses(amountPerDevMainAddress, amountPerAssetIssuanceAddress) {
+function fundDeviceAddresses(amountPerDevMainAddress, amountPerAssetIssuanceAddress, unlockedAssetIssueAddressAmount) {
     Catenis.logger.TRACE('Funding device addresses', {
         deviceId: this.deviceId,
         amountPerDevMainAddress: amountPerDevMainAddress,
-        amountPerAssetIssuanceAddress: amountPerAssetIssuanceAddress
+        amountPerAssetIssuanceAddress: amountPerAssetIssuanceAddress,
+        unlockedAssetIssueAddressAmount: unlockedAssetIssueAddressAmount
     });
     let fundTransact = undefined;
 
@@ -1325,6 +2462,12 @@ function fundDeviceAddresses(amountPerDevMainAddress, amountPerAssetIssuanceAddr
 
         if (amountPerAssetIssuanceAddress !== undefined) {
             fundTransact.addPayees(this.assetIssuanceAddr, amountPerAssetIssuanceAddress);
+        }
+
+        if (unlockedAssetIssueAddressAmount !== undefined) {
+            Object.keys(unlockedAssetIssueAddressAmount).forEach((address) => {
+                fundTransact.addSingleAddressPayee(this.assetIssuanceAddr.type, address, unlockedAssetIssueAddressAmount[address]);
+            });
         }
 
         if (fundTransact.addPayingSource()) {

@@ -127,7 +127,7 @@
 //
 //      m/k/i/1/j/0 (i,j>=1) -> device #j of client #i main addresses root HD extended key
 //      m/k/i/1/j/1 (i,j>=1) -> device #j of client #i asset addresses root HD extended key
-//      m/k/i/1/j/2 (i,j>=1) -> device #j of client #i asset issuance addresses root HD extended key (used only to issue unlocked type of Colored Coins assets)
+//      m/k/i/1/j/2 (i,j>=1) -> device #j of client #i asset issuance addresses root HD extended key
 //      m/k/i/1/j/3 (i,j>=1) -> device #j of client #i public (reserved) addresses #4 root HD extended key
 //      m/k/i/1/j/4 (i,j>=1) -> device #j of client #i public (reserved) addresses #5 root HD extended key
 //      m/k/i/1/j/5 (i,j>=1) -> device #j of client #i public (reserved) addresses #6 root HD extended key

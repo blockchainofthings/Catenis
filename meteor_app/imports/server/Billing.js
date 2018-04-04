@@ -24,6 +24,8 @@ import { LogMessageTransaction } from './LogMessageTransaction';
 import { SendMessageTransaction } from './SendMessageTransaction';
 import { Device } from './Device';
 import { SpendServiceCreditTransaction } from './SpendServiceCreditTransaction';
+import { IssueAssetTransaction } from './IssueAssetTransaction';
+import { TransferAssetTransaction } from './TransferAssetTransaction';
 
 // Config entries
 /*const config_entryConfig = config.get('config_entry');
@@ -162,6 +164,12 @@ Billing.createNew = function (device, serviceTransact, servicePriceInfo, service
     else if (serviceTransact instanceof SendMessageTransaction) {
         docBilling.service = serviceTransact.options.readConfirmation ? Service.clientPaidService.send_msg_read_confirm.name
                 : Service.clientPaidService.send_message.name;
+    }
+    else if (serviceTransact instanceof IssueAssetTransaction) {
+        docBilling.service = Service.clientPaidService.issue_asset.name;
+    }
+    else if (serviceTransact instanceof TransferAssetTransaction) {
+        docBilling.service = Service.clientPaidService.transfer_asset.name;
     }
     else {
         // Not specified or unknown service for billing.
