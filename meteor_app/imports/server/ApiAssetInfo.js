@@ -41,7 +41,7 @@ import {
 // Method used to process GET 'assets/:assetId' endpoint of Rest API
 //
 //  URL parameters:
-//    assetId [String] - ID of asset to transfer an amount of it
+//    assetId [String] - ID of asset to retrieve information
 //
 //  Success data returned: {
 //    "assetId": [String],        - The ID of the asset

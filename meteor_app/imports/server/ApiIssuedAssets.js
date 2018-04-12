@@ -52,7 +52,7 @@ import {
 //      "assetId": [String] - The ID of the asset
 //      "totalExistentBalance": [Number] - The current total balance of that asset that there is (expressed as a fractional amount)
 //    }],
-//    "hasMore": [Boolean] - Indicates whether there are more entries that have not been included in the return list
+//    "hasMore": [Boolean] - Indicates whether there are more entries that have not been included in the returned list
 //  }
 export function listIssuedAssets() {
     try {

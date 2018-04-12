@@ -45,7 +45,7 @@ import {
 //
 //  Success data returned: {
 //    "total": [Number], - The current balance of the asset held by the device that issues the request (expressed as a fractional number)
-//    "unconfirmed": [Number] - The amount from of the balance that is not yet confirmed
+//    "unconfirmed": [Number] - The amount from the balance that is not yet confirmed
 //  }
 export function getAssetBalance() {
     try {

@@ -52,10 +52,10 @@ import {
 //      "assetId": [String] - The ID of the asset
 //      "balance": {
 //        "total": [Number], - The current balance of that asset held by the device that issues the request (expressed as a fractional number)
-//        "unconfirmed": [Number] - The amount from of the balance that is not yet confirmed
+//        "unconfirmed": [Number] - The amount from the balance that is not yet confirmed
 //      }
 //    }],
-//    "hasMore": [Boolean] - Indicates whether there are more entries that have not been included in the return list
+//    "hasMore": [Boolean] - Indicates whether there are more entries that have not been included in the returned list
 //  }
 export function listOwnedAssets() {
     try {
