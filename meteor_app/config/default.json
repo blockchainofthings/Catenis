@@ -481,7 +481,14 @@
   },
   // Parameters pertaining to RestApi module
   "restApi": {
-    "rootPath": "api"
+    "rootPath": "api",
+    "availableVersions": [    // List of all currently available versions of the Catenis REST API
+      "0.2",
+      "0.3",
+      "0.4",
+      "0.5",
+      "0.6"
+    ]
   },
   // Parameters pertaining to Authentication module
   "authentication": {
@@ -498,8 +505,13 @@
   },
   // Parameters pertaining to NotifyMsgDispatcher module
   "notification": {
-    "notifyRootPath": "notify"  // Root path to be used for all notification message dispatcher based on the HTTP protocol.
+    "notifyRootPath": "notify",  // Root path to be used for all notification message dispatcher based on the HTTP protocol.
                                 //  NOTE: the Rest API root path (see restApi section above) shall be prepended to this path to form the fully qualified notification root path
+    "initVersion": "0.1",   // Initial version of the Catenis notification service
+    "availableVersions": [    // List of all currently available versions of the Catenis notification service
+      "0.1",
+      "0.2"
+    ]
   },
   // Parameters pertaining to WebSocketNotifyMsgDispatcher module
   "webSocketNotifyMsgDispatcher": {
@@ -508,6 +520,11 @@
     "notifyWsSubprotocol": "notify.catenis.io",  // Name of WebSocket subprotocol to be used for dispatching notification messages
                                                  //  NOTE: it's a proprietatry protocol that just sends the notification messages straight to the connected client as long as there is an open connection for the given notification event.
                                                  //    Thus the client needs to open one WebSocket connection for each notification event for which it wishes to receive notifications. There shall be an enpoint URI for each notification event
+    "minNotifyServiceVer": "0.1",  // Minimum version of Catenis notification service that is supportted by the WebSocket notification dispatcher
+    "initVersion": "0.1",   // The initial version of the WebSockert notification message dispatcher
+    "availableVersions": [    // List of all currently available versions of the WebSocket notification message dispatcher
+      "0.1"
+    ],
     "heartbeatInterval": 30000,  // Time interval, in miliseconds, for sending heartbeat ping package to client
     "authMsgTimeout": 5000   // Timeout, in miliseconds, for waiting on first message from client used to authenticate itself with the system
   },

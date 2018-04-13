@@ -2,7 +2,7 @@
  * Created by claudio on 17/08/17.
  */
 
-//console.log('[NotityMsgDispatcher.js]: This code just ran.');
+//console.log('[NotifyMsgDispatcher.js]: This code just ran.');
 
 // Module variables
 //
@@ -37,6 +37,23 @@ const cfgSettings = {
 // Generic class to be used as the base for the implementation of specialized notification message dispatchers
 export class NotifyMsgDispatcher {
     constructor () {
+    }
+
+    // Method used to conditionally handle an HTTP upgrade request and establish a connection for the
+    //  communication protocol (over HTTP) used by the notification message dispatcher
+    //
+    //  Arguments:
+    //   request [Object] - The request object of the original request
+    //   socket [Object] - The socket object of the original request
+    //   head [Object] - The head object of the original request
+    //
+    //  Return:
+    //   result [Boolean] - Indicates whether dispatcher shall handle the request
+    //
+    //  NOTE: this method should be implemented in the derived class
+    // noinspection JSMethodCanBeStatic, JSUnusedLocalSymbols
+    handleProtocolConnection(request, socket, head) {
+        Catenis.logger.WARN('NotifyMsgDispatcher.handleProtocolConnection - Method not implemented.');
     }
 
     // Method used to dispatch message notifying of a given event to device

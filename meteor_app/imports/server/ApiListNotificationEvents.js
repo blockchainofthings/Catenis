@@ -24,8 +24,10 @@ import { Catenis } from './Catenis';
 import { Notification } from './Notification';
 import {
     successResponse,
-    errorResponse
+    errorResponse,
+    getUrlApiVersion
 } from './RestApi';
+import { ApiVersion } from './ApiVersion';
 
 // Config entries
 /*const config_entryConfig = config.get('config_entry');
@@ -53,11 +55,14 @@ export function listNotificationEvents() {
             return errorResponse.call(this, 503, 'System currently not available; please try again at a later time');
         }
 
+        // Get API version from endpoint URL
+        const apiVer = new ApiVersion(getUrlApiVersion(this.request.url));
+
         // Execute method to list notification events
         let listResult;
 
         try {
-            listResult = Notification.listEvents();
+            listResult = Notification.listEvents(apiVer);
         }
         catch (err) {
             Catenis.logger.ERROR('Error processing GET \'notification/events\' API request.', err);

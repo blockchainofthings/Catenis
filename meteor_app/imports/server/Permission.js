@@ -24,6 +24,7 @@ import { Catenis } from './Catenis';
 import { CatenisNode } from './CatenisNode';
 import { Client } from './Client';
 import { Device } from './Device';
+import { ApiVersion } from './ApiVersion';
 
 // Config entries
 /*const config_entryConfig = config.get('config_entry');
@@ -428,18 +429,23 @@ Permission.initialize = function () {
 
 // Return an object the properties of which are the event names and their values the corresponding
 //  event description
-Permission.listEvents = function () {
+Permission.listEvents = function (apiVer) {
+    apiVer = ApiVersion.checkVersion(apiVer, false);
     const events = {};
 
     Object.keys(Permission.event).forEach((key) => {
-        events[Permission.event[key].name] = Permission.event[key].description
+        if (!apiVer || apiVer.gte(Permission.event[key].minApiVer)) {
+            events[Permission.event[key].name] = Permission.event[key].description;
+        }
     });
 
     return events;
 };
 
-Permission.isValidEventName = function (eventName) {
-    return Object.values(Permission.event).some((event) => event.name === eventName);
+Permission.isValidEventName = function (eventName, apiVer) {
+    apiVer = ApiVersion.checkVersion(apiVer, false);
+
+    return Object.values(Permission.event).some((event) => (!apiVer || apiVer.gte(event.minApiVer)) && event.name === eventName);
 };
 
 Permission.isValidRight = function (testRight) {
@@ -521,51 +527,63 @@ Permission.fixRightsReplaceOwnHierarchyEntity = function (rights, entity) {
 Permission.event = Object.freeze({
     receive_notify_new_msg: Object.freeze({
         name: 'receive-notify-new-msg',
-        description: 'Receive notification of new message from a device'
+        description: 'Receive notification of new message from a device',
+        minApiVer: '0.4'
     }),
     receive_notify_msg_read: Object.freeze({
         name: 'receive-notify-msg-read',
-        description: 'Receive notification of message read by a device'
+        description: 'Receive notification of message read by a device',
+        minApiVer: '0.4'
     }),
     receive_notify_income_asset_of: Object.freeze({
         name: 'receive-notify-asset-of',
-        description: 'Receive notification of income asset issued by a device'
+        description: 'Receive notification of income asset issued by a device',
+        minApiVer: '0.6'
     }),
     receive_notify_income_asset_from: Object.freeze({
         name: 'receive-notify-asset-from',
-        description: 'Receive notification of income asset from a device'
+        description: 'Receive notification of income asset from a device',
+        minApiVer: '0.6'
     }),
     receive_notify_confirm_asset_of: Object.freeze({
         name: 'receive-notify-confirm-asset-of',
-        description: 'Receive notification of confirmation of pending asset issued by a device'
+        description: 'Receive notification of confirmation of pending asset issued by a device',
+        minApiVer: '0.6'
     }),
     receive_notify_confirm_asset_from: Object.freeze({
         name: 'receive-notify-confirm-asset-from',
-        description: 'Receive notification of confirmation of pending asset transferred by a device'
+        description: 'Receive notification of confirmation of pending asset transferred by a device',
+        minApiVer: '0.6'
     }),
     send_read_msg_confirm: Object.freeze({
         name: 'send-read-msg-confirm',
-        description: 'Send read message confirmation to a device'
+        description: 'Send read message confirmation to a device',
+        minApiVer: '0.4'
     }),
     receive_msg: Object.freeze({
         name: 'receive-msg',
-        description: 'Receive message from a device'
+        description: 'Receive message from a device',
+        minApiVer: '0.4'
     }),
     disclose_main_props: Object.freeze({
         name: 'disclose-main-props',
-        description: 'Disclose device\'s main properties (name, product unique ID) to a device'
+        description: 'Disclose device\'s main properties (name, product unique ID) to a device',
+        minApiVer: '0.4'
     }),
     disclose_identity_info: Object.freeze({
         name: 'disclose-identity-info',
-        description: 'Disclose device\'s basic identification information to a device'
+        description: 'Disclose device\'s basic identification information to a device',
+        minApiVer: '0.4'
     }),
     receive_asset_of: Object.freeze({
         name: 'receive-asset-of',
-        description: 'Receive an amount of an asset issued by a device'
+        description: 'Receive an amount of an asset issued by a device',
+        minApiVer: '0.6'
     }),
     receive_asset_from: Object.freeze({
         name: 'receive-asset-from',
-        description: 'Receive an amount of an asset from a device'
+        description: 'Receive an amount of an asset from a device',
+        minApiVer: '0.6'
     })
 });
 

@@ -238,6 +238,11 @@ Util.cloneObj = function (obj) {
     return cloneObj;
 };
 
+// Method used to escape special characters in an string that is to be used as a regular expression pattern
+Util.escapeRegExp = function (str) {
+    return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // $& means the whole matched string
+};
+
 
 // Util function class (public) properties
 //

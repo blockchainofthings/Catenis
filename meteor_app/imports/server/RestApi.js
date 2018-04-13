@@ -56,7 +56,8 @@ const restApiConfig = config.get('restApi');
 
 // Configuration settings
 const cfgSettings = {
-    rootPath: restApiConfig.get('rootPath')
+    rootPath: restApiConfig.get('rootPath'),
+    availableVersions: restApiConfig.get('availableVersions')
 };
 
 export const restApiRootPath = cfgSettings.rootPath;
@@ -303,14 +304,10 @@ export function RestApi(apiVersion) {
 
 RestApi.initialize = function () {
     Catenis.logger.TRACE('RestApi initialization');
-    // Instantiate RestApi object
-    Catenis.restApi = {
-        'ver0.2': new RestApi('0.2'),
-        'ver0.3': new RestApi('0.3'),
-        'ver0.4': new RestApi('0.4'),
-        'ver0.5': new RestApi('0.5'),
-        'ver0.6': new RestApi('0.6')
-    };
+    // Instantiate RestApi objects for all available API versions
+    Catenis.restApi = {};
+
+    cfgSettings.availableVersions.forEach(ver => Catenis.restApi['ver' + ver] = new RestApi(ver));
 };
 
 
@@ -483,6 +480,14 @@ export function errorResponse(statusCode, errMessage) {
     return resp;
 }
 
+export function getUrlApiVersion(url) {
+    const regExp = new RegExp(util.format("^/%s/([^/]+)/.*$", cfgSettings.rootPath));
+    let match;
+
+    if ((match = url.match(regExp))) {
+        return match[1];
+    }
+}
 
 // Module code
 //

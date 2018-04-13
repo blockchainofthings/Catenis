@@ -25,8 +25,10 @@ import { Device } from './Device';
 import { Permission } from './Permission';
 import {
     successResponse,
-    errorResponse
+    errorResponse,
+    getUrlApiVersion
 } from './RestApi';
+import { ApiVersion } from './ApiVersion';
 
 // Config entries
 /*const config_entryConfig = config.get('config_entry');
@@ -87,12 +89,15 @@ import {
 //  }
 export function setPermissionRights() {
     try {
+        // Get API version from endpoint URL
+        const apiVer = new ApiVersion(getUrlApiVersion(this.request.url));
+
         // Process request parameters
 
         // From URL
         //
         // eventName param
-        if (!(typeof this.urlParams.eventName === 'string' && Permission.isValidEventName(this.urlParams.eventName))) {
+        if (!(typeof this.urlParams.eventName === 'string' && Permission.isValidEventName(this.urlParams.eventName, apiVer))) {
             Catenis.logger.DEBUG('Invalid \'eventName\' parameter for POST \'permission/events/:eventName/rights\' API request', this.urlParams);
             return errorResponse.call(this, 400, 'Invalid parameters');
         }

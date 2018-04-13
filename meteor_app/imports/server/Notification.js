@@ -18,18 +18,25 @@ const util = require('util');
 import config from 'config';
 // Meteor packages
 //import { Meteor } from 'meteor/meteor';
+// noinspection NpmUsedModulesInstalled
+import { WebApp } from 'meteor/webapp';
 
 // References code in other (Catenis) modules
 import { Catenis } from './Catenis';
 import { restApiRootPath } from './RestApi';
+import { ApiVersion } from './ApiVersion';
 
 // Config entries
 const notificationConfig = config.get('notification');
 
 // Configuration settings
 const cfgSettings = {
-    notifyRootPath: notificationConfig.get('notifyRootPath')
+    notifyRootPath: notificationConfig.get('notifyRootPath'),
+    initVersion: notificationConfig.get('initVersion'),
+    availableVersions: notificationConfig.get('availableVersions')
 };
+
+export const initNotifyServiceVer = cfgSettings.initVersion;
 
 
 // Definition of function classes
@@ -37,15 +44,28 @@ const cfgSettings = {
 
 // Notification function class
 export function Notification(notifyMsgDispatcherInfos) {
-    // Instantiate all dispatchers
+    // Try to instantiate all dispatchers for all currently available version of notification service
     this.notifyMsgDispatchers = [];
 
-    notifyMsgDispatcherInfos.forEach((info) => {
-        this.notifyMsgDispatchers.push({
-            name: info.name,
-            instance: info.factory()
+    cfgSettings.availableVersions.forEach((notifyServiceVer) => {
+        notifyMsgDispatcherInfos.forEach((info) => {
+            const dispatcherInstance = info.factory(notifyServiceVer);
+
+            // Make sure that dispatcher supports this version of the notification service
+            if (dispatcherInstance) {
+                this.notifyMsgDispatchers.push({
+                    name: info.name,
+                    dispatcherVer: info.version,
+                    notifyServiceVer: notifyServiceVer,
+                    instance: dispatcherInstance
+                });
+            }
         });
     });
+
+    // Set up handler to process HTTP upgrade requests (used to establish connection for the proper protocol
+    //  over HTTP used by the notification message dispatchers)
+    WebApp.httpServer.on('upgrade', handleUpgradeRequest.bind(this));
 }
 
 
@@ -54,7 +74,7 @@ export function Notification(notifyMsgDispatcherInfos) {
 
 Notification.prototype.dispatchNotifyMessage = function (deviceId, eventName, data) {
     try {
-        // Try to dispatch message throw one of the available dispatchers until one succeeds
+        // Try to dispatch message though one of the available dispatchers until one succeeds
         //  (or none succeeds)
         this.notifyMsgDispatchers.some((dispatcher) => {
             return dispatcher.instance.dispatchNotifyMessage(deviceId, eventName, data);
@@ -73,8 +93,21 @@ Notification.prototype.dispatchNotifyMessage = function (deviceId, eventName, da
 //      or .bind().
 //
 
-/*function priv_func() {
-}*/
+function handleUpgradeRequest(request, socket, head) {
+    try {
+        // Pass protocol connection request to available dispatchers until one handles it (or not)
+        if (!this.notifyMsgDispatchers.some((dispatcher) => {
+            return dispatcher.instance.handleProtocolConnection(request, socket, head);
+        })) {
+            // No dispatcher handled the request. Just abort the request
+            socket.destroy();
+        }
+    }
+    catch (err) {
+        // Error handling HTTP upgrade request. Log error
+        Catenis.logger.ERROR('Error handling HTTP upgrade request', err);
+    }
+}
 
 
 // Notification function class (public) methods
@@ -98,18 +131,23 @@ Notification.registerNotifyMsgDispatcher = function (info) {
 
 // Return an object the properties of which are the event names and their values the corresponding
 //  event description
-Notification.listEvents = function () {
+Notification.listEvents = function (apiVer) {
+    apiVer = ApiVersion.checkVersion(apiVer, false);
     const events = {};
 
     Object.keys(Notification.event).forEach((key) => {
-        events[Notification.event[key].name] = Notification.event[key].description
+        if (!apiVer || apiVer.gte(Notification.event[key].minApiVer)) {
+            events[Notification.event[key].name] = Notification.event[key].description;
+        }
     });
 
     return events;
 };
 
-Notification.isValidEventName = function (eventName) {
-    return Object.values(Notification.event).some((event) => event.name === eventName);
+Notification.isValidEventName = function (eventName, notifyServiceVer) {
+    notifyServiceVer = ApiVersion.checkVersion(notifyServiceVer, false);
+
+    return Object.values(Notification.event).some((event) => (!notifyServiceVer || notifyServiceVer.gte(event.minNotifyServiceVer)) && event.name === eventName);
 };
 
 
@@ -121,19 +159,27 @@ Notification.registeredNotifyMsgDispatcherInfos = [];
 Notification.event = Object.freeze({
     new_msg_received: Object.freeze({
         name: 'new-msg-received',
-        description: 'A new message has been received'
+        description: 'A new message has been received',
+        minNotifyServiceVer: '0.1',
+        minApiVer: '0.4'
     }),
     sent_msg_read: Object.freeze({
         name: 'sent-msg-read',
-        description: 'Previously sent message has been read by intended receiver (target device)'
+        description: 'Previously sent message has been read by intended receiver (target device)',
+        minNotifyServiceVer: '0.1',
+        minApiVer: '0.4'
     }),
     income_asset: Object.freeze({
         name: 'income-asset',
-        description: 'An amount of an asset has been received'
+        description: 'An amount of an asset has been received',
+        minNotifyServiceVer: '0.2',
+        minApiVer: '0.6'
     }),
     confirmed_asset: Object.freeze({
         name: 'confirmed-asset',
-        description: 'An amount of an asset that was pending due to an asset transfer has been confirmed'
+        description: 'An amount of an asset that was pending due to an asset transfer has been confirmed',
+        minNotifyServiceVer: '0.2',
+        minApiVer: '0.6'
     })
 });
 

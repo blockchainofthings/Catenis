@@ -2,7 +2,6 @@
  * Created by claudio on 17/08/17.
  */
 
-
 //console.log('[WebSocketNotifyMsgDispatcher.js]: This code just ran.');
 
 // Module variables
@@ -21,18 +20,21 @@ import config from 'config';
 import WebSocket from 'ws';
 // Meteor packages
 import { Meteor } from 'meteor/meteor';
-// noinspection NpmUsedModulesInstalled
-import { WebApp } from 'meteor/webapp';
 
 // References code in other (Catenis) modules
 import { Catenis } from './Catenis';
-import { Notification } from './Notification';
+import {
+    Notification,
+    initNotifyServiceVer
+} from './Notification';
 import { NotifyMsgDispatcher } from './NotifyMsgDispatcher';
 import {
     Authentication,
     authHeader
 } from './Authentication';
 import { Device } from './Device';
+import { ApiVersion } from './ApiVersion';
+import { Util } from './Util';
 
 // Config entries
 const wsNotifyMsgDispatcherConfig = config.get('webSocketNotifyMsgDispatcher');
@@ -41,12 +43,12 @@ const wsNotifyMsgDispatcherConfig = config.get('webSocketNotifyMsgDispatcher');
 const cfgSettings = {
     wsNotifyRootPath: wsNotifyMsgDispatcherConfig.get('wsNotifyRootPath'),
     notifyWsSubprotocol: wsNotifyMsgDispatcherConfig.get('notifyWsSubprotocol'),
+    minNotifyServiceVer: wsNotifyMsgDispatcherConfig.get('minNotifyServiceVer'),
+    initVersion: wsNotifyMsgDispatcherConfig.get('initVersion'),
+    availableVersions: wsNotifyMsgDispatcherConfig.get('availableVersions'),
     heartbeatInterval: wsNotifyMsgDispatcherConfig.get('heartbeatInterval'),
     authMsgTimeout: wsNotifyMsgDispatcherConfig.get('authMsgTimeout')
 };
-
-const wsNtfyBaseUriPath = util.format('%s%s%s', Notification.qualifiedNotifyRooPath, cfgSettings.wsNotifyRootPath.length > 0 ? '/' : '', cfgSettings.wsNotifyRootPath);
-const wsNtfyEndpointUriPathRegexPattern = util.format('^%s/([^/]+)$', wsNtfyBaseUriPath);
 
 
 // Definition of classes
@@ -54,8 +56,24 @@ const wsNtfyEndpointUriPathRegexPattern = util.format('^%s/([^/]+)$', wsNtfyBase
 
 // WebSocketNotifyMsgDispatcher class
 export class WebSocketNotifyMsgDispatcher extends NotifyMsgDispatcher {
-    constructor () {
+    constructor (notifyServiceVer, dispatcherVer) {
         super();
+
+        this.notifyServiceVer = ApiVersion.checkVersion(notifyServiceVer);
+        this.dispatcherVer = ApiVersion.checkVersion(dispatcherVer);
+
+        // Assemble regular expression used to identify endpoint URI path handled by WebSocket notification
+        //  message dispatcher -
+        //  <qualifiedNotifyRooPath>[/<notifyServiceVer>][/wsNotifyRootPath][/<dispatcherVer>]/<notifyEventName>
+        this.endpointUriPathRegExp = new RegExp(util.format('^%s(?:/%s)%s%s%s(?:/%s)%s/([^/]+)$',
+            Notification.qualifiedNotifyRooPath,
+            Util.escapeRegExp(this.notifyServiceVer.toString()),
+            this.notifyServiceVer.eq(initNotifyServiceVer) ? '?' : '',
+            cfgSettings.wsNotifyRootPath.length > 0 ? '/' : '',
+            cfgSettings.wsNotifyRootPath,
+            Util.escapeRegExp(this.dispatcherVer.toString()),
+            this.dispatcherVer.eq(cfgSettings.initVersion) ? '?' : ''
+        ));
 
         this.serverOn = false;
         this.heartbeatInterval = undefined;
@@ -63,6 +81,31 @@ export class WebSocketNotifyMsgDispatcher extends NotifyMsgDispatcher {
         this.pendingAuthClientConnInfo = new Map();
 
         this.startServer();
+    }
+
+    // Method used to conditionally handle an HTTP upgrade request and establish a connection for the
+    //  communication protocol (over HTTP) used by the notification message dispatcher
+    //
+    //  Arguments:
+    //   request [Object] - The request object of the original request
+    //   socket [Object] - The socket object of the original request
+    //   head [Object] - The head object of the original request
+    //
+    //  Return:
+    //   result [Boolean] - Indicates whether dispatcher shall handle the request
+    //
+    // noinspection JSMethodCanBeStatic, JSUnusedLocalSymbols
+    handleProtocolConnection(request, socket, head) {
+        if (isValidEndpointUriPath.call(this, url.parse(request.url).pathname)) {
+            // Valid endpoint. Try to establish WebSocket protocol connection
+            this.wss.handleUpgrade(request, socket, head, (ws) => {
+                this.wss.emit('connection', ws, request);
+            });
+
+            return true;
+        }
+
+        return false;
     }
 
     // Method used to dispatch message notifying of a given event to device
@@ -119,8 +162,8 @@ export class WebSocketNotifyMsgDispatcher extends NotifyMsgDispatcher {
     startServer() {
         Catenis.logger.TRACE('WebSocket notification message dispatcher - Starting server');
         this.wss = new WebSocket.Server({
-            server: WebApp.httpServer,
-            verifyClient: validateConnection,
+            noServer: true,
+            verifyClient: validateConnection.bind(this),
             handleProtocols: validateProtocol,
             clientTracking: true
         });
@@ -147,8 +190,8 @@ export class WebSocketNotifyMsgDispatcher extends NotifyMsgDispatcher {
 
     static initialize() {
         Catenis.logger.TRACE('WebSocketNotifyMsgDispatcher initialization');
-        // Register dispatcher
-        autoRegistration();
+        // Register all available versions of the dispatcher
+        cfgSettings.availableVersions.forEach(dispatcherVer => autoRegistration(dispatcherVer));
     }
 }
 
@@ -158,6 +201,23 @@ export class WebSocketNotifyMsgDispatcher extends NotifyMsgDispatcher {
 //      they are called, by means of one of the predefined function methods .call(), .apply()
 //      or .bind().
 //
+
+function isValidEndpointUriPath(path) {
+    return this.endpointUriPathRegExp.test(path);
+}
+
+// Parse endpoint URI path to retrieve and validated notification event from it
+//
+//  Arguments:
+//   path [String] - Full path of endpoint URI
+//
+//  Result:
+//   eventName [String] - Name of notification event name embedded in path
+function parseEndpointUriPath(path) {
+    const matchResult = path.match(this.endpointUriPathRegExp);
+
+    return matchResult !== null && Notification.isValidEventName(matchResult[1], this.notifyServiceVer) ? matchResult[1] : undefined;
+}
 
 function connectionHandler(ws, req) {
     Catenis.logger.TRACE('WebSocket notification message dispatcher - Client connection has been established');
@@ -423,12 +483,17 @@ function clientPongHandler() {
     this.isAlive = true;
 }
 
-function autoRegistration() {
+function autoRegistration(dispatcherVer) {
     Notification.registerNotifyMsgDispatcher({
         name: 'WebSocket',
         description: 'Dispatcher that uses the WebSocket protocol, with a proprietary \'notification.catenis.io\' subprotocol, to send notification messages',
-        factory: function () {
-            return new WebSocketNotifyMsgDispatcher();
+        version: dispatcherVer,
+        factory: function (notifyServiceVer) {
+            notifyServiceVer = ApiVersion.checkVersion(notifyServiceVer);
+
+            if (notifyServiceVer.gte(cfgSettings.minNotifyServiceVer)) {
+                return new WebSocketNotifyMsgDispatcher(notifyServiceVer, dispatcherVer);
+            }
         }
     })
 }
@@ -446,8 +511,8 @@ function autoRegistration() {
 //                       -   code [Number] - When result is false this field determines the HTTP error status code to be sent to the client
 //                       -   name [String] - When result is false this field determines the HTTP reason phrase
 function validateConnection(info, callBack) {
-    // Validate the endpoint URI to where connection is being requested
-    const eventName = parseEndpointUriPath(url.parse(info.req.url).pathname);
+    // Extract notification event name from endpoint URI and validate it
+    const eventName = parseEndpointUriPath.call(this, url.parse(info.req.url).pathname);
 
     if (eventName !== undefined) {
         // Save notification event to request object
@@ -475,19 +540,6 @@ function validateConnection(info, callBack) {
 // noinspection JSUnusedLocalSymbols
 function validateProtocol(protocols, request) {
     return protocols.some((protocol) => protocol === cfgSettings.notifyWsSubprotocol) ? cfgSettings.notifyWsSubprotocol : false;
-}
-
-// Parse endpoint URI path to validate it and retrieve notification event from it
-//
-//  Arguments:
-//   path [String] - Full path of endpoint URI
-//
-//  Result:
-//   eventName [String] - Name of notification event name embedded in path
-function parseEndpointUriPath(path) {
-    const matchResult = path.match(new RegExp(wsNtfyEndpointUriPathRegexPattern));
-
-    return matchResult !== null && Notification.isValidEventName(matchResult[1]) ? matchResult[1] : undefined;
 }
 
 // Authenticate Catenis device that is trying to establish WebSocket connection
