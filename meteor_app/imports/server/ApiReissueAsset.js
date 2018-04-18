@@ -42,7 +42,7 @@ import {
 // Method used to process POST 'assets/:assetId/issue' endpoint of Rest API
 //
 //  URL parameters:
-//    assetId [String] - ID of asset to issue more amount of it
+//    assetId [String] - ID of asset to issue more units of it
 //
 //  JSON payload: {
 //    "amount": [Number],      - Amount of asset to be issued (expressed as a fractional amount)
@@ -54,7 +54,7 @@ import {
 //  }
 //
 //  Success data returned: {
-//    "totalExistentBalance": [Number] - Total balance of the asset that there is after specified amount has been reissued (expressed as a fractional number)
+//    "totalExistentBalance": [Number] - Total balance of the asset in existence after specified amount has been reissued (expressed as a fractional number)
 //  }
 export function reissueAsset() {
     try {
@@ -130,7 +130,7 @@ export function reissueAsset() {
             return errorResponse.call(this, 503, 'System currently not available; please try again at a later time');
         }
 
-        // Execute method to issue more amount of an existing asset
+        // Execute method to issue an additional amount of an existing asset
         let totalExistentBalance;
 
         try {

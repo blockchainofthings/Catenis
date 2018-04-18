@@ -1110,7 +1110,7 @@ Device.prototype.retrieveDeviceIdentityInfo = function (device) {
 //  Return value: - If issuing a new asset
 //    assetId: [String]  - ID of issued asset
 //  or: - If reissuing an existing asset
-//    totalExistentBalance: [Number]  - Total balance of the asset that there is after specified amount has been reissued
+//    totalExistentBalance: [Number]  - Total balance of the asset in existence after specified amount has been reissued
 Device.prototype.issueAsset = function (amount, assetInfo, holdingDeviceId) {
     // Make sure that device is not deleted
     if (this.status === Device.status.deleted.name) {
@@ -1876,14 +1876,14 @@ Device.prototype.getAssetBalance = function (assetId) {
 //     assetId: [String],     - The ID of the asset
 //     name: [String],        - The name of the asset
 //     description: [String], - The description of the asset
-//     canReissue: [Boolean], - Indicates whether more amount of this asset can be reissued
+//     canReissue: [Boolean], - Indicates whether more units of this asset can be reissued
 //     decimalPlaces: [Number],  - The maximum number of decimal places that can be used to represent a fractional amount of this asset
 //     issuer: {
 //       deviceId: [String],  - The ID of the device that issued this asset
 //       name: [String],      - (optional) The name of the device
 //       prodUniqueId: [String] - (optional) The product unique ID of the device
 //     },
-//     totalExistentBalance: [Number] - The current total balance of the asset that there is, expressed as a fractional amount
+//     totalExistentBalance: [Number] - The current total balance of the asset in existence, expressed as a fractional amount
 //   }
 Device.prototype.retrieveAssetInfo = function (assetId) {
     // Make sure that device is not deleted
@@ -2053,7 +2053,7 @@ Device.prototype.listOwnedAssets = function (limit, skip) {
 //   result: {
 //     issuedAssets: [{ - A list of issued asset objects
 //       assetId: [String] - The ID of the asset
-//       totalExistentBalance: [Number] - The current total balance of that asset that there is, expressed as a fractional amount
+//       totalExistentBalance: [Number] - The current total balance of that asset in existence, expressed as a fractional amount
 //     }],
 //     hasMore: [Boolean] - Indicates whether there are more entries that have not been included in the return list
 //   }

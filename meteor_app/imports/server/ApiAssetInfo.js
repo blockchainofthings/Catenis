@@ -47,14 +47,14 @@ import {
 //    "assetId": [String],        - The ID of the asset
 //    "name": [String],           - The name of the asset
 //    "description": [String],    - The description of the asset
-//    "canReissue": [Boolean],    - Indicates whether more amount of this asset can be reissued
+//    "canReissue": [Boolean],    - Indicates whether more units of this asset can be reissued
 //    "decimalPlaces": [Number],  - The maximum number of decimal places that can be used to represent a fractional amount of this asset
 //    "issuer": {
 //      "deviceId": [String],  - The ID of the device that issued this asset
 //      "name": [String],      - (only returned if defined and device that issued the request has permission to access this device's main props) The name of the device
 //      "prodUniqueId": [String] - (only returned if defined and device that issued the request has permission to access this device's main props) The product unique ID of the device
 //    },
-//    "totalExistentBalance": [Number] - The current total balance of the asset that there is (expressed as a fractional amount)
+//    "totalExistentBalance": [Number] - The current total balance of the asset in existence (expressed as a fractional amount)
 //  }
 export function retrieveAssetInfo() {
     try {

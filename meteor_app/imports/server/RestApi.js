@@ -208,7 +208,7 @@ export function RestApi(apiVersion) {
         });
 
         this.api.addRoute('assets/:assetId/issue', {authRequired: true}, {
-            // Issue more amount of an existing asset
+            // Issue an additional amount of an existing asset
             //
             //  Refer to the source file where the action function is defined for a detailed description of the endpoint
             post: {
