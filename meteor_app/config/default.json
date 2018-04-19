@@ -613,7 +613,8 @@
     "usageReportHeaders": [  // List of names to be used as headers for the colomns of the usage report
       "address",
       "amount",
-      "date"
+      "txid",
+      "confirmation_date"
     ]
   },
   // Parameters pertaining to StoreBcotTransaction module

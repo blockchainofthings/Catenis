@@ -116,14 +116,16 @@ BcotPayment.generateBcotPaymentReport = function (startDate, endDate, addHeaders
     }
 
     const reportLines = Catenis.db.collection.ReceivedTransaction.find(filter, {
+        txid: 1,
         'confirmation.confirmationDate': 1,
         info: 1
     }).map((doc) => {
         const bcotPayAddrInfo = Catenis.keyStore.getAddressInfoByPath(doc.info.bcotPayment.bcotPayAddressPath, true, false);
 
-        return util.format('"%s","%s","%s"\n',
+        return util.format('"%s","%s","%s","%s"\n',
             BcotPayment.decryptSentFromAddress(doc.info.bcotPayment.encSentFromAddress, bcotPayAddrInfo),
             doc.info.bcotPayment.paidAmount,
+            doc.txid,
             doc.confirmation.confirmationDate.toISOString());
     });
 
