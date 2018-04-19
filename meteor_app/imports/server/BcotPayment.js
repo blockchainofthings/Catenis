@@ -81,22 +81,23 @@ BcotPayment.decryptSentFromAddress = function (encSentFromAddress, bcotPayAddrIn
     return bcotPayAddrInfo.cryptoKeys.decryptData(bcotPayAddrInfo.cryptoKeys, Buffer.from(encSentFromAddress, 'base64')).toString();
 };
 
-// Returns a CSV-formatted text document containing a list of BCOT payments within a given time frame
+// Returns a CSV-formatted text document containing a list of BCOT payments confirmed within a given time frame
 //
 //  Arguments:
-//   startDate: [Object(Date)] - Only BCOT payment transactions received on or after this date and time should be included
-//   endDate: [Object(Date)] - Only BCOT payment transaction receive BEFORE this date should be included
+//   startDate: [Object(Date)] - Only BCOT payment transactions confirmed on or after this date and time should be included
+//   endDate: [Object(Date)] - Only BCOT payment transaction confirmed BEFORE this date should be included
 //   addHeaders: [Boolean] - Indicates whether generated report should include a line with column headers as its first line
 BcotPayment.generateBcotPaymentReport = function (startDate, endDate, addHeaders = false) {
     const filter = {
-        type: 'bcot_payment'
+        type: 'bcot_payment',
+        'confirmation.confirmed': true
     };
 
     const andOperands = [];
 
     if (startDate) {
         andOperands.push({
-            receivedDate: {
+            'confirmation.confirmationDate': {
                 $gte: startDate
             }
         });
@@ -104,7 +105,7 @@ BcotPayment.generateBcotPaymentReport = function (startDate, endDate, addHeaders
 
     if (endDate) {
         andOperands.push({
-            receivedDate: {
+            'confirmation.confirmationDate': {
                 $lt: endDate
             }
         });
@@ -115,7 +116,7 @@ BcotPayment.generateBcotPaymentReport = function (startDate, endDate, addHeaders
     }
 
     const reportLines = Catenis.db.collection.ReceivedTransaction.find(filter, {
-        receivedDate: 1,
+        'confirmation.confirmationDate': 1,
         info: 1
     }).map((doc) => {
         const bcotPayAddrInfo = Catenis.keyStore.getAddressInfoByPath(doc.info.bcotPayment.bcotPayAddressPath, true, false);
@@ -123,7 +124,7 @@ BcotPayment.generateBcotPaymentReport = function (startDate, endDate, addHeaders
         return util.format('"%s","%s","%s"\n',
             BcotPayment.decryptSentFromAddress(doc.info.bcotPayment.encSentFromAddress, bcotPayAddrInfo),
             doc.info.bcotPayment.paidAmount,
-            doc.receivedDate.toISOString());
+            doc.confirmation.confirmationDate.toISOString());
     });
 
     if (addHeaders && reportLines.length > 0) {
