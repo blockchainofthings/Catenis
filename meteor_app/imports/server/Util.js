@@ -38,8 +38,10 @@ export function Util() {
 // Util function class (public) methods
 //
 
-Util.formatCoins = function (amountInSatoshis) {
-    return new BigNumber(amountInSatoshis).dividedBy(100000000).toFormat(8);
+Util.formatCoins = function (amountInSatoshis, thousandsSeparator = true) {
+    const coins = new BigNumber(amountInSatoshis).dividedBy(100000000);
+
+    return thousandsSeparator ? coins.toFormat(8) : coins.toFixed(8);
 };
 
 // Arguments:

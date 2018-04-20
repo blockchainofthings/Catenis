@@ -27,6 +27,7 @@ import { BcotPaymentTransaction } from './BcotPaymentTransaction';
 import { CreditServiceAccTransaction } from './CreditServiceAccTransaction';
 import { StoreBcotTransaction } from './StoreBcotTransaction';
 import { Client } from './Client';
+import { Util } from './Util';
 
 // Config entries
 const bcotPayConfig = config.get('bcotPayment');
@@ -124,7 +125,7 @@ BcotPayment.generateBcotPaymentReport = function (startDate, endDate, addHeaders
 
         return util.format('"%s","%s","%s","%s"\n',
             BcotPayment.decryptSentFromAddress(doc.info.bcotPayment.encSentFromAddress, bcotPayAddrInfo),
-            doc.info.bcotPayment.paidAmount,
+            Util.formatCoins(doc.info.bcotPayment.paidAmount, false),
             doc.txid,
             doc.confirmation.confirmationDate.toISOString());
     });
