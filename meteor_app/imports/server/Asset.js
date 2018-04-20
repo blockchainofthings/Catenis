@@ -76,7 +76,7 @@ export function Asset(docAsset) {
 // Public Asset object methods
 //
 
-// Converts asset amount expressed as a fractional number into an integer number of the asset's smallest division
+// Converts asset amount expressed as a decimal number into an integer number of the asset's smallest division
 //  (according to the asset divisibility)
 //
 //  Arguments:
@@ -90,7 +90,7 @@ Asset.prototype.amountToSmallestDivisionAmount = function (amount, returnBigNumb
 };
 
 // Converts asset amount expressed an integer number of the asset's smallest division (according to
-//  the asset divisibility) into a fractional number
+//  the asset divisibility) into a decimal number
 //
 //  Arguments:
 //    amount: [Object(BigNumber)|Number] - Asset amount represented as an integer number of the asset's smallest division (according to the asset divisibility)
@@ -258,7 +258,7 @@ Asset.getAssetByIssuanceAddressPath = function (addrPath) {
     return new Asset(docAsset);
 };
 
-// Converts asset amount expressed as a fractional number into an integer amount expressed in the asset's
+// Converts asset amount expressed as a decimal number into an integer amount expressed in the asset's
 //  smallest division (according to the asset divisibility
 //
 //  Arguments:
@@ -275,7 +275,7 @@ Asset.amountToSmallestDivisionAmount = function (amount, precision, returnBigNum
 };
 
 // Converts asset amount expressed an integer number of the asset's smallest division (according to
-//  the asset divisibility) into a fractional number
+//  the asset divisibility) into a decimal number
 //
 //  Arguments:
 //    amount: [Object(BigNumber)|Number] - Asset amount represented as an integer number of the asset's smallest division (according to the asset divisibility)

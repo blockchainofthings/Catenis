@@ -44,7 +44,7 @@ import {
 //    assetId [String] - ID of asset to get balance
 //
 //  Success data returned: {
-//    "total": [Number], - The current balance of the asset held by the device that issues the request (expressed as a fractional number)
+//    "total": [Number], - The current balance of the asset held by the device that issues the request (expressed as a decimal number)
 //    "unconfirmed": [Number] - The amount from the balance that is not yet confirmed
 //  }
 export function getAssetBalance() {

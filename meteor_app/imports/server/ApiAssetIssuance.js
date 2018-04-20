@@ -54,7 +54,7 @@ import {
 //
 //  Success data returned: {
 //    "issuanceEvents": [{ - A list of issuance event objects
-//      "amount": [Number],  - The amount of the asset issued (expressed as a fractional number)
+//      "amount": [Number],  - The amount of the asset issued (expressed as a decimal number)
 //      "holdingDevice": {
 //        "deviceId": [String],    - The ID of the device to which the issued asset amount was assigned
 //        "name": [String],        - (only returned if defined and device that issued the request has permission to access this device's main props) The name of the device

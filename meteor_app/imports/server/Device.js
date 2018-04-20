@@ -1837,7 +1837,7 @@ Device.prototype.assetBalance = function (asset, convertAmount = true) {
 //
 //  Return value:
 //   assetBalance: {
-//     total: [Number], - The current balance of the asset held by this device, expressed as a fractional number
+//     total: [Number], - The current balance of the asset held by this device, expressed as a decimal number
 //     unconfirmed: [Number] - The amount from of the balance that is not yet confirmed
 //   }
 Device.prototype.getAssetBalance = function (assetId) {
@@ -1962,7 +1962,7 @@ Device.prototype.retrieveAssetInfo = function (assetId) {
 //     ownedAssets: [{ - A list of owned asset objects
 //       assetId: [String] - The ID of the asset
 //       balance: {
-//         total: [Number], - The current balance of that asset held by this device, expressed as a fractional number
+//         total: [Number], - The current balance of that asset held by this device, expressed as a decimal number
 //         unconfirmed: [Number] - The amount from of the balance that is not yet confirmed
 //       }
 //     }],
@@ -2137,7 +2137,7 @@ Device.prototype.listIssuedAssets = function (limit, skip) {
 //  Return value:
 //   issuanceHistory: {
 //     issuanceEvents: [{ - A list of issuance event objects
-//       amount: [Number],  - The amount of the asset issued, expressed as a fractional number
+//       amount: [Number],  - The amount of the asset issued, expressed as a decimal number
 //       holdingDevice: {
 //         deviceId: [String],    - The ID of the device to which the issued asset amount was assigned
 //         name: [String],        - (optional) The name of the device
@@ -2287,7 +2287,7 @@ Device.prototype.retrieveAssetIssuanceHistory = function (assetId, startDate, en
 //         prodUniqueId: [String] - (optional) The product unique ID of the device
 //       },
 //       balance: {
-//         total: [Number],      - The current balance of that asset held by this device, expressed as a fractional number
+//         total: [Number],      - The current balance of that asset held by this device, expressed as a decimal number
 //         unconfirmed: [Number] - The amount from of the balance that is not yet confirmed
 //       }
 //     }],

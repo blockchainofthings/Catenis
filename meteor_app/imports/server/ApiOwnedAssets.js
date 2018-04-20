@@ -51,7 +51,7 @@ import {
 //    "ownedAssets": [{ - A list of owned asset objects
 //      "assetId": [String] - The ID of the asset
 //      "balance": {
-//        "total": [Number], - The current balance of that asset held by the device that issues the request (expressed as a fractional number)
+//        "total": [Number], - The current balance of that asset held by the device that issues the request (expressed as a decimal number)
 //        "unconfirmed": [Number] - The amount from the balance that is not yet confirmed
 //      }
 //    }],

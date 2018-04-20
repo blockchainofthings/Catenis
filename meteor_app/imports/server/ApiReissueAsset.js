@@ -54,7 +54,7 @@ import {
 //  }
 //
 //  Success data returned: {
-//    "totalExistentBalance": [Number] - Total balance of the asset in existence after specified amount has been reissued (expressed as a fractional number)
+//    "totalExistentBalance": [Number] - Total balance of the asset in existence after specified amount has been reissued (expressed as a decimal number)
 //  }
 export function reissueAsset() {
     try {

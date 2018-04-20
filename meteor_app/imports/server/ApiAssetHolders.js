@@ -58,7 +58,7 @@ import {
 //        "prodUniqueId": [String] - (only returned if defined and device that issued the request has permission to access this device's main props) The product unique ID of the device
 //      },
 //      "balance": {
-//        "total": [Number],      - The current balance of that asset held by this device (expressed as a fractional number)
+//        "total": [Number],      - The current balance of that asset held by this device (expressed as a decimal number)
 //        "unconfirmed": [Number] - The amount from of the balance that is not yet confirmed
 //      }
 //    }],

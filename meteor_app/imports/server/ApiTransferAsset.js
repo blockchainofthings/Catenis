@@ -54,7 +54,7 @@ import {
 //  }
 //
 //  Success data returned: {
-//    "remainingBalance": [Number] - The total balance of the asset held by the device that issues the request after the transfer (expressed as a fractional number)
+//    "remainingBalance": [Number] - The total balance of the asset held by the device that issues the request after the transfer (expressed as a decimal number)
 //  }
 export function transferAsset() {
     try {
