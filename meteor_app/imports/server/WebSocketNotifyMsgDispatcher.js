@@ -170,9 +170,12 @@ export class WebSocketNotifyMsgDispatcher extends NotifyMsgDispatcher {
 
         // Hook up event handlers
         this.wss.on('error', errorHandler.bind(this));
-        this.wss.on('listening', listeningHandler.bind(this));
         this.wss.on('connection', Meteor.bindEnvironment(connectionHandler, 'WebSocket notification message dispatcher - client connection handler',this));
         this.wss.on('headers', headersHandler.bind(this));
+
+        // Indicate that server is on and start heartbeat check
+        this.serverOn = true;
+        startHeartbeatCheck.call(this);
     }
 
     shutdownServer() {
@@ -252,13 +255,6 @@ function authenticationTimeout(ws) {
     }
 }
 
-function listeningHandler() {
-    Catenis.logger.TRACE('WebSocket notification message dispatcher - Server successfully started');
-    this.serverOn = true;
-
-    startHeartbeatCheck.call(this);
-}
-
 function errorHandler(error) {
     // WebSocket server error. Log error
     Catenis.logger.ERROR('WebSocket notification message dispatcher - Server error; server will be shut down.', error);
@@ -300,6 +296,13 @@ function heartbeatPing() {
 
         ws.isAlive = false;
         ws.ping('', false, true);
+        Catenis.logger.TRACE('WebSocket notification message dispatch - Ping sent to client', {
+            ctnDispatcherVer: ws.ctnDispatcher ? {
+                notifyServiceVer: ws.ctnDispatcher.notifyServiceVer,
+                dispatcherVer: ws.ctnDispatcher.dispatcherVer
+            } : undefined,
+            ctnNotify: ws.ctnNotify
+        });
     });
 }
 
@@ -480,6 +483,13 @@ function clientMessageHandler(message) {
 
 // NOTE: method's 'this' is a WebSocket client connection object
 function clientPongHandler() {
+    Catenis.logger.TRACE('WebSocket notification message dispatch - Pong received from client', {
+        ctnDispatcher: this.ctnDispatcher ? {
+            notifyServiceVer: this.ctnDispatcher.notifyServiceVer,
+            dispatcherVer: this.ctnDispatcher.dispatcherVer
+        } : undefined,
+        ctnNotify: this.ctnNotify
+    });
     this.isAlive = true;
 }
 
