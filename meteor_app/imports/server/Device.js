@@ -1574,12 +1574,12 @@ Device.prototype.shouldBeNotifiedOfMessageReadBy = function (device) {
     return Catenis.permission.hasRight(Permission.event.receive_notify_msg_read.name, this, device);
 };
 
-Device.prototype.shouldBeNotifiedOfIncomeAssetOf = function (device) {
-    return Catenis.permission.hasRight(Permission.event.receive_notify_income_asset_of.name, this, device);
+Device.prototype.shouldBeNotifiedOfReceivedAssetOf = function (device) {
+    return Catenis.permission.hasRight(Permission.event.receive_notify_asset_of.name, this, device);
 };
 
-Device.prototype.shouldBeNotifiedOfIncomeAssetFrom = function (device) {
-    return Catenis.permission.hasRight(Permission.event.receive_notify_income_asset_from.name, this, device);
+Device.prototype.shouldBeNotifiedOfAssetReceivedFrom = function (device) {
+    return Catenis.permission.hasRight(Permission.event.receive_notify_asset_from.name, this, device);
 };
 
 Device.prototype.shouldBeNotifiedOfConfirmedAssetOf = function (device) {
@@ -1725,7 +1725,7 @@ Device.prototype.notifyMessageRead = function (message, targetDevice) {
     Catenis.notification.dispatchNotifyMessage(this.deviceId, Notification.event.sent_msg_read.name, JSON.stringify(msgInfo));
 };
 
-Device.prototype.notifyIncomeAsset = function (asset, amount, sendingDevice, receivedDate) {
+Device.prototype.notifyAssetReceived = function (asset, amount, sendingDevice, receivedDate) {
     // Prepare information about received asset to be sent by notification
     const msgInfo = {
         assetId: asset.assetId,
@@ -1744,10 +1744,10 @@ Device.prototype.notifyIncomeAsset = function (asset, amount, sendingDevice, rec
     _und.extend(msgInfo.issuer, sendingDevice.discloseMainPropsTo(this));
 
     // Dispatch notification message
-    Catenis.notification.dispatchNotifyMessage(this.deviceId, Notification.event.income_asset.name, JSON.stringify(msgInfo));
+    Catenis.notification.dispatchNotifyMessage(this.deviceId, Notification.event.asset_received.name, JSON.stringify(msgInfo));
 };
 
-Device.prototype.notifyConfirmedAsset = function (asset, amount, sendingDevice, confirmedDate) {
+Device.prototype.notifyAssetConfirmed = function (asset, amount, sendingDevice, confirmedDate) {
     // Prepare information about confirmed asset to be sent by notification
     const msgInfo = {
         assetId: asset.assetId,
@@ -1766,7 +1766,7 @@ Device.prototype.notifyConfirmedAsset = function (asset, amount, sendingDevice, 
     _und.extend(msgInfo.issuer, sendingDevice.discloseMainPropsTo(this));
 
     // Dispatch notification message
-    Catenis.notification.dispatchNotifyMessage(this.deviceId, Notification.event.confirmed_asset.name, JSON.stringify(msgInfo));
+    Catenis.notification.dispatchNotifyMessage(this.deviceId, Notification.event.asset_confirmed.name, JSON.stringify(msgInfo));
 };
 /** End of notification related methods **/
 

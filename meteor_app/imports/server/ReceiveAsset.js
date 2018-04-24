@@ -2,7 +2,7 @@
  * Created by claudio on 22/03/18.
  */
 
-//console.log('[IncomeAsset.js]: This code just ran.');
+//console.log('[ReceiveAsset.js]: This code just ran.');
 
 // Module variables
 //
@@ -38,20 +38,20 @@ const cfgSettings = {
 // Definition of function classes
 //
 
-// IncomeAsset function class
-export function IncomeAsset() {
+// ReceiveAsset function class
+export function ReceiveAsset() {
 }
 
 
-// Public IncomeAsset object methods
+// Public ReceiveAsset object methods
 //
 
-/*IncomeAsset.prototype.pub_func = function () {
+/*ReceiveAsset.prototype.pub_func = function () {
 };*/
 
 
-// Module functions used to simulate private IncomeAsset object methods
-//  NOTE: these functions need to be bound to a IncomeAsset object reference (this) before
+// Module functions used to simulate private ReceiveAsset object methods
+//  NOTE: these functions need to be bound to a ReceiveAsset object reference (this) before
 //      they are called, by means of one of the predefined function methods .call(), .apply()
 //      or .bind().
 //
@@ -60,11 +60,11 @@ export function IncomeAsset() {
 }*/
 
 
-// IncomeAsset function class (public) methods
+// ReceiveAsset function class (public) methods
 //
 
-IncomeAsset.initialize = function () {
-    Catenis.logger.TRACE('IncomeAsset initialization');
+ReceiveAsset.initialize = function () {
+    Catenis.logger.TRACE('ReceiveAsset initialization');
     // Set up handler for event indicating that new issue asset transaction has been received
     TransactionMonitor.addEventHandler(TransactionMonitor.notifyEvent.issue_asset_tx_rcvd.name, processIssuedAsset);
 
@@ -79,10 +79,10 @@ IncomeAsset.initialize = function () {
 };
 
 
-// IncomeAsset function class (public) properties
+// ReceiveAsset function class (public) properties
 //
 
-/*IncomeAsset.prop = {};*/
+/*ReceiveAsset.prop = {};*/
 
 
 // Definition of module (private) functions
@@ -100,8 +100,8 @@ function processIssuedAsset(data) {
                 const issuingDevice = Device.getDeviceByDeviceId(data.issuingDeviceId);
 
                 // Check if holding device should be notified
-                if (holdingDevice.shouldBeNotifiedOfIncomeAssetOf(issuingDevice)
-                        || holdingDevice.shouldBeNotifiedOfIncomeAssetFrom(issuingDevice)) {
+                if (holdingDevice.shouldBeNotifiedOfReceivedAssetOf(issuingDevice)
+                        || holdingDevice.shouldBeNotifiedOfAssetReceivedFrom(issuingDevice)) {
                     // Get issue asset transaction
                     const issueAssetTransact = IssueAssetTransaction.checkTransaction(CCTransaction.fromTransaction(Transaction.fromTxid(data.txid)));
 
@@ -120,7 +120,7 @@ function processIssuedAsset(data) {
                     }).receivedDate;
 
                     // Notify holding device
-                    holdingDevice.notifyIncomeAsset(issueAssetTransact.asset, issueAssetTransact.amount, issuingDevice, receivedDate);
+                    holdingDevice.notifyAssetReceived(issueAssetTransact.asset, issueAssetTransact.amount, issuingDevice, receivedDate);
                 }
             }
         }
@@ -151,8 +151,8 @@ function processTransferredAsset(data) {
             }
 
             // Check if receiving device should be notified
-            if (receivingDevice.shouldBeNotifiedOfIncomeAssetOf(transferAssetTransact.asset.issuingDevice)
-                    || receivingDevice.shouldBeNotifiedOfIncomeAssetFrom(transferAssetTransact.sendingDevice)) {
+            if (receivingDevice.shouldBeNotifiedOfReceivedAssetOf(transferAssetTransact.asset.issuingDevice)
+                    || receivingDevice.shouldBeNotifiedOfAssetReceivedFrom(transferAssetTransact.sendingDevice)) {
                 // Get transaction received date
                 const receivedDate = Catenis.db.collection.ReceivedTransaction.findOne({
                     txid: data.txid
@@ -163,7 +163,7 @@ function processTransferredAsset(data) {
                 }).receivedDate;
 
                 // Notify receiving device
-                receivingDevice.notifyIncomeAsset(transferAssetTransact.asset, transferAssetTransact.amount, transferAssetTransact.sendingDevice, receivedDate);
+                receivingDevice.notifyAssetReceived(transferAssetTransact.asset, transferAssetTransact.amount, transferAssetTransact.sendingDevice, receivedDate);
             }
         }
     }
@@ -203,7 +203,7 @@ function processIssuedAssetConfirmed(data) {
                 const confirmationDate = getTxConfirmationDate(data.txid);
 
                 // Notify holding device
-                holdingDevice.notifyConfirmedAsset(issueAssetTransact.asset, issueAssetTransact.amount, issuingDevice, confirmationDate);
+                holdingDevice.notifyAssetConfirmed(issueAssetTransact.asset, issueAssetTransact.amount, issuingDevice, confirmationDate);
             }
         }
     }
@@ -231,13 +231,13 @@ function processTransferredAssetConfirmed(data) {
         let confirmationDate;
 
         // Check if receiving device should be notified
-        if (transferAssetTransact.receivingDevice.status === Device.status.active.name && (transferAssetTransact.receivingDevice.shouldBeNotifiedOfIncomeAssetOf(transferAssetTransact.asset.issuingDevice)
-                || transferAssetTransact.receivingDevice.shouldBeNotifiedOfIncomeAssetFrom(transferAssetTransact.sendingDevice))) {
+        if (transferAssetTransact.receivingDevice.status === Device.status.active.name && (transferAssetTransact.receivingDevice.shouldBeNotifiedOfReceivedAssetOf(transferAssetTransact.asset.issuingDevice)
+                || transferAssetTransact.receivingDevice.shouldBeNotifiedOfAssetReceivedFrom(transferAssetTransact.sendingDevice))) {
             // Get transaction confirmation date
             confirmationDate = getTxConfirmationDate(data.txid);
 
             // Notify receiving device
-            transferAssetTransact.receivingDevice.notifyConfirmedAsset(transferAssetTransact.asset, transferAssetTransact.amount, transferAssetTransact.sendingDevice, confirmationDate);
+            transferAssetTransact.receivingDevice.notifyAssetConfirmed(transferAssetTransact.asset, transferAssetTransact.amount, transferAssetTransact.sendingDevice, confirmationDate);
         }
 
         // Check if sending device should be notified
@@ -251,7 +251,7 @@ function processTransferredAssetConfirmed(data) {
             }
 
             // Notify receiving device
-            transferAssetTransact.sendingDevice.notifyConfirmedAsset(transferAssetTransact.asset, transferAssetTransact.changeAmount, transferAssetTransact.sendingDevice, confirmationDate);
+            transferAssetTransact.sendingDevice.notifyAssetConfirmed(transferAssetTransact.asset, transferAssetTransact.changeAmount, transferAssetTransact.sendingDevice, confirmationDate);
         }
     }
     catch (err) {
@@ -298,4 +298,4 @@ function getTxConfirmationDate(txid) {
 //
 
 // Lock function class
-Object.freeze(IncomeAsset);
+Object.freeze(ReceiveAsset);

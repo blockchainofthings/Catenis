@@ -169,14 +169,14 @@ Notification.event = Object.freeze({
         minNotifyServiceVer: '0.1',
         minApiVer: '0.4'
     }),
-    income_asset: Object.freeze({
-        name: 'income-asset',
+    asset_received: Object.freeze({
+        name: 'asset-received',
         description: 'An amount of an asset has been received',
         minNotifyServiceVer: '0.2',
         minApiVer: '0.6'
     }),
-    confirmed_asset: Object.freeze({
-        name: 'confirmed-asset',
+    asset_confirmed: Object.freeze({
+        name: 'asset-confirmed',
         description: 'An amount of an asset that was pending due to an asset transfer has been confirmed',
         minNotifyServiceVer: '0.2',
         minApiVer: '0.6'

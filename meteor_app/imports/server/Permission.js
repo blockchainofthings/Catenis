@@ -535,14 +535,14 @@ Permission.event = Object.freeze({
         description: 'Receive notification of message read by a device',
         minApiVer: '0.4'
     }),
-    receive_notify_income_asset_of: Object.freeze({
+    receive_notify_asset_of: Object.freeze({
         name: 'receive-notify-asset-of',
-        description: 'Receive notification of income asset issued by a device',
+        description: 'Receive notification of asset received for assets issued by a device',
         minApiVer: '0.6'
     }),
-    receive_notify_income_asset_from: Object.freeze({
+    receive_notify_asset_from: Object.freeze({
         name: 'receive-notify-asset-from',
-        description: 'Receive notification of income asset from a device',
+        description: 'Receive notification of asset received from a device',
         minApiVer: '0.6'
     }),
     receive_notify_confirm_asset_of: Object.freeze({
