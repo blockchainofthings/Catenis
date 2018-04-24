@@ -296,13 +296,6 @@ function heartbeatPing() {
 
         ws.isAlive = false;
         ws.ping('', false, true);
-        Catenis.logger.TRACE('WebSocket notification message dispatch - Ping sent to client', {
-            ctnDispatcherVer: ws.ctnDispatcher ? {
-                notifyServiceVer: ws.ctnDispatcher.notifyServiceVer,
-                dispatcherVer: ws.ctnDispatcher.dispatcherVer
-            } : undefined,
-            ctnNotify: ws.ctnNotify
-        });
     });
 }
 
@@ -483,13 +476,6 @@ function clientMessageHandler(message) {
 
 // NOTE: method's 'this' is a WebSocket client connection object
 function clientPongHandler() {
-    Catenis.logger.TRACE('WebSocket notification message dispatch - Pong received from client', {
-        ctnDispatcher: this.ctnDispatcher ? {
-            notifyServiceVer: this.ctnDispatcher.notifyServiceVer,
-            dispatcherVer: this.ctnDispatcher.dispatcherVer
-        } : undefined,
-        ctnNotify: this.ctnNotify
-    });
     this.isAlive = true;
 }
 
