@@ -359,7 +359,7 @@
           "allow": "self"
         },
         "device": {
-          "deny": "self"
+          "allow": "self"
         }
       },
       "receive-notify-confirm-asset-from": {
@@ -368,7 +368,7 @@
           "allow": "self"
         },
         "device": {
-          "deny": "self"
+          "allow": "self"
         }
       },
       "send-read-msg-confirm": {
