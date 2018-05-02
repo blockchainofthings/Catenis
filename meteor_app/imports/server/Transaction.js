@@ -294,7 +294,7 @@ Transaction.prototype.addMultiSigOutputs = function (payInfos, pos) {
 };
 
 // Arguments:
-//  addresses: [Array(String)] - List of Catenis blockchain addresses or non-Catenis public keys
+//  addresses: [Array(String)] - List of Catenis blockchain addresses or non-Catenis hex-encoded public keys
 //  nSigs: [Number] - Number of signatures required for spending multi-signature output
 //  amount: [Number] - Amount, in satoshis, to send
 //  pos: [Number] - Position (zero-based index) for output in transaction
@@ -1535,8 +1535,11 @@ Transaction.fromHex = function (hexTx, txTime) {
                         address: output.scriptPubKey.addresses,
                         nSigs: output.scriptPubKey.reqSigs,
                         amount: new BigNumber(output.value).times(100000000).toNumber(),
-                        addrInfo: decodedScript.pubKeys.map((pubKey) => {
-                            return pubKey.toString('hex')
+                        addrInfo: output.scriptPubKey.addresses.map((address, idx) => {
+                            // Try to get information about address in multi-sig output
+                            const addrInfo = Catenis.keyStore.getAddressInfo(address, true);
+
+                            return addrInfo !== null ? addrInfo : decodedScript.pubKeys[idx].toString('hex');
                         })
                     }
                 }
