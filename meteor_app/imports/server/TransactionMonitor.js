@@ -403,7 +403,7 @@ export class TransactionMonitor extends events.EventEmitter {
         else {
             // Transaction monitor object already instantiated.
             //  Just set up event handler
-            this.on(event, handler);
+            Catenis.txMonitor.on(event, handler);
         }
     }
 
