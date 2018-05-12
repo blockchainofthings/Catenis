@@ -75,7 +75,7 @@ export class TransactionMonitor extends events.EventEmitter {
         this.doingBlockchainPoll = false;
         this.newBlockchainPollTick = false;
         this.blockchainPollPaused = false;
-        this.syncingBlocks = false;
+        this.syncingBlocks = true;  // Assume that will be syncing blocks in the beginning
         this.foundNewCtnTxids = new Map();
         this.processingNewBlocks = false;
         this.nextNewBlocksToProcess = [];
@@ -531,8 +531,14 @@ function pollBlockchain() {
                         let currCtnTxBlockHashIdx = 0;
 
                         if (numCtnTxBlockHashes > 1) {
-                            this.syncingBlocks = true;
-                            Catenis.application.setSyncingBlocks(true);
+                            if (!this.syncingBlocks) {
+                                this.syncingBlocks = true;
+                                Catenis.application.setSyncingBlocks(true);
+                            }
+                        }
+                        else if (this.syncingBlocks) {
+                            this.syncingBlocks = false;
+                            Catenis.application.setSyncingBlocks(false);
                         }
 
                         // Step through blocks containing Catenis transactions
