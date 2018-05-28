@@ -299,7 +299,7 @@ CreditServiceAccTransaction.prototype.sendTransaction = function () {
             });
 
             // Force update of Colored Coins data associated with UTXOs
-            Catenis.ccFNClient.parseNow();
+            Catenis.c3NodeClient.parseNow();
 
             // Check if system funding balance is still within safe limits
             Catenis.ctnHubNode.checkFundingBalance();

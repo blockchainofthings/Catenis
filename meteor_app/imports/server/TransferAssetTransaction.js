@@ -258,7 +258,7 @@ TransferAssetTransaction.prototype.sendTransaction = function () {
             });
 
             // Force update of Colored Coins data associated with UTXOs
-            Catenis.ccFNClient.parseNow();
+            Catenis.c3NodeClient.parseNow();
 
             // Check if system pay tx expense addresses need to be refunded
             this.sendingDevice.client.ctnNode.checkPayTxExpenseFundingBalance();

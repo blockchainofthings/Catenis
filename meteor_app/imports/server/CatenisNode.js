@@ -1190,7 +1190,7 @@ function creditServAccTxConfirmed(data) {
     Catenis.logger.TRACE('Received notification of confirmation of credit service account transaction', data);
     try {
         // Force update of Colored Coins data associated with UTXOs
-        Catenis.ccFNClient.parseNow();
+        Catenis.c3NodeClient.parseNow();
     }
     catch (err) {
         // Error while processing notification of confirmed credit service account transaction.

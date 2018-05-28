@@ -1810,7 +1810,7 @@ Device.prototype.assetBalance = function (asset, convertAmount = true) {
         asset = Asset.getAssetByAssetId(asset, true);
     }
 
-    const balance = Catenis.ccFNClient.getAssetBalance(asset.ccAssetId, this.assetAddr.listAddressesInUse());
+    const balance = Catenis.c3NodeClient.getAssetBalance(asset.ccAssetId, this.assetAddr.listAddressesInUse());
 
     if (balance !== undefined) {
         if (convertAmount) {
@@ -1906,7 +1906,7 @@ Device.prototype.retrieveAssetInfo = function (assetId) {
 
     if (this.deviceId !== asset.issuingDevice.deviceId) {
         // Device is not the issuer of this asset. Check if it currently holds it
-        const balance = Catenis.ccFNClient.getAssetBalance(asset.ccAssetId, this.assetAddr.listAddressesInUse());
+        const balance = Catenis.c3NodeClient.getAssetBalance(asset.ccAssetId, this.assetAddr.listAddressesInUse());
 
         if (balance !== undefined && balance.total > 0) {
             hasAccess = true;
@@ -1923,7 +1923,7 @@ Device.prototype.retrieveAssetInfo = function (assetId) {
     }
 
     // Get total existent asset balance
-    const assetBalance = Catenis.ccFNClient.getAssetBalance(asset.ccAssetId);
+    const assetBalance = Catenis.c3NodeClient.getAssetBalance(asset.ccAssetId);
 
     if (assetBalance === undefined) {
         // Unable to retrieve Colored Coins asset balance. Log error condition
@@ -1991,7 +1991,7 @@ Device.prototype.listOwnedAssets = function (limit, skip) {
         skip = 0;
     }
 
-    const ccAssetIdBalance = Catenis.ccFNClient.getOwningAssets(this.assetAddr.listAddressesInUse());
+    const ccAssetIdBalance = Catenis.c3NodeClient.getOwningAssets(this.assetAddr.listAddressesInUse());
     const result = {
         ownedAssets: [],
         hasMore: false
@@ -2102,7 +2102,7 @@ Device.prototype.listIssuedAssets = function (limit, skip) {
     }).forEach((docAsset, idx) => {
         if (idx < limit) {
             // Retrieve total existent asset balance
-            const assetBalance = Catenis.ccFNClient.getAssetBalance(docAsset.ccAssetId);
+            const assetBalance = Catenis.c3NodeClient.getAssetBalance(docAsset.ccAssetId);
 
             if (assetBalance === undefined) {
                 // No balance returned for Colored Coins asset. Log error condition
@@ -2172,7 +2172,7 @@ Device.prototype.retrieveAssetIssuanceHistory = function (assetId, startDate, en
     }
 
     // Retrieve asset issuance info
-    const txidAssetIssuance = Catenis.ccFNClient.getAssetIssuance(asset.ccAssetId, false);
+    const txidAssetIssuance = Catenis.c3NodeClient.getAssetIssuance(asset.ccAssetId, false);
 
     const issuanceEvents = [];
     let countExceeded = false;
@@ -2330,7 +2330,7 @@ Device.prototype.listAssetHolders = function (assetId, limit, skip) {
     };
 
     // Retrieve asset holders (blockchain addresses)
-    const addressAssetBalance = Catenis.ccFNClient.getAssetHolders(asset.ccAssetId);
+    const addressAssetBalance = Catenis.c3NodeClient.getAssetHolders(asset.ccAssetId);
     const deviceAssetHolder = new Map();
     const skippedDevices = new Set();
     const discardedDevices = new Set();

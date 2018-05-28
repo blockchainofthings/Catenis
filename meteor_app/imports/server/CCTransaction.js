@@ -14,8 +14,9 @@
 // Third-party node modules
 import config from 'config';
 import _und from 'underscore';
-import ccAssetIdEncoder from 'cc-assetid-encoder';
-import CCBuilder from 'cc-transaction';
+import ccAssetIdEncoder from 'catenis-colored-coins/cc-assetid-encoder';
+import CCBuilder from 'catenis-colored-coins/cc-transaction';
+import multihashes from 'multihashes';
 // Meteor packages
 import { Meteor } from 'meteor/meteor';
 
@@ -35,6 +36,7 @@ const ccTransactConfig = config.get('ccTransaction');
 // Configuration settings
 const cfgSettings = {
     ccProtocolPrefix: ccTransactConfig.get('ccProtocolPrefix'),
+    c3ProtocolPrefix: ccTransactConfig.get('c3ProtocolPrefix'),
     ccVersionByte: ccTransactConfig.get('ccVersionByte'),
     torrentHashSize: ccTransactConfig.get('torrentHashSize'),
     sha2Size: ccTransactConfig.get('sha2Size')
@@ -946,7 +948,10 @@ CCTransaction.prototype.assemble = function (spendMultiSigOutputAddress) {
         const pendingInputStatPositions = this.pendingTransferInputSeqs();
 
         if (pendingInputStatPositions === undefined) {
-            const ccBuilder = new CCBuilder();
+            // Make sure that the Catenis Colored Coins protocol is used
+            const ccBuilder = new CCBuilder({
+                protocol: hexPrefixToProtocolId(cfgSettings.c3ProtocolPrefix)
+            });
 
             // Set asset issuing info if required
             if (this.issuingInfo) {
@@ -972,7 +977,7 @@ CCTransaction.prototype.assemble = function (spendMultiSigOutputAddress) {
 
                 if (this.ccMetadata.isStored()) {
                     // Set Colored Coins metadata storing info
-                    ccBuilder.setHash(this.ccMetadata.storeResult.torrentHash, this.ccMetadata.storeResult.sha2);
+                    ccBuilder.setHash(this.ccMetadata.storeResult.multiHash);
                 }
             }
 
@@ -1058,14 +1063,15 @@ CCTransaction.prototype.assemble = function (spendMultiSigOutputAddress) {
             // Add null data output with Colored Coins encoded data
             this.addNullDataOutput(ccResult.codeBuffer, 0);
 
+            // TODO: replace Buffer.allocUnsafe() with Buffer.alloc() in code in master branch too
             if (this.includesMultiSigOutput) {
                 // Add multi-signature output
                 const pubKeys = [
-                    spendMultiSigOutputAddress !== undefined ? spendMultiSigOutputAddress : Buffer.concat([Buffer.from('03', 'hex'), Buffer.allocUnsafe(txCfgSettings.pubKeySize - 1, 0xff)]).toString('hex')
+                    spendMultiSigOutputAddress !== undefined ? spendMultiSigOutputAddress : Buffer.concat([Buffer.from('03', 'hex'), Buffer.alloc(txCfgSettings.pubKeySize - 1, 0xff)], txCfgSettings.pubKeySize).toString('hex')
                 ];
 
                 ccResult.leftover.forEach((buf) => {
-                    pubKeys.push(Buffer.concat([Buffer.from('03', 'hex'), Buffer.allocUnsafe(txCfgSettings.pubKeySize - buf.length - 1, 0), buf]).toString('hex'));
+                    pubKeys.push(Buffer.concat([Buffer.from('03', 'hex'), buf, Buffer.alloc(txCfgSettings.pubKeySize - buf.length - 1, 0)], txCfgSettings.pubKeySize).toString('hex'));
                 });
 
                 this.addMultiSigOutput(pubKeys, 1, pubKeys.length > 2 ? txCfgSettings.oneOf3multiSigTxOutputDustAmount : txCfgSettings.oneOf2MultiSigTxOutputDustAmount, 0);
@@ -1367,7 +1373,7 @@ CCTransaction.fromTransaction = function (transact) {
             _und.extendOwn(ccTransact, transact);
 
             // Retrieve Colored Coins data associated with transaction inputs
-            const txouts = Catenis.ccFNClient.getTxouts(ccTransact.inputs.map(input => input.txout));
+            const txouts = Catenis.c3NodeClient.getTxouts(ccTransact.inputs.map(input => input.txout));
 
             // ...and add them to the tx inputs
             txouts.forEach((txout, idx) => {
@@ -1404,6 +1410,9 @@ CCTransaction.fromTransaction = function (transact) {
             let curInputPos = 0;
             let curOutputPos = nullDataOutputPos + 1;
             let totalAmountTransferred = 0;
+
+            // Make sure that payments are properly sorted
+            ccData.payments.sort((payment1, payment2) => (payment1.burn ? 9999 : payment1.output) - (payment2.burn ? 9999 : payment2.output));
 
             ccData.payments.forEach((payment, idx) => {
                 if (!payment.burn && payment.output !== curOutputPos) {
@@ -1577,61 +1586,95 @@ CCTransaction.fromTransaction = function (transact) {
             }
 
             // Retrieve Colored Coins metadata if any
-            let torrentHash;
-            let sha2;
+            if (ccData.protocol === hexPrefixToProtocolId(cfgSettings.c3ProtocolPrefix)) {
+                // Special case for Catenis Colored Coins protocol
+                let multiHash;
 
-            if (ccData.torrentHash) {
-                torrentHash = ccData.torrentHash.toString('hex');
-
-                if (ccData.sha2) {
-                    sha2 = ccData.sha2.toString('hex');
+                if (ccData.multiHash) {
+                    // Get multi-hash (or the initial part of it) that was recorded along with the Colored Coins data
+                    multiHash = Buffer.from(ccData.multiHash);
                 }
-                else if (ccData.multiSig.length === 1) {
-                    // Get SHA2 of metadata from multi-signature output
-                    sha2 = multiSigTxOutput.payInfo.addrInfo[1].substr(txCfgSettings.pubKeySize - cfgSettings.sha2Size);
+
+                if (ccData.multiSig.length > 0) {
+                    // Get remainder of multi-hash from multi-sig outputs
+                    ccData.multiSig.forEach((multiSigInfo) => {
+                        const multiHashPart = Buffer.from(multiSigTxOutput.payInfo.addrInfo[multiSigInfo.index], 'hex').slice(1);
+
+                        multiHash = multiHash !== undefined ? Buffer.concat([multiHash, multiHashPart], multiHash.length + multiHashPart.length) : multiHashPart;
+                    });
+
+                    // Adjust multi-hash length
+                    const decodedMultiHash = multihashes.decode(multiHash, true);
+                    multiHash = multihashes.encode(decodedMultiHash.digest, decodedMultiHash.code, decodedMultiHash.length);
 
                     ccTransact.includesMultiSigOutput = true;
                 }
-                else {
+
+                if (multiHash !== undefined) {
+                    // Get metadata using crypto keys from first input to decrypt user data (if required)
+                    const firstInput = ccTransact.getInputAt(0);
+
+                    ccTransact.ccMetadata = CCMetadata.fromMultiHash(multiHash, firstInput.addrInfo !== undefined ? firstInput.addrInfo.cryptoKeys : undefined);
+                }
+            }
+            else {
+                let torrentHash;
+                let sha2;
+
+                // TODO: fix extraction of hashes from multi-sig output (multiply substr() parameter by 2; each byte (hex encoded) takes up 2 characters)
+                if (ccData.torrentHash) {
+                    torrentHash = ccData.torrentHash.toString('hex');
+
+                    if (ccData.sha2) {
+                        sha2 = ccData.sha2.toString('hex');
+                    }
+                    else if (ccData.multiSig.length === 1) {
+                        // Get SHA2 of metadata from multi-signature output
+                        sha2 = multiSigTxOutput.payInfo.addrInfo[1].substr(txCfgSettings.pubKeySize - cfgSettings.sha2Size);
+
+                        ccTransact.includesMultiSigOutput = true;
+                    }
+                    else {
+                        // Inconsistent Colored Coins data; multiSig length different than expected
+                        //  Log error condition and throw exception
+                        Catenis.logger.ERROR('Invalid Colored Coins transaction: inconsistent Colored Coins data; multiSig length different than expected', {
+                            ccData: ccData,
+                            expectedMultiSigLength: 1
+                        });
+                        // noinspection ExceptionCaughtLocallyJS
+                        throw new Meteor.Error('ctn_cc_tx_inconsistent_cc_data', 'Invalid Colored Coins transaction: inconsistent Colored Coins data; multiSig length different than expected');
+                    }
+                }
+                else if (ccData.multiSig.length === 2) {
+                    // Get both torrent hash and SHA2 of metadata from multi-signature output
+                    ccData.multiSig.forEach((multiSig) => {
+                        if (multiSig.hashType === 'sha2') {
+                            sha2 = multiSigTxOutput.payInfo.addrInfo[multiSig.index].substr(txCfgSettings.pubKeySize - cfgSettings.sha2Size);
+                        }
+                        else if (multiSig.hashType === 'torrentHash') {
+                            torrentHash = multiSigTxOutput.payInfo.addrInfo[multiSig.index].substr(txCfgSettings.pubKeySize - cfgSettings.torrentHashSize);
+                        }
+                    });
+
+                    ccTransact.includesMultiSigOutput = true;
+                }
+                else if (ccData.multiSig.length > 0) {
                     // Inconsistent Colored Coins data; multiSig length different than expected
                     //  Log error condition and throw exception
                     Catenis.logger.ERROR('Invalid Colored Coins transaction: inconsistent Colored Coins data; multiSig length different than expected', {
                         ccData: ccData,
-                        expectedMultiSigLength: 1
+                        expectedMultiSigLength: 0
                     });
                     // noinspection ExceptionCaughtLocallyJS
                     throw new Meteor.Error('ctn_cc_tx_inconsistent_cc_data', 'Invalid Colored Coins transaction: inconsistent Colored Coins data; multiSig length different than expected');
                 }
-            }
-            else if (ccData.multiSig.length === 2) {
-                // Get both torrent hash and SHA2 of metadata from multi-signature output
-                ccData.multiSig.forEach((multiSig) => {
-                    if (multiSig.hashType === 'sha2') {
-                        sha2 = multiSigTxOutput.payInfo.addrInfo[multiSig.index].substr(txCfgSettings.pubKeySize - cfgSettings.sha2Size);
-                    }
-                    else if (multiSig.hashType === 'torrentHash') {
-                        torrentHash = multiSigTxOutput.payInfo.addrInfo[multiSig.index].substr(txCfgSettings.pubKeySize - cfgSettings.torrentHashSize);
-                    }
-                });
 
-                ccTransact.includesMultiSigOutput = true;
-            }
-            else if (ccData.multiSig.length > 0) {
-                // Inconsistent Colored Coins data; multiSig length different than expected
-                //  Log error condition and throw exception
-                Catenis.logger.ERROR('Invalid Colored Coins transaction: inconsistent Colored Coins data; multiSig length different than expected', {
-                    ccData: ccData,
-                    expectedMultiSigLength: 0
-                });
-                // noinspection ExceptionCaughtLocallyJS
-                throw new Meteor.Error('ctn_cc_tx_inconsistent_cc_data', 'Invalid Colored Coins transaction: inconsistent Colored Coins data; multiSig length different than expected');
-            }
+                if (torrentHash !== undefined) {
+                    // Get metadata using crypto keys from first input to decrypt user data (if required)
+                    const firstInput = ccTransact.getInputAt(0);
 
-            if (torrentHash !== undefined) {
-                // Get metadata using crypto keys from first input to decrypt user data (if required)
-                const firstInput = ccTransact.getInputAt(0);
-
-                ccTransact.ccMetadata = CCMetadata.fromTorrent(torrentHash, sha2, firstInput.addrInfo !== undefined ? firstInput.addrInfo.cryptoKeys : undefined);
+                    ccTransact.ccMetadata = CCMetadata.fromTorrent(torrentHash, sha2, firstInput.addrInfo !== undefined ? firstInput.addrInfo.cryptoKeys : undefined);
+                }
             }
 
             ccTransact.isAssembled = true;
@@ -1699,9 +1742,11 @@ function getAssetId(txout, address, issuingOpts) {
 //  Return:
 //   result: [Object(CCBuilder)] - CCBuilder object containing  decoded Colored Coins data or undefined if supplied data is not valid
 function checkColoredCoinsData(ccData) {
-    const ccHeader = Buffer.from(cfgSettings.ccProtocolPrefix + cfgSettings.ccVersionByte, 'hex');
+    const c3Header = Buffer.from(cfgSettings.ccProtocolPrefix + cfgSettings.ccVersionByte, 'hex');  // For Catenis Colored Coins protocol
+    const ccHeader = Buffer.from(cfgSettings.c3ProtocolPrefix + cfgSettings.ccVersionByte, 'hex');
 
-    if (ccData.length > ccHeader.length && ccData.slice(0, ccHeader.length).equals(ccHeader)) {
+    if ((ccData.length > c3Header.length && ccData.slice(0, c3Header.length).equals(c3Header))
+            || (ccData.length > ccHeader.length && ccData.slice(0, ccHeader.length).equals(ccHeader))) {
         try {
             return CCBuilder.fromHex(ccData);
         }
@@ -1713,6 +1758,11 @@ function isCcDataTooLargeError(err) {
     return /^data code.*bigger.*$/i.test(err.message);
 }
 
+function hexPrefixToProtocolId(hex) {
+    const buf = Buffer.from(hex, 'hex');
+
+    return (buf[0] << 8) + buf[1];
+}
 
 // Module code
 //

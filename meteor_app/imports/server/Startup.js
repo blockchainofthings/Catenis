@@ -45,7 +45,7 @@ import { Permission } from './Permission';
 import { Notification } from './Notification';
 import { WebSocketNotifyMsgDispatcher } from './WebSocketNotifyMsgDispatcher';
 import { MalleabilityEventEmitter } from './MalleabilityEventEmitter';
-import { CCFullNodeClient } from './CCFullNodeClient';
+import { C3NodeClient } from './C3NodeClient';
 import { CCMetadataClient } from './CCMetadataClient';
 import { OmniCore } from './OmniCore';
 import { BcotExchangeRate } from './BcotExchangeRate';
@@ -53,6 +53,9 @@ import { BcotPayment } from './BcotPayment';
 import { SpendServiceCredit } from './SpendServiceCredit';
 import { BcotUsageReportUI } from './AdminUI/BcotUsageReportUI';
 import { ReceiveAsset } from './ReceiveAsset';
+// TEST - begin
+import {TestCatenisColoredCoins} from './Test/TestCatenisColoredCoins';
+// TEST - end
 
 // DEBUG - begin
 //import { resetBitcoinCore } from './Test/FundSourceTest';
@@ -93,7 +96,7 @@ Meteor.startup(function () {
         OmniCore.initialize();
         IpfsClient.initialize();
         IpfsServerMonitor.initialize();
-        CCFullNodeClient.initialize();
+        C3NodeClient.initialize();
         CCMetadataClient.initialize();
         //ColoredCoins.initialize();
         Permission.initialize();

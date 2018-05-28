@@ -74,20 +74,20 @@
     "enabled": false,
     "checkInterval": 30  // Time, in seconds, defining the period within which IPFS server shall be checked to make sure it is still alive
   },
-  // Parameters pertaining to CCFullNodeClient module
-  "ccFullNodeClient": {
-    "serverHost": "10.8.0.1", // Colored Coins Full-Node server host name/IP address (access via VPN)
-    //"serverHost": "localhost", // Colored Coins Full-Node server host name/IP address
-    "localAddress": "", // IP address of local network interface to use to connect with the Colored Coins Full-Node server. If not specified (empty string) the default network interface is used
-    "connectionTimeout": 30000  // Timeout, in miliseconds, for connection with the Colored Coins Full-Node server
+  // Parameters pertaining to C3NodeClient module
+  "c3NodeClient": {
+    "serverHost": "10.8.0.1", // Catenis Colored Coins node server host name/IP address (access via VPN)
+    //"serverHost": "localhost", // Catenis Colored Coins node server host name/IP address
+    "localAddress": "", // IP address of local network interface to use to connect with the Catenis Colored Coins node server. If not specified (empty string) the default network interface is used
+    "connectionTimeout": 30000  // Timeout, in miliseconds, for connection with the Catenis Colored Coins node server
   },
-  // Parameters pertaining to CCFullNodeClient module
+  // Parameters pertaining to CCMetadataClient module
   "ccMetadataClient": {
     "serverHost": "10.8.0.1", // Colored Coins Metadata server host name/IP address (access via VPN)
     //"serverHost": "localhost", // Colored Coins Metadata server host name/IP address
     "tcpPort": 8180, // TCP port used to connect with the Colored Coins Metadata server
     "tokenValidityDuration": 15, // Time, in seconds, within which JWT token is considered valid for authentication
-    "connectionTimeout": 30000  // Timeout, in miliseconds, for connection with the Colored Coins Full-Node server
+    "connectionTimeout": 30000  // Timeout, in miliseconds, for connection with the Colored Coins Metadata server
   },
   // Parameters pertaining to CCMetadata module
   "ccMetadata": {

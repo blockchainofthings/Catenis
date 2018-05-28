@@ -165,7 +165,7 @@ export function IssueAssetTransaction(issuingDevice, holdingDevice, amount, asse
             }
 
             // Make sure that total amount of asset issued does not surpass the largest allowed asset amount
-            const assetBalance = Catenis.ccFNClient.getAssetBalance(this.asset.ccAssetId);
+            const assetBalance = Catenis.c3NodeClient.getAssetBalance(this.asset.ccAssetId);
             this.bnPrevTotalExistentBalance = new BigNumber(0);
 
             if (assetBalance !== undefined && (this.bnPrevTotalExistentBalance = this.asset.amountToSmallestDivisionAmount(assetBalance.total, true)).plus(this.amount).greaterThan(assetCfgSetting.largestAssetAmount)) {
@@ -379,7 +379,7 @@ IssueAssetTransaction.prototype.sendTransaction = function () {
             }
 
             // Force update of Colored Coins data associated with UTXOs
-            Catenis.ccFNClient.parseNow();
+            Catenis.c3NodeClient.parseNow();
 
             // Check if system pay tx expense addresses need to be refunded
             this.issuingDevice.client.ctnNode.checkPayTxExpenseFundingBalance();
