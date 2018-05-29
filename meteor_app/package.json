@@ -18,7 +18,7 @@
     "bitcoinjs-lib": "^3.3.2",
     "bitcoinjs-message": "^1.0.1",
     "body-parser": "^1.16.1",
-    "catenis-colored-coins": "/Users/claudio/Projects/WebStorm/NodeJS/CatenisColoredCoins",
+    "catenis-colored-coins": "git@bitbucket.org:blockchainofthings/cateniscoloredcoins.git#semver:^0.1.1",
     "config": "^1.29.1",
     "eccrypto": "^1.0.3",
     "fibers": "^2.0.0",
