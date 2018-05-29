@@ -6,7 +6,24 @@ import { Transaction } from '../Transaction';
 import { C3NodeClient } from '../C3NodeClient';
 
 export class TestCatenisColoredCoins {
-    constructor() {}
+    constructor() {
+        this.resetMetadata();
+    }
+
+    // Note: this method should be called before calling a different test method. Failure to do so will result
+    //      in an error when trying to decrypt the metadata user data (since the crypto key used to decrypt is
+    //      different from the crypto key used to encrypt -- this is due to the fact that the UTXO spent by the
+    //      first input of the tx issued by the testIssuance method is different from the UTXO spent by the
+    //      first input of the tx issued by the testTransfer method)
+    resetMetadata() {
+        this.ccMeta = new CCMetadata();
+
+        this.ccMeta.setAssetMetadata({ctnAssetId:'fjkajfkjfjdslj'});
+
+        const txids = ['6062e56442ebe60df16b5348fa4dba4c7ff2f95a65377c4f1adce89b3412de85','ecc8cdd2f3aaff6d95a6d520a7cb4b3955b119285d9b88bff4e6e2902288a0b3'];
+
+        this.ccMeta.setFreeUserData('txids',new Buffer(JSON.stringify(txids)),true);
+    }
 
     testIssuance(metadataStorage = TestCatenisColoredCoins.metadataStorage.nullDataOnly) {
         if (TestCatenisColoredCoins.isInitialized()) {
@@ -49,7 +66,7 @@ export class TestCatenisColoredCoins {
 
             this.ccTransact.setChangeTransferOutput(TestCatenisColoredCoins.outAddrs[idx], 0);
 
-            this.ccTransact.setCcMetadata(TestCatenisColoredCoins.ccMeta);
+            this.ccTransact.setCcMetadata(this.ccMeta);
 
             this.ccTransact.assemble();
 
@@ -111,7 +128,7 @@ export class TestCatenisColoredCoins {
 
             this.ccTransact.setChangeTransferOutput(TestCatenisColoredCoins.outAddrs[idx], 0);
 
-            this.ccTransact.setCcMetadata(TestCatenisColoredCoins.ccMeta);
+            this.ccTransact.setCcMetadata(this.ccMeta);
 
             this.ccTransact.assemble();
 
@@ -161,19 +178,11 @@ export class TestCatenisColoredCoins {
 
         TestCatenisColoredCoins.outAddrs = Catenis.ctnHubNode.payTxExpenseAddr.listAddressesInUse();
 
-        TestCatenisColoredCoins.ccMeta = new CCMetadata();
-
-        TestCatenisColoredCoins.ccMeta.setAssetMetadata({ctnAssetId:'fjkajfkjfjdslj'});
-
-        const txids = ['6062e56442ebe60df16b5348fa4dba4c7ff2f95a65377c4f1adce89b3412de85','ecc8cdd2f3aaff6d95a6d520a7cb4b3955b119285d9b88bff4e6e2902288a0b3'];
-
-        TestCatenisColoredCoins.ccMeta.setFreeUserData('txids',new Buffer(JSON.stringify(txids)),true);
-
         resetC3NodeClient();
     }
 
     static isInitialized() {
-        return TestCatenisColoredCoins.ccMeta !== undefined;
+        return TestCatenisColoredCoins.assetInput != undefined && TestCatenisColoredCoins.inputs !== undefined && TestCatenisColoredCoins.outAddrs !== undefined;
     }
 }
 
