@@ -1052,6 +1052,12 @@ CCTransaction.prototype.assemble = function (spendMultiSigOutputAddress) {
                 ccBuilder.shiftOutputs();
                 ccResult = ccBuilder.encode();
 
+                // Fix what seems to be a bug in the Colored Coins transaction builder component: when both hashes
+                //  (torrent and sha2) should be stored in the multi-sig output, the order of the hashes returned in
+                //  the 'leftover' property (torrent, sha2) does not match the expected order of the hashes in the
+                //  multi-sig output (sha2, torrent) when the same component is used to decode the Colored Coins data
+                ccResult.leftover.reverse();
+
                 this.includesMultiSigOutput = true;
             }
 
@@ -1061,11 +1067,11 @@ CCTransaction.prototype.assemble = function (spendMultiSigOutputAddress) {
             if (this.includesMultiSigOutput) {
                 // Add multi-signature output
                 const pubKeys = [
-                    spendMultiSigOutputAddress !== undefined ? spendMultiSigOutputAddress : Buffer.concat([Buffer.from('03', 'hex'), Buffer.allocUnsafe(txCfgSettings.pubKeySize - 1, 0xff)]).toString('hex')
+                    spendMultiSigOutputAddress !== undefined ? spendMultiSigOutputAddress : Buffer.concat([Buffer.from('03', 'hex'), Buffer.alloc(txCfgSettings.pubKeySize - 1, 0xff)]).toString('hex')
                 ];
 
                 ccResult.leftover.forEach((buf) => {
-                    pubKeys.push(Buffer.concat([Buffer.from('03', 'hex'), Buffer.allocUnsafe(txCfgSettings.pubKeySize - buf.length - 1, 0), buf]).toString('hex'));
+                    pubKeys.push(Buffer.concat([Buffer.from('03', 'hex'), Buffer.alloc(txCfgSettings.pubKeySize - buf.length - 1, 0), buf]).toString('hex'));
                 });
 
                 this.addMultiSigOutput(pubKeys, 1, pubKeys.length > 2 ? txCfgSettings.oneOf3multiSigTxOutputDustAmount : txCfgSettings.oneOf2MultiSigTxOutputDustAmount, 0);
@@ -1405,6 +1411,9 @@ CCTransaction.fromTransaction = function (transact) {
             let curOutputPos = nullDataOutputPos + 1;
             let totalAmountTransferred = 0;
 
+            // Make sure that payments are properly sorted
+            ccData.payments.sort((payment1, payment2) => (payment1.burn ? 9999 : payment1.output) - (payment2.burn ? 9999 : payment2.output));
+
             ccData.payments.forEach((payment, idx) => {
                 if (!payment.burn && payment.output !== curOutputPos) {
                     // Transaction output to receive Colored Coins asset payment is not in the right order.
@@ -1588,7 +1597,7 @@ CCTransaction.fromTransaction = function (transact) {
                 }
                 else if (ccData.multiSig.length === 1) {
                     // Get SHA2 of metadata from multi-signature output
-                    sha2 = multiSigTxOutput.payInfo.addrInfo[1].substr(txCfgSettings.pubKeySize - cfgSettings.sha2Size);
+                    sha2 = multiSigTxOutput.payInfo.addrInfo[1].substr(2 * (txCfgSettings.pubKeySize - cfgSettings.sha2Size));
 
                     ccTransact.includesMultiSigOutput = true;
                 }
@@ -1607,10 +1616,10 @@ CCTransaction.fromTransaction = function (transact) {
                 // Get both torrent hash and SHA2 of metadata from multi-signature output
                 ccData.multiSig.forEach((multiSig) => {
                     if (multiSig.hashType === 'sha2') {
-                        sha2 = multiSigTxOutput.payInfo.addrInfo[multiSig.index].substr(txCfgSettings.pubKeySize - cfgSettings.sha2Size);
+                        sha2 = multiSigTxOutput.payInfo.addrInfo[multiSig.index].substr(2 * (txCfgSettings.pubKeySize - cfgSettings.sha2Size));
                     }
                     else if (multiSig.hashType === 'torrentHash') {
-                        torrentHash = multiSigTxOutput.payInfo.addrInfo[multiSig.index].substr(txCfgSettings.pubKeySize - cfgSettings.torrentHashSize);
+                        torrentHash = multiSigTxOutput.payInfo.addrInfo[multiSig.index].substr(2 * (txCfgSettings.pubKeySize - cfgSettings.torrentHashSize));
                     }
                 });
 
