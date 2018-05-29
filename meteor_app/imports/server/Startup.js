@@ -54,12 +54,9 @@ import { SpendServiceCredit } from './SpendServiceCredit';
 import { BcotUsageReportUI } from './AdminUI/BcotUsageReportUI';
 import { ReceiveAsset } from './ReceiveAsset';
 // TEST - begin
-import {TestCatenisColoredCoins} from './Test/TestCatenisColoredCoins';
-// TEST - end
-
-// DEBUG - begin
 //import { resetBitcoinCore } from './Test/FundSourceTest';
-// DEBUG - end
+import { TestCatenisColoredCoins } from './Test/TestCatenisColoredCoins';
+// TEST - end
 
 // Config entries
 const startupConfig = config.get('startup');
@@ -76,9 +73,9 @@ const cfgSettings = {
 
 // Initialization code (on the server)
 Meteor.startup(function () {
-    // DEBUG - begin
+    // TEST - begin
     //resetBitcoinCore();
-    // DEBUG - end
+    // TEST - end
     if (cfgSettings.bypassProcessing) {
         Catenis.logger.INFO('Bypassing processing...');
     }
@@ -127,6 +124,9 @@ Meteor.startup(function () {
         // Then the notification module itself
         Notification.initialize();
 
+        // TEST - Begin
+        TestCatenisColoredCoins.init();
+        // TEST - End
         RestApi.initialize();
 
         // UI support initialization
