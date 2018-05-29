@@ -1062,7 +1062,6 @@ CCTransaction.prototype.assemble = function (spendMultiSigOutputAddress) {
             // Add null data output with Colored Coins encoded data
             this.addNullDataOutput(ccResult.codeBuffer, 0);
 
-            // TODO: replace Buffer.allocUnsafe() with Buffer.alloc() in code in master branch too
             if (this.includesMultiSigOutput) {
                 // Add multi-signature output
                 const pubKeys = [
@@ -1638,7 +1637,6 @@ CCTransaction.fromTransaction = function (transact) {
                 let torrentHash;
                 let sha2;
 
-                // TODO: fix extraction of hashes from multi-sig output (multiply substr() parameter by 2; each byte (hex encoded) takes up 2 characters)
                 if (ccData.torrentHash) {
                     torrentHash = ccData.torrentHash.toString('hex');
 
@@ -1647,7 +1645,7 @@ CCTransaction.fromTransaction = function (transact) {
                     }
                     else if (ccData.multiSig.length === 1) {
                         // Get SHA2 of metadata from multi-signature output
-                        sha2 = multiSigTxOutput.payInfo.addrInfo[1].substr(txCfgSettings.pubKeySize - cfgSettings.sha2Size);
+                        sha2 = multiSigTxOutput.payInfo.addrInfo[1].substr(2 * (txCfgSettings.pubKeySize - cfgSettings.sha2Size));
 
                         ccTransact.includesMultiSigOutput = true;
                     }
@@ -1666,10 +1664,10 @@ CCTransaction.fromTransaction = function (transact) {
                     // Get both torrent hash and SHA2 of metadata from multi-signature output
                     ccData.multiSig.forEach((multiSig) => {
                         if (multiSig.hashType === 'sha2') {
-                            sha2 = multiSigTxOutput.payInfo.addrInfo[multiSig.index].substr(txCfgSettings.pubKeySize - cfgSettings.sha2Size);
+                            sha2 = multiSigTxOutput.payInfo.addrInfo[multiSig.index].substr(2 * (txCfgSettings.pubKeySize - cfgSettings.sha2Size));
                         }
                         else if (multiSig.hashType === 'torrentHash') {
-                            torrentHash = multiSigTxOutput.payInfo.addrInfo[multiSig.index].substr(txCfgSettings.pubKeySize - cfgSettings.torrentHashSize);
+                            torrentHash = multiSigTxOutput.payInfo.addrInfo[multiSig.index].substr(2 * (txCfgSettings.pubKeySize - cfgSettings.torrentHashSize));
                         }
                     });
 
