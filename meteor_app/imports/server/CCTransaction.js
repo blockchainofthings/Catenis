@@ -976,7 +976,7 @@ CCTransaction.prototype.assemble = function (spendMultiSigOutputAddress) {
 
                 if (this.ccMetadata.isStored()) {
                     // Set Colored Coins metadata storing info
-                    ccBuilder.setHash(this.ccMetadata.storeResult.multiHash);
+                    ccBuilder.setHash(this.ccMetadata.storeResult.cid);
                 }
             }
 
@@ -1597,40 +1597,40 @@ CCTransaction.fromTransaction = function (transact) {
             // Retrieve Colored Coins metadata if any
             if (ccData.protocol === hexPrefixToProtocolId(cfgSettings.c3ProtocolPrefix)) {
                 // Special case for Catenis Colored Coins protocol
-                let multiHash;
+                let cid;
 
-                if (ccData.multiHash) {
-                    // Get multi-hash (or the initial part of it) that was recorded along with the Colored Coins data
-                    multiHash = Buffer.from(ccData.multiHash);
+                if (ccData.cid) {
+                    // Get CID (or the initial part of it) that was recorded along with the Colored Coins data
+                    cid = Buffer.from(ccData.cid);
                 }
 
                 if (ccData.multiSig.length > 0) {
-                    // Get remainder of multi-hash from multi-sig outputs
-                    let multiHashLeftLength;
+                    // Get remainder of CID from multi-sig outputs
+                    let cidLeftLength;
 
                     ccData.multiSig.forEach((multiSigInfo, idx) => {
                         let keyData = Buffer.from(multiSigTxOutput.payInfo.addrInfo[multiSigInfo.index], 'hex').slice(1);
 
                         if (idx === 0) {
-                            // Get length of part of multi-hash stored in multi-sig output
-                            multiHashLeftLength = keyData[keyData.length - 1];
+                            // Get length of part of CID stored in multi-sig output
+                            cidLeftLength = keyData[keyData.length - 1];
                             keyData = keyData.slice(0, keyData.length - 1);
                         }
 
-                        const multiHashPart = keyData.slice(-multiHashLeftLength);
-                        multiHashLeftLength -= multiHashPart.length;
+                        const cidPart = keyData.slice(-cidLeftLength);
+                        cidLeftLength -= cidPart.length;
 
-                        multiHash = multiHash !== undefined ? Buffer.concat([multiHash, multiHashPart], multiHash.length + multiHashPart.length) : multiHashPart;
+                        cid = cid !== undefined ? Buffer.concat([cid, cidPart], cid.length + cidPart.length) : cidPart;
                     });
 
                     ccTransact.includesMultiSigOutput = true;
                 }
 
-                if (multiHash !== undefined) {
+                if (cid !== undefined) {
                     // Get metadata using crypto keys from first input to decrypt user data (if required)
                     const firstInput = ccTransact.getInputAt(0);
 
-                    ccTransact.ccMetadata = CCMetadata.fromMultiHash(multiHash, firstInput.addrInfo !== undefined ? firstInput.addrInfo.cryptoKeys : undefined);
+                    ccTransact.ccMetadata = CCMetadata.fromCID(cid, firstInput.addrInfo !== undefined ? firstInput.addrInfo.cryptoKeys : undefined);
                 }
             }
             else {

@@ -18,7 +18,7 @@ import Url from 'url';
 import config from 'config';
 import openssl from 'openssl-wrapper';
 import moment from 'moment';
-import multihashes from 'multihashes';
+import CID from 'cids';
 // Meteor packages
 import { Meteor } from 'meteor/meteor';
 import { HTTP } from 'meteor/http';
@@ -314,7 +314,7 @@ CCMetadata.prototype.assemble = function (encCryptoKeys) {
 //                        This is basically used by the Catenis Colored Coins protocol
 //  Result: [Object] - Object the properties of which depends if using IPFS to store metadata (useIpfs = true) or BitTorrent (useIpfs = false)
 //   - using IPFS: {
-//     multiHash: [String] - Hex encoded multi-hash of metadata stored on IPFS
+//     cid: [String] - Hex encoded CID of metadata stored on IPFS
 //   }
 //   - using BitTorrent: {
 //     torrentHash: [String] - The (hex encoded) hash of the torrent file containing the added metadata
@@ -331,10 +331,10 @@ CCMetadata.prototype.store = function (useIpfs = true) {
                 // Special case for the Catenis Colored Coins protocol
                 try {
                     // Save metadata onto IPFS
-                    const ipfsHash = Catenis.ipfsClient.api.filesAdd(Buffer.from(JSON.stringify(metadata)))[0].hash;
+                    const cidObj = new CID(Catenis.ipfsClient.api.filesAdd(Buffer.from(JSON.stringify(metadata)))[0].hash);
 
                     this.storeResult = {
-                        multiHash: multihashes.toHexString(multihashes.fromB58String(ipfsHash))
+                        cid: cidObj.buffer.toString('hex')
                     };
                 }
                 catch (err) {
@@ -497,15 +497,15 @@ function parseUserData(userData, decCryptoKeys) {
 // Get metadata from IPFS (for Catenis Colored Coins protocol)
 //
 //  Arguments:
-//   multiHash: [Object(Buffer)] - Buffer containing multi-hash of the metadata on IPFS
+//   cid: [Object(Buffer)] - Buffer containing CID of the metadata on IPFS
 //   decCryptKeys [Object(CryptoKeys)] - (optional) The crypto key-pair associated with a blockchain address that should be used to decrypt encrypted user data
-CCMetadata.fromMultiHash = function (multiHash, decCryptoKeys) {
+CCMetadata.fromCID = function (cid, decCryptoKeys) {
     let metadata;
 
     try {
-        const ipfsHash = multihashes.toB58String(multiHash);
+        const cidObj = new CID(cid);
 
-        metadata = Catenis.ipfsClient.api.filesCat(ipfsHash);
+        metadata = Catenis.ipfsClient.api.filesCat(cidObj);
     }
     catch (err) {
         Catenis.logger.ERROR('Error trying to retrieve Colored Coins metadata from IPFS.', err);
@@ -516,7 +516,7 @@ CCMetadata.fromMultiHash = function (multiHash, decCryptoKeys) {
             const ccMeta = new CCMetadata(JSON.parse(metadata).metadata, decCryptoKeys);
 
             ccMeta.storeResult = {
-                multiHash: multiHash
+                cid: cid
             };
 
             return ccMeta;
