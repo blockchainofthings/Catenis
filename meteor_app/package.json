@@ -28,7 +28,7 @@
     "meteor-node-stubs": "^0.3.2",
     "moment": "^2.17.1",
     "moment-timezone": "^0.5.14",
-    "multihashes": "https://github.com/blockchainofthings/js-multihash.git#BCoT",
+    "multihashes": "^0.4.13",
     "openssl-wrapper": "^0.3.4",
     "secp256k1": "^2.0.10",
     "stack-trace": "0.0.9",

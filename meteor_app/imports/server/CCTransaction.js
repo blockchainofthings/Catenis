@@ -16,7 +16,6 @@ import config from 'config';
 import _und from 'underscore';
 import ccAssetIdEncoder from 'catenis-colored-coins/cc-assetid-encoder';
 import CCBuilder from 'catenis-colored-coins/cc-transaction';
-import multihashes from 'multihashes';
 // Meteor packages
 import { Meteor } from 'meteor/meteor';
 
@@ -1070,8 +1069,19 @@ CCTransaction.prototype.assemble = function (spendMultiSigOutputAddress) {
                     spendMultiSigOutputAddress !== undefined ? spendMultiSigOutputAddress : Buffer.concat([Buffer.from('03', 'hex'), Buffer.alloc(txCfgSettings.pubKeySize - 1, 0xff)], txCfgSettings.pubKeySize).toString('hex')
                 ];
 
-                ccResult.leftover.forEach((buf) => {
-                    pubKeys.push(Buffer.concat([Buffer.from('03', 'hex'), buf, Buffer.alloc(txCfgSettings.pubKeySize - buf.length - 1, 0)], txCfgSettings.pubKeySize).toString('hex'));
+                ccResult.leftover.forEach((buf, idx) => {
+                    let lengthByte;
+
+                    if (idx === 0) {
+                        // Extract 'length' byte
+                        lengthByte = buf.slice(0, 1);
+                        buf = buf.slice(1);
+                    }
+                    else {
+                        lengthByte = Buffer.from('');
+                    }
+
+                    pubKeys.push(Buffer.concat([Buffer.from('03', 'hex'), Buffer.alloc(txCfgSettings.pubKeySize - (buf.length + lengthByte.length + 1), 0), buf, lengthByte], txCfgSettings.pubKeySize).toString('hex'));
                 });
 
                 this.addMultiSigOutput(pubKeys, 1, pubKeys.length > 2 ? txCfgSettings.oneOf3multiSigTxOutputDustAmount : txCfgSettings.oneOf2MultiSigTxOutputDustAmount, 0);
@@ -1597,15 +1607,22 @@ CCTransaction.fromTransaction = function (transact) {
 
                 if (ccData.multiSig.length > 0) {
                     // Get remainder of multi-hash from multi-sig outputs
-                    ccData.multiSig.forEach((multiSigInfo) => {
-                        const multiHashPart = Buffer.from(multiSigTxOutput.payInfo.addrInfo[multiSigInfo.index], 'hex').slice(1);
+                    let multiHashLeftLength;
+
+                    ccData.multiSig.forEach((multiSigInfo, idx) => {
+                        let keyData = Buffer.from(multiSigTxOutput.payInfo.addrInfo[multiSigInfo.index], 'hex').slice(1);
+
+                        if (idx === 0) {
+                            // Get length of part of multi-hash stored in multi-sig output
+                            multiHashLeftLength = keyData[keyData.length - 1];
+                            keyData = keyData.slice(0, keyData.length - 1);
+                        }
+
+                        const multiHashPart = keyData.slice(-multiHashLeftLength);
+                        multiHashLeftLength -= multiHashPart.length;
 
                         multiHash = multiHash !== undefined ? Buffer.concat([multiHash, multiHashPart], multiHash.length + multiHashPart.length) : multiHashPart;
                     });
-
-                    // Adjust multi-hash length
-                    const decodedMultiHash = multihashes.decode(multiHash, true);
-                    multiHash = multihashes.encode(decodedMultiHash.digest, decodedMultiHash.code, decodedMultiHash.length);
 
                     ccTransact.includesMultiSigOutput = true;
                 }
