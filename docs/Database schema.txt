@@ -141,7 +141,7 @@ Message {
 
 SentTransaction {
   _id: [string], // MongoDB internal document ID provided by Meteor
-  type: [string], // Identifies the type of transaction that was sent. Valid values (from Catenis.Transaction.type): 'funding', 'credit_service_account', 'store_bcot', 'spend_service_credit', 'send_message', 'log_message', 'read_confirmation', 'issue_asset', 'issue_asset', 'transfer_asset'
+  type: [string], // Identifies the type of transaction that was sent. Valid values (from Catenis.Transaction.type): 'funding', 'credit_service_account', 'store_bcot', 'spend_service_credit', 'send_message', 'log_message', 'read_confirmation', 'issue_asset', 'transfer_asset'
   txid: [string], // Blockchain attributed ID (hash) of the sent transaction
   sentDate: [date/time], // Date and time when transaction was sent to the blockchain network
   confirmation: {
