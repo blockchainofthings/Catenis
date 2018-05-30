@@ -55,7 +55,7 @@ import { BcotUsageReportUI } from './AdminUI/BcotUsageReportUI';
 import { ReceiveAsset } from './ReceiveAsset';
 // TEST - begin
 //import { resetBitcoinCore } from './Test/FundSourceTest';
-import { TestCatenisColoredCoins } from './Test/TestCatenisColoredCoins';
+//import { TestCatenisColoredCoins } from './Test/TestCatenisColoredCoins';
 // TEST - end
 
 // Config entries
@@ -125,7 +125,7 @@ Meteor.startup(function () {
         Notification.initialize();
 
         // TEST - Begin
-        TestCatenisColoredCoins.init();
+        //TestCatenisColoredCoins.init();
         // TEST - End
         RestApi.initialize();
 
