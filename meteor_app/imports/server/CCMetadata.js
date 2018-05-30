@@ -516,7 +516,7 @@ CCMetadata.fromCID = function (cid, decCryptoKeys) {
             const ccMeta = new CCMetadata(JSON.parse(metadata).metadata, decCryptoKeys);
 
             ccMeta.storeResult = {
-                cid: cid
+                cid: cid.toString('hex')
             };
 
             return ccMeta;
