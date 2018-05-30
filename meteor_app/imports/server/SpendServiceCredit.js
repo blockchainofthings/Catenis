@@ -426,7 +426,7 @@ function spendServCredTxConfirmed(data) {
     Catenis.logger.TRACE('Received notification of confirmation of spend service credit transaction', data);
     try {
         // Force update of Colored Coins data associated with UTXOs
-        Catenis.ccFNClient.parseNow();
+        Catenis.c3NodeClient.parseNow();
 
         // Execute code in critical section to make sure task is serialized
         procCS.execute(() => {

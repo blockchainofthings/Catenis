@@ -528,15 +528,15 @@
     "heartbeatInterval": 30000,  // Time interval, in miliseconds, for sending heartbeat ping package to client
     "authMsgTimeout": 5000   // Timeout, in miliseconds, for waiting on first message from client used to authenticate itself with the system
   },
-  // Parameters pertaining to CCFullNodeClient module
-  "ccFullNodeClient": {
-    "serverHost": "catenis-ccfnode", // Colored Coins Full-Node server host name/IP address
-    "mainTcpPort": 8033, // TCP port used to connect with the Colored Coins Full-Node server to interact with bitcoin's main blockchain
-    "testnetTcpPort": 8043, // TCP port used to connect with the Colored Coins Full-Node server to interact with bitcoin's testnet blockchain
-    "inetAddress": "", // IP address of local network interface to use to connect with the Colored Coins Full-Node server. If not specified (empty string) the default network interface is used
-    "user": "??????", // Username used to authenticate the client to the Colored Coins Full-Node server. If not specified (empty string) assume that no authenticaiton is required
-    "password": "??????", // Password used to authenticate the client to the Colored Coins Full-Node server
-    "connectionTimeout": 15000,  // Timeout, in miliseconds, for connection with the Colored Coins Full-Node server
+  // Parameters pertaining to C3NodeClient module
+  "c3NodeClient": {
+    "serverHost": "catenis-ccfnode", // Catenis Colored Coins node server host name/IP address
+    "mainTcpPort": 8033, // TCP port used to connect with the Catenis Colored Coins node server to interact with bitcoin's main blockchain
+    "testnetTcpPort": 8043, // TCP port used to connect with the Catenis Colored Coins node server to interact with bitcoin's testnet blockchain
+    "inetAddress": "", // IP address of local network interface to use to connect with the Catenis Colored Coins node server. If not specified (empty string) the default network interface is used
+    "user": "??????", // Username used to authenticate the client to the Catenis Colored Coins node server. If not specified (empty string) assume that no authenticaiton is required
+    "password": "??????", // Password used to authenticate the client to the Catenis Colored Coins node server
+    "connectionTimeout": 15000,  // Timeout, in miliseconds, for connection with the Catenis Colored Coins node server
     "methodPath": {
       "parseNow": "/parseNow",
       "getAddressesUtxos": "/getAddressesUtxos",
@@ -562,7 +562,7 @@
     "user": "??????", // Username used to authenticate the client to the Colored Coins Metadata server. If not specified (empty string) assume that no authenticaiton is required
     "jwtSecret": "??????", // JWT secret (128-bit hex encoded value) used to authenticate the clent to the Colorec Coins Metadata server
     "tokenValidityDuration": 15, // Time, in seconds, within which JWT token is considered valid for authentication
-    "connectionTimeout": 15000,  // Timeout, in miliseconds, for connection with the Colored Coins Full-Node server
+    "connectionTimeout": 15000,  // Timeout, in miliseconds, for connection with the Colored Coins Metadata server
     "methodPath": {
       "addMetadata": "/addMetadata",
       "getMetadata": "/getMetadata",
@@ -589,7 +589,8 @@
   },
   // Parameters pertaining to CCTransaction module
   "ccTransaction": {
-    "ccProtocolPrefix": "4343",  // Hex encoded Colored Coins protocol data prefix
+    "ccProtocolPrefix": "4343",  // Hex encoded (original) Colored Coins protocol data prefix
+    "c3ProtocolPrefix": "4333",  // Hex encoded Catenis Colored Coins protocol data prefix
     "ccVersionByte": "02", // Hex encoded Colored Coins version byte
     "torrentHashSize": 20,  // Size, in number of bytes, of a torrent hash
     "sha2Size": 32  // Size, in number of bytes, of a SHA2 hash

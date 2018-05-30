@@ -16,7 +16,7 @@
 const util = require('util');
 const crypto = require('crypto');
 // Third-party node modules
-import Future from 'fibers/future';
+//import config from 'config';
 // Meteor packages
 import { Meteor } from 'meteor/meteor';
 
@@ -113,36 +113,7 @@ export class IpfsMessageStorage extends MessageStorage {
             }
 
             // Now, get message from IPFS
-            let dataReader = Catenis.ipfsClient.api.filesCat(ipfsHash);
-            let fut = new Future();
-            let message = undefined;
-
-            dataReader.on('data', (data) => {
-                if (!Buffer.isBuffer(data)) {
-                    data = Buffer.from(data);
-                }
-
-                if (message === undefined) {
-                    message = data;
-                }
-                else {
-                    let totalLength = message.length + data.length;
-
-                    message = Buffer.concat([message, data], totalLength);
-                }
-            });
-
-            dataReader.on('end', () => {
-                fut.return();
-            });
-
-            // Wait until all message is read
-            fut.wait();
-
-            if (message === undefined) {
-                //noinspection ExceptionCaughtLocallyJS
-                throw Error('Unable to get message from IPFS')
-            }
+            const message = Catenis.ipfsClient.api.filesCat(ipfsHash);
 
             // Now validate message contents
             let readMsgHash = hashRipemd160(hashSha256(message));

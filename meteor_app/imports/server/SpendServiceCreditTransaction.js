@@ -363,17 +363,6 @@ SpendServiceCreditTransaction.prototype.payForService = function (client, servic
         const newServiceTxids = this.serviceTxids.concat();
         newServiceTxids.push(serviceTxid);
 
-        if (this.txChanged && newCcTransact.ccMetadata !== undefined && newCcTransact.ccMetadata.isStored()) {
-            // Colored Coins metadata has changed since transaction has been last sent, so remove it
-            //  before replacing it
-            try {
-                Catenis.ccMdClient.removeMetadata(newCcTransact.ccMetadata.storeResult.torrentHash);
-            }
-            catch (err) {
-                Catenis.logger.ERROR('Error trying to remove old Colored Coins metadata for spend service credit transaction.', err);
-            }
-        }
-
         const ccMetadata = new CCMetadata();
         ccMetadata.setFreeUserData(cfgSettings.ccMetadata.servTxidsKey, Buffer.from(JSON.stringify(newServiceTxids)), true);
         Catenis.logger.DEBUG('>>>>>> New spend service credit Colored Coins metadata', {
@@ -852,7 +841,7 @@ SpendServiceCreditTransaction.prototype.sendTransaction = function (isTerminal =
             }
 
             // Force update of Colored Coins data associated with UTXOs
-            Catenis.ccFNClient.parseNow();
+            Catenis.c3NodeClient.parseNow();
 
             // Make sure that system addresses (used to pay for spend service credit tx expense) are properly funded
             Meteor.defer(checkSystemFunding);

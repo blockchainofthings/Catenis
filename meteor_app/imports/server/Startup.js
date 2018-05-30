@@ -45,7 +45,7 @@ import { Permission } from './Permission';
 import { Notification } from './Notification';
 import { WebSocketNotifyMsgDispatcher } from './WebSocketNotifyMsgDispatcher';
 import { MalleabilityEventEmitter } from './MalleabilityEventEmitter';
-import { CCFullNodeClient } from './CCFullNodeClient';
+import { C3NodeClient } from './C3NodeClient';
 import { CCMetadataClient } from './CCMetadataClient';
 import { OmniCore } from './OmniCore';
 import { BcotExchangeRate } from './BcotExchangeRate';
@@ -53,10 +53,10 @@ import { BcotPayment } from './BcotPayment';
 import { SpendServiceCredit } from './SpendServiceCredit';
 import { BcotUsageReportUI } from './AdminUI/BcotUsageReportUI';
 import { ReceiveAsset } from './ReceiveAsset';
-
-// DEBUG - begin
+// TEST - begin
 //import { resetBitcoinCore } from './Test/FundSourceTest';
-// DEBUG - end
+//import { TestCatenisColoredCoins } from './Test/TestCatenisColoredCoins';
+// TEST - end
 
 // Config entries
 const startupConfig = config.get('startup');
@@ -73,9 +73,9 @@ const cfgSettings = {
 
 // Initialization code (on the server)
 Meteor.startup(function () {
-    // DEBUG - begin
+    // TEST - begin
     //resetBitcoinCore();
-    // DEBUG - end
+    // TEST - end
     if (cfgSettings.bypassProcessing) {
         Catenis.logger.INFO('Bypassing processing...');
     }
@@ -93,7 +93,7 @@ Meteor.startup(function () {
         OmniCore.initialize();
         IpfsClient.initialize();
         IpfsServerMonitor.initialize();
-        CCFullNodeClient.initialize();
+        C3NodeClient.initialize();
         CCMetadataClient.initialize();
         //ColoredCoins.initialize();
         Permission.initialize();
@@ -124,6 +124,9 @@ Meteor.startup(function () {
         // Then the notification module itself
         Notification.initialize();
 
+        // TEST - Begin
+        //TestCatenisColoredCoins.init();
+        // TEST - End
         RestApi.initialize();
 
         // UI support initialization

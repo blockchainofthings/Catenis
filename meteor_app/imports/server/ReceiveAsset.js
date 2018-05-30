@@ -145,7 +145,7 @@ function processTransferredAsset(data) {
                 // Asset info not yet in local database. Create it now
 
                 // Get transaction(s) used to issue this asset
-                const assetIssuance = Catenis.ccFNClient.getAssetIssuance(Asset.getCcAssetIdFromCcTransaction(transferAssetTransact.ccTransact), false);
+                const assetIssuance = Catenis.c3NodeClient.getAssetIssuance(Asset.getCcAssetIdFromCcTransaction(transferAssetTransact.ccTransact), false);
 
                 transferAssetTransact.asset = Asset.getAssetByAssetId(Asset.createAsset(CCTransaction.fromTransaction(Transaction.fromTxid(Object.keys(assetIssuance)[0]))));
             }
@@ -223,7 +223,7 @@ function processTransferredAssetConfirmed(data) {
             // Asset info not yet in local database. Create it now
 
             // Get transaction(s) used to issue this asset
-            const assetIssuance = Catenis.ccFNClient.getAssetIssuance(Asset.getCcAssetIdFromCcTransaction(transferAssetTransact.ccTransact), false);
+            const assetIssuance = Catenis.c3NodeClient.getAssetIssuance(Asset.getCcAssetIdFromCcTransaction(transferAssetTransact.ccTransact), false);
 
             transferAssetTransact.asset = Asset.getAssetByAssetId(Asset.createAsset(CCTransaction.fromTransaction(Transaction.fromTxid(Object.keys(assetIssuance)[0]))));
         }

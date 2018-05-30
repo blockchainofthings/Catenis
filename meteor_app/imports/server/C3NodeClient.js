@@ -2,7 +2,7 @@
  * Created by claudio on 21/09/17.
  */
 
-//console.log('[CCFullNodeClient.js]: This code just ran.');
+//console.log('[C3NodeClient.js]: This code just ran.');
 
 // Module variables
 //
@@ -21,18 +21,18 @@ import { Meteor } from 'meteor/meteor';
 import { Catenis } from './Catenis';
 
 // Config entries
-const ccFullNodeClientConfig = config.get('ccFullNodeClient');
-const methodPathConfig = ccFullNodeClientConfig.get('methodPath');
+const c3NodeClientConfig = config.get('c3NodeClient');
+const methodPathConfig = c3NodeClientConfig.get('methodPath');
 
 // Configuration settings
 const cfgSettings = {
-    serverHost: ccFullNodeClientConfig.get('serverHost'),
-    mainTcpPort: ccFullNodeClientConfig.get('mainTcpPort'),
-    testnetTcpPort: ccFullNodeClientConfig.get('testnetTcpPort'),
-    inetAddress: ccFullNodeClientConfig.get('inetAddress'),
-    user: ccFullNodeClientConfig.get('user'),
-    password: ccFullNodeClientConfig.get('password'),
-    connectionTimeout: ccFullNodeClientConfig.get('connectionTimeout'),
+    serverHost: c3NodeClientConfig.get('serverHost'),
+    mainTcpPort: c3NodeClientConfig.get('mainTcpPort'),
+    testnetTcpPort: c3NodeClientConfig.get('testnetTcpPort'),
+    inetAddress: c3NodeClientConfig.get('inetAddress'),
+    user: c3NodeClientConfig.get('user'),
+    password: c3NodeClientConfig.get('password'),
+    connectionTimeout: c3NodeClientConfig.get('connectionTimeout'),
     methodPath: {
         parseNow: methodPathConfig.get('parseNow'),
         getAddressesUtxos: methodPathConfig.get('getAddressesUtxos'),
@@ -55,8 +55,8 @@ const cfgSettings = {
 // Definition of function classes
 //
 
-// CCFullNodeClient function class
-export function CCFullNodeClient(network, host, inetAddr, username, password, timeout) {
+// C3NodeClient function class
+export function C3NodeClient(network, host, inetAddr, username, password, timeout) {
     this.host = host;
     this.port = network === 'testnet' ? cfgSettings.testnetTcpPort : cfgSettings.mainTcpPort;
     this.timeout = timeout;
@@ -73,13 +73,13 @@ export function CCFullNodeClient(network, host, inetAddr, username, password, ti
 }
 
 
-// Public CCFullNodeClient object methods
+// Public C3NodeClient object methods
 //
 
 
-// Call Colored Coins Full Node parseNow method
+// Call Catenis Colored Coins node server parseNow method
 //
-CCFullNodeClient.prototype.parseNow = function () {
+C3NodeClient.prototype.parseNow = function () {
     try {
         return getRequest.call(this, cfgSettings.methodPath.parseNow);
     }
@@ -88,14 +88,14 @@ CCFullNodeClient.prototype.parseNow = function () {
     }
 };
 
-// Call Colored Coins Full Node getAddressesUtxos method
+// Call Catenis Colored Coins node server getAddressesUtxos method
 //
 //  Arguments:
 //   addresses [String|Array(String)] - Blockchain addresses for which to retrieve UTXOs
 //   numOfConfirmations [Number]      - Minimum number of confirmations for UTXO to be returned
 //   waitForParsing [Boolean] - (optional) Indicates whether processing of request should wait until parsing of assets
 //                               is complete
-CCFullNodeClient.prototype.getAddressesUtxos = function (addresses, numOfConfirmations, waitForParsing = true) {
+C3NodeClient.prototype.getAddressesUtxos = function (addresses, numOfConfirmations, waitForParsing = true) {
     const postData = {
         addresses: Array.isArray(addresses) ? addresses : [addresses]
     };
@@ -116,7 +116,7 @@ CCFullNodeClient.prototype.getAddressesUtxos = function (addresses, numOfConfirm
     }
 };
 
-// Call Colored Coins Full Node getUtxos method
+// Call Catenis Colored Coins node server getUtxos method
 //
 //  Arguments:
 //   utxos: [{ [Object|Array(Object)] - Transaction outputs for which to retrieve UTXOs
@@ -126,7 +126,7 @@ CCFullNodeClient.prototype.getAddressesUtxos = function (addresses, numOfConfirm
 //   numOfConfirmations [Number]  - Minimum number of confirmations for UTXO to be returned
 //   waitForParsing [Boolean] - (optional) Indicates whether processing of request should wait until parsing of assets
 //                               is complete
-CCFullNodeClient.prototype.getUtxos = function (utxos, numOfConfirmations, waitForParsing = true) {
+C3NodeClient.prototype.getUtxos = function (utxos, numOfConfirmations, waitForParsing = true) {
     const postData = {
         utxos: Array.isArray(utxos) ? utxos : [utxos]
     };
@@ -147,7 +147,7 @@ CCFullNodeClient.prototype.getUtxos = function (utxos, numOfConfirmations, waitF
     }
 };
 
-// Call Colored Coins Full Node (BCoT modified version) getTxouts method
+// Call Catenis Colored Coins node server getTxouts method
 //
 //  Arguments:
 //   txouts: [{ [Object|Array(Object)] - Transaction outputs for which to retrieve Colored Coins data
@@ -156,7 +156,7 @@ CCFullNodeClient.prototype.getUtxos = function (utxos, numOfConfirmations, waitF
 //   }]
 //   waitForParsing [Boolean] - (optional) Indicates whether processing of request should wait until parsing of assets
 //                               is complete
-CCFullNodeClient.prototype.getTxouts = function (txouts, waitForParsing = true) {
+C3NodeClient.prototype.getTxouts = function (txouts, waitForParsing = true) {
     const postData = {
         txouts: Array.isArray(txouts) ? txouts : [txouts]
     };
@@ -173,13 +173,13 @@ CCFullNodeClient.prototype.getTxouts = function (txouts, waitForParsing = true) 
     }
 };
 
-// Call Colored Coins Full Node getAddressesTransactions method
+// Call Catenis Colored Coins node server getAddressesTransactions method
 //
 //  Arguments:
 //   addresses [String|Array(String)] - Blockchain addresses for which to retrieve transactions
 //   waitForParsing [Boolean] - (optional) Indicates whether processing of request should wait until parsing of assets
 //                               is complete
-CCFullNodeClient.prototype.getAddressesTransactions = function (addresses, waitForParsing = true) {
+C3NodeClient.prototype.getAddressesTransactions = function (addresses, waitForParsing = true) {
     const postData = {
         addresses: Array.isArray(addresses) ? addresses : [addresses]
     };
@@ -196,11 +196,11 @@ CCFullNodeClient.prototype.getAddressesTransactions = function (addresses, waitF
     }
 };
 
-// Call Colored Coins Full Node transmit method
+// Call Catenis Colored Coins node server transmit method
 //
 //  Arguments:
 //   txHex [String] - Hex encoded serialization of transaction to send to the blockchain
-CCFullNodeClient.prototype.transmit = function (txHex) {
+C3NodeClient.prototype.transmit = function (txHex) {
     const postData = {
         txHex: txHex
     };
@@ -213,9 +213,9 @@ CCFullNodeClient.prototype.transmit = function (txHex) {
     }
 };
 
-// Call Colored Coins Full Node getInfo method
+// Call Catenis Colored Coins node server getInfo method
 //
-CCFullNodeClient.prototype.getInfo = function () {
+C3NodeClient.prototype.getInfo = function () {
     try {
         return getRequest.call(this, cfgSettings.methodPath.getInfo);
     }
@@ -224,12 +224,12 @@ CCFullNodeClient.prototype.getInfo = function () {
     }
 };
 
-// Call Colored Coins Full Node importAddresses method
+// Call Catenis Colored Coins node server importAddresses method
 //
 //  Arguments:
 //   addresses [String|Array(String)] - Blockchain addresses to import
 //   reindex [Boolean]      - Indicates whether Bitcoin Core's database should be reindexed
-CCFullNodeClient.prototype.importAddresses = function (addresses, reindex) {
+C3NodeClient.prototype.importAddresses = function (addresses, reindex) {
     const postData = {
         addresses: Array.isArray(addresses) ? addresses : [addresses]
     };
@@ -246,7 +246,7 @@ CCFullNodeClient.prototype.importAddresses = function (addresses, reindex) {
     }
 };
 
-// Call Colored Coins Full Node getAssetHolders method
+// Call Catenis Colored Coins node server getAssetHolders method
 //
 //  Arguments:
 //   ccAssetId [String] - Colored Coins asset ID
@@ -254,7 +254,7 @@ CCFullNodeClient.prototype.importAddresses = function (addresses, reindex) {
 //                                  asset amount balance per holding address
 //   waitForParsing [Boolean] - (optional) Indicates whether processing of request should wait until parsing of assets
 //                               is complete
-CCFullNodeClient.prototype.getAssetHolders = function (ccAssetId, numOfConfirmations, waitForParsing = true) {
+C3NodeClient.prototype.getAssetHolders = function (ccAssetId, numOfConfirmations, waitForParsing = true) {
     const postData = {
         assetId: ccAssetId
     };
@@ -275,7 +275,7 @@ CCFullNodeClient.prototype.getAssetHolders = function (ccAssetId, numOfConfirmat
     }
 };
 
-// Call Colored Coins Full Node getAssetBalance method
+// Call Catenis Colored Coins node server getAssetBalance method
 //
 //  Arguments:
 //   ccAssetId [String] - Colored Coins asset ID
@@ -283,7 +283,7 @@ CCFullNodeClient.prototype.getAssetHolders = function (ccAssetId, numOfConfirmat
 //   numOfConfirmations [Number] - (optional) Minimum number of confirmations to include UTXO amount in accumulated asset amount balance
 //   waitForParsing [Boolean] - (optional) Indicates whether processing of request should wait until parsing of assets
 //                               is complete
-CCFullNodeClient.prototype.getAssetBalance = function (ccAssetId, addresses, numOfConfirmations, waitForParsing = true) {
+C3NodeClient.prototype.getAssetBalance = function (ccAssetId, addresses, numOfConfirmations, waitForParsing = true) {
     const postData = {
         assetId: ccAssetId
     };
@@ -308,7 +308,7 @@ CCFullNodeClient.prototype.getAssetBalance = function (ccAssetId, addresses, num
     }
 };
 
-// Call Colored Coins Full Node getMultiAssetBalance method
+// Call Catenis Colored Coins node server getMultiAssetBalance method
 //
 //  Arguments:
 //   ccAssetIds [String|Array(String)] - List of Colored Coins asset IDs (or a single ID)
@@ -316,7 +316,7 @@ CCFullNodeClient.prototype.getAssetBalance = function (ccAssetId, addresses, num
 //   numOfConfirmations [Number] - (optional) Minimum number of confirmations to include UTXO amount in accumulated asset amount balance
 //   waitForParsing [Boolean] - (optional) Indicates whether processing of request should wait until parsing of assets
 //                               is complete
-CCFullNodeClient.prototype.getMultiAssetBalance = function (ccAssetIds, addresses, numOfConfirmations, waitForParsing = true) {
+C3NodeClient.prototype.getMultiAssetBalance = function (ccAssetIds, addresses, numOfConfirmations, waitForParsing = true) {
     const postData = {
         assetIds: Array.isArray(ccAssetIds) ? ccAssetIds : [ccAssetIds]
     };
@@ -341,13 +341,13 @@ CCFullNodeClient.prototype.getMultiAssetBalance = function (ccAssetIds, addresse
     }
 };
 
-// Call Colored Coins Full Node getAssetIssuance method
+// Call Catenis Colored Coins node server getAssetIssuance method
 //
 //  Arguments:
 //   ccAssetId [String] - Colored Coins asset ID
 //   waitForParsing [Boolean] - (optional) Indicates whether processing of request should wait until parsing of assets
 //                               is complete
-CCFullNodeClient.prototype.getAssetIssuance = function (ccAssetId, waitForParsing = true) {
+C3NodeClient.prototype.getAssetIssuance = function (ccAssetId, waitForParsing = true) {
     const postData = {
         assetId: ccAssetId
     };
@@ -364,13 +364,13 @@ CCFullNodeClient.prototype.getAssetIssuance = function (ccAssetId, waitForParsin
     }
 };
 
-// Call Colored Coins Full Node getAssetIssuingAddress method
+// Call Catenis Colored Coins node server getAssetIssuingAddress method
 //
 //  Arguments:
 //   ccAssetId [String] - Colored Coins asset ID
 //   waitForParsing [Boolean] - (optional) Indicates whether processing of request should wait until parsing of assets
 //                               is complete
-CCFullNodeClient.prototype.getAssetIssuingAddress = function (ccAssetId, waitForParsing = true) {
+C3NodeClient.prototype.getAssetIssuingAddress = function (ccAssetId, waitForParsing = true) {
     const postData = {
         assetId: ccAssetId
     };
@@ -387,7 +387,7 @@ CCFullNodeClient.prototype.getAssetIssuingAddress = function (ccAssetId, waitFor
     }
 };
 
-// Call Colored Coins Full Node getOwningAssets method
+// Call Catenis Colored Coins node server getOwningAssets method
 //
 //  Arguments:
 //   addresses [String|Array(String)] - List of addresses (or a single address) for which to retrieve the assets
@@ -396,7 +396,7 @@ CCFullNodeClient.prototype.getAssetIssuingAddress = function (ccAssetId, waitFor
 //                                  asset amount balance
 //   waitForParsing [Boolean] - (optional) Indicates whether processing of request should wait until parsing of assets
 //                               is complete
-CCFullNodeClient.prototype.getOwningAssets = function (addresses, numOfConfirmations, waitForParsing = true) {
+C3NodeClient.prototype.getOwningAssets = function (addresses, numOfConfirmations, waitForParsing = true) {
     const postData = {
         addresses: Array.isArray(addresses) ? addresses : [addresses]
     };
@@ -418,8 +418,8 @@ CCFullNodeClient.prototype.getOwningAssets = function (addresses, numOfConfirmat
 };
 
 
-// Module functions used to simulate private CCFullNodeClient object methods
-//  NOTE: these functions need to be bound to a CCFullNodeClient object reference (this) before
+// Module functions used to simulate private C3NodeClient object methods
+//  NOTE: these functions need to be bound to a C3NodeClient object reference (this) before
 //      they are called, by means of one of the predefined function methods .call(), .apply()
 //      or .bind().
 //
@@ -555,34 +555,34 @@ function sendRequest(method, path, body, callback) {
 }
 
 
-// CCFullNodeClient function class (public) methods
+// C3NodeClient function class (public) methods
 //
 
-CCFullNodeClient.initialize = function () {
-    Catenis.logger.TRACE('CCFullNodeClient initialization');
-    // Instantiate CCFullNodeClient object
-    Catenis.ccFNClient = new CCFullNodeClient(Catenis.application.cryptoNetworkName, cfgSettings.serverHost, cfgSettings.inetAddress, cfgSettings.user, cfgSettings.password, cfgSettings.connectionTimeout);
+C3NodeClient.initialize = function () {
+    Catenis.logger.TRACE('C3NodeClient initialization');
+    // Instantiate C3NodeClient object
+    Catenis.c3NodeClient = new C3NodeClient(Catenis.application.cryptoNetworkName, cfgSettings.serverHost, cfgSettings.inetAddress, cfgSettings.user, cfgSettings.password, cfgSettings.connectionTimeout);
 };
 
 
-// CCFullNodeClient function class (public) properties
+// C3NodeClient function class (public) properties
 //
 
-/*CCFullNodeClient.prop = {};*/
+/*C3NodeClient.prop = {};*/
 
 
 // Definition of module (private) functions
 //
 
 function handleError(methodName, err) {
-    let errMsg = util.format('Error calling Colored Coins Full Node \'%s\' method.', methodName);
+    let errMsg = util.format('Error calling Catenis Colored Coins node server \'%s\' method.', methodName);
 
     // Log error and rethrow it
     Catenis.logger.DEBUG(errMsg, err);
 
     errMsg += ' ' + err.toString();
 
-    throw new Meteor.Error('ctn_cc_full_node_error', errMsg, err);
+    throw new Meteor.Error('ctn_c3_node_svr_error', errMsg, err);
 }
 
 
@@ -591,4 +591,4 @@ function handleError(methodName, err) {
 //
 
 // Lock function class
-Object.freeze(CCFullNodeClient);
+Object.freeze(C3NodeClient);
