@@ -231,8 +231,6 @@ LogMessageTransaction.prototype.sendTransaction = function () {
             deviceId: this.device.deviceId
         });
 
-        // TODO: issue either Spend Service Credit or Debit Service Account transaction to account for the service payment
-
         // Check if system pay tx expense addresses need to be refunded
         Catenis.ctnHubNode.checkPayTxExpenseFundingBalance();
     }
