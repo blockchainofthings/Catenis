@@ -530,7 +530,7 @@
   },
   // Parameters pertaining to C3NodeClient module
   "c3NodeClient": {
-    "serverHost": "catenis-ccfnode", // Catenis Colored Coins node server host name/IP address
+    "serverHost": "catenis-c3nserv", // Catenis Colored Coins node server host name/IP address
     "mainTcpPort": 8033, // TCP port used to connect with the Catenis Colored Coins node server to interact with bitcoin's main blockchain
     "testnetTcpPort": 8043, // TCP port used to connect with the Catenis Colored Coins node server to interact with bitcoin's testnet blockchain
     "inetAddress": "", // IP address of local network interface to use to connect with the Catenis Colored Coins node server. If not specified (empty string) the default network interface is used
