@@ -22,6 +22,7 @@ import winstonTransportMail from 'winston-mail';
 
 // References code in other (Catenis) modules
 import { Catenis } from './Catenis';
+import { cfgSettings as emailCfgSettings } from './ConfigEmail';
 
 // Config entries
 const loggingConfig = config.get('logging');
@@ -49,6 +50,7 @@ const emailSecureProtocols = {
 
 // Configuration settings
 const cfgSettings = {
+    exitOnError: loggingConfig.get('exitOnError'),
     console: {
         active: logConsoleConfig.get('active'),
         logLevel: logConsoleConfig.has('logLevel') && (logConsoleConfig.get('logLevel') in log4jLevels) ? logConsoleConfig.get('logLevel') : 'INFO'
@@ -63,11 +65,6 @@ const cfgSettings = {
     email: {
         active: logEmailConfig.get('active'),
         logLevel: logEmailConfig.has('logLevel') && (logEmailConfig.get('logLevel') in log4jLevels) ? logEmailConfig.get('logLevel') : 'WARN',
-        smtpHost: logEmailConfig.get('smtpHost'),
-        secureProto: logEmailConfig.has('secureProto') && (logEmailConfig.get('secureProto') in emailSecureProtocols) ? logEmailConfig.get('secureProto') : undefined,
-        smtpPort: logEmailConfig.has('smtpPort') ? logEmailConfig.get('smtpPort') : undefined,
-        username: logEmailConfig.has('username') ? logEmailConfig.get('username') : undefined,
-        password: logEmailConfig.has('password') ? logEmailConfig.get('password') : undefined,
         toAddresses: logEmailConfig.get('toAddresses'),
         fromAddress: logEmailConfig.get('fromAddress'),
         subject: logEmailConfig.get('subject')
@@ -112,7 +109,7 @@ const consoleTranspParams = {
     emailTranspParams = {
         level: cfgSettings.email.logLevel,
         silent: !cfgSettings.email.active,
-        host: cfgSettings.email.smtpHost,
+        host: emailCfgSettings.smtpHost,
         to: cfgSettings.email.toAddresses,
         from: cfgSettings.email.fromAddress,
         subject: cfgSettings.email.subject,
@@ -128,25 +125,25 @@ const consoleTranspParams = {
 //
 
 // Complement logging transport parameters
-if (cfgSettings.email.secureProto !== undefined) {
-    if (cfgSettings.email.secureProto === 'ssl') {
+if (emailCfgSettings.secureProto) {
+    if (emailCfgSettings.secureProto === 'ssl') {
         emailTranspParams.ssl = true;
     }
-    else if (emailTranspParams === 'tls') {
+    else if (emailCfgSettings.secureProto === 'tls') {
         emailTranspParams.tls = true;
     }
 }
 
-if (cfgSettings.email.smtpPort !== undefined && typeof cfgSettings.email.smtpPort === 'number') {
-    emailTranspParams.port = cfgSettings.email.smtpPort;
+if (emailCfgSettings.smtpPort && typeof emailCfgSettings.smtpPort === 'number') {
+    emailTranspParams.port = emailCfgSettings.smtpPort;
 }
 
-if (cfgSettings.email.username !== undefined) {
-    emailTranspParams.username = cfgSettings.email.username;
+if (emailCfgSettings.username) {
+    emailTranspParams.username = emailCfgSettings.username;
 }
 
-if (cfgSettings.email.password !== undefined) {
-    emailTranspParams.password = cfgSettings.email.password;
+if (emailCfgSettings.password) {
+    emailTranspParams.password = emailCfgSettings.password;
 }
 
 // Instantiate Logger object
@@ -163,15 +160,19 @@ Catenis.logger = new (winston.Logger)({
     levels: log4jLevels,
     colors: log4jColors,
     padLevels: true,
+    exitOnError: cfgSettings.exitOnError,
     transports: [
         new (winston.transports.Console)(consoleTranspParams),
         new (winstonTransportsDailyRotateFile)(fileTranspParams),
         new (winstonTransportMail.Mail)(emailTranspParams)
+    ],
+    filters: [
+        appendSourceCodePrefix
     ]
 });
 
 // Filter to append prefix with source code information
-Catenis.logger.filters.push(function (level, msg, meta, inst) {
+function appendSourceCodePrefix(level, msg, meta, inst) {
     // Check whether a stack trace is passed in the meta
     if (typeof meta === 'object' && meta !== null) {
         if (typeof meta.stackTrace !== 'undefined') {
@@ -233,4 +234,4 @@ Catenis.logger.filters.push(function (level, msg, meta, inst) {
     }
 
     return msg;
-});
+}

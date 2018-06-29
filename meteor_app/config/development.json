@@ -25,10 +25,6 @@
     "email": {
       "active": false,
       "logLevel": "ACTION",
-      "smtpHost": "smtp.netzero.com",
-      "secureProto": "ssl", // Valid options: none, ssl or tls
-      "username": "csdecastro", // To be set only if required by SMTP host
-      "password": "???????", // To be set only if required by SMTP host
       "toAddresses": "claudiosdc@gmail.com", // Can be set to a comma separated list of e-mail addresses
       "fromAddress": "Catenis <csdecastro@netzero.com>"
     }
@@ -58,8 +54,6 @@
   "omniCore": {
     "serverHost": "10.8.0.1", // Omni Core server host name/IP address (access via VPN)
     //"serverHost": "catenis-dev", // Omni Core server host name/IP address
-    "mainRpcPort": 7332, // Port used to connect with Omni Core server via its RPC interface to interact with bitcoin's main blockchain
-    "testnetRpcPort": 17332, // Port used to connect with Omni Core server via its RPC interface to interact with bitcoin's testnet blockchain
     "rpcConnectionTimeout": 30000,  // Timeout, in miliseconds, for RPC connection with the Omni Core server
     "rescanTimeout": 900000 // Timeout, in miniseconds, for waiting on Omni Core to finish rescanning the blockchain after importing private key
   },
