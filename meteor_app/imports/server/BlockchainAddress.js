@@ -10,11 +10,8 @@
 // References to external code
 //
 // Internal node modules
-//  NOTE: the reference of these modules are done sing 'require()' instead of 'import' to
-//      to avoid annoying WebStorm warning message: 'default export is not defined in
-//      imported module'
-const util = require('util');
-const crypto = require('crypto');
+import util from 'util';
+import crypto from 'crypto';
 // Third-party node modules
 import config from 'config';
 // Meteor packages

@@ -10,12 +10,9 @@
 // References to external code
 //
 // Internal node modules
-//  NOTE: the reference of these modules are done sing 'require()' instead of 'import' to
-//      to avoid annoying WebStorm warning message: 'default export is not defined in
-//      imported module'
-const crypto = require('crypto');
-const path = require('path');
-const fs = require('fs');
+import crypto from 'crypto';
+import path from 'path';
+import fs from 'fs';
 // Third-party node modules
 import config from 'config';
 import bitcoinLib from 'bitcoinjs-lib';

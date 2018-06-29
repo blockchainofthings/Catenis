@@ -151,10 +151,7 @@
 // References to external code
 //
 // Internal node modules
-//  NOTE: the reference of these modules are done using 'require()' instead of 'import' to
-//      to avoid annoying WebStorm warning message: 'default export is not defined in
-//      imported module'
-const util = require('util');
+import util from 'util';
 // Third-party node modules
 import config from 'config';
 import Loki from 'lokijs';

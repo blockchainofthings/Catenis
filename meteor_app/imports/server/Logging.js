@@ -10,11 +10,8 @@
 // References to external code
 //
 // Internal node modules
-//  NOTE: the reference of these modules are done sing 'require()' instead of 'import' to
-//      to avoid annoying WebStorm warning message: 'default export is not defined in
-//      imported module'
-const util = require('util');
-const path = require('path');
+import util from 'util';
+import path from 'path';
 // Third-party node modules
 import config from 'config';
 import winston from 'winston';
@@ -156,7 +153,7 @@ if (cfgSettings.email.password !== undefined) {
 //
 // NOTE: to add information about source file, line number and
 //  function name to the logged message, one should include
-//  the 'stack-track' module - using Npm.require('stack-trace'))
+//  the 'stack-track' module - import stack-track from 'stack-track'
 //  - and add a meta (last parameter) object containing the
 //  key stackTrace with a value equal to stackTrace.get().
 //  Example:
