@@ -1006,7 +1006,7 @@ function handleNewTransactions(data) {
                             };
                         }
 
-                        //  Prepared to save received tx to the local database
+                        //  Prepare to save received tx to the local database
                         rcvdTxDocsToCreate.push({
                             type: doc.type,
                             txid: doc.txid,
