@@ -1,5 +1,5 @@
 /**
- * Created by claudio on 21/08/17.
+ * Created by Claudio on 2017-08-21.
  */
 
 //console.log('[ApiListNotificationEvents.js]: This code just ran.');

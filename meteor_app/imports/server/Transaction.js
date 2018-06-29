@@ -1,5 +1,5 @@
 /**
- * Created by claudio on 12/07/16.
+ * Created by Claudio on 2016-07-12.
  */
 
 //console.log('[Transaction.js]: This code just ran.');

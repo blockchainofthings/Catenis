@@ -1,5 +1,5 @@
 /**
- * Created by claudio on 24/11/17.
+ * Created by Claudio on 2017-11-24.
  */
 
 //console.log('[CreditServiceAccTransaction.js]: This code just ran.');

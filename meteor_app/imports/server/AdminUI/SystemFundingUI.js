@@ -1,5 +1,5 @@
 /**
- * Created by claudio on 15/05/17.
+ * Created by Claudio on 2017-05-15.
  */
 
 //console.log('[SystemFundingUI.js]: This code just ran.');

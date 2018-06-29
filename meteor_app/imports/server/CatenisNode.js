@@ -1,7 +1,7 @@
 import { Asset } from './Asset';
 
 /**
- * Created by claudio on 25/11/16.
+ * Created by Claudio on 2016-11-25.
  */
 
 //console.log('[CatenisNode.js]: This code just ran.');

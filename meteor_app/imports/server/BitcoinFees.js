@@ -1,5 +1,5 @@
 /**
- * Created by claudio on 29/06/16.
+ * Created by Claudio on 2016-06-29.
  */
 
 //console.log('[BitcoinFees.js]: This code just ran.');

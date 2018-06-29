@@ -1,5 +1,5 @@
 /**
- * Created by claudio on 03/07/17.
+ * Created by Claudio on 2017-07-03.
  */
 
 //console.log('[ReadConfirmTransaction.js]: This code just ran.');

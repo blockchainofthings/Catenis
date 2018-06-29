@@ -1,5 +1,5 @@
 /**
- * Created by claudio on 30/10/17.
+ * Created by Claudio on 2017-10-30.
  */
 
 //console.log('[CCTransaction.js]: This code just ran.');

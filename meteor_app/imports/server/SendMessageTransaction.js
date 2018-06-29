@@ -1,5 +1,5 @@
 /**
- * Created by claudio on 19/11/16.
+ * Created by Claudio on 2016-11-19.
  */
 
 //console.log('[SendMessageTransaction.js]: This code just ran.');

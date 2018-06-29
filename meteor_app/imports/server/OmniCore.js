@@ -1,5 +1,5 @@
 /**
- * Created by claudio on 17/11/17.
+ * Created by Claudio on 2017-11-17.
  */
 
 //console.log('[OmniCore.js]: This code just ran.');

@@ -1,5 +1,5 @@
 /**
- * Created by claudio on 26/09/17.
+ * Created by Claudio on 2017-09-26.
  */
 // TODO: this module shall be removed, along with any code that uses it, when Catenis stops supporting the (original) Colored Coins protocol and only uses the new Catenis Colored Coins protocol
 //console.log('[CCMetadataClient.js]: This code just ran.');

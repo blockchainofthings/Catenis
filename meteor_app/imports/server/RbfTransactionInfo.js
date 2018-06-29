@@ -1,5 +1,5 @@
 /**
- * Created by claudio on 13/07/17.
+ * Created by Claudio on 2017-07-13.
  */
 
 //console.log('[RbfTransactionInfo.js]: This code just ran.');

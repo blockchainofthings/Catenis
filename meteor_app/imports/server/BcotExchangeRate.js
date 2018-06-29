@@ -1,5 +1,5 @@
 /**
- * Created by claudio on 23/11/17.
+ * Created by Claudio on 2017-11-23.
  */
 
 //console.log('[BcotExchangeRate.js]: This code just ran.');

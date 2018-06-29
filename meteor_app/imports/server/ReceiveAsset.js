@@ -1,5 +1,5 @@
 /**
- * Created by claudio on 22/03/18.
+ * Created by Claudio on 2018-03-22.
  */
 
 //console.log('[ReceiveAsset.js]: This code just ran.');

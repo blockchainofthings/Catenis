@@ -1,5 +1,5 @@
 /**
- * Created by claudio on 08/06/16.
+ * Created by Claudio on 2016-06-08.
  */
 
 //console.log('[BlockchainAddress.js]: This code just ran.');

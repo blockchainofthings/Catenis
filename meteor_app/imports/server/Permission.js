@@ -1,5 +1,5 @@
 /**
- * Created by claudio on 02/08/17.
+ * Created by Claudio on 2017-08-02.
  */
 
 //console.log('[Permission.js]: This code just ran.');

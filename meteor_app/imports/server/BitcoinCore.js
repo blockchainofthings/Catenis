@@ -1,5 +1,5 @@
 /**
- * Created by claudio on 24/03/16.
+ * Created by Claudio on 2016-03-24.
  */
 
 //console.log('[BitcoinCore.js]: This code just ran.');

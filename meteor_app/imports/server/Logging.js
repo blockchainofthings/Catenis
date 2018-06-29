@@ -1,5 +1,5 @@
 /**
- * Created by claudio on 26/11/15.
+ * Created by Claudio on 2015-11-26.
  */
 
 //console.log('[Logging.js]: This code just ran.');

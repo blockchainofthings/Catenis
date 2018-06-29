@@ -1,5 +1,5 @@
 /**
- * Created by claudio on 23/12/16.
+ * Created by Claudio on 2016-12-23.
  */
 
 //console.log('[MessageStorage.js]: This code just ran.');

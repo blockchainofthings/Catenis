@@ -1,5 +1,5 @@
 /**
- * Created by claudio on 06/09/17.
+ * Created by Claudio on 2017-09-06.
  */
 
 //console.log('[ApiEffectivePermissionRight.js]: This code just ran.');

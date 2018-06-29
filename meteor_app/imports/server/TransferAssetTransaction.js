@@ -1,5 +1,5 @@
 /**
- * Created by claudio on 20/03/18.
+ * Created by Claudio on 2018-03-20.
  */
 
 //console.log('[TransferAssetTransaction.js]: This code just ran.');

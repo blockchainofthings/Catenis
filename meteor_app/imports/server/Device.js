@@ -1,5 +1,5 @@
 /**
- * Created by claudio on 23/06/16.
+ * Created by Claudio on 2016-06-23.
  */
 
 //console.log('[Device.js]: This code just ran.');

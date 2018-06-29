@@ -1,5 +1,5 @@
 /**
- * Created by claudio on 26/12/16.
+ * Created by Claudio on 2016-12-26.
  */
 
 //console.log('[IpfsMessageStorage.js]: This code just ran.');

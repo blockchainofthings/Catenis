@@ -1,5 +1,5 @@
 /**
- * Created by claudio on 17/08/17.
+ * Created by Claudio on 2017-08-17.
  */
 
 //console.log('[Notification.js]: This code just ran.');
