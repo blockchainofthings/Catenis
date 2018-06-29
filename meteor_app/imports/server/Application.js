@@ -18,7 +18,8 @@ import config from 'config';
 import bitcoinLib from 'bitcoinjs-lib';
 // Meteor packages
 import { Meteor } from 'meteor/meteor';
-
+import { Roles } from 'meteor/alanning:roles';
+import { Accounts } from 'meteor/accounts-base';
 // References code in other (Catenis) modules
 import { Catenis } from './Catenis';
 import { TransactionMonitor } from './TransactionMonitor';
@@ -34,7 +35,10 @@ const cfgSettings = {
     appName: appConfig.get('appName'),
     seedFilename: appConfig.get('seedFilename'),
     cryptoNetwork: appConfig.get('cryptoNetwork'),
-    shutdownTimeout: appConfig.get('shutdownTimeout')
+    shutdownTimeout: appConfig.get('shutdownTimeout'),
+    adminRole: appConfig.get('adminRole'),
+    defaultAdminUser: appConfig.has('defaultAdminUser') ? appConfig.get('defaultAdminUser') : undefined,
+    defaultAdminPsw: appConfig.has('defaultAdminPsw') ? appConfig.get('defaultAdminPsw') : undefined
 };
 
 // Catenis Hub node index
@@ -101,6 +105,9 @@ export function Application() {
 
     // Set initial application status
     this.status = Application.processingStatus.stopped;
+
+    // Make sure that admin user account is defined
+    checkAdminUser.call(this);
 
     // Set up handler to gracefully shutdown the application
     process.on('SIGTERM', Meteor.bindEnvironment(shutdownHandler, 'Catenis application SIGTERM handler', this));
@@ -221,6 +228,14 @@ Application.prototype.isOmniCoreRescanning = function () {
     return statusRegEx.omni_rescan.test(this.status.name);
 };
 
+Application.prototype.cipherData = function (data, decipher = false) {
+    const x = [ 65, 97, 68, 88, 51, 70, 87, 110, 113, 110, 69, 88, 102, 76, 83, 104, 116, 99, 98, 84, 100, 70, 54, 89 ];
+    const y = crypto.createHmac('sha256', Buffer.from(x)).update(this.masterSeed).digest();
+    const cryptoObj = (decipher ? crypto.createDecipher : crypto.createCipher)('des-ede3-cbc', y);
+
+    return Buffer.concat([cryptoObj.update(data), cryptoObj.final()]);
+};
+
 
 // Module functions used to simulate private Application object methods
 //  NOTE: these functions need to be bound to an Application object reference (this) before
@@ -228,14 +243,18 @@ Application.prototype.isOmniCoreRescanning = function () {
 //      or .bind().
 //
 
-function pauseNoFunds() {
-    if (this.isStopped()) {
-        // Change application status. At this state, the application should only accept that new fund addresses
-        //  are created to send funds to the system
-        this.status = Application.processingStatus.paused_no_funds;
-
-        // Make sure that blockchain transaction monitoring is on
-        Catenis.txMonitor.startMonitoring();
+function checkAdminUser() {
+    if (Roles.getUsersInRole(cfgSettings.adminRole).count() === 0 && cfgSettings.defaultAdminUser && cfgSettings.defaultAdminPsw) {
+        Catenis.logger.INFO('Creating default admin user');
+        // No admin user defined. Create default admin user
+        const adminUserId = Accounts.createUser({
+            username: cfgSettings.defaultAdminUser,
+            password: this.cipherData(Buffer.from(cfgSettings.defaultAdminPsw, 'hex'), true).toString(),
+            profile: {
+                name: 'Catenis default admin user'
+            }
+        });
+        Roles.addUsersToRoles(adminUserId, cfgSettings.adminRole);
     }
 }
 
