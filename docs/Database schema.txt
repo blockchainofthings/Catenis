@@ -355,3 +355,10 @@ Billing {
   },
   createdDate: [date/time]  // Date and time when doc/rec has been created
 }
+
+CCMetadataConversion {
+  _id: [string],  // MongoDB internal document ID provided by Meteor
+  torrentHash: [string],  // Torrent hash of Colored Coins metadata
+  cid: [string],  // Hex encoded CID on IPFS of converted Colored Coins metadata
+  createdDate: [date/time]  // Date and time when doc/rec has been created
+}

@@ -378,6 +378,23 @@ CCMetadata.prototype.isStored = function () {
     return this.storeResult !== undefined;
 };
 
+// Store Colored Coins metadata (already stored) on BitTorrent onto IPFS
+CCMetadata.prototype.convertCID = function () {
+    if (this.storeResult && this.storeResult.torrentHash) {
+        const oldStoreResult = this.storeResult;
+
+        this.storeResult = undefined;
+
+        // Store metadata onto IPFS
+        this.store();
+
+        Catenis.db.collection.CCMetadataConversion.insert({
+            torrentHash: oldStoreResult.torrentHash,
+            cid: this.storeResult.cid,
+            createdDate: new Date()
+        });
+    }
+};
 
 // Module functions used to simulate private CCMetadata object methods
 //  NOTE: these functions need to be bound to a CCMetadata object reference (this) before
@@ -558,6 +575,20 @@ CCMetadata.fromTorrent = function (torrentHash, sha2, decCryptoKeys) {
             Catenis.logger.ERROR('Error parsing Colored Coins metadata.', err);
         }
     }
+};
+
+// Check whether Colored Coins metadata (previously) stored on BitTorrent had already
+//  been stored onto IPFS, and returns its CID if it did
+CCMetadata.checkCIDConverted = function (torrentHash) {
+    const ccMetaConvert = Catenis.db.collection.CCMetadataConversion.findOne({
+        torrentHash: torrentHash
+    }, {
+        fields: {
+            cid: true
+        }
+    });
+
+    return ccMetaConvert ? Buffer.from(ccMetaConvert.cid, 'hex') : undefined;
 };
 
 

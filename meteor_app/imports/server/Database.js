@@ -1217,6 +1217,27 @@ Database.initialize = function() {
                     w: 1
                 }
             }]
+        },
+        CCMetadataConversion: {
+            indices: [{
+                fields: {
+                    torrentHash: 1
+                },
+                opts: {
+                    unique: true,
+                    background: true,
+                    w: 1
+                }
+            }, {
+                fields: {
+                    cid: 1
+                },
+                opts: {
+                    unique: true,
+                    background: true,
+                    w: 1
+                }
+            }]
         }
     };
 
