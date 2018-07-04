@@ -1756,7 +1756,7 @@ CCTransaction.convertMetadata = function () {
         fields: {
             txid: 1
         }
-    }).forEach((doc) => {
+    }).fetch().forEach((doc) => {
         // Load Colored Coins transaction so its metadata is converted from BitTorrent
         //  to IPFS if required
         const ccTransact = CCTransaction.fromTransaction(Transaction.fromTxid(doc.txid));
