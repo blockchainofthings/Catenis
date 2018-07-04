@@ -1420,8 +1420,9 @@ CCTransaction.fromTransaction = function (transact) {
             let curOutputPos = nullDataOutputPos + 1;
             let totalAmountTransferred = 0;
 
-            // Make sure that payments are properly sorted
-            ccData.payments.sort((payment1, payment2) => (payment1.burn ? 9999 : payment1.output) - (payment2.burn ? 9999 : payment2.output));
+            // Make sure that payments are properly sorted: sort by inputs and then outputs, leaving
+            //  burn payments at the end of each input sequence
+            ccData.payments.sort((payment1, payment2) => (payment1.input * 10000 + (payment1.burn ? 9999 : payment1.output)) - (payment2.input * 10000 + (payment2.burn ? 9999 : payment2.output)));
 
             ccData.payments.forEach((payment, idx) => {
                 if (!payment.burn && payment.output !== curOutputPos) {
