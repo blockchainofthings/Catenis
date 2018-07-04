@@ -55,10 +55,6 @@
   "c3NodeClient": {
     "connectionTimeout": 30000,  // Timeout, in miliseconds, for connection with the Colored Coins Full-Node server
   },
-  // Parameters pertaining to CCMetadataClient module
-  "ccMetadataClient": {
-    "connectionTimeout": 30000  // Timeout, in miliseconds, for connection with the Colored Coins Full-Node server
-  },
   // Parameters pertaining to CCMetadata module
   "ccMetadata": {
     "urlContentTimeout": 15000,  // Timeout, in miliseconds, fro retrieving content associated with a given URL

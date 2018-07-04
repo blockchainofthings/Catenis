@@ -1689,29 +1689,17 @@ CCTransaction.fromTransaction = function (transact) {
                     // Get metadata using crypto keys from first input to decrypt user data (if required)
                     const firstInput = ccTransact.getInputAt(0);
 
-                    // Check if torrentHash has already been converted into IPFS CID
+                    // Make sure that torrentHash has been converted into IPFS CID
                     let cid;
 
                     if ((cid = CCMetadata.checkCIDConverted(torrentHash))) {
                         ccTransact.ccMetadata = CCMetadata.fromCID(cid, firstInput.addrInfo !== undefined ? firstInput.addrInfo.cryptoKeys : undefined);
                     }
                     else {
-                        ccTransact.ccMetadata = CCMetadata.fromTorrent(torrentHash, sha2, firstInput.addrInfo !== undefined ? firstInput.addrInfo.cryptoKeys : undefined);
-
-                        if (ccTransact.ccMetadata) {
-                            Catenis.logger.TRACE('About to convert Colored Coins metadata from BitTorrent to IPFS', {
-                                txid: ccTransact.txid,
-                                metadata: ccTransact.ccMetadata
-                            });
-                            ccTransact.ccMetadata.convertCID();
-                            ccTransact.ccMetadataConverted = true;
-                        }
-                        else {
-                            Catenis.logger.WARN('Unable to retrieve Colored Coins metadata', {
-                                txid: ccTransact.txid,
-                                torrentHash: torrentHash
-                            });
-                        }
+                        Catenis.logger.WARN('Cannot retrieve Colored Coins metadata that is stored in BitTorrent', {
+                            txid: ccTransact.txid,
+                            torrentHash: torrentHash
+                        });
                     }
                 }
             }
@@ -1734,42 +1722,6 @@ CCTransaction.fromTransaction = function (transact) {
         Catenis.logger.ERROR('Invalid Colored Coins transaction: no Colored Coins data or null data output in an unexpected position', {
             transact: transact
         });
-    }
-};
-
-CCTransaction.convertMetadata = function () {
-    let numConvertedMetadata = 0;
-
-    Catenis.db.collection.SentTransaction.find({
-        type: {
-            $in: ['credit_service_account', 'spend_service_credit', 'issue_asset', 'transfer_asset']
-        },
-        //'confirmation.confirmed': true
-        $or:[{
-            'confirmation.confirmed': true
-        }, {
-            replacedByTxid:{
-                $exists: true
-            }
-        }]
-    }, {
-        fields: {
-            txid: 1
-        }
-    }).fetch().forEach((doc) => {
-        // Load Colored Coins transaction so its metadata is converted from BitTorrent
-        //  to IPFS if required
-        const ccTransact = CCTransaction.fromTransaction(Transaction.fromTxid(doc.txid));
-
-        if (ccTransact) {
-            if (ccTransact.ccMetadataConverted) {
-                numConvertedMetadata++;
-            }
-        }
-    });
-
-    if (numConvertedMetadata > 0) {
-        Catenis.logger.INFO('Number of converted Colored Coins metadata: %d', numConvertedMetadata);
     }
 };
 

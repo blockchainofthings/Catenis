@@ -43,7 +43,6 @@ import { Notification } from './Notification';
 import { WebSocketNotifyMsgDispatcher } from './WebSocketNotifyMsgDispatcher';
 import { MalleabilityEventEmitter } from './MalleabilityEventEmitter';
 import { C3NodeClient } from './C3NodeClient';
-import { CCMetadataClient } from './CCMetadataClient';
 import { OmniCore } from './OmniCore';
 import { BcotExchangeRate } from './BcotExchangeRate';
 import { BcotPayment } from './BcotPayment';
@@ -91,7 +90,6 @@ Meteor.startup(function () {
         IpfsClient.initialize();
         IpfsServerMonitor.initialize();
         C3NodeClient.initialize();
-        CCMetadataClient.initialize();
         //ColoredCoins.initialize();
         Permission.initialize();
         CatenisNode.initialize();

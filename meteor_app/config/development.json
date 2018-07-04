@@ -75,14 +75,6 @@
     "localAddress": "", // IP address of local network interface to use to connect with the Catenis Colored Coins node server. If not specified (empty string) the default network interface is used
     "connectionTimeout": 30000  // Timeout, in miliseconds, for connection with the Catenis Colored Coins node server
   },
-  // Parameters pertaining to CCMetadataClient module
-  "ccMetadataClient": {
-    "serverHost": "10.8.0.1", // Colored Coins Metadata server host name/IP address (access via VPN)
-    //"serverHost": "localhost", // Colored Coins Metadata server host name/IP address
-    "tcpPort": 8180, // TCP port used to connect with the Colored Coins Metadata server
-    "tokenValidityDuration": 15, // Time, in seconds, within which JWT token is considered valid for authentication
-    "connectionTimeout": 30000  // Timeout, in miliseconds, for connection with the Colored Coins Metadata server
-  },
   // Parameters pertaining to CCMetadata module
   "ccMetadata": {
     "signingCertificateFilePath": "/Users/claudio/Documents/Híades/Clientes/Blockchain of Things/Projects/Catenis/Development/Test SSL certificate/Test_cert.pem",  // Filesystem path to Blockchain of Things' owned SSL certificate used to signed message for asset verification

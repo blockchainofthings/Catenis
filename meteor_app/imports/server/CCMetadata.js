@@ -309,9 +309,6 @@ CCMetadata.prototype.assemble = function (encCryptoKeys) {
     }
 };
 
-//  Arguments:
-//   useIpfs [Boolean] - (optional) Indicates whether Colored Coins metadata should be stored in IPFS instead of in BitTorrent.
-//                        This is basically used by the Catenis Colored Coins protocol
 //  Result: [Object] - Object the properties of which depends if using IPFS to store metadata (useIpfs = true) or BitTorrent (useIpfs = false)
 //   - using IPFS: {
 //     cid: [String] - Hex encoded CID of metadata stored on IPFS
@@ -320,43 +317,24 @@ CCMetadata.prototype.assemble = function (encCryptoKeys) {
 //     torrentHash: [String] - The (hex encoded) hash of the torrent file containing the added metadata
 //     sha2: [String] - The (hex encoded) SHA256 hash of the metadata (JSON.stringify())
 //  }
-CCMetadata.prototype.store = function (useIpfs = true) {
+CCMetadata.prototype.store = function () {
     if (this.storeResult === undefined) {
         if (this.metadata) {
             const metadata = {
                 metadata: this.metadata
             };
 
-            if (useIpfs) {
-                // Special case for the Catenis Colored Coins protocol
-                try {
-                    // Save metadata onto IPFS
-                    const cidObj = new CID(Catenis.ipfsClient.api.filesAdd(Buffer.from(JSON.stringify(metadata)))[0].hash);
+            // Special case for the Catenis Colored Coins protocol
+            try {
+                // Save metadata onto IPFS
+                const cidObj = new CID(Catenis.ipfsClient.api.filesAdd(Buffer.from(JSON.stringify(metadata)))[0].hash);
 
-                    this.storeResult = {
-                        cid: cidObj.buffer.toString('hex')
-                    };
-                }
-                catch (err) {
-                    Catenis.logger.ERROR('Error while storing Colored Coins metadata onto IPFS.', err);
-                }
+                this.storeResult = {
+                    cid: cidObj.buffer.toString('hex')
+                };
             }
-            else {
-                try {
-                    this.storeResult = Catenis.ccMdClient.addMetadata(metadata);
-                }
-                catch (err) {
-                    Catenis.logger.ERROR('Error while storing Colored Coins metadata.', err);
-                }
-
-                if (this.storeResult !== undefined && cfgSettings.shareAfterStoring) {
-                    try {
-                        Catenis.ccMdClient.shareMetadata(this.storeResult.torrentHash);
-                    }
-                    catch (err) {
-                        Catenis.logger.ERROR('Error while sharing Colored Coins metadata.', err);
-                    }
-                }
+            catch (err) {
+                Catenis.logger.ERROR('Error while storing Colored Coins metadata onto IPFS.', err);
             }
         }
         else {
@@ -378,23 +356,6 @@ CCMetadata.prototype.isStored = function () {
     return this.storeResult !== undefined;
 };
 
-// Store Colored Coins metadata (already stored) on BitTorrent onto IPFS
-CCMetadata.prototype.convertCID = function () {
-    if (this.storeResult && this.storeResult.torrentHash) {
-        const oldStoreResult = this.storeResult;
-
-        this.storeResult = undefined;
-
-        // Store metadata onto IPFS
-        this.store();
-
-        Catenis.db.collection.CCMetadataConversion.insert({
-            torrentHash: oldStoreResult.torrentHash,
-            cid: this.storeResult.cid,
-            createdDate: new Date()
-        });
-    }
-};
 
 // Module functions used to simulate private CCMetadata object methods
 //  NOTE: these functions need to be bound to a CCMetadata object reference (this) before
@@ -534,39 +495,6 @@ CCMetadata.fromCID = function (cid, decCryptoKeys) {
 
             ccMeta.storeResult = {
                 cid: cid.toString('hex')
-            };
-
-            return ccMeta;
-        }
-        catch (err) {
-            Catenis.logger.ERROR('Error parsing Colored Coins metadata.', err);
-        }
-    }
-};
-
-// Get metadata from torrent
-//
-//  Arguments:
-//   torrentHash: [String] - The hash of the torrent file containing the metadata
-//   sha2: [String] - The SHA256 hash of the metadata (JSON.stringify())
-//   decCryptKeys [Object(CryptoKeys)] - (optional) The crypto key-pair associated with a blockchain address that should be used to decrypt encrypted user data
-CCMetadata.fromTorrent = function (torrentHash, sha2, decCryptoKeys) {
-    let metadata;
-
-    try {
-        metadata = Catenis.ccMdClient.getMetadata(torrentHash, sha2);
-    }
-    catch (err) {
-        Catenis.logger.ERROR('Error trying to retrieve Colored Coins metadata.', err);
-    }
-
-    if (metadata) {
-        try {
-            const ccMeta = new CCMetadata(metadata, decCryptoKeys);
-
-            ccMeta.storeResult = {
-                torrentHash: torrentHash,
-                sha2: sha2
             };
 
             return ccMeta;

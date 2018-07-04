@@ -561,22 +561,6 @@
       "getOwningAssets": "/getOwningAssets"
     }
   },
-  // Parameters pertaining to CCMetadataClient module
-  "ccMetadataClient": {
-    "serverHost": "catenis-ipfs", // Colored Coins Metadata server host name/IP address
-    "tcpPort": 8180, // TCP port used to connect with the Colored Coins Metadata server
-    "inetAddress": "", // IP address of local network interface to use to connect with the Colored Coins Metadata server. If not specified (empty string) the default network interface is used
-    "user": "??????", // Username used to authenticate the client to the Colored Coins Metadata server. If not specified (empty string) assume that no authenticaiton is required
-    "jwtSecret": "??????", // JWT secret (128-bit hex encoded value) used to authenticate the clent to the Colorec Coins Metadata server
-    "tokenValidityDuration": 15, // Time, in seconds, within which JWT token is considered valid for authentication
-    "connectionTimeout": 15000,  // Timeout, in miliseconds, for connection with the Colored Coins Metadata server
-    "methodPath": {
-      "addMetadata": "/addMetadata",
-      "getMetadata": "/getMetadata",
-      "shareMetadata": "/shareMetadata",
-      "removeMetadata": "/removeMetadata"
-    }
-  },
   // Parameters pertaining to CCMetadata module
   "ccMetadata": {
     "ctnAssetsIssuer": "Catenis Enterprise",
