@@ -1637,7 +1637,7 @@ function updateIssuedAddresses() {
         const docIssuedAddrByExpiredAddr = new Map();
 
         Catenis.db.collection.IssuedBlockchainAddress.find({status: 'expired'},
-            {fields: {_id: 1, type: 1, parentPath: 1, path: 1, addrIndex: 1, status: 1}}).forEach((doc) => {
+            {fields: {_id: 1, type: 1, parentPath: 1, path: 1, addrIndex: 1, status: 1}}).fetch().forEach((doc) => {
             let addr = BlockchainAddress.getAddressOfIssuedBlockchainAddress(doc);
 
             if (addr !== null) {
@@ -1668,7 +1668,7 @@ function updateIssuedAddresses() {
         const docIssuedAddrByNewAddrToExpire = new Map();
 
         Catenis.db.collection.IssuedBlockchainAddress.find({status: 'new', expirationDate: {$lte: new Date()}},
-            {fields: {_id: 1, type: 1, path: 1, addrIndex: 1, status: 1}}).forEach((doc) => {
+            {fields: {_id: 1, type: 1, path: 1, addrIndex: 1, status: 1}}).fetch().forEach((doc) => {
             let addr = BlockchainAddress.getAddressOfIssuedBlockchainAddress(doc);
 
             if (addr !== null) {
