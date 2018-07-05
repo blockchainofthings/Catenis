@@ -59,7 +59,7 @@
   },
   // Parameter pertaining to IpfsClient module
   "ipfsClient": {
-    "apiHost": "127.0.0.1",
+    "apiHost": "10.8.0.1",
     "apiPort": 5001,
     "apiProtocol": "http"
   },
