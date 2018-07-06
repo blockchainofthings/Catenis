@@ -243,6 +243,17 @@ Application.prototype.cipherData = function (data, decipher = false) {
 //      or .bind().
 //
 
+function pauseNoFunds() {
+    if (this.isStopped()) {
+        // Change application status. At this state, the application should only accept that new fund addresses
+        //  are created to send funds to the system
+        this.status = Application.processingStatus.paused_no_funds;
+
+        // Make sure that blockchain transaction monitoring is on
+        Catenis.txMonitor.startMonitoring();
+    }
+}
+
 function checkAdminUser() {
     if (Roles.getUsersInRole(cfgSettings.adminRole).count() === 0 && cfgSettings.defaultAdminUser && cfgSettings.defaultAdminPsw) {
         Catenis.logger.INFO('Creating default admin user');
