@@ -839,12 +839,19 @@ function highestEstimatedServicePaymentTxCostPerService() {
 }
 
 function averageEstimatedServicePaymentTxCostPerService() {
+    let numActvPrePaidClients = Client.activePrePaidClientsCount();
+    let numActvPostPaidClients = Client.activePostPaidClientsCount();
+
+    if (numActvPrePaidClients === 0 && numActvPostPaidClients === 0) {
+        numActvPrePaidClients = numActvPostPaidClients = 1;
+    }
+
     return Util.roundToResolution(Util.weightedAverage([
         averageSpendServCredTxCostPerService(),
         averageDebitServAccountTxCostPerService()
     ], [
-        Client.activePrePaidClientsCount(),
-        Client.activePostPaidClientsCount()
+        numActvPrePaidClients,
+        numActvPostPaidClients
     ]), cfgSettings.servicePayment.paymentResolution);
 }
 
