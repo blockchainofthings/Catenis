@@ -33,13 +33,6 @@ export const cfgSettings = {
     maxRetListEntries: assetConfig.get('maxRetListEntries')
 };
 
-// NOTE: this is necessary because the current version of the bignumber.js library that we are using (5.0.0)
-//      does not support the isBigNumber class method, which was introduced in version 6.0.0 only.
-if (!BigNumber.isBigNumber) {
-    BigNumber.isBigNumber = function (v) {
-        return v instanceof BigNumber || v && v.isBigNumber === true || false;
-    };
-}
 
 // Definition of function classes
 //
@@ -269,9 +262,9 @@ Asset.getAssetByIssuanceAddressPath = function (addrPath) {
 //  Return:
 //    convAmount: [Number|Object(BigNumber)]
 Asset.amountToSmallestDivisionAmount = function (amount, precision, returnBigNumber = false) {
-    const bnAmount =  (BigNumber.isBigNumber(amount) ? amount : new BigNumber(amount)).times(Math.pow(10, precision)).floor();
+    const bnAmount =  (BigNumber.isBigNumber(amount) ? amount : new BigNumber(amount)).times(Math.pow(10, precision)).decimalPlaces(0, BigNumber.ROUND_FLOOR);
 
-    return bnAmount.greaterThan(cfgSettings.largestAssetAmount) ? NaN : (returnBigNumber ? bnAmount : bnAmount.toNumber());
+    return bnAmount.isGreaterThan(cfgSettings.largestAssetAmount) ? NaN : (returnBigNumber ? bnAmount : bnAmount.toNumber());
 };
 
 // Converts asset amount expressed an integer number of the asset's smallest division (according to

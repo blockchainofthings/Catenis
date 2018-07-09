@@ -1035,7 +1035,7 @@ function getServicePrice(paidService) {
 
     result.btcServicePrice = bnBtcServicePrice.toNumber();
     result.exchangeRate = Catenis.bcotExchRate.getLatestRate().exchangeRate;
-    result.finalServicePrice = Util.roundToResolution(BcotPayment.bcotToServiceCredit(bnBtcServicePrice.dividedBy(Catenis.bcotExchRate.getLatestRate().exchangeRate).ceil().toNumber()), cfgSettings.servicePriceResolution);
+    result.finalServicePrice = Util.roundToResolution(BcotPayment.bcotToServiceCredit(bnBtcServicePrice.dividedBy(Catenis.bcotExchRate.getLatestRate().exchangeRate).decimalPlaces(0, BigNumber.ROUND_CEIL).toNumber()), cfgSettings.servicePriceResolution);
 
     return result;
 }

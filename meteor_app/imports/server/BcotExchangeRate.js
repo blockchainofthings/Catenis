@@ -70,7 +70,7 @@ BcotExchangeRate.prototype.newRate = function (exchangeRate, date) {
     const now = new Date();
     const docExchRate = {
         // Make sure that exchange rate has no more than 8 decimal places
-        exchangeRate: new BigNumber(exchangeRate).round(8,BigNumber.ROUND_DOWN).toNumber(),
+        exchangeRate: new BigNumber(exchangeRate).decimalPlaces(8, BigNumber.ROUND_DOWN).toNumber(),
         date: date !== undefined && (data instanceof Date) ? date : now,
         createdDate: now
     };

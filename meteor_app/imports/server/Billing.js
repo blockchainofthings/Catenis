@@ -257,7 +257,7 @@ Billing.recordComplementaryReadConfirmTx = function (transact) {
         const complementaryTxInfo = {
             txid: transact.txid,
             fee: complementaryTxFee,
-            feeShare: new BigNumber(complementaryTxFee).dividedBy(sendMsgReadConfirmTxids.length).round(0, BigNumber.ROUND_HALF_EVEN).toNumber()
+            feeShare: new BigNumber(complementaryTxFee).dividedBy(sendMsgReadConfirmTxids.length).decimalPlaces(0, BigNumber.ROUND_HALF_EVEN).toNumber()
         };
 
         const txidServiceTxsToComplement = new Set();

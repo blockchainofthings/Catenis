@@ -168,7 +168,7 @@ export function IssueAssetTransaction(issuingDevice, holdingDevice, amount, asse
             const assetBalance = Catenis.c3NodeClient.getAssetBalance(this.asset.ccAssetId);
             this.bnPrevTotalExistentBalance = new BigNumber(0);
 
-            if (assetBalance !== undefined && (this.bnPrevTotalExistentBalance = this.asset.amountToSmallestDivisionAmount(assetBalance.total, true)).plus(this.amount).greaterThan(assetCfgSetting.largestAssetAmount)) {
+            if (assetBalance !== undefined && (this.bnPrevTotalExistentBalance = this.asset.amountToSmallestDivisionAmount(assetBalance.total, true)).plus(this.amount).isGreaterThan(assetCfgSetting.largestAssetAmount)) {
                 // Amount to be issued is too large. Log error and throw exception
                 Catenis.logger.ERROR('Amount requested to be issued would exceed maximum allowed total asset amount', {
                     assetId: this.assetId

@@ -899,7 +899,7 @@ SpendServiceCreditTransaction.prototype.getFeeInfo = function () {
 
         return {
             fee: lastSentTxFee,
-            feeShare: new BigNumber(lastSentTxFee).dividedBy(this.serviceTxids.length).round(0, BigNumber.ROUND_HALF_EVEN).toNumber()
+            feeShare: new BigNumber(lastSentTxFee).dividedBy(this.serviceTxids.length).decimalPlaces(0, BigNumber.ROUND_HALF_EVEN).toNumber()
         }
     }
 };
