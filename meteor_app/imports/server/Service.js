@@ -473,7 +473,9 @@ Service.distributeDeviceAssetIssuanceAddressDeltaFund  = function (deltaAmount) 
 //    estimatedServiceCost: [Number], - Estimated cost, in satoshis, of the service
 //    priceMarkup: [Number], - Markup used to calculate the price of the service
 //    btcServicePrice: [Number], - Price of the service expressed in (bitcoin) satoshis
-//    exchangeRate: [Number], - Bitcoin to BCOT token exchange rate used to calculate final price
+//    bitcoinPrice: [Number] - Bitcoin price, in USD, used to calculate exchange rate
+//    bcotPrice: [Number] - BCOT token price, in USD, used to calculate exchange rate
+//    exchangeRate: [Number], - Bitcoin to BCOT token (1 BTC = x BCOT) exchange rate used to calculate final price
 //    finalServicePrice: [Number] - Price charged for the service expressed in Catenis service credit's lowest units
 //  }
 Service.logMessageServicePrice = function () {
@@ -486,7 +488,9 @@ Service.logMessageServicePrice = function () {
 //    estimatedServiceCost: [Number], - Estimated cost, in satoshis, of the service
 //    priceMarkup: [Number], - Markup used to calculate the price of the service
 //    btcServicePrice: [Number], - Price of the service expressed in (bitcoin) satoshis
-//    exchangeRate: [Number], - Bitcoin to BCOT token exchange rate used to calculate final price
+//    bitcoinPrice: [Number] - Bitcoin price, in USD, used to calculate exchange rate
+//    bcotPrice: [Number] - BCOT token price, in USD, used to calculate exchange rate
+//    exchangeRate: [Number], - Bitcoin to BCOT token (1 BTC = x BCOT) exchange rate used to calculate final price
 //    finalServicePrice: [Number] - Price charged for the service expressed in Catenis service credit's lowest units
 //  }
 Service.sendMessageServicePrice = function () {
@@ -512,7 +516,9 @@ Service.sendMsgReadConfirmServicePrice = function () {
 //    estimatedServiceCost: [Number], - Estimated cost, in satoshis, of the service
 //    priceMarkup: [Number], - Markup used to calculate the price of the service
 //    btcServicePrice: [Number], - Price of the service expressed in (bitcoin) satoshis
-//    exchangeRate: [Number], - Bitcoin to BCOT token exchange rate used to calculate final price
+//    bitcoinPrice: [Number] - Bitcoin price, in USD, used to calculate exchange rate
+//    bcotPrice: [Number] - BCOT token price, in USD, used to calculate exchange rate
+//    exchangeRate: [Number], - Bitcoin to BCOT token (1 BTC = x BCOT) exchange rate used to calculate final price
 //    finalServicePrice: [Number] - Price charged for the service expressed in Catenis service credit's lowest units
 //  }
 Service.issueAssetServicePrice = function () {
@@ -525,7 +531,9 @@ Service.issueAssetServicePrice = function () {
 //    estimatedServiceCost: [Number], - Estimated cost, in satoshis, of the service
 //    priceMarkup: [Number], - Markup used to calculate the price of the service
 //    btcServicePrice: [Number], - Price of the service expressed in (bitcoin) satoshis
-//    exchangeRate: [Number], - Bitcoin to BCOT token exchange rate used to calculate final price
+//    bitcoinPrice: [Number] - Bitcoin price, in USD, used to calculate exchange rate
+//    bcotPrice: [Number] - BCOT token price, in USD, used to calculate exchange rate
+//    exchangeRate: [Number], - Bitcoin to BCOT token (1 BTC = x BCOT) exchange rate used to calculate final price
 //    finalServicePrice: [Number] - Price charged for the service expressed in Catenis service credit's lowest units
 //  }
 Service.transferAssetServicePrice = function () {
@@ -1022,7 +1030,9 @@ function numPrePaidServices () {
 //    estimatedServiceCost: [Number], - Estimated cost, in satoshis, of the service
 //    priceMarkup: [Number], - Markup used to calculate the price of the service
 //    btcServicePrice: [Number], - Price of the service expressed in (bitcoin) satoshis
-//    exchangeRate: [Number], - Bitcoin to BCOT token exchange rate used to calculate final price
+//    bitcoinPrice: [Number] - Bitcoin price, in USD, used to calculate exchange rate
+//    bcotPrice: [Number] - BCOT token price, in USD, used to calculate exchange rate
+//    exchangeRate: [Number], - Bitcoin to BCOT token (1 BTC = x BCOT) exchange rate used to calculate final price
 //    finalServicePrice: [Number] - Price charged for the service expressed in Catenis service credit's lowest units
 //  }
 function getServicePrice(paidService) {
@@ -1032,10 +1042,13 @@ function getServicePrice(paidService) {
     };
 
     const bnBtcServicePrice = new BigNumber(result.estimatedServiceCost).times(1 + result.priceMarkup);
+    const btcExchangeRate = Catenis.bcotPrice.getLatestBitcoinExchangeRate();
 
     result.btcServicePrice = bnBtcServicePrice.toNumber();
-    result.exchangeRate = Catenis.bcotExchRate.getLatestRate().exchangeRate;
-    result.finalServicePrice = Util.roundToResolution(BcotPayment.bcotToServiceCredit(bnBtcServicePrice.dividedBy(Catenis.bcotExchRate.getLatestRate().exchangeRate).decimalPlaces(0, BigNumber.ROUND_CEIL).toNumber()), cfgSettings.servicePriceResolution);
+    result.bitcoinPrice = btcExchangeRate.btcPrice;
+    result.bcotPrice = btcExchangeRate.bcotPrice;
+    result.exchangeRate = btcExchangeRate.exchangeRate;
+    result.finalServicePrice = Util.roundToResolution(BcotPayment.bcotToServiceCredit(bnBtcServicePrice.multipliedBy(btcExchangeRate.exchangeRate).decimalPlaces(0, BigNumber.ROUND_CEIL).toNumber()), cfgSettings.servicePriceResolution);
 
     return result;
 }

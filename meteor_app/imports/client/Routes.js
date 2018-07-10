@@ -36,6 +36,14 @@ FlowRouter.route('/admin', {
     }
 });
 
+FlowRouter.route('/admin/bcotprice', {
+    action: function () {
+        BlazeLayout.render('adminLayout', {
+            page: 'bcotPrice'
+        });
+    }
+});
+
 FlowRouter.route('/admin/sysfunding', {
     action: function () {
         BlazeLayout.render('adminLayout', {

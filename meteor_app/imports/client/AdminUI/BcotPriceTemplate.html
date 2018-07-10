@@ -1,0 +1,36 @@
+<template name="bcotPrice">
+    <h2>BCOT Token Price</h2>
+    {{#unless Template.subscriptionsReady}}
+        <p style="color:lightgray; margin-top:1em">Loading...</p>
+    {{else}}
+        <table style="margin-left:auto; margin-right:auto; text-align: left">
+            <tr>
+                <td style="text-align:right; font-weight:bold"><label>Current price: </label></td>
+                <td>USD&nbsp;{{formatCurrency bcotTokenPrice.price}}</td>
+            </tr>
+        </table>
+        <div style="margin-top:1em">
+            {{#unless showUpdateForm}}
+                <a id="lnkUpdatePrice" href="#" role="button">Update</a>
+            {{/unless}}
+            <div style="display:{{#if showUpdateForm}}block{{else}}none{{/if}}">
+                <form id="frmUpdatePrice">
+                    <table style="margin-left:auto; margin-right:auto; margin-top:1em; margin-bottom:1em">
+                        <tr>
+                            <td style="text-align:right; vertical-align:top"><label for="itxNewPrice">New price</label></td>
+                            <td style="text-align:left">
+                                <input id="itxNewPrice" name="newPrice" type="text">
+                                {{#if newPriceError}}<br><span style="color:red">{{newPriceError}}</span>{{/if}}
+                            </td>
+                        </tr>
+                    </table>
+                    <input id="saveButton" name="saveButton" type="submit" value="Save">&nbsp;&nbsp;
+                    <a id="lnkCancelPriceUpdate" href="#" role="button">Cancel</a>
+                </form>
+                {{#if updateError}}
+                    <p style="color:red">{{updateError}}</p>
+                {{/if}}
+            </div>
+        </div>
+    {{/unless}}
+</template>

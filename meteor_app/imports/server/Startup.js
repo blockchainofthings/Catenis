@@ -33,6 +33,7 @@ import { KeyStore } from './KeyStore';
 import { TransactionMonitor } from './TransactionMonitor';
 import './ParseRequestBody';
 import { RestApi } from './RestApi';
+import { BcotPriceUI } from './AdminUI/BcotPriceUI';
 import { SystemFundingUI } from './AdminUI/SystemFundingUI';
 import { ClientsUI } from './AdminUI/ClientsUI';
 import { DevicesUI } from './AdminUI/DevicesUI';
@@ -44,7 +45,9 @@ import { WebSocketNotifyMsgDispatcher } from './WebSocketNotifyMsgDispatcher';
 import { MalleabilityEventEmitter } from './MalleabilityEventEmitter';
 import { C3NodeClient } from './C3NodeClient';
 import { OmniCore } from './OmniCore';
-import { BcotExchangeRate } from './BcotExchangeRate';
+import { BitcoinTicker } from './BitcoinTicker';
+import { BitcoinPrice } from './BitcoinPrice';
+import { BcotPrice } from './BcotPrice';
 import { BcotPayment } from './BcotPayment';
 import { SpendServiceCredit } from './SpendServiceCredit';
 import { BcotUsageReportUI } from './AdminUI/BcotUsageReportUI';
@@ -80,10 +83,14 @@ Meteor.startup(function () {
         Catenis.logger.INFO('Starting initialization...');
         Database.initialize();
         Database.removeInconsistentAssetIndices();
+        Database.fixBillingExchangeRate();
+        Database.removeBcotExchangeRateColl();
         Application.initialize();
         MalleabilityEventEmitter.initialize();
         BitcoinFees.initialize();
-        BcotExchangeRate.initialize();
+        BitcoinTicker.initialize();
+        BitcoinPrice.initialize();
+        BcotPrice.initialize();
         KeyStore.initialize();
         BitcoinCore.initialize();
         OmniCore.initialize();
@@ -125,6 +132,7 @@ Meteor.startup(function () {
         RestApi.initialize();
 
         // UI support initialization
+        BcotPriceUI.initialize();
         SystemFundingUI.initialize();
         BcotUsageReportUI.initialize();
         ClientsUI.initialize();

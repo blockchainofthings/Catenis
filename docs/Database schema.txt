@@ -27,6 +27,19 @@ BitcoinFees {
   createdDate: [date/time] // Date and time when doc/rec has been created
 }
 
+BitcoinPrice {
+  _id: [string],  // MongoDB internal document ID provided by Meteor
+  price: [numeric],  // Current bitcoin price expressed in USD
+  referenceDate: [data/time],  // Date and time when price had been observed
+  createdDate: [date/time]  // Date and time when doc/rec has been created
+}
+
+BcotPrice {
+  _id: [string],  // MongoDB internal document ID provided by Meteor
+  price: [numeric],  // Current BCOT token price (as set by BCoT) expressed in USD
+  createdDate: [date/time]  // Date and time when doc/rec has been created
+}
+
 IssuedBlockchainAddress {
   _id: [string], // MongoDB internal document ID provided by Meteor
   type: [string],  // Name of address type (HD node extended key type)
@@ -343,7 +356,9 @@ Billing {
   },
   estimatedServiceCost: [number], - Estimated cost, in satoshis, of the service
   priceMarkup: [number], - Markup used to calculate the price of the service
-  exchangeRate: [number], - Bitcoin to BCOT token exchange rate used to calculate final price
+  bitcoinPrice: [number], - Bitcoin price, in USD, used to calculate the exchange rate
+  bcotPrice: [number], - BCOT Token price, in USD, used to calculate to exchange rate
+  exchangeRate: [number], - Bitcoin to BCOT token (1 BTC = x BCOT) exchange rate used to calculate final price
   finalServicePrice: [number] - Price charged for the service expressed in Catenis service credit's lowest units
   servicePaymentTx: {  // Catenis transaction used to pay for service
     txid: [string],  // Blockchain attributed ID (hash) of transaction used to pay for service expense.

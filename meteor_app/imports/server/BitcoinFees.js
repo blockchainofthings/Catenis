@@ -242,7 +242,7 @@ function startDbPurge() {
 }
 
 function purgeDatabase() {
-    Catenis.logger.TRACE('Exececuting process to purge database by deleting oldest fees docs/recs');
+    Catenis.logger.TRACE('Executing process to purge database by deleting oldest fees docs/recs');
 
     const firstOldestFees = Catenis.db.collection.BitcoinFees.findOne({}, {fields: {createdDate: 1}, sort: {createdDate: -1}, skip: cfgSettings.numDbRecsToMaintain});
 

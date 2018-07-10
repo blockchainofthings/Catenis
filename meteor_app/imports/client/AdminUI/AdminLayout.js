@@ -25,6 +25,7 @@ import './AdminLayout.html';
 
 // Import dependent templates
 import './LoginTemplate.js';
+import './BcotPriceTemplate';
 import './SystemFundingTemplate.js';
 import './BcotUsageReportTemplate.js';
 import './ClientsTemplate.js';

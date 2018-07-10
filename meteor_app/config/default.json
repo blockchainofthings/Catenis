@@ -46,6 +46,10 @@
       "subject": "{{level}} - {{msg}}"
     }
   },
+  // Parameters pertaining to Database module
+  "database": {
+    "defaultBcotPrice": 0.75  // Default BCOT token price (to be used if no price set yet)
+  },
   // Parameters pertaining to BitcoinFees module
   "bitcoinFees": {
     "apiVer1Url": "https://bitcoinfees.21.co/api/v1/fees/",  // URL of version 1 of BitcoinFees API provided by 21.co
@@ -57,6 +61,19 @@
     "dbPurgeMinutes": 0,  // Minutes component of time when database purge should take place
     "dbPurgeSeconds": 0,  // Seconds component of time when database purge should take place
     "dbPurgeInterval": 86400000  // Time interval, in miliseconds, for executing process to purge database (delete oldest fees docs/recs)
+  },
+  // Parameters pertaining to BitcoinTicker module
+  "bitcoinTicker": {
+    "apiUrl": "https://api.coinmarketcap.com/v2/",  // URL of API (from CoinMarketCap) used to retrieve current market info on different crypto currencies
+    "bitcoinTickerEndPoint": "ticker/1",  // API endpoint used to retrieve bitcoin market price
+    "timeout": 20000  // (20 sec.) Timeout, in miliseconds, for connection/request with API server
+  },
+  // Parameters pertaining to BitcoinPrice module
+  "bitcoinPrice": {
+    "priceChangeTimeInterval": 5000,  // (5 sec.) Time interval, in milliseconds, used to detect when bitcoin ticker price changes
+    "updatePriceTimeInterval": 300000,  // (5 min.) Time interval, in milliseconds, for retrieving new bitcoin ticker price
+    "purgeTimeInterval": 86400000,  // (24 hours) Time interval, in milliseconds, for purging older bitcoin ticker prices
+    "priceMaximumLifeTime": 2592000000  // (30 days) Time, in milliseconds, corresponding to maximum life time of recorded bitcoin ticker price. Older prices shall be purged
   },
   // Parameters pertaining to KeyStore module
   "keyStore": {
@@ -585,10 +602,6 @@
     "ccVersionByte": "02", // Hex encoded Colored Coins version byte
     "torrentHashSize": 20,  // Size, in number of bytes, of a torrent hash
     "sha2Size": 32  // Size, in number of bytes, of a SHA2 hash
-  },
-  // Parameters pertaining to CCTransaction module
-  "bcotExchangeRate": {
-    "initialExchangeRate": 0.00024585  // Inital bitcoin to BCOT token exchange rate (calculated in 2017-11-23, using BTC = $8,135, and BCOT = $2)
   },
   // Parameters pertaining to CreditServiceAccTransaction module
   "creditServiceAccTransaction": {
