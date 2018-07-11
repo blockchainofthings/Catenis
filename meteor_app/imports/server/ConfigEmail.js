@@ -1,5 +1,5 @@
 /**
- * Created by Claudio on 12/02/18.
+ * Created by Claudio on 2018-06-29.
  */
 
 //console.log('[ConfigEmail.js]: This code just ran.');
@@ -25,7 +25,7 @@ const emailConfig = config.get('email');
 // Configuration settings
 export const cfgSettings = {
     smtpHost: emailConfig.get('smtpHost'),
-    secureProto: emailConfig.get('secureProto'),
+    secureProto: emailConfig.has('secureProto') ? emailConfig.get('secureProto') : undefined,
     smtpPort: emailConfig.has('smtpPort') ? emailConfig.get('smtpPort') : undefined,
     username: emailConfig.has('username') ? emailConfig.get('username') : undefined,
     password: emailConfig.has('password') ? emailConfig.get('password') : undefined
@@ -45,7 +45,7 @@ if (cfgSettings.username) {
     }
 }
 
-process.env.MAIL_URL = (cfgSettings.secureProto !== 'none' ? 'smtps://' : 'smtp://') +
+process.env.MAIL_URL = (cfgSettings.secureProto && (cfgSettings.secureProto === 'ssl' || cfgSettings.secureProto === 'tls') ? 'smtps://' : 'smtp://') +
     (credentials ? credentials + '@' : '') +
     cfgSettings.smtpHost +
-    (cfgSettings.smtpPort ? cfgSettings.smtpPort : '');
+    (cfgSettings.smtpPort ? ':' + cfgSettings.smtpPort : '');

@@ -1,5 +1,5 @@
 /**
- * Created by claudio on 11/08/17.
+ * Created by Claudio on 2017-08-11.
  */
 
 //console.log('[ApiPostPermissionRights.js]: This code just ran.');
@@ -10,10 +10,7 @@
 // References to external code
 //
 // Internal node modules
-//  NOTE: the reference of these modules are done sing 'require()' instead of 'import' to
-//      to avoid annoying WebStorm warning message: 'default export is not defined in
-//      imported module'
-const util = require('util');
+import util from 'util';
 // Third-party node modules
 //import config from 'config';
 // Meteor packages
@@ -25,8 +22,10 @@ import { Device } from './Device';
 import { Permission } from './Permission';
 import {
     successResponse,
-    errorResponse
+    errorResponse,
+    getUrlApiVersion
 } from './RestApi';
+import { ApiVersion } from './ApiVersion';
 
 // Config entries
 /*const config_entryConfig = config.get('config_entry');
@@ -41,6 +40,9 @@ import {
 //
 
 // Method used to process POST 'permission/events/:eventName/rights' endpoint of Rest API
+//
+//  URL parameters:
+//    eventName [String] - Name of permission event
 //
 //  JSON payload: {
 //    "system": [String] - (optional) Permission right to be attributed at system level for the specified event. Must be one of the following values: "allow", "deny"
@@ -84,12 +86,15 @@ import {
 //  }
 export function setPermissionRights() {
     try {
+        // Get API version from endpoint URL
+        const apiVer = new ApiVersion(getUrlApiVersion(this.request.url));
+
         // Process request parameters
 
         // From URL
         //
         // eventName param
-        if (!(typeof this.urlParams.eventName === 'string' && Permission.isValidEventName(this.urlParams.eventName))) {
+        if (!(typeof this.urlParams.eventName === 'string' && Permission.isValidEventName(this.urlParams.eventName, apiVer))) {
             Catenis.logger.DEBUG('Invalid \'eventName\' parameter for POST \'permission/events/:eventName/rights\' API request', this.urlParams);
             return errorResponse.call(this, 400, 'Invalid parameters');
         }

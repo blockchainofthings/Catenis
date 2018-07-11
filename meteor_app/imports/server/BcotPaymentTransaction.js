@@ -1,5 +1,5 @@
 /**
- * Created by claudio on 26/11/17.
+ * Created by Claudio on 2017-11-26.
  */
 
 //console.log('[BcotPaymentTransaction.js]: This code just ran.');

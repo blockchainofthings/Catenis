@@ -1,0 +1,67 @@
+// Config file with specific settings for development environment
+{
+  // Parameters pertaining to the Catenis application
+  "application": {
+    "seedFilename": "seed.beta2.dat",
+    "cryptoNetwork": "testnet",  // Available values: 'bitcoin' (for Bitcoin's production blockchain), 'testnet' (for Bitcoin's test blockchain)
+    "shutdownTimeout": 30000   // Time, in miliseconds, that the application should wait after it receives a terminate request before it actually terminates
+  },
+  // Parameters pertaining to the Startup module
+  "startup": {
+    "fixMissingAddresses": false, // Indicate if issued blockchain addresses are missing from BitcoinCore wallet they should be automaically included
+    "bypassProcessing": false     // NOTE: this option is for DEBUG ONLY. Bypass all processing, so the app starts but does not do anything. This allows
+                                  //  for debuging via 'meteor shell' or 'meteor mongo'
+  },
+  // Parameters pertaining to logging mechanism
+  "logging": {
+    "console": {
+      "active": true,
+      "logLevel": "TRACE"
+    },
+    "file": {
+      "active": true,
+      "logLevel": "DEBUG"
+    },
+    "email": {
+      "active": true,
+      "logLevel": "WARN",
+      "toAddresses": "claudio@blockchainofthings.com, andre@blockchainofthings.com", // Can be set to a comma separated list of e-mail addresses
+      "fromAddress": "Catenis <catenisadmin@catenis.io>"
+    }
+  },
+  // Parameters pertaining to BitcoinFees module
+  "bitcoinFees": {
+    "retrieveFeesInterval": 86400000,  // Time interval, in miliseconds, for executing method to retrieve latest bitcoin fees
+    "numDbRecsToMaintain": 2000,  // Number of database docs/recs used to store latest fees that should be maintained when puging the database
+    "dbPurgeHours": 2,  // Hours component of time when database purge should take place
+    "dbPurgeMinutes": 0,  // Minutes component of time when database purge should take place
+    "dbPurgeSeconds": 0,  // Seconds component of time when database purge should take place
+    "dbPurgeInterval": 86400000  // Time interval, in miliseconds, for executing process to purge database (delete oldest fees docs/recs)
+  },
+  // Parameters pertaining to KeyStore module
+  "keyStore": {
+    "obsoleteExtKeyTimeToPurge": 86400, // Time, in seconds, before an obsolete HD extended key is purged from local key storage
+    "purgeUnusedExtKeyInternal": 43200000  // Time interval, in miliseconds, for executing method to purge unused HD extended keys form local key storage
+  },
+  // Parameters pertaining to BitcoinCore module
+  "bitcoinCore": {
+    "rpcConnectionTimeout": 30000,  // Timeout, in miliseconds, for RPC connection with the bitcoin server.
+  },
+  // Parameters pertaining to OmniCore module
+  "omniCore": {
+    "rpcConnectionTimeout": 30000,  // Timeout, in miliseconds, for RPC connection with the Omni Core server
+  },
+  // Parameters pertaining to C3NodeClient module
+  "c3NodeClient": {
+    "connectionTimeout": 30000,  // Timeout, in miliseconds, for connection with the Colored Coins Full-Node server
+  },
+  // Parameters pertaining to CCMetadata module
+  "ccMetadata": {
+    "urlContentTimeout": 15000,  // Timeout, in miliseconds, fro retrieving content associated with a given URL
+    "shareAfterStoring": false  // Indicates whether metadata should be shared right after it is stored (added to Colored Coins metadata server)
+  },
+  // Parameters pertaining to BcotPayment module
+  "bcotPayment": {
+    "bcotOmniPropertyId": 2147484804  // BCOT token Omni property ID (yet to be defined for production)
+  }
+}

@@ -1,5 +1,5 @@
 /**
- * Created by claudio on 22/06/16.
+ * Created by Claudio on 2016-06-22.
  */
 
 //console.log('[Client.js]: This code just ran.');
@@ -10,11 +10,8 @@
 // References to external code
 //
 // Internal node modules
-//  NOTE: the reference of these modules are done sing 'require()' instead of 'import' to
-//      to avoid annoying WebStorm warning message: 'default export is not defined in
-//      imported module'
-const util = require('util');
-const crypto = require('crypto');
+import util from 'util';
+import crypto from 'crypto';
 // Third-party node modules
 import config from 'config';
 import _und from 'underscore';     // NOTE: we dot not use the underscore library provided by Meteor because we nee
@@ -927,7 +924,7 @@ Client.billingMode = Object.freeze({
 
 // Create new device ID dependent on Catenis node index, client index and device index
 function newDeviceId(ctnNodeIndex, clientIndex, deviceIndex) {
-    let id = 'd' + Random.createWithSeeds(Array.from(Catenis.application.seed.toString() + ':ctnNodeIndex:' + ctnNodeIndex + ',clientIndex:' + clientIndex + ',deviceIndex:' + deviceIndex)).id(19);
+    let id = 'd' + Random.createWithSeeds(Array.from(Catenis.application.commonSeed.toString() + ':ctnNodeIndex:' + ctnNodeIndex + ',clientIndex:' + clientIndex + ',deviceIndex:' + deviceIndex)).id(19);
     let doc;
 
     if ((doc = Catenis.db.collection.Device.findOne({deviceId: id}, {fields:{_id: 1, index: 1}}))) {

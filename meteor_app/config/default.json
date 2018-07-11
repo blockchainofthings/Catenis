@@ -4,9 +4,11 @@
   "application": {
     "appName": "Catenis",
     "seedFilename": "seed.dat",
-    "walletPswLength": 16,
     "cryptoNetwork": "testnet",  // Available values: 'bitcoin' (for Bitcoin's production blockchain), 'testnet' (for Bitcoin's test blockchain)
-    "shutdownTimeout": 30000   // Time, in miliseconds, that the application should wait after it receives a terminate request before it actually terminates
+    "shutdownTimeout": 30000,   // Time, in miliseconds, that the application should wait after it receives a terminate request before it actually terminates
+    "adminRole": "sys-admin",  // User role for application administration
+    "defaultAdminUser": null,  // (optional) Username of application default admin user
+    "defaultAdminPsw": null  // (optional) Chiphered, hex encoded password for application default admin user
   },
   // Parameters pertaining to the Startup module
   "startup": {
@@ -17,13 +19,14 @@
   // Parameters pertaining to e-mail server configuration
   "email": {
     "smtpHost": "localhost",
-    "secureProto": "none",  // Secure protocol that should be used with SMTP server. Valid options: 'none', 'ssl' or 'tls'
-    "smtpPort": 25,  // To be set only if different than default (depending on secureProto): none (25), ssl (465), tls (587)
-    "username": "??????????",  // To be set only if required by SMTP host
-    "password": "???????????"   // To be set only if required by SMTP host
+    "secureProto": null,  // (optional, can be set to null) Secure protocol that should be used with SMTP server. Valid options: 'ssl' or 'tls'
+    "smtpPort": null,  // (optonal, can be set to null) To be set only if different than default (depending on secureProto): none/null (25), ssl (465), tls (587)
+    "username": null,  // (optional, can be set to null) To be set only if required by SMTP host
+    "password": null   // (optional, can be set to null) To be set only if required by SMTP host
   },
   // Parameters pertaining to logging mechanism
   "logging": {
+    "exitOnError": true,
     "console": {
       "active": true,
       "logLevel": "INFO" // Valid options: ALL, TRACE, DEBUG, INFO, WARN, ACTION, ERROR, FATAL
@@ -59,6 +62,10 @@
       "numberOfDevices": 0
     }]
   },
+  // Parameters pertaining to Database module
+  "database": {
+    "defaultBcotPrice": 0.75  // Default BCOT token price (to be used if no price set yet)
+  },
   // Parameters pertaining to BitcoinFees module
   "bitcoinFees": {
     "apiVer1Url": "https://bitcoinfees.21.co/api/v1/fees/",  // URL of version 1 of BitcoinFees API provided by 21.co
@@ -70,6 +77,19 @@
     "dbPurgeMinutes": 0,  // Minutes component of time when database purge should take place
     "dbPurgeSeconds": 0,  // Seconds component of time when database purge should take place
     "dbPurgeInterval": 86400000  // Time interval, in miliseconds, for executing process to purge database (delete oldest fees docs/recs)
+  },
+  // Parameters pertaining to BitcoinTicker module
+  "bitcoinTicker": {
+    "apiUrl": "https://api.coinmarketcap.com/v2/",  // URL of API (from CoinMarketCap) used to retrieve current market info on different crypto currencies
+    "bitcoinTickerEndPoint": "ticker/1",  // API endpoint used to retrieve bitcoin market price
+    "timeout": 20000  // (20 sec.) Timeout, in miliseconds, for connection/request with API server
+  },
+  // Parameters pertaining to BitcoinPrice module
+  "bitcoinPrice": {
+    "priceChangeTimeInterval": 5000,  // (5 sec.) Time interval, in milliseconds, used to detect when bitcoin ticker price changes
+    "updatePriceTimeInterval": 300000,  // (5 min.) Time interval, in milliseconds, for retrieving new bitcoin ticker price
+    "purgeTimeInterval": 86400000,  // (24 hours) Time interval, in milliseconds, for purging older bitcoin ticker prices
+    "priceMaximumLifeTime": 2592000000  // (30 days) Time, in milliseconds, corresponding to maximum life time of recorded bitcoin ticker price. Older prices shall be purged
   },
   // Parameters pertaining to KeyStore module
   "keyStore": {
@@ -269,7 +289,7 @@
     },
     "asset": {
       "issuance": {
-        "unlockedAssetsPerMinute": 0.33,  // Number of unlocked assets issued per minute that is expected to be sustained
+        "assetsPerMinute": 1,  // Number of assets issued per minute that is expected to be sustained
         "minutesToConfirm": 300,  // Time, in minutes, within which asset issuance txs are expected to be confirmed
         "unconfAssetIssueAddrReuses": 10,  // Number of times an UTXO associated with a device asset issuance addr is expected to be reused
         "assetIssueAddrFunding": {
@@ -298,14 +318,9 @@
         "numOutputs": 4,          // Number of (P2PKH) outputs
         "nullDataPayloadSize": 80 // Size, in bytes, of payload of null data output
       },
-      "issueLockedAsset": {  // Issue locked asset
-        "numInputs": 2,           // Number of inputs (that spend P2PKH outputs)
-        "numOutputs": 2,          // Number of (P2PKH) outputs
-        "nullDataPayloadSize": 68 // Size, in bytes, of payload of null data output
-      },
-      "issueUnlockedAsset": {  // Issue unlocked asset
+      "issueAsset": {  // Issue asset
         "numInputs": 3,           // Number of inputs (that spend P2PKH outputs)
-        "numOutputs": 3,          // Number of (P2PKH) outputs
+        "numOutputs": 4,          // Number of (P2PKH) outputs
         "nullDataPayloadSize": 68 // Size, in bytes, of payload of null data output
       },
       "transferAsset": {  // Transfer asset
@@ -318,8 +333,7 @@
       "logMessage": 100,          // Log message usage weight
       "sendMessage": 100,         // Send message (without read confirmation) usage weight
       "sendMsgReadConfirm": 100,  // Send message with read confirmation usage weight
-      "issueLockedAsset": 1,      // Issue locked asset usage weight
-      "issueUnlockedAsset": 10,   // Issue unlocked asset usage weight
+      "issueAsset": 10,           // Issue asset usage weight
       "transferAsset": 100        // Transfer asset usage weight
     }
   },
@@ -361,6 +375,42 @@
           "deny": "self"
         }
       },
+      "receive-notify-asset-of": {
+        "system": "deny",
+        "client": {
+          "allow": "self"
+        },
+        "device": {
+          "deny": "self"
+        }
+      },
+      "receive-notify-asset-from": {
+        "system": "deny",
+        "client": {
+          "allow": "self"
+        },
+        "device": {
+          "deny": "self"
+        }
+      },
+      "receive-notify-confirm-asset-of": {
+        "system": "deny",
+        "client": {
+          "allow": "self"
+        },
+        "device": {
+          "allow": "self"
+        }
+      },
+      "receive-notify-confirm-asset-from": {
+        "system": "deny",
+        "client": {
+          "allow": "self"
+        },
+        "device": {
+          "allow": "self"
+        }
+      },
       "send-read-msg-confirm": {
         "system": "deny",
         "client": {
@@ -389,6 +439,24 @@
         }
       },
       "disclose-identity-info": {
+        "system": "deny",
+        "client": {
+          "allow": "self"
+        },
+        "device": {
+          "allow": "self"
+        }
+      },
+      "receive-asset-of": {
+        "system": "deny",
+        "client": {
+          "allow": "self"
+        },
+        "device": {
+          "allow": "self"
+        }
+      },
+      "receive-asset-from": {
         "system": "deny",
         "client": {
           "allow": "self"
@@ -453,7 +521,14 @@
   },
   // Parameters pertaining to RestApi module
   "restApi": {
-    "rootPath": "api"
+    "rootPath": "api",
+    "availableVersions": [    // List of all currently available versions of the Catenis REST API
+      "0.2",
+      "0.3",
+      "0.4",
+      "0.5",
+      "0.6"
+    ]
   },
   // Parameters pertaining to Authentication module
   "authentication": {
@@ -470,8 +545,13 @@
   },
   // Parameters pertaining to NotifyMsgDispatcher module
   "notification": {
-    "notifyRootPath": "notify"  // Root path to be used for all notification message dispatcher based on the HTTP protocol.
+    "notifyRootPath": "notify",  // Root path to be used for all notification message dispatcher based on the HTTP protocol.
                                 //  NOTE: the Rest API root path (see restApi section above) shall be prepended to this path to form the fully qualified notification root path
+    "initVersion": "0.1",   // Initial version of the Catenis notification service
+    "availableVersions": [    // List of all currently available versions of the Catenis notification service
+      "0.1",
+      "0.2"
+    ]
   },
   // Parameters pertaining to WebSocketNotifyMsgDispatcher module
   "webSocketNotifyMsgDispatcher": {
@@ -480,18 +560,23 @@
     "notifyWsSubprotocol": "notify.catenis.io",  // Name of WebSocket subprotocol to be used for dispatching notification messages
                                                  //  NOTE: it's a proprietatry protocol that just sends the notification messages straight to the connected client as long as there is an open connection for the given notification event.
                                                  //    Thus the client needs to open one WebSocket connection for each notification event for which it wishes to receive notifications. There shall be an enpoint URI for each notification event
+    "minNotifyServiceVer": "0.1",  // Minimum version of Catenis notification service that is supportted by the WebSocket notification dispatcher
+    "initVersion": "0.1",   // The initial version of the WebSockert notification message dispatcher
+    "availableVersions": [    // List of all currently available versions of the WebSocket notification message dispatcher
+      "0.1"
+    ],
     "heartbeatInterval": 30000,  // Time interval, in miliseconds, for sending heartbeat ping package to client
     "authMsgTimeout": 5000   // Timeout, in miliseconds, for waiting on first message from client used to authenticate itself with the system
   },
-  // Parameters pertaining to CCFullNodeClient module
-  "ccFullNodeClient": {
-    "serverHost": "catenis-ccfnode", // Colored Coins Full-Node server host name/IP address
-    "mainTcpPort": 8033, // TCP port used to connect with the Colored Coins Full-Node server to interact with bitcoin's main blockchain
-    "testnetTcpPort": 8043, // TCP port used to connect with the Colored Coins Full-Node server to interact with bitcoin's testnet blockchain
-    "inetAddress": "", // IP address of local network interface to use to connect with the Colored Coins Full-Node server. If not specified (empty string) the default network interface is used
-    "user": "??????", // Username used to authenticate the client to the Colored Coins Full-Node server. If not specified (empty string) assume that no authenticaiton is required
-    "password": "??????", // Password used to authenticate the client to the Colored Coins Full-Node server
-    "connectionTimeout": 15000,  // Timeout, in miliseconds, for connection with the Colored Coins Full-Node server
+  // Parameters pertaining to C3NodeClient module
+  "c3NodeClient": {
+    "serverHost": "catenis-c3nserv", // Catenis Colored Coins node server host name/IP address
+    "mainTcpPort": 8033, // TCP port used to connect with the Catenis Colored Coins node server to interact with bitcoin's main blockchain
+    "testnetTcpPort": 8043, // TCP port used to connect with the Catenis Colored Coins node server to interact with bitcoin's testnet blockchain
+    "inetAddress": "", // IP address of local network interface to use to connect with the Catenis Colored Coins node server. If not specified (empty string) the default network interface is used
+    "user": "??????", // Username used to authenticate the client to the Catenis Colored Coins node server. If not specified (empty string) assume that no authenticaiton is required
+    "password": "??????", // Password used to authenticate the client to the Catenis Colored Coins node server
+    "connectionTimeout": 15000,  // Timeout, in miliseconds, for connection with the Catenis Colored Coins node server
     "methodPath": {
       "parseNow": "/parseNow",
       "getAddressesUtxos": "/getAddressesUtxos",
@@ -500,23 +585,13 @@
       "getAddressesTransactions": "/getAddressesTransactions",
       "transmit": "/transmit",
       "getInfo": "/getInfo",
-      "importAddresses": "/importAddresses"
-    }
-  },
-  // Parameters pertaining to CCMetadataClient module
-  "ccMetadataClient": {
-    "serverHost": "catenis-ipfs", // Colored Coins Metadata server host name/IP address
-    "tcpPort": 8180, // TCP port used to connect with the Colored Coins Metadata server
-    "inetAddress": "", // IP address of local network interface to use to connect with the Colored Coins Metadata server. If not specified (empty string) the default network interface is used
-    "user": "??????", // Username used to authenticate the client to the Colored Coins Metadata server. If not specified (empty string) assume that no authenticaiton is required
-    "jwtSecret": "??????", // JWT secret (128-bit hex encoded value) used to authenticate the clent to the Colorec Coins Metadata server
-    "tokenValidityDuration": 15, // Time, in seconds, within which JWT token is considered valid for authentication
-    "connectionTimeout": 15000,  // Timeout, in miliseconds, for connection with the Colored Coins Full-Node server
-    "methodPath": {
-      "addMetadata": "/addMetadata",
-      "getMetadata": "/getMetadata",
-      "shareMetadata": "/shareMetadata",
-      "removeMetadata": "/removeMetadata"
+      "importAddresses": "/importAddresses",
+      "getAssetHolders": "/getAssetHolders",
+      "getAssetBalance": "/getAssetBalance",
+      "getMultiAssetBalance": "/getMultiAssetBalance",
+      "getAssetIssuance": "/getAssetIssuance",
+      "getAssetIssuingAddress": "/getAssetIssuingAddress",
+      "getOwningAssets": "/getOwningAssets"
     }
   },
   // Parameters pertaining to CCMetadata module
@@ -531,21 +606,18 @@
     "ctnAssetsLargeLogoHash": "0a5e3d326c0dfd1f87cebdd63fa214faebb9a3d48234a8c7352186985f838261", // SHA256 hash of the large logo image file
     "signingMessageFormat": "Catenis generated asset on %s",  // Format string used to compose message that is to be signed for asset verification purpose
     "signingCertificateFilePath": "/etc/letsencrypt/live/beta.catenis.io/cert.pem",  // Path to file (in PEM format) containing Blockchain of Things' owned SSL certificate used to sign message for asset verification
-    "signingCertificateKeyFilePath": "/etc/letsencrypt/live/beta.catenis.io/privkey.pem",  // Path to file containing (password protected) key of SSL certificate used to sign message for asset verification
-    "urlContentTimeout": 15000,  // Timeout, in miliseconds, fro retrieving content associated with a given URL
+    "signingCertificateKeyFilePath": "/etc/letsencrypt/live/beta.catenis.io/privkey.pem",  // Path to file containing key of SSL certificate used to sign message for asset verification
+    "urlContentTimeout": 15000,  // Timeout, in miliseconds, for retrieving content associated with a given URL
     "encryptedUserDataKeyPrefix": "__enc_",  // Prefix that is prepended to user data key when its value is encrypted
     "shareAfterStoring": false  // Indicates whether metadata should be shared right after it is stored (added to Colored Coins metadata server)
   },
   // Parameters pertaining to CCTransaction module
   "ccTransaction": {
-    "ccProtocolPrefix": "4343",  // Hex encoded Colored Coins protocol data prefix
+    "ccProtocolPrefix": "4343",  // Hex encoded (original) Colored Coins protocol data prefix
+    "c3ProtocolPrefix": "4333",  // Hex encoded Catenis Colored Coins protocol data prefix
     "ccVersionByte": "02", // Hex encoded Colored Coins version byte
     "torrentHashSize": 20,  // Size, in number of bytes, of a torrent hash
     "sha2Size": 32  // Size, in number of bytes, of a SHA2 hash
-  },
-  // Parameters pertaining to CCTransaction module
-  "bcotExchangeRate": {
-    "initialExchangeRate": 0.00024585  // Inital bitcoin to BCOT token exchange rate (calculated in 2017-11-23, using BTC = $8,135, and BCOT = $2)
   },
   // Parameters pertaining to CreditServiceAccTransaction module
   "creditServiceAccTransaction": {
@@ -562,7 +634,8 @@
     "usageReportHeaders": [  // List of names to be used as headers for the colomns of the usage report
       "address",
       "amount",
-      "date"
+      "txid",
+      "confirmation_date"
     ]
   },
   // Parameters pertaining to StoreBcotTransaction module
@@ -629,5 +702,11 @@
     }],
     "defaultTimeZone": "UTC",
     "includeHeaders": true  // Indicates whether report should include a first line with column headers
+  },
+  // Parameters pertaining to Asset module
+  "asset": {
+    "largestAssetAmount": 9007199254740991, // (2^53 - 1) Largest amount of assets (expressed in asset's smalles division) that can be issued
+    "maxQueryIssuanceCount": 500,  // Maximum number of aaset issuance entries that can be returned when retrieving asset issuance history
+    "maxRetListEntries": 500  // Maximum number of entries that should be returned from asset related API methods that returned a list of items (e.g. List Owned Assets, List Issued Assets, List Asset Holders)
   }
 }

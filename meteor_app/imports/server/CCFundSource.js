@@ -1,5 +1,5 @@
 /**
- * Created by claudio on 05/10/17.
+ * Created by Claudio on 2017-10-05.
  */
 
 //console.log('[CCFundSource.js]: This code just ran.');
@@ -439,7 +439,7 @@ function insertUtxo(utxo, assetUtxoInfo, unconfTxids) {
 
 function loadUtxos() {
     // Retrieve UTXOs associated with given addresses, including unconfirmed ones if requested
-    const utxos = Catenis.ccFNClient.getAddressesUtxos(this.addresses, this.useUnconfirmedUtxo || this.selectUnconfUtxos !== undefined ? 0 : 1);
+    const utxos = Catenis.c3NodeClient.getAddressesUtxos(this.addresses, this.useUnconfirmedUtxo || this.selectUnconfUtxos !== undefined ? 0 : 1);
 
     // Store retrieved UTXOs onto local DB making sure that only UTXOs associated with
     //  the specified asset are included, and that any excluded UTXOs are not included,

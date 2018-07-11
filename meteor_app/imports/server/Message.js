@@ -1,5 +1,5 @@
 /**
- * Created by claudio on 05/04/17.
+ * Created by Claudio on 2017-04-05.
  */
 
 //console.log('[Message.js]: This code just ran.');
@@ -10,10 +10,7 @@
 // References to external code
 //
 // Internal node modules
-//  NOTE: the reference of these modules are done sing 'require()' instead of 'import' to
-//      to avoid annoying WebStorm warning message: 'default export is not defined in
-//      imported module'
-const util = require('util');
+import util from 'util';
 // Third-party node modules
 import config from 'config';
 // Meteor packages
@@ -64,6 +61,7 @@ export function Message(docMessage) {
     this.blocked = docMessage.blocked !== undefined;
     this.firstReadDate = docMessage.firstReadDate;
     this.lastReadDate = docMessage.lastReadDate;
+    this.readConfirmed = docMessage.readConfirmed;
 }
 
 
@@ -479,9 +477,10 @@ Message.query = function (issuerDeviceId, filter) {
             }
 
             if (filter.readState === Message.readState.read || filter.readState === Message.readState.unread) {
-                // Make that only messages that had been sent with read confirmation enabled are included
+                // Make that only messages that had been sent with read confirmation enabled are included,
+                //  and consider message read only if read confirmation has already been received
                 outboundSelector.readConfirmationEnabled = true;
-                outboundSelector.firstReadDate = {
+                outboundSelector.readConfirmed = {
                     $exists: filter.readState === Message.readState.read
                 };
             }
@@ -674,7 +673,7 @@ function newMessageId(tx) {
     // We compose a unique seed from the blockchain addresses of the transaction's inputs
     //  We can guarantee that it will be unique because Catenis blockchain  addresses
     //  are only used once
-    const seed = Catenis.application.seed.toString() + ':' + tx.inputs.reduce((acc, input, index) => {
+    const seed = Catenis.application.commonSeed.toString() + ':' + tx.inputs.reduce((acc, input, index) => {
         if (acc.length > 0) {
             acc += ',';
         }

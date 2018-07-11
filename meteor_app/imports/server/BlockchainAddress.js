@@ -1,5 +1,5 @@
 /**
- * Created by claudio on 08/06/16.
+ * Created by Claudio on 2016-06-08.
  */
 
 //console.log('[BlockchainAddress.js]: This code just ran.');
@@ -10,11 +10,8 @@
 // References to external code
 //
 // Internal node modules
-//  NOTE: the reference of these modules are done sing 'require()' instead of 'import' to
-//      to avoid annoying WebStorm warning message: 'default export is not defined in
-//      imported module'
-const util = require('util');
-const crypto = require('crypto');
+import util from 'util';
+import crypto from 'crypto';
 // Third-party node modules
 import config from 'config';
 // Meteor packages
@@ -1640,7 +1637,7 @@ function updateIssuedAddresses() {
         const docIssuedAddrByExpiredAddr = new Map();
 
         Catenis.db.collection.IssuedBlockchainAddress.find({status: 'expired'},
-            {fields: {_id: 1, type: 1, parentPath: 1, path: 1, addrIndex: 1, status: 1}}).forEach((doc) => {
+            {fields: {_id: 1, type: 1, parentPath: 1, path: 1, addrIndex: 1, status: 1}}).fetch().forEach((doc) => {
             let addr = BlockchainAddress.getAddressOfIssuedBlockchainAddress(doc);
 
             if (addr !== null) {
@@ -1671,7 +1668,7 @@ function updateIssuedAddresses() {
         const docIssuedAddrByNewAddrToExpire = new Map();
 
         Catenis.db.collection.IssuedBlockchainAddress.find({status: 'new', expirationDate: {$lte: new Date()}},
-            {fields: {_id: 1, type: 1, path: 1, addrIndex: 1, status: 1}}).forEach((doc) => {
+            {fields: {_id: 1, type: 1, path: 1, addrIndex: 1, status: 1}}).fetch().forEach((doc) => {
             let addr = BlockchainAddress.getAddressOfIssuedBlockchainAddress(doc);
 
             if (addr !== null) {

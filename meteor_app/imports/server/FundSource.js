@@ -1,5 +1,5 @@
 /**
- * Created by claudio on 17/06/16.
+ * Created by Claudio on 2016-06-17.
  */
 
 //console.log('[FundSource.js]: This code just ran.');
@@ -203,6 +203,50 @@ FundSource.prototype.getBalance = function (includeUnconfirmed = true, includeAl
     return this.collUtxo.find(query).reduce((sum, docUtxo) => {
             return sum + docUtxo.amount;
         }, 0);
+};
+
+FundSource.prototype.getBalancePerAddress = function (includeUnconfirmed = true, includeAllocated = false) {
+    const conditions = [];
+
+    if (includeUnconfirmed && this.loadedUnconfirmedUtxos) {
+        if (this.ancestorsCountUpperLimit !== undefined) {
+            conditions.push({ancestorsCount: {$lte: this.ancestorsCountUpperLimit}});
+        }
+
+        if (this.ancestorsSizeUpperLimit !== undefined) {
+            conditions.push({ancestorsSize: {$lte: this.ancestorsSizeUpperLimit}});
+        }
+
+        if (this.descendantsCountUpperLimit !== undefined) {
+            conditions.push({descendantsCount: {$lte: this.descendantsCountUpperLimit}});
+        }
+
+        if (this.descendantsSizeUpperLimit !== undefined) {
+            conditions.push({descendantsSize: {$lte: this.descendantsSizeUpperLimit}});
+        }
+    }
+    else {
+        conditions.push({confirmations: {$gt: 0}});
+    }
+
+    if (!includeAllocated) {
+        conditions.push({allocated: false});
+    }
+
+    const query = conditions.length > 1 ? {$and: conditions} : conditions[0];
+
+    const addressBalance = {};
+
+    this.collUtxo.find(query).forEach((docUtxo) => {
+        if (Object.keys(addressBalance).findIndex(addr => addr === docUtxo.address) !== -1) {
+            addressBalance[docUtxo.address] += docUtxo.amount;
+        }
+        else {
+            addressBalance[docUtxo.address] = docUtxo.amount;
+        }
+    });
+
+    return addressBalance;
 };
 
 //  result: [{

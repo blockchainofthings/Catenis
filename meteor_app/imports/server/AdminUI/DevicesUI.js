@@ -1,5 +1,5 @@
 /**
- * Created by claudio on 26/05/17.
+ * Created by Claudio on 2017-05-26.
  */
 
 //console.log('[DevicesUI.js]: This code just ran.');
@@ -10,10 +10,7 @@
 // References to external code
 //
 // Internal node modules
-//  NOTE: the reference of these modules are done sing 'require()' instead of 'import' to
-//      to avoid annoying WebStorm warning message: 'default export is not defined in
-//      imported module'
-//const util = require('util');
+//import util from 'util';
 // Third-party node modules
 //import config from 'config';
 // Meteor packages

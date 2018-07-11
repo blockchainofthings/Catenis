@@ -1,5 +1,5 @@
 /**
- * Created by claudio on 22/07/16.
+ * Created by Claudio on 2016-07-22.
  */
 
 //console.log('[FundTransaction.js]: This code just ran.');
@@ -10,10 +10,7 @@
 // References to external code
 //
 // Internal node modules
-//  NOTE: the reference of these modules are done sing 'require()' instead of 'import' to
-//      to avoid annoying WebStorm warning message: 'default export is not defined in
-//      imported module'
-//const util = require('util');
+//import util from 'util';
 // Third-party node modules
 //import config from 'config';
 // Meteor packages
@@ -93,6 +90,19 @@ FundTransaction.prototype.addPayees = function (blockchainAddress, amountPerAddr
 
     // Save type of payee
     this.payees.push(blockchainAddress.type);
+};
+
+//  Arguments:
+//   blockchainAddressType: [String] - Type of blockchain address
+//   address: [String] - Blockchain address to which amount should be paid
+//   amount: [Number] - Amount to be assigned to address
+//
+FundTransaction.prototype.addSingleAddressPayee = function (blockchainAddressType, address, amount) {
+    // Add transaction output paying the specified amount to the specific address
+    this.transact.addP2PKHOutput(address, amount);
+
+    // Save type of payee
+    this.payees.push(blockchainAddressType);
 };
 
 FundTransaction.prototype.addPayingSource = function () {

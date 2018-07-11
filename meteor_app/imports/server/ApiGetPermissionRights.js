@@ -1,5 +1,5 @@
 /**
- * Created by claudio on 10/08/17.
+ * Created by Claudio on 2017-08-10.
  */
 
 //console.log('[ApiGetPermissionRights.js]: This code just ran.');
@@ -10,10 +10,7 @@
 // References to external code
 //
 // Internal node modules
-//  NOTE: the reference of these modules are done sing 'require()' instead of 'import' to
-//      to avoid annoying WebStorm warning message: 'default export is not defined in
-//      imported module'
-//const util = require('util');
+//import util from 'util';
 // Third-party node modules
 import _und from 'underscore';      // NOTE: we do not use the underscore library provided by Meteor because we need
                                     //        a feature (_und.omit(obj,predicate)) that is not available in that version
@@ -26,8 +23,10 @@ import { Device } from './Device';
 import { Permission } from './Permission';
 import {
     successResponse,
-    errorResponse
+    errorResponse,
+    getUrlApiVersion
 } from './RestApi';
+import { ApiVersion } from './ApiVersion';
 
 // Config entries
 /*const config_entryConfig = config.get('config_entry');
@@ -71,10 +70,13 @@ import {
 //  }]
 export function retrievePermissionRights() {
     try {
+        // Get API version from endpoint URL
+        const apiVer = new ApiVersion(getUrlApiVersion(this.request.url));
+
         // Process request parameters
 
         // eventName param
-        if (!(typeof this.urlParams.eventName === 'string' && this.urlParams.eventName.length > 0 && Permission.isValidEventName(this.urlParams.eventName))) {
+        if (!(typeof this.urlParams.eventName === 'string' && this.urlParams.eventName.length > 0 && Permission.isValidEventName(this.urlParams.eventName, apiVer))) {
             Catenis.logger.DEBUG('Invalid \'eventName\' parameter for GET \'permission/events/:eventName/rights\' API request', this.urlParams);
             return errorResponse.call(this, 400, 'Invalid parameters');
         }

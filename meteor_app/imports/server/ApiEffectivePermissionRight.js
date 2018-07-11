@@ -1,5 +1,5 @@
 /**
- * Created by claudio on 06/09/17.
+ * Created by Claudio on 2017-09-06.
  */
 
 //console.log('[ApiEffectivePermissionRight.js]: This code just ran.');
@@ -10,10 +10,7 @@
 // References to external code
 //
 // Internal node modules
-//  NOTE: the reference of these modules are done sing 'require()' instead of 'import' to
-//      to avoid annoying WebStorm warning message: 'default export is not defined in
-//      imported module'
-//const util = require('util');
+//import util from 'util';
 // Third-party node modules
 //import config from 'config';
 // Meteor packages
@@ -25,8 +22,10 @@ import { Device } from './Device';
 import { Permission } from './Permission';
 import {
     successResponse,
-    errorResponse
+    errorResponse,
+    getUrlApiVersion
 } from './RestApi';
+import { ApiVersion } from './ApiVersion';
 
 // Config entries
 /*const config_entryConfig = config.get('config_entry');
@@ -54,10 +53,13 @@ import {
 //  }
 export function checkEffectivePermissionRight() {
     try {
+        // Get API version from endpoint URL
+        const apiVer = new ApiVersion(getUrlApiVersion(this.request.url));
+
         // Process request parameters
 
         // eventName param
-        if (!(typeof this.urlParams.eventName === 'string' && this.urlParams.eventName.length > 0 && Permission.isValidEventName(this.urlParams.eventName))) {
+        if (!(typeof this.urlParams.eventName === 'string' && this.urlParams.eventName.length > 0 && Permission.isValidEventName(this.urlParams.eventName, apiVer))) {
             Catenis.logger.DEBUG('Invalid \'eventName\' parameter for GET \'permission/events/:eventName/rights/:deviceId\' API request', this.urlParams);
             return errorResponse.call(this, 400, 'Invalid parameters');
         }

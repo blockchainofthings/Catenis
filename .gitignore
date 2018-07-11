@@ -9,5 +9,4 @@ Debug.js
 ModuleTemplate.txt
 mongodb_dump
 deploy
-*.DS_Store
 meteor_app/config/development-*.json

@@ -1,5 +1,5 @@
 /**
- * Created by claudio on 20/12/17.
+ * Created by Claudio on 2017-12-20.
  */
 
 //console.log('[SpendServiceCredit.js]: This code just ran.');
@@ -85,6 +85,8 @@ export function SpendServiceCredit() {
     TransactionMonitor.addEventHandler(TransactionMonitor.notifyEvent.spend_service_credit_tx_conf.name, spendServCredTxConfirmed.bind(this));
 
     // Retrieve unconfirmed spend service credit transactions
+    let numRetDocs;
+
     Catenis.db.collection.SentTransaction.find({
         type: Transaction.type.spend_service_credit.name,
         'confirmation.confirmed': false,
@@ -100,11 +102,15 @@ export function SpendServiceCredit() {
             sentDate: 1,
             'info.spendServiceCredit': 1
         }
-    }).forEach((doc) => {
+    }).forEach((doc, docIdx, cursor) => {
+        if (numRetDocs === undefined) {
+            numRetDocs = cursor.count();
+        }
+
         const transact = Transaction.fromTxid(doc.txid);
         transact.sentDate = doc.sentDate;
 
-        const spendServCredTransact = newSpendServCredTransaction.call(this, CCTransaction.fromTransaction(transact));
+        const spendServCredTransact = newSpendServCredTransaction.call(this, CCTransaction.fromTransaction(transact), docIdx === numRetDocs - 1);
 
         this.unconfSpendServCredTxs.add(spendServCredTransact);
 
@@ -203,8 +209,8 @@ SpendServiceCredit.prototype.payForService = function (client, serviceTxid, pric
 //      or .bind().
 //
 
-function newSpendServCredTransaction(ccTransact) {
-    const spendServCredTransact = new SpendServiceCreditTransaction(this, ccTransact, true);
+function newSpendServCredTransaction(ccTransact, addNoBillingServTxs) {
+    const spendServCredTransact = new SpendServiceCreditTransaction(this, ccTransact, true, addNoBillingServTxs);
 
     // Set up event handler to receive notification of tx unconfirmed for too long
     spendServCredTransact.on(SpendServiceCreditTransaction.notifyEvent.tx_unconfirmed_too_long.name, this.txUnconfirmedTooLongEventHandler);
@@ -420,7 +426,7 @@ function spendServCredTxConfirmed(data) {
     Catenis.logger.TRACE('Received notification of confirmation of spend service credit transaction', data);
     try {
         // Force update of Colored Coins data associated with UTXOs
-        Catenis.ccFNClient.parseNow();
+        Catenis.c3NodeClient.parseNow();
 
         // Execute code in critical section to make sure task is serialized
         procCS.execute(() => {
@@ -506,6 +512,7 @@ function spendServCredTxConfirmed(data) {
                     throw new Error(util.format('Last found spend service credit transaction (txid: %s) does not match last sent spend service credit transaction (txid: %s)', lastTxid, spendServCredTransact.lastSentCcTransact.txid));
                 }
 
+                let confirmedSpendServiceCreditTransact;
                 let missingServTxids = [];
 
                 if (confirmedCcTransact.txid !== spendServCredTransact.lastSentCcTransact.txid || spendServCredTransact.txChanged) {
@@ -518,7 +525,9 @@ function spendServCredTxConfirmed(data) {
                     });
 
                     // Retrieve service transaction IDs that are missing from confirmed spend service credit transaction
-                    missingServTxids = spendServCredTransact.missingServiceTxids(new SpendServiceCreditTransaction(undefined, confirmedCcTransact, false));
+                    confirmedSpendServiceCreditTransact = new SpendServiceCreditTransaction(undefined, confirmedCcTransact, false);
+
+                    missingServTxids = spendServCredTransact.missingServiceTxids(confirmedSpendServiceCreditTransact);
                 }
 
                 if (confirmedCcTransact.txid !== spendServCredTransact.lastSentCcTransact.txid) {
@@ -555,7 +564,7 @@ function spendServCredTxConfirmed(data) {
                 disposeSpendServCredTransaction.call(this, spendServCredTransact);
 
                 // Record service payment transaction for billing purpose
-                Billing.recordServicePaymentTransaction(spendServCredTransact);
+                Billing.recordServicePaymentTransaction(confirmedSpendServiceCreditTransact !== undefined ? confirmedSpendServiceCreditTransact : spendServCredTransact);
 
                 if (missingServTxids.length > 0) {
                     // Reprocess missing service transactions

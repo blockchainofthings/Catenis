@@ -1,5 +1,5 @@
 /**
- * Created by claudio on 26/11/15.
+ * Created by Claudio on 2015-11-26.
  */
 
 //console.log('[Logging.js]: This code just ran.');
@@ -10,11 +10,8 @@
 // References to external code
 //
 // Internal node modules
-//  NOTE: the reference of these modules are done sing 'require()' instead of 'import' to
-//      to avoid annoying WebStorm warning message: 'default export is not defined in
-//      imported module'
-const util = require('util');
-const path = require('path');
+import util from 'util';
+import path from 'path';
 // Third-party node modules
 import config from 'config';
 import winston from 'winston';
@@ -53,6 +50,7 @@ const emailSecureProtocols = {
 
 // Configuration settings
 const cfgSettings = {
+    exitOnError: loggingConfig.get('exitOnError'),
     console: {
         active: logConsoleConfig.get('active'),
         logLevel: logConsoleConfig.has('logLevel') && (logConsoleConfig.get('logLevel') in log4jLevels) ? logConsoleConfig.get('logLevel') : 'INFO'
@@ -127,7 +125,7 @@ const consoleTranspParams = {
 //
 
 // Complement logging transport parameters
-if (emailCfgSettings.secureProto !== undefined) {
+if (emailCfgSettings.secureProto) {
     if (emailCfgSettings.secureProto === 'ssl') {
         emailTranspParams.ssl = true;
     }
@@ -136,15 +134,15 @@ if (emailCfgSettings.secureProto !== undefined) {
     }
 }
 
-if (emailCfgSettings.smtpPort !== undefined && typeof emailCfgSettings.smtpPort === 'number') {
+if (emailCfgSettings.smtpPort && typeof emailCfgSettings.smtpPort === 'number') {
     emailTranspParams.port = emailCfgSettings.smtpPort;
 }
 
-if (emailCfgSettings.username !== undefined) {
+if (emailCfgSettings.username) {
     emailTranspParams.username = emailCfgSettings.username;
 }
 
-if (emailCfgSettings.password !== undefined) {
+if (emailCfgSettings.password) {
     emailTranspParams.password = emailCfgSettings.password;
 }
 
@@ -152,7 +150,7 @@ if (emailCfgSettings.password !== undefined) {
 //
 // NOTE: to add information about source file, line number and
 //  function name to the logged message, one should include
-//  the 'stack-track' module - using Npm.require('stack-trace'))
+//  the 'stack-track' module - import stack-track from 'stack-track'
 //  - and add a meta (last parameter) object containing the
 //  key stackTrace with a value equal to stackTrace.get().
 //  Example:
@@ -162,15 +160,19 @@ Catenis.logger = new (winston.Logger)({
     levels: log4jLevels,
     colors: log4jColors,
     padLevels: true,
+    exitOnError: cfgSettings.exitOnError,
     transports: [
         new (winston.transports.Console)(consoleTranspParams),
         new (winstonTransportsDailyRotateFile)(fileTranspParams),
         new (winstonTransportMail.Mail)(emailTranspParams)
+    ],
+    filters: [
+        appendSourceCodePrefix
     ]
 });
 
 // Filter to append prefix with source code information
-Catenis.logger.filters.push(function (level, msg, meta, inst) {
+function appendSourceCodePrefix(level, msg, meta, inst) {
     // Check whether a stack trace is passed in the meta
     if (typeof meta === 'object' && meta !== null) {
         if (typeof meta.stackTrace !== 'undefined') {
@@ -232,4 +234,4 @@ Catenis.logger.filters.push(function (level, msg, meta, inst) {
     }
 
     return msg;
-});
+}

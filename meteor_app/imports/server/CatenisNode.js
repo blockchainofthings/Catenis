@@ -1,7 +1,7 @@
 import { Asset } from './Asset';
 
 /**
- * Created by claudio on 25/11/16.
+ * Created by Claudio on 2016-11-25.
  */
 
 //console.log('[CatenisNode.js]: This code just ran.');
@@ -12,11 +12,8 @@ import { Asset } from './Asset';
 // References to external code
 //
 // Internal node modules
-//  NOTE: the reference of these modules are done sing 'require()' instead of 'import' to
-//      to avoid annoying WebStorm warning message: 'default export is not defined in
-//      imported module'
-const util = require('util');
-const events = require('events');
+import util from 'util';
+import events from 'events';
 // Third-party node modules
 import config from 'config';
 import _und from 'underscore';     // NOTE: we dot not use the underscore library provided by Meteor because we need
@@ -1173,7 +1170,7 @@ CatenisNode.serviceCreditAssetDivisibility = cfgSettings.serviceCreditAsset.issu
 
 // Create new client ID dependent on Catenis node index and client index
 function newClientId(ctnNodeIndex, clientIndex) {
-    let id = 'c' + Random.createWithSeeds(Array.from(Catenis.application.seed.toString() + ':ctnNodeIndex:' + ctnNodeIndex + ',clientIndex:' + clientIndex)).id(19);
+    let id = 'c' + Random.createWithSeeds(Array.from(Catenis.application.commonSeed.toString() + ':ctnNodeIndex:' + ctnNodeIndex + ',clientIndex:' + clientIndex)).id(19);
     let doc;
 
     if ((doc = Catenis.db.collection.Client.findOne({clientId: id}, {fields:{_id: 1, index: 1}}))) {
@@ -1190,7 +1187,7 @@ function creditServAccTxConfirmed(data) {
     Catenis.logger.TRACE('Received notification of confirmation of credit service account transaction', data);
     try {
         // Force update of Colored Coins data associated with UTXOs
-        Catenis.ccFNClient.parseNow();
+        Catenis.c3NodeClient.parseNow();
     }
     catch (err) {
         // Error while processing notification of confirmed credit service account transaction.

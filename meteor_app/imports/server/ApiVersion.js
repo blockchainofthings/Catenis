@@ -1,5 +1,5 @@
 /**
- * Created by claudio on 13/07/17.
+ * Created by Claudio on 2017-07-13.
  */
 
 //console.log('[ApiVersion.js]: This code just ran.');
@@ -10,10 +10,7 @@
 // References to external code
 //
 // Internal node modules
-//  NOTE: the reference of these modules are done using 'require()' instead of 'import' to
-//      to avoid annoying WebStorm warning message: 'default export is not defined in
-//      imported module'
-const util = require('util');
+import util from 'util';
 // Third-party node modules
 //import config from 'config';
 // Meteor packages
@@ -66,61 +63,66 @@ export class ApiVersion {
 
     // Test if this version is equal to another version
     eq(ver) {
-        ver = checkVersion(ver);
+        ver = ApiVersion.checkVersion(ver);
 
         return this.major === ver.major && this.minor === ver.minor;
     }
 
     // Test if this version is not equal to another version
     ne(ver) {
-        ver = checkVersion(ver);
+        ver = ApiVersion.checkVersion(ver);
 
         return this.major !== ver.major || this.minor !== ver.minor;
     }
 
     // Test if this version is greater than another version
     gt(ver) {
-        ver = checkVersion(ver);
+        ver = ApiVersion.checkVersion(ver);
 
         return this.major > ver.major || (this.major === ver.major && this.minor > ver.minor);
     }
 
     // Test if this version is less than another version
     lt(ver) {
-        ver = checkVersion(ver);
+        ver = ApiVersion.checkVersion(ver);
 
         return this.major < ver.major || (this.major === ver.major && this.minor < ver.minor);
     }
 
     // Test if this version is greater than or equal to another version
     gte(ver) {
-        ver = checkVersion(ver);
+        ver = ApiVersion.checkVersion(ver);
 
         return this.major > ver.major || (this.major === ver.major && (this.minor > ver.minor || this.minor === ver.minor));
     }
 
     // Test if this version is less than or equal to another version
     lte(ver) {
-        ver = checkVersion(ver);
+        ver = ApiVersion.checkVersion(ver);
 
         return this.major < ver.major || (this.major === ver.major && (this.minor < ver.minor || this.minor === ver.minor));
     }
 }
 
 
-// Definition of module (private) functions
+// ApiVersion function class (public) methods
 //
 
-function isValidVersion(ver) {
-    return (typeof ver === 'string' && new RegExp(verReSource).test(ver)) || (typeof ver === 'object' && ver instanceof ApiVersion)
-}
-
-function checkVersion(ver) {
-    if (!isValidVersion(ver)) {
+ApiVersion.checkVersion = function (ver, reportError = true) {
+    if (isValidVersion(ver)) {
+        return typeof ver === 'string' ? new ApiVersion(ver) : ver;
+    }
+    else if (reportError) {
         // Invalid API ver. Log error and throw exception
         Catenis.logger.ERROR('Invalid API version', {version: ver});
         throw new Error(util.format('Invalid API version: %s', ver));
     }
+};
 
-    return typeof ver === 'string' ? new ApiVersion(ver) : ver;
+
+// Definition of module (private) functions
+//
+
+function isValidVersion(ver) {
+    return (typeof ver === 'string' && new RegExp(verReSource).test(ver)) || (ver instanceof ApiVersion);
 }

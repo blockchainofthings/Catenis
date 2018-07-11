@@ -1,5 +1,5 @@
 /**
- * Created by claudio on 25/11/15.
+ * Created by Claudio on 2015-11-25.
  */
 
 //console.log('[Startup.js]: This code just ran.');
@@ -10,10 +10,7 @@
 // References to external code
 //
 // Internal node modules
-//  NOTE: the reference of these modules are done sing 'require()' instead of 'import' to
-//      to avoid annoying WebStorm warning message: 'default export is not defined in
-//      imported module'
-//const util = require('util');
+//import util from 'util';
 // Third-party node modules
 import config from 'config';
 import Future from 'fibers/future';
@@ -36,6 +33,7 @@ import { KeyStore } from './KeyStore';
 import { TransactionMonitor } from './TransactionMonitor';
 import './ParseRequestBody';
 import { RestApi } from './RestApi';
+import { BcotPriceUI } from './AdminUI/BcotPriceUI';
 import { SystemFundingUI } from './AdminUI/SystemFundingUI';
 import { ClientsUI } from './AdminUI/ClientsUI';
 import { DevicesUI } from './AdminUI/DevicesUI';
@@ -45,18 +43,20 @@ import { Permission } from './Permission';
 import { Notification } from './Notification';
 import { WebSocketNotifyMsgDispatcher } from './WebSocketNotifyMsgDispatcher';
 import { MalleabilityEventEmitter } from './MalleabilityEventEmitter';
-import { CCFullNodeClient } from './CCFullNodeClient';
-import { CCMetadataClient } from './CCMetadataClient';
+import { C3NodeClient } from './C3NodeClient';
 import { OmniCore } from './OmniCore';
-import { BcotExchangeRate } from './BcotExchangeRate';
+import { BitcoinTicker } from './BitcoinTicker';
+import { BitcoinPrice } from './BitcoinPrice';
+import { BcotPrice } from './BcotPrice';
 import { BcotPayment } from './BcotPayment';
 import { SpendServiceCredit } from './SpendServiceCredit';
 import { BcotUsageReportUI } from './AdminUI/BcotUsageReportUI';
 import { LoginFlow } from './UI/LoginFlow';
-
-// DEBUG - begin
+import { ReceiveAsset } from './ReceiveAsset';
+// TEST - begin
 //import { resetBitcoinCore } from './Test/FundSourceTest';
-// DEBUG - end
+//import { TestCatenisColoredCoins } from './Test/TestCatenisColoredCoins';
+// TEST - end
 
 // Config entries
 const startupConfig = config.get('startup');
@@ -73,9 +73,9 @@ const cfgSettings = {
 
 // Initialization code (on the server)
 Meteor.startup(function () {
-    // DEBUG - begin
+    // TEST - begin
     //resetBitcoinCore();
-    // DEBUG - end
+    // TEST - end
     if (cfgSettings.bypassProcessing) {
         Catenis.logger.INFO('Bypassing processing...');
     }
@@ -83,25 +83,22 @@ Meteor.startup(function () {
         // Normal processing
         Catenis.logger.INFO('Starting initialization...');
         Database.initialize();
-        Database.fixMessageCollection();
-        Database.replaceMessageSource();
-        Database.fixMessageFirstReadDate();
-        Database.fixMessageAddReadConfirmationEnabledField();
-        Database.fillClientBillingModeField();
-        Database.fixSentTransactionReplacedByTxidIndex();
-        Database.fixSentTransactionSpendServiceCreditInfo();
-
+        Database.removeInconsistentAssetIndices();
+        Database.fixBillingExchangeRate();
+        Database.removeBcotExchangeRateColl();
         Application.initialize();
         MalleabilityEventEmitter.initialize();
         BitcoinFees.initialize();
-        BcotExchangeRate.initialize();
+        BitcoinTicker.initialize();
+        BitcoinPrice.initialize();
+        BcotPrice.initialize();
         KeyStore.initialize();
         BitcoinCore.initialize();
         OmniCore.initialize();
         IpfsClient.initialize();
         IpfsServerMonitor.initialize();
-        CCFullNodeClient.initialize();
-        CCMetadataClient.initialize();
+        C3NodeClient.initialize();
+        //ColoredCoins.initialize();
         Permission.initialize();
         CatenisNode.initialize();
 
@@ -121,6 +118,7 @@ Meteor.startup(function () {
         BcotPayment.initialize();
         ReceiveMessage.initialize();
         ReadConfirmation.initialize();
+        ReceiveAsset.initialize();
         SpendServiceCredit.initialize();
         TransactionMonitor.initialize();
 
@@ -129,10 +127,14 @@ Meteor.startup(function () {
         // Then the notification module itself
         Notification.initialize();
 
+        // TEST - Begin
+        //TestCatenisColoredCoins.init();
+        // TEST - End
         RestApi.initialize();
 
         // UI support initialization
         LoginFlow.initialize();
+        BcotPriceUI.initialize();
         SystemFundingUI.initialize();
         BcotUsageReportUI.initialize();
         ClientsUI.initialize();
@@ -177,7 +179,7 @@ function CheckImportAddresses(fixMissingAddresses) {
                 const lastAddressToImport = notImportedAddresses.pop();
 
                 // TODO: replace this loop with a call to the new (as of Bitcoin Core ver. 0.14.0) importmulti JSON-RPC command, which takes an array of objects to import
-                // TODO: today we do not store the date and time when the address was created, which can be used in the importnulti call, so we would need to make change to the KeyStore module to include that info
+                // TODO: today we do not store the date and time when the address was created, which can be used in the importmulti call, so we would need to make change to the KeyStore module to include that info
                 notImportedAddresses.forEach((addr) => {
                     // Get public key associated with address and import it onto Bitcoin Core
                     //  without rescanning the blockchain

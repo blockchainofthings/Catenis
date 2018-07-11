@@ -7,16 +7,6 @@ Application {
   lastBlockHeight: [number]  // Height of last blockchain block that has already been processed by the application
 }
 
-// Added by Peter (UI)
-License {
-  _id: [string], // MongoDB internal document ID provided by Meteor
-  licenseType: [string],  // Type of the client account license
-  numAllowedDevices: [integer],  // Number of devices allowed for this specific license type. Unlimited if set to zero
-  active: [boolean],  // Indicates whether license type is currently active
-  createdDate: [data/time],  // Date and time when doc/rec has been created
-  lastModifiedDate: [data/time]  / Data and time when doc/rec has been last modified
-}
-
 BitcoinFees {
   _id: [string],  / MongoDB internal document ID provided by Meteor
   recommended: {
@@ -35,6 +25,19 @@ BitcoinFees {
     }]
   },
   createdDate: [date/time] // Date and time when doc/rec has been created
+}
+
+BitcoinPrice {
+  _id: [string],  // MongoDB internal document ID provided by Meteor
+  price: [numeric],  // Current bitcoin price expressed in USD
+  referenceDate: [data/time],  // Date and time when price had been observed
+  createdDate: [date/time]  // Date and time when doc/rec has been created
+}
+
+BcotPrice {
+  _id: [string],  // MongoDB internal document ID provided by Meteor
+  price: [numeric],  // Current BCOT token price (as set by BCoT) expressed in USD
+  createdDate: [date/time]  // Date and time when doc/rec has been created
 }
 
 IssuedBlockchainAddress {
@@ -151,7 +154,7 @@ Message {
 
 SentTransaction {
   _id: [string], // MongoDB internal document ID provided by Meteor
-  type: [string], // Identifies the type of transaction that was sent. Valid values (from Catenis.Transaction.type): 'funding', 'credit_service_account', 'store_bcot', 'spend_service_credit', 'send_message', 'log_message', 'read_confirmation', 'issue_locked_asset', 'issue_unlocked_asset', 'transfer_asset'
+  type: [string], // Identifies the type of transaction that was sent. Valid values (from Catenis.Transaction.type): 'funding', 'credit_service_account', 'store_bcot', 'spend_service_credit', 'send_message', 'log_message', 'read_confirmation', 'issue_asset', 'transfer_asset'
   txid: [string], // Blockchain attributed ID (hash) of the sent transaction
   sentDate: [date/time], // Date and time when transaction was sent to the blockchain network
   confirmation: {
@@ -206,18 +209,18 @@ SentTransaction {
       },
       spentReadConfirmTxOutCount: [number]  // Number of send message tx read confirmation address outputs that had been spent by this tx
     },
-    issueLockedAsset: {
-      assetId: [string], // ID that uniquely identifies the Colored Coins asset that is issued
-      deviceId: [string] // External ID of the device that is issuing the asset
-    },
-    issueUnlockedAsset: {
-      assetId: [string], // ID that uniquely identifies the coloredCoin asset that is issued
-      deviceId: [string] // External ID of the device that is issuing the asset
+    issueAsset: {
+      assetId: [string], // ID that uniquely identifies the Catenis asset that is issued
+      issuingDeviceId: [string], // External ID of the device that issued the asset
+      holdingDeviceId: [string], // External ID of the device for which the asset is issued and that shall hold it
+      amount: [number]           // Amount of asset issued
     },
     transferAsset: {
-      assetId: [string], // ID that uniquely identifies the Colored Coins asset that is transferred
-      originDeviceId: [string], // External ID of the device that sent the assets
-      targetDeviceId: [string] // External ID of the device that receives the assets
+      assetId: [string], // ID that uniquely identifies the Catenis asset that is transferred
+      sendingDeviceId: [string],   // External ID of the device that sent the assets
+      receivingDeviceId: [string], // External ID of the device that receives the assets
+      amount: [number],            // Amount of asset transferred
+      changeAmount: [number]       // Amount of asset sent back to sending device as change
     }
   },
   originalTxid: [string]  // Blockchain attributed ID (hash) that had been originally assigned to the transaction. If this field exists, it means that this transaction's ID had been modified due to malleability, and the txid field has the modified tx id.
@@ -225,7 +228,7 @@ SentTransaction {
 
 ReceivedTransaction {
   _id: [string], // MongoDB internal document ID provided by Meteor
-  type: [string], // Identifies the type of transaction that was received. Valid values (from Catenis.Transaction.type): 'sys_funding', 'bcot_payment', 'credit_service_account', 'send_message', 'read_confirmation', 'transfer_asset'
+  type: [string], // Identifies the type of transaction that was received. Valid values (from Catenis.Transaction.type): 'sys_funding', 'bcot_payment', 'credit_service_account', 'send_message', 'read_confirmation', 'issue_asset', 'transfer_asset'
   txid: [string], // Blockchain attributed ID (hash) of the received transaction
   receivedDate: [date/time], // Date and time when transaction was received. This is derived from timereceived property returned by gettransaction RPC method
   sentTransaction_id: [string], // MongoDB internal ID of SentTransaction doc/rec which corresponds to this transaction. This field should be filled (exist) for all received transactions that have been sent by this Catenis node. Note that for transactions of the 'sys_funding' type this field must never be filled (exist) since those types of transactions are not sent by the system
@@ -265,10 +268,18 @@ ReceivedTransaction {
         vout: [integer] // The index of the output within the transaction that is spent
       }]
     },
+    issueAsset: {
+      assetId: [string], // ID that uniquely identifies the Catenis asset that is issued
+      issuingDeviceId: [string], // External ID of the device that issued the asset
+      holdingDeviceId: [string], // External ID of the device for which the asset is issued and that shall hold it
+      amount: [number]           // Amount of asset issued
+    },
     transferAsset: {
-      assetId: [string], // ID that uniquely identifies the Colored Coins asset that is transferred
-      originDeviceId: [string], // External ID of the device that sent the assets
-      targetDeviceId: [string] // External ID of the device that receives the assets
+      assetId: [string], // ID that uniquely identifies the Catenis asset that is transferred
+      sendingDeviceId: [string],   // External ID of the device that sent the assets
+      receivingDeviceId: [string], // External ID of the device that receives the assets
+      amount: [number],            // Amount of asset transferred
+      changeAmount: [number]       // Amount of asset sent back to sending device as change
     }
   },
   originalTxid: [string]  // Blockchain attributed ID (hash) that had been originally assigned to the transaction. If this field exists, it means that this transaction's ID had been modified due to malleability, and the txid field has the modified tx id.
@@ -284,7 +295,7 @@ Malleability {
 
 Permission {
   _id: [string], // MongoDB internal document ID provided by Meteor
-  event: [string], // Name of event for which permission is being defined. Valid values (from Permission.event): 'receive_notify_new_msg', 'receive_notify_msg_read', 'send_read_msg_confirm', 'receive_msg'
+  event: [string], // Name of event for which permission is being defined. Valid values (from Permission.event): 'receive-notify-new-msg', 'receive-notify-msg-read', 'receive-notify-asset-of', 'receive-notify-asset-from', 'receive-notify-confirm-asset-of', 'receive-notify-confirm-asset-from', 'send-read-msg-confirm', 'receive-msg', 'disclose-main-props', 'disclose-identity-info', 'receive-asset-of', 'receive-asset-from'
   subjectEntityType: [string],  // The type of the subject entity: either 'client' or 'device'
   subjectEntityId: [string], // ID of device that functions as the subject of the action associated with the event for which permission is being defined (subjectEntityType = 'device'),
                              //  or ID of client for which default permission for all its devices is being set (subjectEntityType = 'client')
@@ -345,7 +356,9 @@ Billing {
   },
   estimatedServiceCost: [number], - Estimated cost, in satoshis, of the service
   priceMarkup: [number], - Markup used to calculate the price of the service
-  exchangeRate: [number], - Bitcoin to BCOT token exchange rate used to calculate final price
+  bitcoinPrice: [number], - Bitcoin price, in USD, used to calculate the exchange rate
+  bcotPrice: [number], - BCOT Token price, in USD, used to calculate to exchange rate
+  exchangeRate: [number], - Bitcoin to BCOT token (1 BTC = x BCOT) exchange rate used to calculate final price
   finalServicePrice: [number] - Price charged for the service expressed in Catenis service credit's lowest units
   servicePaymentTx: {  // Catenis transaction used to pay for service
     txid: [string],  // Blockchain attributed ID (hash) of transaction used to pay for service expense.
@@ -355,5 +368,12 @@ Billing {
                     //  Note: since service payment transactions make use RBF (replace by fee), the actual fee spent is only obtained after the transaction is confirmed
     feeShare: [number]  // Amount, in satoshis, that represents the portion of the fee paid for the service payment transaction that applies this specific service
   },
+  createdDate: [date/time]  // Date and time when doc/rec has been created
+}
+
+CCMetadataConversion {
+  _id: [string],  // MongoDB internal document ID provided by Meteor
+  torrentHash: [string],  // Torrent hash of Colored Coins metadata
+  cid: [string],  // Hex encoded CID on IPFS of converted Colored Coins metadata
   createdDate: [date/time]  // Date and time when doc/rec has been created
 }

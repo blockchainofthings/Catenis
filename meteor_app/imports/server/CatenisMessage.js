@@ -1,5 +1,5 @@
 /**
- * Created by claudio on 21/12/16.
+ * Created by Claudio on 2016-12-21.
  */
 
 //console.log('[CatenisMessage.js]: This code just ran.');
@@ -10,10 +10,7 @@
 // References to external code
 //
 // Internal node modules
-//  NOTE: the reference of these modules are done sing 'require()' instead of 'import' to
-//      to avoid annoying WebStorm warning message: 'default export is not defined in
-//      imported module'
-const util = require('util');
+import util from 'util';
 // Third-party node modules
 import config from 'config';
 // Meteor packages
@@ -22,6 +19,7 @@ import { Meteor } from 'meteor/meteor';
 // References code in other (Catenis) modules
 import { Catenis } from './Catenis';
 import { IpfsMessageStorage } from './IpfsMessageStorage';
+import { Ipfs2MessageStorage } from './Ipfs2MessageStorage';
 
 // Config entries
 const ctnMessageConfig = config.get('catenisMessage');
@@ -202,6 +200,13 @@ CatenisMessage.getMessageStorageInstance = function (storageProvider) {
                 CatenisMessage.msgStoInstances.set(storageProvider.byteCode, instance);
 
                 break;
+
+            case CatenisMessage.storageProvider.ipfs2.byteCode:
+                instance = new Ipfs2MessageStorage();
+
+                CatenisMessage.msgStoInstances.set(storageProvider.byteCode, instance);
+
+                break;
         }
     }
 
@@ -212,15 +217,19 @@ CatenisMessage.getMessageStorageClass = function (storageProvider) {
     switch(storageProvider.byteCode) {
         case CatenisMessage.storageProvider.ipfs.byteCode:
             return IpfsMessageStorage;
+
+        case CatenisMessage.storageProvider.ipfs2.byteCode:
+            return Ipfs2MessageStorage;
     }
 };
 
 CatenisMessage.getStorageProviderByName = function (spName) {
     let sp = undefined;
 
-    Object.keys(CatenisMessage.storageProvider).some((spKey) => {
-        if (CatenisMessage.storageProvider[spKey].name === spName) {
-            sp = CatenisMessage.storageProvider[spKey];
+    // Note: do a reverse lookup to make sure that gets the latest version of the storage provider
+    Object.values(CatenisMessage.storageProvider).reverse().some((sp2) => {
+        if (sp2.name === spName) {
+            sp = sp2;
             return true;
         }
 
@@ -233,9 +242,9 @@ CatenisMessage.getStorageProviderByName = function (spName) {
 CatenisMessage.getStorageProviderByByteCode = function (byteCode) {
     let sp = undefined;
 
-    Object.keys(CatenisMessage.storageProvider).some((key) => {
-        if (CatenisMessage.storageProvider[key].byteCode === byteCode) {
-            sp = CatenisMessage.storageProvider[key];
+    Object.values(CatenisMessage.storageProvider).some((sp2) => {
+        if (sp2.byteCode === byteCode) {
+            sp = sp2;
             return true;
         }
 
@@ -246,19 +255,14 @@ CatenisMessage.getStorageProviderByByteCode = function (byteCode) {
 };
 
 CatenisMessage.isValidStorageScheme = function (strScheme) {
-    return Object.keys(CatenisMessage.storageScheme).some((key) => {
-        return CatenisMessage.storageScheme[key] === strScheme;
-    });
+    return Object.values(CatenisMessage.storageScheme).some(stoScheme => stoScheme === strScheme);
 };
 
 CatenisMessage.isValidStorageProvider = function (sp) {
     let result = false;
 
     if (typeof sp === 'object' && sp !== null && ('byteCode' in sp) && ('name' in sp)) {
-        result = Object.keys(CatenisMessage.storageProvider).some((key) => {
-            return CatenisMessage.storageProvider[key].byteCode === sp.byteCode &&
-                CatenisMessage.storageProvider[key].name === sp.name;
-        });
+        result = Object.values(CatenisMessage.storageProvider).some(sp2 => sp2.byteCode === sp.byteCode && sp2.name === sp.name);
     }
 
     return result;
@@ -397,7 +401,15 @@ CatenisMessage.storageProvider = Object.freeze({
     ipfs: Object.freeze({
         byteCode: 0x01,
         name: "ipfs",
-        description: "IPFS - Interplanetary Filesystem"
+        description: "IPFS - Interplanetary Filesystem",
+        version: 1
+    }),
+    // Note: the following is an enhanced version of the IPFS storage provider, and replaces the earlier (original) version
+    ipfs2: Object.freeze({
+        byteCode: 0x02,
+        name: "ipfs",
+        description: "IPFS - Interplanetary Filesystem",
+        version: 2
     })
 });
 
@@ -427,16 +439,12 @@ function extractFunctionByte(byte) {
 }
 
 function isValidFunctionByte(funcByte) {
-    return Object.keys(CatenisMessage.functionByte).some((key) => {
-        return CatenisMessage.functionByte[key] === funcByte;
-    });
+    return Object.values(CatenisMessage.functionByte).some(funcByte2 => funcByte2 === funcByte);
 }
 
 function isValidOptionsByte(optsByte) {
     // Compute sum of all option bits
-    const optBitsSum = Object.keys(CatenisMessage.optionBit).reduce((sum, key) => {
-        return sum + CatenisMessage.optionBit[key];
-    }, 0);
+    const optBitsSum = Object.values(CatenisMessage.optionBit).reduce((sum, optBit) => sum + optBit, 0);
 
     return (optsByte | optBitsSum) === optBitsSum;
 }

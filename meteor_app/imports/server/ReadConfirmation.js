@@ -1,5 +1,5 @@
 /**
- * Created by claudio on 18/07/17.
+ * Created by Claudio on 2017-07-18.
  */
 
 //console.log('[ReadConfirmation.js]: This code just ran.');
@@ -10,10 +10,7 @@
 // References to external code
 //
 // Internal node modules
-//  NOTE: the reference of these modules are done using 'require()' instead of 'import' to
-//      to avoid annoying WebStorm warning message: 'default export is not defined in
-//      imported module'
-const util = require('util');
+import util from 'util';
 // Third-party node modules
 import config from 'config';
 // Meteor packages

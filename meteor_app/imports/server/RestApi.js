@@ -1,6 +1,7 @@
 /**
- * Created by claudio on 19/01/17.
+ * Created by Claudio on 2017-01-19.
  */
+
 
 //console.log('[RestApi.js]: This code just ran.');
 
@@ -10,10 +11,7 @@
 // References to external code
 //
 // Internal node modules
-//  NOTE: the reference of these modules are done sing 'require()' instead of 'import' to
-//      to avoid annoying WebStorm warning message: 'default export is not defined in
-//      imported module'
-const util = require('util');
+import util from 'util';
 // Third-party node modules
 import config from 'config';
 // Meteor packages
@@ -40,13 +38,23 @@ import { setPermissionRights } from './ApiPostPermissionRights';
 import { listNotificationEvents } from './ApiListNotificationEvents';
 import { checkEffectivePermissionRight } from './ApiEffectivePermissionRight';
 import { retrieveDeviceIdentifyInfo } from './ApiDeviceIdentityInfo';
+import { issueAsset } from './ApiIssueAsset';
+import { reissueAsset } from './ApiReissueAsset';
+import { transferAsset } from './ApiTransferAsset';
+import { retrieveAssetInfo } from './ApiAssetInfo';
+import { getAssetBalance } from './ApiAssetBalance';
+import { listOwnedAssets } from './ApiOwnedAssets';
+import { listIssuedAssets } from './ApiIssuedAssets';
+import { retrieveAssetIssuanceHistory } from './ApiAssetIssuance';
+import { listAssetHolders } from './ApiAssetHolders';
 
 // Config entries
 const restApiConfig = config.get('restApi');
 
 // Configuration settings
 const cfgSettings = {
-    rootPath: restApiConfig.get('rootPath')
+    rootPath: restApiConfig.get('rootPath'),
+    availableVersions: restApiConfig.get('availableVersions')
 };
 
 export const restApiRootPath = cfgSettings.rootPath;
@@ -185,6 +193,89 @@ export function RestApi(apiVersion) {
             }
         });
     }
+
+    if (this.apiVer.gte('0.6')) {
+        this.api.addRoute('assets/issue', {authRequired: true}, {
+            // Issue an amount of a new asset
+            //
+            //  Refer to the source file where the action function is defined for a detailed description of the endpoint
+            post: {
+                action: issueAsset
+            }
+        });
+
+        this.api.addRoute('assets/:assetId/issue', {authRequired: true}, {
+            // Issue an additional amount of an existing asset
+            //
+            //  Refer to the source file where the action function is defined for a detailed description of the endpoint
+            post: {
+                action: reissueAsset
+            }
+        });
+
+        this.api.addRoute('assets/:assetId/transfer', {authRequired: true}, {
+            // Transfer an amount of an asset to a device
+            //
+            //  Refer to the source file where the action function is defined for a detailed description of the endpoint
+            post: {
+                action: transferAsset
+            }
+        });
+
+        this.api.addRoute('assets/:assetId', {authRequired: true}, {
+            // Retrieve information about a given asset
+            //
+            //  Refer to the source file where the action function is defined for a detailed description of the endpoint
+            get: {
+                action: retrieveAssetInfo
+            }
+        });
+
+        this.api.addRoute('assets/:assetId/balance', {authRequired: true}, {
+            // Get the current balance of a given asset held by the device
+            //
+            //  Refer to the source file where the action function is defined for a detailed description of the endpoint
+            get: {
+                action: getAssetBalance
+            }
+        });
+
+        this.api.addRoute('assets/owned', {authRequired: true}, {
+            // List assets owned by the device
+            //
+            //  Refer to the source file where the action function is defined for a detailed description of the endpoint
+            get: {
+                action: listOwnedAssets
+            }
+        });
+
+        this.api.addRoute('assets/issued', {authRequired: true}, {
+            // List assets issued by the device
+            //
+            //  Refer to the source file where the action function is defined for a detailed description of the endpoint
+            get: {
+                action: listIssuedAssets
+            }
+        });
+
+        this.api.addRoute('assets/:assetId/issuance', {authRequired: true}, {
+            // Retrieve issuance history for a given asset
+            //
+            //  Refer to the source file where the action function is defined for a detailed description of the endpoint
+            get: {
+                action: retrieveAssetIssuanceHistory
+            }
+        });
+
+        this.api.addRoute('assets/:assetId/holders', {authRequired: true}, {
+            // List devices that currently hold any amount of a given asset
+            //
+            //  Refer to the source file where the action function is defined for a detailed description of the endpoint
+            get: {
+                action: listAssetHolders
+            }
+        });
+    }
 }
 
 
@@ -210,13 +301,10 @@ export function RestApi(apiVersion) {
 
 RestApi.initialize = function () {
     Catenis.logger.TRACE('RestApi initialization');
-    // Instantiate RestApi object
-    Catenis.restApi = {
-        'ver0.2': new RestApi('0.2'),
-        'ver0.3': new RestApi('0.3'),
-        'ver0.4': new RestApi('0.4'),
-        'ver0.5': new RestApi('0.5')
-    };
+    // Instantiate RestApi objects for all available API versions
+    Catenis.restApi = {};
+
+    cfgSettings.availableVersions.forEach(ver => Catenis.restApi['ver' + ver] = new RestApi(ver));
 };
 
 
@@ -389,6 +477,14 @@ export function errorResponse(statusCode, errMessage) {
     return resp;
 }
 
+export function getUrlApiVersion(url) {
+    const regExp = new RegExp(util.format("^/%s/([^/]+)/.*$", cfgSettings.rootPath));
+    let match;
+
+    if ((match = url.match(regExp))) {
+        return match[1];
+    }
+}
 
 // Module code
 //

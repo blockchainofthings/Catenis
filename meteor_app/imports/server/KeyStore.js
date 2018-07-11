@@ -1,5 +1,5 @@
 /**
- * Created by claudio on 10/03/16.
+ * Created by Claudio on 2016-03-10.
  */
 
 //console.log('[KeyStore.js]: This code just ran.');
@@ -127,7 +127,7 @@
 //
 //      m/k/i/1/j/0 (i,j>=1) -> device #j of client #i main addresses root HD extended key
 //      m/k/i/1/j/1 (i,j>=1) -> device #j of client #i asset addresses root HD extended key
-//      m/k/i/1/j/2 (i,j>=1) -> device #j of client #i asset issuance addresses root HD extended key (used only to issue unlocked type of Colored Coins assets)
+//      m/k/i/1/j/2 (i,j>=1) -> device #j of client #i asset issuance addresses root HD extended key
 //      m/k/i/1/j/3 (i,j>=1) -> device #j of client #i public (reserved) addresses #4 root HD extended key
 //      m/k/i/1/j/4 (i,j>=1) -> device #j of client #i public (reserved) addresses #5 root HD extended key
 //      m/k/i/1/j/5 (i,j>=1) -> device #j of client #i public (reserved) addresses #6 root HD extended key
@@ -151,10 +151,7 @@
 // References to external code
 //
 // Internal node modules
-//  NOTE: the reference of these modules are done using 'require()' instead of 'import' to
-//      to avoid annoying WebStorm warning message: 'default export is not defined in
-//      imported module'
-const util = require('util');
+import util from 'util';
 // Third-party node modules
 import config from 'config';
 import Loki from 'lokijs';
@@ -3021,7 +3018,7 @@ function retrieveHDNode(path) {
 KeyStore.initialize = function () {
     Catenis.logger.TRACE('KeyStore initialization');
     // Instantiate KeyStore object
-    Catenis.keyStore = new KeyStore(Catenis.application.ctnHubNodeIndex, Catenis.application.seed, Catenis.application.cryptoNetwork);
+    Catenis.keyStore = new KeyStore(Catenis.application.ctnHubNodeIndex, Catenis.application.masterSeed, Catenis.application.cryptoNetwork);
 
     // Execute process to purge unused HD extended keys from local key storage now,
     //  and set recurring timer to execute it periodically

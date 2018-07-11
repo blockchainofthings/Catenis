@@ -1,5 +1,5 @@
 /**
- * Created by claudio on 29/06/16.
+ * Created by Claudio on 2016-06-29.
  */
 
 //console.log('[BitcoinFees.js]: This code just ran.');
@@ -10,10 +10,7 @@
 // References to external code
 //
 // Internal node modules
-//  NOTE: the reference of these modules are done sing 'require()' instead of 'import' to
-//      to avoid annoying WebStorm warning message: 'default export is not defined in
-//      imported module'
-const events = require('events');
+import events from 'events';
 // Third-party node modules
 import config from 'config';
 // Meteor packages
@@ -245,7 +242,7 @@ function startDbPurge() {
 }
 
 function purgeDatabase() {
-    Catenis.logger.TRACE('Exececuting process to purge database by deleting oldest fees docs/recs');
+    Catenis.logger.TRACE('Executing process to purge database by deleting oldest fees docs/recs');
 
     const firstOldestFees = Catenis.db.collection.BitcoinFees.findOne({}, {fields: {createdDate: 1}, sort: {createdDate: -1}, skip: cfgSettings.numDbRecsToMaintain});
 

@@ -1,5 +1,5 @@
 /**
- * Created by claudio on 11/12/17.
+ * Created by Claudio on 2017-12-11.
  */
 
 //console.log('[SpendServiceCreditTransaction.js]: This code just ran.');
@@ -54,7 +54,7 @@ const cfgSettings = {
 
 // SpendServiceCreditTransaction function class
 export class SpendServiceCreditTransaction extends events.EventEmitter {
-    constructor (spendServCredCtrl, ccTransact, unconfirmed) {
+    constructor (spendServCredCtrl, ccTransact, unconfirmed, addNoBillingServTxs) {
         super();
 
         // Properties definition
@@ -119,21 +119,41 @@ export class SpendServiceCreditTransaction extends events.EventEmitter {
 
             // Identify blockchain assigned ID of service transaction for which payments
             //  have been made by this transaction
-            if (this.ccTransact.ccMetadata === undefined || this.ccTransact.ccMetadata.userData === undefined
-                    || this.ccTransact.ccMetadata.userData[cfgSettings.ccMetadata.servTxidsKey] === undefined) {
-                // Missing list of service transaction IDs from Colored Coins metadata.
-                //  Log error condition, and throw exception
-                Catenis.logger.ERROR('Inconsistent Colored Coins metadata for spend service credit transaction: missing list of service transaction IDs', {
-                    ccMetadata: this.ccTransact.ccMetadata
+            if (this.ccTransact.ccMetadata !== undefined && this.ccTransact.ccMetadata.userData !== undefined
+                    && this.ccTransact.ccMetadata.userData[cfgSettings.ccMetadata.servTxidsKey] !== undefined) {
+                Catenis.logger.DEBUG('>>>>>> Spend service credit Colored Coins metadata', {
+                    raw: this.ccTransact.ccMetadata.userData[cfgSettings.ccMetadata.servTxidsKey],
+                    string: this.ccTransact.ccMetadata.userData[cfgSettings.ccMetadata.servTxidsKey].toString()
                 });
-                throw new Error('Inconsistent Colored Coins metadata for spend service credit transaction: missing list of service transaction IDs');
+                this.serviceTxids = JSON.parse(this.ccTransact.ccMetadata.userData[cfgSettings.ccMetadata.servTxidsKey].toString());
             }
+            else {
+                // Colored Coins metadata missing. Try to get service transactions from
+                //  local database
+                Catenis.logger.WARN('No Colored Coins metadata associated with spend service credit transaction; trying to retrieve associated service transaction IDs from local database.', {
+                    'ccTransact.txid': ccTransact.txid
+                });
+                const docSpendServCredTx = Catenis.db.collection.SentTransaction.findOne({
+                    txid: ccTransact.txid,
+                    type: 'spend_service_credit'
+                }, {
+                    fields: {
+                        info: 1
+                    }
+                });
 
-            Catenis.logger.DEBUG('>>>>>> Spend service credit Colored Coins metadata', {
-                raw: this.ccTransact.ccMetadata.userData[cfgSettings.ccMetadata.servTxidsKey],
-                string: this.ccTransact.ccMetadata.userData[cfgSettings.ccMetadata.servTxidsKey].toString()
-            });
-            this.serviceTxids = JSON.parse(this.ccTransact.ccMetadata.userData[cfgSettings.ccMetadata.servTxidsKey].toString());
+                if (docSpendServCredTx !== undefined) {
+                    this.serviceTxids = docSpendServCredTx.info.spendServiceCredit.serviceTxids;
+                }
+                else {
+                    // Unable to retrieve spend service credit transaction from local database.
+                    //  Log error condition, and throw exception
+                    Catenis.logger.ERROR('Could not find spend service credit transaction; unable to retrieve associated service transaction IDs', {
+                        'ccTransact.txid': ccTransact.txid
+                    });
+                    throw new Error(util.format('Could not find spend service credit transaction (txid: %s); unable to retrieve associated service transaction IDs', ccTransact.txid));
+                }
+            }
 
             this.fee = this.ccTransact.feeAmount();
 
@@ -141,6 +161,16 @@ export class SpendServiceCreditTransaction extends events.EventEmitter {
             this.change = changeOutputPos >= 0 ? this.ccTransact.totalOutputsAmount(changeOutputPos) : 0;
 
             this.txChanged = false;
+
+            if (addNoBillingServTxs) {
+                const extServTxids = Util.mergeArrays(this.serviceTxids, getServiceTxsWithNoBilling());
+
+                if (extServTxids.length > this.serviceTxids.length) {
+                    this.serviceTxids = extServTxids;
+                    this.txChanged = true;
+                }
+            }
+
             this.txFunded = false;
             this.noMorePaymentsAccepted = this.ccTransact.realSize() > Transaction.maxTxSize * cfgSettings.txSizeThresholdRatio;
 
@@ -332,17 +362,6 @@ SpendServiceCreditTransaction.prototype.payForService = function (client, servic
         //  add it to Colored Coins metadata
         const newServiceTxids = this.serviceTxids.concat();
         newServiceTxids.push(serviceTxid);
-
-        if (this.txChanged && newCcTransact.ccMetadata !== undefined && newCcTransact.ccMetadata.isStored()) {
-            // Colored Coins metadata has changed since transaction has been last sent, so remove it
-            //  before replacing it
-            try {
-                Catenis.ccMdClient.removeMetadata(newCcTransact.ccMetadata.storeResult.torrentHash);
-            }
-            catch (err) {
-                Catenis.logger.ERROR('Error trying to remove old Colored Coins metadata for spend service credit transaction.', err);
-            }
-        }
 
         const ccMetadata = new CCMetadata();
         ccMetadata.setFreeUserData(cfgSettings.ccMetadata.servTxidsKey, Buffer.from(JSON.stringify(newServiceTxids)), true);
@@ -822,7 +841,7 @@ SpendServiceCreditTransaction.prototype.sendTransaction = function (isTerminal =
             }
 
             // Force update of Colored Coins data associated with UTXOs
-            Catenis.ccFNClient.parseNow();
+            Catenis.c3NodeClient.parseNow();
 
             // Make sure that system addresses (used to pay for spend service credit tx expense) are properly funded
             Meteor.defer(checkSystemFunding);
@@ -872,7 +891,7 @@ SpendServiceCreditTransaction.prototype.getFeeInfo = function () {
         const lastSentTxFee = this.lastSentCcTransact.feeAmount();
 
         if (lastSentTxFee !== this.fee) {
-            Catenis.logger.WARN('Inconsistent fee for spend service credit transaction transaction', {
+            Catenis.logger.WARN('Inconsistent fee for spend service credit transaction', {
                 spendServCredTxFee: this.fee,
                 lastSentTxFee: lastSentTxFee
             });
@@ -880,7 +899,7 @@ SpendServiceCreditTransaction.prototype.getFeeInfo = function () {
 
         return {
             fee: lastSentTxFee,
-            feeShare: new BigNumber(lastSentTxFee).dividedBy(this.serviceTxids.length).round(0, BigNumber.ROUND_HALF_EVEN).toNumber()
+            feeShare: new BigNumber(lastSentTxFee).dividedBy(this.serviceTxids.length).decimalPlaces(0, BigNumber.ROUND_HALF_EVEN).toNumber()
         }
     }
 };
@@ -1133,6 +1152,17 @@ function checkSystemFunding() {
     Catenis.ctnHubNode.checkServicePaymentPayTxExpenseFundingBalance();
 }
 
+function getServiceTxsWithNoBilling() {
+    return Catenis.db.collection.Billing.find({
+        servicePaymentTx: {
+            $exists: false
+        }
+    }, {
+        fields: {
+            'serviceTx.txid': 1
+        }
+    }).map((doc) => doc.serviceTx.txid);
+}
 
 // Module code
 //

@@ -80,6 +80,14 @@ FlowRouter.route('/admin/updateProfile', {
     }
 });
 
+FlowRouter.route('/admin/bcotprice', {
+    action: function () {
+        BlazeLayout.render('adminLayout', {
+            page: 'bcotPrice'
+        });
+    }
+});
+
 FlowRouter.route('/admin/sysfunding', {
     action: function () {
         BlazeLayout.render('adminLayout', {

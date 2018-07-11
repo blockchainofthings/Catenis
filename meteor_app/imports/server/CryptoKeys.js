@@ -1,5 +1,5 @@
 /**
- * Created by claudio on 14/03/16.
+ * Created by Claudio on 2016-03-14.
  */
 
 //console.log('[CryptoKeys.js]: This code just ran.');
@@ -12,10 +12,7 @@
 // References to external code
 //
 // Internal node modules
-//  NOTE: the reference of these modules are done sing 'require()' instead of 'import' to
-//      to avoid annoying WebStorm warning message: 'default export is not defined in
-//      imported module'
-const crypto = require('crypto');
+import crypto from 'crypto';
 // Third-party node modules
 import eccrypto from 'eccrypto';
 import secp256k1 from 'secp256k1';

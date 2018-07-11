@@ -1,5 +1,5 @@
 /**
- * Created by claudio on 22/02/17.
+ * Created by Claudio on 2017-02-22.
  */
 
 //console.log('[ApiSendMessage.js]: This code just ran.');
@@ -10,10 +10,7 @@
 // References to external code
 //
 // Internal node modules
-//  NOTE: the reference of these modules are done sing 'require()' instead of 'import' to
-//      to avoid annoying WebStorm warning message: 'default export is not defined in
-//      imported module'
-//const util = require('util');
+//import util from 'util';
 // Third-party node modules
 //import config from 'config';
 // Meteor packages
@@ -200,12 +197,12 @@ export function sendMessage() {
                 else if (err.error === 'ctn_device_not_active') {
                     error = errorResponse.call(this, 400, 'Device is not active');
                 }
-                else if (err.error === 'ctn_device_no_credits') {
-                    error = errorResponse.call(this, 400, 'No credit to send message');
-                }
                 else if (err.error === 'ctn_device_target_deleted' || err.error === 'ctn_device_target_not_active'
                         || err.error === 'ctn_device_target_not_found') {
                     error = errorResponse.call(this, 400, 'Invalid target device');
+                }
+                else if (err.error === 'ctn_device_low_service_acc_balance') {
+                    error = errorResponse.call(this, 400, 'Not enough credits to pay for send message service');
                 }
                 else if (err.error === 'ctn_msg_data_too_long') {
                     error = errorResponse.call(this, 400, 'Message too long to be embedded');

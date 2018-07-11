@@ -1,5 +1,5 @@
 /**
- * Created by claudio on 09/12/17.
+ * Created by Claudio on 2017-12-09.
  */
 
 //console.log('[Billing.js]: This code just ran.');
@@ -24,6 +24,8 @@ import { LogMessageTransaction } from './LogMessageTransaction';
 import { SendMessageTransaction } from './SendMessageTransaction';
 import { Device } from './Device';
 import { SpendServiceCreditTransaction } from './SpendServiceCreditTransaction';
+import { IssueAssetTransaction } from './IssueAssetTransaction';
+import { TransferAssetTransaction } from './TransferAssetTransaction';
 
 // Config entries
 /*const config_entryConfig = config.get('config_entry');
@@ -163,6 +165,12 @@ Billing.createNew = function (device, serviceTransact, servicePriceInfo, service
         docBilling.service = serviceTransact.options.readConfirmation ? Service.clientPaidService.send_msg_read_confirm.name
                 : Service.clientPaidService.send_message.name;
     }
+    else if (serviceTransact instanceof IssueAssetTransaction) {
+        docBilling.service = Service.clientPaidService.issue_asset.name;
+    }
+    else if (serviceTransact instanceof TransferAssetTransaction) {
+        docBilling.service = Service.clientPaidService.transfer_asset.name;
+    }
     else {
         // Not specified or unknown service for billing.
         //  Log error and throw exception
@@ -195,6 +203,8 @@ Billing.createNew = function (device, serviceTransact, servicePriceInfo, service
 
     docBilling.estimatedServiceCost = servicePriceInfo.estimatedServiceCost;
     docBilling.priceMarkup = servicePriceInfo.priceMarkup;
+    docBilling.bitcoinPrice = servicePriceInfo.bitcoinPrice;
+    docBilling.bcotPrice = servicePriceInfo.bcotPrice;
     docBilling.exchangeRate = servicePriceInfo.exchangeRate;
     docBilling.finalServicePrice = servicePriceInfo.finalServicePrice;
 
@@ -249,7 +259,7 @@ Billing.recordComplementaryReadConfirmTx = function (transact) {
         const complementaryTxInfo = {
             txid: transact.txid,
             fee: complementaryTxFee,
-            feeShare: new BigNumber(complementaryTxFee).dividedBy(sendMsgReadConfirmTxids.length).round(0, BigNumber.ROUND_HALF_EVEN).toNumber()
+            feeShare: new BigNumber(complementaryTxFee).dividedBy(sendMsgReadConfirmTxids.length).decimalPlaces(0, BigNumber.ROUND_HALF_EVEN).toNumber()
         };
 
         const txidServiceTxsToComplement = new Set();

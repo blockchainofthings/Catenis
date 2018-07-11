@@ -1,5 +1,5 @@
 /**
- * Created by claudio on 13/07/17.
+ * Created by Claudio on 2017-07-13.
  */
 
 //console.log('[BalanceInfo.js]: This code just ran.');
@@ -10,10 +10,7 @@
 // References to external code
 //
 // Internal node modules
-//  NOTE: the reference of these modules are done using 'require()' instead of 'import' to
-//      to avoid annoying WebStorm warning message: 'default export is not defined in
-//      imported module'
-//const util = require('util');
+//import util from 'util';
 // Third-party node modules
 import config from 'config';
 // Meteor packages
@@ -21,6 +18,7 @@ import config from 'config';
 
 // References code in other (Catenis) modules
 import { FundSource } from './FundSource';
+import { Util } from './Util';
 
 // Config entries
 const balanceInfoConfig = config.get('balanceInfo');
@@ -66,7 +64,7 @@ export class BalanceInfo {
             }
         }
 
-        this.minimumBalance = useSafetyFactor ? expectedMinimumBalance * (1 + safetyFactor) : expectedMinimumBalance;
+        this.minimumBalance = useSafetyFactor ? Util.roundToResolution(expectedMinimumBalance * (1 + safetyFactor), 1) : expectedMinimumBalance;
         this.currentBalance = new FundSource(addressList, includeUnconfirmedUtxos ? {unconfUtxoInfo: {}} : undefined).getBalance();
     }
 

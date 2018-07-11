@@ -1,5 +1,5 @@
 /**
- * Created by claudio on 12/07/16.
+ * Created by Claudio on 2016-07-12.
  */
 
 //console.log('[Transaction.js]: This code just ran.');
@@ -12,10 +12,7 @@
 // References to external code
 //
 // Internal node modules
-//  NOTE: the reference of these modules are done sing 'require()' instead of 'import' to
-//      to avoid annoying WebStorm warning message: 'default export is not defined in
-//      imported module'
-const util = require('util');
+import util from 'util';
 // Third-party node modules
 import config from 'config';
 import bitcoinLib from 'bitcoinjs-lib';
@@ -294,7 +291,7 @@ Transaction.prototype.addMultiSigOutputs = function (payInfos, pos) {
 };
 
 // Arguments:
-//  addresses: [Array(String)] - List of Catenis blockchain addresses or non-Catenis public keys
+//  addresses: [Array(String)] - List of Catenis blockchain addresses or non-Catenis hex-encoded public keys
 //  nSigs: [Number] - Number of signatures required for spending multi-signature output
 //  amount: [Number] - Amount, in satoshis, to send
 //  pos: [Number] - Position (zero-based index) for output in transaction
@@ -875,12 +872,8 @@ Transaction.prototype.serialize = function () {
 //      feeAmount: [integer], // Amount, in satoshis, paid as fee for this transaction
 //      txSize: [integer] // Transaction size, in bytes. Used to calculate fee rate
 //    }
-//    issue_locked_asset: {
-//      assetId: [string], // ID that uniquely identifies the Colored Coins asset that is issued
-//      deviceId: [string] // External ID of the device that is issuing the asset
-//    }
-//    issue_unlocked_asset: {
-//      assetId: [string], // ID that uniquely identifies the coloredCoin asset that is issued
+//    issue_asset: {
+//      assetId: [string], // ID that uniquely identifies the Catenis asset that is issued
 //      deviceId: [string] // External ID of the device that is issuing the asset
 //    }
 //    transfer_asset: {
@@ -1391,11 +1384,28 @@ Transaction.parse = function (serializedTx) {
     return tx;
 };
 
-Transaction.fromTxid = function (txid) {
-    return Transaction.fromHex(Catenis.bitcoinCore.getRawTransactionCheck(txid, false));
+Transaction.fromTxid = function (txid, getTxTime = false, getBlockTime = false) {
+    if (getTxTime || getBlockTime) {
+        const txInfo = Catenis.bitcoinCore.getTransaction(txid, false, false);
+
+        const args = [txInfo.hex];
+
+        if (getTxTime) {
+            args.push(txInfo.time);
+        }
+
+        if (getBlockTime && txInfo.blocktime) {
+            args.push(txInfo.blocktime);
+        }
+
+        return Transaction.fromHex.apply(undefined, args);
+    }
+    else {
+        return Transaction.fromHex(Catenis.bitcoinCore.getRawTransactionCheck(txid, false));
+    }
 };
 
-Transaction.fromHex = function (hexTx) {
+Transaction.fromHex = function (hexTx, txTime, blockTime) {
     // Try to decode transaction
     try {
         const decodedTx = Catenis.bitcoinCore.decodeRawTransaction(hexTx, false);
@@ -1407,6 +1417,14 @@ Transaction.fromHex = function (hexTx) {
             tx.rawTransaction = hexTx;
             tx.txid = decodedTx.txid;
             tx.useOptInRBF = true;
+
+            if (txTime) {
+                tx.date = new Date(txTime * 1000);
+            }
+
+            if (blockTime) {
+                tx.blockDate = new Date(blockTime * 1000);
+            }
 
             // Get inputs
             const txidTxouts = new Map();
@@ -1528,8 +1546,11 @@ Transaction.fromHex = function (hexTx) {
                         address: output.scriptPubKey.addresses,
                         nSigs: output.scriptPubKey.reqSigs,
                         amount: new BigNumber(output.value).times(100000000).toNumber(),
-                        addrInfo: decodedScript.pubKeys.map((pubKey) => {
-                            return pubKey.toString('hex')
+                        addrInfo: output.scriptPubKey.addresses.map((address, idx) => {
+                            // Try to get information about address in multi-sig output
+                            const addrInfo = Catenis.keyStore.getAddressInfo(address, true);
+
+                            return addrInfo !== null ? addrInfo : decodedScript.pubKeys[idx].toString('hex');
                         })
                     }
                 }
@@ -1787,19 +1808,14 @@ Transaction.type = Object.freeze({
         description: 'Transaction used to spend read confirmation output(s) from send message transactions thus indicating that message has been read by target device',
         dbInfoEntryName: 'readConfirmation'
     }),
-    issue_locked_asset: Object.freeze({
-        name: 'issue_locked_asset',
-        description: 'Transaction used to issue (Colored Coins) assets (of a given type) that cannot be reissued for a device',
-        dbInfoEntryName: 'issueLockedAsset'
-    }),
-    issue_unlocked_asset: Object.freeze({
-        name: 'issue_unlocked_asset',
-        description: 'Transaction used to issue or reissue (Colored Coins) assets (of a given type) for a device',
-        dbInfoEntryName: 'issueUnlockedAsset'
+    issue_asset: Object.freeze({
+        name: 'issue_asset',
+        description: 'Transaction used to issue an amount of a Catenis assets for a device',
+        dbInfoEntryName: 'issueAsset'
     }),
     transfer_asset: Object.freeze({
         name: 'transfer_asset',
-        description: 'Transaction used to transfer an amount of (Colored Coins) assets (of a given type) owned by a device to another device',
+        description: 'Transaction used to transfer an amount of Catenis asset owned by a device to another device',
         dbInfoEntryName: 'transferAsset'
     })
 });

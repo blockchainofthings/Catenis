@@ -1,5 +1,5 @@
 /**
- * Created by claudio on 29/12/15.
+ * Created by Claudio on 2015-12-29.
  */
 
 //console.log('[Database.js]: This code just ran.');
@@ -12,7 +12,7 @@
 // Internal node modules
 //import util from 'util';
 // Third-party node modules
-//import config from 'config';
+import config from 'config';
 // Meteor packages
 import { Meteor } from 'meteor/meteor';
 import { Mongo } from 'meteor/mongo';
@@ -22,6 +22,15 @@ import { Catenis } from './Catenis';
 import { ctnHubNodeIndex } from './Application';
 import { CatenisNode } from './CatenisNode';
 import { cfgSettings as licenseCfgSettings } from './License';
+
+// Config entries
+const dbConfig = config.get('database');
+
+// Configuration settings
+const cfgSettings = {
+    defaultBcotPrice: dbConfig.get('defaultBcotPrice')
+};
+
 
 // Definition of function classes
 //
@@ -122,6 +131,19 @@ Database.initialize = function() {
         Application: {
             initFunc: initApplication
         },
+        License: {
+            initFunc: initLicense,
+            indices: [{
+                fields: {
+                    licenseType: 1
+                },
+                opts: {
+                    unique: true,
+                    background: true,
+                    w: 1
+                }
+            }]
+        },
         BitcoinFees: {
             indices: [{
                 fields: {
@@ -131,16 +153,34 @@ Database.initialize = function() {
                     background: true,
                     w: 1
                 }
-            }],
-            initFunc: initLicense
+            }]
         },
-        License: {
+        BitcoinPrice: {
             indices: [{
                 fields: {
-                    licenseType: 1
+                    referenceDate: 1
                 },
                 opts: {
-                    unique: true,
+                    background: true,
+                    w: 1
+                }
+            }, {
+                fields: {
+                    createdDate: 1
+                },
+                opts: {
+                    background: true,
+                    w: 1
+                }
+            }]
+        },
+        BcotPrice: {
+            initFunc: initBcotPrice,
+            indices: [{
+                fields: {
+                    createdDate: 1
+                },
+                opts: {
                     background: true,
                     w: 1
                 }
@@ -615,8 +655,7 @@ Database.initialize = function() {
                     background: true,
                     w: 1
                 }
-            },
-            {
+            }, {
                 fields: {
                     txid: 1
                 },
@@ -625,8 +664,7 @@ Database.initialize = function() {
                     background: true,
                     w: 1
                 }
-            },
-            {
+            }, {
                 fields: {
                     sentDate: 1
                 },
@@ -634,8 +672,7 @@ Database.initialize = function() {
                     background: true,
                     w: 1
                 }
-            },
-            {
+            }, {
                 fields: {
                     'confirmation.confirmed': 1
                 },
@@ -643,8 +680,7 @@ Database.initialize = function() {
                     background: true,
                     w: 1
                 }
-            },
-            {
+            }, {
                 fields: {
                     'confirmation.confirmationDate': 1
                 },
@@ -653,8 +689,7 @@ Database.initialize = function() {
                     background: true,
                     w: 1
                 }
-            },
-            {
+            }, {
                 fields: {
                     replacedByTxid: 1
                 },
@@ -664,8 +699,7 @@ Database.initialize = function() {
                     background: true,
                     w: 1
                 }
-            },
-            {
+            }, {
                 fields: {
                     'info.creditServiceAccount.clientId': 1
                 },
@@ -674,8 +708,7 @@ Database.initialize = function() {
                     background: true,
                     w: 1
                 }
-            },
-            {
+            }, {
                 fields: {
                     'info.spendServiceCredit.clientIds': 1
                 },
@@ -684,8 +717,7 @@ Database.initialize = function() {
                     background: true,
                     w: 1
                 }
-            },
-            {
+            }, {
                 fields: {
                     'info.readConfirmation.serializedTx.inputs.txid': 1
                 },
@@ -694,8 +726,7 @@ Database.initialize = function() {
                     background: true,
                     w: 1
                 }
-            },
-            {
+            }, {
                 fields: {
                     'info.sendMessage.originDeviceId': 1
                 },
@@ -704,8 +735,7 @@ Database.initialize = function() {
                     background: true,
                     w: 1
                 }
-            },
-            {
+            }, {
                 fields: {
                     'info.sendMessage.targetDeviceId': 1
                 },
@@ -714,10 +744,63 @@ Database.initialize = function() {
                     background: true,
                     w: 1
                 }
-            },
-            {
+            }, {
                 fields: {
                     'info.logMessage.deviceId': 1
+                },
+                opts: {
+                    sparse: true,
+                    background: true,
+                    w: 1
+                }
+            }, {
+                fields: {
+                    'info.issueAsset.assetId': 1
+                },
+                opts: {
+                    sparse: true,
+                    background: true,
+                    w: 1
+                }
+            }, {
+                fields: {
+                    'info.issueAsset.issuingDeviceId': 1
+                },
+                opts: {
+                    sparse: true,
+                    background: true,
+                    w: 1
+                }
+            }, {
+                fields: {
+                    'info.issueAsset.holdingDeviceId': 1
+                },
+                opts: {
+                    sparse: true,
+                    background: true,
+                    w: 1
+                }
+            }, {
+                fields: {
+                    'info.transferAsset.assetId': 1
+                },
+                opts: {
+                    sparse: true,
+                    background: true,
+                    w: 1
+                }
+            }, {
+                fields: {
+                    'info.transferAsset.sendingDeviceId': 1
+                },
+                opts: {
+                    sparse: true,
+                    background: true,
+                    w: 1
+                }
+            }, {
+                fields: {
+                    'info.transferAsset.receivingDeviceId': 1
                 },
                 opts: {
                     sparse: true,
@@ -735,8 +818,7 @@ Database.initialize = function() {
                     background: true,
                     w: 1
                 }
-            },
-            {
+            }, {
                 fields: {
                     txid: 1
                 },
@@ -745,8 +827,7 @@ Database.initialize = function() {
                     background: true,
                     w: 1
                 }
-            },
-            {
+            }, {
                 fields: {
                     receivedDate: 1
                 },
@@ -754,8 +835,7 @@ Database.initialize = function() {
                     background: true,
                     w: 1
                 }
-            },
-            {
+            }, {
                 fields: {
                     sentTransaction_id: 1
                 },
@@ -764,8 +844,7 @@ Database.initialize = function() {
                     background: true,
                     w: 1
                 }
-            },
-            {
+            }, {
                 fields: {
                     'confirmation.confirmed': 1
                 },
@@ -774,8 +853,7 @@ Database.initialize = function() {
                     background: true,
                     w: 1
                 }
-            },
-            {
+            }, {
                 fields: {
                     'confirmation.confirmationDate': 1
                 },
@@ -784,8 +862,7 @@ Database.initialize = function() {
                     background: true,
                     w: 1
                 }
-            },
-            {
+            }, {
                 fields: {
                     'info.sysFunding.fundAddresses.path': 1
                 },
@@ -794,8 +871,7 @@ Database.initialize = function() {
                     background: true,
                     w: 1
                 }
-            },
-            {
+            }, {
                 fields: {
                     'info.bcotPayment.clientId': 1
                 },
@@ -804,8 +880,7 @@ Database.initialize = function() {
                     background: true,
                     w: 1
                 }
-            },
-            {
+            }, {
                 fields: {
                     'info.bcotPayment.bcotPayAddressPath': 1
                 },
@@ -814,8 +889,7 @@ Database.initialize = function() {
                     background: true,
                     w: 1
                 }
-            },
-            {
+            }, {
                 fields: {
                     'info.creditServiceAccount.clientId': 1
                 },
@@ -824,9 +898,7 @@ Database.initialize = function() {
                     background: true,
                     w: 1
                 }
-            },
-
-            {
+            }, {
                 fields: {
                     'info.sendMessage.readConfirmation.spent': 1
                 },
@@ -835,8 +907,7 @@ Database.initialize = function() {
                     background: true,
                     w: 1
                 }
-            },
-            {
+            }, {
                 fields: {
                     'info.readConfirmation.spentReadConfirmTxOuts.txid': 1
                 },
@@ -845,8 +916,7 @@ Database.initialize = function() {
                     background: true,
                     w: 1
                 }
-            },
-            {
+            }, {
                 fields: {
                     'info.sendMessage.originDeviceId': 1
                 },
@@ -855,10 +925,63 @@ Database.initialize = function() {
                     background: true,
                     w: 1
                 }
-            },
-            {
+            }, {
                 fields: {
                     'info.sendMessage.targetDeviceId': 1
+                },
+                opts: {
+                    sparse: true,
+                    background: true,
+                    w: 1
+                }
+            }, {
+                fields: {
+                    'info.issueAsset.assetId': 1
+                },
+                opts: {
+                    sparse: true,
+                    background: true,
+                    w: 1
+                }
+            }, {
+                fields: {
+                    'info.issueAsset.issuingDeviceId': 1
+                },
+                opts: {
+                    sparse: true,
+                    background: true,
+                    w: 1
+                }
+            }, {
+                fields: {
+                    'info.issueAsset.holdingDeviceId': 1
+                },
+                opts: {
+                    sparse: true,
+                    background: true,
+                    w: 1
+                }
+            }, {
+                fields: {
+                    'info.transferAsset.assetId': 1
+                },
+                opts: {
+                    sparse: true,
+                    background: true,
+                    w: 1
+                }
+            }, {
+                fields: {
+                    'info.transferAsset.sendingDeviceId': 1
+                },
+                opts: {
+                    sparse: true,
+                    background: true,
+                    w: 1
+                }
+            }, {
+                fields: {
+                    'info.transferAsset.receivingDeviceId': 1
                 },
                 opts: {
                     sparse: true,
@@ -1002,7 +1125,7 @@ Database.initialize = function() {
                 }
             }, {
                 fields: {
-                    entityId: 1
+                    'issuance.entityId': 1
                 },
                 opts: {
                     background: true,
@@ -1010,38 +1133,11 @@ Database.initialize = function() {
                 }
             }, {
                 fields: {
-                    addrPath: 1
+                    'issuance.addrPath': 1
                 },
                 opts: {
                     unique: true,
                     sparse: true,
-                    background: true,
-                    w: 1
-                }
-            }, {
-                fields: {
-                    createdDate: 1
-                },
-                opts: {
-                    background: true,
-                    w: 1
-                }
-            }]
-        },
-        BcotExchangeRate: {
-            indices: [{
-                fields: {
-                    exchangeRate: 1
-                },
-                opts: {
-                    background: true,
-                    w: 1
-                }
-            }, {
-                fields: {
-                    date: -1
-                },
-                opts: {
                     background: true,
                     w: 1
                 }
@@ -1143,6 +1239,27 @@ Database.initialize = function() {
                     createdDate: 1
                 },
                 opts: {
+                    background: true,
+                    w: 1
+                }
+            }]
+        },
+        CCMetadataConversion: {
+            indices: [{
+                fields: {
+                    torrentHash: 1
+                },
+                opts: {
+                    unique: true,
+                    background: true,
+                    w: 1
+                }
+            }, {
+                fields: {
+                    cid: 1
+                },
+                opts: {
+                    unique: true,
                     background: true,
                     w: 1
                 }
@@ -1579,6 +1696,99 @@ Database.fixReceivedTransactionBcotPaymentInfo = function () {
     }
 };
 
+//** Temporary method used to remove indices on (non-existent) fields 'entityId' and 'addrPath' of Asset collection
+Database.removeInconsistentAssetIndices = function () {
+    Catenis.db.mongoCollection.Asset.indexes(function (error, indices) {
+        if (!error) {
+            const indicesToRemove = indices.filter((index) => {
+                const keyFields = Object.keys(index.key);
+
+                return keyFields.length === 1 && (keyFields[0] === 'entityId' || keyFields[0] === 'addrPath');
+            });
+
+            indicesToRemove.forEach((index) => {
+                Catenis.db.mongoCollection.Asset.dropIndex(index.name, function (error) {
+                    if (error) {
+                        // Error trying to remove index. Log error and throw exception
+                        Catenis.logger.ERROR('Error trying to remove inconsistent index (\'%s\') of Asset DB collection.', index.name,  error);
+                        throw new Error('Error trying to remove inconsistent index of Asset DB collection');
+                    }
+
+                    Catenis.logger.INFO('****** Inconsistent index (\'%s\') of Asset DB collection successfully removed.', index.name);
+                });
+            });
+        }
+        else {
+            // Error retrieving indices. Log error
+            Catenis.logger.ERROR('Error retrieving indices from Asset DB collection.', error);
+            throw new Error('Error retrieving indices from Asset DB collection');
+        }
+    });
+};
+
+//** Temporary method used to remove unused BcotExchangeRate collection
+Database.removeBcotExchangeRateColl = function () {
+    Catenis.db.mongoDb.collection('BcotExchangeRate', (error, collection) => {
+        if (!error) {
+            collection.drop((error) => {
+                if (!error) {
+                    Catenis.logger.INFO('****** Collection BcotExchangeRate successfully removed');
+                }
+                else {
+                    if (error.name !== 'MongoError' || error.message !== 'ns not found') {
+                        Catenis.logger.ERROR('Error while removing BcotExchangeRate collection.', error);
+                    }
+                }
+            })
+        }
+        else {
+            Catenis.logger.ERROR('Error while retrieving BcotExchangeRate collection.', error);
+        }
+    })
+};
+
+//** Temporary method used to fix exchange rate value in Billing docs/recs
+import BigNumber from 'bignumber.js';
+
+Database.fixBillingExchangeRate = function () {
+    let countFixedDocs = 0;
+
+    Catenis.db.collection.Billing.find({
+        bitcoinPrice: {
+            $exists: false
+        },
+        bcotPrice: {
+            $exists: false
+        },
+        $and: [{
+            exchangeRate: {
+                $gt: 0
+            }
+        }, {
+            exchangeRate: {
+                $lt: 1
+            }
+        }]
+    }, {
+        fields: {
+            exchangeRate: 1
+        }
+    }).fetch().forEach((doc) => {
+        // Replace exchange rate wth its inverse value
+        Catenis.db.collection.Billing.update({_id: doc._id}, {
+            $set: {
+                exchangeRate: new BigNumber(1).dividedBy(doc.exchangeRate).decimalPlaces(8, BigNumber.ROUND_HALF_EVEN).toNumber()
+            }
+        });
+
+        countFixedDocs++;
+    });
+
+    if (countFixedDocs > 0) {
+        Catenis.logger.INFO('****** Exchange rate value has been fixed for %d Billing docs/recs', countFixedDocs);
+    }
+};
+
 
 // Module functions used to simulate private Database object methods
 //  NOTE: these functions need to be bound to a Database object reference (this) before
@@ -1647,11 +1857,32 @@ function initLicense() {
     }
 }
 
+function initBcotPrice() {
+    // Check if there is already at least one BCOT token price recorded
+    const docBcotPrice = this.collection.BcotPrice.findOne({}, {
+        fields: {
+            _id: 1
+        },
+        sort: {
+            createdDate: -1
+        }
+    });
+
+    if (!docBcotPrice) {
+        // Record default BCOT token price
+        this.collection.BcotPrice.insert({
+            price: cfgSettings.defaultBcotPrice,
+            createdDate: new Date()
+        });
+    }
+}
+
+
 // Definition of module (private) functions
 //
 
 //** Temporary method used to drop any index of a given collection if the 'safe' property is present
-//import Future from 'fibers/future';}
+import Future from 'fibers/future';
 
 function dropSafeIndices (collection) {
     const fut1 = new Future();

@@ -1,5 +1,5 @@
 /**
- * Created by claudio on 16/06/17.
+ * Created by Claudio on 2017-06-16.
  */
 
 //console.log('[ApiReadMessage2.js]: This code just ran.');
@@ -10,10 +10,7 @@
 // References to external code
 //
 // Internal node modules
-//  NOTE: the reference of these modules are done sing 'require()' instead of 'import' to
-//      to avoid annoying WebStorm warning message: 'default export is not defined in
-//      imported module'
-//const util = require('util');
+//import util from 'util';
 // Third-party node modules
 import _und from 'underscore';      // NOTE: we do not use the underscore library provided by Meteor because we need
                                     //        a feature (_und.omit(obj,predicate)) that is not available in that version

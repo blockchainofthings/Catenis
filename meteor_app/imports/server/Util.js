@@ -1,5 +1,5 @@
 /**
- * Created by claudio on 21/07/16.
+ * Created by Claudio on 2016-07-21.
  */
 
 //console.log('[Util.js]: This code just ran.');
@@ -10,10 +10,7 @@
 // References to external code
 //
 // Internal node modules
-//  NOTE: the reference of these modules are done sing 'require()' instead of 'import' to
-//      to avoid annoying WebStorm warning message: 'default export is not defined in
-//      imported module'
-const util = require('util');
+import util from 'util';
 // Third-party node modules
 // noinspection JSFileReferences
 import BigNumber from 'bignumber.js';
@@ -38,8 +35,10 @@ export function Util() {
 // Util function class (public) methods
 //
 
-Util.formatCoins = function (amountInSatoshis) {
-    return new BigNumber(amountInSatoshis).dividedBy(100000000).toFormat(8);
+Util.formatCoins = function (amountInSatoshis, thousandsSeparator = true) {
+    const coins = new BigNumber(amountInSatoshis).dividedBy(100000000);
+
+    return thousandsSeparator ? coins.toFormat(8) : coins.toFixed(8);
 };
 
 // Arguments:
@@ -211,6 +210,19 @@ Util.diffArrays = function (ar1, ar2) {
     return Object.keys(diffResult).length > 0 ? diffResult : undefined;
 };
 
+// Concatenate two arrays making sure that common values are not duplicated
+Util.mergeArrays = function (ar1, ar2) {
+    const resultAr = ar1.concat([]);
+
+    ar2.forEach((element) => {
+        if (resultAr.indexOf(element) === -1) {
+            resultAr.push(element);
+        }
+    });
+
+    return resultAr;
+};
+
 // This method is to be used in place of underscore.js's clone() method to overcome a limitation
 //  of that method where accessor type properties (getter/setter) are copied as data properties
 Util.cloneObj = function (obj) {
@@ -224,6 +236,16 @@ Util.cloneObj = function (obj) {
 
     return cloneObj;
 };
+
+// Method used to escape special characters in an string that is to be used as a regular expression pattern
+Util.escapeRegExp = function (str) {
+    return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // $& means the whole matched string
+};
+
+Util.areDatesEqual = function(dt1, dt2) {
+    return !(dt1 < dt2) && !(dt1 > dt2);
+};
+
 
 // Util function class (public) properties
 //

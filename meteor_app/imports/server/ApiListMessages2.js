@@ -1,5 +1,5 @@
 /**
- * Created by claudio on 20/10/17.
+ * Created by Claudio on 2017-10-20.
  */
 
 //console.log('[ApiListMessages2.js]: This code just ran.');
@@ -10,10 +10,7 @@
 // References to external code
 //
 // Internal node modules
-//  NOTE: the reference of these modules are done sing 'require()' instead of 'import' to
-//      to avoid annoying WebStorm warning message: 'default export is not defined in
-//      imported module'
-//const util = require('util');
+//import util from 'util';
 // Third-party node modules
 import moment from 'moment';
 import _und from 'underscore';      // NOTE: we do not use the underscore library provided by Meteor because we need
@@ -234,6 +231,10 @@ export function listMessages2() {
             if (mt.isValid()) {
                 filter.startDate = mt.toDate();
             }
+            else {
+                Catenis.logger.DEBUG('Invalid \'startDate\' parameter for GET \'messages\' API request', this.queryParams);
+                return errorResponse.call(this, 400, 'Invalid parameters');
+            }
         }
 
         // endDate param
@@ -242,6 +243,10 @@ export function listMessages2() {
 
             if (mt.isValid()) {
                 filter.endDate = mt.toDate();
+            }
+            else {
+                Catenis.logger.DEBUG('Invalid \'endDate\' parameter for GET \'messages\' API request', this.queryParams);
+                return errorResponse.call(this, 400, 'Invalid parameters');
             }
         }
 

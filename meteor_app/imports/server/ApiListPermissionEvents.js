@@ -1,5 +1,5 @@
 /**
- * Created by claudio on 10/08/17.
+ * Created by Claudio on 2017-08-10.
  */
 
 //console.log('[ApiListPermissionEvents.js]: This code just ran.');
@@ -10,10 +10,7 @@
 // References to external code
 //
 // Internal node modules
-//  NOTE: the reference of these modules are done sing 'require()' instead of 'import' to
-//      to avoid annoying WebStorm warning message: 'default export is not defined in
-//      imported module'
-//const util = require('util');
+//import util from 'util';
 // Third-party node modules
 //import config from 'config';
 // Meteor packages
@@ -24,8 +21,10 @@ import { Catenis } from './Catenis';
 import { Permission } from './Permission';
 import {
     successResponse,
-    errorResponse
+    errorResponse,
+    getUrlApiVersion
 } from './RestApi';
+import { ApiVersion } from './ApiVersion';
 
 // Config entries
 /*const config_entryConfig = config.get('config_entry');
@@ -53,11 +52,14 @@ export function listPermissionEvents() {
             return errorResponse.call(this, 503, 'System currently not available; please try again at a later time');
         }
 
+        // Get API version from endpoint URL
+        const apiVer = new ApiVersion(getUrlApiVersion(this.request.url));
+
         // Execute method to list permission events
         let listResult;
 
         try {
-            listResult = Permission.listEvents();
+            listResult = Permission.listEvents(apiVer);
         }
         catch (err) {
             Catenis.logger.ERROR('Error processing GET \'permission/events\' API request.', err);

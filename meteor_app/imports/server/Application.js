@@ -1,5 +1,5 @@
 /**
- * Created by claudio on 27/11/15.
+ * Created by Claudio on 2015-11-27.
  */
 
 //console.log('[Application.js]: This code just ran.');
@@ -10,18 +10,16 @@
 // References to external code
 //
 // Internal node modules
-//  NOTE: the reference of these modules are done sing 'require()' instead of 'import' to
-//      to avoid annoying WebStorm warning message: 'default export is not defined in
-//      imported module'
-const crypto = require('crypto');
-const path = require('path');
-const fs = require('fs');
+import crypto from 'crypto';
+import path from 'path';
+import fs from 'fs';
 // Third-party node modules
 import config from 'config';
 import bitcoinLib from 'bitcoinjs-lib';
 // Meteor packages
 import { Meteor } from 'meteor/meteor';
-
+import { Roles } from 'meteor/alanning:roles';
+import { Accounts } from 'meteor/accounts-base';
 // References code in other (Catenis) modules
 import { Catenis } from './Catenis';
 import { TransactionMonitor } from './TransactionMonitor';
@@ -36,9 +34,11 @@ const appConfig = config.get('application');
 const cfgSettings = {
     appName: appConfig.get('appName'),
     seedFilename: appConfig.get('seedFilename'),
-    walletPswLength: appConfig.get('walletPswLength'),
     cryptoNetwork: appConfig.get('cryptoNetwork'),
-    shutdownTimeout: appConfig.get('shutdownTimeout')
+    shutdownTimeout: appConfig.get('shutdownTimeout'),
+    adminRole: appConfig.get('adminRole'),
+    defaultAdminUser: appConfig.has('defaultAdminUser') ? appConfig.get('defaultAdminUser') : undefined,
+    defaultAdminPsw: appConfig.has('defaultAdminPsw') ? appConfig.get('defaultAdminPsw') : undefined
 };
 
 // Catenis Hub node index
@@ -70,31 +70,14 @@ export function Application() {
     const appSeedPath = path.join(process.env.PWD, cfgSettings.seedFilename),
         encData = fs.readFileSync(appSeedPath, {encoding: 'utf8'});
 
-    // TODO: IMPORTANT: avoid using this seed directly as the base for creating other cryptographically generated data, especially the one that shall be shared with other Catenis nodes. Instead, this seed should be used to generated other specific seeds by hashing it. Then only the specific seed shall be shared and not the base Catenis application see
-    Object.defineProperty(this, 'seed', {
+    Object.defineProperty(this, 'masterSeed', {
         get: function () {
-            return decryptSeed(Buffer.from(encData, 'base64'));
+            return conformSeed(Buffer.from(encData, 'base64'));
         }
     });
 
-    Object.defineProperty(this, 'walletPsw', {
-        get: function () {
-            //noinspection JSPotentiallyInvalidUsageOfThis
-            const seed = this.seed,
-                seedLength = seed.length,
-                pswLength = seedLength < cfgSettings.walletPswLength ? seedLength : cfgSettings.walletPswLength,
-                psw = Buffer.allocUnsafe(pswLength);
-
-            for (let idx = 0; idx < pswLength; idx++) {
-                psw[idx] = seed[idx % 2 === 0 ? idx / 2 : seedLength - Math.floor(idx / 2) - 1]
-            }
-
-            return psw;
-        }
-    });
-
-    if (! isSeedValid(this.seed)) {
-        throw new Error('Application seed does not match seed currently recorded onto the database');
+    if (! isSeedValid(this.masterSeed)) {
+        throw new Error('Application (master) seed does not match seed currently recorded onto the database');
     }
 
     // Identify test prefix if present
@@ -103,6 +86,14 @@ export function Application() {
     if (matchResult && matchResult.length > 1) {
         this.testPrefix = matchResult[1];
     }
+
+    const encCommonSeed = generateCommonSeed(this.testPrefix);
+
+    Object.defineProperty(this, 'commonSeed', {
+        get: function () {
+            return conformSeed(encCommonSeed, true, false);
+        }
+    });
 
     // Get crypto network
     this.cryptoNetworkName = cfgSettings.cryptoNetwork;
@@ -114,6 +105,9 @@ export function Application() {
 
     // Set initial application status
     this.status = Application.processingStatus.stopped;
+
+    // Make sure that admin user account is defined
+    checkAdminUser.call(this);
 
     // Set up handler to gracefully shutdown the application
     process.on('SIGTERM', Meteor.bindEnvironment(shutdownHandler, 'Catenis application SIGTERM handler', this));
@@ -234,6 +228,14 @@ Application.prototype.isOmniCoreRescanning = function () {
     return statusRegEx.omni_rescan.test(this.status.name);
 };
 
+Application.prototype.cipherData = function (data, decipher = false) {
+    const x = [ 65, 97, 68, 88, 51, 70, 87, 110, 113, 110, 69, 88, 102, 76, 83, 104, 116, 99, 98, 84, 100, 70, 54, 89 ];
+    const y = crypto.createHmac('sha256', Buffer.from(x)).update(this.masterSeed).digest();
+    const cryptoObj = (decipher ? crypto.createDecipher : crypto.createCipher)('des-ede3-cbc', y);
+
+    return Buffer.concat([cryptoObj.update(data), cryptoObj.final()]);
+};
+
 
 // Module functions used to simulate private Application object methods
 //  NOTE: these functions need to be bound to an Application object reference (this) before
@@ -249,6 +251,21 @@ function pauseNoFunds() {
 
         // Make sure that blockchain transaction monitoring is on
         Catenis.txMonitor.startMonitoring();
+    }
+}
+
+function checkAdminUser() {
+    if (Roles.getUsersInRole(cfgSettings.adminRole).count() === 0 && cfgSettings.defaultAdminUser && cfgSettings.defaultAdminPsw) {
+        Catenis.logger.INFO('Creating default admin user');
+        // No admin user defined. Create default admin user
+        const adminUserId = Accounts.createUser({
+            username: cfgSettings.defaultAdminUser,
+            password: this.cipherData(Buffer.from(cfgSettings.defaultAdminPsw, 'hex'), true).toString(),
+            profile: {
+                name: 'Catenis default admin user'
+            }
+        });
+        Roles.addUsersToRoles(adminUserId, cfgSettings.adminRole);
     }
 }
 
@@ -351,16 +368,20 @@ Application.processingStatus = Object.freeze({
 // Definition of module (private) functions
 //
 
-// Receives a buffer with the ciphered seed data,
-//  and returns a buffer with the deciphered data
-function decryptSeed(encData) {
+// Method used to cipher/decipher application seed (both master and common seed)
+//
+//  Arguments:
+//   data [Object(Buffer)] - Buffer containing the plain/ciphered seed
+//   decrypt [Boolean] - True if seed should be deciphered, false if seed should be ciphered
+//   master [Boolean] - True if master seed, false if common seed
+//
+//  Return: [Object(Buffer)] - Buffer with ciphered/deciphered seed
+function conformSeed(data, decrypt = true, master = true) {
     const x = [ 78, 87, 108, 79, 77, 49, 82, 65, 89, 122, 69, 122, 75, 71, 103, 104, 84, 121, 115, 61],
-        dec = crypto.createDecipher('des-ede3-cbc', Buffer.from(Buffer.from(x).toString(), 'base64').toString());
+        y = [97, 69, 65, 120, 77, 50, 77, 119, 75, 121, 104, 48, 100, 48, 53, 120, 74, 106, 85, 61],
+        cryptoObj = (decrypt ? crypto.createDecipher : crypto.createCipher)('des-ede3-cbc', Buffer.from(Buffer.from(master ? x : y).toString(), 'base64').toString());
 
-    const decBuf1 = dec.update(encData),
-        decBuf2 = dec.final();
-
-    return Buffer.concat([decBuf1, decBuf2]);
+    return Buffer.concat([cryptoObj.update(data), cryptoObj.final()]);
 }
 
 function isSeedValid(seed) {
@@ -386,6 +407,11 @@ function isSeedValid(seed) {
     }
 
     return isValid;
+}
+
+function generateCommonSeed(testPrefix) {
+    return conformSeed(Random.createWithSeeds(this.masterSeed + ': This is the seed to be used by all Catenis Hubs').id(36) +
+        (testPrefix ? ':' + testPrefix.toUpperCase() : ''), false, false);
 }
 
 function shutdown() {
