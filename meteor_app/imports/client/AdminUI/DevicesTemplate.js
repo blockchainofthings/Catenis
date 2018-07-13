@@ -1,5 +1,5 @@
 /**
- * Created by claudio on 26/05/17.
+ * Created by Claudio on 2017-05-26.
  */
 
 //console.log('[DevicesTemplate.js]: This code just ran.');

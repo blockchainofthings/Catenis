@@ -1,3 +1,6 @@
 /**
- * Created by peter on 7/26/17.
+ * Created by Claudio on 2017-07-26.
  */
+
+// Import template UI
+import './resetPwd.html';

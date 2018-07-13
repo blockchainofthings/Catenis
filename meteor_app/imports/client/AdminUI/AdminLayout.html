@@ -3,6 +3,7 @@
     {{#unless currentUser}}
         {{> login}}
     {{else}}
+        {{#if isInRole 'sys-admin'}}
          <div id="wrapper">
 
              <!--top navigation bar-->
@@ -127,5 +128,9 @@
 
          </div>
         <!--end of wrapper -->
+        {{else}}
+            <p>User has no permission of access this resource.</p>
+            {{logout}}
+        {{/if}}
     {{/unless}}
 </template>

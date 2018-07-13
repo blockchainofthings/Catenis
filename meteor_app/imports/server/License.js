@@ -1,5 +1,5 @@
 /**
- * Created by claudio on 12/02/18.
+ * Created by Claudio on 2018-02-12.
  */
 
 //console.log('[License.js]: This code just ran.');

@@ -1,10 +1,9 @@
 /**
- * Created by claudio on 27/01/17.
+ * Created by claudio on 2017-01-27.
  */
 
 // Load startup modules
-import '/imports/both/ConfigLoginForm';
-import '/imports/client/CustomizeLoginForm';
+import '/imports/both/ConfigAccounts';
 import '/imports/client/ClientDatabase';
 import '/imports/client/Routes';
 

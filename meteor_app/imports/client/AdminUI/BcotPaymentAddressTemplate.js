@@ -1,5 +1,5 @@
 /**
- * Created by claudio on 08/01/18.
+ * Created by Claudio on 2018-01-08.
  */
 
 //console.log('[BcoTPaymentAddressTemplate.js]: This code just ran.');

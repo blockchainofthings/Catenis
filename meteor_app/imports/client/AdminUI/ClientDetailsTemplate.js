@@ -1,5 +1,5 @@
 /**
- * Created by claudio on 24/05/17.
+ * Created by Claudio on 2017-05-24.
  */
 
 //console.log('[ClientDetailsTemplate.js]: This code just ran.');
@@ -226,10 +226,9 @@ Template.clientDetails.events({
 
     //added by peter to allow resending enrollment Email
     'click #resendEnrollmentEmail'(events, template) {
-        const client = Catenis.db.collection.Client.findOne({user_id: Template.instance().data.user_id});
         template.state.set('haveResentEnrollmentEmail', true);
 
-        Meteor.call('resendEnrollmentEmail', client.user_id, (error) => {
+        Meteor.call('resendEnrollmentEmail', Template.instance().data.user_id, (error) => {
             if (error) {
                 template.state.set('resendEnrollmentEmailSuccess', false);
             }

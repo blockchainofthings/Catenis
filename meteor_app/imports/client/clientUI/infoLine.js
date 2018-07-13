@@ -1,5 +1,5 @@
 /**
- * Created by peter on 8/24/17.
+ * Created by Claudio on 2017-08-24.
  */
 import './infoLine.html';
 import { Catenis } from '../ClientCatenis';

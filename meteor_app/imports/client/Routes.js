@@ -1,5 +1,5 @@
 /**
- * Created by claudio on 12/05/17.
+ * Created by Claudio on 2017-05-12.
  */
 
 //console.log('[Routes.js]: This code just ran.');
@@ -17,13 +17,13 @@
 // Third-party node modules
 //import config from 'config';
 // Meteor packages
-import { Meteor } from 'meteor/meteor';
+//import { Meteor } from 'meteor/meteor';
 import { FlowRouter } from 'meteor/kadira:flow-router';
 import { BlazeLayout } from 'meteor/kadira:blaze-layout';
 
 // Import templates
 import './AdminUI/AdminLayout.js';
-import './AdminUI/resetPwd.html';
+import './AdminUI/BlankLayout.js';
 import './clientUI/baseTemplate.js';
 import './clientUI/infoLine.js';
 
@@ -32,7 +32,10 @@ import './clientUI/infoLine.js';
 
 BlazeLayout.setRoot('body');
 
+// Note: special routes for accounts templates configured at ConfigAccount.js module (via AccountsTemplates.configureRoutes)
+//      since that code needs to be rum on both client and server
 
+// Regular routes
 FlowRouter.route('/', {
     action: function () {
         BlazeLayout.render('baseTemplate');
@@ -149,30 +152,6 @@ FlowRouter.route('/admin/clients/:user_id/newdevice', {
                 user_id: params.user_id
             }
         });
-    }
-});
-
-FlowRouter.route('/enroll-account/:token',{
-
-    action: function(params){
-        BlazeLayout.render('enrollAccount',{
-            dataContext:{
-                token: params.token
-            }
-        });
-
-        AccountsTemplates.paramToken= params.token;
-    }
-});
-
-FlowRouter.route('/reset-password/:token', {
-    action: function(params){
-        BlazeLayout.render('resetPwd',{
-            dataContext:{
-                token: params.token
-            }
-        });
-        AccountsTemplates.paramToken= params.token;
     }
 });
 

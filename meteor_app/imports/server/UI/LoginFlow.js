@@ -1,5 +1,5 @@
 /**
- * Created by claudio on 12/02/18.
+ * Created by Claudio on 2018-02-12.
  */
 
 //console.log('[LoginFlow.js]: This code just ran.');
@@ -60,14 +60,6 @@ export function LoginFlow() {
 
 LoginFlow.initialize = function () {
     Catenis.logger.TRACE('LoginFlow initialization');
-    Accounts.urls.resetPassword = function(token) {
-        return Meteor.absoluteUrl('reset-password/' + token);
-    };
-
-    Accounts.urls.enrollAccount = function(token) {
-        return Meteor.absoluteUrl('enroll-account/' + token);
-    };
-
     // Configure e-mail template used to reset password
     Accounts.emailTemplates.resetPassword.subject = (user) => {
         return 'Catenis Password Reset';

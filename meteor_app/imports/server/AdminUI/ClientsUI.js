@@ -92,7 +92,7 @@ ClientsUI.initialize = function () {
 
         },
 
-        //added by peter to allow Meteor account activation on enrollment. called from ../both/ConfigLoginForm.js
+        //added by peter to allow Meteor account activation on enrollment. called from ../both/ConfigAccounts.js
 
         activateCurrentUser: function(){
             if( Meteor.user().profile.status!=="Pending" ){

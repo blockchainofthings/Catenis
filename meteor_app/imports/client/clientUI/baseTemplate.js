@@ -1,5 +1,5 @@
 /**
- * Created by peter on 8/7/17.
+ * Created by Claudio on 2017-08-07.
  */
 import './baseTemplate.html';
 import './UserNewDevice.js';

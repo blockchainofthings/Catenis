@@ -1,6 +1,8 @@
 /**
- * Created by peter on 7/11/17.
+ * Created by Claudio on 2017-07-11.
  */
+
+// Import template UI
 import './LoginForm.html';
 
 //overriding the atForm from useraccounts module to custom style it with bootstrap.

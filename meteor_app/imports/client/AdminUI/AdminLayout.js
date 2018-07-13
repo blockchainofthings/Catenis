@@ -1,5 +1,5 @@
 /**
- * Created by claudio on 15/05/17.
+ * Created by Claudio on 2017-05-15.
  */
 
 //console.log('[AdminLayout.js]: This code just ran.');
@@ -19,6 +19,7 @@
 // Meteor packages
 import { Meteor } from 'meteor/meteor';
 import { Template } from 'meteor/templating';
+import { FlowRouter } from 'meteor/kadira:flow-router';
 
 
 // References code in other (Catenis) modules on the client
@@ -111,5 +112,14 @@ Template.adminLayout.events({
         (event.currentTarget).style.backgroundColor = '#5555bb';
         $(event.currentTarget).children()[0].style.color = 'white';
         $(event.currentTarget).children()[1].style.color = 'white';
+    }
+});
+
+Template.adminLayout.helpers({
+    logout() {
+        setTimeout(() => {
+            Meteor.logout();
+            FlowRouter.go('/');
+        }, 1000);
     }
 });
