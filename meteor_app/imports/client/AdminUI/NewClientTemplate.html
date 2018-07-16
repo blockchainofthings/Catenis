@@ -3,47 +3,13 @@
         <div class="panel panel-login minWidthElement noBoxShadow">
             <div class="panel-body">
                 <div class="row">
-                    <h2>ADD NEW USER</h2>
-                    <br>
+                    <h2>NEW CLIENT</h2>
                     <div class="col-lg-12">
-                        <br>
-                        {{#if newUserId}}
-                            <p style="color:blue">New user with userId: "{{newUserId}}" successfully created</p>
-                            {{#if clientInfo}}
-                                <!--showing the newly generated client's information-->
-                                <div class="table-responsive">
-                                    <table class="table table-striped">
-                                        <thead>
-                                            <tr>
-                                                <th>Client Name</th>
-                                                <th>User name</th>
-                                                <th>First Name</th>
-                                                <th>Last Name</th>
-                                                <th>Company Name</th>
-                                                <th>Email</th>
-                                                <th>Password</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <tr>
-                                                <td>{{clientInfo.name}}</td>
-                                                <td>{{clientInfo.username}}</td>
-                                                <td>{{clientInfo.firstName}}</td>
-                                                <td>{{clientInfo.lastName}}</td>
-                                                <td>{{clientInfo.companyName}}</td>
-                                                <td>{{clientInfo.email}}</td>
-                                                <td>***Password is not Visible***</td>
-                                            </tr>
-                                        </tbody>
-                                    </table>
-                                </div>
-                            {{/if}}
+                        {{#if newClientId}}
+                            <p style="color:blue">New client (client ID: {{newClientId}}) successfully created</p>
                             <div class="row">
                                 <div class="col-md-6">
-                                    <a href="/admin/clients" class="form-control btn btn-login at-btn">Back to users</a>
-                                </div>
-                                <div class="col-md-6">
-                                    <a href="#" id="reset" class="form-control btn btn-login at-btn">Add Another</a>
+                                    <a href="/admin/clients" class="form-control btn btn-login at-btn">Close</a>
                                 </div>
                             </div>
                         {{else}}
@@ -57,7 +23,6 @@
                                 <div class="form-group">
                                     <input type="text" maxlength="40" id="txtUsername" name="username" placeholder="Username" autocapitalize="none" autocorrect="off">
                                 </div>
-
                                 <div class="row">
                                     <div class="col-md-6">
                                         <div class="form-group">
@@ -70,7 +35,9 @@
                                         </div>
                                     </div>
                                 </div>
-
+                                <div class="form-group">
+                                    <input type="text" maxlength="80" id="txtCompanyName" name="companyName" placeholder="Company" autocapitalize="none" autocorrect="off">
+                                </div>
                                 <div class="row">
                                     <div class="col-md-6">
                                         <div class="form-group">
@@ -78,42 +45,40 @@
                                         </div>
                                     </div>
                                     <div class="col-md-6">
-                                        <button type="button"  class="form-control btn btn-login at-btn submit" data-toggle="modal" data-target="#confirmEmail" style="{{#if emailValidated}} background-color: greenyellow {{else}} background-color: red {{/if}}">{{ValidateEmailMessage}}</button>
-
-                                        <div class="modal" tabindex="-1" role="dialog" id="confirmEmail">
-                                            <div class="modal-dialog" role="document">
-                                                <div class="modal-content">
-                                                    <div class="modal-header">
-                                                        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-                                                        <h4 class="modal-title">Validate Email</h4>
-                                                    </div>
-                                                    <div class="modal-body">
-                                                        <!--error message box, should not appear unless there is an issue-->
-                                                        <p id="resultEmailConfirmation">please validate client's email</p>
-                                                        <div class="form-group" id="confirmEmail">
-                                                            <input type="email" maxlength="40" id="txtConfirmEmail" name="confirmEmail" placeholder="Validate Email" autocapitalize="none" autocorrect="off">
+                                        <div class="form-group">
+                                            {{#if needsConfirmEmail}}
+                                            <button type="button"  class="form-control btn btn-login at-btn submit" data-toggle="modal" data-target="#confirmEmail" style="background-color: red">Please confirm</button>
+                                            {{/if}}
+                                            <div class="modal" tabindex="-1" role="dialog" id="confirmEmail">
+                                                <div class="modal-dialog" role="document">
+                                                    <div class="modal-content">
+                                                        <div class="modal-header">
+                                                            <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                                                            <h4 class="modal-title">Email Confirmation</h4>
                                                         </div>
-                                                    </div>
-                                                    <div class="modal-footer">
-                                                        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-                                                        <button type="button" class="btn btn-primary" id="checkEmailValidity">Validate</button>
-                                                    </div>
-                                                </div><!-- /.modal-content -->
-                                            </div><!-- /.modal-dialog -->
-                                        </div><!-- /.modal -->
+                                                        <div class="modal-body">
+                                                            <!--error message box, should not appear unless there is an issue-->
+                                                            <p id="resultEmailConfirmation">Please reenter email to confirm it</p>
+                                                            <div class="form-group" id="confirmEmail">
+                                                                <input type="email" maxlength="40" id="txtConfirmEmail" name="confirmEmail" placeholder="Confirm Email" autocapitalize="none" autocorrect="off">
+                                                            </div>
+                                                        </div>
+                                                        <div class="modal-footer">
+                                                            <button type="button" id="btnEmailConfirmClose" class="btn btn-default" data-dismiss="modal">Close</button>
+                                                            <button type="button" class="btn btn-primary" id="checkEmailValidity">Confirm</button>
+                                                        </div>
+                                                    </div><!-- /.modal-content -->
+                                                </div><!-- /.modal-dialog -->
+                                            </div><!-- /.modal -->
+                                        </div>
                                     </div>
                                 </div>
-
-
                                 <div class="form-group">
-                                    <input type="text" maxlength="80" id="txtCompanyName" name="companyName" placeholder="Company" autocapitalize="none" autocorrect="off">
-                                </div>
-                                <div class="form-group">
-                                    <input type="hidden" id="emailValidation" value="notValidated">
+                                    <input type="hidden" id="emailConfirmation" value="notConfirmed">
                                 </div>
                                 <div class="row">
                                     <div class="col-xs-6 form-group pull-left">
-                                        <a href="#" id="reset" class="form-control btn btn-login at-btn">Clear</a>
+                                        <a href="/admin/clients" id="reset" class="form-control btn btn-login at-btn">Cancel</a>
                                     </div>
                                     <div class="col-xs-6 form-group pull-right">
                                         <button type="submit" class="form-control btn btn-login at-btn submit {{submitDisabled}}">Add User</button>

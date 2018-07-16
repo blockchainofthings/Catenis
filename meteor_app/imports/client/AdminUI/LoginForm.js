@@ -2,48 +2,29 @@
  * Created by Claudio on 2017-07-11.
  */
 
+//console.log('[LoginForm.js]: This code just ran.');
+
+// Module variables
+//
+
+// References to external code
+//
+// Internal node modules
+//import util from 'util';
+// Third-party node modules
+//import config from 'config';
+// Meteor packages
+import { Template } from "meteor/templating";
+import { AccountsTemplates } from 'meteor/useraccounts:core';
+
 // Import template UI
 import './LoginForm.html';
 
-//overriding the atForm from useraccounts module to custom style it with bootstrap.
-Template.LoginForm.replaces("atPwdForm");
 
-Template.login.events({
-    'click #login-form-link'(event, template) {
-        AccountsTemplates.setState('signIn');
-    },
+// Module code
+//
 
-    'click #forgotPwd-form-link'(event, template){
-        AccountsTemplates.setState('forgotPwd');
-    },
-
-});
-
-
-
-
-
-Template.login.helpers({
-    atFormTitle: function () {
-
-        if( AccountsTemplates.getState() === 'signIn' ){
-            return "LOGIN";
-            // }else if(AccountsTemplates.getState() === 'signUp'){
-            //     return "REGISTER";
-        }else if(AccountsTemplates.getState() === 'forgotPwd'){
-            return "RESET PASSWORD";
-        }else if(AccountsTemplates.getState() === 'enrollAccount'){
-            return "ENROLL ACCOUNT";
-        }else if(AccountsTemplates.getState() === 'resetPwd'){
-            return "RESET PASSWORD NOW";
-        }else{
-            return "Something went wrong";
-        }
-    },
-    equals: function(v1, v2){
-        return (v1===v2);
-    }
-});
-
+// Override atForm from useraccounts module to custom style it with bootstrap
+Template.loginForm.replaces("atPwdForm");
 
 Template.atForm.helpers(AccountsTemplates.atFormHelpers);

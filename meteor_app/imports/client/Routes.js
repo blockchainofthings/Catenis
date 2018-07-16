@@ -22,10 +22,9 @@ import { FlowRouter } from 'meteor/kadira:flow-router';
 import { BlazeLayout } from 'meteor/kadira:blaze-layout';
 
 // Import templates
+import './AdminUI/LoginLayout.js';
 import './AdminUI/AdminLayout.js';
-import './AdminUI/BlankLayout.js';
-import './clientUI/baseTemplate.js';
-import './clientUI/infoLine.js';
+import './clientUI/ClientLayout.js';
 
 // Module code
 //
@@ -38,13 +37,13 @@ BlazeLayout.setRoot('body');
 // Regular routes
 FlowRouter.route('/', {
     action: function () {
-        BlazeLayout.render('baseTemplate');
+        BlazeLayout.render('clientLayout');
     }
 });
 
 FlowRouter.route('/updateProfile', {
     action: function () {
-        BlazeLayout.render('baseTemplate', {
+        BlazeLayout.render('clientLayout', {
             page: 'updateProfile'
         });
     }
@@ -52,7 +51,7 @@ FlowRouter.route('/updateProfile', {
 
 FlowRouter.route('/devices', {
     action: function() {
-        BlazeLayout.render('baseTemplate', {
+        BlazeLayout.render('clientLayout', {
             page: 'userNewDevice',
         });
     }
@@ -60,7 +59,7 @@ FlowRouter.route('/devices', {
 
 FlowRouter.route('/devices/:device_id', {
     action: function (params) {
-        BlazeLayout.render('baseTemplate', {
+        BlazeLayout.render('clientLayout', {
             page: 'deviceDetails',
             dataContext: {
                 device_id: params.device_id
@@ -157,7 +156,7 @@ FlowRouter.route('/admin/clients/:user_id/newdevice', {
 
 FlowRouter.route('/credits', {
     action: function (params, queryParams) {
-        BlazeLayout.render('baseTemplate', {
+        BlazeLayout.render('clientLayout', {
             page: 'creditPrices'
         });
     }

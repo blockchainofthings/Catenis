@@ -50,7 +50,7 @@ AccountsTemplates.addFields([{
 }, pwd]);
 
 AccountsTemplates.configure({
-    defaultLayout: 'blankLayout',
+    defaultLayout: 'loginLayout',
     defaultLayoutRegions: {},
     defaultContentRegion: 'page',
 
@@ -66,7 +66,8 @@ AccountsTemplates.configure({
     showPlaceholders: true,
 
     onSubmitHook: onSubmitFunc,
-    
+    onLogoutHook: onLogout,
+
     texts: {
         title: {
             // Get rid of their titles
@@ -88,8 +89,25 @@ AccountsTemplates.configure({
 });
 
 // Configure special routes for accounts templates
-AccountsTemplates.configureRoute('resetPwd', {template: 'resetPwd'});
-AccountsTemplates.configureRoute('enrollAccount', {template: 'enrollAccount'});
+AccountsTemplates.configureRoute('signIn', {
+    path: '/login',
+    template: 'login',
+    redirect: function () {
+        redirectHome();
+    }
+});
+AccountsTemplates.configureRoute('resetPwd', {
+    template: 'login',
+    redirect: function () {
+        redirectHome();
+    }
+});
+AccountsTemplates.configureRoute('enrollAccount', {
+    template: 'login',
+    redirect: function () {
+        redirectHome();
+    }
+});
 
 // Method called after accounts template form is submitted
 //
@@ -100,35 +118,31 @@ AccountsTemplates.configureRoute('enrollAccount', {template: 'enrollAccount'});
 function onSubmitFunc(error, state) {
     //runs on successful at-pwd-form submit. Use this to allow for client activation and banning disabled users
     if (!error) {
-        // Successfully enrolled client, change client status to "ACTIVE"
         if (state === 'enrollAccount') {
-            //check if user is actually a first time user.
-            if (Meteor.user().profile.status === 'Pending') {
-                //activate user
-                Meteor.call('activateCurrentUser', (error) => {
-                });
-
-                //createClient
-                Meteor.call('createClient', Meteor.user()._id, (error))
-            }
-
-            //Successful Activation, now going to log this person out and redirect them to a new page with a link to login.
-            Meteor.logout();
-            FlowRouter.go('/');
-        }
-        else if (state === 'signIn') {
-            const user = Meteor.user();
-            if (!Roles.userIsInRole(user._id, 'sys-admin')) {
-                // Ensure that the meteor account of the client is activated. Otherwise logout
-                if (user.profile.status !== 'Activated') {
-                    Meteor.logout();
+            // Client account successfully enrolled. Activate client
+            Meteor.call('activateClient', Meteor.userId(), (error) => {
+                if (error) {
+                    console.log('Error calling \'activateClient\' remote method: ' + error);
+                    AccountsTemplates.logout();
                 }
-            }
-        }
-        else if (state === 'resetPwd') {
-            // Ensure that this user is activated. Otherwise refuse login
-            Meteor.logout();
-            FlowRouter.go('/');
+            });
         }
     }
+}
+
+function redirectHome() {
+    const user = Meteor.user();
+    const user_id = user ? user._id : Meteor.userId();
+
+    if (Roles.userIsInRole(user_id, 'sys-admin')) {
+        FlowRouter.go('/admin');
+    }
+    else if (Roles.userIsInRole(user_id, 'ctn-client')) {
+        FlowRouter.go('/');
+    }
+}
+
+function onLogout() {
+    AccountsTemplates.setState('signIn');
+    FlowRouter.go('/login');
 }

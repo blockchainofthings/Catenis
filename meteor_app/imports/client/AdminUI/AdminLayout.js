@@ -10,17 +10,14 @@
 // References to external code
 //
 // Internal node modules
-//  NOTE: the reference of these modules are done sing 'require()' instead of 'import' to
-//      to avoid annoying WebStorm warning message: 'default export is not defined in
-//      imported module'
-//const util = require('util');
+//import util from 'util';
 // Third-party node modules
 //import config from 'config';
 // Meteor packages
 import { Meteor } from 'meteor/meteor';
 import { Template } from 'meteor/templating';
 import { FlowRouter } from 'meteor/kadira:flow-router';
-
+import { AccountsTemplates } from 'meteor/useraccounts:core';
 
 // References code in other (Catenis) modules on the client
 import { Catenis } from '../ClientCatenis';
@@ -37,10 +34,22 @@ import './DeviceDetailsTemplate.js';
 import './NewClientTemplate.js';
 import './NewDeviceTemplate.js';
 import '../clientUI/updateProfile.js'
-//below was added by Peter to incorporate bootstrap styling of useraccounts
-import './LoginForm.js';
-import './LoginBtn.js';
-import './enrollAccount.js';
+
+
+// Definition of module (private) functions
+//
+
+function redirectHome() {
+    const user = Meteor.user();
+    const user_id = user ? user._id : Meteor.userId();
+
+    if (Roles.userIsInRole(user_id, 'sys-admin')) {
+        FlowRouter.go('/admin');
+    }
+    else if (Roles.userIsInRole(user_id, 'ctn-client')) {
+        FlowRouter.go('/');
+    }
+}
 
 
 // Module code
@@ -58,13 +67,14 @@ Template.adminLayout.onDestroyed(function () {
 
 Template.adminLayout.events({
     'click #lnkLogout'(event, template) {
-        Meteor.logout();
+        AccountsTemplates.logout();
         return false;
     },
     'click .menu-toggle'(event, template) {
         $('#wrapper').toggleClass('toggled');
+        return false;
     },
-    'click #changeLicenseConfigButton': function (event, template) {
+    'click #changeLicenseConfigButton'(event, template) {
         // Populate the form fields with the data from the current data.
         $('#changeLicenseConfigForm')
         .find('[name="starter"]').val(Catenis.db.collection.License.findOne({licenseType: 'Starter'}).numAllowedDevices).end()
@@ -112,14 +122,21 @@ Template.adminLayout.events({
         (event.currentTarget).style.backgroundColor = '#5555bb';
         $(event.currentTarget).children()[0].style.color = 'white';
         $(event.currentTarget).children()[1].style.color = 'white';
+    },
+    'click .navbar-brand'(event, template) {
+        redirectHome();
+        return false;
+    },
+    'click #lnkCtnTitle'(event, template) {
+        redirectHome();
+        return false;
     }
 });
 
 Template.adminLayout.helpers({
-    logout() {
-        setTimeout(() => {
-            Meteor.logout();
-            FlowRouter.go('/');
-        }, 1000);
+    login() {
+        if (!Meteor.user() && !Meteor.userId()) {
+            FlowRouter.go('/login');
+        }
     }
 });

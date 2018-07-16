@@ -21,7 +21,6 @@ import { Accounts } from 'meteor/accounts-base'
 import { Catenis } from '../Catenis';
 import { CatenisNode } from '../CatenisNode';
 import { Client } from '../Client';
-import { Util } from '../Util';
 
 
 const maxMsgCreditsCount = 100;
@@ -58,6 +57,77 @@ ClientsUI.initialize = function () {
     Catenis.logger.TRACE('ClientsUI initialization');
     // Declaration of RPC methods to be called from client
     Meteor.methods({
+        createNewClient: function (ctnNodeIndex, clientInfo) {
+            if (Roles.userIsInRole(this.userId, 'sys-admin')) {
+                // Prepare to create new Catenis client
+                const props = {
+                    name: clientInfo.name
+                };
+
+                if (clientInfo.firstName) {
+                    props.firstName = clientInfo.firstName;
+                }
+
+                if (clientInfo.lastName) {
+                    props.lastName = clientInfo.lastName;
+                }
+
+                if (clientInfo.company) {
+                    props.company = clientInfo.company;
+                }
+
+                // Try to create Catenis client
+                let clientId;
+
+                try {
+                    clientId = CatenisNode.getCatenisNodeByIndex(ctnNodeIndex).createClient(props, null, {
+                        createUser: true,
+                        username: clientInfo.username,
+                        email: clientInfo.email,
+                        sendEnrollmentEmail: true
+                    });
+                }
+                catch (err) {
+                    // Error trying to create Catenis client. Log error and throw exception
+                    Catenis.logger.ERROR('Failure trying to create new Catenis client.', err);
+                    throw new Meteor.Error('client.create.failure', 'Failure trying to create new Catenis client: ' + err.toString());
+                }
+
+                return clientId;
+            }
+            else {
+                // User not logged in or not a system administrator.
+                //  Throw exception
+                throw new Meteor.Error('ctn_admin_no_permission', 'No permission; must be logged in as a system administrator to perform this task');
+            }
+        },
+        // Note: this method is expected to be called by a Catenis client user, right after its successful enrollment
+        activateClient: function (user_id) {
+            if (Roles.userIsInRole(this.userId, 'ctn-client')) {
+                try {
+                    // Try to retrieve client associated with given user
+                    const client = Client.getClientByUserId(user_id);
+
+                    if (client.status === Client.status.new.name) {
+                        client.activate();
+                    }
+                }
+                catch (err) {
+                    // Error trying to activate client. Log error and throw exception
+                    Catenis.logger.ERROR('Failure trying to activate Catenis client.', err);
+                    throw new Meteor.Error('client.activate.failure', 'Failure trying to activate Catenis client: ' + err.toString());
+                }
+            }
+            else {
+                // User not logged in or not a system administrator.
+                //  Throw exception
+                throw new Meteor.Error('ctn_admin_no_permission', 'No permission; must be logged in as a system administrator to perform this task');
+            }
+        },
+
+
+
+
         addMessageCredits: function (clientId, count) {
             if(verifyUserRole()) {
                 if (!Number.isInteger(count) || count < 0 || count > maxMsgCreditsCount) {
@@ -126,9 +196,6 @@ ClientsUI.initialize = function () {
             }
 
         },
-
-
-        //create user from admin side.
         createUserToEnroll: function (ctnNodeIndex, clientInfo) {
             // Try to create meteor client user
             let user_id;
@@ -368,32 +435,13 @@ ClientsUI.initialize = function () {
 
     // Declaration of publications
     Meteor.publish('catenisClients', function (ctnNodeIndex) {
-        ctnNodeIndex = ctnNodeIndex || Catenis.application.ctnHubNodeIndex;
+        if (Roles.userIsInRole(this.userId, 'sys-admin')) {
+            ctnNodeIndex = ctnNodeIndex || Catenis.application.ctnHubNodeIndex;
 
-        const docCtnNode = Catenis.db.collection.CatenisNode.findOne({ctnNodeIndex: ctnNodeIndex}, {fields: {_id: 1}});
-
-        if (docCtnNode === undefined) {
-            // Subscription made with an invalid Catenis node index. Log error and throw exception
-            Catenis.logger.ERROR('Subscription to method \'catenisClients\' made with an invalid Catenis node index', {ctnNodeIndex: ctnNodeIndex});
-            throw new Meteor.Error('clients.subscribe.catenis-clients.invalid-param', 'Subscription to method \'catenisClients\' made with an invalid Catenis node index');
-        }
-
-        let isAdminUser;
-        let userId=this.userId;
-        let user= Meteor.users.findOne({_id: userId});
-
-
-        //check if the user is Admin
-        if(user && user.roles && user.roles.includes('sys-admin') ){
-            isAdminUser= true;
-        }else{
-            isAdminUser= false;
-        }
-        //user is Admin. Return every data there is.
-        if(isAdminUser){
+            const ctnNode = CatenisNode.getCatenisNodeByIndex(ctnNodeIndex);
 
             return Catenis.db.collection.Client.find({
-                catenisNode_id: docCtnNode._id,
+                catenisNode_id: ctnNode.doc_id,
                 status: {$ne: 'deleted'}
             }, {
                 fields: {
@@ -405,23 +453,12 @@ ClientsUI.initialize = function () {
                     status: 1
                 }
             });
-
-        }else{
-
-            //    user is just a normal person, we return only their client id.
-            //    alternatively, we could look into having client_id be coupled with user
-            return Catenis.db.collection.Client.find({
-                catenisNode_id: docCtnNode._id,
-                status: {$ne: 'deleted'},
-                user_id: this.userId
-            },
-            {
-                fields:{
-                    _id: 1,
-                    clientId: 1,
-                    user_id:1
-                }
-            })
+        }
+        else {
+            // User not logged in or not a system administrator
+            //  Make sure that publication is not started and throw exception
+            this.stop();
+            throw new Meteor.Error('ctn_admin_no_permission', 'No permission; must be logged in as a system administrator to perform this task');
         }
     });
 

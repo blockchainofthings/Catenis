@@ -1,7 +1,7 @@
 <template name="adminLayout">
     <!--this is the template that is first rendered at /admin call-->
     {{#unless currentUser}}
-        {{> login}}
+        {{login}}
     {{else}}
         {{#if isInRole 'sys-admin'}}
          <div id="wrapper">
@@ -10,7 +10,7 @@
              <nav class="navbar navbar-default top-navBar">
                  <div class="container-fluid topNavCustom">
                      <div class="navbar-header">
-                         <a class="navbar-brand" href="#">
+                         <a class="navbar-brand" href="#" style="text-decoration:none">
                              <p> Catenis<span class="gray">Enterprise</span></p>
                          </a>
                          <div class="pull-left">
@@ -43,20 +43,14 @@
             <!-- Sidebar -->
             <div id="sidebar-wrapper">
                 <ul class="sidebar-nav">
-                    {{#if isInRole 'sys-admin'}}
                     <li class="sideNavButtons">
                         <a href="/admin/sysfunding" class="show"><i class="glyphicon glyphicon-bitcoin"></i>  System Funding</a>
                         <a href="/admin/sysfunding" class="notshow"><i class="glyphicon glyphicon-bitcoin"></i></a>
                     </li>
                     <li  class="sideNavButtons">
-                        <a href="/admin/clients" class="show"><i class="glyphicon glyphicon-knight"></i> Users</a>
+                        <a href="/admin/clients" class="show"><i class="glyphicon glyphicon-knight"></i> Clients</a>
                         <a href="/admin/clients" id="menu-toggle" class="notshow"><i class="glyphicon glyphicon-knight"></i></a>
                     </li>
-                    <li  class="sideNavButtons">
-                        <a href="/admin/newclient" class="show" id="register-form-link"><i class="glyphicon glyphicon-save"></i> Register Users</a>
-                        <a href="/admin/newclient"  class="notshow" id="register-form-link"><i class="glyphicon glyphicon-save"></i></a>
-                    </li>
-                    {{/if}}
                     <li  class="sideNavButtons">
                         <a id="lnkLogout" href="#" role="button" class="show"><i class="glyphicon glyphicon-thumbs-down"></i> Log out</a>
                         <a href="" id="lnkLogout" class="notshow"><i class="glyphicon glyphicon-thumbs-down"></i></a>
@@ -129,8 +123,12 @@
          </div>
         <!--end of wrapper -->
         {{else}}
-            <p>User has no permission of access this resource.</p>
-            {{logout}}
+            <div style="text-align: center">
+                <a id="lnkCtnTitle" href="#" style="text-decoration:none">
+                    <h1>Catenis<span class="gray">Enterprise</span></h1>
+                </a>
+                <p>User has no permission of access this resource.</p>
+            </div>
         {{/if}}
     {{/unless}}
 </template>

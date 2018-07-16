@@ -51,8 +51,9 @@ import { BcotPrice } from './BcotPrice';
 import { BcotPayment } from './BcotPayment';
 import { SpendServiceCredit } from './SpendServiceCredit';
 import { BcotUsageReportUI } from './AdminUI/BcotUsageReportUI';
-import { LoginFlow } from './UI/LoginFlow';
 import { ReceiveAsset } from './ReceiveAsset';
+import { LoginUI } from './AdminUI/LoginUI';
+import { AccountsEmail } from './AccountsEmail';
 // TEST - begin
 //import { resetBitcoinCore } from './Test/FundSourceTest';
 //import { TestCatenisColoredCoins } from './Test/TestCatenisColoredCoins';
@@ -87,6 +88,7 @@ Meteor.startup(function () {
         Database.fixBillingExchangeRate();
         Database.removeBcotExchangeRateColl();
         Application.initialize();
+        AccountsEmail.initialize();
         MalleabilityEventEmitter.initialize();
         BitcoinFees.initialize();
         BitcoinTicker.initialize();
@@ -133,7 +135,7 @@ Meteor.startup(function () {
         RestApi.initialize();
 
         // UI support initialization
-        LoginFlow.initialize();
+        LoginUI.initialize();
         BcotPriceUI.initialize();
         SystemFundingUI.initialize();
         BcotUsageReportUI.initialize();

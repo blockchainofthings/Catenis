@@ -1,64 +1,91 @@
 /**
  * Created by Claudio on 2017-08-07.
  */
-import './baseTemplate.html';
+//console.log('[ClientLayout.js]: This code just ran.');
+
+// Module variables
+//
+
+// References to external code
+//
+// Internal node modules
+//import util from 'util';
+// Third-party node modules
+//import config from 'config';
+// Meteor packages
+import { Meteor } from 'meteor/meteor';
+import { Template } from 'meteor/templating';
+import { FlowRouter } from 'meteor/kadira:flow-router';
+import { AccountsTemplates } from 'meteor/useraccounts:core';
+
+// References code in other (Catenis) modules on the client
+import { Catenis } from '../ClientCatenis';
+
+// Import template UI
+import './ClientLayout.html';
+
+// Import dependent templates
 import './UserNewDevice.js';
 import './infoLine.js';
 import './creditPrices.js';
-import { Catenis } from '../ClientCatenis';
 
-function changeNavStructures(width){
 
+// Definition of module (private) functions
+//
+
+function redirectHome() {
+    const user = Meteor.user();
+    const user_id = user ? user._id : Meteor.userId();
+
+    if (Roles.userIsInRole(user_id, 'sys-admin')) {
+        FlowRouter.go('/admin');
+    }
+    else if (Roles.userIsInRole(user_id, 'ctn-client')) {
+        FlowRouter.go('/');
+    }
+}
+
+function changeNavStructures(width) {
     var toggled= "toggled" ==$("#wrapper").attr("class") ;
 
     if(width<580 && !toggled){
         $("#wrapper").addClass("toggled");
     }
+}
 
-
+function onWindowResize() {
+    const width = $(window).width();
+    changeNavStructures(width);
 }
 
 
-const onWindowResize = function() {
-    const width = $(window).width();
-    changeNavStructures(width);
-};
+// Module code
+//
+
+Template.clientLayout.onCreated(function () {
+    this.catenisClientsSubs = this.subscribe('catenisClients', Catenis.ctnHubNodeIndex);
+});
 
 const throttledOnWindowResize = _.throttle(onWindowResize, 200, {
     leading: false
 });
 
-
-Template.baseTemplate.onCreated(function () {
-
-    this.catenisClientsSubs = this.subscribe('catenisClients', Catenis.ctnHubNodeIndex);
-
-
-});
-
-Template.baseTemplate.onDestroyed(function(){
-
+Template.clientLayout.onDestroyed(function(){
     if (this.catenisClientsSubs) {
         this.catenisClientsSubs.stop();
     }
     $(window).off('resize', throttledOnWindowResize);
-
-
 });
 
-Template.baseTemplate.onRendered(function(){
-
+Template.clientLayout.onRendered(function(){
     $(window).resize(throttledOnWindowResize);
-
-
 });
 
-Template.baseTemplate.events({
+Template.clientLayout.events({
     'click #lnkLogout'(event, template) {
-        Meteor.logout();
+        AccountsTemplates.logout();
         return false;
     },
-
     'click .menu-toggle'(event, template){
         $("#wrapper").toggleClass("toggled");
         var sideNavSmall;
@@ -70,22 +97,17 @@ Template.baseTemplate.events({
             sideNavSmall= false;
         }
 
-
         var windowSize = $(window).width();
         if( windowSize <= 500 && !sideNavSmall ){
             $(".infoLine").addClass("hidden");
         }else{
-
             $(".infoLine").removeClass("hidden");
-
         }
 
-
-
+        return false;
     },
-
     'click .sideNavButtons'(event, template){
-    //    change all colors to original color
+        //    change all colors to original color
         var sideNav= document.getElementsByClassName("sideNavButtons");
 
         for ( var i=0; i< sideNav.length ; i++ ){
@@ -100,15 +122,23 @@ Template.baseTemplate.events({
 
         $(event.currentTarget).children()[0].style.color="white";
         $(event.currentTarget).children()[1].style.color="white";
-
     },
-
-
+    'click .navbar-brand'(event, template) {
+        redirectHome();
+        return false;
+    },
+    'click #lnkCtnTitle'(event, template) {
+        redirectHome();
+        return false;
+    }
 });
 
-
-Template.baseTemplate.helpers({
-
+Template.clientLayout.helpers({
+    login() {
+        if (!Meteor.user() && !Meteor.userId()) {
+            FlowRouter.go('/login');
+        }
+    },
     myClient: function () {
         const client= Catenis.db.collection.Client.findOne({user_id: Meteor.user()._id});
         if(client){
@@ -117,7 +147,6 @@ Template.baseTemplate.helpers({
             //this is only necessary because right now the catenisadmin has no client.
             return null;
         }
-    },
-
+    }
 });
 

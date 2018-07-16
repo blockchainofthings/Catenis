@@ -1,6 +1,9 @@
 /**
  * Created by Claudio on 2017-08-24.
  */
+
+import { FlowRouter } from 'meteor/kadira:flow-router';
+
 import './infoLine.html';
 import { Catenis } from '../ClientCatenis';
 
@@ -51,10 +54,10 @@ Template.infoLine.helpers({
     },
 
     breadCrumbs: function(){
-
         //    lists out the current depth of the user.
         let crumbsList;
-        let path= window.location.pathname;
+        FlowRouter.watchPathChange();
+        let path= FlowRouter.current().path;//window.location.pathname;
         crumbsList=path.split("/");
         crumbsList[0]="Home";
 
@@ -64,13 +67,13 @@ Template.infoLine.helpers({
         }
 
         return crumbsList;
-
     },
 
     lastCrumb: function(){
         //    lists out the current depth of the user.
         let crumbsList;
-        let path= window.location.pathname;
+        FlowRouter.watchPathChange();
+        let path= FlowRouter.current().path;//window.location.pathname;
         crumbsList=path.split("/");
         crumbsList[0]="Home";
 
@@ -88,18 +91,5 @@ Template.infoLine.helpers({
             return lastOne;
         }
 
-    },
-    // infoLineDisplay: function(){
-    //     console.log( $("#infoLine"));
-    //     var width= $("#infoLine").offsetWidth;
-    //     console.log(width);
-    //     if(width< 500){
-    //         return "none";
-    //     }else{
-    //         return "block";
-    //     }
-    //
-    // },
-
-
+    }
 });

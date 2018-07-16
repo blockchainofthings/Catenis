@@ -19,6 +19,8 @@ import _und from 'underscore';     // NOTE: we dot not use the underscore librar
 // Meteor packages
 import { Meteor } from 'meteor/meteor';
 import { Random } from 'meteor/random';
+import { Accounts } from 'meteor/accounts-base';
+import { Roles } from 'meteor/alanning:roles';
 
 // References code in other (Catenis) modules
 import { Catenis } from './Catenis';
@@ -39,6 +41,8 @@ const clientConfig = config.get('client');
 
 // Configuration settings
 export const cfgSettings = {
+    userNamePrefix: clientConfig.get('userNamePrefix'),
+    clientRole: clientConfig.get('clientRole'),
     deviceDefaultRightsByEvent: clientConfig.get('deviceDefaultRightsByEvent')
 };
 
@@ -122,6 +126,11 @@ Client.prototype.assignUser = function (user_id) {
             Catenis.logger.ERROR('Invalid user ID for assigning to client', {userId: user_id});
             throw new Meteor.Error('ctn_client_invalid_user_id', util.format('Invalid user ID (%s) for assigning to client', user_id));
         }
+        else if (Roles.userIsInRole(docUser._id, cfgSettings.clientRole)) {
+            // Invalid user role
+            Catenis.logger.ERROR('User does not have the expected role for it to be assigned to a client', {userId: user_id});
+            throw new Meteor.Error('ctn_client_no_user_role', util.format('User (Id: %s) does not have the expected role for it to be assigned to a client', user_id));
+        }
         else if (docUser.catenis !== undefined && docUser.catenis.client_id !== undefined) {
             // User already assigned to a client. Log error and throw exception
             Catenis.logger.ERROR('User already assigned to a client', {userId: user_id});
@@ -144,16 +153,16 @@ Client.prototype.assignUser = function (user_id) {
             throw new Meteor.Error('ctn_client_update_error', util.format('Error trying to update client (doc Id: %s)', this.doc_id), err.stack);
         }
 
-        if (userCanLogin) {
-            try {
-                // Update User doc/rec saving the ID of the client associated with it
-                Meteor.users.update({_id: user_id}, {$set: {'catenis.client_id': this.doc_id}});
-            }
-            catch (err) {
-                Catenis.logger.ERROR(util.format('Error updating user (Id: %s) associated with client (clientId: %s).', user_id, this.clientId), err);
-                throw new Meteor.Error('ctn_client_update_user_error', util.format('Error updating user (Id: %s) associated with client (clientId: %s).', user_id, this.clientId), err.stack);
-            }
+        try {
+            // Update User doc/rec saving the ID of the client associated with it
+            Meteor.users.update({_id: user_id}, {$set: {'catenis.client_id': this.doc_id}});
+        }
+        catch (err) {
+            Catenis.logger.ERROR(util.format('Error updating user (Id: %s) associated with client (clientId: %s).', user_id, this.clientId), err);
+            throw new Meteor.Error('ctn_client_update_user_error', util.format('Error updating user (Id: %s) associated with client (clientId: %s).', user_id, this.clientId), err.stack);
+        }
 
+        if (userCanLogin) {
             // Update local status
             this.status = Client.status.active.name;
         }
@@ -199,6 +208,18 @@ Client.prototype.activate = function () {
 
                 result = true;
             }
+            else {
+                // User assigned to client cannot log in. Log error
+                //  and throw exception
+                Catenis.logger.WARN('Trying to activate client the user of which cannot log in', {client: this});
+                throw new Meteor.Error('ctn_client_user_no_login', 'Client\'s user cannot log in');
+            }
+        }
+        else {
+            // Client does not yet have a user assigned to it. Log error
+            //  and throw exception
+            Catenis.logger.WARN('Trying to activate client that has no user assigned to it', {client: this});
+            throw new Meteor.Error('ctn_client_no_user', 'Client does not have a user assigned to it yet');
         }
     }
     else {
@@ -621,6 +642,57 @@ Client.prototype.getDeviceDefaultRights = function() {
 
 Client.initialize = function () {
     Catenis.logger.TRACE('Client initialization');
+};
+
+Client.createNewUserForClient = function (username, email, deviceName) {
+    const opts = {};
+
+    if (typeof username === 'string' && username.length > 0) {
+        opts.username = username;
+    }
+
+    if (typeof email === 'string' && email.length > 0) {
+        opts.email = email;
+    }
+
+    opts.profile = {
+        name: cfgSettings.userNamePrefix + (typeof deviceName === 'string' && deviceName.length > 0 ? ': ' + deviceName : '')
+    };
+
+    let user_id;
+
+    try {
+        user_id = Accounts.createUser(opts);
+    }
+    catch (err) {
+        Catenis.logger.ERROR('Error creating new user for client.', err);
+
+        let errorToThrow;
+
+        if ((err instanceof Meteor.Error) && err.error === 403) {
+            if (error.reason === 'Username already exists.') {
+                errorToThrow = new Meteor.Error('ctn_client_duplicate_username', 'Error creating new user for client: username already exists');
+            }
+            else if (error.reason === 'Email already exists.') {
+                errorToThrow = new Meteor.Error('ctn_client_duplicate_email', 'Error creating new user for client: email already exists');
+            }
+            else if (error.reason === 'Something went wrong. Please check your credentials.') {
+                // Generic credentials error. Try to identify what was wrong
+                if (opts.username && Meteor.users.findOne({username: opts.username}, {fields:{_id: 1}})) {
+                    errorToThrow = new Meteor.Error('ctn_client_duplicate_username', 'Error creating new user for client: username already exists');
+                }
+                else if (opts.email && Meteor.users.findOne({emails: {$elemMatch: {address: opts.email}}}, {fields:{_id: 1}})) {
+                    errorToThrow = new Meteor.Error('ctn_client_duplicate_email', 'Error creating new user for client: email already exists');
+                }
+            }
+        }
+
+        throw errorToThrow ? errorToThrow : new Meteor.Error('ctn_client_new_user_failure', util.format('Error creating new user for client: %s', err.toString()));
+    }
+
+    Roles.addUsersToRoles(user_id, cfgSettings.clientRole);
+
+    return user_id;
 };
 
 Client.getClientByClientId = function (clientId, includeDeleted = true) {
