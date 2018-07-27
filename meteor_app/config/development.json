@@ -38,7 +38,6 @@
   },
   // Parameters pertaining to KeyStore module
   "keyStore": {
-    "obsoleteExtKeyTimeToPurge": 300, // Time, in seconds, before an obsolete HD extended key is purged from local key storage
     "purgeUnusedExtKeyInternal": 1800000  // (30 min.) Time interval, in miliseconds, for executing method to purge unused HD extended keys form local key storage
   },
   // Parameters pertaining to BitcoinCore module
@@ -54,6 +53,10 @@
     //"serverHost": "catenis-dev", // Omni Core server host name/IP address
     "rpcConnectionTimeout": 30000,  // (30 sec.) Timeout, in miliseconds, for RPC connection with the Omni Core server
     "rescanTimeout": 900000 // (15 min.) Timeout, in miniseconds, for waiting on Omni Core to finish rescanning the blockchain after importing private key
+  },
+  // Parameters pertaining to BlockchainAddress module
+  "blockchainAddress": {
+    "updateIssuedAddressesInterval": 86400000 // (24 hours) Time interval, in miliseconds, for executing method to update issued addresses
   },
   // Parameter pertaining to IpfsClient module
   "ipfsClient": {
