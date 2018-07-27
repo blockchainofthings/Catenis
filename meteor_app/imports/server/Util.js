@@ -242,8 +242,8 @@ Util.escapeRegExp = function (str) {
     return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // $& means the whole matched string
 };
 
-Util.areDatesEqual = function(dt1, dt2) {
-    return !(dt1 < dt2) && !(dt1 > dt2);
+Util.areDatesEqual = function (dt1, dt2) {
+    return dt1.valueOf() === dt2.valueOf();
 };
 
 
