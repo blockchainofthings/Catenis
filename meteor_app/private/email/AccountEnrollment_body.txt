@@ -1,6 +1,6 @@
 Dear customer,
 
-We are glad to announce that your Catenis client account ({!username}) has successfully been create. To activate it, please follow the link below:
+We are glad to announce that your Catenis Enterprise client account ({!username}) has successfully been create. To activate it, please follow the link below:
 
 {!url}
 

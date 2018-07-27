@@ -54,6 +54,11 @@ import { BcotUsageReportUI } from './AdminUI/BcotUsageReportUI';
 import { ReceiveAsset } from './ReceiveAsset';
 import { LoginUI } from './AdminUI/LoginUI';
 import { AccountsEmail } from './AccountsEmail';
+import { LicenseExpireEmailNotify } from './LicenseExpireEmailNotify';
+import { LicenseOverdueEmailNotify } from './LicenseOverdueEmailNotify';
+import { LicenseExpireRemindEmailNotify } from './LicenseExpireRemindEmailNotify';
+import { DevicesDisableEmailNotify } from './DevicesDisableEmailNotify';
+import { ClientLicense } from './ClientLicense';
 // TEST - begin
 //import { resetBitcoinCore } from './Test/FundSourceTest';
 //import { TestCatenisColoredCoins } from './Test/TestCatenisColoredCoins';
@@ -87,8 +92,13 @@ Meteor.startup(function () {
         Database.removeInconsistentAssetIndices();
         Database.fixBillingExchangeRate();
         Database.removeBcotExchangeRateColl();
+        Database.addMissingClientTimeZone();
         Application.initialize();
         AccountsEmail.initialize();
+        LicenseExpireEmailNotify.initialize();
+        LicenseOverdueEmailNotify.initialize();
+        LicenseExpireRemindEmailNotify.initialize();
+        DevicesDisableEmailNotify.initialize();
         MalleabilityEventEmitter.initialize();
         BitcoinFees.initialize();
         BitcoinTicker.initialize();
@@ -115,8 +125,10 @@ Meteor.startup(function () {
         Client.checkDeviceDefaultRights();
         Device.checkDeviceInitialRights();
 
+
         Database.fixReceivedTransactionBcotPaymentInfo();
 
+        ClientLicense.initialize();
         BcotPayment.initialize();
         ReceiveMessage.initialize();
         ReadConfirmation.initialize();

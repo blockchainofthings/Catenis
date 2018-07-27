@@ -146,7 +146,7 @@ Device.prototype.disable = function () {
         throw new Meteor.Error('ctn_device_not_active', util.format('Cannot disable a device that is not active (deviceId: %s)', this.deviceId));
     }
 
-    deactivateDevice.call(this);
+    inactivateDevice.call(this);
 };
 
 Device.prototype.enable = function () {
@@ -314,20 +314,16 @@ Device.prototype.fundAddresses = function () {
         }
 
         if (newDevStatus !== undefined) {
-            try {
-                Catenis.db.collection.Device.update({_id: this.doc_id}, {
-                    $set: {
-                        status: newDevStatus,
-                        lastStatusChangedDate: new Date()
-                    }
-                });
+            // Make sure that device can be activated
+            if (newDevStatus === Device.status.active.name && this.client.maximumAllowedDevices && this.client.activeDevicesCount() >= this.client.maximumAllowedDevices) {
+                // Number of active devices of client already reached the maximum allowed.
+                //  Silently reset status to 'inactive'
+                newDevStatus = Device.status.inactive.name;
+            }
 
-                this.status = newDevStatus;
-            }
-            catch (err) {
-                Catenis.logger.ERROR(util.format('Error trying to update status of device (doc Id: %s) to \'%s\'.', this.doc_id, newDevStatus), err);
-                throw new Meteor.Error('ctn_device_update_error', util.format('Error trying to update status of device (doc Id: %s) to \'%s\'', this.doc_id, newDevStatus), err.stack);
-            }
+            updateStatus.call(this, newDevStatus);
+
+            this.status = newDevStatus;
         }
     });
 };
@@ -1779,14 +1775,15 @@ Device.prototype.getAssetIssuanceAddressesInUseExcludeUnlocked = function () {
         let unlockedAssetIssueAddrsSet;
 
         if (unlockedAssetIssueAddrs.length > 20) {
+            // Optimization: only instantiate a set object is number of entries is large enough (more than 20).
+            //  Otherwise, do lookup through the array itself
             unlockedAssetIssueAddrsSet = new Set(unlockedAssetIssueAddrs);
         }
 
-        function isUnlockedAssetIssueAddr(addr) {
-            return unlockedAssetIssueAddrsSet ? unlockedAssetIssueAddrsSet.has(addr) : unlockedAssetIssueAddrs.some(addr2 => addr2 === addr);
-        }
-
-        return this.assetIssuanceAddr.listAddressesInUse().filter(addr => !isUnlockedAssetIssueAddr(addr));
+        return this.assetIssuanceAddr.listAddressesInUse().filter(addr =>
+            // Only return addresses that are not an unlocked asset issue address
+            !(unlockedAssetIssueAddrsSet ? unlockedAssetIssueAddrsSet.has(addr)
+                : unlockedAssetIssueAddrs.some(addr2 => addr2 === addr)));
     }
     else {
         return this.assetIssuanceAddr.listAddressesInUse();
@@ -2497,71 +2494,89 @@ function fundDeviceAddresses(amountPerDevMainAddress, amountPerAssetIssuanceAddr
     }
 }
 
-function activateDevice() {
-    if (this.status !== Device.status.deleted.name && this.status !== Device.status.active.name) {
-        // Execute code in critical section to avoid DB concurrency
-        this.devDbCS.execute(() => {
-            // Get current device status and check if it needs to be updated
-            const curDevDoc = Catenis.db.collection.Device.findOne({_id: this.doc_id}, {fields: {_id: 1, status: 1}});
-
-            if (curDevDoc.status !== Device.status.active.name && curDevDoc.status !== Device.status.deleted.name) {
-                try {
-                    Catenis.db.collection.Device.update({_id: this.doc_id}, {
-                        $set: {
-                            status: Device.status.active.name,
-                            lastStatusChangedDate: new Date()
-                        }
-                    });
-                }
-                catch (err) {
-                    Catenis.logger.ERROR(util.format('Error trying to update status of device (doc Id: %s) to \'active\'.', this.doc_id), err);
-                    throw new Meteor.Error('ctn_device_update_error', util.format('Error trying to update status of device (doc Id: %s) to \'active\'', this.doc_id), err.stack);
-                }
+function updateStatus(newDevStatus) {
+    try {
+        Catenis.db.collection.Device.update({_id: this.doc_id}, {
+            $set: {
+                status: newDevStatus,
+                lastStatusChangedDate: new Date()
             }
-
-            this.status = Device.status.active.name;
         });
     }
-    else if (this.status === Device.status.deleted.name) {
-        // Log inconsistent condition
-        Catenis.logger.WARN('Trying to activate a deleted device', {deviceId: this.deviceId});
-    }
-    else {  // status == 'active'
-        // Log inconsistent condition
-        Catenis.logger.WARN('Trying to activate a device that is already activated', {deviceId: this.deviceId});
+    catch (err) {
+        Catenis.logger.ERROR(util.format('Error trying to update status of device (doc Id: %s) to \'%s\'.', this.doc_id, newDevStatus), err);
+        throw new Meteor.Error('ctn_device_update_error', util.format('Error trying to update status of device (doc Id: %s) to \'%s\'', this.doc_id, newDevStatus), err.stack);
     }
 }
 
-function deactivateDevice() {
-    if (this.status === Device.status.active.name) {
-        // Execute code in critical section to avoid DB concurrency
-        this.devDbCS.execute(() => {
-            // Get current device status and check if it needs to be updated
-            const curDevDoc = Catenis.db.collection.Device.findOne({_id: this.doc_id}, {fields: {_id: 1, status: 1}});
+function activateDevice() {
+    // Execute code in critical section to avoid DB concurrency
+    this.devDbCS.execute(() => {
+        // Get current device status and check if it needs to be updated
+        const curDevDoc = Catenis.db.collection.Device.findOne({_id: this.doc_id}, {fields: {_id: 1, status: 1}});
 
-            if (curDevDoc.status === Device.status.active.name) {
-                try {
-                    Catenis.db.collection.Device.update({_id: this.doc_id}, {
-                        $set: {
-                            status: Device.status.inactive.name,
-                            lastStatusChangedDate: new Date()
-                        }
+        if (curDevDoc.status !== Device.status.active.name && curDevDoc.status !== Device.status.deleted.name) {
+            let newDevStatus = Device.status.active.name;
+
+            // Make sure that device can be activated
+            if (curDevDoc.status === Device.status.inactive.name) {
+                if (this.client.maximumAllowedDevices && this.client.devicesInUseCount() >= this.client.maximumAllowedDevices) {
+                    // Number of devices in use of client already reached the maximum allowed.
+                    //  Log error and throw exception indicating that device cannot be activated
+                    Catenis.logger.ERROR('Cannot activate device; maximum number of allowed devices already reached for client.', {
+                        clientId: this.client.clientId,
+                        maximumAllowedDevices: this.client.maximumAllowedDevices
                     });
-                }
-                catch (err) {
-                    Catenis.logger.ERROR(util.format('Error trying to update status of device (doc Id: %s) to \'inactive\'.', this.doc_id), err);
-                    throw new Meteor.Error('ctn_device_update_error', util.format('Error trying to update status of device (doc Id: %s) to \'inactive\'', this.doc_id), err.stack);
+                    throw new Meteor.Error('ctn_client_max_devices', util.format('Cannot activate device; maximum number of allowed devices already reached for client (clientId: %s)', this.client.clientId));
                 }
             }
+            else {  // curDevDoc.status === Device.status.new.name || curDevDoc.status === Device.status.pending.name
+                if (this.client.maximumAllowedDevices && this.client.activeDevicesCount() >= this.client.maximumAllowedDevices) {
+                    // Number of active devices of client already reached the maximum allowed.
+                    //  Silently reset status to 'inactive'
+                    newDevStatus = Device.status.inactive.name;
+                }
+            }
+
+            updateStatus.call(this, newDevStatus);
+
+            this.status = newDevStatus;
+        }
+        else {
+            this.status = curDevDoc.status;
+
+            if (this.status === Device.status.deleted.name) {
+                // Log inconsistent condition
+                Catenis.logger.WARN('Trying to activate a deleted device', {deviceId: this.deviceId});
+            }
+            else {  // status == 'active'
+                // Log inconsistent condition
+                Catenis.logger.WARN('Trying to activate a device that is already activated', {deviceId: this.deviceId});
+            }
+        }
+    });
+}
+
+function inactivateDevice() {
+    // Execute code in critical section to avoid DB concurrency
+    this.devDbCS.execute(() => {
+        // Get current device status and check if it needs to be updated
+        const curDevDoc = Catenis.db.collection.Device.findOne({_id: this.doc_id}, {fields: {_id: 1, status: 1}});
+
+        if (curDevDoc.status === Device.status.active.name) {
+            updateStatus.call(this, Device.status.inactive.name);
 
             this.status = Device.status.inactive.name;
-        });
-    }
-    else {
-        // Log inconsistent condition
-        Catenis.logger.WARN('Trying to deactivate a device that is not active', {deviceId: this.deviceId});
-    }
+        }
+        else {
+            this.status = curDevDoc.status;
+
+            // Log inconsistent condition
+            Catenis.logger.WARN('Trying to inactivate a device that is not active', {deviceId: this.deviceId});
+        }
+    });
 }
+
 
 // Device function class (public) methods
 //

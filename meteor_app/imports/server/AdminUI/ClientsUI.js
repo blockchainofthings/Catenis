@@ -84,7 +84,8 @@ ClientsUI.initialize = function () {
                         createUser: true,
                         username: clientInfo.username,
                         email: clientInfo.email,
-                        sendEnrollmentEmail: true
+                        sendEnrollmentEmail: true,
+                        timeZone: clientInfo.timeZone
                     });
                 }
                 catch (err) {

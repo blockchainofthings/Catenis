@@ -73,8 +73,16 @@
                                         </div>
                                     </div>
                                 </div>
+                                <div class="form-group" style="text-align:left; margin-bottom:30px">
+                                    <label for="selTimeZone">Time Zone</label><br>
+                                    <select id="selTimeZone" name="timeZone">
+                                        {{#each timeZone in timeZones}}
+                                        <option value="{{timeZone.value}}" {{timeZone.selected}}>{{timeZone.name}}</option>
+                                        {{/each}}
+                                    </select>
+                                </div>
                                 <div class="form-group">
-                                    <input type="hidden" id="emailConfirmation" value="notConfirmed">
+                                    <input type="hidden" id="emailConfirmation" name="emailConfirmation" value="notConfirmed">
                                 </div>
                                 <div class="row">
                                     <div class="col-xs-6 form-group pull-left">

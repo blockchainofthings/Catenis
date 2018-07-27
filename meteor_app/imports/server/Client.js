@@ -16,6 +16,7 @@ import crypto from 'crypto';
 import config from 'config';
 import _und from 'underscore';     // NOTE: we dot not use the underscore library provided by Meteor because we nee
                                    //        a feature (_und.omit(obj,predicate)) that is not available in that version
+import moment from 'moment-timezone';
 // Meteor packages
 import { Meteor } from 'meteor/meteor';
 import { Random } from 'meteor/random';
@@ -35,14 +36,23 @@ import { Device } from './Device';
 import { FundSource } from './FundSource';
 import { Permission } from './Permission';
 import { CCFundSource } from './CCFundSource';
+import { ClientLicense } from './ClientLicense';
+import { License } from './License';
 
 // Config entries
 const clientConfig = config.get('client');
+const clientTempLicConfig = clientConfig.get('temporaryLicense');
 
 // Configuration settings
 export const cfgSettings = {
     userNamePrefix: clientConfig.get('userNamePrefix'),
     clientRole: clientConfig.get('clientRole'),
+    minLicenseValDaysToReplace: clientConfig.get('minLicenseValDaysToReplace'),
+    temporaryLicense: {
+        "active": clientTempLicConfig.get('active'),
+        "level": clientTempLicConfig.get('level'),
+        "type": clientTempLicConfig.get('type')
+    },
     deviceDefaultRightsByEvent: clientConfig.get('deviceDefaultRightsByEvent')
 };
 
@@ -56,8 +66,10 @@ export const cfgSettings = {
 //    docClient: [Object] - Client database doc/rec
 //    ctnNode: [Object] - instance of CatenisNode function class with which client is associated
 //    initializeDevices: [boolean] - (optional) indicates whether devices associated with this client
-//                              should also be initialized. Defaults to false.
-export function Client(docClient, ctnNode, initializeDevices) {
+//                              should also be initialized. Defaults to false
+//    noClientLicense [Boolean] - (optional, default:false) If set, indicates that client license for this client should
+//                                 not be instantiated
+export function Client(docClient, ctnNode, initializeDevices, noClientLicense = false) {
     // Make sure that CatenisNode instance matches Client doc/rec
     if (docClient.catenisNode_id !== ctnNode.doc_id) {
         // CatenisNode instance does not match Client doc/rec. Log error and throw exception
@@ -76,13 +88,60 @@ export function Client(docClient, ctnNode, initializeDevices) {
     this.clientIndex = docClient.index.clientIndex;
     this.props = docClient.props;
     this.apiAccessGenKey = docClient.apiAccessGenKey;
+    this.timeZone = docClient.timeZone && moment.tz.zone(docClient.timeZone) ? docClient.timeZone : moment.tz.guess();
     this.billingMode = docClient.billingMode;
     this.status = docClient.status;
 
-    Object.defineProperty(this, 'apiAccessSecret', {
-        get: function () {
-            //noinspection JSPotentiallyInvalidUsageOfThis,JSCheckFunctionSignatures
-            return crypto.createHmac('sha512', this.apiAccessGenKey).update('And here it is: the Catenis API key for client' + this.clientId).digest('hex');
+    Object.defineProperties(this, {
+        apiAccessSecret: {
+            get: () => {
+                return crypto.createHmac('sha512', this.apiAccessGenKey).update('And here it is: the Catenis API key for client' + this.clientId).digest('hex');
+            }
+        },
+        userAccountUsername: {
+            get: () => {
+                if (!this._user) {
+                    getUser.call(this);
+                }
+
+                if (this._user) {
+                    return this._user.username;
+                }
+            },
+            enumerate: true
+        },
+        userAccountEmail: {
+            get: () => {
+                if (!this._user) {
+                    getUser.call(this);
+                }
+
+                if (this._user) {
+                    let emailIdx = 0;
+
+                    if (this._user.emails.length > 0) {
+                        // Has more than one e-mail address associated with it.
+                        //  Try to get first one that has already been verified
+                        emailIdx = this._user.emails.findIndex((email) => {
+                            return email.verified;
+                        });
+
+                        if (emailIdx < 0) {
+                            emailIdx = 0;
+                        }
+                    }
+
+                    return this._user.emails[emailIdx].address;
+                }
+            },
+            enumerate: true
+        },
+        maximumAllowedDevices: {
+            get: () => {
+                return this.clientLicense && this.clientLicense.hasLicense() ? this.clientLicense.license.maximumDevices
+                    : (this.clientLicense ? 0 : undefined);
+            },
+            enumerate: true
         }
     });
 
@@ -108,6 +167,27 @@ export function Client(docClient, ctnNode, initializeDevices) {
             Catenis.logger.TRACE('About to initialize device', {deviceId: doc.deviceId});
             new Device(doc, this);
         });
+    }
+
+    if (!noClientLicense) {
+        // Instantiate client license
+        this.clientLicense = new ClientLicense(this);
+
+        if (this.status === Client.status.active.name) {
+            if (!this.clientLicense.hasLicense() && cfgSettings.temporaryLicense.active) {
+                Catenis.logger.DEBUG('Provisioning temporary license for client (clientId: %s)', this.clientId, {
+                    temporaryLicense: {
+                        level: cfgSettings.temporaryLicense.level,
+                        type: cfgSettings.temporaryLicense.type
+                    }
+                });
+                // Provision temporary license
+                this.clientLicense.provision(cfgSettings.temporaryLicense.level, cfgSettings.temporaryLicense.type);
+            }
+            else {
+                this.conformNumberOfDevices();
+            }
+        }
     }
 }
 
@@ -439,6 +519,17 @@ Client.prototype.createDevice = function (props, ownApiAccessKey = false, initRi
         throw new Meteor.Error('ctn_client_inactive', util.format('Cannot create device for an inactive client (clientId: %s)', this.clientId));
     }
 
+    // Check if a new device can be created for this client
+    if (this.maximumAllowedDevices && this.devicesInUseCount() >= this.maximumAllowedDevices) {
+        // Maximum number of allowed devices already reached for this client.
+        //  Log error and throw exception
+        Catenis.logger.ERROR('Cannot create device; maximum number of allowed devices already reached for client.', {
+            clientId: this.clientId,
+            maximumAllowedDevices: this.maximumAllowedDevices
+        });
+        throw new Meteor.Error('ctn_client_max_devices', util.format('Cannot create device; maximum number of allowed devices already reached for client (clientId: %s)', this.clientId));
+    }
+
     let docDevice = undefined;
     let device;
 
@@ -521,6 +612,85 @@ Client.prototype.createDevice = function (props, ownApiAccessKey = false, initRi
     return docDevice.deviceId;
 };
 
+Client.prototype.devicesInUseCount = function () {
+    return Catenis.db.collection.Device.find({
+        client_id: this.doc_id,
+        status: {
+            $nin: [
+                Device.status.inactive.name,
+                Device.status.deleted
+            ]
+        }
+    }).count();
+};
+
+Client.prototype.activeDevicesCount = function () {
+    return Catenis.db.collection.Device.find({
+        client_id: this.doc_id,
+        status: Device.status.active.name
+    }).count();
+};
+
+Client.prototype.conformNumberOfDevices = function () {
+    try {
+        if (this.clientLicense) {
+            if (this.status === Client.status.active.name) {
+                if (this.maximumAllowedDevices) {
+                    const cursorActvDevices = Catenis.db.collection.Device.find({
+                        client_id: this.doc_id,
+                        status: Device.status.active.name
+                    }, {
+                        fields: {
+                            index: 1
+                        },
+                        sort: {
+                            lastStatusChangedDate: 1
+                        }
+                    });
+
+                    // Note: we only care to verify the number of active devices because the devices that had
+                    //      not yet been activated (status 'new' or 'pending') shall have their status set
+                    //      to 'inactive' if required when they are (automatically) activated
+                    if (cursorActvDevices.count() > this.maximumAllowedDevices) {
+                        // Number of currently active devices exceeds maximum allowed number of active devices.
+                        //  Disable devices that were last activated
+                        const docActvDevices = cursorActvDevices.fetch();
+                        const disabledDevices = [];
+
+                        for (let idx = docActvDevices.length - 1; idx >= this.maximumAllowedDevices; idx--) {
+                            const device = this.getDeviceByIndex(docActvDevices[idx].index.deviceIndex);
+
+                            device.disable();
+                            disabledDevices.push(device);
+                        }
+
+                        if (this.clientLicense.hasLicense()) {
+                            // Notify client that some devices have been disabled
+                            Catenis.devsDisabEmailNtfy.send({
+                                client: this,
+                                devices: disabledDevices
+                            });
+                        }
+                    }
+                }
+            }
+            else {
+                // Trying to conform number of devices for a non-active client.
+                //  Log warning condition
+                Catenis.logger.WARN('Trying to conform number of devices for a non-active client.', {
+                    clientId: this.clientId,
+                    status: this.status
+                });
+            }
+        }
+    }
+    catch (err) {
+        // Log error condition
+        Catenis.logger.ERROR('Error trying to conform number of devices of client (clientId: %s)', this.clientId, err);
+    }
+};
+
+
 // Update client properties
 //
 // Arguments:
@@ -599,6 +769,168 @@ Client.prototype.getIdentityInfo = function () {
     return idInfo;
 };
 
+/** License related methods **/
+// Provision a license to start in a specific date
+//
+//  Arguments:
+//   license_id [String] - License database doc/rec ID identifying the license to be used
+//   startDate [Object(Date)|String] - The date from when the license validity should start. If a Date object is passed,
+//                                      that date is converted to the client's local time zone. Otherwise, if a string
+//                                      is passed, it should be a calendar date in the format 'YYYY-MM-DD', and it
+//                                      designates a date in the client's local time zone.
+//                                      NOTE: the license validity always set to start in a day boundary in regards to
+//                                          the client's local time zone.
+//                                      NOTE 2: if the start date, when converted to the client's local time zone, has
+//                                          a time past 12 p.m., one extra day is added to the license validity to
+//                                          compensate for the late start.
+//
+//  Return:
+//   provisionedClientLicense_id [String] - Database doc/rec ID of newly created/provisioned client license
+Client.prototype.addLicense = function (license_id, startDate) {
+    // Validate arguments
+    const errArg = {};
+
+    if (!isValidLicenseDocId(license_id)) {
+        errArg.license_id = license_id;
+    }
+
+    if (!isValidLicenseStartDate(startDate)) {
+        errArg.startDate = startDate;
+    }
+
+    if (Object.keys(errArg).length > 0) {
+        const errArgs = Object.keys(errArg);
+
+        Catenis.logger.ERROR(util.format('Client.addLicense method called with invalid argument%s', errArgs.length > 1 ? 's' : ''), errArg);
+        throw new Error(util.format('Invalid %s argument%s', errArgs.join(', '), errArgs.length > 1 ? 's' : ''));
+    }
+
+    // Make sure that client has license support
+    if (!this.clientLicense) {
+        // Log error condition and throw exception
+        Catenis.logger.ERROR('Unable to add new license: client (clientId: %s) has no license support', this.clientId);
+        throw new Meteor.Error('ctn_client_no_license_support', util.format('Unable to add new license: client (clientId: %s) has no license support', this.clientId));
+    }
+
+    // Get license to be added
+    const license = License.getLicenseByDocId(license_id);
+
+    // Provision license
+    return this.clientLicense.provision(license.level, license.type, startDate);
+};
+
+// Provision a license to start immediately replacing the currently active license
+//
+//  Arguments:
+//   license_id [String] - License database doc/rec ID identifying the license to be used
+//
+//  Note: when replacing a license, the new license is set to terminate exactly when the current license does
+//
+//  Return:
+//   provisionedClientLicense_id [String] - Database doc/rec ID of newly created/provisioned client license
+Client.prototype.replaceLicense = function (license_id) {
+    // Validate arguments
+    const errArg = {};
+
+    if (!isValidLicenseDocId(license_id)) {
+        errArg.license_id = license_id;
+    }
+
+    if (Object.keys(errArg).length > 0) {
+        const errArgs = Object.keys(errArg);
+
+        Catenis.logger.ERROR(util.format('Client.replaceLicense method called with invalid argument%s', errArgs.length > 1 ? 's' : ''), errArg);
+        throw new Error(util.format('Invalid %s argument%s', errArgs.join(', '), errArgs.length > 1 ? 's' : ''));
+    }
+
+    // Make sure that client has license support
+    if (!this.clientLicense) {
+        // Log error condition and throw exception
+        Catenis.logger.ERROR('Unable to replace license: client (clientId: %s) has no license support', this.clientId);
+        throw new Meteor.Error('ctn_client_no_license_support', util.format('Unable to replace license: client (clientId: %s) has no license support', this.clientId));
+    }
+
+    // Make sure that client has a currently active license
+    if (!this.clientLicense.hasLicense()) {
+        // Log error condition and throw exception
+        Catenis.logger.ERROR('Unable to replace license: client (clientId: %s) has no currently active license', this.clientId);
+        throw new Meteor.Error('ctn_client_no_license', util.format('Unable to replace license: client (clientId: %s) has no currently active license', this.clientId));
+    }
+
+    // Get license to replace existing one
+    const license = License.getLicenseByDocId(license_id);
+
+    const mtNow = moment();
+    const provisionOpts = {};
+
+    if (license.validityMonths && this.clientLicense.validity.endDate) {
+        // Calculate end date for validity period of new (replacing) license
+        provisionOpts.validityDays = Math.ceil(moment(this.clientLicense.validity.endDate).diff(mtNow, 'd', true));
+        provisionOpts.compensateLateStart = false;
+
+        // Make sure that validity period for new license is not too small
+        if (provisionOpts.validityDays < cfgSettings.minLicenseValDaysToReplace) {
+            // Log error condition and throw exception
+            Catenis.logger.ERROR('Unable to replace license: client license close to expire', {
+                clientLicense: this.clientLicense
+            });
+            throw new Meteor.Error('ctn_client_lic_close_expire', 'Unable to replace license: client license close to expire');
+        }
+    }
+
+    // Provision license
+    return this.clientLicense.provision(license.level, license.type, mtNow.toDate(), provisionOpts);
+};
+
+// Provision a license to start right after the provisioned license with the latest end date
+//
+//  Arguments:
+//   license_id [String] - License database doc/rec ID identifying the license to be used
+//
+//  Note: if current license is provisional renewal, start immediately with same start date
+//
+//  Return:
+//   provisionedClientLicense_id [String] - Database doc/rec ID of newly created/provisioned client license
+Client.prototype.renewLicense = function (license_id) {
+    // Validate arguments
+    const errArg = {};
+
+    if (!isValidLicenseDocId(license_id)) {
+        errArg.license_id = license_id;
+    }
+
+    if (Object.keys(errArg).length > 0) {
+        const errArgs = Object.keys(errArg);
+
+        Catenis.logger.ERROR(util.format('Client.renewLicense method called with invalid argument%s', errArgs.length > 1 ? 's' : ''), errArg);
+        throw new Error(util.format('Invalid %s argument%s', errArgs.join(', '), errArgs.length > 1 ? 's' : ''));
+    }
+
+    // Make sure that client has license support
+    if (!this.clientLicense) {
+        // Log error condition and throw exception
+        Catenis.logger.ERROR('Unable to renew license: client (clientId: %s) has no license support', this.clientId);
+        throw new Meteor.Error('ctn_client_no_license_support', util.format('Unable to replace license: client (clientId: %s) has no license support', this.clientId));
+    }
+
+    // Make sure that client has a currently active license
+    if (!this.clientLicense.hasLicense()) {
+        // Log error condition and throw exception
+        Catenis.logger.ERROR('Unable to renew license: client (clientId: %s) has no currently active license', this.clientId);
+        throw new Meteor.Error('ctn_client_no_license', util.format('Unable to replace license: client (clientId: %s) has no currently active license', this.clientId));
+    }
+
+    // Get license to renew existing one
+    const license = License.getLicenseByDocId(license_id);
+
+    // Determine start date
+    const startDate = this.clientLicense.provisionalRenewal ? this.clientLicense.validity.startDate : undefined;
+
+    // Provision license
+    return this.clientLicense.provision(license.level, license.type, startDate);
+};
+/** End of license related methods **/
+
 /** Permission related methods **/
 // Set the default permission rights to use for newly created devices
 //
@@ -635,6 +967,22 @@ Client.prototype.getDeviceDefaultRights = function() {
 //      they are called, by means of one of the predefined function methods .call(), .apply()
 //      or .bind().
 //
+
+function getUser() {
+    if (this.user_id) {
+        this._user = Meteor.users.findOne({
+            _id: this.user_id,
+            emails: {
+                $exists: true
+            }
+        }, {
+            fields: {
+                username: 1,
+                emails: 1
+            }
+        });
+    }
+}
 
 
 // Client function class (public) methods
@@ -714,6 +1062,27 @@ Client.getClientByClientId = function (clientId, includeDeleted = true) {
     }
 
     return new Client(docClient, CatenisNode.getCatenisNodeByIndex(docClient.index.ctnNodeIndex));
+};
+
+Client.getClientByDocId = function (client_id, includeDeleted = true, noClientLicense = false) {
+    // Retrieve Client doc/rec
+    const query = {
+        _id: client_id
+    };
+
+    if (!includeDeleted) {
+        query.status = {$ne: Client.status.deleted.name};
+    }
+
+    const docClient = Catenis.db.collection.Client.findOne(query);
+
+    if (docClient === undefined) {
+        // No client available with the given client ID. Log error and throw exception
+        Catenis.logger.ERROR('Could not find client with given database rec/doc ID', {client_id: client_id});
+        throw new Meteor.Error('ctn_client_not_found', util.format('Could not find client with given database rec/doc ID (%s)', client_id));
+    }
+
+    return new Client(docClient, CatenisNode.getCatenisNodeByIndex(docClient.index.ctnNodeIndex), false, noClientLicense);
 };
 
 Client.getClientByUserId = function (user_id, includeDeleted = true) {
@@ -1006,6 +1375,14 @@ function newDeviceId(ctnNodeIndex, clientIndex, deviceIndex) {
     }
 
     return id;
+}
+
+function isValidLicenseStartDate(startDate) {
+    return (startDate instanceof Date) || (typeof startDate === 'string' && moment(startDate, 'YYYY-MM-DD', true).isValid());
+}
+
+function isValidLicenseDocId(id) {
+    return typeof id === 'string' && id.length > 0;
 }
 
 

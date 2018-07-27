@@ -15,12 +15,11 @@
 //      imported module'
 //const util = require('util');
 // Third-party node modules
-//import config from 'config';
-
+import moment from 'moment-timezone';
 // Meteor packages
 import { Meteor } from 'meteor/meteor';
 import { Template } from 'meteor/templating';
-import { RectiveDict } from 'meteor/reactive-dict';
+import { ReactiveDict } from 'meteor/reactive-dict';
 
 // References code in other (Catenis) modules on the client
 import { Catenis } from '../ClientCatenis';
@@ -75,6 +74,8 @@ function validateFormData(form, errMsgs) {
         }
     }
 
+    clientInfo.timeZone = form.timeZone.value;
+
     return !hasError ? clientInfo : undefined;
 }
 
@@ -86,7 +87,7 @@ Template.newClient.onCreated(function () {
     this.state = new ReactiveDict();
     this.state.set('errMsgs', []);
     this.state.set('email', undefined);
-    this.state.set('emailConfimed', false);
+    this.state.set('emailConfirmed', false);
 });
 
 Template.newClient.onDestroyed(function () {
@@ -108,16 +109,16 @@ Template.newClient.events({
         template.state.set('email', email.length > 0 ? email : undefined);
         event.target.form.confirmEmail.value = '';
         template.$('#emailConfirmation')[0].value = 'notConfirmed';
-        template.state.set('emailConfimed', false);
+        template.state.set('emailConfirmed', false);
     },
     'change #txtConfirmEmail'(event, template){
         template.$('#emailConfirmation')[0].value = 'notConfirmed';
-        template.state.set('emailConfimed', false);
+        template.state.set('emailConfirmed', false);
     },
     'click #btnEmailConfirmClose'(event, template) {
         const form = event.target.form;
 
-        if (!template.state.get('emailConfimed')) {
+        if (!template.state.get('emailConfirmed')) {
             form.confirmEmail.value = '';
             template.$('#resultEmailConfirmation')[0].innerHTML = 'Please reenter email to confirm it';
         }
@@ -134,7 +135,7 @@ Template.newClient.events({
         else if (email === confirmEmail) {
             template.$('#emailConfirmation')[0].value = 'confirmed';
             template.$('#resultEmailConfirmation')[0].innerHTML = 'Please reenter email to confirm it';
-            template.state.set('emailConfimed', true);
+            template.state.set('emailConfirmed', true);
 
             // Close modal form backdrop
             $('#confirmEmail').modal('hide');
@@ -197,6 +198,22 @@ Template.newClient.helpers({
     needsConfirmEmail: function () {
         const template = Template.instance();
 
-        return template.state.get('email') && !template.state.get('emailConfimed');
+        return template.state.get('email') && !template.state.get('emailConfirmed');
+    },
+    timeZones() {
+        const localTZ = moment.tz.guess();
+        const now = Date.now();
+
+        // Return time zones sorted by offset and name
+        return moment.tz.names().map((tzName) => {
+            const mt = moment.tz(now, tzName);
+
+            return {
+                name: tzName + mt.format(' (UTCZ)'),
+                offset: mt.utcOffset(),
+                value: tzName,
+                selected: tzName === localTZ ? 'selected' : ''
+            };
+        }).sort((tz1, tz2) => tz1.offset === tz2.offset ? (tz1.name < tz2.name ? -1 : (tz1.name > tz2.name ? 1 : 0)) : tz1.offset - tz2.offset);
     }
 });

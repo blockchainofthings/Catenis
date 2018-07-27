@@ -18,7 +18,7 @@ import events from 'events';
 import config from 'config';
 import _und from 'underscore';     // NOTE: we dot not use the underscore library provided by Meteor because we need
                                    //        a feature (_und.omit(obj,predicate)) that is not available in that version
-
+import moment from 'moment-timezone';
 // Meteor packages
 import { Meteor } from 'meteor/meteor';
 import { Random } from 'meteor/random';
@@ -519,6 +519,7 @@ CatenisNode.prototype.getIdentityInfo = function () {
 //      username: [String], - (optional) Username for the new user to be created. If not specified, the client name is used
 //      email: [String], - (optional) Email address for the new user to be created
 //      sendEnrollmentEmail: [Boolean], - (optional, default: false) Indicate that enrollment e-mail should be sent after client is successfully created
+//      timeZone: [String], - (optional, default:server time zone) The name of the time zone to be used by the client
 //      billingMode: [String], - (optional, default: 'pre-paid') Identifies that billing mode to be used for this client. The value of one of the properties of Client.billingMode object
 //      deviceDefaultRightsByEvent: [Object] - (optional) Default rights to be used when creating new devices. Object the keys of which should be the defined permission event names.
 //                                           -  The value for each event name key should be a rights object as defined for the Permission.setRights method
@@ -616,6 +617,7 @@ CatenisNode.prototype.createClient = function (props, user_id, opts) {
             },
             props: props,
             apiAccessGenKey: Random.secret(),
+            timeZone: opts.timeZone && moment.tz.zone(opts.timeZone) ? opts.timeZone : moment.tz.guess(),
             billingMode: opts.billingMode ? opts.billingMode : Client.billingMode.prePaid,
             status: user_id && docUser.services !== undefined && docUser.services.password !== undefined ? Client.status.active.name : Client.status.new.name,
             createdDate: new Date(Date.now())

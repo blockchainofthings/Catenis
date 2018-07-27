@@ -1,0 +1,11 @@
+Dear customer,
+
+We are sorry to inform that the license associated with your Catenis Enterprise client account has been expired.
+
+Client account: username '{!username}' (client ID: {!clientId})
+
+As a result, all your existing Catenis virtual devices are being disabled.
+
+To renew your license, please contact us.
+
+The Blockchain of Things team

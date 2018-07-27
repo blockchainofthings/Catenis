@@ -21,14 +21,15 @@ import { Mongo } from 'meteor/mongo';
 import { Catenis } from './Catenis';
 import { ctnHubNodeIndex } from './Application';
 import { CatenisNode } from './CatenisNode';
-import { cfgSettings as licenseCfgSettings } from './License';
+import { conformStrIdField } from './License';
 
 // Config entries
 const dbConfig = config.get('database');
 
 // Configuration settings
 const cfgSettings = {
-    defaultBcotPrice: dbConfig.get('defaultBcotPrice')
+    defaultBcotPrice: dbConfig.get('defaultBcotPrice'),
+    defaultLicenses: dbConfig.get('defaultLicenses')
 };
 
 
@@ -130,19 +131,6 @@ Database.initialize = function() {
     const collections = {
         Application: {
             initFunc: initApplication
-        },
-        License: {
-            initFunc: initLicense,
-            indices: [{
-                fields: {
-                    licenseType: 1
-                },
-                opts: {
-                    unique: true,
-                    background: true,
-                    w: 1
-                }
-            }]
         },
         BitcoinFees: {
             indices: [{
@@ -277,6 +265,159 @@ Database.initialize = function() {
                     lastStatusChangedDate: 1
                 },
                 opts: {
+                    background: true,
+                    w: 1
+                }
+            }]
+        },
+        License: {
+            initFunc: initLicense,
+            indices: [{
+                fields: {
+                    level: 1,
+                    type: 1,
+                    revision: 1
+                },
+                opts: {
+                    unique: true,
+                    background: true,
+                    w: 1
+                }
+            }, {
+                fields: {
+                    level: 1
+                },
+                opts: {
+                    background: true,
+                    w: 1
+                }
+            }, {
+                fields: {
+                    order: 1
+                },
+                opts: {
+                    background: true,
+                    w: 1
+                }
+            }, {
+                fields: {
+                    type: 1
+                },
+                opts: {
+                    background: true,
+                    w: 1
+                }
+            }, {
+                fields: {
+                    revision: 1
+                },
+                opts: {
+                    background: true,
+                    w: 1
+                }
+            }, {
+                fields: {
+                    maximumDevices: 1
+                },
+                opts: {
+                    background: true,
+                    w: 1
+                }
+            }],
+            validator: {
+                level: {
+                    $type: 'string'
+                },
+                order: {
+                    $type: 'int'
+                },
+                $or: [{
+                    type: {
+                        $exists: false
+                    }
+                }, {
+                    type: {
+                        $type: 'string'
+                    }
+                }],
+                revision: {
+                    $type: 'int'
+                }
+            }
+        },
+        ClientLicense: {
+            indices: [{
+                fields: {
+                    client_id: 1
+                },
+                opts: {
+                    background: true,
+                    w: 1
+                }
+            }, {
+                fields: {
+                    license_id: 1
+                },
+                opts: {
+                    background: true,
+                    w: 1
+                }
+            }, {
+                fields: {
+                    'validity.startDate': 1
+                },
+                opts: {
+                    background: true,
+                    w: 1
+                }
+            }, {
+                fields: {
+                    'validity.endDate': 1
+                },
+                opts: {
+                    sparse: 1,
+                    background: true,
+                    w: 1
+                }
+            }, {
+                fields: {
+                    status: 1
+                },
+                opts: {
+                    background: true,
+                    w: 1
+                }
+            }, {
+                fields: {
+                    expireRemindNotifySent: 1
+                },
+                opts: {
+                    background: true,
+                    w: 1
+                }
+            }, {
+                fields: {
+                    provisionedDate: 1
+                },
+                opts: {
+                    background: true,
+                    w: 1
+                }
+            }, {
+                fields: {
+                    activatedDate: 1
+                },
+                opts: {
+                    sparse: 1,
+                    background: true,
+                    w: 1
+                }
+            }, {
+                fields: {
+                    expiredDate: 1
+                },
+                opts: {
+                    sparse: 1,
                     background: true,
                     w: 1
                 }
@@ -1419,6 +1560,45 @@ Database.fixBillingExchangeRate = function () {
     }
 };
 
+//** Temporary method used to add time zone field to Client docs/recs
+import moment from 'moment-timezone';
+
+Database.addMissingClientTimeZone = function () {
+    let countUpdatedDocs = 0;
+
+    // Get ID of Client docs/recs missing time zone field
+    const client_ids = Catenis.db.collection.Client.find({
+        timeZone: {
+            $exists: false
+        }
+    }, {
+        fields: {
+            _id: 1
+        }
+    }).map(doc => doc._id);
+
+    if (client_ids.length > 0) {
+        // Add missing time zone field with server's time zone
+        const serverTZ = moment.tz.guess();
+
+        countUpdatedDocs += Catenis.db.collection.Client.update({
+            _id: {
+                $in: client_ids
+            }
+        }, {
+            $set: {
+                timeZone: serverTZ
+            }
+        }, {
+            multi: true
+        });
+    }
+
+    if (countUpdatedDocs > 0) {
+        Catenis.logger.INFO('****** Time zone field (with server\'s time zone) has been added to %d Client docs/recs', countUpdatedDocs);
+    }
+};
+
 
 // Module functions used to simulate private Database object methods
 //  NOTE: these functions need to be bound to a Database object reference (this) before
@@ -1473,16 +1653,28 @@ function initCatenisNode() {
 }
 
 function initLicense() {
-    const docLicense = this.collection.License.findOne({});
+    const docLicense = this.collection.License.findOne({}, {
+        fields: {
+            _id: 1
+        }
+    });
 
     if (!docLicense) {
-        // No client account licenses yet configured. Populate database with default license types
-        licenseCfgSettings.defaultLicenses.forEach((license) => {
-            this.collection.License.insert({
-                licenseType: license.type,
-                numberOfDevices: license.numberOfDevices,
-                createdDate: new Date()
-            })
+        // No license rec/docs exist yet. Add default license entries
+        const now = new Date();
+
+        cfgSettings.defaultLicenses.forEach((license) => {
+            license.level = conformStrIdField(license.level);
+
+            if (license.type) {
+                license.type = conformStrIdField(license.type);
+            }
+
+            license.status = 'active';
+            license.createdDate = now;
+            license.activatedDate = now;
+
+            this.collection.License.insert(license);
         });
     }
 }

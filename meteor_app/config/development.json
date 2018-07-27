@@ -95,5 +95,9 @@
     },
     "unconfirmedTxTimeout": 10080,  // (7 days) Timeout, in minutes, for waiting for latest sent spend service credit tx to be confirmed (set to 7 days, which is half the default mempool tx eviction time of 14 days)
     "txSizeThresholdRatio": 0.9  // Ratio that should be applied to maximum tx size to calculate threshold for spend service credit tx size. Above that size the tx fee rate should be reset so that is is confirmed as soon as possible
+  },
+  // Parameters pertaining to ClientLicense module
+  "clientLicense": {
+    "licenseMonitorInterval": 5  // Time interval, in minutes, used to monitor client licenses for update and expiration reminder.
   }
 }
