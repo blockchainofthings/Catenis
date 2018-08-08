@@ -18,6 +18,7 @@ import { Meteor } from 'meteor/meteor';
 
 // References code in other (Catenis) modules
 import { Catenis } from './Catenis';
+import { LicenseShared } from '../both/LicenseShared';
 
 // Config entries
 /*const config_entryConfig = config.get('config_entry');
@@ -423,20 +424,7 @@ License.isValidType = function (type) {
 // License function class (public) properties
 //
 
-License.status = Object.freeze({
-    new: Object.freeze({
-        name: 'new',
-        description: 'License has been create but is not yet active'
-    }),
-    active: Object.freeze({
-        name: 'active',
-        description: 'License is currently active'
-    }),
-    inactive: Object.freeze({
-        name: 'inactive',
-        description: 'License is not active anymore'
-    })
-});
+License.status = LicenseShared.status;
 
 
 // Definition of module (private) functions

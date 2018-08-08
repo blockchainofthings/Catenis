@@ -623,12 +623,12 @@ btn:active{
 
 
 /*changing bootstrap table settings to align words to center*/
-.table > thead > tr > th{
+/*.table > thead > tr > th{
     text-align:center;
 }
-.table> tbody> tr> th{
+.table > tbody> tr > th{
     text-align:center;
-}
+}*/
 
 
 /*font Awesome set up so that we can have */
@@ -744,3 +744,20 @@ btn:active{
     width:100%;
 }
 
+.input {
+    font-family: Roboto, sans-serif;
+    font-size: 16px;
+    font-weight: 100;
+    color: gray;
+}
+
+textarea.apiAccessSecret {
+    font-family: Courier;
+    width: 90%;
+    resize: none;
+    border-color: lightgray;
+}
+
+.noMargin {
+    margin:0
+}

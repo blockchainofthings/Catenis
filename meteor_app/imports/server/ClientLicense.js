@@ -19,6 +19,7 @@ import { Meteor } from 'meteor/meteor';
 
 // References code in other (Catenis) modules
 import { Catenis } from './Catenis';
+import { ClientLicenseShared } from '../both/ClientLicenseShared';
 import { Client } from './Client';
 import { Util } from './Util';
 import { License } from './License';
@@ -91,10 +92,10 @@ ClientLicense.prototype.getClient = function () {
 ClientLicense.prototype.expire = function (bypassProvisionalRenewal = true) {
     if (this.license) {
         try {
-            // Make sure that client license if currently active
+            // Make sure that client license is not already expired
             const now = new Date();
 
-            if (this.status === ClientLicense.status.active.name) {
+            if (this.status !== ClientLicense.status.expired.name) {
                 const modifier =  {
                     $set: {
                         status: ClientLicense.status.expired.name,
@@ -161,7 +162,7 @@ ClientLicense.prototype.expire = function (bypassProvisionalRenewal = true) {
 //     validityDays: [Number], - (optional) Validity in days to be used in place of standard license validity in months
 //     provisionalRenewal: [Boolean], - (optional, default:false) Indicates whether a provisional renewal period should be
 //                                        provisioned instead of the regular license validity period
-//     observeProvisionalRenewal: [boolean], - (optional, default:true) Indicates whether a provisional renewal license should be
+//     observeProvisionalRenewal: [Boolean], - (optional, default:true) Indicates whether a provisional renewal license should be
 //                                              (automatically) created when this license expires, provided that the associated license supports it
 //     compensateLateStart: [Boolean], - (optional, default:true) Indicates whether an extra day should be added to the license validity period to
 //                                    compensate for a start date late in the day. Note that it only applies to when a
@@ -211,9 +212,9 @@ ClientLicense.prototype.provision = function (licenseLevel, licenseType, startDa
             throw new Error(util.format('Invalid %s argument%s', errArgs.join(', '), errArgs.length > 1 ? 's' : ''));
         }
 
-        options.provisionalRenewal = options.provisionalRenewal ? !!options.provisionalRenewal : false;
-        options.observeProvisionalRenewal = options.observeProvisionalRenewal ? !!options.observeProvisionalRenewal : true;
-        options.compensateLateStart = options.compensateLateStart ? !!options.compensateLateStart : true;
+        options.provisionalRenewal = !Util.isUndefinedOrNull(options.provisionalRenewal) ? !!options.provisionalRenewal : false;
+        options.observeProvisionalRenewal = !Util.isUndefinedOrNull(options.observeProvisionalRenewal) ? !!options.observeProvisionalRenewal : true;
+        options.compensateLateStart = !Util.isUndefinedOrNull(options.compensateLateStart) ? !!options.compensateLateStart : true;
 
         // Retrieve license entry to use
         const license = License.getLicenseByLevelAndType(licenseLevel, licenseType);
@@ -264,7 +265,7 @@ ClientLicense.prototype.provision = function (licenseLevel, licenseType, startDa
                 let licenseEndDate;
 
                 // Check if an end date needs to be specified
-                let validityPeriod = license.validityMonths ? moment.duration(license.validityMonths, 'M') : moment.duration(options.validityDays, 'd');
+                let validityPeriod = options.validityDays ? moment.duration(options.validityDays, 'd') : moment.duration(license.validityMonths, 'M');
 
                 if (validityPeriod.valueOf() > 0 || options.provisionalRenewal) {
                     // Check if a provisional renewal period should be used instead
@@ -669,20 +670,7 @@ ClientLicense.initialize = function () {
 // ClientLicense function class (public) properties
 //
 
-ClientLicense.status = Object.freeze({
-    provisioned: Object.freeze({
-        name: 'provisioned',
-        description: 'License is assigned to client but has not yet been activated'
-    }),
-    active: Object.freeze({
-        name: 'active',
-        description: 'License is currently in effect'
-    }),
-    expired: Object.freeze({
-        name: 'expired',
-        description: 'License is no longer valid'
-    }),
-});
+ClientLicense.status = ClientLicenseShared.status;
 
 
 // Definition of module (private) functions

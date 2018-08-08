@@ -15,140 +15,51 @@
 //      imported module'
 //const util = require('util');
 // Third-party node modules
-//import config from 'config';
+import ClipboardJS from 'clipboard';
 // Meteor packages
 import { Meteor } from 'meteor/meteor';
 import { Template } from 'meteor/templating';
-import { RectiveDict } from 'meteor/reactive-dict';
+import { ReactiveDict } from 'meteor/reactive-dict';
 
 // References code in other (Catenis) modules on the client
 import { Catenis } from '../ClientCatenis';
+import { ClientUtil } from '../ClientUtil';
+import { ClientLicenseShared } from '../../both/ClientLicenseShared';
 
 // Import template UI
 import './ClientDetailsTemplate.html';
 
 // Import dependent templates
-import './DevicesTemplate.js';
-
-function validateFormData(form, errMsgs) {
-    const clientInfo = {};
-    let hasError = false;
-
-    clientInfo.name = form.clientName.value ? form.clientName.value.trim() : '';
-
-    if (clientInfo.name.length === 0) {
-        // Client name not supplied. Report error
-        errMsgs.push('Please enter a client name');
-        hasError = true;
-    }
-
-    clientInfo.username = form.username.value ? form.username.value.trim() : '';
-
-    if (clientInfo.username.length === 0) {
-        // Username not supplied. Report error
-        errMsgs.push('Please enter a username');
-        hasError = true;
-    }
-
-    clientInfo.email = form.email.value ? form.email.value.trim() : '';
-
-    if (clientInfo.email.length === 0) {
-        // Email not supplied. Report error
-        errMsgs.push('Please enter an email address');
-        hasError = true;
-    }
-    else {
-        const confEmail = form.confirmEmail.value ? form.confirmEmail.value.trim() : '';
-
-        if (clientInfo.email !== confEmail) {
-            // Confirmation email does not match. Report error
-            errMsgs.push('Confirmation email does not match');
-            hasError = true;
-        }
-    }
-    clientInfo.firstName = form.firstName.value? form.firstName.value.trim() : '';
-    if (clientInfo.firstName.length === 0) {
-        // firstName not supplied. Report error
-        errMsgs.push("Please enter client's first name");
-        hasError = true;
-    }
-
-    clientInfo.lastName = form.lastName.value? form.lastName.value.trim() : '';
-    if (clientInfo.lastName.length === 0) {
-        // firstName not supplied. Report error
-        errMsgs.push("Please enter client's last name");
-        hasError = true;
-    }
-    clientInfo.companyName= form.companyName.value? form.companyName.value.trim() : '';
-    if (clientInfo.companyName.length === 0) {
-        // firstName not supplied. Report error
-        errMsgs.push("Please enter client's company name");
-        hasError = true;
-    }
+import './ClientLicensesTemplate.js';
 
 
-    //check if the validation on the form has been completed. If this works, the above email check is redundant.
+// Definition of module (private) functions
+//
 
-    if(form.emailValidation && form.emailValidation.value!=="Validated"){
-        errMsgs.push('Email was not validated');
-        hasError =true;
-    }
+/*function module_func() {
+}*/
 
-    // password will be filled in by the users, except when we're updating it ourselves
-    if(form.password){
-
-        //this method is being called in the update form
-        clientInfo.pwd = form.password.value ? form.password.value.trim() : '';
-
-        if (clientInfo.pwd.length === 0) {
-            // Password not supplied. We're not changing the password
-        }
-        else {
-            const confPsw = form.confirmPassword.value ? form.confirmPassword.value.trim() : '';
-            if (clientInfo.pwd !== confPsw) {
-                // Confirmation password does not match. Report error
-                errMsgs.push('Confirmation password does not match');
-                hasError = true;
-            }
-        }
-    }
-    return !hasError ? clientInfo : undefined;
-}
-
-
-function licenseViolation(numDevices, user_id) {
-    const licenseType= Meteor.users.findOne( {_id: user_id} ).profile.license.licenseType;
-
-    if(licenseType==="Enterprise"){
-        return false;
-    }else{
-        let numAllowed= Catenis.db.collection.License.findOne({licenseType: licenseType}).numAllowedDevices;
-        //returns true if this situation results in a license violation.
-        return numAllowed < numDevices;
-    }
-}
 
 // Module code
 //
 
 Template.clientDetails.onCreated(function () {
-
     this.state = new ReactiveDict();
+
     this.state.set('addMsgCreditsStatus', 'idle');  // Valid statuses: 'idle', 'data-enter', 'processing', 'error', 'success'
-    this.state.set('showDevices', !!this.data.showDevices);
-    //added by peter to check whether enrollment email was sent.
     this.state.set('haveResentEnrollmentEmail', false);
     this.state.set('errMsgs', []);
-    // Subscribe to receive fund balance updates
-    this.clientRecordSubs = this.subscribe('clientRecord', this.data.user_id);
-    // this.clientUserSubs = this.subscribe('clientUser', this.data.user_id);
-    //this.clientMessageCreditsSubs = this.subscribe('clientMessageCredits', this.data.user_id);
-    this.userListSubs = this.subscribe('userList', Meteor.user());
+    this.state.set('infoMsg', undefined);
+    this.state.set('infoMsgType', 'info');
+    this.state.set('apiAccessSecret', undefined);
+    this.state.set('displayResetApiAccessSecretForm', 'none');
+    this.state.set('displayResetApiAccessSecretButton', 'none');
 
-    //added to allow device number count.
-    this.clientDevicesSubs = this.subscribe('clientDevices', this.data.user_id);
-    //added to find allowed devices number
-    this.licenseSubs = this.subscribe('license');
+    // Subscribe to receive database docs/recs updates
+    this.clientRecordSubs = this.subscribe('clientRecord', this.data.client_id);
+    this.clientUserSubs = this.subscribe('clientUser', this.data.client_id);
+    this.currentClientLicenseSubs = this.subscribe('currentClientLicense', this.data.client_id);
+    this.currentLicenseSubs = this.subscribe('currentLicense', this.data.client_id);
 });
 
 Template.clientDetails.onDestroyed(function () {
@@ -160,87 +71,174 @@ Template.clientDetails.onDestroyed(function () {
         this.clientUserSubs.stop();
     }
 
-    if (this.clientMessageCreditsSubs) {
-        this.clientMessageCreditsSubs.stop();
+    if (this.currentClientLicenseSubs) {
+        this.currentClientLicenseSubs.stop();
     }
 
-    //added to allow device number count.
-    if (this.clientDevicesSubs) {
-        this.clientDevicesSubs.stop();
-    }
-
-
-    if (this.userListSubs){
-        this.userListSubs.stop();
-    }
-
-    if(this.licenseSubs){
-        this.licenseSubs.stop();
+    if (this.currentLicenseSubs) {
+        this.currentLicenseSubs.stop();
     }
 });
 
 Template.clientDetails.events({
-    'click #lnkAddMsgCredits'(event, template) {
-        template.state.set('addMsgCreditsStatus', 'data-enter');
-        return false;
+    'click #btnDismissInfo'(events, template) {
+        // Clear info message
+        template.state.set('infoMsg', undefined);
+        template.state.set('infoMsgType', 'info');
     },
-    'click #butAddMsgCredits'(event, template) {
-
-        const client = Catenis.db.collection.Client.findOne({user_id: Template.instance().data.user_id});
-        const fieldCreditsCount = template.$('#txiMsgCreditAmount')[0];
-        const creditsCount = parseInt(fieldCreditsCount.value);
-
-        if (!isNaN(creditsCount)) {
-            // Call remote method to add message credits
-            Meteor.call('addMessageCredits', client.clientId, creditsCount, (error) => {
-                //this is currently not working right now.
-                if (error) {
-                    template.state.set('addMsgCreditsError', error.toString());
-                    template.state.set('addMsgCreditsStatus', 'error');
-                }
-                else {
-                    template.state.set('addMsgCreditsStatus', 'success');
-                }
-            });
-
-            template.state.set('addMsgCreditsStatus', 'processing');
-        }
-        else {
-            fieldCreditsCount.value = null;
-        }
+    'click #btnDismissError'(events, template) {
+        // Clear error message
+        template.state.set('errMsgs', []);
     },
-    'click #lnkCancelAddMsgCredits'(event, template) {
-        template.state.set('addMsgCreditsStatus', 'idle');
+    'click #btnResendEnrollment'(events, template) {
+        // Reset messages
+        template.state.set('errMsgs', []);
+        template.state.set('infoMsg', 'Sending client account enrollment e-mail message to customer...');
+        template.state.set('infoMsgType', 'info');
 
-        return false;
-    },
-    'click #lnkShowDevices'(event, template) {
-        template.state.set('showDevices', true);
-
-        return false;
-    },
-    'click #lnkHideDevices'(event, template) {
-        template.state.set('showDevices', false);
-        return false;
-    },
-
-    //added by peter to allow resending enrollment Email
-    'click #resendEnrollmentEmail'(events, template) {
-        template.state.set('haveResentEnrollmentEmail', true);
-
-        Meteor.call('resendEnrollmentEmail', Template.instance().data.user_id, (error) => {
+        Meteor.call('sendEnrollmentEmail', template.data.client_id, (error) => {
             if (error) {
-                template.state.set('resendEnrollmentEmailSuccess', false);
+                template.state.set('infoMsg', undefined);
+                template.state.set('infoMsgType', 'info');
+
+                const errMsgs = template.state.get('errMsgs');
+                errMsgs.push('Error sending client account enrollment e-mail message: ' + error.toString());
+                template.state.set('errMsgs', errMsgs);
             }
             else {
-                template.state.set('resendEnrollmentEmailSuccess', true);
+                template.state.set('infoMsg', 'Client account enrollment e-mail message successfully sent');
+                template.state.set('infoMsgType', 'success');
             }
             template.state.set('')
         });
-
     },
+    'click #btnResetPassword'(events, template) {
+        // Reset alert messages
+        template.state.set('errMsgs', []);
+        template.state.set('infoMsg', 'Sending client account\'s password reset e-mail message to customer...');
+        template.state.set('infoMsgType', 'info');
 
+        Meteor.call('sendResetPasswordEmail',template.data.client_id, (error) => {
+            if (error) {
+                template.state.set('infoMsg', undefined);
+                template.state.set('infoMsgType', 'info');
 
+                const errMsgs = template.state.get('errMsgs');
+                errMsgs.push('Error sending client account\'s password reset e-mail message: ' + error.toString());
+                template.state.set('errMsgs', errMsgs);
+            }
+            else {
+                template.state.set('infoMsg', 'Client account\'s password reset e-mail message successfully sent');
+                template.state.set('infoMsgType', 'success');
+            }
+        });
+    },
+    'click #btnApiAccessSecret'(events, template) {
+        new ClipboardJS('#btnCopyClipboard', {
+            container: document.getElementById('divClientAPIAccessSecret')
+        });
+
+        // Reset alert messages
+        template.state.set('errMsgs', []);
+        template.state.set('infoMsg', undefined);
+        template.state.set('infoMsgType', 'info');
+
+        // Clear local copy of API access secret
+        template.state.set('apiAccessSecret', undefined);
+        // Make sure that form to reset API access secret is not displayed
+        template.state.set('displayResetApiAccessSecretForm', 'none');
+
+        // About to show client's default API key modal window
+        Meteor.call('getClientApiAccessSecret', template.data.client_id, (error, apiAccessSecret) => {
+            if (error) {
+                console.log('Error retrieving client API access secret:', error);
+            }
+            else {
+                template.state.set('apiAccessSecret', apiAccessSecret);
+            }
+        });
+    },
+    'click #btnCloseClientAPIAccessSecret1'(events, template) {
+        // Delete local copy of API access secret
+        template.state.set('apiAccessSecret', undefined);
+
+        return false;
+    },
+    'click #btnCloseClientAPIAccessSecret2'(events, template) {
+        // Delete local copy of API access secret
+        template.state.set('apiAccessSecret', undefined);
+
+        return false;
+    },
+    'click #divClientAPIAccessSecret'(events, template) {
+        if (events.target.id === 'divClientAPIAccessSecret') {
+            // Delete local copy of API access secret
+            template.state.set('apiAccessSecret', undefined);
+        }
+    },
+    'click #btnResetApiAccessSecret'(events, template) {
+        // Reset reset all devices too option
+        $('#cbxResetAllDevices')[0].checked = false;
+
+        // Reset confirmation
+        $('#itxActionConfirmation')[0].value = '';
+        template.state.set('displayResetApiAccessSecretButton', 'none');
+
+        // Display form to reset client's default API access secret
+        template.state.set('displayResetApiAccessSecretForm', 'block');
+
+        return false;
+    },
+    'click #btnCancelResetApiAccessSecret'(events, template) {
+        // Hide form to reset API access secret
+        template.state.set('displayResetApiAccessSecretForm', 'none');
+
+        return false;
+    },
+    'change #itxActionConfirmation'(event, template) {
+        if (event.target.value.trim().toLowerCase() === 'yes, i do confirm it') {
+            // Show button to reset API access secret
+            template.state.set('displayResetApiAccessSecretButton', 'inline');
+        }
+    },
+    'submit #formClientApiAccessSecret'(event, template) {
+        event.preventDefault();
+        event.stopPropagation();
+
+        const form = event.target;
+        let confirmMsg = 'LAST CHANCE!\n\nIf you proceed, the client\'s default API access secret will be reset';
+
+        if (form.resetAllDevices.checked) {
+            confirmMsg += ', ALONG WITH the API access secret FOR ALL DEVICES of this client'
+        }
+
+        confirmMsg += '.\n\nPLEASE NOTE THAT THIS ACTION CANNOT BE UNDONE.';
+
+        if (confirm(confirmMsg)) {
+            // Reset alert messages
+            template.state.set('errMsgs', []);
+            template.state.set('infoMsg', undefined);
+            template.state.set('infoMsgType', 'info');
+
+            Meteor.call('resetClientApiAccessSecret', Template.instance().data.client_id , form.resetAllDevices.checked, (error, key) => {
+                if (error) {
+                    const errMsgs = template.state.get('errMsgs');
+                    errMsgs.push('Error resetting client\'s default API access secret: ' + error.toString());
+                    template.state.set('errMsgs', errMsgs);
+                }
+                else {
+                    template.state.set('infoMsg', 'Successfully reset client\'s default API access secret');
+                    template.state.set('infoMsgType', 'success');
+                }
+            });
+
+            // Close modal panel
+            $('#btnCloseClientAPIAccessSecret2').click();
+        }
+        else {
+            $('#btnCancelResetApiAccessSecret').click();
+        }
+    },
 
     //in future, these two functions below should be coalesced to become a single changeUserStatus function, that takes in
     //the parameter of current status and flips it other way. Be mindful that there are three statuses, activated, deactivated, and pending.
@@ -269,38 +267,6 @@ Template.clientDetails.events({
             });
         }
 
-    },
-
-    'submit #updateLicenseAdminForm'(event, template){
-        const client = Catenis.db.collection.Client.findOne({user_id: Template.instance().data.user_id});
-        const form = event.target;
-        const newLicenseState = form.licenseStateRadio.value ? form.licenseStateRadio.value.trim() : '';
-
-        // see if the user currently has more devices than can be held under the new service scheme.
-        const numUserDevices = Catenis.db.collection.Device.find( {"client_id": {$eq: client._id } } ).count();
-        const newlyAllowedDevices = Catenis.db.collection.License.findOne({licenseType: newLicenseState}).numAllowedDevices;
-        if(confirm("you're about to change this user's license to "+ newLicenseState+". Are you sure?")===true){
-
-            //client side verification
-            if(newlyAllowedDevices < numUserDevices ){
-
-                alert("The user has too many devices to allow to be reverted to "+ newLicenseState +".");
-
-            }else{
-
-                Meteor.call('updateLicenseAdmin', client, newLicenseState, (error)=>{
-                    if(error) {
-                        console.log("there was an error updating license", error);
-                    }else{
-
-                        //successfully changed user license state
-                        if( licenseViolation(numUserDevices, client.user_id) ){
-                            alert("after changing the license, the user now has more devices than allowed!");
-                        }
-                    }
-                });
-            }
-        }
     },
 
 
@@ -352,49 +318,166 @@ Template.clientDetails.events({
             template.state.set('errMsgs', errMsgs);
         }
 
-    },
-
-    'submit #resetClientAPIKey'(event, template){
-        event.preventDefault();
-        event.stopPropagation();
-        const form = event.target;
-        const sentence="I would like to reset this Client's API access Key";
-        var userInput= form.resetSentence.value;
-        var resetAll = form.resetAll.value;
-
-        if(userInput!=sentence){
-
-            alert("you typed in the wrong value");
-
-        }else{
-
-            Meteor.call('renewClientAPIKey',Template.instance().data.user_id , resetAll, (error, key) => {
-                if (error) {
-                    console.log('Error calling \'resetClientAPISeceret\' remote method: ' + error);
-                }
-                else {
-                    alert('New Client API access secret: ' + key);
-                    $('#resetClientAPIKey').modal('hide');
-                    $('body').removeClass('modal-open');
-                    $('.modal-backdrop').remove();
-                }
-            });
-
-        }
-
     }
-
 });
 
-
 Template.clientDetails.helpers({
-    client: function () {
-        return Catenis.db.collection.Client.findOne({user_id: Template.instance().data.user_id});
+    client() {
+        return Catenis.db.collection.Client.findOne({_id: Template.instance().data.client_id});
     },
-    clientUsername: function (user_id) {
+    clientTitle(client) {
+        return client.props.name || client.clientId;
+    },
+    clientUsername(user_id) {
         const user = Meteor.users.findOne({_id: user_id});
+
         return user ? user.username : undefined;
     },
+    clientCustomerName(client) {
+        let custName = client.props.firstName;
+
+        if (client.props.lastName) {
+            if (custName) {
+                custName += ' ';
+            }
+
+            custName += client.props.lastName;
+        }
+
+        return custName;
+    },
+    clientUserEmail(user_id) {
+        const user = Meteor.users.findOne({_id: user_id});
+
+        return ClientUtil.getUserEmail(user);
+    },
+    clientLicenseName(client_id) {
+        const docClientLicense = Catenis.db.collection.ClientLicense.findOne({
+            client_id: client_id,
+            status: ClientLicenseShared.status.active.name
+        }, {
+            sort: {
+                'validity.startDate': -1,
+                activatedDate: -1
+            }
+        });
+
+        if (docClientLicense) {
+            const docLicense = Catenis.db.collection.License.findOne({_id: docClientLicense.license_id});
+
+            if (docLicense) {
+                let licName = ClientUtil.capitalize(docLicense.level);
+
+                if (docLicense.type) {
+                    licName += ' (' + docLicense.type + ')';
+                }
+
+                return licName;
+            }
+        }
+    },
+    clientLicenseExpiration(client) {
+        const docClientLicenses = Catenis.db.collection.ClientLicense.find({
+            client_id: client._id,
+            status: {
+                $in: [
+                    ClientLicenseShared.status.active.name,
+                    ClientLicenseShared.status.provisioned.name
+                ]
+            }
+        }, {
+            fields: {
+                _id: 1,
+                validity: 1,
+                status: 1
+            },
+            sort: {
+                status: 1,
+                activatedDate: 1,
+                provisionedDate: 1
+            }
+        }).fetch();
+
+        let expirationDate;
+
+        if (docClientLicenses.length > 0) {
+            let docLastActvLicense;
+            let docLastProvLicense;
+
+            docClientLicenses.some((doc) => {
+                if (doc.status === ClientLicenseShared.status.active.name) {
+                    // Update active license (and last provisioned license)
+                    docLastProvLicense = docLastActvLicense = doc;
+                }
+                else { // doc.status === ClientLicenseShared.status.provisioned.name
+                    if (docLastActvLicense) {
+                        if (!docLastProvLicense.validity.endDate || doc.validity.startDate <= docLastProvLicense.validity.endDate) {
+                            // Provisioned license starts before previous provisioned license ends.
+                            //  Update last provisioned license
+                            docLastProvLicense = doc;
+                        }
+                        else {
+                            // Provisioned license starts after previous provisioned license ends.
+                            //  Stop iteration
+                            return true;
+                        }
+                    }
+                    else {
+                        // No active license. Stop iteration
+                        return true;
+                    }
+                }
+
+                // Continue iteration
+                return false;
+            });
+
+            if (docLastProvLicense && docLastProvLicense.validity.endDate) {
+                expirationDate = docLastProvLicense.validity.endDate;
+            }
+        }
+
+        return expirationDate ? ClientUtil.startOfDayTimeZone(expirationDate, client.timeZone, true).format('LLLL') : undefined;
+    },
+    isNewClient(client) {
+        return client.status === 'new';
+    },
+    isActiveClient(client) {
+        return client.status === 'active';
+    },
+    hasErrorMessage() {
+        return Template.instance().state.get('errMsgs').length > 0;
+    },
+    errorMessage() {
+        return Template.instance().state.get('errMsgs').reduce((compMsg, errMsg) => {
+            if (compMsg.length > 0) {
+                compMsg += '<br>';
+            }
+            return compMsg + errMsg;
+        }, '');
+    },
+    hasInfoMessage() {
+        return !!Template.instance().state.get('infoMsg');
+    },
+    infoMessage() {
+        return Template.instance().state.get('infoMsg');
+    },
+    infoMessageType() {
+        return Template.instance().state.get('infoMsgType');
+    },
+    clientApiAccessSecret() {
+        return Template.instance().state.get('apiAccessSecret');
+    },
+    displayResetApiAccessSecretForm() {
+        return Template.instance().state.get('displayResetApiAccessSecretForm');
+    },
+    reverseDisplay(display) {
+        return display === 'none' ? 'block' : 'none';
+    },
+    displayResetApiAccessSecretButton() {
+        return Template.instance().state.get('displayResetApiAccessSecretButton');
+    },
+
     messageCredits: function () {
         return 0;//Catenis.db.collection.MessageCredits.findOne(1);
     },
@@ -467,14 +550,6 @@ Template.clientDetails.helpers({
             return "user has no license";
         }
     },
-    errorMessage: function () {
-        return Template.instance().state.get('errMsgs').reduce((compMsg, errMsg) => {
-            if (compMsg.length > 0) {
-                compMsg += '<br>';
-            }
-            return compMsg + errMsg;
-        }, '');
-    },
     successfulUpdate: function(){
         return Template.instance().state.get('successfulUpdate');
     },
@@ -513,16 +588,8 @@ Template.clientDetails.helpers({
             return "something went wrong";
         }
     },
-    user_id: function(){
-        return Template.instance().data.user_id;
-    },
     // Takes in input of licenseType, returns the number of devices allowed
     devicesForLicense: function(licenseType){
         return Catenis.db.collection.License.findOne({licenseType: licenseType}).numAllowedDevices;
-    },
-    // Check if the user actually exists, or this is some random address typed up that should not render anything
-    ensureUserExists: function(){
-        return Meteor.users.findOne( {_id: Template.instance().data.user_id});
     }
-
 });

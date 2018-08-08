@@ -7,293 +7,151 @@
                         {{#unless Template.subscriptionsReady}}
                             <p style="color:lightgray; margin-top:1em">Loading...</p>
                         {{else}}
-                            {{#unless ensureUserExists}}
-                                <p>This is not a valid user, please check if there wasn't an error in approaching this page</p>
-                            {{else}}
-                            <h2> {{client.props.name}} </h2>
-                            <br>
+                            <h2>CLIENT<br>{{clientTitle client}}</h2>
                             <div class="row">
-                                <div class="col-md-12">
-                                    {{#unless userActive}}<p>The user currently has no activated client</p>{{/unless}}
-                                    <!--edit user-->
+                                <div class="col-md-6">
                                     <div class="pull-left">
-                                        {{#if successfulUpdate}}
-                                            <p style="color:green">successfully updated user </p>
-                                        {{/if}}
-                                        <button type="button" id="editForm" value="{{client.user_id}}" class="form-control btn btn-login at-btn submit editButton paddedBtn" data-toggle="modal" data-target="#updateFormModal">Update User Profile</button>
-                                        <!--Modal form to update the values-->
-                                        <div class="modal fade" tabindex="-1" role="dialog" id="updateFormModal">
-                                            <div class="modal-dialog" role="document">
-                                                <div class="modal-content">
-                                                    <form id="updateForm">
-                                                        <div class="modal-header">
-                                                            <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-                                                            <h4 class="modal-title">Update Information</h4>
-                                                            {{#unless successfulUpdate}}
-                                                                <p style="color:red">{{{errorMessage}}}</p>
-                                                            {{/unless}}
-                                                        </div>
-
-                                                        <div class="modal-body">
-                                                            <div class="table-responsive">
-                                                                <table class="table table-striped">
-                                                                    <tbody>
-                                                                    <tr>
-                                                                        <th>Client Name</th>
-                                                                        <td><input type="text" maxlength="80" id="txtClientNameUpdate" name="clientName" placeholder="Client Name" autocapitalize="none" autocorrect="off"></td>
-                                                                    </tr>
-                                                                    <tr>
-                                                                        <th>User name</th>
-                                                                        <td><input type="text" maxlength="40" id="txtUsernameUpdate" name="username" placeholder="Username" autocapitalize="none" autocorrect="off" disabled="disabled"></td>
-                                                                    </tr>
-                                                                    <tr>
-                                                                        <th>First Name</th>
-                                                                        <td><input type="text" maxlength="80" id="txtFirstNameUpdate" name="firstName" placeholder="First Name" autocapitalize="none" autocorrect="off"></td>
-                                                                    </tr>
-                                                                    <tr>
-                                                                        <th>Last Name</th>
-                                                                        <td><input type="text" maxlength="80" id="txtLastNameUpdate" name="lastName" placeholder="Last Name" autocapitalize="none" autocorrect="off"></td>
-                                                                    </tr>
-                                                                    <tr>
-                                                                        <th>Company Name</th>
-                                                                        <td><input type="text" maxlength="80" id="txtCompanyNameUpdate" name="companyName" placeholder="Company" autocapitalize="none" autocorrect="off"></td>
-                                                                    </tr>
-                                                                    <tr>
-                                                                        <th>Email</th>
-                                                                        <td><input type="email" maxlength="40" id="emailUpdate" name="email" placeholder="Email" autocapitalize="none" autocorrect="off"></td>
-                                                                    </tr>
-                                                                    <tr>
-                                                                        <th>Confirm Email</th>
-                                                                        <td><input type="email" maxlength="40" id="confirmEmailUpdate" name="confirmEmail" placeholder="Confirm Email" autocapitalize="none" autocorrect="off"></td>
-                                                                    </tr>
-                                                                    <tr>
-                                                                        <th>Password</th>
-                                                                        <td><input type="password" maxlength="40" id="passwordUpdate" name="password" placeholder="Password" autocapitalize="none" autocorrect="off"></td>
-                                                                    </tr>
-                                                                    <tr>
-                                                                        <th>Password Repeat</th>
-                                                                        <td><input type="password" maxlength="40" id="confirmPasswordUpdate" name="confirmPassword" placeholder="Confirm Password" autocapitalize="none" autocorrect="off"></td>
-                                                                    </tr>
-                                                                    </tbody>
-                                                                </table>
-                                                            </div>
-                                                        </div>
-                                                        <div class="modal-footer">
-                                                            <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-                                                            <button type="submit" class="btn btn-primary" id="changeAccountSettings">Update</button>
-                                                        </div>
-                                                    </form>
-                                                </div>
-                                            </div>
-                                        </div>
+                                        <a href="/admin/clients" role="button" class="btn-login btn paddedBtn">Back to Clients</a>
                                     </div>
-
-                                    <!--add Message Credit-->
-                                    {{#if userActive}}
+                                </div>
+                                <div class="col-md-6">
                                     <div class="pull-right">
-                                        {{#if (checkAddMsgCreditsStatus 'idle')}}
-                                            <a id="lnkAddMsgCredits" href="#" role="button" class="btn-login btn paddedBtn fullWidth">Add more credits</a>
-                                        {{else if (checkAddMsgCreditsStatus 'data-enter')}}
-                                            <input id="txiMsgCreditAmount" type="text" placeholder="Credit Amount"/>
-                                            <div class="row">
-                                                <div class="col-md-6">
-                                                    <button id="butAddMsgCredits" class="btn-login btn paddedBtn fullWidth topMargin05">Add credit</button>
-                                                </div>
-                                                <div class="col-md-6">
-                                                    <button id="lnkCancelAddMsgCredits" href="#" class="btn-login btn paddedBtn fullWidth topMargin05">Cancel</button>
-                                                </div>
-                                            </div>
-                                        {{else if (checkAddMsgCreditsStatus 'processing')}}
-                                            <span style="color:blue">Processing. Please wait...</span>
-                                        {{else if (checkAddMsgCreditsStatus 'success')}}
-                                            <span>Transaction complete, please wait for Confirmation</span>
-                                            <br>
-                                            <a id="lnkCancelAddMsgCredits" href="#" role="button" class="btn-login btn paddedBtn">Close</a>
-                                        {{else if (checkAddMsgCreditsStatus 'error')}}
-                                            <span style="color:red">{{addMsgCreditsError}}</span>
-                                              <a id="lnkCancelAddMsgCredits" href="#" role="button" class="btn-login btn paddedBtn">Close</a>
-                                        {{/if}}
+                                        <button type="button" id="editForm" value="{{client.user_id}}" class="btn btn-login paddedBtn">Edit Client</button>
                                     </div>
-                                    {{/if}}
                                 </div>
                             </div>
-                            <br>
-
-
-                            <div class="row">
+                            <div class="row" style="padding-top:1em">
                                 <div class="col-lg-12">
-                                    <!--<h2> Client Info </h2>-->
-                                    <table class="table table-striped">
+                                    <table class="table table-striped text-left">
                                         <tbody>
-                                        {{#if userActive}}
                                         <tr>
-                                            <td><label>Client&nbsp;ID:&nbsp;</label></td>
-                                            <td>{{client.clientId}}</td>
-                                        </tr>
-                                        <tr>
-                                            <td><label>Client&nbsp;Index:&nbsp;</label></td>
+                                            <th><label class="noMargin">Client Index:</label></th>
                                             <td>{{client.index.clientIndex}}</td>
                                         </tr>
                                         <tr>
-                                            <td><label>Username:&nbsp;</label></td>
+                                            <th><label class="noMargin">Client ID:</label></th>
+                                            <td>{{client.clientId}}</td>
+                                        </tr>
+                                        <tr>
+                                            <th><label class="noMargin">Username:</label></th>
                                             <td>{{clientUsername client.user_id}}</td>
                                         </tr>
-                                        {{/if}}
                                         <tr>
-                                            <td><label>Message&nbsp;Credits:&nbsp;</label></td>
-                                            <td>
-                                                {{messageCredits.confirmed}}{{#if (hasUnconfirmedMessageCredits messageCredits)}}&nbsp;( + unconfirmed: <span style="color:red">{{messageCredits.unconfirmed}}</span>){{/if}}
-                                            </td>
+                                            <th><label class="noMargin">Status:</label></th>
+                                            <td>{{client.status}}</td>
                                         </tr>
                                         <tr>
-                                            <td><label> Meteor Account Status:</label></td>
-                                            <td>
-                                                {{userStatus client.user_id}}
-                                            </td>
+                                            <th><label class="noMargin">Customer Name:</label></th>
+                                            <td>{{clientCustomerName client}}</td>
                                         </tr>
                                         <tr>
-                                            <td><label> User License Type:</label></td>
-                                            <td>
-                                                {{licenseType client.user_id}} ({{devicesForLicense (licenseType client.user_id)}} devices)
-                                            </td>
+                                            <th><label class="noMargin">Company:</label></th>
+                                            <td>{{client.props.company}}</td>
                                         </tr>
                                         <tr>
-                                            <td><label> Devices in Use:</label></td>
-                                            <td>
-                                                {{ numDevices "active"}}
-                                            </td>
+                                            <th><label class="noMargin">Email:</label></th>
+                                            <td>{{clientUserEmail client.user_id}}</td>
                                         </tr>
                                         <tr>
-                                            <td><label> Devices Available:</label></td>
-                                            <td>
-                                                {{ numDevices "available"}}
-                                            </td>
+                                            <th><label class="noMargin">Time Zone:</label></th>
+                                            <td>{{client.timeZone}}</td>
+                                        </tr>
+                                        <tr>
+                                            <th><label class="noMargin">License:</label></th>
+                                            <td>{{clientLicenseName client._id}}</td>
+                                        </tr>
+                                        <tr>
+                                            <th><label class="noMargin">License Expiration (*):</label></th>
+                                            <td>{{clientLicenseExpiration client}}</td>
                                         </tr>
                                         </tbody>
                                     </table>
-
+                                    <div class="text-left" style="font-size:10pt; margin-bottom:20px; color:gray">
+                                        (*) Date/time in reference to client's time zone
+                                    </div>
                                 </div>
                             </div>
-                            {{#if haveResentEnrollmentEmail}}
-                            <div class="pull-left">
-                                {{#if resendEnrollmentEmailSuccess}}
-                                    <p> Successfully resent enrollment email</p>
-                                {{else}}
-                                    <!--this pops up first. need to have a "pending" element that shows that it's not an error-->
-                                    <p> Wait, sending email. If this line persists, there is an error.</p>
-                                {{/if}}
+                            {{#if hasInfoMessage}}
+                            <div class="alert alert-{{infoMessageType}}" role="alert">
+                                {{infoMessage}}
+                                <button type="button" id="btnDismissInfo" class="close" aria-label="Close">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
                             </div>
                             {{/if}}
-                            <br>
-                            <div class="row paddingTop40px">
-                                <div class="col-md-3">
-                                    <a href="#" id="resendEnrollmentEmail" role="button" class="btn-login btn paddedBtn fullWidth ">Re-Enroll User</a>
+                            {{#if hasErrorMessage}}
+                                <div class="alert alert-danger" role="alert">
+                                    {{{errorMessage}}}
+                                    <button type="button" id="btnDismissError" class="close" aria-label="Close">
+                                        <span aria-hidden="true">&times;</span>
+                                    </button>
                                 </div>
-                                <div class="col-md-3">
-                                    <button type="button" id="updateUserLicense" class="btn-login btn paddedBtn fullWidth " data-toggle="modal" data-target="#changeUserLicense">Change License</button>
-                                    <div class="modal fade" tabindex="-1" role="dialog" id="changeUserLicense">
-                                        <div class="modal-dialog" role="document">
-                                            <div class="modal-content">
-                                                <form id="updateLicenseAdminForm">
-                                                    <div class="modal-header">
-                                                        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-                                                        <h4 class="modal-title">Change User License</h4>
-                                                        <p id="currentLicenseStatus"> </p>
-                                                        {{#unless successfulLicenseUpdate}}
-                                                            <p style="color:red">{{{licenseErrorMessage}}}</p>
-                                                        {{/unless}}
+                            {{/if}}
+                            <div class="row">
+                                {{#if (isNewClient client)}}
+                                <div class="col-md-12">
+                                    <button type="button" id="btnResendEnrollment" class="btn-login btn paddedBtn fullWidth">Resend Enrollment</button>
+                                </div>
+                                {{/if}}
+                                {{#if (isActiveClient client)}}
+                                    <div class="col-md-4">
+                                        <button type="button" id="btnResetPassword" class="btn-login btn paddedBtn fullWidth">Reset Password</button>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <a id="lnkManageLicenses" href="/admin/clients/{{client_id}}/licenses" role="button" class="btn-login btn paddedBtn fullWidth">Manage Licenses</a>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <button type="button" id="btnApiAccessSecret" class="btn-login btn paddedBtn fullWidth" data-toggle="modal" data-target="#divClientAPIAccessSecret">API Access Secret</button>
+                                    </div>
+                                    <div class="col-md-12">
+                                        <button type="button" id="btnManageDevices" class="btn-login btn paddedBtn fullWidth">Manage Devices</button>
+                                    </div>
+                                {{/if}}
+                            </div>
+                            {{!Modal panel used to show and reset client's default API access secret}}
+                            <div id="divClientAPIAccessSecret" class="modal fade" tabindex="-1" role="dialog">
+                                <div class="modal-dialog" role="document">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <button id="btnCloseClientAPIAccessSecret1" type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                                            <h4 class="modal-title">Client's Default API Access Secret</h4>
+                                        </div>
+                                        <div class="modal-body">
+                                            <div>
+                                                <textarea id="txtApiAccessSecret" rows="3" disabled class="apiAccessSecret">{{clientApiAccessSecret}}</textarea>
+                                            </div>
+                                            <div style="margin-bottom:1em">
+                                                <button id="btnCopyClipboard" type="button" class="btn" data-clipboard-text="{{clientApiAccessSecret}}"><span class="glyphicon glyphicon-copy" aria-hidden="true"></span> Copy to Clipboard</button>
+                                            </div>
+                                            <div style="display:{{reverseDisplay displayResetApiAccessSecretForm}}">
+                                                <button id="btnResetApiAccessSecret" type="button" class="btn btn-login paddedBtn">Reset API Access Key</button>
+                                            </div>
+                                            <div id="divResetApiAccessSecret" class="panel panel-default" style="padding:1em; display:{{displayResetApiAccessSecretForm}}">
+                                                <form id="formClientApiAccessSecret" autocomplete="off">
+                                                    <table class="text-left" style="margin-left:auto; margin-right:auto">
+                                                        <tr>
+                                                            <td class="text-right" style="vertical-align:text-top; padding-right:10px"><input id="cbxResetAllDevices" type="checkbox" name="resetAllDevices"></td>
+                                                            <td><label for="cbxResetAllDevices">Use new client's default API access secret to reset<br> the API access secret for all devices</label></td>
+                                                        </tr>
+                                                    </table>
+                                                    <div style="margin-top:1em; margin-bottom:1em">
+                                                        <label>To confirm your action, please type the following text below: <b>yes, I do confirm it</b>
+                                                        <br><input id="itxActionConfirmation" type="text" size="20" maxlength="20" placeholder="confirmation" autocomplete="off"></label>
                                                     </div>
-                                                    <div class="modal-body">
-                                                        <label class="radio-inline">
-                                                            <input type="radio" name="licenseStateRadio" id="starter" value="Starter" required> Starter: {{devicesForLicense "Starter"}}
-                                                            <!--have to finish this work.-->
-                                                        </label>
-                                                        <label class="radio-inline">
-                                                            <input type="radio" name="licenseStateRadio" id="basic" value="Basic"> Basic: {{devicesForLicense "Basic"}}
-                                                        </label>
-                                                        <label class="radio-inline">
-                                                            <input type="radio" name="licenseStateRadio" id="professional" value="Professional"> Professional: {{devicesForLicense "Professional"}}
-                                                        </label>
-                                                        <label class="radio-inline">
-                                                            <input type="radio" name="licenseStateRadio" id="enterprise" value="Enterprise"> Enterprise: {{devicesForLicense "Enterprise"}}
-                                                        </label>
-                                                    </div>
-                                                    <div class="modal-footer">
-                                                        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-                                                        <button type="submit" class="btn btn-primary" id="licenseChangeSubmit">Change License</button>
+                                                    <div style="margin-top:1em">
+                                                        <button id="btnCancelResetApiAccessSecret" type="button" class="btn btn-default">Cancel</button>&nbsp;&nbsp;
+                                                        <button id="submitResetApiAccessSecret" type="submit" class="btn btn-primary" style="display:{{displayResetApiAccessSecretButton}}">Reset API Access Secret</button>
                                                     </div>
                                                 </form>
                                             </div>
                                         </div>
-                                    </div>
-
-                                </div>
-                                <div class="col-md-3">
-                                    {{#unless userActive}}
-                                        <a href="#" id="activateUser" role="button" class="btn-login btn paddedBtn fullWidth ">Activate User</a>
-                                    {{else}}
-                                        <a href="#" id="deactivateUser" role="button" class="btn-login btn paddedBtn fullWidth ">Deactivate User</a>
-                                    {{/unless}}
-                                    <!--also have a slot for incase the user is pending-->
-                                </div>
-                                <div class="col-md-3">
-                                    {{#unless showDevices}}
-                                            <a href="#" id="lnkShowDevices" role="button" class="btn-login btn paddedBtn fullWidth ">Show devices</a>
-                                    {{else}}
-                                            <a id="lnkHideDevices" href="#" role="button" class="btn-login btn paddedBtn fullWidth">Hide devices</a>
-                                    {{/unless}}
-                                </div>
-
-                            </div>
-                            <hr>
-                            <div class="row">
-                                <div class="col-md-12">
-                                    <button type="button" id="updateUserLicense" class="btn-login btn paddedBtn fullWidth " data-toggle="modal" data-target="#resetClientAPIKey">Change Client API Key</button>
-                                    <div>
-                                        {{#if showDevices}}
-                                            {{#if client._id}}
-                                                {{> devices user_id=user_id}}
-                                            {{/if}}
-                                        {{/if}}
-                                    </div>
-                                </div>
-                            </div>
-                                <div class="modal fade" tabindex="-1" role="dialog" id="resetClientAPIKey">
-                                    <div class="modal-dialog" role="document">
-                                        <div class="modal-content">
-                                            <form id="resetAPIKey">
-                                                <div class="modal-header">
-                                                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-                                                    <h4 class="modal-title">Reset Client API Key</h4>
-                                                </div>
-                                                <div class="modal-body">
-                                                    <p class="creditDetail">I would like to reset this Client's API access Key</p>
-                                                    <input type="text" id="resetSentence" name="resetSentence" placeholder="type the exact sentence above to reset API key" class="fullWidth text-center">
-                                                    <label class="radio-inline">
-                                                        <input type="radio" name="resetAll" id="true" value="true"> Reset All Devices Key
-                                                    </label>
-                                                    <label class="radio-inline">
-                                                        <input type="radio" name="resetAll" id="true" value="false"> Reset only Client Key
-                                                    </label>
-                                                </div>
-                                                <div class="modal-footer">
-                                                    <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-                                                    <button type="submit" id="submitClientAPIkey" class="btn btn-primary">Change Client API Key</button>
-                                                </div>
-                                            </form>
+                                        <div class="modal-footer">
+                                            <button id="btnCloseClientAPIAccessSecret2" type="button" class="btn btn-default" data-dismiss="modal">Close</button>
                                         </div>
                                     </div>
                                 </div>
-                            {{/unless}}
+                            </div>
                         {{/unless}}
-                        <div class="row">
-                            <div class="col-md-6">
-                                <a href="/admin/clients" role="button" class="btn-login btn paddedBtn fullWidth">Back to Users</a>
-                            </div>
-                            <div class="col-md-6">
-                                <a href="/admin/newclient" role="button" class="btn-login btn paddedBtn fullWidth">Add another User</a>
-                            </div>
-                        </div>
                     </div>
                 </div>
             </div>

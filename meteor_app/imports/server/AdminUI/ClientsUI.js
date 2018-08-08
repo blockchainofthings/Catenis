@@ -10,7 +10,7 @@
 // References to external code
 //
 // Internal node modules
-//import util from 'util';
+import util from 'util';
 // Third-party node modules
 //import config from 'config';
 // Meteor packages
@@ -21,7 +21,8 @@ import { Accounts } from 'meteor/accounts-base'
 import { Catenis } from '../Catenis';
 import { CatenisNode } from '../CatenisNode';
 import { Client } from '../Client';
-
+import { ClientLicense } from '../ClientLicense';
+import { License } from '../License';
 
 const maxMsgCreditsCount = 100;
 
@@ -125,8 +126,162 @@ ClientsUI.initialize = function () {
                 throw new Meteor.Error('ctn_admin_no_permission', 'No permission; must be logged in as a system administrator to perform this task');
             }
         },
+        sendEnrollmentEmail: function (client_id){
+            if (Roles.userIsInRole(this.userId, 'sys-admin')) {
+                try {
+                    const client = Client.getClientByDocId(client_id);
 
+                    Accounts.sendEnrollmentEmail(client.user_id);
+                }
+                catch (err) {
+                    // Error trying to send client account enrollment e-mail. Log error and throw exception
+                    Catenis.logger.ERROR('Failure trying to send client account enrollment e-mail message.', err);
+                    throw new Meteor.Error('client.sendEnrollmentEmail.failure', 'Failure trying to send client account enrollment e-mail message: ' + err.toString());
+                }
+            }
+            else {
+                // User not logged in or not a system administrator.
+                //  Throw exception
+                throw new Meteor.Error('ctn_admin_no_permission', 'No permission; must be logged in as a system administrator to perform this task');
+            }
+        },
+        sendResetPasswordEmail: function (client_id){
+            if (Roles.userIsInRole(this.userId, 'sys-admin')) {
+                try {
+                    const client = Client.getClientByDocId(client_id);
 
+                    Accounts.sendResetPasswordEmail(client.user_id);
+                }
+                catch (err) {
+                    // Error trying to send e-mail to reset client account's password. Log error and throw exception
+                    Catenis.logger.ERROR('Failure trying to send e-mail message to reset client account\'s password.', err);
+                    throw new Meteor.Error('client.sendResetPasswordEmail.failure', 'Failure trying to send e-mail message to reset client account\'s password: ' + err.toString());
+                }
+            }
+            else {
+                // User not logged in or not a system administrator.
+                //  Throw exception
+                throw new Meteor.Error('ctn_admin_no_permission', 'No permission; must be logged in as a system administrator to perform this task');
+            }
+        },
+        getClientApiAccessSecret: function (client_id) {
+            if (Roles.userIsInRole(this.userId, 'sys-admin')) {
+                try {
+                    const client = Client.getClientByDocId(client_id);
+
+                    return client.apiAccessSecret;
+                }
+                catch (err) {
+                    // Error trying to get client's API access secret. Log error and throw exception
+                    Catenis.logger.ERROR('Failure trying to get client\'s API access secret.', err);
+                    throw new Meteor.Error('client.getClientApiAccessSecret.failure', 'Failure trying to get client\'s API access secret: ' + err.toString());
+                }
+            }
+            else {
+                // User not logged in or not a system administrator.
+                //  Throw exception
+                throw new Meteor.Error('ctn_admin_no_permission', 'No permission; must be logged in as a system administrator to perform this task');
+            }
+        },
+        resetClientApiAccessSecret: function (client_id, resetAllDevicesToo) {
+            if (Roles.userIsInRole(this.userId, 'sys-admin')) {
+                try {
+                    const client = Client.getClientByDocId(client_id);
+
+                    client.renewApiAccessGenKey(resetAllDevicesToo);
+                }
+                catch (err) {
+                    // Error trying to get client's API access secret. Log error and throw exception
+                    Catenis.logger.ERROR('Failure trying to renew client\'s API access generation key.', err);
+                    throw new Meteor.Error('client.getClientApiAccessSecret.failure', 'Failure trying to renew client\'s API access generation key: ' + err.toString());
+                }
+            }
+            else {
+                // User not logged in or not a system administrator.
+                //  Throw exception
+                throw new Meteor.Error('ctn_admin_no_permission', 'No permission; must be logged in as a system administrator to perform this task');
+            }
+        },
+        addClientLicense: function (client_id, clientLicenseInfo) {
+            if (Roles.userIsInRole(this.userId, 'sys-admin')) {
+                try {
+                    const client = Client.getClientByDocId(client_id);
+
+                    if (!clientLicenseInfo.startDate) {
+                        clientLicenseInfo.startDate = new Date();
+                    }
+
+                    return client.addLicense(clientLicenseInfo.license_id, clientLicenseInfo.startDate, clientLicenseInfo.endDate);
+                }
+                catch (err) {
+                    // Error trying to add new license to client. Log error and throw exception
+                    Catenis.logger.ERROR('Failure trying to add new license to client.', util.inspect({clientLicenseInfo: clientLicenseInfo}), err);
+                    throw new Meteor.Error('client.addClientLicense.failure', 'Failure trying to add new license to client: ' + err.toString());
+                }
+            }
+            else {
+                // User not logged in or not a system administrator.
+                //  Throw exception
+                throw new Meteor.Error('ctn_admin_no_permission', 'No permission; must be logged in as a system administrator to perform this task');
+            }
+        },
+        renewClientLicense: function (client_id, license_id) {
+            if (Roles.userIsInRole(this.userId, 'sys-admin')) {
+                try {
+                    const client = Client.getClientByDocId(client_id);
+
+                    return client.renewLicense(license_id);
+                }
+                catch (err) {
+                    // Error trying to renew client license. Log error and throw exception
+                    Catenis.logger.ERROR('Failure trying to renew client license (client_id: %s; license_id: %s).', client_id, license_id, err);
+                    throw new Meteor.Error('client.renewClientLicense.failure', 'Failure trying to renew client license: ' + err.toString());
+                }
+            }
+            else {
+                // User not logged in or not a system administrator.
+                //  Throw exception
+                throw new Meteor.Error('ctn_admin_no_permission', 'No permission; must be logged in as a system administrator to perform this task');
+            }
+        },
+        upgradeClientLicense: function (client_id, license_id) {
+            if (Roles.userIsInRole(this.userId, 'sys-admin')) {
+                try {
+                    const client = Client.getClientByDocId(client_id);
+
+                    return client.replaceLicense(license_id);
+                }
+                catch (err) {
+                    // Error trying to upgrade client license. Log error and throw exception
+                    Catenis.logger.ERROR('Failure trying to upgrade client license (client_id: %s; license_id: %s).', client_id, license_id, err);
+                    throw new Meteor.Error('client.upgradeClientLicense.failure', 'Failure trying to upgrade client license: ' + err.toString());
+                }
+            }
+            else {
+                // User not logged in or not a system administrator.
+                //  Throw exception
+                throw new Meteor.Error('ctn_admin_no_permission', 'No permission; must be logged in as a system administrator to perform this task');
+            }
+        },
+        expireClientLicense: function (clientLicense_id) {
+            if (Roles.userIsInRole(this.userId, 'sys-admin')) {
+                try {
+                    const clientLicense = new ClientLicense(clientLicense_id);
+
+                    clientLicense.expire();
+                }
+                catch (err) {
+                    // Error trying to expire client license. Log error and throw exception
+                    Catenis.logger.ERROR('Failure trying to expire client license (doc_id: %s).', clientLicense_id, err);
+                    throw new Meteor.Error('client.expireClientLicense.failure', 'Failure trying to expire client license: ' + err.toString());
+                }
+            }
+            else {
+                // User not logged in or not a system administrator.
+                //  Throw exception
+                throw new Meteor.Error('ctn_admin_no_permission', 'No permission; must be logged in as a system administrator to perform this task');
+            }
+        },
 
 
         addMessageCredits: function (clientId, count) {
@@ -148,20 +303,6 @@ ClientsUI.initialize = function () {
 
 
         //added by peter to allow for resending enrollment email.
-        resendEnrollmentEmail: function(clientId){
-            if(verifyUserRole()) {
-                try {
-                    Accounts.sendEnrollmentEmail(clientId);
-                }catch(err){
-                    Catenis.logger.ERROR('Failure trying to resend enrollment Email to client.', err);
-                    throw new Meteor.Error('client.resendEnrollmentEmail.failure', 'Failure trying to resend enrollment Email: ' + err.toString());
-                }
-            }else{
-                Catenis.logger.ERROR('User does not have permission to access method "resendEnrollmentEmail"');
-                throw new Meteor.Error('User does not have permission to access method "resendEnrollmentEmail"');
-            }
-
-        },
 
         //added by peter to allow Meteor account activation on enrollment. called from ../both/ConfigAccounts.js
 
@@ -413,43 +554,39 @@ ClientsUI.initialize = function () {
                 Catenis.logger.ERROR('User does not have permission to access method "updateLicenseConfig"');
                 throw new Meteor.Error('User does not have permission to access method "updateLicenseConfig"');
             }
-        },
-
-
-        renewClientAPIKey: function(userId, resetAllDeviceKey){
-
-            if(verifyUserRole()){
-
-                var client= Client.getClientByUserId(userId);
-                client.renewApiAccessGenKey(resetAllDeviceKey) ;
-                return client.apiAccessGenKey;
-
-            }else{
-
-                Catenis.logger.ERROR('User does not have permission to access method "renewClientAPIKey"');
-                throw new Meteor.Error('User does not have permission to access method "renewClientAPIKey"');
-            }
-
         }
     });
-
 
     // Declaration of publications
     Meteor.publish('catenisClients', function (ctnNodeIndex) {
         if (Roles.userIsInRole(this.userId, 'sys-admin')) {
             ctnNodeIndex = ctnNodeIndex || Catenis.application.ctnHubNodeIndex;
 
-            const ctnNode = CatenisNode.getCatenisNodeByIndex(ctnNodeIndex);
+            const docCtnNode = Catenis.db.collection.CatenisNode.findOne({
+                ctnNodeIndex: ctnNodeIndex
+            }, {
+                fields: {
+                    _id: 1
+                }
+            });
+
+            if (docCtnNode === undefined) {
+                // Subscription made with an invalid Catenis node index.
+                //  Log error, make sure that subscription is not started and throw exception
+                Catenis.logger.ERROR('Subscription to method \'catenisClients\' made with an invalid Catenis node index', {ctnNodeIndex: ctnNodeIndex});
+                this.stop();
+                throw new Meteor.Error('clients.subscribe.catenis-clients.invalid-param', 'Subscription to method \'catenisClients\' made with an invalid Catenis node index');
+            }
 
             return Catenis.db.collection.Client.find({
-                catenisNode_id: ctnNode.doc_id,
-                status: {$ne: 'deleted'}
+                catenisNode_id: docCtnNode._id,
+                status: {
+                    $ne: 'deleted'
+                }
             }, {
                 fields: {
                     _id: 1,
-                    user_id: 1,
                     clientId: 1,
-                    index: 1,
                     props: 1,
                     status: 1
                 }
@@ -463,151 +600,662 @@ ClientsUI.initialize = function () {
         }
     });
 
-    Meteor.publish('clientRecord', function (user_id) {
-        return Catenis.db.collection.Client.find({
-            user_id: user_id
-        }, {
-            fields: {
-                _id: 1,
-                user_id: 1,
-                clientId: 1,
-                index: 1,
-                props: 1,
-                status: 1
-            }
-        });
-    });
-
-    Meteor.publish('clientUser', function (user_id) {
-        const client = Catenis.db.collection.Client.findOne({user_id: user_id}, {fields: {user_id: 1}});
-
-        if (client && client.user_id) {
-            return Meteor.users.find({_id: client.user_id}, {
+    Meteor.publish('clientRecord', function (client_id) {
+        if (Roles.userIsInRole(this.userId, 'sys-admin')) {
+            return Catenis.db.collection.Client.find({
+                _id: client_id
+            }, {
                 fields: {
                     _id: 1,
-                    username: 1,
-                    //below added to allow user activation status access.
-                    profile:1,
-                    //below added to allow license information access.
+                    user_id: 1,
+                    clientId: 1,
+                    index: 1,
+                    props: 1,
+                    timeZone: 1,
+                    status: 1
                 }
             });
         }
         else {
-            // Nothing to return
-            return this.ready();
+            // User not logged in or not a system administrator
+            //  Make sure that publication is not started and throw exception
+            this.stop();
+            throw new Meteor.Error('ctn_admin_no_permission', 'No permission; must be logged in as a system administrator to perform this task');
         }
-
     });
-    //userList returns the information of all user details the user has access to.
-    //currently, only differentiates if the user is super user or not.
-    Meteor.publish('userList', function(userInfo){
 
-        const user = userInfo;
-        if (user) {
-            if(user.roles && user.roles.includes('sys-admin')){
-                return Meteor.users.find();
-            }else{
-                return user;
-            }
+    Meteor.publish('clientUser', function (client_id) {
+        if (Roles.userIsInRole(this.userId, 'sys-admin')) {
+            return Meteor.users.find({
+                'catenis.client_id': client_id
+            }, {
+                fields: {
+                    _id: 1,
+                    username: 1,
+                    emails: 1
+                }
+            });
         }
         else {
-            // Nothing to return
-            return this.ready();
+            // User not logged in or not a system administrator
+            //  Make sure that publication is not started and throw exception
+            this.stop();
+            throw new Meteor.Error('ctn_admin_no_permission', 'No permission; must be logged in as a system administrator to perform this task');
         }
     });
 
-    Meteor.publish('license', function(){
-
-        return Catenis.db.collection.License.find({});
-
+    Meteor.publish('currentClientLicense', function(client_id) {
+        if (Roles.userIsInRole(this.userId, 'sys-admin')) {
+            return Catenis.db.collection.ClientLicense.find({
+                client_id: client_id,
+                status: {
+                    $in: [
+                        ClientLicense.status.active.name,
+                        ClientLicense.status.provisioned.name
+                    ]
+                }
+            }, {
+                fields: {
+                    _id: 1,
+                    client_id: 1,
+                    license_id: 1,
+                    validity: 1,
+                    status: 1,
+                    activatedDate: 1
+                }
+            });
+        }
+        else {
+            // User not logged in or not a system administrator
+            //  Make sure that publication is not started and throw exception
+            this.stop();
+            throw new Meteor.Error('ctn_admin_no_permission', 'No permission; must be logged in as a system administrator to perform this task');
+        }
     });
 
-    /*Meteor.publish('clientMessageCredits', function (user_id) {
-
-        let client_id= Catenis.db.collection.Client.findOne({user_id: user_id}).client_id;
-
-        const messageCreditCount = {
-            unconfirmed: 0,
-            confirmed: 0
-        };
-        let initializing = true;
-
-        const observeHandle = Catenis.db.collection.ServiceCredit.find({
-            client_id: client_id,
-            srvCreditType: Client.serviceCreditType.message,
-            remainCredits: {$gt: 0}
-        },
-        {   fields: {
-                _id: 1,
-                'fundingTx.confirmed': 1,
-                remainCredits: 1
-            }
-        }).observe({
-            added: (doc) => {
-                // Adjust message credits
-                if (doc.fundingTx.confirmed) {
-                    messageCreditCount.confirmed += doc.remainCredits;
+    Meteor.publish('currentLicense', function(client_id) {
+        if (Roles.userIsInRole(this.userId, 'sys-admin')) {
+            // Variable used to control doc/recs sent to other party
+            const docIdCounter = new Map();
+            
+            const observeHandle = Catenis.db.collection.ClientLicense.find({
+                client_id: client_id,
+                status: ClientLicense.status.active.name
+            }, {
+                fields: {
+                    _id: 1,
+                    license_id: 1
                 }
-                else {
-                    messageCreditCount.unconfirmed += doc.remainCredits;
+            }).observe({
+                added: (doc) => {
+                    // Check if doc/rec has not yet been sent to other party
+                    if (!docIdCounter.has(doc.license_id) || docIdCounter.get(doc.license_id) === 0) {
+                        const docLicense = Catenis.db.collection.License.findOne({
+                            _id: doc.license_id
+                        }, {
+                            fields: {
+                                _id: 1,
+                                level: 1,
+                                type: 1,
+                                maximumDevices: 1
+                            }
+                        });
+
+                        this.added('License', docLicense._id, {
+                            level: docLicense.level,
+                            type: docLicense.type,
+                            maximumDevices: docLicense.maximumDevices
+                        });
+                        
+                        // Indicate that doc/rec has been sent
+                        docIdCounter.set(doc.license_id, 1);
+                    }
+                    else {
+                        // Doc/rec already sent. Just increment counter
+                        docIdCounter.set(doc.license_id, docIdCounter.get(doc.license_id) + 1);
+                    }
+                },
+                changed: (newDoc, oldDoc) => {
+                    // Only do anything if License database doc/rec has changed.
+                    //  Note: this should never happen, but we do it for robustness
+                    if (newDoc.license_id !== oldDoc.license_id) {
+                        // Process exclusion first
+                        let counter;
+                        
+                        if (docIdCounter.has(oldDoc.license_id) && (counter = docIdCounter.get(oldDoc.license_id)) > 0) {
+                            // Decrement counter
+                            docIdCounter.set(oldDoc.license_id, --counter);
+                            
+                            if (counter === 0) {
+                                // Exclude sent doc/rec
+                                this.removed('License', oldDoc.license_id);
+                            }
+                        }
+                        else {
+                            // Inconsistent state. Log error
+                            Catenis.logger.ERROR('Inconsistent License database doc/rec counter in \'currentLicense\' publication, \'changed\' event', {
+                                oldDoc: oldDoc,
+                                newDoc: newDoc,
+                                docIdCounter: docIdCounter
+                            })
+                        }
+                        
+                        // Process addition now
+
+                        // Check if doc/rec has not yet been sent to other party
+                        if (!docIdCounter.has(newDoc.license_id) || docIdCounter.get(newDoc.license_id) === 0) {
+                            const docLicense = Catenis.db.collection.License.findOne({
+                                _id: newDoc.license_id
+                            }, {
+                                fields: {
+                                    _id: 1,
+                                    level: 1,
+                                    type: 1,
+                                    maximumDevices: 1
+                                }
+                            });
+
+                            this.added('License', docLicense._id, {
+                                level: docLicense.level,
+                                type: docLicense.type,
+                                maximumDevices: docLicense.maximumDevices
+                            });
+
+                            // Indicate that doc/rec has been sent
+                            docIdCounter.set(newDoc.license_id, 1);
+                        }
+                        else {
+                            // Doc/rec already sent. Just increment counter
+                            docIdCounter.set(newDoc.license_id, docIdCounter.get(newDoc.license_id) + 1);
+                        }
+                    }
+                },
+                removed: (doc) => {
+                    let counter;
+
+                    if (docIdCounter.has(doc.license_id) && (counter = docIdCounter.get(doc.license_id)) > 0) {
+                        // Decrement counter
+                        docIdCounter.set(doc.license_id, --counter);
+
+                        if (counter === 0) {
+                            // Exclude sent doc/rec
+                            this.removed('License', doc.license_id);
+                        }
+                    }
+                    else {
+                        // Inconsistent state. Log error
+                        Catenis.logger.ERROR('Inconsistent License database doc/rec counter in \'currentLicense\' publication, \'removed\' event', {
+                            oldDoc: doc,
+                            docIdCounter: docIdCounter
+                        })
+                    }
                 }
+            });
 
-                if (!initializing) {
-                    this.changed('MessageCredits', 1, {
-                        unconfirmed: messageCreditCount.unconfirmed.toLocaleString(),
-                        confirmed: messageCreditCount.confirmed.toLocaleString()
-                    });
+            this.ready();
+
+            this.onStop(() => observeHandle.stop());
+        }
+        else {
+            // User not logged in or not a system administrator
+            //  Make sure that publication is not started and throw exception
+            this.stop();
+            throw new Meteor.Error('ctn_admin_no_permission', 'No permission; must be logged in as a system administrator to perform this task');
+        }
+    });
+
+    Meteor.publish('allClientLicenses', function(client_id) {
+        if (Roles.userIsInRole(this.userId, 'sys-admin')) {
+            return Catenis.db.collection.ClientLicense.find({
+                client_id: client_id
+            });
+        }
+        else {
+            // User not logged in or not a system administrator
+            //  Make sure that publication is not started and throw exception
+            this.stop();
+            throw new Meteor.Error('ctn_admin_no_permission', 'No permission; must be logged in as a system administrator to perform this task');
+        }
+    });
+
+    Meteor.publish('allClientLicenseLicenses', function(client_id) {
+        if (Roles.userIsInRole(this.userId, 'sys-admin')) {
+            // include not only License database doc/recs associated with all ClientLicense database doc/recs
+            //  for a given client but also all currently active License database doc/recs
+
+            const docIdCounter = new Map();
+            
+            // Look for all active License database doc/recs
+            const observeHandle = Catenis.db.collection.License.find({
+                status: License.status.active.name
+            }, {
+                fields: {
+                    _id: 1,
+                    level: 1,
+                    order: 1,
+                    type: 1,
+                    revision: 1,
+                    maximumDevices: 1,
+                    status: 1
                 }
-            },
+            }).observe({
+                added: (doc) => {
+                    // Check if doc/rec has not yet been sent to other party
+                    if (!docIdCounter.has(doc._id) || docIdCounter.get(doc._id) === 0) {
+                        this.added('License', doc._id, {
+                            level: doc.level,
+                            order: doc.order,
+                            type: doc.type,
+                            revision: doc.revision,
+                            maximumDevices: doc.maximumDevices,
+                            status: doc.status
+                        });
 
-            changed: (newDoc, oldDoc) => {
-                // Adjust message credits
-                if (oldDoc.fundingTx.confirmed) {
-                    messageCreditCount.confirmed -= oldDoc.remainCredits;
+                        // Indicate that doc/rec has been sent
+                        docIdCounter.set(doc._id, 1);
+                    }
+                    else {
+                        // Doc/rec already sent. Just increment counter
+                        docIdCounter.set(doc._id, docIdCounter.get(doc._id) + 1);
+                    }
+                },
+                // Note: no need to monitor changes since we assume that the fields of License database docs/recs
+                //      already active cannot be changed
+                removed: (doc) => {
+                    let counter;
+
+                    if (docIdCounter.has(doc._id) && (counter = docIdCounter.get(doc._id)) > 0) {
+                        // Decrement counter
+                        docIdCounter.set(doc._id, --counter);
+
+                        if (counter === 0) {
+                            // Exclude sent doc/rec
+                            this.removed('License', doc._id);
+                        }
+                    }
+                    else {
+                        // Inconsistent state. Log error
+                        Catenis.logger.ERROR('Inconsistent License database doc/rec counter in \'allClientLicenseLicenses\' publication, \'removed\' event of observe #1', {
+                            oldDoc: doc,
+                            docIdCounter: docIdCounter
+                        })
+                    }
                 }
-                else {
-                    messageCreditCount.unconfirmed -= oldDoc.remainCredits;
+            });
+            
+            // Look for License database docs/recs associated with all ClientLicense database docs/recs for a given client
+            const observeHandle2 = Catenis.db.collection.ClientLicense.find({
+                client_id: client_id
+            }, {
+                fields: {
+                    _id: 1,
+                    license_id: 1
                 }
+            }).observe({
+                added: (doc) => {
+                    // Check if doc/rec has not yet been sent to other party
+                    if (!docIdCounter.has(doc.license_id) || docIdCounter.get(doc.license_id) === 0) {
+                        const docLicense = Catenis.db.collection.License.findOne({
+                            _id: doc.license_id
+                        }, {
+                            fields: {
+                                _id: 1,
+                                level: 1,
+                                order: 1,
+                                type: 1,
+                                revision: 1,
+                                maximumDevices: 1,
+                                status: 1
+                            }
+                        });
 
-                if (newDoc.fundingTx.confirmed) {
-                    messageCreditCount.confirmed += newDoc.remainCredits;
+                        this.added('License', docLicense._id, {
+                            level: docLicense.level,
+                            order: docLicense.order,
+                            type: docLicense.type,
+                            revision: docLicense.revision,
+                            maximumDevices: docLicense.maximumDevices,
+                            status: docLicense.status
+                        });
+
+                        // Indicate that doc/rec has been sent
+                        docIdCounter.set(doc.license_id, 1);
+                    }
+                    else {
+                        // Doc/rec already sent. Just increment counter
+                        docIdCounter.set(doc.license_id, docIdCounter.get(doc.license_id) + 1);
+                    }
+                },
+                changed: (newDoc, oldDoc) => {
+                    // Only do anything if License database doc/rec has changed.
+                    //  Note: this should never happen, but we do it for robustness
+                    if (newDoc.license_id !== oldDoc.license_id) {
+                        // Process exclusion first
+                        let counter;
+
+                        if (docIdCounter.has(oldDoc.license_id) && (counter = docIdCounter.get(oldDoc.license_id)) > 0) {
+                            // Decrement counter
+                            docIdCounter.set(oldDoc.license_id, --counter);
+
+                            if (counter === 0) {
+                                // Exclude sent doc/rec
+                                this.removed('License', oldDoc.license_id);
+                            }
+                        }
+                        else {
+                            // Inconsistent state. Log error
+                            Catenis.logger.ERROR('Inconsistent License database doc/rec counter in \'allClientLicenseLicenses\' publication, \'changed\' event of observe #2', {
+                                oldDoc: oldDoc,
+                                newDoc: newDoc,
+                                docIdCounter: docIdCounter
+                            })
+                        }
+
+                        // Process addition now
+
+                        // Check if doc/rec has not yet been sent to other party
+                        if (!docIdCounter.has(newDoc.license_id) || docIdCounter.get(newDoc.license_id) === 0) {
+                            const docLicense = Catenis.db.collection.License.findOne({
+                                _id: newDoc.license_id
+                            }, {
+                                fields: {
+                                    _id: 1,
+                                    level: 1,
+                                    order: 1,
+                                    type: 1,
+                                    revision: 1,
+                                    maximumDevices: 1,
+                                    status: 1
+                                }
+                            });
+
+                            this.added('License', docLicense._id, {
+                                level: docLicense.level,
+                                order: docLicense.order,
+                                type: docLicense.type,
+                                revision: docLicense.revision,
+                                maximumDevices: docLicense.maximumDevices,
+                                status: docLicense.status
+                            });
+
+                            // Indicate that doc/rec has been sent
+                            docIdCounter.set(newDoc.license_id, 1);
+                        }
+                        else {
+                            // Doc/rec already sent. Just increment counter
+                            docIdCounter.set(newDoc.license_id, docIdCounter.get(newDoc.license_id) + 1);
+                        }
+                    }
+                },
+                removed: (doc) => {
+                    let counter;
+
+                    if (docIdCounter.has(doc.license_id) && (counter = docIdCounter.get(doc.license_id)) > 0) {
+                        // Decrement counter
+                        docIdCounter.set(doc.license_id, --counter);
+
+                        if (counter === 0) {
+                            // Exclude sent doc/rec
+                            this.removed('License', doc.license_id);
+                        }
+                    }
+                    else {
+                        // Inconsistent state. Log error
+                        Catenis.logger.ERROR('Inconsistent License database doc/rec counter in \'allClientLicenseLicenses\' publication, \'removed\' event of observe #2', {
+                            oldDoc: doc,
+                            docIdCounter: docIdCounter
+                        })
+                    }
                 }
-                else {
-                    messageCreditCount.unconfirmed += newDoc.remainCredits;
+            });
+
+            this.ready();
+
+            this.onStop(() => {
+                observeHandle.stop();
+                observeHandle2.stop();
+            });
+        }
+        else {
+            // User not logged in or not a system administrator
+            //  Make sure that publication is not started and throw exception
+            this.stop();
+            throw new Meteor.Error('ctn_admin_no_permission', 'No permission; must be logged in as a system administrator to perform this task');
+        }
+    });
+
+    Meteor.publish('singleClientLicense', function(client_id, clientLicense_id) {
+        if (Roles.userIsInRole(this.userId, 'sys-admin')) {
+            // Include not only the client license identified by the supplied ID but also
+            //  any client license for the specified client that is provisioned
+            return Catenis.db.collection.ClientLicense.find({
+                $or: [{
+                    _id: clientLicense_id
+                }, {
+                    client_id: client_id,
+                    status: ClientLicense.status.provisioned.name
+                }]
+            });
+        }
+        else {
+            // User not logged in or not a system administrator
+            //  Make sure that publication is not started and throw exception
+            this.stop();
+            throw new Meteor.Error('ctn_admin_no_permission', 'No permission; must be logged in as a system administrator to perform this task');
+        }
+    });
+
+    Meteor.publish('singleClientLicenseLicenses', function(client_id, clientLicense_id) {
+        if (Roles.userIsInRole(this.userId, 'sys-admin')) {
+            // include not only License database doc/recs associated with a specific client license
+            //  but also all currently active License database doc/recs
+
+            const docIdCounter = new Map();
+
+            // Look for all active License database doc/recs
+            const observeHandle = Catenis.db.collection.License.find({
+                status: License.status.active.name
+            }, {
+                fields: {
+                    _id: 1,
+                    level: 1,
+                    order: 1,
+                    type: 1,
+                    revision: 1,
+                    maximumDevices: 1,
+                    status: 1
                 }
+            }).observe({
+                added: (doc) => {
+                    // Check if doc/rec has not yet been sent to other party
+                    if (!docIdCounter.has(doc._id) || docIdCounter.get(doc._id) === 0) {
+                        this.added('License', doc._id, {
+                            level: doc.level,
+                            order: doc.order,
+                            type: doc.type,
+                            revision: doc.revision,
+                            maximumDevices: doc.maximumDevices,
+                            status: doc.status
+                        });
 
-                this.changed('MessageCredits', 1, {
-                    unconfirmed: messageCreditCount.unconfirmed.toLocaleString(),
-                    confirmed: messageCreditCount.confirmed.toLocaleString()
-                });
-            },
+                        // Indicate that doc/rec has been sent
+                        docIdCounter.set(doc._id, 1);
+                    }
+                    else {
+                        // Doc/rec already sent. Just increment counter
+                        docIdCounter.set(doc._id, docIdCounter.get(doc._id) + 1);
+                    }
+                },
+                // Note: no need to monitor changes since we assume that the fields of License database docs/recs
+                //      already active cannot be changed
+                removed: (doc) => {
+                    let counter;
 
-            deleted: (oldDoc) => {
-                // Adjust message credits
-                if (oldDoc.fundingTx.confirmed) {
-                    messageCreditCount.confirmed -= oldDoc.remainCredits;
+                    if (docIdCounter.has(doc._id) && (counter = docIdCounter.get(doc._id)) > 0) {
+                        // Decrement counter
+                        docIdCounter.set(doc._id, --counter);
+
+                        if (counter === 0) {
+                            // Exclude sent doc/rec
+                            this.removed('License', doc._id);
+                        }
+                    }
+                    else {
+                        // Inconsistent state. Log error
+                        Catenis.logger.ERROR('Inconsistent License database doc/rec counter in \'singleClientLicenseLicenses\' publication, \'removed\' event of observe #1', {
+                            oldDoc: doc,
+                            docIdCounter: docIdCounter
+                        })
+                    }
                 }
-                else {
-                    messageCreditCount.unconfirmed -= oldDoc.remainCredits;
+            });
+
+            // Look for License database docs/recs associated with the specified client license
+            //  or any provisioned client license associated with the specified client
+            const observeHandle2 = Catenis.db.collection.ClientLicense.find({
+                $or: [{
+                    _id: clientLicense_id
+                }, {
+                    client_id: client_id,
+                    status: ClientLicense.status.provisioned.name
+                }]
+            }, {
+                fields: {
+                    _id: 1,
+                    license_id: 1
                 }
+            }).observe({
+                added: (doc) => {
+                    // Check if doc/rec has not yet been sent to other party
+                    if (!docIdCounter.has(doc.license_id) || docIdCounter.get(doc.license_id) === 0) {
+                        const docLicense = Catenis.db.collection.License.findOne({
+                            _id: doc.license_id
+                        }, {
+                            fields: {
+                                _id: 1,
+                                level: 1,
+                                order: 1,
+                                type: 1,
+                                revision: 1,
+                                maximumDevices: 1,
+                                status: 1
+                            }
+                        });
 
-                this.changed('MessageCredits', 1, {
-                    unconfirmed: messageCreditCount.unconfirmed.toLocaleString(),
-                    confirmed: messageCreditCount.confirmed.toLocaleString()
-                });
-            }
-        });
+                        this.added('License', docLicense._id, {
+                            level: docLicense.level,
+                            order: docLicense.order,
+                            type: docLicense.type,
+                            revision: docLicense.revision,
+                            maximumDevices: docLicense.maximumDevices,
+                            status: docLicense.status
+                        });
 
-        initializing = false;
+                        // Indicate that doc/rec has been sent
+                        docIdCounter.set(doc.license_id, 1);
+                    }
+                    else {
+                        // Doc/rec already sent. Just increment counter
+                        docIdCounter.set(doc.license_id, docIdCounter.get(doc.license_id) + 1);
+                    }
+                },
+                changed: (newDoc, oldDoc) => {
+                    // Only do anything if License database doc/rec has changed.
+                    //  Note: this should never happen, but we do it for robustness
+                    if (newDoc.license_id !== oldDoc.license_id) {
+                        // Process exclusion first
+                        let counter;
 
-        this.added('MessageCredits', 1, {
-            unconfirmed: messageCreditCount.unconfirmed.toLocaleString(),
-            confirmed: messageCreditCount.confirmed.toLocaleString()
-        });
-        this.ready();
+                        if (docIdCounter.has(oldDoc.license_id) && (counter = docIdCounter.get(oldDoc.license_id)) > 0) {
+                            // Decrement counter
+                            docIdCounter.set(oldDoc.license_id, --counter);
 
-        this.onStop(() => observeHandle.stop());
-    });*/
+                            if (counter === 0) {
+                                // Exclude sent doc/rec
+                                this.removed('License', oldDoc.license_id);
+                            }
+                        }
+                        else {
+                            // Inconsistent state. Log error
+                            Catenis.logger.ERROR('Inconsistent License database doc/rec counter in \'singleClientLicenseLicenses\' publication, \'changed\' event of observe #2', {
+                                oldDoc: oldDoc,
+                                newDoc: newDoc,
+                                docIdCounter: docIdCounter
+                            })
+                        }
+
+                        // Process addition now
+
+                        // Check if doc/rec has not yet been sent to other party
+                        if (!docIdCounter.has(newDoc.license_id) || docIdCounter.get(newDoc.license_id) === 0) {
+                            const docLicense = Catenis.db.collection.License.findOne({
+                                _id: newDoc.license_id
+                            }, {
+                                fields: {
+                                    _id: 1,
+                                    level: 1,
+                                    order: 1,
+                                    type: 1,
+                                    revision: 1,
+                                    maximumDevices: 1,
+                                    status: 1
+                                }
+                            });
+
+                            this.added('License', docLicense._id, {
+                                level: docLicense.level,
+                                order: docLicense.order,
+                                type: docLicense.type,
+                                revision: docLicense.revision,
+                                maximumDevices: docLicense.maximumDevices,
+                                status: docLicense.status
+                            });
+
+                            // Indicate that doc/rec has been sent
+                            docIdCounter.set(newDoc.license_id, 1);
+                        }
+                        else {
+                            // Doc/rec already sent. Just increment counter
+                            docIdCounter.set(newDoc.license_id, docIdCounter.get(newDoc.license_id) + 1);
+                        }
+                    }
+                },
+                removed: (doc) => {
+                    let counter;
+
+                    if (docIdCounter.has(doc.license_id) && (counter = docIdCounter.get(doc.license_id)) > 0) {
+                        // Decrement counter
+                        docIdCounter.set(doc.license_id, --counter);
+
+                        if (counter === 0) {
+                            // Exclude sent doc/rec
+                            this.removed('License', doc.license_id);
+                        }
+                    }
+                    else {
+                        // Inconsistent state. Log error
+                        Catenis.logger.ERROR('Inconsistent License database doc/rec counter in \'singleClientLicenseLicenses\' publication, \'removed\' event of observe #2', {
+                            oldDoc: doc,
+                            docIdCounter: docIdCounter
+                        })
+                    }
+                }
+            });
+
+            this.ready();
+
+            this.onStop(() => {
+                observeHandle.stop();
+                observeHandle2.stop();
+            });
+        }
+        else {
+            // User not logged in or not a system administrator
+            //  Make sure that publication is not started and throw exception
+            this.stop();
+            throw new Meteor.Error('ctn_admin_no_permission', 'No permission; must be logged in as a system administrator to perform this task');
+        }
+    });
 };
 
 

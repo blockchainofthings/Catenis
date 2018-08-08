@@ -9,27 +9,24 @@
                             <p style="color:lightgray; margin-top:1em">Loading...</p>
                         {{else}}
                             <div style="text-align:right">
-                                <a href="/admin/newclient" role="button" class="btn-login btn paddedBtn">New client</a>
+                                <a href="/admin/clients/new" role="button" class="btn-login btn paddedBtn">New client</a>
                             </div>
-                            <table  class="table table-striped table-responsive">
+                            <table class="table table-striped table-responsive text-left">
                                 <thead>
                                     <tr>
-                                        <th>Client ID</th>
                                         <th>Name</th>
+                                        <th>Client ID</th>
                                         <th>Status</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                 {{#each client in clients}}
                                     <tr>
-                                        <td><a href="/admin/clients/{{client.clientId}}">{{client.clientId}}</a></td>
-                                        <td style="color:{{#if (isClientActive client)}} black {{else}} red{{/if}}">
-                                            {{client.props.name}}
-                                        </td>
+                                        <td>{{client.props.name}}</td>
+                                        <td><a href="/admin/clients/{{client._id}}">{{client.clientId}}</a></td>
                                         <td>{{client.status}}</td>
                                     </tr>
                                 {{/each}}
-                                <!--limit the amount of clients displayed, allow a toggle view-->
                                 </tbody>
                             </table>
                         {{/unless}}
@@ -38,5 +35,4 @@
             </div>
         </div>
     </div>
-
 </template>

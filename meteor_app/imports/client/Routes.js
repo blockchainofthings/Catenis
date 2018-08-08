@@ -106,39 +106,67 @@ FlowRouter.route('/admin/clients', {
     }
 });
 
-FlowRouter.route('/admin/clients/:user_id', {
+FlowRouter.route('/admin/clients/new', {
     action: function (params, queryParams) {
-        const dataContext = {
-            user_id: params.user_id
-        };
-
-        if (queryParams.showDevices) {
-            dataContext.showDevices = true;
-        }
-
         BlazeLayout.render('adminLayout', {
-            page: 'clientDetails',
-            dataContext: dataContext
+            page: 'newClient'
         });
     }
 });
 
-FlowRouter.route('/admin/clients/:user_id/devices/:device_id', {
-    action: function (params) {
+FlowRouter.route('/admin/clients/:client_id', {
+    action: function (params, queryParams) {
         BlazeLayout.render('adminLayout', {
-            page: 'deviceDetails',
+            page: 'clientDetails',
             dataContext: {
-                user_id: params.user_id,
-                device_id: params.device_id
+                client_id: params.client_id
             }
         });
     }
 });
 
-FlowRouter.route('/admin/newclient', {
+FlowRouter.route('/admin/clients/:client_id/licenses', {
     action: function (params, queryParams) {
         BlazeLayout.render('adminLayout', {
-            page: 'newClient'
+            page: 'clientLicenses',
+            dataContext: {
+                client_id: params.client_id
+            }
+        });
+    }
+});
+
+FlowRouter.route('/admin/clients/:client_id/licenses/new', {
+    action: function (params, queryParams) {
+        BlazeLayout.render('adminLayout', {
+            page: 'newClientLicense',
+            dataContext: {
+                client_id: params.client_id
+            }
+        });
+    }
+});
+
+FlowRouter.route('/admin/clients/:client_id/licenses/:clientLicense_id', {
+    action: function (params, queryParams) {
+        BlazeLayout.render('adminLayout', {
+            page: 'clientLicenseDetails',
+            dataContext: {
+                client_id: params.client_id,
+                clientLicense_id: params.clientLicense_id
+            }
+        });
+    }
+});
+
+FlowRouter.route('/admin/clients/:client_id/devices/:device_id', {
+    action: function (params) {
+        BlazeLayout.render('adminLayout', {
+            page: 'deviceDetails',
+            dataContext: {
+                client_id: params.client_id,
+                device_id: params.device_id
+            }
         });
     }
 });

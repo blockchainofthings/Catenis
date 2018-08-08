@@ -38,6 +38,7 @@ import { Permission } from './Permission';
 import { CCFundSource } from './CCFundSource';
 import { ClientLicense } from './ClientLicense';
 import { License } from './License';
+import { Util } from './Util';
 
 // Config entries
 const clientConfig = config.get('client');
@@ -47,6 +48,7 @@ const clientTempLicConfig = clientConfig.get('temporaryLicense');
 export const cfgSettings = {
     userNamePrefix: clientConfig.get('userNamePrefix'),
     clientRole: clientConfig.get('clientRole'),
+    minLicenseValidityDays: clientConfig.get('minLicenseValidityDays'),
     minLicenseValDaysToReplace: clientConfig.get('minLicenseValDaysToReplace'),
     temporaryLicense: {
         "active": clientTempLicConfig.get('active'),
@@ -116,10 +118,10 @@ export function Client(docClient, ctnNode, initializeDevices, noClientLicense = 
                     getUser.call(this);
                 }
 
-                if (this._user) {
+                if (this._user && this._user.emails && this._user.emails.length > 0) {
                     let emailIdx = 0;
 
-                    if (this._user.emails.length > 0) {
+                    if (this._user.emails.length > 1) {
                         // Has more than one e-mail address associated with it.
                         //  Try to get first one that has already been verified
                         emailIdx = this._user.emails.findIndex((email) => {
@@ -783,10 +785,11 @@ Client.prototype.getIdentityInfo = function () {
 //                                      NOTE 2: if the start date, when converted to the client's local time zone, has
 //                                          a time past 12 p.m., one extra day is added to the license validity to
 //                                          compensate for the late start.
+//   endDate [String] - (optional) The end date used to override the license validity period
 //
 //  Return:
 //   provisionedClientLicense_id [String] - Database doc/rec ID of newly created/provisioned client license
-Client.prototype.addLicense = function (license_id, startDate) {
+Client.prototype.addLicense = function (license_id, startDate, endDate) {
     // Validate arguments
     const errArg = {};
 
@@ -796,6 +799,10 @@ Client.prototype.addLicense = function (license_id, startDate) {
 
     if (!isValidLicenseStartDate(startDate)) {
         errArg.startDate = startDate;
+    }
+
+    if (endDate && !isValidLicenseEndDate(endDate)) {
+        errArg.endDate = endDate;
     }
 
     if (Object.keys(errArg).length > 0) {
@@ -815,8 +822,33 @@ Client.prototype.addLicense = function (license_id, startDate) {
     // Get license to be added
     const license = License.getLicenseByDocId(license_id);
 
+    const provisionOpts = {};
+
+    if (endDate) {
+        // An end date has been passed to override the license's standard validity period.
+        //  Calculate number of days for validity period
+        const mtStartDate = typeof startDate === 'string' ? Util.dayTimeZoneToDate(startDate, this.timeZone, true)
+            : Util.startOfDayTimeZone(startDate, this.timeZone, true);
+        const mtEndDate = Util.dayTimeZoneToDate(endDate, this.timeZone, true);
+
+        const validityDays = mtEndDate.diff(mtStartDate, 'd');
+
+        if (validityDays < cfgSettings.minLicenseValidityDays) {
+            // Overridden license validity not with minimum days constraints.
+            //  Log error condition and throw exception
+            Catenis.logger.ERROR('Overridden license validity is not with minimum days constraints', {
+                specifiedValidityDays: validityDays,
+                minValidityDays: cfgSettings.minLicenseValidityDays
+            });
+            throw new Meteor.Error('ctn_client_lic_val_error', 'Overridden license validity is not with minimum days constraints');
+        }
+
+        provisionOpts.validityDays = validityDays;
+        provisionOpts.compensateLateStart = false;
+    }
+
     // Provision license
-    return this.clientLicense.provision(license.level, license.type, startDate);
+    return this.clientLicense.provision(license.level, license.type, startDate, provisionOpts);
 };
 
 // Provision a license to start immediately replacing the currently active license
@@ -1379,6 +1411,10 @@ function newDeviceId(ctnNodeIndex, clientIndex, deviceIndex) {
 
 function isValidLicenseStartDate(startDate) {
     return (startDate instanceof Date) || (typeof startDate === 'string' && moment(startDate, 'YYYY-MM-DD', true).isValid());
+}
+
+function isValidLicenseEndDate(endDate) {
+    return typeof endDate === 'string' && moment(endDate, 'YYYY-MM-DD', true).isValid();
 }
 
 function isValidLicenseDocId(id) {

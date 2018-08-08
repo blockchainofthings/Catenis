@@ -39,12 +39,12 @@
                                     <input type="text" maxlength="80" id="txtCompanyName" name="companyName" placeholder="Company" autocapitalize="none" autocorrect="off">
                                 </div>
                                 <div class="row">
-                                    <div class="col-md-6">
+                                    <div class="col-md-8">
                                         <div class="form-group">
                                             <input type="email" maxlength="40" id="txtEmail" name="email" placeholder="Email" autocapitalize="none" autocorrect="off">
                                         </div>
                                     </div>
-                                    <div class="col-md-6">
+                                    <div class="col-md-4">
                                         <div class="form-group">
                                             {{#if needsConfirmEmail}}
                                             <button type="button"  class="form-control btn btn-login at-btn submit" data-toggle="modal" data-target="#confirmEmail" style="background-color: red">Please confirm</button>
@@ -74,8 +74,8 @@
                                     </div>
                                 </div>
                                 <div class="form-group" style="text-align:left; margin-bottom:30px">
-                                    <label for="selTimeZone">Time Zone</label><br>
-                                    <select id="selTimeZone" name="timeZone">
+                                    <label for="selTimeZone" class="input">Time Zone</label><br>
+                                    <select id="selTimeZone" name="timeZone" class="input">
                                         {{#each timeZone in timeZones}}
                                         <option value="{{timeZone.value}}" {{timeZone.selected}}>{{timeZone.name}}</option>
                                         {{/each}}
@@ -89,7 +89,7 @@
                                         <a href="/admin/clients" id="reset" class="form-control btn btn-login at-btn">Cancel</a>
                                     </div>
                                     <div class="col-xs-6 form-group pull-right">
-                                        <button type="submit" class="form-control btn btn-login at-btn submit {{submitDisabled}}">Add User</button>
+                                        <button type="submit" class="form-control btn btn-login at-btn submit {{submitDisabled}}">Create Client</button>
                                     </div>
                                 </div>
                             </form>

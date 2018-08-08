@@ -60,57 +60,16 @@
             <!-- end of sidebar -->
 
             <!--start of content-wrapper-->
-            <div id="page-content-wrapper" class="text-center">
+            <div id="page-content-wrapper" class="text-center" style="height:auto">
                     <div class="row">
                         <div class="col-md-8 col-md-offset-2">
                             {{#if isInRole 'sys-admin'}}
-                                <div class="modal fade" tabindex="-1" role="dialog" id="changeLicenseConfig">
-                                    <div class="modal-dialog" role="document">
-                                        <div class="modal-content">
-                                            <form id="changeLicenseConfigForm">
-                                                <div class="modal-header">
-                                                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-                                                    <h4 class="modal-title">Change License Configuration</h4>
-                                                </div>
-                                                <div class="modal-body">
-                                                    <div class="table-responsive">
-                                                        <table class="table table-striped">
-                                                            <tbody>
-                                                            <tr>
-                                                                <th>Starter</th>
-                                                                <td><input type="number" id="starterLicense" name="starter"></td>
-                                                            </tr>
-                                                            <tr>
-                                                                <th>Basic</th>
-                                                                <td><input type="number" id="basicLicense" name="basic"></td>
-                                                            </tr>
-                                                            <tr>
-                                                                <th>Professional</th>
-                                                                <td><input type="number" id="professionalLicense" name="professional"></td>
-                                                            </tr>
-                                                            <tr>
-                                                                <th>Enterprise</th>
-                                                                <td><input type="number" id="enterpriseLicense" name="enterprise"></td>
-                                                            </tr>
-                                                            </tbody>
-                                                        </table>
-                                                    </div>
-                                                </div>
-                                                <div class="modal-footer">
-                                                    <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-                                                    <button type="submit" class="btn btn-primary">Change License Config</button>
-                                                </div>
-                                            </form>
-                                        </div>
-                                    </div>
-                                </div>
-
                                 <article class="text-center">
-                                        {{#if page}}
-                                        <div class="block">
-                                            {{> Template.dynamic template=page data=dataContext}}
-                                        </div>
-                                        {{/if}}
+                                    {{#if page}}
+                                    <div class="block">
+                                        {{> Template.dynamic template=page data=dataContext}}
+                                    </div>
+                                    {{/if}}
                                 </article>
                             {{else}}
                                 <p>User does not have the necessary permission.</p>
@@ -123,7 +82,7 @@
          </div>
         <!--end of wrapper -->
         {{else}}
-            <div style="text-align: center">
+            <div class="text-center">
                 <a id="lnkCtnTitle" href="#" style="text-decoration:none">
                     <h1>Catenis<span class="gray">Enterprise</span></h1>
                 </a>

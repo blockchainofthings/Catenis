@@ -374,6 +374,8 @@
   "client": {
     "userNamePrefix": "User for Catenis client",  // Prefix to be used for the name of users created to be associated with a Catenis clients
     "clientRole": "ctn-client",  // Role attributed to users associated with Catenis clients
+    "minLicenseValidityDays": 7,  // Minimum number of days for a license validity period (when overriding the default validity period)
+                           //  Note: this value must be kept in sync with the minValidityDays constant defined in the ClientLicensesTemplate.js module
     "minLicenseValDaysToReplace": 2,  // Mininum validity in days for a new license to replace an existing license
     "temporaryLicense": {  // Used to avoid that client devices be disabled for clients created before the license feature was available before an official license is assigned to them
       "active": false,   // Indicate that temporary license should be assigned

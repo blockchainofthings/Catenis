@@ -19,7 +19,7 @@
 // Meteor packages
 import { Meteor } from 'meteor/meteor';
 import { Template } from 'meteor/templating';
-import { RectiveDict } from 'meteor/reactive-dict';
+import { ReactiveDict } from 'meteor/reactive-dict';
 
 // References code in other (Catenis) modules on the client
 import { Catenis } from '../ClientCatenis';

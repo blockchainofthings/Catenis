@@ -45,14 +45,11 @@ Template.clients.onDestroyed(function () {
 });
 
 Template.clients.events({
-
 });
 
 Template.clients.helpers({
     clients: function () {
-        return Catenis.db.collection.Client.find({}, {sort:{'props.name': 1}}).fetch();
-    },
-    isClientActive: function (client) {
-        return client.status === 'active';
+        return Catenis.db.collection.Client.find({}, {
+            sort:{'props.name': 1}}).fetch();
     }
 });
