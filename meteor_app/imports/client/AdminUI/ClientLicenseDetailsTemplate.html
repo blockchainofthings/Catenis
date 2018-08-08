@@ -263,19 +263,12 @@
                                                             <b>Warning!</b>&nbsp;This client license is currently <b>active</b>. If it is <b>expired</b>, <b>all</b> of this client's virtual devices shall be <b>deactivated</b>.
                                                         </div>
                                                     {{/if}}
-                                                    <div class="row">
-                                                        <div class="col-xs-4 form-group"></div>
-                                                        <div class="col-xs-4 form-group">
-                                                            <button id="btnDoExpireLicense" type="button" class="btn btn-login paddedBtn" style="display:{{displayDoExpireLicenseButton}}">Expire License</button>
-                                                        </div>
-                                                    </div>
-                                                    <div id="divExpireLicenseConfirm" class="panel panel-default" style="padding:1em; display:{{displayExpireLicenseConfirm}}">
+                                                    <div id="divExpireLicenseConfirm" class="panel panel-default" style="padding:1em">
                                                         <div style="margin-top:1em; margin-bottom:1em">
                                                             <label>To confirm your action, please type the following text below: <b>yes, I do confirm it</b>
                                                                 <br><input id="itxExpireConfirmation" type="text" size="20" maxlength="20" placeholder="confirmation" autocomplete="off"></label>
                                                         </div>
                                                         <div style="margin-top:1em">
-                                                            <button id="btnCancelExpireLicenseConfirm" type="button" class="btn btn-default">Cancel</button>&nbsp;&nbsp;
                                                             <button type="submit" class="btn btn-primary" style="display:{{displayExpireLicenseSubmitButton}}">Expire License</button>
                                                         </div>
                                                     </div>

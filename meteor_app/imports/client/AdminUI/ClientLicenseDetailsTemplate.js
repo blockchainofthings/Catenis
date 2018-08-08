@@ -85,8 +85,6 @@ Template.clientLicenseDetails.onCreated(function () {
     this.state.set('displayUpgradeLicenseConfirm', 'none');
     this.state.set('displayUpgradeLicenseSubmitButton', 'none');
 
-    this.state.set('displayDoExpireLicenseButton', 'none');
-    this.state.set('displayExpireLicenseConfirm', 'none');
     this.state.set('displayExpireLicenseSubmitButton', 'none');
 
     // Subscribe to receive database docs/recs updates
@@ -188,12 +186,8 @@ Template.clientLicenseDetails.events({
         template.state.set('infoMsg', undefined);
         template.state.set('infoMsgType', 'info');
 
-        // Show do action button
-        template.state.set('displayDoExpireLicenseButton', 'inline');
-
         // Reset action confirmation
         $('#itxExpireConfirmation')[0].value = '';
-        template.state.set('displayExpireLicenseConfirm', 'none');
         template.state.set('displayExpireLicenseSubmitButton', 'none');
     },
     'change #itxRenewConfirmation'(event, template) {
@@ -245,18 +239,6 @@ Template.clientLicenseDetails.events({
 
         // Show do action button
         template.state.set('displayDoUpgradeLicenseButton', 'inline');
-    },
-    'click #btnCancelExpireLicenseConfirm'(event, template) {
-        event.preventDefault();
-        event.stopPropagation();
-
-        // Reset action confirmation
-        $('#itxExpireConfirmation')[0].value = '';
-        template.state.set('displayExpireLicenseConfirm', 'none');
-        template.state.set('displayExpireLicenseSubmitButton', 'none');
-
-        // Show do action button
-        template.state.set('displayDoExpireLicenseButton', 'inline');
     },
     'change #selLicense'(event, template) {
         // Check if a more restrictive license is selected
@@ -346,27 +328,6 @@ Template.clientLicenseDetails.events({
             // Form data error
             template.state.set('newLicenseErrMsgs', errMsgs);
         }
-    },
-    'click #btnDoExpireLicense'(event, template) {
-        event.preventDefault();
-        event.stopPropagation();
-
-        // Reset alert messages
-        template.state.set('newLicenseErrMsgs', []);
-        template.state.set('errMsgs', []);
-        template.state.set('infoMsg', undefined);
-        template.state.set('infoMsgType', 'info');
-
-        // Do validation of form controls here (not needed in this case)
-
-        // Form OK
-
-        // Hide do action button
-        template.state.set('displayDoExpireLicenseButton', 'none');
-
-        // Show action confirmation panel, and make sure that submit button is not shown
-        template.state.set('displayExpireLicenseConfirm', 'block');
-        template.state.set('displayExpireLicenseSubmitButton', 'none');
     },
     'submit #frmRenewClientLicense'(event, template) {
         event.preventDefault();
@@ -641,12 +602,6 @@ Template.clientLicenseDetails.helpers({
     },
     displayUpgradeLicenseSubmitButton() {
         return Template.instance().state.get('displayUpgradeLicenseSubmitButton');
-    },
-    displayDoExpireLicenseButton() {
-        return Template.instance().state.get('displayDoExpireLicenseButton');
-    },
-    displayExpireLicenseConfirm() {
-        return Template.instance().state.get('displayExpireLicenseConfirm');
     },
     displayExpireLicenseSubmitButton() {
         return Template.instance().state.get('displayExpireLicenseSubmitButton');
