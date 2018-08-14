@@ -64,7 +64,7 @@ export function BitcoinCore(network, host, username, password, timeout) {
         //  - 'getblockheader'
         //  - 'abandontransaction'
         command: Meteor.wrapAsync(this.btcClient.cmd, this.btcClient),
-        getinfo: Meteor.wrapAsync(this.btcClient.getInfo, this.btcClient),
+        getnetworkinfo: Meteor.wrapAsync(this.btcClient.getNetworkInfo, this.btcClient),
         getblockchaininfo: Meteor.wrapAsync(this.btcClient.getBlockchainInfo, this.btcClient),
         importprivkey: Meteor.wrapAsync(this.btcClient.importPrivKey, this.btcClient),
         listunspent: Meteor.wrapAsync(this.btcClient.listUnspent, this.btcClient),
@@ -94,14 +94,12 @@ export function BitcoinCore(network, host, username, password, timeout) {
 // Public BitcoinCore object methods
 //
 
-// NOTE: the getinfo JSON-RPC command is deprecated in Bitcoin Core ver. 0.14.0 onwards. Thus it should be replaced by
-//      either getblockchaininfo, getnetworkinfo or getwalletinfo depending on the needed info
-BitcoinCore.prototype.getInfo = function () {
+BitcoinCore.prototype.getNetworkInfo = function () {
     try {
-        return this.rpcApi.getinfo();
+        return this.rpcApi.getnetworkinfo();
     }
     catch (err) {
-        handleError('getinfo', err);
+        handleError('getnetworkinfo', err);
     }
 };
 
