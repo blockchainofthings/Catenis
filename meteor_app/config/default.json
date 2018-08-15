@@ -122,7 +122,7 @@
       "deviceAsset": 900,
       "deviceAssetIssuance": 900
     },
-    "updateIssuedAddressesInterval": 1800000, // Time interval, in miliseconds, for executing method to update issued addresses
+    "updateIssuedAddressesInterval": 86400000, // (24 hours) Time interval, in miliseconds, for executing method to update issued addresses
     "inactiveObjectTime": 345600,  // Time, in seconds, from the time when instantiated object has been last accessed before it is considered inactive
     "deleteInactiveObjectsInterval": 43200000 // Time interval, in miliseconds, for executing method to delete inactive objects
   },
