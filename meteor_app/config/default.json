@@ -88,7 +88,7 @@
     "apiVer1Url": "https://bitcoinfees.21.co/api/v1/fees/",  // URL of version 1 of BitcoinFees API provided by 21.co
     "recommendedFeesEndPoint": "recommended",  // Endpoint of BitcoinFees API method for retrieving recommended fees
     "listFeesEndPoint": "list",  // Endpoint of BitcoinFees API method for retrieving complete list of fees
-    "retrieveFeesInterval": 21600000,  // Time interval, in miliseconds, for executing method to retrieve latest bitcoin fees
+    "retrieveFeesInterval": 21600000,  // (6 hours) Time interval, in miliseconds, for executing method to retrieve latest bitcoin fees
     "numDbRecsToMaintain": 2000,  // Number of database docs/recs used to store latest fees that should be maintained when puging the database
     "dbPurgeHours": 2,  // Hours component of time when database purge should take place
     "dbPurgeMinutes": 0,  // Minutes component of time when database purge should take place
@@ -155,7 +155,7 @@
       "deviceAsset": 900,  // (15 min.)
       "deviceAssetIssuance": 900  // (15 min.)
     },
-    "updateIssuedAddressesInterval": 86400000, // (24 hours)Time interval, in miliseconds, for executing method to update issued addresses
+    "updateIssuedAddressesInterval": 86400000, // (24 hours) Time interval, in miliseconds, for executing method to update issued addresses
     "inactiveObjectTime": 345600,  // (4 days) Time, in seconds, from the time when instantiated object has been last accessed before it is considered inactive
     "deleteInactiveObjectsInterval": 43200000 // (12 hours) Time interval, in miliseconds, for executing method to delete inactive objects
   },
