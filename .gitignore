@@ -4,7 +4,7 @@ meteor_app/node_modules
 meteor_build
 *.tar.gz
 seed*.dat
-local.json
+local*.json
 Debug.js
 ModuleTemplate.txt
 mongodb_dump

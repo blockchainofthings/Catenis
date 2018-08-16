@@ -5,7 +5,7 @@
     "appName": "Catenis",
     "seedFilename": "seed.dat",
     "cryptoNetwork": "testnet",  // Available values: 'bitcoin' (for Bitcoin's production blockchain), 'testnet' (for Bitcoin's test blockchain)
-    "shutdownTimeout": 30000,   // Time, in miliseconds, that the application should wait after it receives a terminate request before it actually terminates
+    "shutdownTimeout": 30000,   // (30 sec.) Time, in miliseconds, that the application should wait after it receives a terminate request before it actually terminates
     "adminRole": "sys-admin",  // User role for application administration
     "defaultAdminUser": null,  // (optional) Username of application default admin user
     "defaultAdminPsw": null  // (optional) Chiphered, hex encoded password for application default admin user
@@ -55,12 +55,12 @@
     "apiVer1Url": "https://bitcoinfees.21.co/api/v1/fees/",  // URL of version 1 of BitcoinFees API provided by 21.co
     "recommendedFeesEndPoint": "recommended",  // Endpoint of BitcoinFees API method for retrieving recommended fees
     "listFeesEndPoint": "list",  // Endpoint of BitcoinFees API method for retrieving complete list of fees
-    "retrieveFeesInterval": 21600000,  // Time interval, in miliseconds, for executing method to retrieve latest bitcoin fees
+    "retrieveFeesInterval": 21600000,  // (6 hours) Time interval, in miliseconds, for executing method to retrieve latest bitcoin fees
     "numDbRecsToMaintain": 2000,  // Number of database docs/recs used to store latest fees that should be maintained when puging the database
     "dbPurgeHours": 2,  // Hours component of time when database purge should take place
     "dbPurgeMinutes": 0,  // Minutes component of time when database purge should take place
     "dbPurgeSeconds": 0,  // Seconds component of time when database purge should take place
-    "dbPurgeInterval": 86400000  // Time interval, in miliseconds, for executing process to purge database (delete oldest fees docs/recs)
+    "dbPurgeInterval": 86400000  // (24 hours) Time interval, in miliseconds, for executing process to purge database (delete oldest fees docs/recs)
   },
   // Parameters pertaining to BitcoinTicker module
   "bitcoinTicker": {
@@ -77,8 +77,8 @@
   },
   // Parameters pertaining to KeyStore module
   "keyStore": {
-    "obsoleteExtKeyTimeToPurge": 345600, // Time, in seconds, before an obsolete HD extended key is purged from local key storage
-    "purgeUnusedExtKeyInterval": 43200000  // Time interval, in miliseconds, for executing method to purge unused HD extended keys form local key storage
+    "obsoleteExtKeyTimeToPurge": 345600, // (4 days) Time, in seconds, before an obsolete HD extended key is purged from local key storage
+    "purgeUnusedExtKeyInterval": 43200000  // (12 hours) Time interval, in miliseconds, for executing method to purge unused HD extended keys form local key storage
   },
   // Parameters pertaining to BitcoinCore module
   "bitcoinCore": {
@@ -87,8 +87,8 @@
     "testnetRpcPort": 18332, // Port used to connect with Bitcoin Core server via its RPC interface to interact with bitcoin's testnet blockchain
     "rpcUser": "??????", // Username used to connect with Bitcoin Core server via its RPC interface
     "rpcPassword": "??????", // Password used to connect with Bitcoin Core server via its RPC interface
-    "rpcConnectionTimeout": 15000,  // Timeout, in miliseconds, for RPC connection with the Bitcoin Core server
-    "rescanTimeout": 7200000 // Timeout, in miniseconds, for waiting on Bitcoin Core to finish rescanning the blockchain after importing private key
+    "rpcConnectionTimeout": 15000,  // (15 sec.) Timeout, in miliseconds, for RPC connection with the Bitcoin Core server
+    "rescanTimeout": 7200000 // (2 hours) Timeout, in miniseconds, for waiting on Bitcoin Core to finish rescanning the blockchain after importing private key
   },
   // Parameters pertaining to OmniCore module
   "omniCore": {
@@ -97,34 +97,34 @@
     "testnetRpcPort": 18332, // Port used to connect with Omni Core server via its RPC interface to interact with bitcoin's testnet blockchain
     "rpcUser": "??????", // Username used to connect with Omni Core server via its RPC interface
     "rpcPassword": "??????", // Password used to connect with Omni Core server via its RPC interface
-    "rpcConnectionTimeout": 15000,  // Timeout, in miliseconds, for RPC connection with the Omni Core server
-    "rescanTimeout": 7200000 // Timeout, in miniseconds, for waiting on Omni Core to finish rescanning the blockchain after importing private key
+    "rpcConnectionTimeout": 15000,  // (15 sec.) Timeout, in miliseconds, for RPC connection with the Omni Core server
+    "rescanTimeout": 7200000 // (2 hours) Timeout, in miniseconds, for waiting on Omni Core to finish rescanning the blockchain after importing private key
   },
   // Parameters pertaining to BlockchainAddress module
   "blockchainAddress": {
     "addressValidity": {  // Time, in seconds, before which a newly issued address expires
-      "systemDeviceMain": 900,
-      "systemFundingPayment":  14400,
-      "systemFundingChange": 900,
-      "systemPayTxExpense": 900,
-      "systemReadConfSpendNotify": 900,
-      "systemReadConfSpendOnly": 900,
-      "systemReadConfSpendNull": 900,
-      "systemReadConfPayTxExpense": 900,
+      "systemDeviceMain": 900,  // (15 min.)
+      "systemFundingPayment":  14400,  // (4 hours)
+      "systemFundingChange": 900,  // (15 min.)
+      "systemPayTxExpense": 900,  // (15 min.)
+      "systemReadConfSpendNotify": 900,  // (15 min.)
+      "systemReadConfSpendOnly": 900,  // (15 min.)
+      "systemReadConfSpendNull": 900,  // (15 min.)
+      "systemReadConfPayTxExpense": 900,  // (15 min.)
       "systemServCredIssuing": 0,   // Indicates that addresses of this type should never expire
-      "systemServPymtPayTxExpense": 900,
-      "systemMultiSigSignee": 900,
-      "clientServAccCreditLine": 900,
-      "clientServAccDebitLine": 900,
-      "clientBcotPayment": 14400,
-      "deviceReadConfirm": 900,
-      "deviceMain": 900,
-      "deviceAsset": 900,
-      "deviceAssetIssuance": 900
+      "systemServPymtPayTxExpense": 900,  // (15 min.)
+      "systemMultiSigSignee": 900,  // (15 min.)
+      "clientServAccCreditLine": 900,  // (15 min.)
+      "clientServAccDebitLine": 900,  // (15 min.)
+      "clientBcotPayment": 14400,  // (4 hours)
+      "deviceReadConfirm": 900,  // (15 min.)
+      "deviceMain": 900,  // (15 min.)
+      "deviceAsset": 900,  // (15 min.)
+      "deviceAssetIssuance": 900  // (15 min.)
     },
     "updateIssuedAddressesInterval": 86400000, // (24 hours) Time interval, in miliseconds, for executing method to update issued addresses
-    "inactiveObjectTime": 345600,  // Time, in seconds, from the time when instantiated object has been last accessed before it is considered inactive
-    "deleteInactiveObjectsInterval": 43200000 // Time interval, in miliseconds, for executing method to delete inactive objects
+    "inactiveObjectTime": 345600,  // (4 days) Time, in seconds, from the time when instantiated object has been last accessed before it is considered inactive
+    "deleteInactiveObjectsInterval": 43200000 // (12 hours) Time interval, in miliseconds, for executing method to delete inactive objects
   },
   // Parameters pertaining to FundSource module
   "fundSource": {
@@ -221,7 +221,7 @@
     },
     "sysMessage": {
       "messagesPerMinute": 4,  // Number of system messages sents per minute that is expected to be sustained
-      "minutesToConfirm": 300,  // Time, in minutes, within which send system message txs are expected to be confirmed
+      "minutesToConfirm": 300,  // (5 hours) Time, in minutes, within which send system message txs are expected to be confirmed
       "unconfMainAddrReuses": 10,  // Number of times an UTXO associated with a system main addr is expected to be reused
       "mainAddrFunding": {
         "unitAmount": 600,  // Amount, in satoshis, equivalent to one unit of funding
@@ -238,7 +238,7 @@
     },
     "message": {
       "messagesPerMinute": 4,  // Number of messages sents per minute that is expected to be sustained
-      "minutesToConfirm": 300,  // Time, in minutes, within which send message txs are expected to be confirmed
+      "minutesToConfirm": 300,  // (5 hours) Time, in minutes, within which send message txs are expected to be confirmed
       "unconfMainAddrReuses": 10,  // Number of times an UTXO associated with a device main addr is expected to be reused
       "readConfimAddrAmount": 600,  // Amount, in satoshis, that should be paid to read confirmation address output of send message tx
       "mainAddrFunding": {
@@ -257,7 +257,7 @@
         "initTxFeeRate": 1,  // Amount, in satoshis/byte, for the initial fee rate for a read confirmation transaction
         "txFeeRateIncrement": 1,  // Amount, in satoshis/byte, that transaction feed rate should be incremented for the new replacement transaction
         "terminalReadConfirmTx": {
-          "minutesToConfirm": 300,  // Time, in minutes, within which terminal read confirmation txs are expected to be confirmed
+          "minutesToConfirm": 300,  // (5 hours) Time, in minutes, within which terminal read confirmation txs are expected to be confirmed
           "typicalTxConfig": {
             "numMessagesConfirmed": 2,  // Number of send message txs confirmed by terminal read confirmation transactions
             "numPayTxExpenseInputs": 2,  // Number of inputs used to pay for tx expense (fee)
@@ -274,7 +274,7 @@
     "asset": {
       "issuance": {
         "assetsPerMinute": 1,  // Number of assets issued per minute that is expected to be sustained
-        "minutesToConfirm": 300,  // Time, in minutes, within which asset issuance txs are expected to be confirmed
+        "minutesToConfirm": 300,  // (5 hours) Time, in minutes, within which asset issuance txs are expected to be confirmed
         "unconfAssetIssueAddrReuses": 10,  // Number of times an UTXO associated with a device asset issuance addr is expected to be reused
         "assetIssueAddrFunding": {
           "unitAmount": 600,  // Amount, in satoshis, equivalent to one unit of funding
@@ -283,7 +283,7 @@
         }
       },
       "transfer": {
-        "minutesToConfirm": 300  // Time, in minutes, within which asset transfer txs are expected to be confirmed
+        "minutesToConfirm": 300  // (5 hours) Time, in minutes, within which asset transfer txs are expected to be confirmed
       }
     },
     "serviceTxConfig": {
@@ -467,12 +467,12 @@
   },
   // Parameters pertaining to TransactionMonitor module
   "transactionMonitor": {
-    "blockchainPollingInterval": 15000, // Time interval, in miliseconds, for polling the blockchain for newly arrived transactions and blocks
-    "mempoolExpiryHours": 336,  // Time, in hours, after which transactions are evicted from Bitcoin Core' mempool
-    "purgeFoundNewCtnTxsInterval": 3600000,  // Time interval, in miliseconds, for executing method to purge transactions from list of found new Catenis transactions
-    "limitTxConfirmTime": 60,  // Time, in minutes, after which it is expected for any Catenis issued transaction to have already been confirmed
-    "checkOldUnconfTxsInterval": 1800000,  // Time interval, in miliseconds, for checking if there are old transactions that have not yet been confirmed
-    "newTxsBatchProcDoneTimeout": 60000  // Timeout, in miliseconds, for waiting for a given new transactions batch to finish processing
+    "blockchainPollingInterval": 15000, // (15 sec.) Time interval, in miliseconds, for polling the blockchain for newly arrived transactions and blocks
+    "mempoolExpiryHours": 336,  // (14 days) Time, in hours, after which transactions are evicted from Bitcoin Core' mempool
+    "purgeFoundNewCtnTxsInterval": 3600000,  // (1 hour) Time interval, in miliseconds, for executing method to purge transactions from list of found new Catenis transactions
+    "limitTxConfirmTime": 60,  // (1 hour) Time, in minutes, after which it is expected for any Catenis issued transaction to have already been confirmed
+    "checkOldUnconfTxsInterval": 1800000,  // (30 min.) Time interval, in miliseconds, for checking if there are old transactions that have not yet been confirmed
+    "newTxsBatchProcDoneTimeout": 60000  // (1 min.) Timeout, in miliseconds, for waiting for a given new transactions batch to finish processing
   },
   // Parameters pertaining to CatenisMessage module
   "catenisMessage": {
@@ -500,7 +500,7 @@
   },
   // Parameters pertaining to ReadConfirmation module
   "readConfirmation": {
-    "unconfirmedTxTimeout": 10080,  // Timeout, in minutes, for waiting for latest read confirmation tx to be confirmed (set to 7 days, which is half the default mempool tx eviction time of 14 days)
+    "unconfirmedTxTimeout": 10080,  // (7 days) Timeout, in minutes, for waiting for latest read confirmation tx to be confirmed (set to 7 days, which is half the default mempool tx eviction time of 14 days)
     "txSizeThresholdRatio": 0.9  // Ratio that should be applied to maximum tx size to calculate theshold for read confirmation tx size. Above that size the tx fee rate should be reset so that is is confirmed as soon as possible
   },
   // Parameters pertaining to RestApi module
@@ -521,7 +521,7 @@
       "signMethodId": "CTN1-HMAC-SHA256",
       "scopeRequest": "ctn1_request",
       "timestampHdr": "x-bcot-timestamp",
-      "allowedTimestampOffset": 300,   // Time, in seconds, representing the allowed variation (+/-) of timestamp in regards to current time
+      "allowedTimestampOffset": 300,   // (5 min.) Time, in seconds, representing the allowed variation (+/-) of timestamp in regards to current time
                                        //  for request to be considered valid
       "authRegexPattern": "^<signMethodId> +(?:C|c)redential *= *(\\w{20})/(\\d{8})/<scopeRequest> *, *(?:S|s)ignature *= *([0-9a-fA-F]{64}) *$",
       "signValidDays": 7  // Number of days from specified signature date after which signature is not considered valid anymore
@@ -549,8 +549,8 @@
     "availableVersions": [    // List of all currently available versions of the WebSocket notification message dispatcher
       "0.1"
     ],
-    "heartbeatInterval": 30000,  // Time interval, in miliseconds, for sending heartbeat ping package to client
-    "authMsgTimeout": 5000   // Timeout, in miliseconds, for waiting on first message from client used to authenticate itself with the system
+    "heartbeatInterval": 30000,  // (30 sec.) Time interval, in miliseconds, for sending heartbeat ping package to client
+    "authMsgTimeout": 5000   // (5 sec.) Timeout, in miliseconds, for waiting on first message from client used to authenticate itself with the system
   },
   // Parameters pertaining to C3NodeClient module
   "c3NodeClient": {
@@ -560,7 +560,7 @@
     "inetAddress": "", // IP address of local network interface to use to connect with the Catenis Colored Coins node server. If not specified (empty string) the default network interface is used
     "user": "??????", // Username used to authenticate the client to the Catenis Colored Coins node server. If not specified (empty string) assume that no authenticaiton is required
     "password": "??????", // Password used to authenticate the client to the Catenis Colored Coins node server
-    "connectionTimeout": 15000,  // Timeout, in miliseconds, for connection with the Catenis Colored Coins node server
+    "connectionTimeout": 15000,  // (15 sec.) Timeout, in miliseconds, for connection with the Catenis Colored Coins node server
     "methodPath": {
       "parseNow": "/parseNow",
       "getAddressesUtxos": "/getAddressesUtxos",
@@ -591,7 +591,7 @@
     "signingMessageFormat": "Catenis generated asset on %s",  // Format string used to compose message that is to be signed for asset verification purpose
     "signingCertificateFilePath": "/etc/letsencrypt/live/beta.catenis.io/cert.pem",  // Path to file (in PEM format) containing Blockchain of Things' owned SSL certificate used to sign message for asset verification
     "signingCertificateKeyFilePath": "/etc/letsencrypt/live/beta.catenis.io/privkey.pem",  // Path to file containing key of SSL certificate used to sign message for asset verification
-    "urlContentTimeout": 15000,  // Timeout, in miliseconds, for retrieving content associated with a given URL
+    "urlContentTimeout": 15000,  // (15 sec.) Timeout, in miliseconds, for retrieving content associated with a given URL
     "encryptedUserDataKeyPrefix": "__enc_",  // Prefix that is prepended to user data key when its value is encrypted
     "shareAfterStoring": false  // Indicates whether metadata should be shared right after it is stored (added to Colored Coins metadata server)
   },
@@ -625,7 +625,7 @@
   // Parameters pertaining to StoreBcotTransaction module
   "storeBcotTransaction": {
     "bcotStoreAddrAmount": 600,  // Amount, in satohis, to be paid to BCOT store address output
-    "timeToConfirm": 300,  // Time, in minutes, that is expected the store BCOT transaction to be confirmed
+    "timeToConfirm": 300,  // (5 hours) Time, in minutes, that is expected the store BCOT transaction to be confirmed
     "omniDataPrefix": "omni"  // Prefix of Omni encoded data to be embedd in transaction
   },
   // Parameters pertaining to SpendServiceCreditTransaction module
@@ -634,7 +634,7 @@
     "ccMetadata": {
       "servTxidsKey": "servTxids"  // Name (key) of Colored Coins free user metadata used to refer to BCOT Token Payment transaction
     },
-    "unconfirmedTxTimeout": 10080,  // Timeout, in minutes, for waiting for latest sent spend service credit tx to be confirmed (set to 7 days, which is half the default mempool tx eviction time of 14 days)
+    "unconfirmedTxTimeout": 10080,  // (7 days) Timeout, in minutes, for waiting for latest sent spend service credit tx to be confirmed (set to 7 days, which is half the default mempool tx eviction time of 14 days)
     "txSizeThresholdRatio": 0.9  // Ratio that should be applied to maximum tx size to calculate threshold for spend service credit tx size. Above that size the tx fee rate should be reset so that is is confirmed as soon as possible
   },
   // Parameters pertaining to BcotUsageReportUI module
