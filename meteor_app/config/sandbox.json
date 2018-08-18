@@ -2,6 +2,7 @@
 {
   // Parameters pertaining to the Catenis application
   "application": {
+    "environment": "sandbox",
     "seedFilename": "seed.beta2.dat",
     "cryptoNetwork": "testnet",  // Available values: 'bitcoin' (for Bitcoin's production blockchain), 'testnet' (for Bitcoin's test blockchain)
     "shutdownTimeout": 30000   // (30 sec.) Time, in miliseconds, that the application should wait after it receives a terminate request before it actually terminates
@@ -26,7 +27,7 @@
       "active": true,
       "logLevel": "WARN",
       "toAddresses": "claudio@blockchainofthings.com, andre@blockchainofthings.com", // Can be set to a comma separated list of e-mail addresses
-      "fromAddress": "Catenis <catenisadmin@catenis.io>"
+      "fromAddress": "Catenis [Sandbox] <catenisadmin@catenis.io>"
     }
   },
   // Parameters pertaining to BitcoinFees module

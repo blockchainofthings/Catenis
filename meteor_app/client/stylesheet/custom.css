@@ -1,0 +1,10 @@
+div.envHeader {
+    margin: 0;
+    width: 100%;
+    height: auto;
+    padding: 0.25em;
+    text-align: center;
+    background-color: #6c3;
+    color: white;
+    font-size: 12pt;
+}

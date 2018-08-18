@@ -54,7 +54,14 @@ BcotPriceUI.initialize = function () {
     // Declaration of RPC methods to be called from client
     Meteor.methods({
         setBcotPrice: function (price) {
-            Catenis.bcotPrice.setNewBcotPrice(price);
+            if (Roles.userIsInRole(this.userId, 'sys-admin')) {
+                Catenis.bcotPrice.setNewBcotPrice(price);
+            }
+            else {
+                // User not logged in or not a system administrator.
+                //  Throw exception
+                throw new Meteor.Error('ctn_admin_no_permission', 'No permission; must be logged in as a system administrator to perform this task');
+            }
         }
     });
 

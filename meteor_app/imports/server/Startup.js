@@ -52,6 +52,7 @@ import { BcotPayment } from './BcotPayment';
 import { SpendServiceCredit } from './SpendServiceCredit';
 import { BcotUsageReportUI } from './AdminUI/BcotUsageReportUI';
 import { ReceiveAsset } from './ReceiveAsset';
+import { AdminUI } from './AdminUI/AdminUI';
 // TEST - begin
 //import { resetBitcoinCore } from './Test/FundSourceTest';
 //import { TestCatenisColoredCoins } from './Test/TestCatenisColoredCoins';
@@ -132,6 +133,7 @@ Meteor.startup(function () {
         RestApi.initialize();
 
         // UI support initialization
+        AdminUI.initialize();
         BcotPriceUI.initialize();
         SystemFundingUI.initialize();
         BcotUsageReportUI.initialize();

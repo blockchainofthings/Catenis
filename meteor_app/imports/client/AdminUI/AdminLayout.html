@@ -1,4 +1,7 @@
 <template name="adminLayout">
+    {{#if isNonProdEnvironment appEnvironment}}
+    <div class="envHeader">{{capitalize appEnvironment}}</div>
+    {{/if}}
     <div style="text-align:center">
         <h1>Catenis Enterprise Admin</h1>
     </div>
