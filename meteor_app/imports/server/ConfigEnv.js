@@ -19,10 +19,3 @@
 if (process.env.NODE_CONFIG_DIR === undefined) {
     process.env.NODE_CONFIG_DIR = require('path').join(process.env.PWD, 'config');
 }
-
-// Set NODE_ENV environment variable based on custom CTN_NODE_ENV variable because, since the upgrade to
-//  Meteor 1.7, NODE_ENV has its value reset to 'development' when meteor app is started from meteor's
-//  development environment (execute 'meteor' command from meteor_app directory)
-if (process.env.CTN_NODE_ENV) {
-    process.env.NODE_ENV = process.env.CTN_NODE_ENV;
-}
