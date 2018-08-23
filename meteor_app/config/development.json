@@ -37,6 +37,10 @@
     "dbPurgeSeconds": 0,  // Seconds component of time when database purge should take place
     "dbPurgeInterval": 86400000  // (24 hours) Time interval, in miliseconds, for executing process to purge database (delete oldest fees docs/recs)
   },
+  // Parameters pertaining to BitcoinPrice module
+  "bitcoinPrice": {
+    "updatePriceTimeInterval": 1800000  // (30 min.) Time interval, in milliseconds, for retrieving new bitcoin ticker price
+  },
   // Parameters pertaining to KeyStore module
   "keyStore": {
     "obsoleteExtKeyTimeToPurge": 300, // (5 min.) Time, in seconds, before an obsolete HD extended key is purged from local key storage
