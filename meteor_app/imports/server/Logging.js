@@ -12,6 +12,7 @@
 // Internal node modules
 import util from 'util';
 import path from 'path';
+import fs from 'fs';
 // Third-party node modules
 import config from 'config';
 import winston from 'winston';
@@ -124,6 +125,9 @@ const consoleTranspParams = {
 // Module code
 //
 
+// Make sure that log directory exists
+checkLogDirExistence();
+
 // Complement logging transport parameters
 if (emailCfgSettings.secureProto) {
     if (emailCfgSettings.secureProto === 'ssl') {
@@ -234,4 +238,23 @@ function appendSourceCodePrefix(level, msg, meta, inst) {
     }
 
     return msg;
+}
+
+function checkLogDirExistence() {
+    const logDirPath = path.join(process.env.PWD, logFileConfig.get('logDir'));
+
+    // Check existence
+    try {
+        fs.accessSync(logDirPath);
+    }
+    catch (err) {
+        // Assume that directory does not yet exists and try to create it
+        try {
+            fs.mkdirSync(logDirPath, 0o755);
+        }
+        catch (err2) {
+            // Error creating log directory
+            throw new Error('Unable to create log directory: ' + err2.toString());
+        }
+    }
 }
