@@ -259,3 +259,13 @@ function saveProcessId() {
         }
     });
 }
+
+export function removeProcessId() {
+    try {
+        fs.unlinkSync(path.join(process.env.PWD, cfgSettings.pidFilename));
+    }
+    catch (err) {
+        // Error removing process ID file
+        Catenis.logger.ERROR('Error removing process ID file.', err);
+    }
+}
