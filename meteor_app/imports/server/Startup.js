@@ -10,7 +10,8 @@
 // References to external code
 //
 // Internal node modules
-//import util from 'util';
+import path from 'path';
+import fs from 'fs';
 // Third-party node modules
 import config from 'config';
 import Future from 'fibers/future';
@@ -71,7 +72,8 @@ const startupConfig = config.get('startup');
 // Configuration settings
 const cfgSettings = {
     fixMissingAddresses: startupConfig.get('fixMissingAddresses'),
-    bypassProcessing: startupConfig.get('bypassProcessing')
+    bypassProcessing: startupConfig.get('bypassProcessing'),
+    pidFilename: startupConfig.get('pidFilename')
 };
 
 
@@ -80,6 +82,9 @@ const cfgSettings = {
 
 // Initialization code (on the server)
 Meteor.startup(function () {
+    // Record ID of current process
+    saveProcessId();
+
     // TEST - begin
     //resetBitcoinCore();
     // TEST - end
@@ -259,5 +264,24 @@ function CheckImportAddresses(fixMissingAddresses) {
             Catenis.logger.FATAL('There are blockchain addresses missing (not currently imported) from Bitcoin Core and/or Omni Core');
             throw new Meteor.Error('There are blockchain addresses missing (not currently imported) from Bitcoin Core and/or Omni Core');
         }
+    }
+}
+
+function saveProcessId() {
+    fs.writeFile(path.join(process.env.PWD, cfgSettings.pidFilename), process.pid.toString(), (err) => {
+        if (err) {
+            // Error recording process ID
+            Catenis.logger.ERROR('Error recording process ID.', err);
+        }
+    });
+}
+
+export function removeProcessId() {
+    try {
+        fs.unlinkSync(path.join(process.env.PWD, cfgSettings.pidFilename));
+    }
+    catch (err) {
+        // Error removing process ID file
+        Catenis.logger.ERROR('Error removing process ID file.', err);
     }
 }

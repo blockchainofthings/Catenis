@@ -26,6 +26,7 @@ import { TransactionMonitor } from './TransactionMonitor';
 import { Device } from './Device';
 import { Transaction } from './Transaction';
 import { FundSource } from './FundSource';
+import { removeProcessId } from './Startup';
 
 // Config entries
 const appConfig = config.get('application');
@@ -422,6 +423,9 @@ function generateCommonSeed(testPrefix) {
 
 function shutdown() {
     Catenis.logger.TRACE('Shutting down application');
+    // Remove process ID file
+    removeProcessId();
+
     process.exit(Application.exitCode.terminated);
 }
 

@@ -1,7 +1,7 @@
 .idea
 meteor_app/log
 meteor_app/node_modules
-meteor_build
+build
 *.tar.gz
 seed*.dat
 local*json
@@ -10,3 +10,4 @@ ModuleTemplate.txt
 mongodb_dump
 deploy
 meteor_app/config/development-*.json
+catenis-pid
