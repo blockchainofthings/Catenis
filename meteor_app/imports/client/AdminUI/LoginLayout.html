@@ -1,5 +1,11 @@
 <template name="loginLayout">
-    <div style="text-align:center">
+{{#unless appEnvironment}}
+    <p style="color:lightgray; margin:1em 1em">Loading...</p>
+{{else}}
+    {{#if isNonProdEnvironment appEnvironment}}
+        <div class="envHeader">{{capitalize appEnvironment}}</div>
+    {{/if}}
+    <div style="position:relative; top:30px; text-align:center">
         <a id="lnkCtnTitle" href="#" style="text-decoration:none">
             <h1>Catenis<span class="gray">Enterprise</span></h1>
         </a>
@@ -15,4 +21,5 @@
             </div>
         {{/unless}}
     {{/unless}}
+{{/unless}}
 </template>

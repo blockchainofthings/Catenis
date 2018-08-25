@@ -52,6 +52,7 @@ import { BcotPayment } from './BcotPayment';
 import { SpendServiceCredit } from './SpendServiceCredit';
 import { BcotUsageReportUI } from './AdminUI/BcotUsageReportUI';
 import { ReceiveAsset } from './ReceiveAsset';
+import { AdminUI } from './AdminUI/AdminUI';
 import { LoginUI } from './AdminUI/LoginUI';
 import { AccountsEmail } from './AccountsEmail';
 import { LicenseExpireEmailNotify } from './LicenseExpireEmailNotify';
@@ -147,6 +148,7 @@ Meteor.startup(function () {
         RestApi.initialize();
 
         // UI support initialization
+        AdminUI.initialize();
         LoginUI.initialize();
         BcotPriceUI.initialize();
         SystemFundingUI.initialize();

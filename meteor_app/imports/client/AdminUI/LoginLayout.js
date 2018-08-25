@@ -16,6 +16,7 @@
 // Meteor packages
 import { Template } from "meteor/templating";
 import { Meteor } from "meteor/meteor";
+import { ReactiveDict } from 'meteor/reactive-dict';
 
 // Import template UI
 import './LoginLayout.html';
@@ -50,6 +51,19 @@ function redirectHome() {
 //
 
 Template.loginLayout.onCreated(function () {
+    this.state = new ReactiveDict();
+
+    this.state.set('appEnv', undefined);
+
+    Meteor.call('getAppEnvironment', (err, env) => {
+        if (err) {
+            console.log('Error calling \'getAppEnvironment\' remote procedure.', err);
+        }
+        else {
+            this.state.set('appEnv', env);
+        }
+    });
+
     this.currentUserSubs = this.subscribe('currentUser');
 });
 
@@ -69,5 +83,16 @@ Template.loginLayout.events({
 Template.loginLayout.helpers({
     tryRedirect() {
         return AccountsTemplates.getState() === 'signIn' && redirectHome();
+    },
+    appEnvironment() {
+        return Template.instance().state.get('appEnv');
+    },
+    isNonProdEnvironment(env) {
+        return env && env.toLowerCase() !== 'production';
+    },
+    capitalize(str) {
+        if (str) {
+            return str.substr(0, 1).toUpperCase() + str.substr(1);
+        }
     }
 });

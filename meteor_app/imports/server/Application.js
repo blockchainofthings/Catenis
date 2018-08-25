@@ -33,6 +33,7 @@ const appConfig = config.get('application');
 // Configuration settings
 const cfgSettings = {
     appName: appConfig.get('appName'),
+    environment: appConfig.get('environment'),
     seedFilename: appConfig.get('seedFilename'),
     cryptoNetwork: appConfig.get('cryptoNetwork'),
     shutdownTimeout: appConfig.get('shutdownTimeout'),
@@ -59,13 +60,18 @@ const statusRegEx = {
 
 // Application function class
 export function Application() {
-    // Save Catenis node index used by application
-    Object.defineProperty(this, 'ctnHubNodeIndex', {
-        get: function () {
-            return ctnHubNodeIndex;
+    // Save environment and Catenis node index associated with application
+    Object.defineProperties(this, {
+        environment: {
+            get: () => cfgSettings.environment,
+            enumerable: true
+        },
+        ctnHubNodeIndex: {
+            get: () => ctnHubNodeIndex,
+            enumerable: true
         }
     });
-    
+
     // Get application seed
     const appSeedPath = path.join(process.env.PWD, cfgSettings.seedFilename),
         encData = fs.readFileSync(appSeedPath, {encoding: 'utf8'});

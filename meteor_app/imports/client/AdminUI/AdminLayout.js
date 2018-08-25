@@ -16,6 +16,7 @@
 // Meteor packages
 import { Meteor } from 'meteor/meteor';
 import { Template } from 'meteor/templating';
+import { ReactiveDict } from 'meteor/reactive-dict';
 import { FlowRouter } from 'meteor/kadira:flow-router';
 import { AccountsTemplates } from 'meteor/useraccounts:core';
 
@@ -56,6 +57,19 @@ function redirectHome() {
 //
 
 Template.adminLayout.onCreated(function () {
+    this.state = new ReactiveDict();
+
+    this.state.set('appEnv', undefined);
+
+    Meteor.call('getAppEnvironment', (err, env) => {
+        if (err) {
+            console.log('Error calling \'getAppEnvironment\' remote procedure.', err);
+        }
+        else {
+            this.state.set('appEnv', env);
+        }
+    });
+
     this.licenseSubs = this.subscribe('license');
 });
 
@@ -137,6 +151,17 @@ Template.adminLayout.helpers({
     login() {
         if (!Meteor.user() && !Meteor.userId()) {
             FlowRouter.go('/login');
+        }
+    },
+    appEnvironment() {
+        return Template.instance().state.get('appEnv');
+    },
+    isNonProdEnvironment(env) {
+        return env && env.toLowerCase() !== 'production';
+    },
+    capitalize(str) {
+        if (str) {
+            return str.substr(0, 1).toUpperCase() + str.substr(1);
         }
     }
 });

@@ -15,6 +15,7 @@
 // Meteor packages
 import { Meteor } from 'meteor/meteor';
 import { Template } from 'meteor/templating';
+import { ReactiveDict } from 'meteor/reactive-dict';
 import { FlowRouter } from 'meteor/kadira:flow-router';
 import { AccountsTemplates } from 'meteor/useraccounts:core';
 
@@ -63,6 +64,19 @@ function onWindowResize() {
 //
 
 Template.clientLayout.onCreated(function () {
+    this.state = new ReactiveDict();
+
+    this.state.set('appEnv', undefined);
+
+    Meteor.call('getAppEnvironment', (err, env) => {
+        if (err) {
+            console.log('Error calling \'getAppEnvironment\' remote procedure.', err);
+        }
+        else {
+            this.state.set('appEnv', env);
+        }
+    });
+
     this.catenisClientsSubs = this.subscribe('catenisClients', Catenis.ctnHubNodeIndex);
 });
 
@@ -139,13 +153,15 @@ Template.clientLayout.helpers({
             FlowRouter.go('/login');
         }
     },
-    myClient: function () {
-        const client= Catenis.db.collection.Client.findOne({user_id: Meteor.user()._id});
-        if(client){
-            return client._id;
-        }else{
-            //this is only necessary because right now the catenisadmin has no client.
-            return null;
+    appEnvironment() {
+        return Template.instance().state.get('appEnv');
+    },
+    isNonProdEnvironment(env) {
+        return env && env.toLowerCase() !== 'production';
+    },
+    capitalize(str) {
+        if (str) {
+            return str.substr(0, 1).toUpperCase() + str.substr(1);
         }
     }
 });

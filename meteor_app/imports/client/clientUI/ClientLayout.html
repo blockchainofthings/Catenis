@@ -1,4 +1,7 @@
 <template name="clientLayout">
+{{#unless appEnvironment}}
+    <p style="color:lightgray; margin:1em 1em">Loading...</p>
+{{else}}
     {{#unless currentUser}}
         {{login}}
     {{else}}
@@ -6,40 +9,44 @@
         <div id="wrapper">
             <!--top navigation bar-->
             <nav class="navbar navbar-default top-navBar">
-                <div class="container-fluid topNavCustom">
-                    <div class="navbar-header">
-                        <a class="navbar-brand" href="#" style="text-decoration:none">
-                            <p> Catenis<span class="gray">Enterprise</span></p>
-                        </a>
-                        <div class="pull-left">
-                            <a href="" class="menu-toggle"><i class="fa fa-bars fa-th-large"></i></a>
+                <div id="divFixWrapper">
+                    {{#if isNonProdEnvironment appEnvironment}}
+                        <div class="envHeader">{{capitalize appEnvironment}}</div>
+                    {{/if}}
+                    <div class="container-fluid topNavCustom">
+                        <div class="navbar-header">
+                            <a class="navbar-brand" href="#" style="text-decoration:none">
+                                <p> Catenis<span class="gray">Enterprise</span></p>
+                            </a>
+                            <div class="pull-left">
+                                <a href="" class="menu-toggle"><i class="fa fa-bars fa-th-large"></i></a>
+                            </div>
+                            <div class="pull-right" id="userAccount">
+                                <ul class="nav navbar-nav navbar-right">
+                                    <li class="dropdown">
+                                        <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false"><i class="glyphicon glyphicon-user"></i> Account <span class="caret"></span></a>
+                                        <ul class="dropdown-menu">
+                                            <li><a>{{currentUser.username}}</a></li>
+                                            <li role="separator" class="divider"></li>
+                                            <li><a href="//updateProfile">Manage Account</a></li>
+                                            <li><a id="lnkLogout" href="#" role="button">Log Out</a></li>
+                                        </ul>
+                                    </li>
+                                </ul>
+                            </div>
+                            <div class="pull-right credit">
+                                <p class="creditDetail">Catenis Credit: 0.12001278</p>
+                            </div>
                         </div>
-                        <div class="pull-right" id="userAccount">
-                            <ul class="nav navbar-nav navbar-right">
-                                <li class="dropdown">
-                                    <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false"><i class="glyphicon glyphicon-user"></i> Account <span class="caret"></span></a>
-                                    <ul class="dropdown-menu">
-                                        <li><a>{{currentUser.username}}</a></li>
-                                        <li role="separator" class="divider"></li>
-                                        <li><a href="//updateProfile">Manage Account</a></li>
-                                        <li><a id="lnkLogout" href="#" role="button">Log Out</a></li>
-                                    </ul>
-                                </li>
-                            </ul>
-                        </div>
-                        <div class="pull-right credit">
-                            <p class="creditDetail">Catenis Credit: 0.12001278</p>
-                        </div>
-                    </div>
-                    <!-- Brand and toggle get grouped for better mobile display -->
-                    <!--<a href="#menu-toggle" class="btn btn-default" id="menu-toggle"><a class="navbar-brand noPadding" href="#"><img src="images/CompanyElement_SM_Darkbackgrounds.png" class="logoImage" alt="logo"></a></a>-->
-
-                </div><!-- /.container-fluid -->
+                        <!-- Brand and toggle get grouped for better mobile display -->
+                        <!--<a href="#menu-toggle" class="btn btn-default" id="menu-toggle"><a class="navbar-brand noPadding" href="#"><img src="images/CompanyElement_SM_Darkbackgrounds.png" class="logoImage" alt="logo"></a></a>-->
+                    </div><!-- /.container-fluid -->
+                </div>
             </nav>
             <!--end of top nav bar-->
 
             <!-- Sidebar -->
-            <div id="sidebar-wrapper">
+            <div id="sidebar-wrapper" style="{{#if isNonProdEnvironment appEnvironment}}top:80px{{/if}}">
                 <ul class="sidebar-nav">
                     <li class="sideNavButtons">
                         <a href="/devices" class="show "><i class="glyphicon glyphicon-bitcoin"></i> Add Devices</a>
@@ -59,7 +66,7 @@
 
 
             <!--start of content-wrapper-->
-            <div id="page-content-wrapper">
+            <div id="page-content-wrapper" style="{{#if isNonProdEnvironment appEnvironment}}top:30px{{/if}}">
                     <div class="row infoLineBox">
                         <div class="col-md-12 fullWidth infoLine">
                         {{#unless Template.subscriptionsReady}}
@@ -94,4 +101,5 @@
             </div>
         {{/if}}
     {{/unless}}
+{{/unless}}
 </template>
