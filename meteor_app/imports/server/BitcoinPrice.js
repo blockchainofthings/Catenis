@@ -112,6 +112,10 @@ function checkPriceChange() {
         catch (err) {
             // Error processing timer to check for bitcoin price change
             Catenis.logger.ERROR('Error processing timer to check for bitcoin price change.', err);
+
+            // Stop recurring process to check when price changes
+            clearInterval(this.priceChangeInterval);
+            this.priceChangeInterval = undefined;
         }
         finally {
             this.checkingPriceChanged = false;
