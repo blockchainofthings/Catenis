@@ -92,13 +92,13 @@ Notification.prototype.dispatchNotifyMessage = function (deviceId, eventName, da
 
 function handleUpgradeRequest(request, socket, head) {
     try {
-        // Pass protocol connection request to available dispatchers until one handles it (or not)
-        if (!this.notifyMsgDispatchers.some((dispatcher) => {
+        // Pass protocol connection request to available dispatchers until one handles it (or not).
+        //  NOTE: if no dispatcher handles the request, we do not take any action since it is
+        //      likely that it is a request from the app's UI (DDP via WebSockets, which is the
+        //      standard for meteor apps)
+        this.notifyMsgDispatchers.some((dispatcher) => {
             return dispatcher.instance.handleProtocolConnection(request, socket, head);
-        })) {
-            // No dispatcher handled the request. Just abort the request
-            socket.destroy();
-        }
+        });
     }
     catch (err) {
         // Error handling HTTP upgrade request. Log error
