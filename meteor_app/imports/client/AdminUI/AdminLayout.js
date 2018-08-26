@@ -28,6 +28,7 @@ import './AdminLayout.html';
 
 // Import dependent templates
 import './LoginTemplate.js';
+import './UserAccountTemplate.js';
 import './BcotPriceTemplate.js';
 import './SystemFundingTemplate.js';
 import './ClientsTemplate.js';
@@ -69,14 +70,9 @@ Template.adminLayout.onCreated(function () {
             this.state.set('appEnv', env);
         }
     });
-
-    this.licenseSubs = this.subscribe('license');
 });
 
 Template.adminLayout.onDestroyed(function () {
-    if (this.licenseSubs) {
-        this.licenseSubs.stop();
-    }
 });
 
 Template.adminLayout.events({
@@ -87,38 +83,6 @@ Template.adminLayout.events({
     'click .menu-toggle'(event, template) {
         $('#wrapper').toggleClass('toggled');
         return false;
-    },
-    'click #changeLicenseConfigButton'(event, template) {
-        // Populate the form fields with the data from the current data.
-        $('#changeLicenseConfigForm')
-        .find('[name="starter"]').val(Catenis.db.collection.License.findOne({licenseType: 'Starter'}).numAllowedDevices).end()
-        .find('[name="basic"]').val(Catenis.db.collection.License.findOne({licenseType: 'Basic'}).numAllowedDevices).end()
-        .find('[name="professional"]').val(Catenis.db.collection.License.findOne({licenseType: 'Professional'}).numAllowedDevices).end()
-        .find('[name="enterprise"]').val(Catenis.db.collection.License.findOne({licenseType: 'Enterprise'}).numAllowedDevices).end();
-    },
-    'submit #changeLicenseConfigForm'(event, template) {
-        const form = event.target;
-        let licenseConfig = {};
-
-        licenseConfig.starter = form.starter.value ? form.starter.value : Catenis.db.collection.License.findOne({licenseType: 'Starter'}).numAllowedDevices;
-        licenseConfig.basic = form.basic.value ? form.basic.value : Catenis.db.collection.License.findOne({licenseType: 'Basic'}).numAllowedDevices;
-        licenseConfig.professional = form.professional.value ? form.professional.value : Catenis.db.collection.License.findOne({licenseType: 'Professional'}).numAllowedDevices;
-        licenseConfig.enterprise = form.enterprise.value ? form.enterprise.value : Catenis.db.collection.License.findOne({licenseType: 'Enterprise'}).numAllowedDevices;
-
-        // Call remote method to update client
-        Meteor.call('updateLicenseConfig', licenseConfig, (error) => {
-            if (error) {
-                console.log('error attempting to update license configuration', error);
-            }
-            else {
-                // Catenis client successfully updated
-
-                // Close modal form
-                $('#updateFormModal').modal('hide');
-                $('body').removeClass('modal-open');
-                $('.modal-backdrop').remove();
-            }
-        });
     },
     'click .sideNavButtons'(event, template) {
         // Change all colors to original color
@@ -138,10 +102,6 @@ Template.adminLayout.events({
         $(event.currentTarget).children()[1].style.color = 'white';
     },
     'click .navbar-brand'(event, template) {
-        redirectHome();
-        return false;
-    },
-    'click #lnkCtnTitle'(event, template) {
         redirectHome();
         return false;
     }

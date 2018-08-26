@@ -9,7 +9,7 @@
         <div id="wrapper">
             <!--top navigation bar-->
             <nav class="navbar navbar-default top-navBar">
-                <div id="divFixWrapper">
+                <div id="fixWrapper">
                     {{#if isNonProdEnvironment appEnvironment}}
                         <div class="envHeader">{{capitalize appEnvironment}}</div>
                     {{/if}}
@@ -29,7 +29,7 @@
                                             <li><a>{{currentUser.username}}</a></li>
                                             <li role="separator" class="divider"></li>
                                             <li><a href="//updateProfile">Manage Account</a></li>
-                                            <li><a id="lnkLogout" href="#" role="button">Log Out</a></li>
+                                            <li><a id="lnkLogout" href="#" role="button">Sign Out</a></li>
                                         </ul>
                                     </li>
                                 </ul>
@@ -56,14 +56,9 @@
                         <a href="/credits" class="show "><i class="glyphicon glyphicon-bitcoin"></i> See Credits</a>
                         <a href="/credits" class="notshow "><i class="glyphicon glyphicon-bitcoin"></i></a>
                     </li>
-                    <li class="sideNavButtons">
-                        <a id="lnkLogout" href="" role="button" class="show "><i class="glyphicon glyphicon-thumbs-down"></i>Log out</a>
-                        <a href="menu-toggle" id="lnkLogout" class="notshow "><i class="glyphicon glyphicon-thumbs-down"></i></a>
-                    </li>
                 </ul>
             </div>
             <!-- end of sidebar -->
-
 
             <!--start of content-wrapper-->
             <div id="page-content-wrapper" style="{{#if isNonProdEnvironment appEnvironment}}top:30px{{/if}}">
@@ -93,12 +88,44 @@
         </div>
         <!--end of wrapper -->
         {{else}}
-            <div style="text-align: center">
-                <a id="lnkCtnTitle" href="#" style="text-decoration:none">
-                    <h1>Catenis<span class="gray">Enterprise</span></h1>
-                </a>
-                <p>User has no permission of access this resource.</p>
+        <!-- No permission to access resource -->
+        <div id="wrapper">
+            <nav id="navBar" class="navbar navbar-default top-navBar">
+                <div id="fixWrapper">
+                    {{#if isNonProdEnvironment appEnvironment}}
+                        <div class="envHeader">{{capitalize appEnvironment}}</div>
+                    {{/if}}
+                    <div class="container-fluid topNavCustom">
+                        <div class="navbar-header">
+                            <a class="navbar-brand" href="#" style="text-decoration:none">
+                                <p>Catenis<span class="gray">Enterprise</span></p>
+                            </a>
+                            <div class="pull-right" id="userAccount">
+                                <ul class="nav navbar-nav navbar-right">
+                                    <li class="dropdown">
+                                        <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false"><i class="glyphicon glyphicon-user"></i> {{currentUser.username}} <span class="caret"></span></a>
+                                        <ul class="dropdown-menu">
+                                            <li role="separator" class="divider"></li>
+                                            <li><a id="lnkLogout" href="#" role="button">Sign Out</a></li>
+                                        </ul>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div><!-- /.container-fluid -->
+                </div>
+            </nav>
+            <!--end of top nav bar-->
+
+            <!--start of content-wrapper-->
+            <div class="text-center" style="position:relative; {{#if isNonProdEnvironment appEnvironment}}top:30px{{/if}}">
+                <div class="row">
+                    <p style="margin-top:2em">User has no permission of access this resource.</p>
+                </div>
             </div>
+            <!--end of content-wrapper-->
+        </div>
+        <!--end of wrapper -->
         {{/if}}
     {{/unless}}
 {{/unless}}

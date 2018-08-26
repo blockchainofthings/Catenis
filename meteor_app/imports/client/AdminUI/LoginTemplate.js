@@ -55,7 +55,7 @@ Template.login.events({
 Template.login.helpers({
     atFormTitle() {
         if (AccountsTemplates.getState() === 'signIn' ) {
-            return "LOGIN";
+            return "SIGN IN";
         }
         else if (AccountsTemplates.getState() === 'forgotPwd') {
             return "RESET PASSWORD";

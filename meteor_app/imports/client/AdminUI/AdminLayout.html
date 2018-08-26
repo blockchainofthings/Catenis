@@ -18,7 +18,7 @@
                      <div class="container-fluid topNavCustom">
                          <div class="navbar-header">
                              <a class="navbar-brand" href="#" style="text-decoration:none">
-                                 <p> Catenis<span class="gray">Enterprise</span></p>
+                                 <p>Catenis<span class="gray">Enterprise</span></p>
                              </a>
                              <div class="pull-left">
                                  <a href="" class="menu-toggle"><i class="fa fa-bars fa-th-large"></i></a>
@@ -26,15 +26,11 @@
                              <div class="pull-right" id="userAccount">
                                  <ul class="nav navbar-nav navbar-right">
                                      <li class="dropdown">
-                                         <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false"><i class="glyphicon glyphicon-user"></i> Account <span class="caret"></span></a>
+                                         <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false"><i class="glyphicon glyphicon-user"></i> {{currentUser.username}} <span class="caret"></span></a>
                                          <ul class="dropdown-menu">
-                                             <li><a>{{currentUser.username}}</a></li>
+                                             <li><a href="/admin/userAccount">User Account</a></li>
                                              <li role="separator" class="divider"></li>
-                                             <li><a href="/admin/updateProfile  ">Manage Account</a></li>
-                                             {{#if isInRole 'sys-admin'}}
-                                             <li><a href="" id="changeLicenseConfigButton" data-toggle="modal" data-target="#changeLicenseConfig">Device License Config</a></li>
-                                             {{/if}}
-                                             <li><a id="lnkLogout" href="#" role="button">Log Out</a></li>
+                                             <li><a id="lnkLogout" href="#" role="button">Sign Out</a></li>
                                          </ul>
                                      </li>
                                  </ul>
@@ -58,10 +54,6 @@
                         <a href="/admin/clients" class="show"><i class="glyphicon glyphicon-knight"></i> Clients</a>
                         <a href="/admin/clients" id="menu-toggle" class="notshow"><i class="glyphicon glyphicon-knight"></i></a>
                     </li>
-                    <li  class="sideNavButtons">
-                        <a id="lnkLogout" href="#" role="button" class="show"><i class="glyphicon glyphicon-thumbs-down"></i> Log out</a>
-                        <a href="" id="lnkLogout" class="notshow"><i class="glyphicon glyphicon-thumbs-down"></i></a>
-                    </li>
                 </ul>
             </div>
             <!-- end of sidebar -->
@@ -70,17 +62,13 @@
             <div id="page-content-wrapper" class="text-center" style="{{#if isNonProdEnvironment appEnvironment}}top:30px{{/if}}">
                     <div class="row">
                         <div class="col-md-8 col-md-offset-2">
-                            {{#if isInRole 'sys-admin'}}
-                                <article class="text-center">
-                                    {{#if page}}
-                                    <div class="block">
-                                        {{> Template.dynamic template=page data=dataContext}}
-                                    </div>
-                                    {{/if}}
-                                </article>
-                            {{else}}
-                                <p>User does not have the necessary permission.</p>
-                            {{/if}}
+                            <article class="text-center">
+                                {{#if page}}
+                                <div class="block">
+                                    {{> Template.dynamic template=page data=dataContext}}
+                                </div>
+                                {{/if}}
+                            </article>
                         </div>
                     </div>
             </div>
@@ -89,12 +77,44 @@
          </div>
         <!--end of wrapper -->
         {{else}}
-            <div class="text-center">
-                <a id="lnkCtnTitle" href="#" style="text-decoration:none">
-                    <h1>Catenis<span class="gray">Enterprise</span></h1>
-                </a>
-                <p>User has no permission of access this resource.</p>
+        <!-- No permission to access resource -->
+        <div id="wrapper">
+            <nav id="navBar" class="navbar navbar-default top-navBar">
+                <div id="fixWrapper">
+                    {{#if isNonProdEnvironment appEnvironment}}
+                        <div class="envHeader">{{capitalize appEnvironment}}</div>
+                    {{/if}}
+                    <div class="container-fluid topNavCustom">
+                        <div class="navbar-header">
+                            <a class="navbar-brand" href="#" style="text-decoration:none">
+                                <p>Catenis<span class="gray">Enterprise</span></p>
+                            </a>
+                            <div class="pull-right" id="userAccount">
+                                <ul class="nav navbar-nav navbar-right">
+                                    <li class="dropdown">
+                                        <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false"><i class="glyphicon glyphicon-user"></i> {{currentUser.username}} <span class="caret"></span></a>
+                                        <ul class="dropdown-menu">
+                                            <li role="separator" class="divider"></li>
+                                            <li><a id="lnkLogout" href="#" role="button">Sign Out</a></li>
+                                        </ul>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div><!-- /.container-fluid -->
+                </div>
+            </nav>
+            <!--end of top nav bar-->
+
+            <!--start of content-wrapper-->
+            <div class="text-center" style="position:relative; {{#if isNonProdEnvironment appEnvironment}}top:30px{{/if}}">
+                <div class="row">
+                    <p style="margin-top:2em">User has no permission of access this resource.</p>
+                </div>
             </div>
+            <!--end of content-wrapper-->
+        </div>
+        <!--end of wrapper -->
         {{/if}}
     {{/unless}}
 {{/unless}}

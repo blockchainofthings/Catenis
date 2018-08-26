@@ -74,10 +74,10 @@ FlowRouter.route('/admin', {
     }
 });
 
-FlowRouter.route('/admin/updateProfile', {
+FlowRouter.route('/admin/userAccount', {
     action: function () {
         BlazeLayout.render('adminLayout',{
-            page: 'updateProfile'
+            page: 'userAccount'
         });
     }
 });

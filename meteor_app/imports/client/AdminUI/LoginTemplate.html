@@ -17,7 +17,7 @@
                             <!--these are the bottom buttons-->
 
                             <!--1. Login page-->
-                            {{#if (equals atFormTitle "LOGIN")}}
+                            {{#if (equals atFormTitle "SIGN IN")}}
                                 <div class="col-xs-6 tabs">
                                     <a href="#" class="active" id="forgotPwd-form-link"><div class="login">FORGOT PASSWORD?</div></a>
                                 </div>
@@ -30,7 +30,7 @@
                             <!--2. Forgot Password Page-->
                             {{#if (equals atFormTitle "RESET PASSWORD")}}
                                 <div class="col-xs-6 tabs">
-                                    <a href="#" class="active" id="login-form-link"><div class="login">LOGIN</div></a>
+                                    <a href="#" class="active" id="login-form-link"><div class="login">SIGN IN</div></a>
                                 </div>
                                 <div class="col-xs-6 tabs">
                                     <a href="#" id="register-form-link"><div class="register">REGISTER</div></a>
@@ -40,7 +40,7 @@
                             <!--4. enroll Account Page-->
                             {{#if (equals atFormTitle "ENROLL ACCOUNT")}}
                                 <div class="col-xs-6 tabs">
-                                    <a href="/admin" class="active" id="login-form-link"><div class="login">LOGIN</div></a>
+                                    <a href="/admin" class="active" id="SIGN IN-form-link"><div class="login">SIGN IN</div></a>
                                 </div>
                                 <div class="col-xs-6 tabs">
                                     <a href="#" id="register-form-link"><div class="register">REGISTER</div></a>

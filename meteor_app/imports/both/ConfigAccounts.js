@@ -82,7 +82,7 @@ AccountsTemplates.configure({
             enrollAccount: 'Enroll Account',
             forgotPwd: 'Send Email Link',
             resetPwd: 'Reset Password',
-            signIn: 'Log In',
+            signIn: 'Sign In',
             signUp: 'Register'
         }
     },
