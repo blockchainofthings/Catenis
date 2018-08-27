@@ -57,6 +57,8 @@ Template.clientDetails.onCreated(function () {
 
     this.state.set('displayResetPasswordSubmitButton', 'none');
 
+    this.state.set('displayDeleteClientSubmitButton', 'none');
+
     this.state.set('apiAccessSecret', undefined);
     this.state.set('displayResetApiAccessSecretForm', 'none');
     this.state.set('displayResetApiAccessSecretButton', 'none');
@@ -307,7 +309,57 @@ Template.clientDetails.events({
         else {
             $('#btnCancelResetApiAccessSecret').click();
         }
-    }
+    },
+    'click #btnDeleteClient'(events, template) {
+        event.preventDefault();
+
+        // Reset alert messages
+        template.state.set('errMsgs', []);
+        template.state.set('infoMsg', undefined);
+        template.state.set('infoMsgType', 'info');
+
+        // Reset action confirmation
+        $('#itxDeleteClientConfirmation')[0].value = '';
+        template.state.set('displayDeleteClientSubmitButton', 'none');
+    },
+    'change #itxDeleteClientConfirmation'(event, template) {
+        if (event.target.value.trim().toLowerCase() === 'yes, i do confirm it') {
+            // Show button to confirm action
+            template.state.set('displayDeleteClientSubmitButton', 'inline');
+        }
+    },
+    'submit #frmDeleteClient'(event, template) {
+        event.preventDefault();
+        event.stopPropagation();
+
+        const confirmMsg = 'LAST CHANCE!\n\nIf you proceed, the client and ALL its virtual devices will be DELETED.\n\nPLEASE NOTE THAT THIS ACTION CANNOT BE UNDONE.';
+
+        if (confirm(confirmMsg)) {
+            // Close modal panel
+            $('#btnCloseDeleteClient2').click();
+
+            // Reset alert messages
+            template.state.set('errMsgs', []);
+            template.state.set('infoMsg', undefined);
+            template.state.set('infoMsgType', 'info');
+
+            Meteor.call('deleteClient', template.data.client_id, (error) => {
+                if (error) {
+                    const errMsgs = template.state.get('errMsgs');
+                    errMsgs.push('Error deleting client: ' + error.toString());
+                    template.state.set('errMsgs', errMsgs);
+                }
+                else {
+                    template.state.set('infoMsg', 'Client successfully deleted');
+                    template.state.set('infoMsgType', 'success');
+                }
+            });
+        }
+        else {
+            // Close modal panel
+            $('#btnCloseDeleteClient2').click();
+        }
+    },
 });
 
 Template.clientDetails.helpers({
@@ -350,6 +402,10 @@ Template.clientDetails.helpers({
 
             case ClientShared.status.new.name:
                 color = 'blue';
+                break;
+                
+            case ClientShared.status.deleted.name:
+                color = 'red';
                 break;
         }
 
@@ -449,6 +505,9 @@ Template.clientDetails.helpers({
     isActiveClient(client) {
         return client.status === ClientShared.status.active.name;
     },
+    isDeletedClient(client) {
+        return client.status === ClientShared.status.deleted.name;
+    },
     hasErrorMessage() {
         return Template.instance().state.get('errMsgs').length > 0;
     },
@@ -486,5 +545,8 @@ Template.clientDetails.helpers({
     },
     displayResetApiAccessSecretButton() {
         return Template.instance().state.get('displayResetApiAccessSecretButton');
+    },
+    displayDeleteClientSubmitButton() {
+        return Template.instance().state.get('displayDeleteClientSubmitButton');
     }
 });

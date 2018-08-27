@@ -771,3 +771,13 @@ div#fixWrapper {
     width:100%;
     z-index:1000;
 }
+
+.btn-warn {
+    background-color: #E8E9EC;
+    color: red;
+}
+.btn-warn:hover,
+.btn-warn:focus {
+    background-color: #b70000;
+    color: white;
+}

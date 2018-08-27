@@ -282,6 +282,25 @@ ClientsUI.initialize = function () {
                 //  Throw exception
                 throw new Meteor.Error('ctn_admin_no_permission', 'No permission; must be logged in as a system administrator to perform this task');
             }
+        },
+        deleteClient: function (client_id) {
+            if (Roles.userIsInRole(this.userId, 'sys-admin')) {
+                try {
+                    const client = Client.getClientByDocId(client_id);
+
+                    client.delete();
+                }
+                catch (err) {
+                    // Error trying to delete client. Log error and throw exception
+                    Catenis.logger.ERROR('Failure trying to delete client (doc_id: %s).', client_id, err);
+                    throw new Meteor.Error('client.deleteClient.failure', 'Failure trying to delete client: ' + err.toString());
+                }
+            }
+            else {
+                // User not logged in or not a system administrator.
+                //  Throw exception
+                throw new Meteor.Error('ctn_admin_no_permission', 'No permission; must be logged in as a system administrator to perform this task');
+            }
         }
     });
 
