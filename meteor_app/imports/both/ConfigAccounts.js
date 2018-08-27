@@ -140,6 +140,10 @@ function redirectHome() {
     else if (Roles.userIsInRole(user_id, 'ctn-client')) {
         FlowRouter.go('/');
     }
+    else {
+        // Unrecognized account. Just log out
+        AccountsTemplates.logout();
+    }
 }
 
 function onLogout() {

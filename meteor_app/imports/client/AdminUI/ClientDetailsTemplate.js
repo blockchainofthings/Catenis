@@ -23,6 +23,7 @@ import { ReactiveDict } from 'meteor/reactive-dict';
 
 // References code in other (Catenis) modules on the client
 import { Catenis } from '../ClientCatenis';
+import { ClientShared } from '../../both/ClientShared';
 import { ClientUtil } from '../ClientUtil';
 import { ClientLicenseShared } from '../../both/ClientLicenseShared';
 
@@ -51,6 +52,11 @@ Template.clientDetails.onCreated(function () {
     this.state.set('errMsgs', []);
     this.state.set('infoMsg', undefined);
     this.state.set('infoMsgType', 'info');
+
+    this.state.set('displayResendEnrollmentSubmitButton', 'none');
+
+    this.state.set('displayResetPasswordSubmitButton', 'none');
+
     this.state.set('apiAccessSecret', undefined);
     this.state.set('displayResetApiAccessSecretForm', 'none');
     this.state.set('displayResetApiAccessSecretButton', 'none');
@@ -91,47 +97,110 @@ Template.clientDetails.events({
         template.state.set('errMsgs', []);
     },
     'click #btnResendEnrollment'(events, template) {
-        // Reset messages
-        template.state.set('errMsgs', []);
-        template.state.set('infoMsg', 'Sending client account enrollment e-mail message to customer...');
-        template.state.set('infoMsgType', 'info');
+        event.preventDefault();
 
-        Meteor.call('sendEnrollmentEmail', template.data.client_id, (error) => {
-            if (error) {
-                template.state.set('infoMsg', undefined);
-                template.state.set('infoMsgType', 'info');
-
-                const errMsgs = template.state.get('errMsgs');
-                errMsgs.push('Error sending client account enrollment e-mail message: ' + error.toString());
-                template.state.set('errMsgs', errMsgs);
-            }
-            else {
-                template.state.set('infoMsg', 'Client account enrollment e-mail message successfully sent');
-                template.state.set('infoMsgType', 'success');
-            }
-            template.state.set('')
-        });
-    },
-    'click #btnResetPassword'(events, template) {
         // Reset alert messages
         template.state.set('errMsgs', []);
-        template.state.set('infoMsg', 'Sending client account\'s password reset e-mail message to customer...');
+        template.state.set('infoMsg', undefined);
         template.state.set('infoMsgType', 'info');
 
-        Meteor.call('sendResetPasswordEmail',template.data.client_id, (error) => {
-            if (error) {
-                template.state.set('infoMsg', undefined);
-                template.state.set('infoMsgType', 'info');
+        // Reset action confirmation
+        $('#itxResendEnrollmentConfirmation')[0].value = '';
+        template.state.set('displayResendEnrollmentSubmitButton', 'none');
+    },
+    'change #itxResendEnrollmentConfirmation'(event, template) {
+        if (event.target.value.trim().toLowerCase() === 'yes, i do confirm it') {
+            // Show button to confirm action
+            template.state.set('displayResendEnrollmentSubmitButton', 'inline');
+        }
+    },
+    'submit #frmResendEnrollment'(event, template) {
+        event.preventDefault();
+        event.stopPropagation();
 
-                const errMsgs = template.state.get('errMsgs');
-                errMsgs.push('Error sending client account\'s password reset e-mail message: ' + error.toString());
-                template.state.set('errMsgs', errMsgs);
-            }
-            else {
-                template.state.set('infoMsg', 'Client account\'s password reset e-mail message successfully sent');
-                template.state.set('infoMsgType', 'success');
-            }
-        });
+        const confirmMsg = 'LAST CHANCE!\n\nIf you proceed, an e-mail message requesting for client account enrollment will be sent to the customer.\n\nPLEASE NOTE THAT THIS ACTION CANNOT BE UNDONE.';
+
+        if (confirm(confirmMsg)) {
+            // Close modal panel
+            $('#btnCloseResendEnrollment2').click();
+
+            // Reset alert messages
+            template.state.set('errMsgs', []);
+            template.state.set('infoMsg', 'Sending client account enrollment e-mail message to customer...');
+            template.state.set('infoMsgType', 'info');
+
+            Meteor.call('sendEnrollmentEmail', template.data.client_id, (error) => {
+                if (error) {
+                    template.state.set('infoMsg', undefined);
+                    template.state.set('infoMsgType', 'info');
+
+                    const errMsgs = template.state.get('errMsgs');
+                    errMsgs.push('Error sending client account enrollment e-mail message: ' + error.toString());
+                    template.state.set('errMsgs', errMsgs);
+                }
+                else {
+                    template.state.set('infoMsg', 'Client account enrollment e-mail message successfully sent');
+                    template.state.set('infoMsgType', 'success');
+                }
+            });
+        }
+        else {
+            // Close modal panel
+            $('#btnCloseResendEnrollment2').click();
+        }
+    },
+    'click #btnResetPassword'(events, template) {
+        event.preventDefault();
+
+        // Reset alert messages
+        template.state.set('errMsgs', []);
+        template.state.set('infoMsg', undefined);
+        template.state.set('infoMsgType', 'info');
+
+        // Reset action confirmation
+        $('#itxResetPasswordConfirmation')[0].value = '';
+        template.state.set('displayResetPasswordSubmitButton', 'none');
+    },
+    'change #itxResetPasswordConfirmation'(event, template) {
+        if (event.target.value.trim().toLowerCase() === 'yes, i do confirm it') {
+            // Show button to confirm action
+            template.state.set('displayResetPasswordSubmitButton', 'inline');
+        }
+    },
+    'submit #frmResetPassword'(event, template) {
+        event.preventDefault();
+        event.stopPropagation();
+
+        const confirmMsg = 'LAST CHANCE!\n\nIf you proceed, the client\'s account password will be reset.\n\nPLEASE NOTE THAT THIS ACTION CANNOT BE UNDONE.';
+
+        if (confirm(confirmMsg)) {
+            // Close modal panel
+            $('#btnCloseResetPassword2').click();
+
+            // Reset alert messages
+            template.state.set('errMsgs', []);
+            template.state.set('infoMsg', 'Sending client account\'s password reset e-mail message to customer...');
+            template.state.set('infoMsgType', 'info');
+
+            Meteor.call('sendResetPasswordEmail', template.data.client_id, (error) => {
+                if (error) {
+                    template.state.set('infoMsg', undefined);
+                    template.state.set('infoMsgType', 'info');
+
+                    const errMsgs = template.state.get('errMsgs');
+                    errMsgs.push('Error sending client account\'s password reset e-mail message: ' + error.toString());
+                    template.state.set('errMsgs', errMsgs);
+                }
+                else {
+                    template.state.set('infoMsg', 'Client account\'s password reset e-mail message successfully sent');
+                    template.state.set('infoMsgType', 'success');
+                }
+            });
+        }
+        else {
+            // Close modal panel
+            $('#btnCloseResetPassword2').click();
+        }
     },
     'click #btnApiAccessSecret'(events, template) {
         new ClipboardJS('#btnCopyClipboard', {
@@ -351,6 +420,21 @@ Template.clientDetails.helpers({
 
         return ClientUtil.getUserEmail(user);
     },
+    statusColor(status) {
+        let color;
+
+        switch (status) {
+            case ClientShared.status.active.name:
+                color = 'green';
+                break;
+
+            case ClientShared.status.new.name:
+                color = 'blue';
+                break;
+        }
+
+        return color;
+    },
     clientLicenseName(client_id) {
         const docClientLicense = Catenis.db.collection.ClientLicense.findOne({
             client_id: client_id,
@@ -464,6 +548,12 @@ Template.clientDetails.helpers({
     },
     infoMessageType() {
         return Template.instance().state.get('infoMsgType');
+    },
+    displayResendEnrollmentSubmitButton() {
+        return Template.instance().state.get('displayResendEnrollmentSubmitButton');
+    },
+    displayResetPasswordSubmitButton() {
+        return Template.instance().state.get('displayResetPasswordSubmitButton');
     },
     clientApiAccessSecret() {
         return Template.instance().state.get('apiAccessSecret');

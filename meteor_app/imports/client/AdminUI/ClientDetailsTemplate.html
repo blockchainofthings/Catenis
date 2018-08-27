@@ -38,7 +38,7 @@
                                         </tr>
                                         <tr>
                                             <th><label class="noMargin">Status:</label></th>
-                                            <td>{{client.status}}</td>
+                                            <td><span style="color:{{statusColor client.status}}">{{client.status}}</span></td>
                                         </tr>
                                         <tr>
                                             <th><label class="noMargin">Customer Name:</label></th>
@@ -90,12 +90,12 @@
                             <div class="row">
                                 {{#if (isNewClient client)}}
                                 <div class="col-md-12">
-                                    <button type="button" id="btnResendEnrollment" class="btn-login btn paddedBtn fullWidth">Resend Enrollment</button>
+                                    <button type="button" id="btnResendEnrollment" class="btn-login btn paddedBtn fullWidth" data-toggle="modal" data-target="#divResendEnrollment">Resend Enrollment</button>
                                 </div>
                                 {{/if}}
                                 {{#if (isActiveClient client)}}
                                     <div class="col-md-4">
-                                        <button type="button" id="btnResetPassword" class="btn-login btn paddedBtn fullWidth">Reset Password</button>
+                                        <button type="button" id="btnResetPassword" class="btn-login btn paddedBtn fullWidth" data-toggle="modal" data-target="#divResetPassword">Reset Password</button>
                                     </div>
                                     <div class="col-md-4">
                                         <a id="lnkManageLicenses" href="/admin/clients/{{client_id}}/licenses" role="button" class="btn-login btn paddedBtn fullWidth">Manage Licenses</a>
@@ -107,6 +107,60 @@
                                         <button type="button" id="btnManageDevices" class="btn-login btn paddedBtn fullWidth">Manage Devices</button>
                                     </div>
                                 {{/if}}
+                            </div>
+                            {{!Modal panel containing form used to resend client enrollment e-mail}}
+                            <div id="divResendEnrollment" class="modal fade" tabindex="-1" role="dialog">
+                                <div class="modal-dialog" role="document">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <button id="btnCloseResendEnrollment1" type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                                            <h4 class="modal-title">Resend Client Enrollment E-mail</h4>
+                                        </div>
+                                        <div class="modal-body">
+                                            <form id="frmResendEnrollment" autocomplete="off">
+                                                <div id="divResendEnrollmentConfirm" class="panel panel-default" style="padding:1em">
+                                                    <div style="margin-top:1em; margin-bottom:1em">
+                                                        <label>To confirm your action, please type the following text below: <b>yes, I do confirm it</b>
+                                                            <br><input id="itxResendEnrollmentConfirmation" type="text" size="20" maxlength="20" placeholder="confirmation" autocomplete="off"></label>
+                                                    </div>
+                                                    <div style="margin-top:1em">
+                                                        <button type="submit" class="btn btn-primary" style="display:{{displayResendEnrollmentSubmitButton}}">Resend Enrollment</button>
+                                                    </div>
+                                                </div>
+                                            </form>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button id="btnCloseResendEnrollment2" type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {{!Modal panel containing form used to reset client's password}}
+                            <div id="divResetPassword" class="modal fade" tabindex="-1" role="dialog">
+                                <div class="modal-dialog" role="document">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <button id="btnCloseResetPassword1" type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                                            <h4 class="modal-title">Reset Client Account's Password</h4>
+                                        </div>
+                                        <div class="modal-body">
+                                            <form id="frmResetPassword" autocomplete="off">
+                                                <div id="divResetPasswordConfirm" class="panel panel-default" style="padding:1em">
+                                                    <div style="margin-top:1em; margin-bottom:1em">
+                                                        <label>To confirm your action, please type the following text below: <b>yes, I do confirm it</b>
+                                                            <br><input id="itxResetPasswordConfirmation" type="text" size="20" maxlength="20" placeholder="confirmation" autocomplete="off"></label>
+                                                    </div>
+                                                    <div style="margin-top:1em">
+                                                        <button type="submit" class="btn btn-primary" style="display:{{displayResetPasswordSubmitButton}}">Reset Password</button>
+                                                    </div>
+                                                </div>
+                                            </form>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button id="btnCloseResetPassword2" type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                             {{!Modal panel used to show and reset client's default API access secret}}
                             <div id="divClientAPIAccessSecret" class="modal fade" tabindex="-1" role="dialog">

@@ -24,7 +24,7 @@
                                     <tr>
                                         <td>{{client.props.name}}</td>
                                         <td><a href="/admin/clients/{{client._id}}">{{client.clientId}}</a></td>
-                                        <td>{{client.status}}</td>
+                                        <td><span style="color:{{statusColor client.status}}">{{client.status}}</span></td>
                                     </tr>
                                 {{/each}}
                                 </tbody>

@@ -6,7 +6,9 @@
                     <h2>NEW CLIENT</h2>
                     <div class="col-lg-12">
                         {{#if newClientId}}
-                            <p style="color:blue">New client (client ID: {{newClientId}}) successfully created</p>
+                            <div class="alert alert-success" role="alert">
+                                New client (client ID: {{newClientId}}) successfully created
+                            </div>
                             <div class="row">
                                 <div class="col-md-6">
                                     <a href="/admin/clients" class="form-control btn btn-login at-btn">Close</a>

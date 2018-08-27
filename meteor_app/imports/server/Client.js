@@ -25,6 +25,7 @@ import { Roles } from 'meteor/alanning:roles';
 
 // References code in other (Catenis) modules
 import { Catenis } from './Catenis';
+import { ClientShared } from '../both/ClientShared';
 import { CriticalSection } from './CriticalSection';
 import {
     ClientServiceAccountCreditLineAddress,
@@ -1050,13 +1051,13 @@ Client.createNewUserForClient = function (username, email, deviceName) {
         let errorToThrow;
 
         if ((err instanceof Meteor.Error) && err.error === 403) {
-            if (error.reason === 'Username already exists.') {
+            if (err.reason === 'Username already exists.') {
                 errorToThrow = new Meteor.Error('ctn_client_duplicate_username', 'Error creating new user for client: username already exists');
             }
-            else if (error.reason === 'Email already exists.') {
+            else if (err.reason === 'Email already exists.') {
                 errorToThrow = new Meteor.Error('ctn_client_duplicate_email', 'Error creating new user for client: email already exists');
             }
-            else if (error.reason === 'Something went wrong. Please check your credentials.') {
+            else if (err.reason === 'Something went wrong. Please check your credentials.') {
                 // Generic credentials error. Try to identify what was wrong
                 if (opts.username && Meteor.users.findOne({username: opts.username}, {fields:{_id: 1}})) {
                     errorToThrow = new Meteor.Error('ctn_client_duplicate_username', 'Error creating new user for client: username already exists');
@@ -1371,20 +1372,7 @@ Client.checkDeviceDefaultRights = function () {
 
 Client.clientCtrl = {};
 
-Client.status = Object.freeze({
-    new: Object.freeze({
-        name: 'new',
-        description: 'Newly created client awaiting activation'
-    }),
-    active: Object.freeze({
-        name: 'active',
-        description: 'Client is in its normal use mode'
-    }),
-    deleted: Object.freeze({
-        name: 'deleted',
-        description: 'Client has been logically deleted'
-    })
-});
+Client.status = ClientShared.status;
 
 Client.billingMode = Object.freeze({
     prePaid: 'pre-paid',

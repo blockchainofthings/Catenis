@@ -22,6 +22,7 @@ import { Template } from 'meteor/templating';
 
 // References code in other (Catenis) modules on the client
 import { Catenis } from '../ClientCatenis';
+import { ClientShared } from '../../both/ClientShared';
 
 // Import template UI
 import './ClientsTemplate.html';
@@ -51,5 +52,20 @@ Template.clients.helpers({
     clients: function () {
         return Catenis.db.collection.Client.find({}, {
             sort:{'props.name': 1}}).fetch();
+    },
+    statusColor(status) {
+        let color;
+
+        switch (status) {
+            case ClientShared.status.active.name:
+                color = 'green';
+                break;
+
+            case ClientShared.status.new.name:
+                color = 'blue';
+                break;
+        }
+
+        return color;
     }
 });
