@@ -15,7 +15,6 @@
 //import config from 'config';
 // Meteor packages
 import { Meteor } from 'meteor/meteor';
-import { Roles } from 'meteor/alanning:roles';
 
 // References code in other (Catenis) modules
 import { Catenis } from '../Catenis';

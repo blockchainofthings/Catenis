@@ -35,7 +35,6 @@ import './ClientsTemplate.js';
 import './DeviceDetailsTemplate.js';
 import './NewClientTemplate.js';
 import './NewDeviceTemplate.js';
-import '../clientUI/updateProfile.js'
 
 
 // Definition of module (private) functions

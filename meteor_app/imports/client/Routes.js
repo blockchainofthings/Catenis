@@ -74,7 +74,7 @@ FlowRouter.route('/admin', {
     }
 });
 
-FlowRouter.route('/admin/userAccount', {
+FlowRouter.route('/admin/useraccount', {
     action: function () {
         BlazeLayout.render('adminLayout',{
             page: 'userAccount'

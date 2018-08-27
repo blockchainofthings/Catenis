@@ -31,8 +31,8 @@ export function LoginUI() {
 // Public LoginUI object methods
 //
 
-LoginUI.prototype.pub_func = function () {
-};
+/*LoginUI.prototype.pub_func = function () {
+};*/
 
 
 // Module functions used to simulate private LoginUI object methods
@@ -41,8 +41,8 @@ LoginUI.prototype.pub_func = function () {
 //      or .bind().
 //
 
-function priv_func() {
-}
+/*function priv_func() {
+}*/
 
 
 // LoginUI function class (public) methods
@@ -50,6 +50,8 @@ function priv_func() {
 
 LoginUI.initialize = function () {
     Catenis.logger.TRACE('LoginUI initialization');
+    // NOTE: the access to this publication MUST not be restricted since it needs
+    //      to be accessed from the login form
     Meteor.publish('currentUser', function () {
         const currentUser_id = Meteor.userId();
 
@@ -75,14 +77,14 @@ LoginUI.initialize = function () {
 // LoginUI function class (public) properties
 //
 
-LoginUI.prop = {};
+/*LoginUI.prop = {};*/
 
 
 // Definition of module (private) functions
 //
 
-function module_func() {
-}
+/*function module_func() {
+}*/
 
 
 // Module code

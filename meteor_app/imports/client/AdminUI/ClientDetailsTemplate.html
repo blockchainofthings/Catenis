@@ -88,12 +88,12 @@
                                 </div>
                             {{/if}}
                             <div class="row">
-                                {{#if (isNewClient client)}}
+                                {{#if isNewClient client}}
                                 <div class="col-md-12">
                                     <button type="button" id="btnResendEnrollment" class="btn-login btn paddedBtn fullWidth" data-toggle="modal" data-target="#divResendEnrollment">Resend Enrollment</button>
                                 </div>
                                 {{/if}}
-                                {{#if (isActiveClient client)}}
+                                {{#if isActiveClient client}}
                                     <div class="col-md-4">
                                         <button type="button" id="btnResetPassword" class="btn-login btn paddedBtn fullWidth" data-toggle="modal" data-target="#divResetPassword">Reset Password</button>
                                     </div>

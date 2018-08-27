@@ -307,86 +307,6 @@ Template.clientDetails.events({
         else {
             $('#btnCancelResetApiAccessSecret').click();
         }
-    },
-
-    //in future, these two functions below should be coalesced to become a single changeUserStatus function, that takes in
-    //the parameter of current status and flips it other way. Be mindful that there are three statuses, activated, deactivated, and pending.
-
-    //NOTE: this is not linked to the deactivation of the Catenis Clients, so they have to be implemented as well.
-    'click #activateUser'(events, template) {
-        const client = Catenis.db.collection.Client.findOne({user_id: Template.instance().data.user_id});
-
-        if( confirm("you're about to activate this user. Are you sure?")===true){
-            Meteor.call('changeUserStatus', client.user_id, 'Activated', (error) => {
-                if (error) {
-                    console.log("there was an error activating user", error);
-                }
-            });
-        }
-
-    },
-    'click #deactivateUser'(events, template) {
-        const client = Catenis.db.collection.Client.findOne({user_id: Template.instance().data.user_id});
-
-        if(confirm("you're about to deactivate this user and all linked devices. Are you sure?")===true){
-            Meteor.call('changeUserStatus', client.user_id, 'Deactivated', (error) => {
-                if (error) {
-                    console.log("there was an error deactivating user", error);
-                }
-            });
-        }
-
-    },
-
-
-    'click #editForm': function(event, template){
-
-        let userId= event.target.value;
-        let user=Meteor.users.findOne({_id: userId});
-
-        // Populate the form fields with the data from the current form.
-        $('#updateForm')
-            .find('[name="clientName"]').val(user.profile.name).end()
-            .find('[name="username"]').val(user.username).end()
-            .find('[name="email"]').val(user.emails? user.emails[0].address: "" ).end()
-            .find('[name="confirmEmail"]').val(user.emails? user.emails[0].address: "").end()
-            .find('[name="firstName"]').val(user.profile.firstname).end()
-            .find('[name="lastName"]').val(user.profile.lastname).end()
-            .find('[name="companyName"]').val(user.profile.company).end();
-    },
-
-    'submit #updateForm'(event, template){
-        event.preventDefault();
-        const form = event.target;
-        // Reset errors
-        template.state.set('errMsgs', []);
-        template.state.set('successfulUpdate', false);
-        let errMsgs = [];
-        let clientInfo;
-
-        if ((clientInfo = validateFormData(form, errMsgs))) {
-            // Call remote method to update client
-            Meteor.call('updateUser', clientInfo, (error) => {
-                if (error) {
-                    template.state.set('errMsgs', [
-                        error.toString()
-                    ]);
-                }
-
-                else {
-                    // Catenis client successfully updated
-                    template.state.set('successfulUpdate', true);
-
-                    //close modal form
-                    $('#updateFormModal').modal('hide');
-                    $('body').removeClass('modal-open');
-                    $('.modal-backdrop').remove();
-                }
-            });
-        } else {
-            template.state.set('errMsgs', errMsgs);
-        }
-
     }
 });
 
@@ -524,10 +444,10 @@ Template.clientDetails.helpers({
         return expirationDate ? ClientUtil.startOfDayTimeZone(expirationDate, client.timeZone, true).format('LLLL') : undefined;
     },
     isNewClient(client) {
-        return client.status === 'new';
+        return client.status === ClientShared.status.new.name;
     },
     isActiveClient(client) {
-        return client.status === 'active';
+        return client.status === ClientShared.status.active.name;
     },
     hasErrorMessage() {
         return Template.instance().state.get('errMsgs').length > 0;
@@ -566,120 +486,5 @@ Template.clientDetails.helpers({
     },
     displayResetApiAccessSecretButton() {
         return Template.instance().state.get('displayResetApiAccessSecretButton');
-    },
-
-    messageCredits: function () {
-        return 0;//Catenis.db.collection.MessageCredits.findOne(1);
-    },
-    hasUnconfirmedMessageCredits: function (messageCredits) {
-        return messageCredits && messageCredits.unconfirmed > 0;
-    },
-    // compareOper: valid values: 'equal'/'any-of', 'not-equal'/'none-of'
-    checkAddMsgCreditsStatus: function (status, compareOper) {
-        compareOper = compareOper && (Array.isArray(status) ? 'all-of' : 'equal');
-        const currentStatus = Template.instance().state.get('addMsgCreditsStatus');
-        let result = false;
-
-        if (compareOper === 'equal' || compareOper === 'any-of') {
-            if (Array.isArray(status)) {
-                result = status.some((stat) => stat === currentStatus);
-            }
-            else {
-                result = status === currentStatus;
-            }
-        }
-        else if (compareOper === 'not-equal' || compareOper === 'none-of') {
-            if (Array.isArray(status)) {
-                result = !status.some((stat) => stat === currentStatus);
-            }
-            else {
-                result = status !== currentStatus;
-            }
-        }
-        return result;
-    },
-    addMsgCreditsError: function () {
-        return Template.instance().state.get('addMsgCreditsError');
-    },
-    showDevices: function () {
-        return Template.instance().state.get('showDevices');
-    },
-    haveResentEnrollmentEmail: function(){
-        return Template.instance().state.get('haveResentEnrollmentEmail');
-    },
-    userActive: function(){
-        const user= Meteor.users.findOne({_id:  Template.instance().data.user_id});
-        if(user){
-            if(user.profile.status==="Activated"){
-                return true;
-            }else{
-                return false;
-            }
-        }else{
-            return undefined;
-        }
-    },
-    userStatus:function(user_id){
-        const user= Meteor.users.findOne({_id: user_id});
-        if(user){
-           return user.profile.status;
-        }else{
-            return "undefined(error)";
-        }
-    },
-    resendEnrollmentEmailSuccess: function(){
-        return Template.instance().state.get('resendEnrollmentEmailSuccess');
-    },
-    licenseType: function(user_id){
-        const user= Meteor.users.findOne( {_id: user_id} );
-        let licenseType;
-        if( user && user.profile && user.profile.license ){
-            licenseType= user.profile.license.licenseType;
-           return licenseType;
-        }else{
-            return "user has no license";
-        }
-    },
-    successfulUpdate: function(){
-        return Template.instance().state.get('successfulUpdate');
-    },
-    numDevices: function(opt){
-        const client = Catenis.db.collection.Client.findOne({user_id: Template.instance().data.user_id});
-        const numUserDevices= Catenis.db.collection.Device.find( {"client_id": {$eq: client._id } } ).count();
-
-        if(opt==="active"){
-            return numUserDevices;
-
-        }else if(opt==="available"){
-            let licenseType;
-            if(Meteor.users.findOne( {_id: client.user_id} ).profile.license){
-
-                licenseType= Meteor.users.findOne( {_id: client.user_id} ).profile.license.licenseType;
-
-                if(licenseType==="Enterprise"){
-
-                    return 'unlimited';
-
-                }else{
-
-                    let numAllowed;
-                    // needs to be changed if the numAllowed value for license gets changed.
-                    // NOTE: could be used to indicate how many devices the user is overusing.
-                    numAllowed= Catenis.db.collection.License.findOne({licenseType: licenseType}).numAllowedDevices;
-
-                    return numAllowed- numUserDevices< 0 ? "user is overusing "+ (numUserDevices-numAllowed).toString()+" devices": numAllowed- numUserDevices;
-                }
-
-            }else{
-                return "user has no license";
-            }
-
-        }else{
-            return "something went wrong";
-        }
-    },
-    // Takes in input of licenseType, returns the number of devices allowed
-    devicesForLicense: function(licenseType){
-        return Catenis.db.collection.License.findOne({licenseType: licenseType}).numAllowedDevices;
     }
 });
