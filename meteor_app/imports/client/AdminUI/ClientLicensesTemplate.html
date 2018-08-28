@@ -23,18 +23,18 @@
                             </div>
                             {{#if hasInfoMessage}}
                                 <div class="alert alert-{{infoMessageType}}" role="alert">
-                                    {{infoMessage}}
                                     <button type="button" id="btnDismissInfo" class="close" aria-label="Close">
                                         <span aria-hidden="true">&times;</span>
                                     </button>
+                                    {{infoMessage}}
                                 </div>
                             {{/if}}
                             {{#if hasErrorMessage}}
                                 <div class="alert alert-danger" role="alert">
-                                    {{errorMessage}}
                                     <button type="button" id="btnDismissError" class="close" aria-label="Close">
                                         <span aria-hidden="true">&times;</span>
                                     </button>
+                                    {{errorMessage}}
                                 </div>
                             {{/if}}
                             <div class="row">
@@ -86,10 +86,10 @@
                                         <div class="modal-body">
                                             {{#if hasAddLicenseErrorMessage}}
                                                 <div class="alert alert-danger" role="alert">
-                                                    {{{addLicenseErrorMessage}}}
                                                     <button type="button" id="btnDismissAddLicenseError" class="close" aria-label="Close">
                                                         <span aria-hidden="true">&times;</span>
                                                     </button>
+                                                    {{{addLicenseErrorMessage}}}
                                                 </div>
                                             {{/if}}
                                             <form id="frmAddClientLicense" autocomplete="off">

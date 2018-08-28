@@ -88,18 +88,18 @@
                                 </div>
                                 {{#if hasInfoMessage}}
                                     <div class="alert alert-{{infoMessageType}}" role="alert">
-                                        {{infoMessage}}
                                         <button type="button" id="btnDismissInfo" class="close" aria-label="Close">
                                             <span aria-hidden="true">&times;</span>
                                         </button>
+                                        {{infoMessage}}
                                     </div>
                                 {{/if}}
                                 {{#if hasErrorMessage}}
                                     <div class="alert alert-danger" role="alert">
-                                        {{{errorMessage}}}
                                         <button type="button" id="btnDismissError" class="close" aria-label="Close">
                                             <span aria-hidden="true">&times;</span>
                                         </button>
+                                        {{{errorMessage}}}
                                     </div>
                                 {{/if}}
                                 <div class="row">
@@ -136,10 +136,10 @@
                                             <div class="modal-body">
                                                 {{#if hasNewLicenseErrorMessage}}
                                                     <div class="alert alert-danger" role="alert">
-                                                        {{{newLicenseErrorMessage}}}
                                                         <button type="button" id="btnDismissNewLicenseError" class="close" aria-label="Close">
                                                             <span aria-hidden="true">&times;</span>
                                                         </button>
+                                                        {{{newLicenseErrorMessage}}}
                                                     </div>
                                                 {{/if}}
                                                 <form id="frmRenewClientLicense" autocomplete="off">
@@ -195,10 +195,10 @@
                                             <div class="modal-body">
                                                 {{#if hasNewLicenseErrorMessage}}
                                                     <div class="alert alert-danger" role="alert">
-                                                        {{{newLicenseErrorMessage}}}
                                                         <button type="button" id="btnDismissNewLicenseError" class="close" aria-label="Close">
                                                             <span aria-hidden="true">&times;</span>
                                                         </button>
+                                                        {{{newLicenseErrorMessage}}}
                                                     </div>
                                                 {{/if}}
                                                 {{#let licenses=(licensesToUpgrade license)}}
@@ -250,10 +250,10 @@
                                             <div class="modal-body">
                                                 {{#if hasNewLicenseErrorMessage}}
                                                     <div class="alert alert-danger" role="alert">
-                                                        {{{newLicenseErrorMessage}}}
                                                         <button type="button" id="btnDismissNewLicenseError" class="close" aria-label="Close">
                                                             <span aria-hidden="true">&times;</span>
                                                         </button>
+                                                        {{{newLicenseErrorMessage}}}
                                                     </div>
                                                 {{/if}}
                                                 <form id="frmExpireClientLicense" autocomplete="off">
