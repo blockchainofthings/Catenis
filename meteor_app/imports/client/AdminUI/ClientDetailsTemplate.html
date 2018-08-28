@@ -17,7 +17,7 @@
                                 {{#unless isDeletedClient client}}
                                 <div class="col-md-6">
                                     <div class="pull-right">
-                                        <button type="button" id="editForm" value="{{client.user_id}}" class="btn btn-login paddedBtn">Edit Client</button>
+                                        <a href="/admin/clients/{{client_id}}/edit" role="button" class="btn-login btn paddedBtn">Edit Client</a>
                                     </div>
                                 </div>
                                 {{/unless}}

@@ -122,6 +122,17 @@ FlowRouter.route('/admin/clients/:client_id', {
     }
 });
 
+FlowRouter.route('/admin/clients/:client_id/edit', {
+    action: function (params, queryParams) {
+        BlazeLayout.render('adminLayout', {
+            page: 'editClient',
+            dataContext: {
+                client_id: params.client_id
+            }
+        });
+    }
+});
+
 FlowRouter.route('/admin/clients/:client_id/licenses', {
     action: function (params, queryParams) {
         BlazeLayout.render('adminLayout', {

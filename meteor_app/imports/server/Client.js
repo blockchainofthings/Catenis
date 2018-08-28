@@ -693,6 +693,97 @@ Client.prototype.conformNumberOfDevices = function () {
     }
 };
 
+Client.prototype.replaceUserAccountEmail = function (newEmail) {
+    // Make sure that client is not deleted
+    if (this.status === Client.status.deleted.name) {
+        // Cannot replace user account e-mail of a deleted client. Log error and throw exception
+        Catenis.logger.ERROR('Cannot replace user account e-mail of a deleted client', {clientId: this.clientId});
+        throw new Meteor.Error('ctn_client_deleted', util.format('Cannot replace user account e-mail of a deleted client (clientId: %s)', this.clientId));
+    }
+
+    if (!this.userAccountEmail) {
+        // Client has no user account e-mail to be replaced. Log error and throw exception
+        Catenis.logger.WARN('Client has no user account e-mail to be replaced', {client: this});
+        throw new Meteor.Error('ctn_client_no_email', util.format('Client (clientId: %s) has no user account e-mail to be replaced', this.clientId));
+    }
+
+    const existingEmail = this.userAccountEmail;
+
+    // Make sure that new e-mail address is different from currently existing e-mail address
+    if (newEmail !== existingEmail) {
+        try {
+            // Add new e-mail address
+            Accounts.addEmail(this.user_id, newEmail);
+        }
+        catch (err) {
+            // Error adding new e-mail address to client's user account.
+            //  Log error and throw exception
+            Catenis.logger.WARN('Error adding new e-mail address to client\'s user account (user_id: %s).', this.user_id, err);
+            throw new Meteor.Error('ctn_client_add_email_error', util.format('Error adding new e-mail address to client\'s user account (user_id: %s)', this.user_id), err.stack);
+        }
+
+        try {
+            // Now, remove previously existing e-mail address
+            Accounts.removeEmail(this.user_id, existingEmail);
+        }
+        catch (err) {
+            // Error removing previously existing e-mail address from client's user account.
+            //  Log error and throw exception
+            Catenis.logger.WARN('Error removing previously existing e-mail address from client\'s user account (user_id: %s).', this.user_id, err);
+            throw new Meteor.Error('ctn_client_remove_email_error', util.format('Error removing previously existing e-mail address from client\'s user account (user_id: %s)', this.user_id), err.stack);
+        }
+
+        // Reload client user
+        getUser.call(this);
+    }
+};
+
+Client.prototype.updateTimeZone = function (newTimeZone) {
+    // Make sure that client is not deleted
+    if (this.status === Client.status.deleted.name) {
+        // Cannot update time zone of a deleted client. Log error and throw exception
+        Catenis.logger.ERROR('Cannot update time zone of a deleted client', {clientId: this.clientId});
+        throw new Meteor.Error('ctn_client_deleted', util.format('Cannot update time zone of a deleted client (clientId: %s)', this.clientId));
+    }
+
+    // Make sure that time zone is valid
+    if (!moment.tz.zone(newTimeZone)) {
+        // Invalid time zone to update. Log error and throw exception
+        Catenis.logger.ERROR('Client time zone cannot be updated; invalid time zone', {newTimeZone: newTimeZone});
+        throw new Meteor.Error('ctn_client_invalid_tz', 'Client time zone cannot be updated; invalid time zone');
+    }
+
+    // Make sure that it's a different time zone
+    if (newTimeZone !== this.timeZone) {
+        // Retrieve current client time zone
+        const currTimeZone = Catenis.db.collection.Client.findOne({
+            _id: this.doc_id
+        }, {
+            fields: {
+                timeZone: 1
+            }
+        }).timeZone;
+
+        try {
+            // Update Client doc/rec setting the new properties
+            Catenis.db.collection.Client.update({
+                _id: this.doc_id
+            }, {
+                $set: {
+                    timeZone: newTimeZone
+                }
+            });
+        }
+        catch (err) {
+            // Error updating Client doc/rec. Log error and throw exception
+            Catenis.logger.ERROR(util.format('Error trying to update client time zone field (doc_id: %s).', this.doc_id), err);
+            throw new Meteor.Error('ctn_client_update_error', util.format('Error trying to update client time zone field (doc_id: %s)', this.doc_id), err.stack);
+        }
+
+        // Update time zone locally too
+        this.timeZone = newTimeZone;
+    }
+};
 
 // Update client properties
 //
@@ -725,7 +816,7 @@ Client.prototype.updateProperties = function (newProps) {
         if (this.status === Client.status.deleted.name) {
             // Cannot update properties of a deleted client. Log error and throw exception
             Catenis.logger.ERROR('Cannot update properties of a deleted client', {clientId: this.clientId});
-            throw new Meteor.Error('ctn_client_deleted', util.format('Cannot update date properties of a deleted client (clientId: %s)', this.clientId));
+            throw new Meteor.Error('ctn_client_deleted', util.format('Cannot update properties of a deleted client (clientId: %s)', this.clientId));
         }
 
         // Retrieve current client properties

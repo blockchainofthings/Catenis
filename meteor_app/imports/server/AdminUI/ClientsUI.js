@@ -104,6 +104,39 @@ ClientsUI.initialize = function () {
                 throw new Meteor.Error('ctn_admin_no_permission', 'No permission; must be logged in as a system administrator to perform this task');
             }
         },
+        updateClient: function (client_id, clientInfo) {
+            if (Roles.userIsInRole(this.userId, 'sys-admin')) {
+                try {
+                    const client = Client.getClientByDocId(client_id);
+
+                    // Prepare to update client's properties
+                    const props = {
+                        name: clientInfo.name,
+                        firstName: clientInfo.firstName ? clientInfo.firstName : undefined,
+                        lastName: clientInfo.lastName ? clientInfo.lastName : undefined,
+                        company: clientInfo.company ? clientInfo.company : undefined
+                    };
+
+                    client.updateProperties(props);
+
+                    // Replace user account e-mail address
+                    client.replaceUserAccountEmail(clientInfo.email);
+
+                    // Update time zone
+                    client.updateTimeZone(clientInfo.timeZone);
+                }
+                catch (err) {
+                    // Error trying to update client data. Log error and throw exception
+                    Catenis.logger.ERROR('Failure trying to update client data.', err);
+                    throw new Meteor.Error('client.update.failure', 'Failure trying to update client data: ' + err.toString());
+                }
+            }
+            else {
+                // User not logged in or not a system administrator.
+                //  Throw exception
+                throw new Meteor.Error('ctn_admin_no_permission', 'No permission; must be logged in as a system administrator to perform this task');
+            }
+        },
         // Note: this method is expected to be called by a Catenis client user, right after its successful enrollment
         activateClient: function (user_id) {
             if (Roles.userIsInRole(this.userId, 'ctn-client')) {

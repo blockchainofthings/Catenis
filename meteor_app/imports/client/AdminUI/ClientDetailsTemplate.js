@@ -29,6 +29,7 @@ import './ClientDetailsTemplate.html';
 
 // Import dependent templates
 import './ClientLicensesTemplate.js';
+import './EditClientTemplate.js';
 
 
 // Definition of module (private) functions
