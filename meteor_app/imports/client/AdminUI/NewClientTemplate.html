@@ -16,7 +16,12 @@
                             </div>
                         {{else}}
                             {{#if hasError}}
-                                <p style="color:red">{{{errorMessage}}}</p>
+                                <div class="alert alert-danger" role="alert">
+                                    <button type="button" id="btnDismissError" class="close" aria-label="Close">
+                                        <span aria-hidden="true">&times;</span>
+                                    </button>
+                                    {{{errorMessage}}}
+                                </div>
                             {{/if}}
                             <form id="frmNewClient">
                                 <div class="form-group">

@@ -91,6 +91,10 @@ Template.newClient.onDestroyed(function () {
 });
 
 Template.newClient.events({
+    'click #btnDismissError'(events, template) {
+        // Clear error message
+        template.state.set('errMsgs', []);
+    },
     'change #txtClientName'(event, template) {
         const clientName = event.target.value;
         const usernameCtrl = template.$('#txtUsername')[0];
