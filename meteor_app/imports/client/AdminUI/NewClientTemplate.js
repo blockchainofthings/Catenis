@@ -48,10 +48,10 @@ function validateFormData(form, errMsgs) {
 
     clientInfo.firstName = form.firstName.value ? form.firstName.value.trim() : undefined;
     clientInfo.lastName = form.lastName.value ? form.lastName.value.trim() : undefined;
-    clientInfo.companyName= form.companyName.value ? form.companyName.value.trim() : undefined;
+    clientInfo.company= form.companyName.value ? form.companyName.value.trim() : undefined;
 
     if ((!clientInfo.firstName || clientInfo.firstName.length === 0) && (!clientInfo.lastName
-        || clientInfo.lastName.length === 0) && (!clientInfo.companyName || clientInfo.companyName.length === 0)) {
+        || clientInfo.lastName.length === 0) && (!clientInfo.company || clientInfo.company.length === 0)) {
         // Neither first name, last name nor company name supplied. Report error
         errMsgs.push('Please enter at least one of: first name, last name, or company');
         hasError = true;
