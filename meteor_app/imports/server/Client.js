@@ -402,6 +402,18 @@ Client.prototype.delete = function (deletedDate) {
             throw new Meteor.Error('ctn_client_update_error', util.format('Error trying to delete client (doc_id: %s)', this.doc_id), err.stack);
         }
 
+        if (docClient.user_id) {
+            try {
+                // Delete user account associated with this client
+                Meteor.users.remove({_id: docClient.user_id});
+            }
+            catch (err) {
+                // Error deleting user account associated with deleted client. Log error and throw exception
+                Catenis.logger.ERROR(util.format('Error deleting user account (user_id: %s) associated with deleted client.', docClient.user_id), err);
+                throw new Meteor.Error('ctn_client_user_delete_error', util.format('Error deleting user account (user_id: %s) associated with deleted client', docClient.user_id), err.stack);
+            }
+        }
+
         // Update local variables
         this.user_id = undefined;
         this.status = Client.status.deleted.name;
