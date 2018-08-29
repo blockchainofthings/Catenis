@@ -91,9 +91,12 @@
                             {{/if}}
                             <div class="row">
                                 {{#if isNewClient client}}
-                                <div class="col-md-12">
-                                    <button type="button" id="btnResendEnrollment" class="btn-login btn paddedBtn fullWidth" data-toggle="modal" data-target="#divResendEnrollment">Resend Enrollment</button>
-                                </div>
+                                    <div class="col-md-8">
+                                        <button type="button" id="btnResendEnrollment" class="btn-login btn paddedBtn fullWidth" data-toggle="modal" data-target="#divResendEnrollment">Resend Enrollment</button>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <button type="button" id="btnDeleteClient" class="btn-login btn paddedBtn btn-warn fullWidth" data-toggle="modal" data-target="#divDeleteClient">Delete Client</button>
+                                    </div>
                                 {{/if}}
                                 {{#if isActiveClient client}}
                                     <div class="col-md-4">
