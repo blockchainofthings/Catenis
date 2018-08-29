@@ -132,9 +132,9 @@ Template.newClient.events({
 
         template.state.set('emailMismatch', false);
     },
-    'click #btnEmailConfirmClose'(events, template) {
-        // Clear confirm email form
-        events.target.form.confirmEmail.value = '';
+    'hidden.bs.modal #divConfirmEmail'(events, template) {
+        // Modal panel has been closed. Clear confirm email form
+        template.find('#frmNewClient').confirmEmail.value = '';
 
         template.state.set('emailMismatch', false);
     },
@@ -150,8 +150,8 @@ Template.newClient.events({
         else if (email === confirmEmail) {
             template.state.set('emailConfirmed', true);
 
-            // Close modal form backdrop
-            $('#confirmEmail').modal('hide');
+            // Close modal panel
+            $('#divConfirmEmail').modal('hide');
         }
         else{
             template.state.set('emailMismatch', true);

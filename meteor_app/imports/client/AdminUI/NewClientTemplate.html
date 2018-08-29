@@ -55,9 +55,10 @@
                                     <div class="col-md-4">
                                         <div class="form-group">
                                             {{#if showConfirmEmailButton}}
-                                                <button type="button" id="btnConfirmEmail" class="form-control btn btn-login btn-warn at-btn submit" data-toggle="modal" data-target="#confirmEmail">Please confirm</button>
+                                                <button type="button" id="btnConfirmEmail" class="form-control btn btn-login btn-warn at-btn submit" data-toggle="modal" data-target="#divConfirmEmail">Please confirm</button>
                                             {{/if}}
-                                            <div class="modal" tabindex="-1" role="dialog" id="confirmEmail">
+                                            {{!Modal panel containing form used to confirm e-mail address}}
+                                            <div class="modal" tabindex="-1" role="dialog" id="divConfirmEmail">
                                                 <div class="modal-dialog" role="document">
                                                     <div class="modal-content">
                                                         <div class="modal-header">
@@ -75,7 +76,7 @@
                                                             {{else}}
                                                                 <p id="resultEmailConfirmation">Please reenter email to confirm it.</p>
                                                             {{/if}}
-                                                            <div class="form-group" id="confirmEmail">
+                                                            <div class="form-group">
                                                                 <input type="email" maxlength="40" id="txtConfirmEmail" name="confirmEmail" placeholder="Confirm Email" autocomplete="off" autocapitalize="none" autocorrect="off">
                                                             </div>
                                                             <div class="text-center">
@@ -83,11 +84,11 @@
                                                             </div>
                                                         </div>
                                                         <div class="modal-footer">
-                                                            <button type="button" id="btnEmailConfirmClose" class="btn btn-default" data-dismiss="modal">Close</button>
+                                                            <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
                                                         </div>
-                                                    </div><!-- /.modal-content -->
-                                                </div><!-- /.modal-dialog -->
-                                            </div><!-- /.modal -->
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
