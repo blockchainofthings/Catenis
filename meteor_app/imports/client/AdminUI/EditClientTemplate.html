@@ -24,29 +24,29 @@
                                     {{infoMessage}}
                                 </div>
                             {{/if}}
-                            <form id="frmEditClient">
+                            <form id="frmEditClient" autocomplete="off">
                                 <div class="form-group">
-                                    <input type="text" value="{{clientData.name}}" maxlength="80" id="txtClientName" name="clientName" placeholder="Client Name" autocapitalize="none" autocorrect="off">
+                                    <input type="text" value="{{clientData.name}}" maxlength="80" id="txtClientName" name="clientName" placeholder="Client Name" autocomplete="off" autocapitalize="none" autocorrect="off">
                                 </div>
                                 <div class="row">
                                     <div class="col-md-6">
                                         <div class="form-group">
-                                            <input type="text" value="{{clientData.firstName}}" maxlength="80" id="txtFirstName" name="firstName" placeholder="First Name" autocapitalize="none" autocorrect="off">
+                                            <input type="text" value="{{clientData.firstName}}" maxlength="80" id="txtFirstName" name="firstName" placeholder="First Name" autocomplete="off" autocapitalize="none" autocorrect="off">
                                         </div>
                                     </div>
                                     <div class="col-md-6">
                                         <div class="form-group">
-                                            <input type="text" value="{{clientData.lastName}}" maxlength="80" id="txtLastName" name="lastName" placeholder="Last Name" autocapitalize="none" autocorrect="off">
+                                            <input type="text" value="{{clientData.lastName}}" maxlength="80" id="txtLastName" name="lastName" placeholder="Last Name" autocomplete="off" autocapitalize="none" autocorrect="off">
                                         </div>
                                     </div>
                                 </div>
                                 <div class="form-group">
-                                    <input type="text" value="{{clientData.company}}" maxlength="80" id="txtCompanyName" name="companyName" placeholder="Company" autocapitalize="none" autocorrect="off">
+                                    <input type="text" value="{{clientData.company}}" maxlength="80" id="txtCompanyName" name="companyName" placeholder="Company" autocomplete="off" autocapitalize="none" autocorrect="off">
                                 </div>
                                 <div class="row">
                                     <div class="col-md-8">
                                         <div class="form-group">
-                                            <input type="email" value="{{clientData.email}}" maxlength="40" id="txtEmail" name="email" placeholder="Email" autocapitalize="none" autocorrect="off">
+                                            <input type="email" value="{{clientData.email}}" maxlength="40" id="txtEmail" name="email" placeholder="Email" autocomplete="off" autocapitalize="none" autocorrect="off">
                                         </div>
                                     </div>
                                     <div class="col-md-4">
@@ -70,10 +70,10 @@
                                                                     Emails do not match. Please check entered email.
                                                                 </div>
                                                             {{else}}
-                                                                <p id="resultEmailConfirmation">Please reenter email to confirm it</p>
+                                                                <p id="resultEmailConfirmation">Please reenter email to confirm it.</p>
                                                             {{/if}}
                                                             <div class="form-group" id="confirmEmail">
-                                                                <input type="email" maxlength="40" id="txtConfirmEmail" name="confirmEmail" placeholder="Confirm Email" autocapitalize="none" autocorrect="off">
+                                                                <input type="email" maxlength="40" id="txtConfirmEmail" name="confirmEmail" placeholder="Confirm Email" autocomplete="off" autocapitalize="none" autocorrect="off">
                                                             </div>
                                                             <div class="text-center">
                                                                 <button type="button" class="btn btn-primary" id="checkEmailValidity">Confirm</button>
@@ -101,11 +101,12 @@
                                 </div>
                                 <div class="row">
                                     <div class="col-xs-6 form-group pull-left">
-                                        <a href="/admin/clients/{{client_id}}" id="reset" class="form-control btn btn-login at-btn">{{#if isClientUpdated}}Back{{else}}Cancel{{/if}}</a>
+                                        <button id="btnCancel" type="button" class="form-control btn btn-login at-btn">{{#if isClientUpdated}}Back{{else}}Cancel{{/if}}</button>
+                                        <a id="lnkCancel" href="/admin/clients/{{client_id}}" style="display:none"></a>
                                     </div>
                                     {{#if showUpdateButton}}
                                     <div class="col-xs-6 form-group pull-right">
-                                        <button type="submit" class="form-control btn btn-login at-btn submit">Update</button>
+                                        <button type="submit" id="btnUpdate" class="form-control btn btn-login at-btn submit">Update</button>
                                     </div>
                                     {{/if}}
                                 </div>

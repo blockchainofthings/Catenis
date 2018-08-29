@@ -10,7 +10,7 @@
 // References to external code
 //
 // Internal node modules
-//import util from 'util';
+import util from 'util';
 // Third-party node modules
 //import config from 'config';
 // Meteor packages
@@ -193,6 +193,12 @@ Template.editClient.events({
 
         template.state.set('emailMismatch', false);
     },
+    'click #btnEmailConfirmClose'(events, template) {
+        // Clear confirm email form
+        events.target.form.confirmEmail.value = '';
+
+        template.state.set('emailMismatch', false);
+    },
     'click #checkEmailValidity'(event, template) {
         const form = event.target.form;
 
@@ -213,12 +219,19 @@ Template.editClient.events({
             form.confirmEmail.focus();
         }
     },
+    'click #btnCancel'(event, template) {
+        // Note: we resource to this unconventional solution so we can disable the Cancel button and,
+        //      at the same time, make it behave the same way as when a link is clicked (which we
+        //      cannot achieve with either window.location.href = '<url>' or document.location = '<url>';
+        //      both solutions cause a page reload, whilst clicking on th link does not)
+        template.find('#lnkCancel').click();
+    },
     'submit #frmEditClient'(event, template) {
         event.preventDefault();
 
         const form = event.target;
 
-        // Reset errors
+        // Clear alert messages
         template.state.set('errMsgs', []);
         template.state.set('infoMsg', undefined);
         template.state.set('infoMsgType', 'info');
@@ -227,9 +240,17 @@ Template.editClient.events({
         let clientInfo;
 
         if ((clientInfo = validateFormData(form, errMsgs, template))) {
+            // Disable buttons
+            const btnCancel = template.find('#btnCancel');
+            const btnUpdate = template.find('#btnUpdate');
+            btnCancel.disabled = true;
+            btnUpdate.disabled = true;
+
             // Call remote method to create new client
             Meteor.call('updateClient', template.data.client_id, clientInfo, (error) => {
-                template.state.set('clientUpdated', true);
+                // Reenable buttons
+                btnCancel.disabled = false;
+                btnUpdate.disabled = false;
 
                 if (error) {
                     template.state.set('errMsgs', [
@@ -237,8 +258,10 @@ Template.editClient.events({
                     ]);
                 }
                 else {
-                    // Indicate that client has been successfully update
+                    // Indicate that client has been successfully updated
+                    template.state.set('clientUpdated', true);
                     template.state.set('infoMsg', 'Client data successfully update.');
+                    template.state.set('infoMsgType', 'success');
                 }
             });
         }
@@ -273,6 +296,14 @@ Template.editClient.helpers({
     hasErrorMessage() {
         return Template.instance().state.get('errMsgs').length > 0;
     },
+    errorMessage() {
+        return Template.instance().state.get('errMsgs').reduce((compMsg, errMsg) => {
+            if (compMsg.length > 0) {
+                compMsg += '<br>';
+            }
+            return compMsg + errMsg;
+        }, '');
+    },
     hasInfoMessage() {
         return !!Template.instance().state.get('infoMsg');
     },
@@ -281,14 +312,6 @@ Template.editClient.helpers({
     },
     infoMessageType() {
         return Template.instance().state.get('infoMsgType');
-    },
-    errorMessage() {
-        return Template.instance().state.get('errMsgs').reduce((compMsg, errMsg) => {
-            if (compMsg.length > 0) {
-                compMsg += '<br>';
-            }
-            return compMsg + errMsg;
-        }, '');
     },
     timeZones(currTZName) {
         const now = Date.now();
