@@ -10,7 +10,7 @@
 // References to external code
 //
 // Internal node modules
-//import util from 'util';
+import util from 'util';
 // Third-party node modules
 import moment from 'moment-timezone';
 // Meteor packages
@@ -26,7 +26,7 @@ import './NewClientTemplate.html';
 
 // Definition of module (private) functions
 
-function validateFormData(form, errMsgs) {
+function validateFormData(form, errMsgs, template) {
     const clientInfo = {};
     let hasError = false;
 
@@ -65,8 +65,8 @@ function validateFormData(form, errMsgs) {
         hasError = true;
     }
     else {
-        if (form.emailConfirmation && form.emailConfirmation.value !== 'confirmed') {
-            errMsgs.push('Email has not been confirmed');
+        if (template.state.get('needsConfirmEmail') && !template.state.get('emailConfirmed')) {
+            errMsgs.push('Please confirm email address');
             hasError =true;
         }
     }
@@ -82,9 +82,16 @@ function validateFormData(form, errMsgs) {
 
 Template.newClient.onCreated(function () {
     this.state = new ReactiveDict();
+
     this.state.set('errMsgs', []);
-    this.state.set('email', undefined);
+    this.state.set('infoMsg', undefined);
+    this.state.set('infoMsgType', 'info');
+
+    this.state.set('clientCreated', false);
+
+    this.state.set('needsConfirmEmail', false);
     this.state.set('emailConfirmed', false);
+    this.state.set('emailMismatch', false);
 });
 
 Template.newClient.onDestroyed(function () {
@@ -95,6 +102,11 @@ Template.newClient.events({
         // Clear error message
         template.state.set('errMsgs', []);
     },
+    'click #btnDismissInfo'(events, template) {
+        // Clear info message
+        template.state.set('infoMsg', undefined);
+        template.state.set('infoMsgType', 'info');
+    },
     'change #txtClientName'(event, template) {
         const clientName = event.target.value;
         const usernameCtrl = template.$('#txtUsername')[0];
@@ -103,26 +115,28 @@ Template.newClient.events({
             usernameCtrl.value = clientName.replace(/(\s|[^\w])+/g,'_');
         }
     },
-    'change #txtEmail'(event, template) {
-        let email = event.target.value;
-        email = email ? email.trim() : '';
+    'change #txtEmail'(events, template) {
+        // Indicate that form field has changed
+        template.state.set('fieldsChanged', true);
 
-        template.state.set('email', email.length > 0 ? email : undefined);
-        event.target.form.confirmEmail.value = '';
-        template.$('#emailConfirmation')[0].value = 'notConfirmed';
+        // Indicate that e-mail needs to be confirmed
+        template.state.set('needsConfirmEmail', true);
         template.state.set('emailConfirmed', false);
     },
-    'change #txtConfirmEmail'(event, template){
-        template.$('#emailConfirmation')[0].value = 'notConfirmed';
-        template.state.set('emailConfirmed', false);
+    'click #btnDismissErrorConfirmEmail'(events, template) {
+        template.state.set('emailMismatch', false);
     },
-    'click #btnEmailConfirmClose'(event, template) {
-        const form = event.target.form;
+    'click #btnConfirmEmail'(events, template) {
+        // Prepare for e-mail confirmation
+        events.target.form.confirmEmail.value = '';
 
-        if (!template.state.get('emailConfirmed')) {
-            form.confirmEmail.value = '';
-            template.$('#resultEmailConfirmation')[0].innerHTML = 'Please reenter email to confirm it';
-        }
+        template.state.set('emailMismatch', false);
+    },
+    'click #btnEmailConfirmClose'(events, template) {
+        // Clear confirm email form
+        events.target.form.confirmEmail.value = '';
+
+        template.state.set('emailMismatch', false);
     },
     'click #checkEmailValidity'(event, template) {
         const form = event.target.form;
@@ -131,41 +145,67 @@ Template.newClient.events({
         const confirmEmail = form.confirmEmail.value ? form.confirmEmail.value.trim() : '';
 
         if (confirmEmail.length === 0) {
-            template.$('#resultEmailConfirmation')[0].innerHTML = 'Please reenter email to confirm it';
+            form.confirmEmail.focus();
         }
         else if (email === confirmEmail) {
-            template.$('#emailConfirmation')[0].value = 'confirmed';
-            template.$('#resultEmailConfirmation')[0].innerHTML = 'Please reenter email to confirm it';
             template.state.set('emailConfirmed', true);
 
             // Close modal form backdrop
             $('#confirmEmail').modal('hide');
         }
         else{
-            template.$('#resultEmailConfirmation')[0].innerHTML = '<span style="color:red">Emails do not match. Please check entered email</span>';
+            template.state.set('emailMismatch', true);
+            form.confirmEmail.focus();
         }
+    },
+    'click #btnCancel'(event, template) {
+        // Note: we resource to this unconventional solution so we can disable the Cancel button and,
+        //      at the same time, make it behave the same way as when a link is clicked (which we
+        //      cannot achieve with either window.location.href = '<url>' or document.location = '<url>';
+        //      both solutions cause a page reload, whilst clicking on th link does not)
+        template.find('#lnkCancel').click();
     },
     'submit #frmNewClient'(event, template) {
         event.preventDefault();
 
         const form = event.target;
 
-        // Reset errors
+        // Clear alert messages
         template.state.set('errMsgs', []);
+        template.state.set('infoMsg', undefined);
+        template.state.set('infoMsgType', 'info');
         let errMsgs = [];
         let clientInfo;
 
-        if ((clientInfo = validateFormData(form, errMsgs))) {
+        if ((clientInfo = validateFormData(form, errMsgs, template))) {
+            // Disable buttons
+            const btnCancel = template.find('#btnCancel');
+            const btnUpdate = template.find('#btnUpdate');
+            btnCancel.disabled = true;
+            btnUpdate.disabled = true;
+
+            // Display alert message indicating that request is being processed
+            template.state.set('infoMsg', 'Your request is being processed. Please wait.');
+
             // Call remote method to create new client
             Meteor.call('createNewClient', Catenis.ctnHubNodeIndex, clientInfo, (error, clientId) => {
+                // Reenable buttons
+                btnCancel.disabled = false;
+                btnUpdate.disabled = false;
+
                 if (error) {
+                    // Clear info alert message, and display error message
+                    template.state.set('infoMsg', undefined);
+
                     template.state.set('errMsgs', [
                         error.toString()
                     ]);
                 }
                 else {
-                    // Catenis client successfully created
-                    template.state.set('newClientId', clientId);
+                    // Indicate that client has been successfully created
+                    template.state.set('clientCreated', true);
+                    template.state.set('infoMsg', util.format('New client (client ID: %s) successfully created.', clientId));
+                    template.state.set('infoMsgType', 'success');
                 }
             });
         }
@@ -179,7 +219,10 @@ Template.newClient.helpers({
     hasError: function () {
         return Template.instance().state.get('errMsgs').length > 0;
     },
-    errorMessage: function () {
+    hasErrorMessage() {
+        return Template.instance().state.get('errMsgs').length > 0;
+    },
+    errorMessage() {
         return Template.instance().state.get('errMsgs').reduce((compMsg, errMsg) => {
             if (compMsg.length > 0) {
                 compMsg += '<br>';
@@ -187,19 +230,17 @@ Template.newClient.helpers({
             return compMsg + errMsg;
         }, '');
     },
-    newClientId: function () {
-        return Template.instance().state.get('newClientId');
+    hasInfoMessage() {
+        return !!Template.instance().state.get('infoMsg');
     },
-    clientInfo: function() {
-        return Template.instance().state.get('clientInfo');
+    infoMessage() {
+        return Template.instance().state.get('infoMsg');
     },
-    successfulUpdate: function(){
-        return Template.instance().state.get('successfulUpdate');
+    infoMessageType() {
+        return Template.instance().state.get('infoMsgType');
     },
-    needsConfirmEmail: function () {
-        const template = Template.instance();
-
-        return template.state.get('email') && !template.state.get('emailConfirmed');
+    isClientCreated() {
+        return Template.instance().state.get('clientCreated');
     },
     timeZones() {
         const localTZ = moment.tz.guess();
@@ -216,5 +257,16 @@ Template.newClient.helpers({
                 selected: tzName === localTZ ? 'selected' : ''
             };
         }).sort((tz1, tz2) => tz1.offset === tz2.offset ? (tz1.name < tz2.name ? -1 : (tz1.name > tz2.name ? 1 : 0)) : tz1.offset - tz2.offset);
+    },
+    showCreateButton() {
+        return !Template.instance().state.get('clientCreated');
+    },
+    showConfirmEmailButton() {
+        const template = Template.instance();
+
+        return template.state.get('needsConfirmEmail') && !template.state.get('emailConfirmed');
+    },
+    emailsDoNotMatch() {
+        return Template.instance().state.get('emailMismatch');
     }
 });

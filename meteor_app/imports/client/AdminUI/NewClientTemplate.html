@@ -3,19 +3,12 @@
         <div class="panel panel-login minWidthElement noBoxShadow">
             <div class="panel-body">
                 <div class="row">
-                    <h2>NEW CLIENT</h2>
                     <div class="col-lg-12">
-                        {{#if newClientId}}
-                            <div class="alert alert-success" role="alert">
-                                New client (client ID: {{newClientId}}) successfully created
-                            </div>
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <a href="/admin/clients" class="form-control btn btn-login at-btn">Close</a>
-                                </div>
-                            </div>
+                        {{#unless Template.subscriptionsReady}}
+                            <p style="color:lightgray; margin-top:1em">Loading...</p>
                         {{else}}
-                            {{#if hasError}}
+                            <h2>NEW CLIENT</h2>
+                            {{#if hasErrorMessage}}
                                 <div class="alert alert-danger" role="alert">
                                     <button type="button" id="btnDismissError" class="close" aria-label="Close">
                                         <span aria-hidden="true">&times;</span>
@@ -23,38 +16,46 @@
                                     {{{errorMessage}}}
                                 </div>
                             {{/if}}
-                            <form id="frmNewClient">
+                            {{#if hasInfoMessage}}
+                                <div class="alert alert-{{infoMessageType}}" role="alert">
+                                    <button type="button" id="btnDismissInfo" class="close" aria-label="Close">
+                                        <span aria-hidden="true">&times;</span>
+                                    </button>
+                                    {{infoMessage}}
+                                </div>
+                            {{/if}}
+                            <form id="frmNewClient" autocomplete="off">
                                 <div class="form-group">
-                                    <input type="text" maxlength="80" id="txtClientName" name="clientName" placeholder="Client Name" autocapitalize="none" autocorrect="off">
+                                    <input type="text" maxlength="80" id="txtClientName" name="clientName" placeholder="Client Name" autocomplete="off" autocapitalize="none" autocorrect="off">
                                 </div>
                                 <div class="form-group">
-                                    <input type="text" maxlength="40" id="txtUsername" name="username" placeholder="Username" autocapitalize="none" autocorrect="off">
+                                    <input type="text" maxlength="40" id="txtUsername" name="username" placeholder="Username" autocomplete="off" autocapitalize="none" autocorrect="off">
                                 </div>
                                 <div class="row">
                                     <div class="col-md-6">
                                         <div class="form-group">
-                                            <input type="text" maxlength="80" id="txtFirstName" name="firstName" placeholder="First Name" autocapitalize="none" autocorrect="off">
+                                            <input type="text" maxlength="80" id="txtFirstName" name="firstName" placeholder="First Name" autocomplete="off" autocapitalize="none" autocorrect="off">
                                         </div>
                                     </div>
                                     <div class="col-md-6">
                                         <div class="form-group">
-                                            <input type="text" maxlength="80" id="txtLastName" name="lastName" placeholder="Last Name" autocapitalize="none" autocorrect="off">
+                                            <input type="text" maxlength="80" id="txtLastName" name="lastName" placeholder="Last Name" autocomplete="off" autocapitalize="none" autocorrect="off">
                                         </div>
                                     </div>
                                 </div>
                                 <div class="form-group">
-                                    <input type="text" maxlength="80" id="txtCompanyName" name="companyName" placeholder="Company" autocapitalize="none" autocorrect="off">
+                                    <input type="text" maxlength="80" id="txtCompanyName" name="companyName" placeholder="Company" autocomplete="off" autocapitalize="none" autocorrect="off">
                                 </div>
                                 <div class="row">
                                     <div class="col-md-8">
                                         <div class="form-group">
-                                            <input type="email" maxlength="40" id="txtEmail" name="email" placeholder="Email" autocapitalize="none" autocorrect="off">
+                                            <input type="email" maxlength="40" id="txtEmail" name="email" placeholder="Email" autocomplete="off" autocapitalize="none" autocorrect="off">
                                         </div>
                                     </div>
                                     <div class="col-md-4">
                                         <div class="form-group">
-                                            {{#if needsConfirmEmail}}
-                                            <button type="button"  class="form-control btn btn-login btn-warn at-btn submit" data-toggle="modal" data-target="#confirmEmail">Please confirm</button>
+                                            {{#if showConfirmEmailButton}}
+                                                <button type="button" id="btnConfirmEmail" class="form-control btn btn-login btn-warn at-btn submit" data-toggle="modal" data-target="#confirmEmail">Please confirm</button>
                                             {{/if}}
                                             <div class="modal" tabindex="-1" role="dialog" id="confirmEmail">
                                                 <div class="modal-dialog" role="document">
@@ -64,15 +65,25 @@
                                                             <h4 class="modal-title">Email Confirmation</h4>
                                                         </div>
                                                         <div class="modal-body">
-                                                            <!--error message box, should not appear unless there is an issue-->
-                                                            <p id="resultEmailConfirmation">Please reenter email to confirm it</p>
+                                                            {{#if emailsDoNotMatch}}
+                                                                <div class="alert alert-danger" role="alert">
+                                                                    <button type="button" id="btnDismissErrorConfirmEmail" class="close" aria-label="Close">
+                                                                        <span aria-hidden="true">&times;</span>
+                                                                    </button>
+                                                                    Emails do not match. Please check entered email.
+                                                                </div>
+                                                            {{else}}
+                                                                <p id="resultEmailConfirmation">Please reenter email to confirm it.</p>
+                                                            {{/if}}
                                                             <div class="form-group" id="confirmEmail">
-                                                                <input type="email" maxlength="40" id="txtConfirmEmail" name="confirmEmail" placeholder="Confirm Email" autocapitalize="none" autocorrect="off">
+                                                                <input type="email" maxlength="40" id="txtConfirmEmail" name="confirmEmail" placeholder="Confirm Email" autocomplete="off" autocapitalize="none" autocorrect="off">
+                                                            </div>
+                                                            <div class="text-center">
+                                                                <button type="button" class="btn btn-primary" id="checkEmailValidity">Confirm</button>
                                                             </div>
                                                         </div>
                                                         <div class="modal-footer">
                                                             <button type="button" id="btnEmailConfirmClose" class="btn btn-default" data-dismiss="modal">Close</button>
-                                                            <button type="button" class="btn btn-primary" id="checkEmailValidity">Confirm</button>
                                                         </div>
                                                     </div><!-- /.modal-content -->
                                                 </div><!-- /.modal-dialog -->
@@ -93,14 +104,17 @@
                                 </div>
                                 <div class="row">
                                     <div class="col-xs-6 form-group pull-left">
-                                        <a href="/admin/clients" id="reset" class="form-control btn btn-login at-btn">Cancel</a>
+                                        <button id="btnCancel" type="button" class="form-control btn btn-login at-btn">{{#if isClientCreated}}Back{{else}}Cancel{{/if}}</button>
+                                        <a id="lnkCancel" href="/admin/clients" style="display:none"></a>
                                     </div>
-                                    <div class="col-xs-6 form-group pull-right">
-                                        <button type="submit" class="form-control btn btn-login at-btn submit {{submitDisabled}}">Create Client</button>
-                                    </div>
+                                    {{#if showCreateButton}}
+                                        <div class="col-xs-6 form-group pull-right">
+                                            <button type="submit" id="btnUpdate" class="form-control btn btn-login at-btn submit">Create Client</button>
+                                        </div>
+                                    {{/if}}
                                 </div>
                             </form>
-                        {{/if}}
+                        {{/unless}}
                     </div>
                 </div>
             </div>
