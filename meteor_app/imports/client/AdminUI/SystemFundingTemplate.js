@@ -33,7 +33,9 @@ import './FundingAddressTemplate.js';
 Template.systemFunding.onCreated(function () {
     this.state = new ReactiveDict();
 
-    // Subscribe to receive fund balance updates
+    this.state.set('fundAddress', undefined);
+
+    // Subscribe to receive database docs/recs updates
     this.fundingBalanceSubs = this.subscribe('fundingBalance');
 });
 
@@ -44,7 +46,7 @@ Template.systemFunding.onDestroyed(function () {
 });
 
 Template.systemFunding.events({
-    'click #lnkNewAddressToFund'(event, template) {
+    'click #btnFundSystem'(event, template) {
         Meteor.call('newSysFundingAddress', (error, addr) => {
             if (error) {
                 console.log('Error calling \'newSysFundingAddress\' remote method: ' + error);
@@ -53,15 +55,14 @@ Template.systemFunding.events({
                 template.state.set('fundAddress', addr);
             }
         });
-
-        return false;
     },
-    'click #lnkDiscardAddr'(event, template) {
-        if (confirm('Are you sure you want to discard this address?')) {
-            template.state.set('fundAddress', undefined);
-        }
-
-        return false;
+    'hide.bs.modal #divFundSystem'(event, template) {
+        // Modal panel about to close. Ask for confirmation
+        return confirm('WARNING: if you proceed, you will NOT be able to continue monitoring the incoming bitcoins.\n\nPLEASE NOTE THAT THIS ACTION CANNOT BE UNDONE.');
+    },
+    'hidden.bs.modal #divFundSystem'(event, template) {
+        // Modal panel has been closed. Clear funding address
+        template.state.set('fundAddress', undefined);
     }
 });
 
@@ -74,10 +75,5 @@ Template.systemFunding.helpers({
     },
     lowBalance(balanceInfo) {
         return balanceInfo && balanceInfo.currentBalance < balanceInfo.minimumBalance;
-    },
-
-});
-
-
-Template.systemFunding.onRendered(function(){
+    }
 });
