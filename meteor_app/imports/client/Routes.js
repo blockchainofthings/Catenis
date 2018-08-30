@@ -167,6 +167,17 @@ FlowRouter.route('/admin/clients/:client_id/licenses/:clientLicense_id', {
     }
 });
 
+FlowRouter.route('/admin/clients/:client_id/serviceaccount', {
+    action: function (params, queryParams) {
+        BlazeLayout.render('adminLayout', {
+            page: 'serviceAccount',
+            dataContext: {
+                client_id: params.client_id
+            }
+        });
+    }
+});
+
 FlowRouter.route('/admin/clients/:client_id/devices/:device_id', {
     action: function (params) {
         BlazeLayout.render('adminLayout', {
