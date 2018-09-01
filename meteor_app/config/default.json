@@ -490,7 +490,7 @@
   // Paramenters pertaining to IpfsServerMonitor module
   "ipfsServerMonitor": {
     "enabled": true,
-    "checkInterval": 30  // Time, in seconds, defining the period within which IPFS server shall be checked to make sure it is still alive
+    "checkInterval": 300  // (5 min.) Time, in seconds, defining the period within which IPFS server shall be checked to make sure it is still alive
   },
   // Parameters pertaining to Message module
   "message": {
