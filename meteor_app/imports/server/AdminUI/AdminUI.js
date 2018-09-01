@@ -52,15 +52,10 @@ AdminUI.initialize = function () {
     Catenis.logger.TRACE('AdminUI initialization');
     // Declaration of RPC methods to be called from client
     Meteor.methods({
+        // NOTE: the access to this (remote) method MUST not be restricted
+        //      since it needs to be accessed from the login form too
         getAppEnvironment: function () {
-            if (Roles.userIsInRole(this.userId, 'sys-admin')) {
-                return Catenis.application.environment;
-            }
-            else {
-                // User not logged in or not a system administrator.
-                //  Throw exception
-                throw new Meteor.Error('ctn_admin_no_permission', 'No permission; must be logged in as a system administrator to perform this task');
-            }
+            return Catenis.application.environment;
         }
     });
 };
