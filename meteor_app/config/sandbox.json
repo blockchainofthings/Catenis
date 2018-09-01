@@ -13,6 +13,14 @@
     "bypassProcessing": false     // NOTE: this option is for DEBUG ONLY. Bypass all processing, so the app starts but does not do anything. This allows
                                   //  for debuging via 'meteor shell' or 'meteor mongo'
   },
+  // Parameters pertaining to e-mail server configuration
+  "email": {
+    "smtpHost": "smtpout.secureserver.net",
+    "secureProto": "ssl",  // (optional, can be set to null) Secure protocol that should be used with SMTP server. Valid options: 'ssl' or 'tls'
+    "smtpPort": null,  // (optonal, can be set to null) To be set only if different than default (depending on secureProto): none/null (25), ssl (465), tls (587)
+    "username": "???????",  // (optional, can be set to null) To be set only if required by SMTP host
+    "password": "???????"   // (optional, can be set to null) To be set only if required by SMTP host
+  },
   // Parameters pertaining to logging mechanism
   "logging": {
     "console": {
@@ -27,7 +35,7 @@
       "active": true,
       "logLevel": "WARN",
       "toAddresses": "claudio@blockchainofthings.com, andre@blockchainofthings.com", // Can be set to a comma separated list of e-mail addresses
-      "fromAddress": "Catenis [Sandbox] <catenisadmin@catenis.io>"
+      "fromAddress": "Catenis [Sandbox] <admin@catenis.io>"
     }
   },
   // Parameters pertaining to BitcoinFees module
@@ -50,15 +58,23 @@
   },
   // Parameters pertaining to BitcoinCore module
   "bitcoinCore": {
+    "serverHost": "127.0.0.1", // Bitcoin Core server host name/IP address
     "rpcConnectionTimeout": 30000  // (30 sec.) Timeout, in miliseconds, for RPC connection with the bitcoin server.
   },
   // Parameters pertaining to OmniCore module
   "omniCore": {
+    "serverHost": "127.0.0.1", // Omni Core server host name/IP address
+    "testnetRpcPort": 17332, // Port used to connect with Omni Core server via its RPC interface to interact with bitcoin's testnet blockchain
     "rpcConnectionTimeout": 30000  // (30 sec.) Timeout, in miliseconds, for RPC connection with the Omni Core server
   },
   // Parameters pertaining to C3NodeClient module
   "c3NodeClient": {
+    "serverHost": "127.0.0.1", // Catenis Colored Coins node server host name/IP address
     "connectionTimeout": 30000  // (30 sec.) Timeout, in miliseconds, for connection with the Colored Coins Full-Node server
+  },
+  // Parameter pertaining to IpfsClient module
+  "ipfsClient": {
+    "apiHost": "127.0.0.1"
   },
   // Parameters pertaining to CCMetadata module
   "ccMetadata": {
