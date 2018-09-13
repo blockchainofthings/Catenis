@@ -16,6 +16,7 @@
     "fixMissingAddresses": false, // Indicate if issued blockchain addresses are missing from BitcoinCore wallet they should be automaically included
     "bypassProcessing": false,     // NOTE: this option is for DEBUG ONLY. Bypass all processing, so the app starts but does not do anything. This allows
                                   //  for debuging via 'meteor shell' or 'meteor mongo'
+    "dataToCipher": null,  // A text that should be ciphered by the application. If set, the Catenis application is started in "bypass processing" mode and will output the ciphered data
     "pidFilename": "catenis-pid"  // Name of the file containig the ID of the current process that is created/updated whenever that app starts
   },
   // Parameters pertaining to e-mail server configuration

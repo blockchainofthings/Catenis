@@ -66,6 +66,7 @@ const startupConfig = config.get('startup');
 const cfgSettings = {
     fixMissingAddresses: startupConfig.get('fixMissingAddresses'),
     bypassProcessing: startupConfig.get('bypassProcessing'),
+    dataToCipher: startupConfig.get('dataToCipher'),
     pidFilename: startupConfig.get('pidFilename')
 };
 
@@ -81,8 +82,13 @@ Meteor.startup(function () {
     // TEST - begin
     //resetBitcoinCore();
     // TEST - end
-    if (cfgSettings.bypassProcessing) {
+    if (cfgSettings.bypassProcessing || cfgSettings.dataToCipher) {
         Catenis.logger.INFO('Bypassing processing...');
+
+        if (cfgSettings.dataToCipher) {
+            Application.initialize(true);
+            Catenis.logger.INFO('*** Ciphered data (hex): %s', Catenis.application.cipherData(cfgSettings.dataToCipher).toString('hex'));
+        }
     }
     else {
         // Normal processing

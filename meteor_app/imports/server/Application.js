@@ -60,19 +60,7 @@ const statusRegEx = {
 //
 
 // Application function class
-export function Application() {
-    // Save environment and Catenis node index associated with application
-    Object.defineProperties(this, {
-        environment: {
-            get: () => cfgSettings.environment,
-            enumerable: true
-        },
-        ctnHubNodeIndex: {
-            get: () => ctnHubNodeIndex,
-            enumerable: true
-        }
-    });
-
+export function Application(cipherOnly = false) {
     // Get application seed
     const appSeedPath = path.join(process.env.PWD, cfgSettings.seedFilename),
         encData = fs.readFileSync(appSeedPath, {encoding: 'utf8'});
@@ -83,44 +71,58 @@ export function Application() {
         }
     });
 
-    if (! isSeedValid(this.masterSeed)) {
-        throw new Error('Application (master) seed does not match seed currently recorded onto the database');
-    }
-
-    // Identify test prefix if present
-    const matchResult = cfgSettings.seedFilename.match(/^seed(?:\.(\w+))?\.dat$/);
-
-    if (matchResult && matchResult.length > 1) {
-        this.testPrefix = matchResult[1];
-    }
-
-    const encCommonSeed = generateCommonSeed(this.testPrefix);
-
-    Object.defineProperty(this, 'commonSeed', {
-        get: function () {
-            return conformSeed(encCommonSeed, true, false);
+    if (!cipherOnly) {
+        if (! isSeedValid(this.masterSeed)) {
+            throw new Error('Application (master) seed does not match seed currently recorded onto the database');
         }
-    });
 
-    // Get crypto network
-    this.cryptoNetworkName = cfgSettings.cryptoNetwork;
-    this.cryptoNetwork = bitcoinLib.networks[this.cryptoNetworkName];
+        // Save environment and Catenis node index associated with application
+        Object.defineProperties(this, {
+            environment: {
+                get: () => cfgSettings.environment,
+                enumerable: true
+            },
+            ctnHubNodeIndex: {
+                get: () => ctnHubNodeIndex,
+                enumerable: true
+            }
+        });
 
-    if (this.cryptoNetwork === undefined) {
-        throw new Error('Invalid/unknown crypto network: ' + this.cryptoNetworkName);
+        // Identify test prefix if present
+        const matchResult = cfgSettings.seedFilename.match(/^seed(?:\.(\w+))?\.dat$/);
+
+        if (matchResult && matchResult.length > 1) {
+            this.testPrefix = matchResult[1];
+        }
+
+        const encCommonSeed = generateCommonSeed(this.testPrefix);
+
+        Object.defineProperty(this, 'commonSeed', {
+            get: function () {
+                return conformSeed(encCommonSeed, true, false);
+            }
+        });
+
+        // Get crypto network
+        this.cryptoNetworkName = cfgSettings.cryptoNetwork;
+        this.cryptoNetwork = bitcoinLib.networks[this.cryptoNetworkName];
+
+        if (this.cryptoNetwork === undefined) {
+            throw new Error('Invalid/unknown crypto network: ' + this.cryptoNetworkName);
+        }
+
+        // Set initial application status
+        this.status = Application.processingStatus.stopped;
+
+        // Make sure that admin user account is defined
+        checkAdminUser.call(this);
+
+        // Set up handler to gracefully shutdown the application
+        process.on('SIGTERM', Meteor.bindEnvironment(shutdownHandler, 'Catenis application SIGTERM handler', this));
+
+        // Set up handler for event indicating that transaction used to fund system has been confirmed
+        TransactionMonitor.addEventHandler(TransactionMonitor.notifyEvent.sys_funding_tx_conf.name, sysFundingTxConfirmed.bind(this));
     }
-
-    // Set initial application status
-    this.status = Application.processingStatus.stopped;
-
-    // Make sure that admin user account is defined
-    checkAdminUser.call(this);
-
-    // Set up handler to gracefully shutdown the application
-    process.on('SIGTERM', Meteor.bindEnvironment(shutdownHandler, 'Catenis application SIGTERM handler', this));
-
-    // Set up handler for event indicating that transaction used to fund system has been confirmed
-    TransactionMonitor.addEventHandler(TransactionMonitor.notifyEvent.sys_funding_tx_conf.name, sysFundingTxConfirmed.bind(this));
 }
 
 
@@ -322,10 +324,10 @@ function sysFundingTxConfirmed(data) {
 // Application function class (public) methods
 //
 
-Application.initialize = function () {
+Application.initialize = function (cipherOnly = false) {
     Catenis.logger.TRACE('Application initialization');
     // Instantiate App object
-    Catenis.application = new Application();
+    Catenis.application = new Application(cipherOnly);
 };
 
 
