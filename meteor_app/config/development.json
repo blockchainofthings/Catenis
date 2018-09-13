@@ -48,21 +48,21 @@
   },
   // Parameters pertaining to BitcoinCore module
   "bitcoinCore": {
-    "serverHost": "10.8.0.1", // Bitcoin Core server host name/IP address (access via VPN)
-    //"serverHost": "catenis-dev", // Bitcoin Core server host name/IP address
+    "serverHost": "catenis-local", // Bitcoin Core server host name/IP address
+    "testnetRpcPort": 18443, // (regtest) Port used to connect with Bitcoin Core server via its RPC interface to interact with bitcoin's testnet blockchain
     "rpcConnectionTimeout": 30000,  // (30 sec.) Timeout, in miliseconds, for RPC connection with the bitcoin server.
     "rescanTimeout": 900000 // (15 min.) Timeout, in miniseconds, for waiting on Bitcoin Core to finish rescanning the blockchain after importing private key
   },
   // Parameters pertaining to OmniCore module
   "omniCore": {
-    "serverHost": "10.8.0.1", // Omni Core server host name/IP address (access via VPN)
-    //"serverHost": "catenis-dev", // Omni Core server host name/IP address
+    "serverHost": "catenis-local", // Omni Core server host name/IP address
+    "testnetRpcPort": 17443, // (regtest) Port used to connect with Omni Core server via its RPC interface to interact with bitcoin's testnet blockchain
     "rpcConnectionTimeout": 30000,  // (30 sec.) Timeout, in miliseconds, for RPC connection with the Omni Core server
     "rescanTimeout": 900000 // (15 min.) Timeout, in miniseconds, for waiting on Omni Core to finish rescanning the blockchain after importing private key
   },
   // Parameter pertaining to IpfsClient module
   "ipfsClient": {
-    "apiHost": "10.8.0.1",
+    "apiHost": "catenis-local",
     "apiPort": 5001,
     "apiProtocol": "http"
   },
@@ -73,8 +73,7 @@
   },
   // Parameters pertaining to C3NodeClient module
   "c3NodeClient": {
-    "serverHost": "10.8.0.1", // Catenis Colored Coins node server host name/IP address (access via VPN)
-    //"serverHost": "localhost", // Catenis Colored Coins node server host name/IP address
+    "serverHost": "catenis-local", // Catenis Colored Coins node server host name/IP address (access via VPN)
     "localAddress": "", // IP address of local network interface to use to connect with the Catenis Colored Coins node server. If not specified (empty string) the default network interface is used
     "connectionTimeout": 30000  // (30 sec.) Timeout, in miliseconds, for connection with the Catenis Colored Coins node server
   },
@@ -87,7 +86,7 @@
   },
   // Parameters pertaining to BcotPayment module
   "bcotPayment": {
-    "bcotOmniPropertyId": 2147484804  // BCOT token Omni property ID (yet to be defined for production)
+    "bcotOmniPropertyId": 2147483651  // BCOT token Omni property ID (yet to be defined for production)
   },
   // Parameters pertaining to SpendServiceCreditTransaction module
   "spendServiceCreditTransaction": {
