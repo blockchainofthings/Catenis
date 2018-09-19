@@ -57,21 +57,22 @@
   },
   // Parameters pertaining to BitcoinCore module
   "bitcoinCore": {
-    "serverHost": "ctnprod-btccore", // Bitcoin Core server host name/IP address
+    "serverHost": "127.0.0.1", // Bitcoin Core server host name/IP address
     "rpcConnectionTimeout": 30000  // (30 sec.) Timeout, in miliseconds, for RPC connection with the bitcoin server.
   },
   // Parameters pertaining to OmniCore module
   "omniCore": {
-    "serverHost": "ctnprod-omncore", // Omni Core server host name/IP address
+    "serverHost": "127.0.0.1", // Omni Core server host name/IP address
+    "mainRpcPort": 7332, // Port used to connect with Omni Core server via its RPC interface to interact with bitcoin's main blockchain
     "rpcConnectionTimeout": 30000  // (30 sec.) Timeout, in miliseconds, for RPC connection with the Omni Core server
   },
   // Parameter pertaining to IpfsClient module
   "ipfsClient": {
-    "apiHost": "ctnprod-ipfs"
+    "apiHost": "127.0.0.1"
   },
   // Parameters pertaining to C3NodeClient module
   "c3NodeClient": {
-    "serverHost": "ctnprod-c3nserv", // Catenis Colored Coins node server host name/IP address
+    "serverHost": "127.0.0.1", // Catenis Colored Coins node server host name/IP address
     "connectionTimeout": 30000  // (30 sec.) Timeout, in miliseconds, for connection with the Colored Coins Full-Node server
   },
   // Parameters pertaining to CCMetadata module
