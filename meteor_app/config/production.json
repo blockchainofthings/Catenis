@@ -21,6 +21,7 @@
   },
   // Parameters pertaining to logging mechanism
   "logging": {
+    "exitOnError": false,
     "console": {
       "active": true,
       "logLevel": "TRACE"
