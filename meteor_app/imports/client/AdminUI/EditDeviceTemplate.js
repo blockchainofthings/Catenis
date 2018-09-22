@@ -1,8 +1,8 @@
 /**
- * Created by Claudio on 2017-05-30.
+ * Created by Claudio on 2018-09-22.
  */
 
-//console.log('[NewDeviceTemplate.js]: This code just ran.');
+//console.log('[EditDeviceTemplate.js]: This code just ran.');
 
 // Module variables
 //
@@ -22,9 +22,21 @@ import { ReactiveDict } from 'meteor/reactive-dict';
 import { Catenis } from '../ClientCatenis';
 
 // Import template UI
-import './NewDeviceTemplate.html';
+import './EditDeviceTemplate.html';
+
+// Import dependent templates
+
 
 // Definition of module (private) functions
+//
+
+function loadDeviceData(template) {
+    const device = Catenis.db.collection.Device.findOne({_id: template.data.device_id});
+
+    template.state.set('deviceName', device.props.name);
+    template.state.set('prodUniqueId', device.props.prodUniqueId);
+    template.state.set('public', device.props.public);
+}
 
 function validateFormData(form, errMsgs, template) {
     const deviceInfo = {};
@@ -38,9 +50,11 @@ function validateFormData(form, errMsgs, template) {
         hasError = true;
     }
 
-    deviceInfo.prodUniqueId = form.prodUniqueId.value ? form.prodUniqueId.value.trim() : '';
+    if (form.prodUniqueId) {
+        deviceInfo.prodUniqueId = form.prodUniqueId.value ? form.prodUniqueId.value.trim() : '';
+    }
+
     deviceInfo.public = form.public.checked;
-    deviceInfo.assignClientAPIAccessSecret = form.assignClientAPIAccessSecret.checked;
 
     return !hasError ? deviceInfo : undefined;
 }
@@ -49,45 +63,61 @@ function validateFormData(form, errMsgs, template) {
 // Module code
 //
 
-Template.newDevice.onCreated(function () {
+Template.editDevice.onCreated(function () {
     this.state = new ReactiveDict();
 
     this.state.set('errMsgs', []);
     this.state.set('infoMsg', undefined);
     this.state.set('infoMsgType', 'info');
 
-    this.state.set('deviceCreated', false);
+    this.state.set('fieldsChanged', false);
+    this.state.set('deviceUpdated', false);
+
+    this.state.set('deviceName', undefined);
+    this.state.set('public', undefined);
+
+    // Subscribe to receive database docs/recs updates
+    this.deviceRecordSubs = this.subscribe('deviceRecord', this.data.device_id, () => {
+        loadDeviceData(this);
+    });
 });
 
-Template.newDevice.onDestroyed(function () {
+Template.editDevice.onDestroyed(function () {
+    if (this.deviceRecordSubs) {
+        this.deviceRecordSubs.stop();
+    }
 });
 
-Template.newDevice.events({
-    'click #btnDismissError'(events, template) {
-        // Clear error message
-        template.state.set('errMsgs', []);
-    },
+Template.editDevice.events({
     'click #btnDismissInfo'(events, template) {
         // Clear info message
         template.state.set('infoMsg', undefined);
         template.state.set('infoMsgType', 'info');
     },
-    'change #txtDeviceName'(event, template) {
-        const deviceName = event.target.value;
-        const usernameCtrl = template.$('#txtUsername')[0];
-
-        if (!usernameCtrl.value || usernameCtrl.value.length === 0) {
-            usernameCtrl.value = deviceName.replace(/(\s|[^\w])+/g,'_');
-        }
+    'click #btnDismissError'(events, template) {
+        // Clear error message
+        template.state.set('errMsgs', []);
+    },
+    'change #txtDeviceName'(events, template) {
+        // Indicate that form field has changed
+        template.state.set('fieldsChanged', true);
+    },
+    'change #txtProdUniqueId'(events, template) {
+        // Indicate that form field has changed
+        template.state.set('fieldsChanged', true);
+    },
+    'change #cbxPublic'(events, template) {
+        // Indicate that form field has changed
+        template.state.set('fieldsChanged', true);
     },
     'click #btnCancel'(event, template) {
         // Note: we resource to this unconventional solution so we can disable the Cancel button and,
         //      at the same time, make it behave the same way as when a link is clicked (which we
         //      cannot achieve with either window.location.href = '<url>' or document.location = '<url>';
-        //      both solutions cause a page reload, whilst clicking on the link does not)
+        //      both solutions cause a page reload, whilst clicking on th link does not)
         template.find('#lnkCancel').click();
     },
-    'submit #frmNewDevice'(event, template) {
+    'submit #frmEditDevice'(event, template) {
         event.preventDefault();
 
         const form = event.target;
@@ -97,36 +127,31 @@ Template.newDevice.events({
         template.state.set('infoMsg', undefined);
         template.state.set('infoMsgType', 'info');
         let errMsgs = [];
+
         let deviceInfo;
 
         if ((deviceInfo = validateFormData(form, errMsgs, template))) {
             // Disable buttons
             const btnCancel = template.find('#btnCancel');
-            const btnCreate = template.find('#btnCreate');
+            const btnUpdate = template.find('#btnUpdate');
             btnCancel.disabled = true;
-            btnCreate.disabled = true;
+            btnUpdate.disabled = true;
 
-            // Display alert message indicating that request is being processed
-            template.state.set('infoMsg', 'Your request is being processed. Please wait.');
-
-            // Call remote method to create new device
-            Meteor.call('createNewDevice', template.data.client_id, deviceInfo, (error, deviceId) => {
+            // Call remote method to update device
+            Meteor.call('updateDevice', template.data.device_id, deviceInfo, (error) => {
                 // Reenable buttons
                 btnCancel.disabled = false;
-                btnCreate.disabled = false;
+                btnUpdate.disabled = false;
 
                 if (error) {
-                    // Clear info alert message, and display error message
-                    template.state.set('infoMsg', undefined);
-
                     template.state.set('errMsgs', [
                         error.toString()
                     ]);
                 }
                 else {
-                    // Indicate that device has been successfully created
-                    template.state.set('deviceCreated', true);
-                    template.state.set('infoMsg', util.format('New device (device ID: %s) successfully created.', deviceId));
+                    // Indicate that device has been successfully updated
+                    template.state.set('deviceUpdated', true);
+                    template.state.set('infoMsg', 'Device data successfully update.');
                     template.state.set('infoMsgType', 'success');
                 }
             });
@@ -137,7 +162,31 @@ Template.newDevice.events({
     }
 });
 
-Template.newDevice.helpers({
+Template.editDevice.helpers({
+    device() {
+        return Catenis.db.collection.Device.findOne({_id: Template.instance().data.device_id});
+    },
+    deviceTitle(device) {
+        return device.props.name || device.deviceId;
+    },
+    deviceData() {
+        const template = Template.instance();
+
+        return {
+            name: template.state.get('deviceName'),
+            prodUniqueId: template.state.get('prodUniqueId'),
+            public: template.state.get('public')
+        };
+    },
+    hasProdUniqueId(deviceData) {
+        return !!deviceData.prodUniqueId;
+    },
+    publicChecked(deviceData) {
+        return deviceData.public ? 'checked' : undefined;
+    },
+    isDeviceUpdated() {
+        return Template.instance().state.get('deviceUpdated');
+    },
     hasErrorMessage() {
         return Template.instance().state.get('errMsgs').length > 0;
     },
@@ -158,10 +207,9 @@ Template.newDevice.helpers({
     infoMessageType() {
         return Template.instance().state.get('infoMsgType');
     },
-    isDeviceCreated() {
-        return Template.instance().state.get('deviceCreated');
-    },
-    showCreateButton() {
-        return !Template.instance().state.get('deviceCreated');
+    showUpdateButton() {
+        const template = Template.instance();
+
+        return template.state.get('fieldsChanged') && !template.state.get('deviceUpdated');
     }
 });

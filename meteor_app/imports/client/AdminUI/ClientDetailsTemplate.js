@@ -31,6 +31,7 @@ import './ClientDetailsTemplate.html';
 import './ClientLicensesTemplate.js';
 import './EditClientTemplate.js';
 import './ServiceAccountTemplate.js';
+import './DevicesTemplate.js';
 
 
 // Definition of module (private) functions
@@ -46,7 +47,6 @@ import './ServiceAccountTemplate.js';
 Template.clientDetails.onCreated(function () {
     this.state = new ReactiveDict();
 
-    this.state.set('addMsgCreditsStatus', 'idle');  // Valid statuses: 'idle', 'data-enter', 'processing', 'error', 'success'
     this.state.set('haveResentEnrollmentEmail', false);
     this.state.set('errMsgs', []);
     this.state.set('infoMsg', undefined);

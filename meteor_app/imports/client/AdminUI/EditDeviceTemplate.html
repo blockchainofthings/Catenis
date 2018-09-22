@@ -1,4 +1,4 @@
-<template name="newDevice">
+<template name="editDevice">
     <div>
         <div class="panel panel-login minWidthElement noBoxShadow">
             <div class="panel-body">
@@ -7,13 +7,13 @@
                         {{#unless Template.subscriptionsReady}}
                             <p style="color:lightgray; margin-top:1em">Loading...</p>
                         {{else}}
-                            <h2>NEW DEVICE</h2>
+                            <h2>EDIT DEVICE<br><span style="color:dimgray">{{deviceTitle device}}</span></h2>
                             {{#if hasErrorMessage}}
                                 <div class="alert alert-danger" role="alert">
                                     <button type="button" id="btnDismissError" class="close" aria-label="Close">
                                         <span aria-hidden="true">&times;</span>
                                     </button>
-                                    {{{errorMessage}}}
+                                    {{errorMessage}}
                                 </div>
                             {{/if}}
                             {{#if hasInfoMessage}}
@@ -24,27 +24,26 @@
                                     {{infoMessage}}
                                 </div>
                             {{/if}}
-                            <form id="frmNewDevice" autocomplete="off">
+                            <form id="frmEditDevice" autocomplete="off">
                                 <div class="form-group">
-                                    <input type="text" maxlength="80" id="txtDeviceName" name="deviceName" placeholder="Device Name" autocomplete="off" autocapitalize="none" autocorrect="off">
+                                    <input type="text" value="{{deviceData.name}}" maxlength="80" id="txtDeviceName" name="deviceName" placeholder="Device Name" autocomplete="off" autocapitalize="none" autocorrect="off">
                                 </div>
+                                {{#unless hasProdUniqueId deviceData}}
                                 <div class="form-group">
-                                    <input type="text" maxlength="80" id="txtProdUniqueId" name="prodUniqueId" placeholder="Product Unique ID" autocomplete="off" autocapitalize="none" autocorrect="off">
+                                    <input type="text" value="{{deviceData.prodUniqueId}}" maxlength="80" id="txtProdUniqueId" name="prodUniqueId" placeholder="Product Unique ID" autocomplete="off" autocapitalize="none" autocorrect="off">
                                 </div>
-                                <div class="form-group" style="text-align:left; margin-top:25px">
-                                    <span><input type="checkbox" id="cbxPublic" name="public"/>&nbsp;&nbsp;<label for="cbxPublic" class="input">Public</label></span>
-                                </div>
-                                <div class="form-group" style="text-align:left; margin-top:15px; margin-bottom:30px">
-                                    <span><input type="checkbox" id="cbxAssignClientAPIAccessSecret" name="assignClientAPIAccessSecret"/>&nbsp;&nbsp;<label for="cbxAssignClientAPIAccessSecret" class="input">Assign Client's Default API Access Secret</label></span>
+                                {{/unless}}
+                                <div class="form-group" style="text-align:left; margin-top:25px; margin-bottom:30px">
+                                    <span><input type="checkbox" id="cbxPublic" name="public" {{publicChecked deviceData.public}}/>&nbsp;&nbsp;<label for="cbxPublic" class="input">Public</label></span>
                                 </div>
                                 <div class="row">
                                     <div class="col-xs-6 form-group pull-left">
-                                        <button id="btnCancel" type="button" class="form-control btn btn-login at-btn">{{#if isDeviceCreated}}Back{{else}}Cancel{{/if}}</button>
-                                        <a id="lnkCancel" href="/admin/clients/{{client_id}}/devices" style="display:none"></a>
+                                        <button id="btnCancel" type="button" class="form-control btn btn-login at-btn">{{#if isDeviceUpdated}}Back{{else}}Cancel{{/if}}</button>
+                                        <a id="lnkCancel" href="/admin/clients/{{client_id}}/devices/{{device_id}}" style="display:none"></a>
                                     </div>
-                                    {{#if showCreateButton}}
+                                    {{#if showUpdateButton}}
                                         <div class="col-xs-6 form-group pull-right">
-                                            <button type="submit" id="btnCreate" class="form-control btn btn-login at-btn submit">Create Device</button>
+                                            <button type="submit" id="btnUpdate" class="form-control btn btn-login at-btn submit">Update</button>
                                         </div>
                                     {{/if}}
                                 </div>

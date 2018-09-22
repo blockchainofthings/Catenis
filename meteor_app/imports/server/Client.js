@@ -583,7 +583,7 @@ Client.prototype.createDevice = function (props, ownApiAccessKey = false, initRi
             docDevice._id = Catenis.db.collection.Device.insert(docDevice);
         }
         catch (err) {
-            if (err.name === 'MongoError' && err.code === 11000 && err.errmsg.search(/index:\s+props\.prodUniqueId/) >= 0) {
+            if ((err.name === 'MongoError' || err.name === 'BulkWriteError') && err.code === 11000 && err.errmsg.search(/index:\s+props\.prodUniqueId/) >= 0) {
                 // Duplicate product unique ID error.
                 Catenis.logger.ERROR(util.format('Cannot create device; product unique ID (%s) already associated with another device', docDevice.props.prodUniqueId), err);
                 throw new Meteor.Error('ctn_device_duplicate_prodUniqueId', util.format('Cannot create device; product unique ID (%s) already associated with another device', docDevice.props.prodUniqueId), err.stack);
@@ -633,7 +633,7 @@ Client.prototype.devicesInUseCount = function () {
         status: {
             $nin: [
                 Device.status.inactive.name,
-                Device.status.deleted
+                Device.status.deleted.name
             ]
         }
     }).count();
@@ -1213,7 +1213,7 @@ Client.getClientByDocId = function (client_id, includeDeleted = true, noClientLi
     const docClient = Catenis.db.collection.Client.findOne(query);
 
     if (docClient === undefined) {
-        // No client available with the given client ID. Log error and throw exception
+        // No client available with the given doc/rec ID. Log error and throw exception
         Catenis.logger.ERROR('Could not find client with given database rec/doc ID', {client_id: client_id});
         throw new Meteor.Error('ctn_client_not_found', util.format('Could not find client with given database rec/doc ID (%s)', client_id));
     }

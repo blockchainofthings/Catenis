@@ -226,7 +226,7 @@ ClientsUI.initialize = function () {
                     client.renewApiAccessGenKey(resetAllDevicesToo);
                 }
                 catch (err) {
-                    // Error trying to get client's API access secret. Log error and throw exception
+                    // Error trying to reset client's API access secret. Log error and throw exception
                     Catenis.logger.ERROR('Failure trying to renew client\'s API access generation key.', err);
                     throw new Meteor.Error('client.getClientApiAccessSecret.failure', 'Failure trying to renew client\'s API access generation key: ' + err.toString());
                 }

@@ -180,9 +180,9 @@ Template.newClient.events({
         if ((clientInfo = validateFormData(form, errMsgs, template))) {
             // Disable buttons
             const btnCancel = template.find('#btnCancel');
-            const btnUpdate = template.find('#btnUpdate');
+            const btnCreate = template.find('#btnCreate');
             btnCancel.disabled = true;
-            btnUpdate.disabled = true;
+            btnCreate.disabled = true;
 
             // Display alert message indicating that request is being processed
             template.state.set('infoMsg', 'Your request is being processed. Please wait.');
@@ -191,7 +191,7 @@ Template.newClient.events({
             Meteor.call('createNewClient', Catenis.ctnHubNodeIndex, clientInfo, (error, clientId) => {
                 // Reenable buttons
                 btnCancel.disabled = false;
-                btnUpdate.disabled = false;
+                btnCreate.disabled = false;
 
                 if (error) {
                     // Clear info alert message, and display error message
@@ -216,9 +216,6 @@ Template.newClient.events({
 });
 
 Template.newClient.helpers({
-    hasError: function () {
-        return Template.instance().state.get('errMsgs').length > 0;
-    },
     hasErrorMessage() {
         return Template.instance().state.get('errMsgs').length > 0;
     },

@@ -23,6 +23,7 @@ import { Random } from 'meteor/random';
 
 // References code in other (Catenis) modules
 import { Catenis } from './Catenis';
+import { DeviceShared } from '../both/DeviceShared';
 import { CriticalSection } from './CriticalSection';
 import { TransactionMonitor } from './TransactionMonitor';
 import { BitcoinCore } from './BitcoinCore';
@@ -1449,7 +1450,7 @@ Device.prototype.transferAsset = function (receivingDeviceId, amount, assetId) {
 Device.prototype.updateProperties = function (newProps) {
     newProps = typeof newProps === 'string' ? {name: newProps} : (typeof newProps === 'object' && newProps !== null ? newProps : {});
 
-    if ('prodUniqueId' in newProps) {
+    if ('prodUniqueId' in newProps && this.props.prodUniqueId) {
         // Avoid that product unique ID of device be changed
         delete newProps.prodUniqueId;
     }
@@ -1501,8 +1502,16 @@ Device.prototype.updateProperties = function (newProps) {
             }
             catch (err) {
                 // Error updating Device doc/rec. Log error and throw exception
-                Catenis.logger.ERROR(util.format('Error trying to update device properties (doc_id: %s).', this.doc_id), err);
-                throw new Meteor.Error('ctn_device_update_error', util.format('Error trying to update device properties (doc_id: %s)', this.doc_id), err.stack);
+                if ((err.name === 'MongoError' || err.name === 'BulkWriteError') && err.code === 11000 && err.errmsg.search(/index:\s+props\.prodUniqueId/) >= 0) {
+                    // Duplicate product unique ID error.
+                    Catenis.logger.ERROR(util.format('Cannot update device; product unique ID (%s) already associated with another device', props.prodUniqueId), err);
+                    throw new Meteor.Error('ctn_device_duplicate_prodUniqueId', util.format('Cannot update device; product unique ID (%s) already associated with another device', props.prodUniqueId), err.stack);
+                }
+                else {
+                    // Any other error
+                    Catenis.logger.ERROR(util.format('Error trying to update device properties (doc_id: %s).', this.doc_id), err);
+                    throw new Meteor.Error('ctn_device_update_error', util.format('Error trying to update device properties (doc_id: %s)', this.doc_id), err.stack);
+                }
             }
 
             // Update properties locally too
@@ -2629,6 +2638,27 @@ Device.getDeviceByProductUniqueId = function (prodUniqueId, includeDeleted = tru
     return new Device(docDevice, CatenisNode.getCatenisNodeByIndex(docDevice.index.ctnNodeIndex).getClientByIndex(docDevice.index.clientIndex));
 };
 
+Device.getDeviceByDocId = function (device_id, includeDeleted = true) {
+    // Retrieve Device doc/rec
+    const query = {
+        _id: device_id
+    };
+
+    if (!includeDeleted) {
+        query.status = {$ne: Device.status.deleted.name};
+    }
+
+    const docDevice = Catenis.db.collection.Device.findOne(query);
+
+    if (docDevice === undefined) {
+        // No device available with the given doc/rec ID. Log error and throw exception
+        Catenis.logger.ERROR('Could not find device with given database rec/doc ID', {device_id: device_id});
+        throw new Meteor.Error('ctn_device_not_found', util.format('Could not find device with given database rec/doc ID (%s)', device_id));
+    }
+
+    return new Device(docDevice, CatenisNode.getCatenisNodeByIndex(docDevice.index.ctnNodeIndex).getClientByIndex(docDevice.index.clientIndex));
+};
+
 Device.activeDevicesCount = function () {
     return Catenis.db.collection.Device.find({status: Device.status.active.name}).count();
 };
@@ -2942,28 +2972,7 @@ Device.checkDeviceInitialRights = function () {
 // Device function class (public) properties
 //
 
-Device.status = Object.freeze({
-    new: Object.freeze({
-        name: 'new',
-        description: 'Newly created device awaiting activation; funding of device\'s main/asset addresses have not started (due to lack of system funds)'
-    }),
-    pending: Object.freeze({
-        name: 'pending',
-        description: 'Awaiting confirmation of funding of device\'s main/asset addresses'
-    }),
-    active: Object.freeze({
-        name: 'active',
-        description: 'Device is in its normal use mode; after device\'s main/asset addresses have been funded'
-    }),
-    inactive: Object.freeze({
-        name: 'inactive',
-        description: 'Disabled device; device has been put temporarily out of use'
-    }),
-    deleted: Object.freeze({
-        name: 'deleted',
-        description: 'Device has been logically deleted'
-    })
-});
+Device.status = DeviceShared.status;
 
 
 // Definition of module (private) functions

@@ -246,7 +246,7 @@ Template.editClient.events({
             btnCancel.disabled = true;
             btnUpdate.disabled = true;
 
-            // Call remote method to create new client
+            // Call remote method to update client
             Meteor.call('updateClient', template.data.client_id, clientInfo, (error) => {
                 // Reenable buttons
                 btnCancel.disabled = false;

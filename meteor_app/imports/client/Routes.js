@@ -178,10 +178,44 @@ FlowRouter.route('/admin/clients/:client_id/serviceaccount', {
     }
 });
 
+FlowRouter.route('/admin/clients/:client_id/devices', {
+    action: function (params, queryParams) {
+        BlazeLayout.render('adminLayout', {
+            page: 'devices',
+            dataContext: {
+                client_id: params.client_id
+            }
+        });
+    }
+});
+
+FlowRouter.route('/admin/clients/:client_id/devices/new', {
+    action: function (params, queryParams) {
+        BlazeLayout.render('adminLayout', {
+            page: 'newDevice',
+            dataContext: {
+                client_id: params.client_id
+            }
+        });
+    }
+});
+
 FlowRouter.route('/admin/clients/:client_id/devices/:device_id', {
     action: function (params) {
         BlazeLayout.render('adminLayout', {
             page: 'deviceDetails',
+            dataContext: {
+                client_id: params.client_id,
+                device_id: params.device_id
+            }
+        });
+    }
+});
+
+FlowRouter.route('/admin/clients/:client_id/devices/:device_id/edit', {
+    action: function (params) {
+        BlazeLayout.render('adminLayout', {
+            page: 'editDevice',
             dataContext: {
                 client_id: params.client_id,
                 device_id: params.device_id
