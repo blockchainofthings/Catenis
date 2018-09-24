@@ -55,7 +55,8 @@
   // Parameters pertaining to KeyStore module
   "keyStore": {
     "obsoleteExtKeyTimeToPurge": 86400, // (24 hours) Time, in seconds, before an obsolete HD extended key is purged from local key storage
-    "purgeUnusedExtKeyInterval": 43200000  // (12 hours) Time interval, in miliseconds, for executing method to purge unused HD extended keys form local key storage
+    "purgeUnusedExtKeyInterval": 43200000,  // (12 hours) Time interval, in miliseconds, for executing method to purge unused HD extended keys form local key storage
+    "checkDbConsistency": true  // Indicates whether consistency of in-momory key store database should be checked against Catenis local database (for issued blockchain addresses)
   },
   // Parameters pertaining to BitcoinCore module
   "bitcoinCore": {
