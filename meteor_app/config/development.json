@@ -44,7 +44,7 @@
   // Parameters pertaining to KeyStore module
   "keyStore": {
     "obsoleteExtKeyTimeToPurge": 300, // (5 min.) Time, in seconds, before an obsolete HD extended key is purged from local key storage
-    "purgeUnusedExtKeyInternal": 1800000  // (30 min.) Time interval, in miliseconds, for executing method to purge unused HD extended keys form local key storage
+    "purgeUnusedExtKeyInterval": 600000,  // (10 min.) Time interval, in miliseconds, for executing method to purge unused HD extended keys form local key storage
   },
   // Parameters pertaining to BitcoinCore module
   "bitcoinCore": {

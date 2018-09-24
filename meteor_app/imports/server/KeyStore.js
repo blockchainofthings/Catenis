@@ -198,7 +198,7 @@ const numClientServCredAddrRoots = 10,
     numUsedDeviceIntAddrRoots = 1,
     numUsedDevicePubAddrRoots = 3;
 
-let purgeUnusedExtKeyInternalHandle;
+let purgeUnusedExtKeyIntervalHandle;
 
 // Definition of function classes
 //
@@ -3024,7 +3024,7 @@ KeyStore.initialize = function () {
     //  and set recurring timer to execute it periodically
     purgeUnusedExtendedKeys.call(Catenis.keyStore);
     Catenis.logger.TRACE('Setting recurring timer to purge unused HD extended keys from local key storage');
-    purgeUnusedExtKeyInternalHandle = Meteor.setInterval(purgeUnusedExtendedKeys.bind(Catenis.keyStore), cfgSettings.purgeUnusedExtKeyInterval);
+    purgeUnusedExtKeyIntervalHandle = Meteor.setInterval(purgeUnusedExtendedKeys.bind(Catenis.keyStore), cfgSettings.purgeUnusedExtKeyInterval);
 };
 
 KeyStore.isValidPath = function (path) {
@@ -3968,9 +3968,9 @@ function isValidServiceCreditIndex(index) {
 //
 
 // Definition of properties
-Object.defineProperty(KeyStore, 'purgeUnusedExtKeyInternalHandle', {
+Object.defineProperty(KeyStore, 'purgeUnusedExtKeyIntervalHandle', {
     get: function () {
-        return purgeUnusedExtKeyInternalHandle;
+        return purgeUnusedExtKeyIntervalHandle;
     },
     enumerable: true
 });
