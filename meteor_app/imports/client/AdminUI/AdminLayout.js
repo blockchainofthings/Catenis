@@ -28,6 +28,7 @@ import './AdminLayout.html';
 
 // Import dependent templates
 import './LoginTemplate.js';
+import './AdminHomeTemplate.js';
 import './UserAccountTemplate.js';
 import './BcotPriceTemplate.js';
 import './SystemFundingTemplate.js';
@@ -84,25 +85,32 @@ Template.adminLayout.events({
         return false;
     },
     'click .sideNavButtons'(event, template) {
-        // Change all colors to original color
-        const sideNav = document.getElementsByClassName('sideNavButtons');
+        // Reset color of all sidebar nav entries
+        $('.sideNavButtons').toArray().forEach((navEntry) => {
+            navEntry.style.backgroundColor = '#e8e9ec';
+            Array.from(navEntry.children).forEach(childElem => childElem.style.color = '');
+        });
 
-        for (let i = 0; i < sideNav.length; i++) {
-            sideNav[i].style.backgroundColor = '#e8e9ec';
-            $(sideNav[i]).children()[0].style = '';
-            $(sideNav[i]).children()[1].style = '';
-
-            // sideNav[i].style.color = "#333399";
-            sideNav[i].style = '';
-        }
-
-        (event.currentTarget).style.backgroundColor = '#5555bb';
-        $(event.currentTarget).children()[0].style.color = 'white';
-        $(event.currentTarget).children()[1].style.color = 'white';
+        // Set color of selected sidebar nav entry
+        event.currentTarget.style.backgroundColor = '#5555bb';
+        Array.from(event.currentTarget.children).forEach(childElem => childElem.style.color = 'white');
     },
     'click .navbar-brand'(event, template) {
+        // Reset color of all sidebar nav entries
+        $('.sideNavButtons').toArray().forEach((navEntry) => {
+            navEntry.style.backgroundColor = '#e8e9ec';
+            Array.from(navEntry.children).forEach(childElem => childElem.style.color = '');
+        });
+
         redirectHome();
         return false;
+    },
+    'click .userMenuEntry'(event, template) {
+        // Reset color of all sidebar nav entries
+        $('.sideNavButtons').toArray().forEach((navEntry) => {
+            navEntry.style.backgroundColor = '#e8e9ec';
+            Array.from(navEntry.children).forEach(childElem => childElem.style.color = '');
+        });
     }
 });
 

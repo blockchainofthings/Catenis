@@ -67,7 +67,9 @@ FlowRouter.route('/devices/:device_id', {
 
 FlowRouter.route('/admin', {
     action: function () {
-        BlazeLayout.render('adminLayout');
+        BlazeLayout.render('adminLayout', {
+            page: 'adminHome'
+        });
     }
 });
 
