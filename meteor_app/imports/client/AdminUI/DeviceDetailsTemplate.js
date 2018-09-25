@@ -170,8 +170,7 @@ Template.deviceDetails.events({
             $('#divDeviceAPIAccessSecret').modal('hide');
         }
         else {
-            // Close modal panel
-            $('#divDeviceAPIAccessSecret').modal('hide');
+            $('#btnCancelResetApiAccessSecret').click();
         }
     },
     'click #btnDeactivateDevice'(events, template) {
