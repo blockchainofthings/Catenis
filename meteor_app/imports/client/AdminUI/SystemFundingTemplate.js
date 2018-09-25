@@ -63,6 +63,9 @@ Template.systemFunding.events({
     'hidden.bs.modal #divFundSystem'(event, template) {
         // Modal panel has been closed. Clear funding address
         template.state.set('fundAddress', undefined);
+
+        // Make sure that button used to activate modal panel is not selected
+        $('#btnFundSystem').blur();
     }
 });
 

@@ -203,6 +203,11 @@ Template.clientLicenses.events({
         template.state.set('displayAddLicenseConfirm', 'none');
         template.state.set('displayAddLicenseSubmitButton', 'none');
     },
+    'hidden.bs.modal #divAddClientLicense'(events, template) {
+        // Modal panel has been closed. Make sure that button used to
+        //  activate modal panel is not selected
+        $('#btnAddClientLicense').blur();
+    },
     'change #itxAddConfirmation'(event, template) {
         if (event.target.value.trim().toLowerCase() === 'yes, i do confirm it') {
             // Show button to confirm action
@@ -328,13 +333,13 @@ Template.clientLicenses.events({
                     template.state.set('infoMsgType', 'success');
 
                     // Close modal panel
-                    $('#btnCloseAddClientLicense2').click();
+                    $('#divAddClientLicense').modal('hide');
                 }
             });
         }
         else {
             // Close modal panel
-            $('#btnCloseAddClientLicense2').click();
+            $('#divAddClientLicense').modal('hide');
         }
     }
 });

@@ -73,6 +73,9 @@ Template.serviceAccount.events({
     'hidden.bs.modal #divAddServiceCredit'(event, template) {
         // Modal panel has been closed. Clear BCOT payment address
         template.state.set('bcotPayAddress', undefined);
+
+        // Make sure that button used to activate modal panel is not selected
+        $('#btnAddCredit').blur();
     }
 });
 

@@ -190,17 +190,32 @@ Template.clientLicenseDetails.events({
         $('#itxExpireConfirmation')[0].value = '';
         template.state.set('displayExpireLicenseSubmitButton', 'none');
     },
+    'hidden.bs.modal #divRenewClientLicense'(events, template) {
+        // Modal panel has been closed. Make sure that button used to
+        //  activate modal panel is not selected
+        $('#btnRenewLicense').blur();
+    },
     'change #itxRenewConfirmation'(event, template) {
         if (event.target.value.trim().toLowerCase() === 'yes, i do confirm it') {
             // Show button to confirm action
             template.state.set('displayRenewLicenseSubmitButton', 'inline');
         }
     },
+    'hidden.bs.modal #divUpgradeClientLicense'(events, template) {
+        // Modal panel has been closed. Make sure that button used to
+        //  activate modal panel is not selected
+        $('#btnUpgradeLicense').blur();
+    },
     'change #itxUpgradeConfirmation'(event, template) {
         if (event.target.value.trim().toLowerCase() === 'yes, i do confirm it') {
             // Show button to confirm action
             template.state.set('displayUpgradeLicenseSubmitButton', 'inline');
         }
+    },
+    'hidden.bs.modal #divExpireClientLicense'(events, template) {
+        // Modal panel has been closed. Make sure that button used to
+        //  activate modal panel is not selected
+        $('#btnExpireLicense').blur();
     },
     'change #itxExpireConfirmation'(event, template) {
         if (event.target.value.trim().toLowerCase() === 'yes, i do confirm it') {
@@ -358,13 +373,13 @@ Template.clientLicenseDetails.events({
                     template.state.set('infoMsgType', 'success');
 
                     // Close modal panel
-                    $('#btnCloseRenewClientLicense2').click();
+                    $('#divRenewClientLicense').modal('hide');
                 }
             });
         }
         else {
             // Close modal panel
-            $('#btnCloseRenewClientLicense2').click();
+            $('#divRenewClientLicense').modal('hide');
         }
     },
     'submit #frmUpgradeClientLicense'(event, template) {
@@ -390,13 +405,13 @@ Template.clientLicenseDetails.events({
                     template.state.set('infoMsgType', 'success');
 
                     // Close modal panel
-                    $('#btnCloseUpgradeClientLicense2').click();
+                    $('#divUpgradeClientLicense').modal('hide');
                 }
             });
         }
         else {
             // Close modal panel
-            $('#btnCloseUpgradeClientLicense2').click();
+            $('#divUpgradeClientLicense').modal('hide');
         }
     },
     'submit #frmExpireClientLicense'(event, template) {
@@ -423,13 +438,13 @@ Template.clientLicenseDetails.events({
                     template.state.set('infoMsgType', 'success');
 
                     // Close modal panel
-                    $('#btnCloseExpireClientLicense2').click();
+                    $('#divExpireClientLicense').modal('hide');
                 }
             });
         }
         else {
             // Close modal panel
-            $('#btnCloseExpireClientLicense2').click();
+            $('#divExpireClientLicense').modal('hide');
         }
     }
 });

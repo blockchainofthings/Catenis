@@ -109,6 +109,11 @@ Template.clientDetails.events({
         $('#itxResendEnrollmentConfirmation')[0].value = '';
         template.state.set('displayResendEnrollmentSubmitButton', 'none');
     },
+    'hidden.bs.modal #divResendEnrollment'(events, template) {
+        // Modal panel has been closed. Make sure that button used to
+        //  activate modal panel is not selected
+        $('#btnResendEnrollment').blur();
+    },
     'change #itxResendEnrollmentConfirmation'(event, template) {
         if (event.target.value.trim().toLowerCase() === 'yes, i do confirm it') {
             // Show button to confirm action
@@ -123,7 +128,7 @@ Template.clientDetails.events({
 
         if (confirm(confirmMsg)) {
             // Close modal panel
-            $('#btnCloseResendEnrollment2').click();
+            $('#divResendEnrollment').modal('hide');
 
             // Reset alert messages
             template.state.set('errMsgs', []);
@@ -147,7 +152,7 @@ Template.clientDetails.events({
         }
         else {
             // Close modal panel
-            $('#btnCloseResendEnrollment2').click();
+            $('#divResendEnrollment').modal('hide');
         }
     },
     'click #btnResetPassword'(events, template) {
@@ -161,6 +166,11 @@ Template.clientDetails.events({
         // Reset action confirmation
         $('#itxResetPasswordConfirmation')[0].value = '';
         template.state.set('displayResetPasswordSubmitButton', 'none');
+    },
+    'hidden.bs.modal #divResetPassword'(events, template) {
+        // Modal panel has been closed. Make sure that button used to
+        //  activate modal panel is not selected
+        $('#btnResetPassword').blur();
     },
     'change #itxResetPasswordConfirmation'(event, template) {
         if (event.target.value.trim().toLowerCase() === 'yes, i do confirm it') {
@@ -176,7 +186,7 @@ Template.clientDetails.events({
 
         if (confirm(confirmMsg)) {
             // Close modal panel
-            $('#btnCloseResetPassword2').click();
+            $('#divResetPassword').modal('hide');
 
             // Reset alert messages
             template.state.set('errMsgs', []);
@@ -200,7 +210,7 @@ Template.clientDetails.events({
         }
         else {
             // Close modal panel
-            $('#btnCloseResetPassword2').click();
+            $('#divResetPassword').modal('hide');
         }
     },
     'click #btnApiAccessSecret'(events, template) {
@@ -228,23 +238,12 @@ Template.clientDetails.events({
             }
         });
     },
-    'click #btnCloseClientAPIAccessSecret1'(events, template) {
-        // Delete local copy of API access secret
+    'hidden.bs.modal #divClientAPIAccessSecret'(events, template) {
+        // Modal panel has been closed. Delete local copy of API access secret
         template.state.set('apiAccessSecret', undefined);
 
-        return false;
-    },
-    'click #btnCloseClientAPIAccessSecret2'(events, template) {
-        // Delete local copy of API access secret
-        template.state.set('apiAccessSecret', undefined);
-
-        return false;
-    },
-    'click #divClientAPIAccessSecret'(events, template) {
-        if (events.target.id === 'divClientAPIAccessSecret') {
-            // Delete local copy of API access secret
-            template.state.set('apiAccessSecret', undefined);
-        }
+        // Make sure that button used to activate modal panel is not selected
+        $('#btnApiAccessSecret').blur();
     },
     'click #btnResetApiAccessSecret'(events, template) {
         // Reset reset all devices too option
@@ -303,7 +302,7 @@ Template.clientDetails.events({
             });
 
             // Close modal panel
-            $('#btnCloseClientAPIAccessSecret2').click();
+            $('#divClientAPIAccessSecret').modal('hide');
         }
         else {
             $('#btnCancelResetApiAccessSecret').click();
@@ -321,6 +320,11 @@ Template.clientDetails.events({
         $('#itxDeleteClientConfirmation')[0].value = '';
         template.state.set('displayDeleteClientSubmitButton', 'none');
     },
+    'hidden.bs.modal #divDeleteClient'(events, template) {
+        // Modal panel has been closed. Make sure that button used to
+        //  activate modal panel is not selected
+        $('#btnDeleteClient').blur();
+    },
     'change #itxDeleteClientConfirmation'(event, template) {
         if (event.target.value.trim().toLowerCase() === 'yes, i do confirm it') {
             // Show button to confirm action
@@ -335,7 +339,7 @@ Template.clientDetails.events({
 
         if (confirm(confirmMsg)) {
             // Close modal panel
-            $('#btnCloseDeleteClient2').click();
+            $('#divDeleteClient').modal('hide');
 
             // Reset alert messages
             template.state.set('errMsgs', []);
@@ -356,7 +360,7 @@ Template.clientDetails.events({
         }
         else {
             // Close modal panel
-            $('#btnCloseDeleteClient2').click();
+            $('#divDeleteClient').modal('hide');
         }
     },
 });
