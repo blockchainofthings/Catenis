@@ -103,6 +103,16 @@ FlowRouter.route('/admin/systemfunding', {
 
 // Note: the last component of the path must match (case insensitive) the page name,
 //  so the corresponding sidebar nav entry can be properly selected upon page load
+FlowRouter.route('/admin/bcotusagereport', {
+    action: function () {
+        BlazeLayout.render('adminLayout', {
+            page: 'bcotUsageReport'
+        });
+    }
+});
+
+// Note: the last component of the path must match (case insensitive) the page name,
+//  so the corresponding sidebar nav entry can be properly selected upon page load
 FlowRouter.route('/admin/clients', {
     action: function () {
         BlazeLayout.render('adminLayout', {
