@@ -81,6 +81,8 @@ FlowRouter.route('/admin/useraccount', {
     }
 });
 
+// Note: the last component of the path must match (case insensitive) the page name,
+//  so the corresponding sidebar nav entry can be properly selected upon page load
 FlowRouter.route('/admin/bcotprice', {
     action: function () {
         BlazeLayout.render('adminLayout', {
@@ -89,7 +91,9 @@ FlowRouter.route('/admin/bcotprice', {
     }
 });
 
-FlowRouter.route('/admin/sysfunding', {
+// Note: the last component of the path must match (case insensitive) the page name,
+//  so the corresponding sidebar nav entry can be properly selected upon page load
+FlowRouter.route('/admin/systemfunding', {
     action: function () {
         BlazeLayout.render('adminLayout', {
             page: 'systemFunding'
@@ -97,6 +101,8 @@ FlowRouter.route('/admin/sysfunding', {
     }
 });
 
+// Note: the last component of the path must match (case insensitive) the page name,
+//  so the corresponding sidebar nav entry can be properly selected upon page load
 FlowRouter.route('/admin/clients', {
     action: function () {
         BlazeLayout.render('adminLayout', {

@@ -53,6 +53,25 @@ function redirectHome() {
     }
 }
 
+function getSidebarNavEntry(pageName) {
+    const navEntries = $('.sideNavButtons').toArray();
+
+    for (let idx = 0, limit = navEntries.length; idx < limit; idx++) {
+        const navEntry = navEntries[idx];
+
+        if (navEntry.children[0].href.endsWith('/' + pageName)) {
+            return navEntry;
+        }
+    }
+}
+
+function selectSidebarNavEntry(navEntry) {
+    if (navEntry) {
+        navEntry.style.backgroundColor = '#5555bb';
+        Array.from(navEntry.children).forEach(childElem => childElem.style.color = 'white');
+    }
+}
+
 
 // Module code
 //
@@ -61,6 +80,7 @@ Template.adminLayout.onCreated(function () {
     this.state = new ReactiveDict();
 
     this.state.set('appEnv', undefined);
+    this.state.set('initializing', true);
 
     Meteor.call('getAppEnvironment', (err, env) => {
         if (err) {
@@ -76,6 +96,12 @@ Template.adminLayout.onDestroyed(function () {
 });
 
 Template.adminLayout.events({
+    'click #sidebar-wrapper'(event, template) {
+        if (template.state.get('initializing')) {
+            template.state.set('initializing', false);
+            selectSidebarNavEntry(getSidebarNavEntry(template.data.page().toLowerCase()));
+        }
+    },
     'click #lnkLogout'(event, template) {
         AccountsTemplates.logout();
         return false;
