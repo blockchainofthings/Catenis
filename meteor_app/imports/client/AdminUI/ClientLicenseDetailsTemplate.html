@@ -71,14 +71,18 @@
                                                 <th><label class="noMargin">Provisioned Date:</label></th>
                                                 <td>{{clientLicense.provisionedDate}}</td>
                                             </tr>
-                                            <tr>
-                                                <th><label class="noMargin">Activated Date:</label></th>
-                                                <td>{{clientLicense.activatedDate}}</td>
-                                            </tr>
-                                            <tr>
-                                                <th><label class="noMargin">Expired Date:</label></th>
-                                                <td>{{clientLicense.expiredDate}}</td>
-                                            </tr>
+                                            {{#if clientLicense.activatedDate}}
+                                                <tr>
+                                                    <th><label class="noMargin">Activated Date:</label></th>
+                                                    <td>{{clientLicense.activatedDate}}</td>
+                                                </tr>
+                                            {{/if}}
+                                            {{#if clientLicense.expiredDate}}
+                                                <tr>
+                                                    <th><label class="noMargin">Expired Date:</label></th>
+                                                    <td>{{clientLicense.expiredDate}}</td>
+                                                </tr>
+                                            {{/if}}
                                             </tbody>
                                         </table>
                                         <div class="text-left" style="font-size:10pt; margin-bottom:20px; color:gray">
