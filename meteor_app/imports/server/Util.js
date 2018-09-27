@@ -16,6 +16,7 @@ import util from 'util';
 import BigNumber from 'bignumber.js';
 import bitcoinLib from 'bitcoinjs-lib';
 import _und from 'underscore';
+import moment from 'moment-timezone';
 // Meteor packages
 //import { Meteor } from 'meteor/meteor';
 
@@ -242,8 +243,36 @@ Util.escapeRegExp = function (str) {
     return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // $& means the whole matched string
 };
 
-Util.areDatesEqual = function(dt1, dt2) {
-    return !(dt1 < dt2) && !(dt1 > dt2);
+Util.areDatesEqual = function (dt1, dt2) {
+    return dt1.valueOf() === dt2.valueOf();
+};
+
+// Arguments:
+//  date [Object(Date)|Object(moment)] - Date object
+//  timeZone [String] - Name of time zone (e.g. 'America/New_York')
+//  returnMoment [Boolean] - Indicates whether resulting date/time should be returned as a moment or a Date object
+Util.startOfDayTimeZone = function (date, timeZone, returnMoment = false) {
+    const mt = (moment.isMoment(date) ? date : moment(date)).tz(timeZone).startOf('d');
+
+    return returnMoment ? mt : mt.toDate();
+};
+
+// Arguments:
+//  day [String] - String representing a given calendar date in the format 'YYYY-MM-DD'
+//  timeZone [String] - Name of time zone (e.g. 'America/New_York')
+//  returnMoment [Boolean] - Indicates whether resulting date/time should be returned as a moment or a Date object
+Util.dayTimeZoneToDate = function (day, timeZone, returnMoment = false) {
+    const mt = moment.tz(day, 'YYYY-MM-DD', true, timeZone);
+
+    return returnMoment ? mt : mt.toDate();
+};
+
+Util.capitalize = function (str) {
+    return str.substr(0, 1).toUpperCase() + str.substr(1);
+};
+
+Util.isUndefinedOrNull = function (val) {
+    return val === undefined || val === null;
 };
 
 Util.capitalize = function (str) {

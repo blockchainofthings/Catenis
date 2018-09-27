@@ -1,5 +1,5 @@
 /**
- * Created by claudio on 15/05/17.
+ * Created by Claudio on 2017-05-15.
  */
 
 //console.log('[ClientDatabase.js]: This code just ran.');
@@ -10,10 +10,7 @@
 // References to external code
 //
 // Internal node modules
-//  NOTE: the reference of these modules are done sing 'require()' instead of 'import' to
-//      to avoid annoying WebStorm warning message: 'default export is not defined in
-//      imported module'
-//const util = require('util');
+//import util from 'util';
 // Third-party node modules
 //import config from 'config';
 // Meteor packages
@@ -34,9 +31,12 @@ Catenis.db = {
         FundingBalanceInfo: new Mongo.Collection('FundingBalanceInfo'),
         ReceivedAmount: new Mongo.Collection('ReceivedAmount'),
         Client: new Mongo.Collection('Client'),
+        ClientLicense: new Mongo.Collection('ClientLicense'),
+        License: new Mongo.Collection('License'),
         Device: new Mongo.Collection('Device'),
         ServiceAccountBalance: new Mongo.Collection('ServiceAccountBalance'),
         ReceivedBcotAmount: new Mongo.Collection('ReceivedBcotAmount'),
-        BcotTokenPrice: new Mongo.Collection('BcotTokenPrice')
+        BcotTokenPrice: new Mongo.Collection('BcotTokenPrice'),
+        ClientDevicesInfo: new Mongo.Collection('ClientDevicesInfo')
     }
 };

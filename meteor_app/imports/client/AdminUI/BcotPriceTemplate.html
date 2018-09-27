@@ -1,36 +1,93 @@
 <template name="bcotPrice">
-    <h2>BCOT Token Price</h2>
-    {{#unless Template.subscriptionsReady}}
-        <p style="color:lightgray; margin-top:1em">Loading...</p>
-    {{else}}
-        <table style="margin-left:auto; margin-right:auto; text-align: left">
-            <tr>
-                <td style="text-align:right; font-weight:bold"><label>Current price: </label></td>
-                <td>USD&nbsp;{{formatCurrency bcotTokenPrice.price}}</td>
-            </tr>
-        </table>
-        <div style="margin-top:1em">
-            {{#unless showUpdateForm}}
-                <a id="lnkUpdatePrice" href="#" role="button">Update</a>
-            {{/unless}}
-            <div style="display:{{#if showUpdateForm}}block{{else}}none{{/if}}">
-                <form id="frmUpdatePrice">
-                    <table style="margin-left:auto; margin-right:auto; margin-top:1em; margin-bottom:1em">
-                        <tr>
-                            <td style="text-align:right; vertical-align:top"><label for="itxNewPrice">New price</label></td>
-                            <td style="text-align:left">
-                                <input id="itxNewPrice" name="newPrice" type="text">
-                                {{#if newPriceError}}<br><span style="color:red">{{newPriceError}}</span>{{/if}}
-                            </td>
-                        </tr>
-                    </table>
-                    <input id="saveButton" name="saveButton" type="submit" value="Save">&nbsp;&nbsp;
-                    <a id="lnkCancelPriceUpdate" href="#" role="button">Cancel</a>
-                </form>
-                {{#if updateError}}
-                    <p style="color:red">{{updateError}}</p>
-                {{/if}}
+    <div>
+        <div class="panel panel-login minWidthElement noBoxShadow">
+            <div class="panel-body">
+                <div class="row">
+                    <div class="col-lg-12">
+                        <h2>BCOT Token Price</h2>
+                        {{#unless Template.subscriptionsReady}}
+                            <p style="color:lightgray; margin-top:1em">Loading...</p>
+                        {{else}}
+                            {{#if hasInfoMessage}}
+                                <div class="alert alert-{{infoMessageType}}" role="alert">
+                                    <button type="button" id="btnDismissInfo" class="close" aria-label="Close">
+                                        <span aria-hidden="true">&times;</span>
+                                    </button>
+                                    {{infoMessage}}
+                                </div>
+                            {{/if}}
+                            {{#if hasErrorMessage}}
+                                <div class="alert alert-danger" role="alert">
+                                    <button type="button" id="btnDismissError" class="close" aria-label="Close">
+                                        <span aria-hidden="true">&times;</span>
+                                    </button>
+                                    {{errorMessage}}
+                                </div>
+                            {{/if}}
+                            <table class="table table-striped" style="width:80%; margin-left:auto; margin-right:auto">
+                                <thead>
+                                <tr>
+                                    <th><label>Current price</label></th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                <tr>
+                                    <th>USD&nbsp;{{formatCurrency bcotTokenPrice.price}}</th>
+                                </tr>
+                                </tbody>
+                            </table>
+                            <div class="center">
+                                <button type="button" id="btnUpdatePrice" class="btn-login btn paddedBtn" data-toggle="modal" data-target="#divUpdatePrice">Update Price</button>
+                            </div>
+                            {{!Modal panel containing form used to update BCOT toke price}}
+                            <div id="divUpdatePrice" class="modal fade" data-backdrop="static" tabindex="-1" role="dialog">
+                                <div class="modal-dialog" role="document">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                                            <h4 class="modal-title">Update BCOT Token Price</h4>
+                                        </div>
+                                        <div class="modal-body">
+                                            {{#if hasNewPriceErrorMessage}}
+                                                <div class="alert alert-danger" role="alert">
+                                                    <button type="button" id="btnDismissNewPriceError" class="close" aria-label="Close">
+                                                        <span aria-hidden="true">&times;</span>
+                                                    </button>
+                                                    {{{newPriceErrorMessage}}}
+                                                </div>
+                                            {{/if}}
+                                            <form id="frmUpdatePrice" autocomplete="off">
+                                                <div class="form-group">
+                                                    <input type='text' id='itxNewPrice' name="newPrice" placeholder="New Price" autocomplete="off" />
+                                                </div>
+                                                <div class="row">
+                                                    <div class="col-xs-4 form-group"></div>
+                                                    <div class="col-xs-4 form-group">
+                                                        <button id="btnDoUpdatePrice" type="button" class="btn btn-login paddedBtn" style="display:{{displayDoUpdatePriceButton}}">Update Price</button>
+                                                    </div>
+                                                </div>
+                                                <div id="divUpdatePriceConfirm" class="panel panel-default" style="padding:1em; display:{{displayUpdatePriceConfirm}}">
+                                                    <div style="margin-top:1em; margin-bottom:1em">
+                                                        <label>To confirm your action, please type the following text below: <b>yes, I do confirm it</b>
+                                                            <br><input id="itxUpdatePriceConfirmation" type="text" size="20" maxlength="20" placeholder="confirmation" autocomplete="off"></label>
+                                                    </div>
+                                                    <div style="margin-top:1em">
+                                                        <button id="btnCancelUpdatePriceConfirm" type="button" class="btn btn-default">Cancel</button>&nbsp;&nbsp;
+                                                        <button type="submit" class="btn btn-primary" style="display:{{displayUpdatePriceSubmitButton}}">Update Price</button>
+                                                    </div>
+                                                </div>
+                                            </form>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        {{/unless}}
+                    </div>
+                </div>
             </div>
         </div>
-    {{/unless}}
+    </div>
 </template>

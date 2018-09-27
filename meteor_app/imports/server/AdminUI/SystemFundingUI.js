@@ -55,7 +55,16 @@ SystemFundingUI.initialize = function () {
     Catenis.logger.TRACE('SystemFundingUI initialization');
     // Declaration of RPC methods to be called from client
     Meteor.methods({
-        newSysFundingAddress: newSysFundingAddress
+        newSysFundingAddress: function () {
+            if (Roles.userIsInRole(this.userId, 'sys-admin')) {
+                return Catenis.ctnHubNode.fundingPaymentAddr.newAddressKeys().getAddress();
+            }
+            else {
+                // User not logged in or not a system administrator.
+                //  Throw exception
+                throw new Meteor.Error('ctn_admin_no_permission', 'No permission; must be logged in as a system administrator to perform this task');
+            }
+        }
     });
 
     // Declaration of publications
@@ -173,11 +182,12 @@ SystemFundingUI.initialize = function () {
             this.onStop(() => observeHandle.stop());
         }
         else {
-            // User not logged in or not a system administrator
+            // User not logged in or not a system administrator.
             //  Make sure that publication is not started and throw exception
             this.stop();
             throw new Meteor.Error('ctn_admin_no_permission', 'No permission; must be logged in as a system administrator to perform this task');
         }
+
     });
 };
 
@@ -191,16 +201,8 @@ SystemFundingUI.initialize = function () {
 // Definition of module (private) functions
 //
 
-function newSysFundingAddress() {
-    if (Roles.userIsInRole(this.userId, 'sys-admin')) {
-        return Catenis.ctnHubNode.fundingPaymentAddr.newAddressKeys().getAddress();
-    }
-    else {
-        // User not logged in or not a system administrator.
-        //  Throw exception
-        throw new Meteor.Error('ctn_admin_no_permission', 'No permission; must be logged in as a system administrator to perform this task');
-    }
-}
+/*function module_func() {
+}*/
 
 
 // Module code

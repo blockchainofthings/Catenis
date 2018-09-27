@@ -1,0 +1,175 @@
+<template name="licenseDetails">
+    <div>
+        <div class="panel panel-login minWidthElement noBoxShadow">
+            <div class="panel-body">
+                <div class="row">
+                    <div class="col-lg-12">
+                        {{#unless Template.subscriptionsReady}}
+                            <p style="color:lightgray; margin-top:1em">Loading...</p>
+                        {{else}}
+                            <h2>License</h2>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="pull-left">
+                                        <a href="/admin/licenses" role="button" class="btn-login btn paddedBtn">Back to Licenses</a>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                </div>
+                            </div>
+                            <div class="row" style="padding-top:1em">
+                                <div class="col-lg-12">
+                                    <table class="table table-striped text-left">
+                                        <tbody>
+                                        <tr>
+                                            <th><label class="noMargin">Order:</label></th>
+                                            <td>{{license.order}}</td>
+                                        </tr>
+                                        <tr>
+                                            <th><label class="noMargin">Level:</label></th>
+                                            <td>{{capitalize license.level}}</td>
+                                        </tr>
+                                        <tr>
+                                            <th><label class="noMargin">Type:</label></th>
+                                            <td>{{capitalize license.type}}</td>
+                                        </tr>
+                                        <tr>
+                                            <th><label class="noMargin">Revision:</label></th>
+                                            <td>{{license.revision}}</td>
+                                        </tr>
+                                        <tr>
+                                            <th><label class="noMargin">Maximum Devices In Use:</label></th>
+                                            <td>{{license.maximumDevices}}</td>
+                                        </tr>
+                                        <tr>
+                                            <th><label class="noMargin">Months Of Validity:</label></th>
+                                            <td>{{license.validityMonths}}</td>
+                                        </tr>
+                                        <tr>
+                                            <th><label class="noMargin">Days Of Provisional Renewal:</label></th>
+                                            <td>{{license.provisionalRenewalDays}}</td>
+                                        </tr>
+                                        <tr>
+                                            <th><label class="noMargin">Status:</label></th>
+                                            <td><span style="color:{{statusColor license.status}}">{{license.status}}</span></td>
+                                        </tr>
+                                        <tr>
+                                            <th><label class="noMargin">Created Date:</label></th>
+                                            <td>{{license.createdDate}}</td>
+                                        </tr>
+                                        {{#if license.activatedDate}}
+                                            <tr>
+                                                <th><label class="noMargin">Activated Date:</label></th>
+                                                <td>{{license.activatedDate}}</td>
+                                            </tr>
+                                        {{/if}}
+                                        {{#if license.deactivatedDate}}
+                                            <tr>
+                                                <th><label class="noMargin">Deactivated Date:</label></th>
+                                                <td>{{license.deactivatedDate}}</td>
+                                            </tr>
+                                        {{/if}}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            {{#if hasInfoMessage}}
+                                <div class="alert alert-{{infoMessageType}}" role="alert">
+                                    <button type="button" id="btnDismissInfo" class="close" aria-label="Close">
+                                        <span aria-hidden="true">&times;</span>
+                                    </button>
+                                    {{infoMessage}}
+                                </div>
+                            {{/if}}
+                            {{#if hasErrorMessage}}
+                                <div class="alert alert-danger" role="alert">
+                                    <button type="button" id="btnDismissError" class="close" aria-label="Close">
+                                        <span aria-hidden="true">&times;</span>
+                                    </button>
+                                    {{{errorMessage}}}
+                                </div>
+                            {{/if}}
+                            <div class="row">
+                                <div class="col-md-4">
+                                </div>
+                                {{#if canActivateLicense license activeLicense}}
+                                    <div class="col-md-4">
+                                        <button type="button" id="btnActivateLicense" class="btn-login btn paddedBtn fullWidth" data-toggle="modal" data-target="#divActivateLicense">Activate License</button>
+                                    </div>
+                                {{/if}}
+                                {{#if canDeactivateLicense license}}
+                                    <div class="col-md-4">
+                                        <button type="button" id="btnDeactivateLicense" class="btn-login btn paddedBtn btn-warn fullWidth" data-toggle="modal" data-target="#divDeactivateLicense">Deactivate License</button>
+                                    </div>
+                                {{/if}}
+                            </div>
+                            {{!Modal panel containing form used to activate license}}
+                            <div id="divActivateLicense" class="modal fade" tabindex="-1" role="dialog">
+                                <div class="modal-dialog" role="document">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <button id="btnCloseActivateLicense1" type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                                            <h4 class="modal-title">Activate License</h4>
+                                        </div>
+                                        <div class="modal-body">
+                                            <form id="frmActivateLicense" autocomplete="off">
+                                                {{#if activeLicense}}
+                                                    <input type="hidden" name="hasActiveLicense" value="true"/>
+                                                    <div class="alert alert-warning" role="alert">
+                                                        <b>Warning!</b>&nbsp;If this license is activated, it will <b>deactivate</b> the currently activate license of that same level and type.
+                                                    </div>
+                                                {{/if}}
+                                                <div id="divActivateLicenseConfirm" class="panel panel-default" style="padding:1em">
+                                                    <div style="margin-top:1em; margin-bottom:1em">
+                                                        <label>To confirm your action, please type the following text below: <b>yes, I do confirm it</b>
+                                                            <br><input id="itxActivateLicenseConfirmation" type="text" size="20" maxlength="20" placeholder="confirmation" autocomplete="off"></label>
+                                                    </div>
+                                                    <div style="margin-top:1em">
+                                                        <button type="submit" class="btn btn-primary" style="display:{{displayActivateLicenseSubmitButton}}">Activate License</button>
+                                                    </div>
+                                                </div>
+                                            </form>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button id="btnCloseActivateLicense2" type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {{!Modal panel containing form used to deactivate license}}
+                            <div id="divDeactivateLicense" class="modal fade" tabindex="-1" role="dialog">
+                                <div class="modal-dialog" role="document">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <button id="btnCloseDeactivateLicense1" type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                                            <h4 class="modal-title">Deactivate License</h4>
+                                        </div>
+                                        <div class="modal-body">
+                                            <div class="alert alert-warning" role="alert">
+                                                <b>Warning!</b>&nbsp;This license will <b>not</b> be able to be assigned to clients after it is deactivated.
+                                            </div>
+                                            <form id="frmDeactivateLicense" autocomplete="off">
+                                                <div id="divDeactivateLicenseConfirm" class="panel panel-default" style="padding:1em">
+                                                    <div style="margin-top:1em; margin-bottom:1em">
+                                                        <label>To confirm your action, please type the following text below: <b>yes, I do confirm it</b>
+                                                            <br><input id="itxDeactivateLicenseConfirmation" type="text" size="20" maxlength="20" placeholder="confirmation" autocomplete="off"></label>
+                                                    </div>
+                                                    <div style="margin-top:1em">
+                                                        <button type="submit" class="btn btn-primary" style="display:{{displayDeactivateLicenseSubmitButton}}">Deactivate License</button>
+                                                    </div>
+                                                </div>
+                                            </form>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button id="btnCloseDeactivateLicense2" type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        {{/unless}}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</template>

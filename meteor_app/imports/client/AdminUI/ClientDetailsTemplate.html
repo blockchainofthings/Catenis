@@ -1,45 +1,255 @@
 <template name="clientDetails">
-    <h2>{{client.props.name}}</h2>
-    {{#unless Template.subscriptionsReady}}
-        <p style="color:lightgray; margin-top:1em">Loading...</p>
-    {{else}}
-        <a href="/admin/clients">Back to clients</a>
-        <table cellpadding="2" style="margin-left:auto; margin-right:auto; margin-top:1em; max-width: 70%">
-            <tr>
-                <td style="text-align:right; font-weight:bold"><label>Client&nbsp;ID:&nbsp;</label></td>
-                <td style="text-align:left">{{client.clientId}}</td>
-            </tr>
-            <tr>
-                <td style="text-align:right; font-weight:bold"><label>Client&nbsp;Index:&nbsp;</label></td>
-                <td style="text-align:left">{{client.index.clientIndex}}</td>
-            </tr>
-            <tr>
-                <td style="text-align:right; font-weight:bold"><label>Username:&nbsp;</label></td>
-                <td style="text-align:left">{{clientUsername client.user_id}}</td>
-            </tr>
-        </table>
-        <div style="margin-top:1em">
-            <label>Service account balance:</label>&nbsp;{{serviceAccountBalance.balance}}
-            <div style="margin-top:1em">
-                {{#unless bcotPayAddress}}
-                    <a id="lnkNewBcotPayAddress" href="#" role="button">Get address to send BCOT tokens to</a>
-                {{else}}
-                    <div>
-                        (<a id="lnkDiscardAddr" href="#" role="button">discard address</a>)
+    <div>
+        <div class="panel panel-login minWidthElement noBoxShadow">
+            <div class="panel-body">
+                <div class="row">
+                    <div class="col-lg-12">
+                        {{#unless Template.subscriptionsReady}}
+                            <p style="color:lightgray; margin-top:1em">Loading...</p>
+                        {{else}}
+                            <h2>CLIENT<br><span style="color:dimgray">{{clientTitle client}}</span></h2>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="pull-left">
+                                        <a href="/admin/clients" role="button" class="btn-login btn paddedBtn">Back to Clients</a>
+                                    </div>
+                                </div>
+                                {{#unless isDeletedClient client}}
+                                <div class="col-md-6">
+                                    <div class="pull-right">
+                                        <a href="/admin/clients/{{client_id}}/edit" role="button" class="btn-login btn paddedBtn">Edit Client</a>
+                                    </div>
+                                </div>
+                                {{/unless}}
+                            </div>
+                            <div class="row" style="padding-top:1em">
+                                <div class="col-lg-12">
+                                    <table class="table table-striped text-left">
+                                        <tbody>
+                                        <tr>
+                                            <th><label class="noMargin">Client Index:</label></th>
+                                            <td>{{client.index.clientIndex}}</td>
+                                        </tr>
+                                        <tr>
+                                            <th><label class="noMargin">Client ID:</label></th>
+                                            <td>{{client.clientId}}</td>
+                                        </tr>
+                                        <tr>
+                                            <th><label class="noMargin">Username:</label></th>
+                                            <td>{{clientUsername client.user_id}}</td>
+                                        </tr>
+                                        <tr>
+                                            <th><label class="noMargin">Status:</label></th>
+                                            <td><span style="color:{{statusColor client.status}}">{{client.status}}</span></td>
+                                        </tr>
+                                        <tr>
+                                            <th><label class="noMargin">Customer Name:</label></th>
+                                            <td>{{clientCustomerName client}}</td>
+                                        </tr>
+                                        <tr>
+                                            <th><label class="noMargin">Company:</label></th>
+                                            <td>{{client.props.company}}</td>
+                                        </tr>
+                                        <tr>
+                                            <th><label class="noMargin">Email:</label></th>
+                                            <td>{{clientUserEmail client.user_id}}</td>
+                                        </tr>
+                                        <tr>
+                                            <th><label class="noMargin">Time Zone:</label></th>
+                                            <td>{{client.timeZone}}</td>
+                                        </tr>
+                                        <tr>
+                                            <th><label class="noMargin">License:</label></th>
+                                            <td>{{clientLicenseName client._id}}</td>
+                                        </tr>
+                                        <tr>
+                                            <th><label class="noMargin">License Expiration (*):</label></th>
+                                            <td>{{clientLicenseExpiration client}}</td>
+                                        </tr>
+                                        </tbody>
+                                    </table>
+                                    <div class="text-left" style="font-size:10pt; margin-bottom:20px; color:gray">
+                                        (*) Date/time in reference to client's time zone
+                                    </div>
+                                </div>
+                            </div>
+                            {{#if hasInfoMessage}}
+                            <div class="alert alert-{{infoMessageType}}" role="alert">
+                                <button type="button" id="btnDismissInfo" class="close" aria-label="Close">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                                {{infoMessage}}
+                            </div>
+                            {{/if}}
+                            {{#if hasErrorMessage}}
+                                <div class="alert alert-danger" role="alert">
+                                    <button type="button" id="btnDismissError" class="close" aria-label="Close">
+                                        <span aria-hidden="true">&times;</span>
+                                    </button>
+                                    {{{errorMessage}}}
+                                </div>
+                            {{/if}}
+                            <div class="row">
+                                {{#if isNewClient client}}
+                                    <div class="col-md-8">
+                                        <button type="button" id="btnResendEnrollment" class="btn-login btn paddedBtn fullWidth" data-toggle="modal" data-target="#divResendEnrollment">Resend Enrollment</button>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <button type="button" id="btnDeleteClient" class="btn-login btn paddedBtn btn-warn fullWidth" data-toggle="modal" data-target="#divDeleteClient">Delete Client</button>
+                                    </div>
+                                {{/if}}
+                                {{#if isActiveClient client}}
+                                    <div class="col-md-4">
+                                        <button type="button" id="btnResetPassword" class="btn-login btn paddedBtn fullWidth" data-toggle="modal" data-target="#divResetPassword">Reset Password</button>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <button type="button" id="btnApiAccessSecret" class="btn-login btn paddedBtn fullWidth" data-toggle="modal" data-target="#divClientAPIAccessSecret">API Access Secret</button>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <a id="lnkManageLicenses" href="/admin/clients/{{client_id}}/licenses" role="button" class="btn-login btn paddedBtn fullWidth">Manage Licenses</a>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <a id="lnkManageDevices" href="/admin/clients/{{client_id}}/devices" role="button" class="btn-login btn paddedBtn fullWidth">Manage Devices</a>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <a id="lnkServiceAccount" href="/admin/clients/{{client_id}}/serviceaccount" role="button" class="btn-login btn paddedBtn fullWidth">Service Account</a>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <button type="button" id="btnDeleteClient" class="btn-login btn paddedBtn btn-warn fullWidth" data-toggle="modal" data-target="#divDeleteClient">Delete Client</button>
+                                    </div>
+                                {{/if}}
+                            </div>
+                            {{!Modal panel containing form used to resend client enrollment e-mail}}
+                            <div id="divResendEnrollment" class="modal fade" tabindex="-1" role="dialog">
+                                <div class="modal-dialog" role="document">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <button id="btnCloseResendEnrollment1" type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                                            <h4 class="modal-title">Resend Client Enrollment E-mail</h4>
+                                        </div>
+                                        <div class="modal-body">
+                                            <form id="frmResendEnrollment" autocomplete="off">
+                                                <div id="divResendEnrollmentConfirm" class="panel panel-default" style="padding:1em">
+                                                    <div style="margin-top:1em; margin-bottom:1em">
+                                                        <label>To confirm your action, please type the following text below: <b>yes, I do confirm it</b>
+                                                            <br><input id="itxResendEnrollmentConfirmation" type="text" size="20" maxlength="20" placeholder="confirmation" autocomplete="off"></label>
+                                                    </div>
+                                                    <div style="margin-top:1em">
+                                                        <button type="submit" class="btn btn-primary" style="display:{{displayResendEnrollmentSubmitButton}}">Resend Enrollment</button>
+                                                    </div>
+                                                </div>
+                                            </form>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button id="btnCloseResendEnrollment2" type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {{!Modal panel containing form used to reset client's password}}
+                            <div id="divResetPassword" class="modal fade" tabindex="-1" role="dialog">
+                                <div class="modal-dialog" role="document">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <button id="btnCloseResetPassword1" type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                                            <h4 class="modal-title">Reset Client Account's Password</h4>
+                                        </div>
+                                        <div class="modal-body">
+                                            <form id="frmResetPassword" autocomplete="off">
+                                                <div id="divResetPasswordConfirm" class="panel panel-default" style="padding:1em">
+                                                    <div style="margin-top:1em; margin-bottom:1em">
+                                                        <label>To confirm your action, please type the following text below: <b>yes, I do confirm it</b>
+                                                            <br><input id="itxResetPasswordConfirmation" type="text" size="20" maxlength="20" placeholder="confirmation" autocomplete="off"></label>
+                                                    </div>
+                                                    <div style="margin-top:1em">
+                                                        <button type="submit" class="btn btn-primary" style="display:{{displayResetPasswordSubmitButton}}">Reset Password</button>
+                                                    </div>
+                                                </div>
+                                            </form>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button id="btnCloseResetPassword2" type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {{!Modal panel used to show and reset client's default API access secret}}
+                            <div id="divClientAPIAccessSecret" class="modal fade" tabindex="-1" role="dialog">
+                                <div class="modal-dialog" role="document">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <button id="btnCloseClientAPIAccessSecret1" type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                                            <h4 class="modal-title">Client's Default API Access Secret</h4>
+                                        </div>
+                                        <div class="modal-body">
+                                            <div>
+                                                <textarea id="txtApiAccessSecret" rows="3" disabled class="apiAccessSecret">{{clientApiAccessSecret}}</textarea>
+                                            </div>
+                                            <div style="margin-bottom:1em">
+                                                <button id="btnCopyClipboard" type="button" class="btn" data-clipboard-text="{{clientApiAccessSecret}}"><span class="glyphicon glyphicon-copy" aria-hidden="true"></span> Copy to Clipboard</button>
+                                            </div>
+                                            <div style="display:{{reverseDisplay displayResetApiAccessSecretForm}}">
+                                                <button id="btnResetApiAccessSecret" type="button" class="btn btn-login paddedBtn">Reset API Access Key</button>
+                                            </div>
+                                            <div id="divResetApiAccessSecret" class="panel panel-default" style="padding:1em; display:{{displayResetApiAccessSecretForm}}">
+                                                <form id="formClientApiAccessSecret" autocomplete="off">
+                                                    <table class="text-left" style="margin-left:auto; margin-right:auto">
+                                                        <tr>
+                                                            <td class="text-right" style="vertical-align:text-top; padding-right:10px"><input id="cbxResetAllDevices" type="checkbox" name="resetAllDevices"></td>
+                                                            <td><label for="cbxResetAllDevices">Use new client's default API access secret to reset<br> the API access secret for all devices</label></td>
+                                                        </tr>
+                                                    </table>
+                                                    <div style="margin-top:1em; margin-bottom:1em">
+                                                        <label>To confirm your action, please type the following text below: <b>yes, I do confirm it</b>
+                                                        <br><input id="itxActionConfirmation" type="text" size="20" maxlength="20" placeholder="confirmation" autocomplete="off"></label>
+                                                    </div>
+                                                    <div style="margin-top:1em">
+                                                        <button id="btnCancelResetApiAccessSecret" type="button" class="btn btn-default">Cancel</button>&nbsp;&nbsp;
+                                                        <button id="submitResetApiAccessSecret" type="submit" class="btn btn-primary" style="display:{{displayResetApiAccessSecretButton}}">Reset API Access Secret</button>
+                                                    </div>
+                                                </form>
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button id="btnCloseClientAPIAccessSecret2" type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {{!Modal panel containing form used to delete client}}
+                            <div id="divDeleteClient" class="modal fade" tabindex="-1" role="dialog">
+                                <div class="modal-dialog" role="document">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <button id="btnCloseDeleteClient1" type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                                            <h4 class="modal-title">Delete Client</h4>
+                                        </div>
+                                        <div class="modal-body">
+                                            <div class="alert alert-warning" role="alert">
+                                                <b>Warning!</b>&nbsp;<b>All</b> virtual devices associated with this client shall <b>also</b> be <b>deleted</b>.
+                                            </div>
+                                            <form id="frmDeleteClient" autocomplete="off">
+                                                <div id="divDeleteClientConfirm" class="panel panel-default" style="padding:1em">
+                                                    <div style="margin-top:1em; margin-bottom:1em">
+                                                        <label>To confirm your action, please type the following text below: <b>yes, I do confirm it</b>
+                                                            <br><input id="itxDeleteClientConfirmation" type="text" size="20" maxlength="20" placeholder="confirmation" autocomplete="off"></label>
+                                                    </div>
+                                                    <div style="margin-top:1em">
+                                                        <button type="submit" class="btn btn-primary" style="display:{{displayDeleteClientSubmitButton}}">Delete Client</button>
+                                                    </div>
+                                                </div>
+                                            </form>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button id="btnCloseDeleteClient2" type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        {{/unless}}
                     </div>
-                    {{> bcotPaymentAddress bcotPayAddress=bcotPayAddress}}
-                {{/unless}}
+                </div>
             </div>
         </div>
-        <div style="margin-top:1em">
-            {{#unless showDevices}}
-                <a id="lnkShowDevices" href="#">Show devices</a>
-            {{else}}
-                <a id="lnkHideDevices" href="#">Hide devices</a>
-                {{#if client._id}}
-                    {{> devices client_id=client._id}}
-                {{/if}}
-            {{/unless}}
-        </div>
-    {{/unless}}
+    </div>
 </template>

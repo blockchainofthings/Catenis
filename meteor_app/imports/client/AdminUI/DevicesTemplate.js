@@ -1,5 +1,5 @@
 /**
- * Created by claudio on 26/05/17.
+ * Created by Claudio on 2017-05-26.
  */
 
 //console.log('[DevicesTemplate.js]: This code just ran.');
@@ -10,10 +10,7 @@
 // References to external code
 //
 // Internal node modules
-//  NOTE: the reference of these modules are done sing 'require()' instead of 'import' to
-//      to avoid annoying WebStorm warning message: 'default export is not defined in
-//      imported module'
-//const util = require('util');
+//import util from 'util';
 // Third-party node modules
 //import config from 'config';
 // Meteor packages
@@ -25,21 +22,34 @@ import { Catenis } from '../ClientCatenis';
 
 // Import template UI
 import './DevicesTemplate.html';
+import { DeviceShared } from '../../both/DeviceShared';
 
 // Import dependent templates
+import './NewDeviceTemplate.js';
+import './DeviceDetailsTemplate.js';
 
 
 // Module code
 //
 
 Template.devices.onCreated(function () {
-    // Subscribe to receive device updates
+    // Subscribe to receive database docs/recs updates
+    this.clientRecordSubs = this.subscribe('clientRecord', this.data.client_id);
     this.clientDevicesSubs = this.subscribe('clientDevices', this.data.client_id);
+    this.clientDevicesInfoSubs = this.subscribe('clientDevicesInfo', this.data.client_id);
 });
 
 Template.devices.onDestroyed(function () {
+    if (this.clientRecordSubs) {
+        this.clientRecordSubs.stop();
+    }
+
     if (this.clientDevicesSubs) {
         this.clientDevicesSubs.stop();
+    }
+
+    if (this.clientDevicesInfoSubs) {
+        this.clientDevicesInfoSubs.stop();
     }
 });
 
@@ -47,13 +57,42 @@ Template.devices.events({
 });
 
 Template.devices.helpers({
-    listDevices: function () {
-        return Catenis.db.collection.Device.find({}, {sort:{'index.deviceIndex': 1}}).fetch();
+    client() {
+        return Catenis.db.collection.Client.findOne({_id: Template.instance().data.client_id});
     },
-    isDeviceActive: function (device) {
-        return device.status === 'active';
+    clientTitle(client) {
+        return client.props.name || client.clientId;
     },
-    docClientId: function () {
-        return Template.instance().data.client_id;
+    devices: function () {
+        return Catenis.db.collection.Device.find({}, {sort:{'props.name': 1}}).fetch();
+    },
+    clientDevicesInfo() {
+        return Catenis.db.collection.ClientDevicesInfo.findOne(1);
+    },
+    maximumDevicesReached(clientDevicesInfo) {
+        return clientDevicesInfo.maxAllowedDevices <= clientDevicesInfo.numDevicesInUse;
+    },
+    statusColor(status) {
+        let color;
+
+        switch (status) {
+            case DeviceShared.status.new.name:
+                color = 'blue';
+                break;
+
+            case DeviceShared.status.pending.name:
+                color = 'gold';
+                break;
+
+            case DeviceShared.status.active.name:
+                color = 'green';
+                break;
+
+            case DeviceShared.status.inactive.name:
+                color = 'lightgray';
+                break;
+        }
+
+        return color;
     }
 });

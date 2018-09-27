@@ -32,4 +32,6 @@ twbs:bootstrap@3.3.6
 aldeed:template-extension@4.1.0
 email@1.2.3
 meteortoys:allthings@4.0.0
+useraccounts:flow-routing@1.14.2
 underscore@1.0.10
+tsega:bootstrap3-datetimepicker

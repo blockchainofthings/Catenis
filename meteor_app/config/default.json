@@ -51,7 +51,40 @@
   },
   // Parameters pertaining to Database module
   "database": {
-    "defaultBcotPrice": 0.75  // Default BCOT token price (to be used if no price set yet)
+    "defaultBcotPrice": 0.75,  // Default BCOT token price (to be used if no price set yet)
+    "defaultLicenses": [{
+      "level": "Enterprise",  // Name used to identify the license level
+      "order": 10,  // The order associated with the license level. The lower the order, the less restrictive (e.g. maximum number of devices) the license is
+      "type": "annual",  // Used to identify any characteristics that differentiate this specific license
+      "revision": 0,  // The revision number of the license. Revisions are used to change some characteristics of a license (level & type) (e.g. maximum number of devices)
+      // Unlimited number of devices
+      "validityMonths": 12, // Period of time, in months, through which this lincense is valid
+      "provisionalRenewalDays": 7 // The duration, in days, for the provisional renewal of this license
+    }, {
+      "level": "Professional",  // Name used to identify the license level
+      "order": 20,  // The order associated with the license level. The lower the order, the less restrictive (e.g. maximum number of devices) the license is
+      "type": "annual",  // Used to identify any characteristics that differentiate this specific license
+      "revision": 0,  // The revision number of the license. Revisions are used to change some characteristics of a license (level & type) (e.g. maximum number of devices)
+      "maximumDevices": 200,  //Maximum number of client devices that can be active at any time
+      "validityMonths": 12, // Period of time, in months, through which this lincense is valid
+      "provisionalRenewalDays": 7 // The duration, in days, for the provisional renewal of this license
+    }, {
+      "level": "Basic",  // Name used to identify the license level
+      "order": 30,  // The order associated with the license level. The lower the order, the less restrictive (e.g. maximum number of devices) the license is
+      "type": "annual",  // Used to identify any characteristics that differentiate this specific license
+      "revision": 0,  // The revision number of the license. Revisions are used to change some characteristics of a license (level & type) (e.g. maximum number of devices)
+      "maximumDevices": 20,  // Maximum number of client devices that can be active at any time
+      "validityMonths": 12, // Period of time, in months, through which this lincense is valid
+      "provisionalRenewalDays": 7 // The duration, in days, for the provisional renewal of this license
+    }, {
+      "level": "Starter",  // Name used to identify the license level
+      "order": 40,  // The order associated with the license level. The lower the order, the less restrictive (e.g. maximum number of devices) the license is
+      // No specific type
+      "revision": 0,  // The revision number of the license. Revisions are used to change some characteristics of a license (level & type) (e.g. maximum number of devices)
+      "maximumDevices": 2  // Maximum number of client devices that can be active at any time
+      // Never expires
+      // No provisional renewal
+    }]
   },
   // Parameters pertaining to BitcoinFees module
   "bitcoinFees": {
@@ -343,6 +376,16 @@
   },
   // Parameters partaining to Client module
   "client": {
+    "userNamePrefix": "User for Catenis client",  // Prefix to be used for the name of users created to be associated with a Catenis clients
+    "clientRole": "ctn-client",  // Role attributed to users associated with Catenis clients
+    "minLicenseValidityDays": 7,  // Minimum number of days for a license validity period (when overriding the default validity period)
+                           //  Note: this value must be kept in sync with the minValidityDays constant defined in the ClientLicensesTemplate.js module
+    "minLicenseValDaysToReplace": 2,  // Mininum validity in days for a new license to replace an existing license
+    "temporaryLicense": {  // Used to avoid that client devices be disabled for clients created before the license feature was available before an official license is assigned to them
+      "active": false,   // Indicate that temporary license should be assigned
+      "level": "Basic",  // Level of temporary license to assign
+      "type": "annual"  // Type of temporary license to assign
+    },
     // NOTE: the following should be interpreted as a single entry with an object value
     "deviceDefaultRightsByEvent": {   // Default permission right settings for newly created devices to be assigned to clients: there must be one entry for each defined permission event
       "receive-notify-new-msg": {
@@ -696,5 +739,51 @@
     "largestAssetAmount": 9007199254740991, // (2^53 - 1) Largest amount of assets (expressed in asset's smalles division) that can be issued
     "maxQueryIssuanceCount": 500,  // Maximum number of aaset issuance entries that can be returned when retrieving asset issuance history
     "maxRetListEntries": 500  // Maximum number of entries that should be returned from asset related API methods that returned a list of items (e.g. List Owned Assets, List Issued Assets, List Asset Holders)
+  },
+  // Parameters pertaining to EmailContents module
+  "emailContents": {
+    "resourcePath": "email/",  // Path (from private/ directory) from where e-mail contents resources (e.g. subject and body templates) should be loaded
+    "subjectTemplateNameFormat": "%s_subject.txt",  // Format for composing file name of e-mail subject template
+    "htmlBodyTemplateNameFormat": "%s_body.html",  // Format for composing file name of HTML version of e-mail body template
+    "textBodyTemplateNameFormat": "%s_body.txt"  // Format for composing file name of text version of e-mail body template
+  },
+  // Parameters pertaining to AccountsEmail module
+  "accountsEmail": {
+    "fromAddress": "Catenis Enterprise <catenisadmin@catenis.io>",  // E-mail address used to send accounts related e-mail messages
+    "resetPasswordContents": "PasswordReset",  // Name of e-mail contents used for password reset
+    "enrollAccountContents": "AccountEnrollment"  // Name of e-mail contents used for account enrollment
+  },
+  // Parameters pertaining to ClientLicense module
+  "clientLicense": {
+    "defLateStartCompTimeThreshold": "12:00",  // Default late start compensation time threshold
+    "daysToExpireForReminder": 15,  // Number of days from client license's expiration date that should trigger license expiration reminder notification e-mail message
+    "licenseMonitorInterval": 15,  // Time interval, in minutes, used to monitor client licenses for update and expiration reminder.
+                                   //  Note: this should be a divisor of an hour (60 min)
+                                   //  Note 2: the rationale for using the value 15 is that existing time zone offsets are a whole number of hours, +00:300 or +00:45 from UTC
+    "offSetToMonitor": 15000  // (15 sec.) Time, in milliseconds, that should be wait from the time set to start the monitoring of client licenses to actually start it
+  },
+  // Parameters pertaining to LicenseExpireEmailNotify module
+  "licenseExpireEmailNotify": {
+    "emailName": "LicenseExpiration",  // Reference name of e-mail contents to be used for this notification
+    "fromAddress": "Catenis Enterprise <catenisadmin@catenis.io>",  // E-mail address of sender of e-mail notification message
+    "replyAddress": "donotreply@catenis.io"  // (optional) E-mail address to be used as the address to be used when replying to notification e-mail message
+  },
+  // Parameters pertaining to LicenseOverdueEmailNotify module
+  "licenseOverdueEmailNotify": {
+    "emailName": "LicenseOverdue",  // Reference name of e-mail contents to be used for this notification
+    "fromAddress": "Catenis Enterprise <catenisadmin@catenis.io>",  // E-mail address of sender of e-mail notification message
+    "replyAddress": "donotreply@catenis.io"  // (optional) E-mail address to be used as the address to be used when replying to notification e-mail message
+  },
+  // Parameters pertaining to LicenseExpireRemindEmailNotify module
+  "licenseExpireRemindEmailNotify": {
+    "emailName": "LicenseExpirationReminder",  // Reference name of e-mail contents to be used for this notification
+    "fromAddress": "Catenis Enterprise <catenisadmin@catenis.io>",  // E-mail address of sender of e-mail notification message
+    "replyAddress": "donotreply@catenis.io"  // (optional) E-mail address to be used as the address to be used when replying to notification e-mail message
+  },
+  // Parameters pertaining to DevicesDisableEmailNotify module
+  "devicesDisabledEmailNotify": {
+    "emailName": "DevicesDisabled",  // Reference name of e-mail contents to be used for this notification
+    "fromAddress": "Catenis Enterprise <catenisadmin@catenis.io>",  // E-mail address of sender of e-mail notification message
+    "replyAddress": "donotreply@catenis.io"  // (optional) E-mail address to be used as the address to be used when replying to notification e-mail message
   }
 }

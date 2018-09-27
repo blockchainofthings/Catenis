@@ -2476,81 +2476,90 @@ KeyStore.prototype.initDeviceHDNodes = function (ctnNodeIndex, clientIndex, devi
             Catenis.logger.ERROR(util.format('Public hierarchy root HD extended key (%s) for client with index %d of Catenis node with index %d not found', clientPubHierarchyRootPath, clientIndex, ctnNodeIndex));
         }
         else {
-            // Create client internal root HD extended key for device with given index
+            // Make sure that HD nodes for specified device have not yet been initialized
             const deviceIntRootPath = util.format('%s/%d', clientIntHierarchyRootPath, deviceIndex);
-            let deviceIntRootHDNode = clientIntHierarchyRootHDNode.derive(deviceIndex);
 
-            if (deviceIntRootHDNode.index !== deviceIndex) {
-                Catenis.logger.WARN(util.format('Device internal root HD extended key (%s) derived with an unexpected index', deviceIntRootPath), {
-                    expectedIndex: deviceIndex,
-                    returnedIndex: deviceIntRootHDNode.index
-                });
+            if (retrieveHDNode.call(this, deviceIntRootPath) === null) {
+                // Create client internal root HD extended key for device with given index
+                let deviceIntRootHDNode = clientIntHierarchyRootHDNode.derive(deviceIndex);
+
+                if (deviceIntRootHDNode.index !== deviceIndex) {
+                    Catenis.logger.WARN(util.format('Device internal root HD extended key (%s) derived with an unexpected index', deviceIntRootPath), {
+                        expectedIndex: deviceIndex,
+                        returnedIndex: deviceIntRootHDNode.index
+                    });
+                }
+                else {
+                    // Save newly created HD extended key to store it later
+                    hdNodesToStore.push({type: 'dev_int_root', path: deviceIntRootPath, hdNode: deviceIntRootHDNode, isLeaf: false, isReserved: false});
+
+                    // Create all predefined and reserved device internal addresses root HD extended keys
+                    for (let idx = 0; idx < numDeviceAddrRoots; idx++) {
+                        const deviceIntAddrRootPath = util.format('%s/%d', deviceIntRootPath, idx),
+                            deviceIntAddrRootHDNode = deviceIntRootHDNode.derive(idx);
+
+                        if (deviceIntAddrRootHDNode.index !== idx) {
+                            Catenis.logger.WARN(util.format('Device internal addresses #%d root HD extended key (%s) derived with an unexpected index', idx + 1, deviceIntAddrRootPath), {
+                                expectedIndex: idx,
+                                returnedIndex: deviceIntAddrRootHDNode.index
+                            });
+                            deviceIntRootHDNode = null;
+                        }
+                        else {
+                            // Save newly created HD extended key to store it later
+                            hdNodesToStore.push({type: idx === 0 ? 'dev_read_conf_addr_root' : 'dev_int_rsrv_addr_root', path: deviceIntAddrRootPath, hdNode: deviceIntAddrRootHDNode, isLeaf: false, isReserved: idx >= numUsedDeviceIntAddrRoots});
+                        }
+                    }
+
+                    if (deviceIntRootHDNode !== null) {
+                        // Create client public root HD extended key for device with given index
+                        const devicePubRootPath = util.format('%s/%d', clientPubHierarchyRootPath, deviceIndex);
+                        let devicePubRootHDNode = clientPubHierarchyRootHDNode.derive(deviceIndex);
+
+                        if (devicePubRootHDNode.index !== deviceIndex) {
+                            Catenis.logger.WARN(util.format('Device public root HD extended key (%s) derived with an unexpected index', devicePubRootPath), {
+                                expectedIndex: deviceIndex,
+                                returnedIndex: devicePubRootHDNode.index
+                            });
+                        }
+                        else {
+                            // Save newly created HD extended key to store it later
+                            hdNodesToStore.push({type: 'dev_pub_root', path: devicePubRootPath, hdNode: devicePubRootHDNode, isLeaf: false, isReserved: false});
+
+                            // Create all predefined and reserved device public addresses root HD extended keys
+                            for (let idx = 0; idx < numDeviceAddrRoots; idx++) {
+                                let devicePubAddrRootPath = util.format('%s/%d', devicePubRootPath, idx),
+                                    devicePubAddrRootHDNode = devicePubRootHDNode.derive(idx);
+
+                                if (devicePubAddrRootHDNode.index !== idx) {
+                                    Catenis.logger.WARN(util.format('Device public address #%d root HD extended key (%s) derived with an unexpected index', idx + 1, devicePubAddrRootPath), {
+                                        expectedIndex: idx,
+                                        returnedIndex: devicePubAddrRootHDNode.index
+                                    });
+                                    devicePubRootHDNode = null;
+                                }
+                                else {
+                                    // Save newly created HD extended key to store it later
+                                    hdNodesToStore.push({type: idx === 0 ? 'dev_main_addr_root' : (idx === 1 ? 'dev_asst_addr_root' : (idx === 2 ? 'dev_asst_issu_addr_root' : 'dev_pub_rsrv_addr_root')), path: devicePubAddrRootPath, hdNode: devicePubAddrRootHDNode, isLeaf: false, isReserved: idx >= numUsedDevicePubAddrRoots});
+                                }
+                            }
+
+                            if (devicePubRootHDNode !== null) {
+                                // Store all newly created HD extended keys, and indicate success
+                                hdNodesToStore.forEach((hdNodeToStore) => {
+                                    storeHDNode.call(this, hdNodeToStore.type, hdNodeToStore.path, hdNodeToStore.hdNode, hdNodeToStore.isLeaf, hdNodeToStore.isReserved);
+                                });
+
+                                success = true;
+                            }
+                        }
+                    }
+                }
             }
             else {
-                // Save newly created HD extended key to store it later
-                hdNodesToStore.push({type: 'dev_int_root', path: deviceIntRootPath, hdNode: deviceIntRootHDNode, isLeaf: false, isReserved: false});
-
-                // Create all predefined and reserved device internal addresses root HD extended keys
-                for (let idx = 0; idx < numDeviceAddrRoots; idx++) {
-                    const deviceIntAddrRootPath = util.format('%s/%d', deviceIntRootPath, idx),
-                        deviceIntAddrRootHDNode = deviceIntRootHDNode.derive(idx);
-
-                    if (deviceIntAddrRootHDNode.index !== idx) {
-                        Catenis.logger.WARN(util.format('Device internal addresses #%d root HD extended key (%s) derived with an unexpected index', idx + 1, deviceIntAddrRootPath), {
-                            expectedIndex: idx,
-                            returnedIndex: deviceIntAddrRootHDNode.index
-                        });
-                        deviceIntRootHDNode = null;
-                    }
-                    else {
-                        // Save newly created HD extended key to store it later
-                        hdNodesToStore.push({type: idx === 0 ? 'dev_read_conf_addr_root' : 'dev_int_rsrv_addr_root', path: deviceIntAddrRootPath, hdNode: deviceIntAddrRootHDNode, isLeaf: false, isReserved: idx >= numUsedDeviceIntAddrRoots});
-                    }
-                }
-
-                if (deviceIntRootHDNode !== null) {
-                    // Create client public root HD extended key for device with given index
-                    const devicePubRootPath = util.format('%s/%d', clientPubHierarchyRootPath, deviceIndex);
-                    let devicePubRootHDNode = clientPubHierarchyRootHDNode.derive(deviceIndex);
-
-                    if (devicePubRootHDNode.index !== deviceIndex) {
-                        Catenis.logger.WARN(util.format('Device public root HD extended key (%s) derived with an unexpected index', devicePubRootPath), {
-                            expectedIndex: deviceIndex,
-                            returnedIndex: devicePubRootHDNode.index
-                        });
-                    }
-                    else {
-                        // Save newly created HD extended key to store it later
-                        hdNodesToStore.push({type: 'dev_pub_root', path: devicePubRootPath, hdNode: devicePubRootHDNode, isLeaf: false, isReserved: false});
-
-                        // Create all predefined and reserved device public addresses root HD extended keys
-                        for (let idx = 0; idx < numDeviceAddrRoots; idx++) {
-                            let devicePubAddrRootPath = util.format('%s/%d', devicePubRootPath, idx),
-                                devicePubAddrRootHDNode = devicePubRootHDNode.derive(idx);
-
-                            if (devicePubAddrRootHDNode.index !== idx) {
-                                Catenis.logger.WARN(util.format('Device public address #%d root HD extended key (%s) derived with an unexpected index', idx + 1, devicePubAddrRootPath), {
-                                    expectedIndex: idx,
-                                    returnedIndex: devicePubAddrRootHDNode.index
-                                });
-                                devicePubRootHDNode = null;
-                            }
-                            else {
-                                // Save newly created HD extended key to store it later
-                                hdNodesToStore.push({type: idx === 0 ? 'dev_main_addr_root' : (idx === 1 ? 'dev_asst_addr_root' : (idx === 2 ? 'dev_asst_issu_addr_root' : 'dev_pub_rsrv_addr_root')), path: devicePubAddrRootPath, hdNode: devicePubAddrRootHDNode, isLeaf: false, isReserved: idx >= numUsedDevicePubAddrRoots});
-                            }
-                        }
-
-                        if (devicePubRootHDNode !== null) {
-                            // Store all newly created HD extended keys, and indicate success
-                            hdNodesToStore.forEach((hdNodeToStore) => {
-                                storeHDNode.call(this, hdNodeToStore.type, hdNodeToStore.path, hdNodeToStore.hdNode, hdNodeToStore.isLeaf, hdNodeToStore.isReserved);
-                            });
-
-                            success = true;
-                        }
-                    }
-                }
+                // Device HD nodes already initialized. Nothing to do,
+                //  just indicate success
+                success = true;
             }
         }
     }

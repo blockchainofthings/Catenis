@@ -38,13 +38,12 @@
     "dbPurgeInterval": 86400000  // (24 hours) Time interval, in miliseconds, for executing process to purge database (delete oldest fees docs/recs)
   },
   // Parameters pertaining to BitcoinPrice module
-  "bitcoinPrice": {
+    "bitcoinPrice": {
     "updatePriceTimeInterval": 1800000  // (30 min.) Time interval, in milliseconds, for retrieving new bitcoin ticker price
   },
   // Parameters pertaining to KeyStore module
   "keyStore": {
-    "obsoleteExtKeyTimeToPurge": 300, // (5 min.) Time, in seconds, before an obsolete HD extended key is purged from local key storage
-    "purgeUnusedExtKeyInterval": 600000,  // (10 min.) Time interval, in miliseconds, for executing method to purge unused HD extended keys form local key storage
+    "purgeUnusedExtKeyInterval": 1800000  // (30 min.) Time interval, in miliseconds, for executing method to purge unused HD extended keys form local key storage
   },
   // Parameters pertaining to BitcoinCore module
   "bitcoinCore": {
@@ -69,7 +68,7 @@
   // Paramenters pertaining to IpfsServerMonitor module
   "ipfsServerMonitor": {
     "enabled": false,
-    "checkInterval": 30  // Time, in seconds, defining the period within which IPFS server shall be checked to make sure it is still alive
+    "checkInterval": 300  // (5 min.) Time, in seconds, defining the period within which IPFS server shall be checked to make sure it is still alive
   },
   // Parameters pertaining to C3NodeClient module
   "c3NodeClient": {
@@ -96,5 +95,9 @@
     },
     "unconfirmedTxTimeout": 10080,  // (7 days) Timeout, in minutes, for waiting for latest sent spend service credit tx to be confirmed (set to 7 days, which is half the default mempool tx eviction time of 14 days)
     "txSizeThresholdRatio": 0.9  // Ratio that should be applied to maximum tx size to calculate threshold for spend service credit tx size. Above that size the tx fee rate should be reset so that is is confirmed as soon as possible
+  },
+  // Parameters pertaining to ClientLicense module
+  "clientLicense": {
+    "licenseMonitorInterval": 5  // Time interval, in minutes, used to monitor client licenses for update and expiration reminder.
   }
 }

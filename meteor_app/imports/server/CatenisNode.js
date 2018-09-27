@@ -18,10 +18,11 @@ import events from 'events';
 import config from 'config';
 import _und from 'underscore';     // NOTE: we dot not use the underscore library provided by Meteor because we need
                                    //        a feature (_und.omit(obj,predicate)) that is not available in that version
-
+import moment from 'moment-timezone';
 // Meteor packages
 import { Meteor } from 'meteor/meteor';
 import { Random } from 'meteor/random';
+import { Roles } from 'meteor/alanning:roles';
 
 // References code in other (Catenis) modules
 import { Catenis } from './Catenis';
@@ -506,17 +507,24 @@ CatenisNode.prototype.getIdentityInfo = function () {
 // Create new client
 //
 //  Arguments:
-//    props: [string] - client name
+//    props: [String] - client name
 //           or
 //           {
-//      name: [string] - (optional)
+//      name: [String] - (optional)
 //      (any additional property)
 //    }
-//    user_id: [string] - (optional)
-//    billingMode: [String] - (optional) Identifies that billing mode to be used for this client. The value of one of the properties of Client.billingMode object
-//    deviceDefaultRightsByEvent: [Object] - (optional) Default rights to be used when creating new devices. Object the keys of which should be the defined permission event names.
-//                                         -  The value for each event name key should be a rights object as defined for the Permission.setRights method
-CatenisNode.prototype.createClient = function (props, user_id, billingMode = Client.billingMode.prePaid, deviceDefaultRightsByEvent) {
+//    user_id: [String] - (optional)
+//    opts: { - (optional)
+//      createUser: [Boolean], - (optional, default: false) Indicates that a new user should be created for this client
+//      username: [String], - (optional) Username for the new user to be created. If not specified, the client name is used
+//      email: [String], - (optional) Email address for the new user to be created
+//      sendEnrollmentEmail: [Boolean], - (optional, default: false) Indicate that enrollment e-mail should be sent after client is successfully created
+//      timeZone: [String], - (optional, default:server time zone) The name of the time zone to be used by the client
+//      billingMode: [String], - (optional, default: 'pre-paid') Identifies that billing mode to be used for this client. The value of one of the properties of Client.billingMode object
+//      deviceDefaultRightsByEvent: [Object] - (optional) Default rights to be used when creating new devices. Object the keys of which should be the defined permission event names.
+//                                           -  The value for each event name key should be a rights object as defined for the Permission.setRights method
+//    }
+CatenisNode.prototype.createClient = function (props, user_id, opts) {
     props = typeof props === 'string' ? {name: props} : (typeof props === 'object' && props !== null ? props : {});
 
     // Validate (pre-defined) properties
@@ -540,9 +548,11 @@ CatenisNode.prototype.createClient = function (props, user_id, billingMode = Cli
         throw new Meteor.Error('ctn_node_deleted', util.format('Cannot create client for deleted Catenis node (ctnNodeIndex: %d)', this.ctnNodeIndex));
     }
 
+    opts = opts || {};
     let docUser = undefined;
+    let newUserCreated = false;
 
-    if (user_id !== undefined) {
+    if (user_id) {
         // Make sure that user ID is valid
         docUser = Meteor.users.findOne({_id: user_id}, {fields: {_id: 1, 'services.password': 1, 'catenis.client_id': 1}});
 
@@ -551,11 +561,33 @@ CatenisNode.prototype.createClient = function (props, user_id, billingMode = Cli
             Catenis.logger.ERROR('Invalid user ID for creating client', {userId: user_id});
             throw new Meteor.Error('ctn_client_invalid_user_id', util.format('Invalid user ID (%s) for creating client', user_id));
         }
+        else if (Roles.userIsInRole(docUser._id, cfgSettings.clientRole)) {
+            // Invalid user role
+            Catenis.logger.ERROR('User does not have the expected role for it to be assigned to a client', {userId: user_id});
+            throw new Meteor.Error('ctn_client_no_user_role', util.format('User (Id: %s) does not have the expected role for it to be assigned to a client', user_id));
+        }
         else if (docUser.catenis !== undefined && docUser.catenis.client_id !== undefined) {
             // User already assigned to a client. Log error and throw exception
             Catenis.logger.ERROR('User already assigned to a client', {userId: user_id});
             throw new Meteor.Error('ctn_client_user_already_assigned', util.format('User (Id: %s) already assigned to a client', user_id));
         }
+    }
+    else if (opts.createUser) {
+        // A new user should be created. Determine its username
+        const username = opts.username || props.name;
+
+        if (!username) {
+            // No username could be determined for the new user to be create. Log error and throw exception
+            Catenis.logger.ERROR('No username could be determined for creating new user for new client', {
+                props: props,
+                opts: opts
+            });
+            throw new Meteor.Error('ctn_client_no_username', 'No username for creating new user for new client');
+        }
+
+        user_id = Client.createNewUserForClient(username, opts.email, props.name);
+        docUser = Meteor.users.findOne({_id: user_id}, {fields: {_id: 1, 'services.password': 1}});
+        newUserCreated = true;
     }
 
     let docClient = undefined;
@@ -585,12 +617,13 @@ CatenisNode.prototype.createClient = function (props, user_id, billingMode = Cli
             },
             props: props,
             apiAccessGenKey: Random.secret(),
-            billingMode: billingMode,
-            status: user_id !== undefined && docUser.services !== undefined && docUser.services.password !== undefined ? Client.status.active.name : Client.status.new.name,
+            timeZone: opts.timeZone && moment.tz.zone(opts.timeZone) ? opts.timeZone : moment.tz.guess(),
+            billingMode: opts.billingMode ? opts.billingMode : Client.billingMode.prePaid,
+            status: user_id && docUser.services !== undefined && docUser.services.password !== undefined ? Client.status.active.name : Client.status.new.name,
             createdDate: new Date(Date.now())
         };
 
-        if (user_id !== undefined) {
+        if (user_id) {
             docClient.user_id = user_id;
         }
 
@@ -600,10 +633,21 @@ CatenisNode.prototype.createClient = function (props, user_id, billingMode = Cli
         }
         catch (err) {
             Catenis.logger.ERROR('Error trying to create new client.', err);
+
+            if (newUserCreated) {
+                try {
+                    // Delete new user that had been created for this client
+                    Meteor.users.remove({_id: user_id});
+                }
+                catch (err2) {
+                    Catenis.logger.ERROR('Error trying to delete new user that had been created for new client.', err2);
+                }
+            }
+
             throw new Meteor.Error('ctn_client_insert_error', 'Error trying to create new client', err.stack);
         }
 
-        if (user_id !== undefined) {
+        if (user_id) {
             try {
                 // Update User doc/rec saving the ID of the client associated with it
                 Meteor.users.update({_id: user_id}, {$set: {'catenis.client_id': docClient._id}});
@@ -621,7 +665,7 @@ CatenisNode.prototype.createClient = function (props, user_id, billingMode = Cli
             //  are specified, get system's configured default
             client = new Client(docClient, this);
 
-            client.setDeviceDefaultRights(deviceDefaultRightsByEvent !== undefined ? deviceDefaultRightsByEvent : clientCfgSettings.deviceDefaultRightsByEvent);
+            client.setDeviceDefaultRights(opts.deviceDefaultRightsByEvent !== undefined ? opts.deviceDefaultRightsByEvent : clientCfgSettings.deviceDefaultRightsByEvent);
         }
         catch (err) {
             Catenis.logger.ERROR(util.format('Error setting device default permission rights for newly created client (clientId: %s).', client.clientId), err);
@@ -633,6 +677,9 @@ CatenisNode.prototype.createClient = function (props, user_id, billingMode = Cli
     });
 
     // If we hit this point, a new Client doc (rec) has been successfully created
+    if (user_id && opts.sendEnrollmentEmail) {
+        Accounts.sendEnrollmentEmail(user_id);
+    }
 
     if (docClient.status === Client.status.active.name) {
         // Execute code in critical section to avoid UTXOs concurrency

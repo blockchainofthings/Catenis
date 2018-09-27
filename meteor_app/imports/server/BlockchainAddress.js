@@ -1099,8 +1099,29 @@ function setBoundingIndices() {
             this.firstInUseAddrIndex = Catenis.db.collection.IssuedBlockchainAddress.findOne({parentPath: this.parentPath, status: {$in: ['new', 'expired']}}, {fields: {addrIndex: 1}, sort: {addrIndex: 1}}).addrIndex;
 
             // Add in-use addresses to KeyStore
-            Catenis.db.collection.IssuedBlockchainAddress.find({parentPath: this.parentPath, $and: [{addrIndex: {$gte: this.firstInUseAddrIndex}}, {addrIndex: {$lte: this.lastInUseAddrIndex}}], status: {$ne: 'nonexistent'}},
-                    {fields: {addrIndex: 1, status: 1}, sort: {adrrIndex: 1}}).fetch().forEach((doc) => {
+            Catenis.db.collection.IssuedBlockchainAddress.find({
+                parentPath: this.parentPath,
+                $and: [{
+                    addrIndex: {
+                        $gte: this.firstInUseAddrIndex
+                    }
+                }, {
+                    addrIndex: {
+                        $lte: this.lastInUseAddrIndex
+                    }
+                }],
+                status: {
+                    $ne: 'nonexistent'
+                }
+            }, {
+                fields: {
+                    addrIndex: 1,
+                    status: 1
+                },
+                sort: {
+                    adrrIndex: 1
+                }
+            }).fetch().forEach((doc) => {
                 if (doc.status !== 'obsolete') {
                     this._getAddressKeys(doc.addrIndex);
                 }

@@ -1642,7 +1642,7 @@ Transaction.fixMalleability = function (source, originalTxid, modifiedTxid) {
             });
         }
         catch (err) {
-            if (err.name === 'MongoError' && err.code === 11000 && err.errmsg.search(/index:\s+originalTxid/) >= 0) {
+            if ((err.name === 'MongoError' || err.name === 'BulkWriteError') && err.code === 11000 && err.errmsg.search(/index:\s+originalTxid/) >= 0) {
                 // Duplicate original tx ID error.
                 Catenis.logger.WARN('Trying to create a new Malleability record with an original transaction ID for which there is already a Malleability record', {originalTxid: originalTxid});
                 duplicateRecord = true;

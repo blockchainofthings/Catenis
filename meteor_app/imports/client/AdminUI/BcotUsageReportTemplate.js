@@ -1,5 +1,5 @@
 /**
- * Created by claudio on 19/01/18.
+ * Created by Claudio on 2018-01-19.
  */
 
 //console.log('[BcotUsageReportTemplate.js]: This code just ran.');
@@ -16,7 +16,7 @@ import moment from 'moment';
 // Meteor packages
 import { Meteor } from 'meteor/meteor';
 import { Template } from 'meteor/templating';
-import { RectiveDict } from 'meteor/reactive-dict';
+import { ReactiveDict } from 'meteor/reactive-dict';
 
 // References code in other (Catenis) modules on the client
 //import { Catenis } from '../ClientCatenis';
@@ -74,13 +74,22 @@ function validateFormData(form, errMsgs, timeZones) {
     return !hasError ? period : undefined;
 }
 
+function formatDate (dt) {
+    return dt ? dt.split(/[\-:\.+]/).join('') : '';
+}
+
 
 // Module code
 //
 
 Template.bcotUsageReport.onCreated(function () {
     this.state = new ReactiveDict();
+
     this.state.set('errMsgs', []);
+    this.state.set('infoMsg', undefined);
+    this.state.set('infoMsgType', 'info');
+
+    this.state.set('isInitializing', true);
     this.state.set('doingDownload', false);
     this.state.set('reportData', undefined);
     this.state.set('reportFilename', undefined);
@@ -99,9 +108,57 @@ Template.bcotUsageReport.onDestroyed(function () {
 });
 
 Template.bcotUsageReport.events({
+    'click #frmBcotUsageReport'(event, template) {
+        if (template.state.get('isInitializing')) {
+            // Activate date/time picker controls
+            const dtPicker = $('#dtpkrStartDate');
+            dtPicker.datetimepicker({
+                format: 'YYYY-MM-DD'
+            });
+            const dtPicker2 = $('#dtpkrEndDate');
+            dtPicker2.datetimepicker({
+                useCurrent: false,
+                format: 'YYYY-MM-DD'
+            });
+
+            // Set handler to adjust minimum end date based on currently
+            //  selected start date
+            dtPicker.on("dp.change", function (e) {
+                // Get start date (moment obj)
+                let startDate = e.date;
+
+                if (!startDate) {
+                    startDate = moment().startOf('day');
+                }
+
+                // Adjust limit for end date
+                const minDate = startDate.clone();
+
+                const dataDtPicker2 = dtPicker2.data("DateTimePicker");
+
+                if (dataDtPicker2.date() && dataDtPicker2.date().valueOf() < minDate.valueOf()) {
+                    dataDtPicker2.clear();
+                }
+
+                dataDtPicker2.minDate(minDate);
+            });
+        }
+    },
+    'click #btnDismissError'(events, template) {
+        // Clear error message
+        template.state.set('errMsgs', []);
+    },
+    'click #btnDismissInfo'(events, template) {
+        // Clear info message
+        template.state.set('infoMsg', undefined);
+        template.state.set('infoMsgType', 'info');
+    },
     'change #selTimeZone'(event, template) {
         // Reset report generation
         template.state.set('errMsgs', []);
+        template.state.set('infoMsg', undefined);
+        template.state.set('infoMsgType', 'info');
+
         template.state.set('doingDownload', false);
         template.state.set('reportData', undefined);
         template.state.set('reportFilename', undefined);
@@ -109,6 +166,9 @@ Template.bcotUsageReport.events({
     'change #txtStartDate'(event, template) {
         // Reset report generation
         template.state.set('errMsgs', []);
+        template.state.set('infoMsg', undefined);
+        template.state.set('infoMsgType', 'info');
+
         template.state.set('doingDownload', false);
         template.state.set('reportData', undefined);
         template.state.set('reportFilename', undefined);
@@ -116,6 +176,9 @@ Template.bcotUsageReport.events({
     'change #txtEndDate'(event, template) {
         // Reset report generation
         template.state.set('errMsgs', []);
+        template.state.set('infoMsg', undefined);
+        template.state.set('infoMsgType', 'info');
+
         template.state.set('doingDownload', false);
         template.state.set('reportData', undefined);
         template.state.set('reportFilename', undefined);
@@ -125,8 +188,10 @@ Template.bcotUsageReport.events({
 
         const form = event.target;
 
-        // Reset errors
+        // Clear alerts
         template.state.set('errMsgs', []);
+        template.state.set('infoMsg', undefined);
+        template.state.set('infoMsgType', 'info');
         let errMsgs = [];
 
         let reportPeriod;
@@ -139,12 +204,15 @@ Template.bcotUsageReport.events({
                     util.format('%s.%s', cfgSettings.baseFilename, cfgSettings.fileExtension));
 
             template.state.set('doingDownload', true);
+            template.state.set('infoMsg', 'Generating report...');
+            template.state.set('infoMsgType', 'info');
 
             // Call remote method to create client
             Meteor.call('downloadBcotUsageReport', reportPeriod.startDate, reportPeriod.endDate, (error, report) => {
                 template.state.set('doingDownload', false);
 
                 if (error) {
+                    template.state.set('infoMsg', undefined);
                     template.state.set('errMsgs', [
                         error.toString()
                     ]);
@@ -152,6 +220,15 @@ Template.bcotUsageReport.events({
                 else {
                     // Report successfully generated
                     template.state.set('reportData', report);
+
+                    if (report.length > 0) {
+                        template.state.set('infoMsg', 'Report ready to be downloaded');
+                        template.state.set('infoMsgType', 'success');
+                    }
+                    else {
+                        template.state.set('infoMsg', 'Nothing to download; report is empty');
+                        template.state.set('infoMsgType', 'warning');
+                    }
                 }
             });
         }
@@ -162,7 +239,7 @@ Template.bcotUsageReport.events({
 });
 
 Template.bcotUsageReport.helpers({
-    isUIReady: function () {
+    isConfigReady: function () {
         return Template.instance().state.get('cfgSettings') !== undefined;
     },
     timeZones: function () {
@@ -172,11 +249,11 @@ Template.bcotUsageReport.helpers({
             return {
                 value: tz.value,
                 name: tz.name,
-                selectedAttribute: tz.value === cfgSettings.defaultTimeZone ? 'selected' : ''
+                selected: tz.value === cfgSettings.defaultTimeZone ? 'selected' : ''
             }
         });
     },
-    hasError: function () {
+    hasErrorMessage: function () {
         return Template.instance().state.get('errMsgs').length > 0;
     },
     errorMessage: function () {
@@ -188,25 +265,22 @@ Template.bcotUsageReport.helpers({
             return compMsg + errMsg;
         }, '');
     },
+    hasInfoMessage() {
+        return !!Template.instance().state.get('infoMsg');
+    },
+    infoMessage() {
+        return Template.instance().state.get('infoMsg');
+    },
+    infoMessageType() {
+        return Template.instance().state.get('infoMsgType');
+    },
     canGenerateReport: function () {
         return Template.instance().state.get('reportData') === undefined && !Template.instance().state.get('doingDownload');
-    },
-    generatingReport: function () {
-        return Template.instance().state.get('doingDownload');
     },
     reportFilename: function () {
         return Template.instance().state.get('reportFilename');
     },
     reportData: function () {
         return Template.instance().state.get('reportData');
-    },
-    emptyReport: function () {
-        const reportData = Template.instance().state.get('reportData');
-
-        return reportData !== undefined && reportData.length === 0;
     }
 });
-
-function formatDate (dt) {
-    return dt ? dt.split(/[\-:\.+]/).join('') : '';
-}

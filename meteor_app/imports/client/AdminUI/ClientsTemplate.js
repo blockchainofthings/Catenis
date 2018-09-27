@@ -1,5 +1,5 @@
 /**
- * Created by claudio on 17/05/17.
+ * Created by Claudio on 2017-05-17.
  */
 
 //console.log('[ClientsTemplate.js]: This code just ran.');
@@ -10,10 +10,7 @@
 // References to external code
 //
 // Internal node modules
-//  NOTE: the reference of these modules are done sing 'require()' instead of 'import' to
-//      to avoid annoying WebStorm warning message: 'default export is not defined in
-//      imported module'
-//const util = require('util');
+//import util from 'util';
 // Third-party node modules
 //import config from 'config';
 // Meteor packages
@@ -22,6 +19,7 @@ import { Template } from 'meteor/templating';
 
 // References code in other (Catenis) modules on the client
 import { Catenis } from '../ClientCatenis';
+import { ClientShared } from '../../both/ClientShared';
 
 // Import template UI
 import './ClientsTemplate.html';
@@ -34,12 +32,12 @@ import './ClientDetailsTemplate.js';
 //
 
 Template.clients.onCreated(function () {
-    // Subscribe to receive fund balance updates
+    // Subscribe to retrieve client docs/recs updates
     this.catenisClientsSubs = this.subscribe('catenisClients', Catenis.ctnHubNodeIndex);
 });
 
 Template.clients.onDestroyed(function () {
-    if (this.catenisClientsSubs) {
+    if (this.catenisClientsSubs){
         this.catenisClientsSubs.stop();
     }
 });
@@ -48,10 +46,23 @@ Template.clients.events({
 });
 
 Template.clients.helpers({
-    listClients: function () {
-        return Catenis.db.collection.Client.find({}, {sort:{'props.name': 1}}).fetch();
+    clients: function () {
+        return Catenis.db.collection.Client.find({}, {
+            sort:{'props.name': 1}}).fetch();
     },
-    isClientActive: function (client) {
-        return client.status === 'active';
+    statusColor(status) {
+        let color;
+
+        switch (status) {
+            case ClientShared.status.active.name:
+                color = 'green';
+                break;
+
+            case ClientShared.status.new.name:
+                color = 'blue';
+                break;
+        }
+
+        return color;
     }
 });

@@ -1,5 +1,5 @@
 /**
- * Created by claudio on 30/05/17.
+ * Created by Claudio on 2017-05-30.
  */
 
 //console.log('[NewDeviceTemplate.js]: This code just ran.');
@@ -10,16 +10,13 @@
 // References to external code
 //
 // Internal node modules
-//  NOTE: the reference of these modules are done sing 'require()' instead of 'import' to
-//      to avoid annoying WebStorm warning message: 'default export is not defined in
-//      imported module'
-//const util = require('util');
+import util from 'util';
 // Third-party node modules
 //import config from 'config';
 // Meteor packages
 import { Meteor } from 'meteor/meteor';
 import { Template } from 'meteor/templating';
-import { RectiveDict } from 'meteor/reactive-dict';
+import { ReactiveDict } from 'meteor/reactive-dict';
 
 // References code in other (Catenis) modules on the client
 import { Catenis } from '../ClientCatenis';
@@ -27,21 +24,23 @@ import { Catenis } from '../ClientCatenis';
 // Import template UI
 import './NewDeviceTemplate.html';
 
-
 // Definition of module (private) functions
-//
 
-function validateFormData(form, errMsgs) {
+function validateFormData(form, errMsgs, template) {
     const deviceInfo = {};
     let hasError = false;
 
-    deviceInfo.name = form.clientName.value ? form.clientName.value.trim() : '';
+    deviceInfo.name = form.deviceName.value ? form.deviceName.value.trim() : '';
+
+    if (deviceInfo.name.length === 0) {
+        // Device name not supplied. Report error
+        errMsgs.push('Please enter a device name');
+        hasError = true;
+    }
 
     deviceInfo.prodUniqueId = form.prodUniqueId.value ? form.prodUniqueId.value.trim() : '';
-
     deviceInfo.public = form.public.checked;
-
-    deviceInfo.ownAPIAccessKey = form.ownAPIAccessKey.checked;
+    deviceInfo.assignClientAPIAccessSecret = form.assignClientAPIAccessSecret.checked;
 
     return !hasError ? deviceInfo : undefined;
 }
@@ -52,40 +51,83 @@ function validateFormData(form, errMsgs) {
 
 Template.newDevice.onCreated(function () {
     this.state = new ReactiveDict();
-    this.state.set('errMsgs', []);
 
-    // Subscribe to receive client updates
-    this.clientRecordSubs = this.subscribe('clientRecord', this.data.client_id);
+    this.state.set('errMsgs', []);
+    this.state.set('infoMsg', undefined);
+    this.state.set('infoMsgType', 'info');
+
+    this.state.set('deviceCreated', false);
 });
 
 Template.newDevice.onDestroyed(function () {
-    if (this.clientRecordSubs) {
-        this.clientRecordSubs.stop();
-    }
 });
 
 Template.newDevice.events({
+    'click #btnDismissError'(events, template) {
+        // Clear error message
+        template.state.set('errMsgs', []);
+    },
+    'click #btnDismissInfo'(events, template) {
+        // Clear info message
+        template.state.set('infoMsg', undefined);
+        template.state.set('infoMsgType', 'info');
+    },
+    'change #txtDeviceName'(event, template) {
+        const deviceName = event.target.value;
+        const usernameCtrl = template.$('#txtUsername')[0];
+
+        if (!usernameCtrl.value || usernameCtrl.value.length === 0) {
+            usernameCtrl.value = deviceName.replace(/(\s|[^\w])+/g,'_');
+        }
+    },
+    'click #btnCancel'(event, template) {
+        // Note: we resource to this unconventional solution so we can disable the Cancel button and,
+        //      at the same time, make it behave the same way as when a link is clicked (which we
+        //      cannot achieve with either window.location.href = '<url>' or document.location = '<url>';
+        //      both solutions cause a page reload, whilst clicking on the link does not)
+        template.find('#lnkCancel').click();
+    },
     'submit #frmNewDevice'(event, template) {
         event.preventDefault();
 
         const form = event.target;
 
-        // Reset errors
+        // Clear alert messages
         template.state.set('errMsgs', []);
+        template.state.set('infoMsg', undefined);
+        template.state.set('infoMsgType', 'info');
         let errMsgs = [];
         let deviceInfo;
 
-        if ((deviceInfo = validateFormData(form, errMsgs))) {
-            // Call remote method to create client device
-            Meteor.call('createDevice', template.data.client_id, deviceInfo, (error, deviceId) => {
+        if ((deviceInfo = validateFormData(form, errMsgs, template))) {
+            // Disable buttons
+            const btnCancel = template.find('#btnCancel');
+            const btnCreate = template.find('#btnCreate');
+            btnCancel.disabled = true;
+            btnCreate.disabled = true;
+
+            // Display alert message indicating that request is being processed
+            template.state.set('infoMsg', 'Your request is being processed. Please wait.');
+
+            // Call remote method to create new device
+            Meteor.call('createNewDevice', template.data.client_id, deviceInfo, (error, deviceId) => {
+                // Reenable buttons
+                btnCancel.disabled = false;
+                btnCreate.disabled = false;
+
                 if (error) {
+                    // Clear info alert message, and display error message
+                    template.state.set('infoMsg', undefined);
+
                     template.state.set('errMsgs', [
                         error.toString()
                     ]);
                 }
                 else {
-                    // Catenis device successfully created
-                    template.state.set('newDeviceId', deviceId);
+                    // Indicate that device has been successfully created
+                    template.state.set('deviceCreated', true);
+                    template.state.set('infoMsg', util.format('New device (device ID: %s) successfully created.', deviceId));
+                    template.state.set('infoMsgType', 'success');
                 }
             });
         }
@@ -96,25 +138,30 @@ Template.newDevice.events({
 });
 
 Template.newDevice.helpers({
-    hasError: function () {
+    hasErrorMessage() {
         return Template.instance().state.get('errMsgs').length > 0;
     },
-    errorMessage: function () {
+    errorMessage() {
         return Template.instance().state.get('errMsgs').reduce((compMsg, errMsg) => {
             if (compMsg.length > 0) {
                 compMsg += '<br>';
             }
-
             return compMsg + errMsg;
         }, '');
     },
-    client: function () {
-        return Catenis.db.collection.Client.findOne({_id: Template.instance().data.client_id});
+    hasInfoMessage() {
+        return !!Template.instance().state.get('infoMsg');
     },
-    docClientId: function () {
-        return Template.instance().data.client_id;
+    infoMessage() {
+        return Template.instance().state.get('infoMsg');
     },
-    newDeviceId: function () {
-        return Template.instance().state.get('newDeviceId');
+    infoMessageType() {
+        return Template.instance().state.get('infoMsgType');
+    },
+    isDeviceCreated() {
+        return Template.instance().state.get('deviceCreated');
+    },
+    showCreateButton() {
+        return !Template.instance().state.get('deviceCreated');
     }
 });

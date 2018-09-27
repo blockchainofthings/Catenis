@@ -1,0 +1,294 @@
+<template name="clientLicenseDetails">
+    <div>
+        <div class="panel panel-login minWidthElement noBoxShadow">
+            <div class="panel-body">
+                <div class="row">
+                    <div class="col-lg-12">
+                        {{#unless Template.subscriptionsReady}}
+                            <p style="color:lightgray; margin-top:1em">Loading...</p>
+                        {{else}}
+                            {{#let license=(clientLicenseLicense clientLicense.license_id)}}
+                                <h2>CLIENT<br>{{clientTitle client}}
+                                    <br><br>License</h2>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="pull-left">
+                                            <a href="/admin/clients/{{client_id}}/licenses" role="button" class="btn-login btn paddedBtn">Back to Client Licenses</a>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                    </div>
+                                </div>
+                                <div class="row" style="padding-top:1em">
+                                    <div class="col-lg-12">
+                                        <table class="table table-striped text-left">
+                                            <tbody>
+                                            <tr>
+                                                <th><label class="noMargin">Order:</label></th>
+                                                <td>{{license.order}}</td>
+                                            </tr>
+                                            <tr>
+                                                <th><label class="noMargin">Level:</label></th>
+                                                <td>{{capitalize license.level}}</td>
+                                            </tr>
+                                            <tr>
+                                                <th><label class="noMargin">Type:</label></th>
+                                                <td>{{capitalize license.type}}</td>
+                                            </tr>
+                                            <tr>
+                                                <th><label class="noMargin">Revision:</label></th>
+                                                <td>{{license.revision}}</td>
+                                            </tr>
+                                            <tr>
+                                                <th><label class="noMargin">Maximum Devices:</label></th>
+                                                <td>{{license.maximumDevices}}</td>
+                                            </tr>
+                                            <tr>
+                                                <th><label class="noMargin">Validity Start Date (*):</label></th>
+                                                <td>{{formatLongDate clientLicense.validity.startDate client}}</td>
+                                            </tr>
+                                            <tr>
+                                                <th><label class="noMargin">Validity End Date (*):</label></th>
+                                                <td>{{formatLongDate clientLicense.validity.endDate client}}</td>
+                                            </tr>
+                                            <tr>
+                                                <th><label class="noMargin">Is Provisional Renewal:</label></th>
+                                                <td>{{clientLicense.provisionalRenewal}}</td>
+                                            </tr>
+                                            <tr>
+                                                <th><label class="noMargin">Observe Provisional Renewal:</label></th>
+                                                <td>{{clientLicense.observeProvisionalRenewal}}</td>
+                                            </tr>
+                                            <tr>
+                                                <th><label class="noMargin">Status:</label></th>
+                                                <td><span style="color:{{statusColor clientLicense.status}}">{{clientLicense.status}}</span></td>
+                                            </tr>
+                                            <tr>
+                                                <th><label class="noMargin">Expiration Notification Sent:</label></th>
+                                                <td>{{clientLicense.expireRemindNotifySent}}</td>
+                                            </tr>
+                                            <tr>
+                                                <th><label class="noMargin">Provisioned Date:</label></th>
+                                                <td>{{clientLicense.provisionedDate}}</td>
+                                            </tr>
+                                            {{#if clientLicense.activatedDate}}
+                                                <tr>
+                                                    <th><label class="noMargin">Activated Date:</label></th>
+                                                    <td>{{clientLicense.activatedDate}}</td>
+                                                </tr>
+                                            {{/if}}
+                                            {{#if clientLicense.expiredDate}}
+                                                <tr>
+                                                    <th><label class="noMargin">Expired Date:</label></th>
+                                                    <td>{{clientLicense.expiredDate}}</td>
+                                                </tr>
+                                            {{/if}}
+                                            </tbody>
+                                        </table>
+                                        <div class="text-left" style="font-size:10pt; margin-bottom:20px; color:gray">
+                                            (*) Date/time in reference to client's time zone
+                                        </div>
+                                    </div>
+                                </div>
+                                {{#if hasInfoMessage}}
+                                    <div class="alert alert-{{infoMessageType}}" role="alert">
+                                        <button type="button" id="btnDismissInfo" class="close" aria-label="Close">
+                                            <span aria-hidden="true">&times;</span>
+                                        </button>
+                                        {{infoMessage}}
+                                    </div>
+                                {{/if}}
+                                {{#if hasErrorMessage}}
+                                    <div class="alert alert-danger" role="alert">
+                                        <button type="button" id="btnDismissError" class="close" aria-label="Close">
+                                            <span aria-hidden="true">&times;</span>
+                                        </button>
+                                        {{{errorMessage}}}
+                                    </div>
+                                {{/if}}
+                                <div class="row">
+                                    {{#if canRenewLicense clientLicense}}
+                                        <div class="col-md-4">
+                                            <button type="button" id="btnRenewLicense" class="btn-login btn paddedBtn fullWidth" data-toggle="modal" data-target="#divRenewClientLicense">Renew License</button>
+                                        </div>
+                                    {{else}}
+                                        <div class="col-md-4"></div>
+                                    {{/if}}
+                                    {{#if canUpgradeLicense clientLicense license}}
+                                        <div class="col-md-4">
+                                            <button type="button" id="btnUpgradeLicense" class="btn-login btn paddedBtn fullWidth" data-toggle="modal" data-target="#divUpgradeClientLicense">Upgrade License</button>
+                                        </div>
+                                    {{else}}
+                                        <div class="col-md-4"></div>
+                                    {{/if}}
+                                    {{#if canExpireLicense clientLicense}}
+                                        <div class="col-md-4">
+                                            <button type="button" id="btnExpireLicense" class="btn-login btn paddedBtn fullWidth" data-toggle="modal" data-target="#divExpireClientLicense">Expire License</button>
+                                        </div>
+                                    {{else}}
+                                        <div class="col-md-4"></div>
+                                    {{/if}}
+                                </div>
+                                {{!Modal panel containing form used to renew client license}}
+                                <div id="divRenewClientLicense" class="modal fade" tabindex="-1" role="dialog">
+                                    <div class="modal-dialog" role="document">
+                                        <div class="modal-content">
+                                            <div class="modal-header">
+                                                <button id="btnCloseRenewClientLicense1" type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                                                <h4 class="modal-title">Renew Client License</h4>
+                                            </div>
+                                            <div class="modal-body">
+                                                {{#if hasNewLicenseErrorMessage}}
+                                                    <div class="alert alert-danger" role="alert">
+                                                        <button type="button" id="btnDismissNewLicenseError" class="close" aria-label="Close">
+                                                            <span aria-hidden="true">&times;</span>
+                                                        </button>
+                                                        {{{newLicenseErrorMessage}}}
+                                                    </div>
+                                                {{/if}}
+                                                <form id="frmRenewClientLicense" autocomplete="off">
+                                                    <input type="hidden" name="currentLicense_id" value="{{license._id}}"/>
+                                                    <input type="hidden" name="currentLicenseOrder" value="{{license.order}}"/>
+                                                    {{#if renewMoreRestrictiveLicense}}
+                                                        <input type="hidden" name="isMoreRestrictiveLicense" value="true"/>
+                                                        <div class="alert alert-warning" role="alert">
+                                                            <b>Warning!</b>&nbsp;The selected license is <b>more restrictive</b> than the current one, and may force the <b>deactivation</b> of some of the client's virtual devices when it is activated.
+                                                        </div>
+                                                    {{/if}}
+                                                    <div class="form-group text-left">
+                                                        <label for="selLicense" class="input">License</label><br>
+                                                        <select id="selLicense" name="license" class="input">
+                                                            <option value="">-- select --</option>
+                                                            {{#each newLicense in activeLicenses}}
+                                                                <option value="{{newLicense._id}}" {{checkSelectedLicense newLicense license}}>{{newLicense.name}}</option>
+                                                            {{/each}}
+                                                        </select>
+                                                    </div>
+                                                    <div class="row">
+                                                        <div class="col-xs-4 form-group"></div>
+                                                        <div class="col-xs-4 form-group">
+                                                            <button id="btnDoRenewLicense" type="button" class="btn btn-login paddedBtn" style="display:{{displayDoRenewLicenseButton}}">Renew License</button>
+                                                        </div>
+                                                    </div>
+                                                    <div id="divRenewLicenseConfirm" class="panel panel-default" style="padding:1em; display:{{displayRenewLicenseConfirm}}">
+                                                        <div style="margin-top:1em; margin-bottom:1em">
+                                                            <label>To confirm your action, please type the following text below: <b>yes, I do confirm it</b>
+                                                                <br><input id="itxRenewConfirmation" type="text" size="20" maxlength="20" placeholder="confirmation" autocomplete="off"></label>
+                                                        </div>
+                                                        <div style="margin-top:1em">
+                                                            <button id="btnCancelRenewLicenseConfirm" type="button" class="btn btn-default">Cancel</button>&nbsp;&nbsp;
+                                                            <button type="submit" class="btn btn-primary" style="display:{{displayRenewLicenseSubmitButton}}">Renew License</button>
+                                                        </div>
+                                                    </div>
+                                                </form>
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button id="btnCloseRenewClientLicense2" type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                {{!Modal panel containing form used to upgrade client license}}
+                                <div id="divUpgradeClientLicense" class="modal fade" tabindex="-1" role="dialog">
+                                    <div class="modal-dialog" role="document">
+                                        <div class="modal-content">
+                                            <div class="modal-header">
+                                                <button id="btnCloseUpgradeClientLicense1" type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                                                <h4 class="modal-title">Upgrade Client License</h4>
+                                            </div>
+                                            <div class="modal-body">
+                                                {{#if hasNewLicenseErrorMessage}}
+                                                    <div class="alert alert-danger" role="alert">
+                                                        <button type="button" id="btnDismissNewLicenseError" class="close" aria-label="Close">
+                                                            <span aria-hidden="true">&times;</span>
+                                                        </button>
+                                                        {{{newLicenseErrorMessage}}}
+                                                    </div>
+                                                {{/if}}
+                                                {{#let licenses=(licensesToUpgrade license)}}
+                                                {{#if nonEmptyArray licenses}}
+                                                <form id="frmUpgradeClientLicense" autocomplete="off">
+                                                    <div class="form-group text-left">
+                                                        <label for="selLicense" class="input">License</label><br>
+                                                        <select id="selLicense" name="license" class="input">
+                                                            <option value="">-- select --</option>
+                                                            {{#each newLicense in licenses}}
+                                                                <option value="{{newLicense._id}}" {{checkSelectedLicense newLicense license}}>{{newLicense.name}}</option>
+                                                            {{/each}}
+                                                        </select>
+                                                    </div>
+                                                    <div class="row">
+                                                        <div class="col-xs-4 form-group"></div>
+                                                        <div class="col-xs-4 form-group">
+                                                            <button id="btnDoUpgradeLicense" type="button" class="btn btn-login paddedBtn" style="display:{{displayDoUpgradeLicenseButton}}">Upgrade License</button>
+                                                        </div>
+                                                    </div>
+                                                    <div id="divUpgradeLicenseConfirm" class="panel panel-default" style="padding:1em; display:{{displayUpgradeLicenseConfirm}}">
+                                                        <div style="margin-top:1em; margin-bottom:1em">
+                                                            <label>To confirm your action, please type the following text below: <b>yes, I do confirm it</b>
+                                                                <br><input id="itxUpgradeConfirmation" type="text" size="20" maxlength="20" placeholder="confirmation" autocomplete="off"></label>
+                                                        </div>
+                                                        <div style="margin-top:1em">
+                                                            <button id="btnCancelUpgradeLicenseConfirm" type="button" class="btn btn-default">Cancel</button>&nbsp;&nbsp;
+                                                            <button type="submit" class="btn btn-primary" style="display:{{displayUpgradeLicenseSubmitButton}}">Upgrade License</button>
+                                                        </div>
+                                                    </div>
+                                                </form>
+                                                {{/if}}
+                                                {{/let}}
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button id="btnCloseUpgradeClientLicense2" type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                {{!Modal panel containing form used to expire client license}}
+                                <div id="divExpireClientLicense" class="modal fade" tabindex="-1" role="dialog">
+                                    <div class="modal-dialog" role="document">
+                                        <div class="modal-content">
+                                            <div class="modal-header">
+                                                <button id="btnCloseExpireClientLicense1" type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                                                <h4 class="modal-title">Expire Client License</h4>
+                                            </div>
+                                            <div class="modal-body">
+                                                {{#if hasNewLicenseErrorMessage}}
+                                                    <div class="alert alert-danger" role="alert">
+                                                        <button type="button" id="btnDismissNewLicenseError" class="close" aria-label="Close">
+                                                            <span aria-hidden="true">&times;</span>
+                                                        </button>
+                                                        {{{newLicenseErrorMessage}}}
+                                                    </div>
+                                                {{/if}}
+                                                <form id="frmExpireClientLicense" autocomplete="off">
+                                                    {{#if isActiveLicense clientLicense}}
+                                                        <input type="hidden" name="isActiveLicense" value="true"/>
+                                                        <div class="alert alert-warning" role="alert">
+                                                            <b>Warning!</b>&nbsp;This client license is currently <b>active</b>. If it is <b>expired</b>, <b>all</b> of this client's virtual devices shall be <b>deactivated</b>.
+                                                        </div>
+                                                    {{/if}}
+                                                    <div id="divExpireLicenseConfirm" class="panel panel-default" style="padding:1em">
+                                                        <div style="margin-top:1em; margin-bottom:1em">
+                                                            <label>To confirm your action, please type the following text below: <b>yes, I do confirm it</b>
+                                                                <br><input id="itxExpireConfirmation" type="text" size="20" maxlength="20" placeholder="confirmation" autocomplete="off"></label>
+                                                        </div>
+                                                        <div style="margin-top:1em">
+                                                            <button type="submit" class="btn btn-primary" style="display:{{displayExpireLicenseSubmitButton}}">Expire License</button>
+                                                        </div>
+                                                    </div>
+                                                </form>
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button id="btnCloseExpireClientLicense2" type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            {{/let}}
+                        {{/unless}}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</template>

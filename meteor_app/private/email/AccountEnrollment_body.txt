@@ -1,0 +1,7 @@
+Dear customer,
+
+We are glad to announce that your Catenis Enterprise client account ({!username}) has successfully been create. To activate it, please follow the link below:
+
+{!url}
+
+The Blockchain of Things team

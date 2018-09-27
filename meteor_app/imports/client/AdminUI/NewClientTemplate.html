@@ -1,48 +1,124 @@
 <template name="newClient">
-    <h2>Add New Client</h2>
-    <a href="/admin/clients">Back to clients</a>
-    {{#if newClientId}}
-        <p style="color:blue">New client {{newClientId}} successfully created</p>
-    {{else}}
-        {{#if hasError}}
-            <p style="color:red">{{{errorMessage}}}</p>
-        {{/if}}
-        <form id="frmNewClient">
-            <table cellpadding="2" style="margin-left:auto; margin-right:auto; margin-top:1em; margin-bottom:0.5em">
-                <tr>
-                    <td style="text-align:right; font-weight:bold">
-                        <label for="txtClientName">Name</label>
-                    </td>
-                    <td style="text-align:right">
-                        <input id="txtClientName" name="clientName" type="text" maxlength="80"/>
-                    </td>
-                </tr>
-                <tr>
-                    <td style="text-align:right; font-weight:bold">
-                        <label for="txtUsername">Username</label>
-                    </td>
-                    <td style="text-align:right">
-                        <input id="txtUsername" name="username" type="text" maxlength="40"/>
-                    </td>
-                </tr>
-                <tr>
-                    <td style="text-align:right; font-weight:bold">
-                        <label for="pswPassword">Password</label>
-                    </td>
-                    <td style="text-align:right">
-                        <input id="pswPassword" name="password" type="password" maxlength="40"/>
-                    </td>
-                </tr>
-                <tr>
-                    <td style="text-align:right; font-weight:bold">
-                        <label for="pswConfirmPassword">Confirm Password</label>
-                    </td>
-                    <td style="text-align:right">
-                        <input id="pswConfirmPassword" name="confirmPassword" type="password" maxlength="40"/>
-                    </td>
-                </tr>
-            </table>
-            <input type="submit" value="Add Client"/>
-        </form>
-    {{/if}}
+    <div>
+        <div class="panel panel-login minWidthElement noBoxShadow">
+            <div class="panel-body">
+                <div class="row">
+                    <div class="col-lg-12">
+                        {{#unless Template.subscriptionsReady}}
+                            <p style="color:lightgray; margin-top:1em">Loading...</p>
+                        {{else}}
+                            <h2>NEW CLIENT</h2>
+                            {{#if hasErrorMessage}}
+                                <div class="alert alert-danger" role="alert">
+                                    <button type="button" id="btnDismissError" class="close" aria-label="Close">
+                                        <span aria-hidden="true">&times;</span>
+                                    </button>
+                                    {{{errorMessage}}}
+                                </div>
+                            {{/if}}
+                            {{#if hasInfoMessage}}
+                                <div class="alert alert-{{infoMessageType}}" role="alert">
+                                    <button type="button" id="btnDismissInfo" class="close" aria-label="Close">
+                                        <span aria-hidden="true">&times;</span>
+                                    </button>
+                                    {{infoMessage}}
+                                </div>
+                            {{/if}}
+                            <form id="frmNewClient" autocomplete="off">
+                                <div class="form-group">
+                                    <input type="text" maxlength="80" id="txtClientName" name="clientName" placeholder="Client Name" autocomplete="off" autocapitalize="none" autocorrect="off">
+                                </div>
+                                <div class="form-group">
+                                    <input type="text" maxlength="40" id="txtUsername" name="username" placeholder="Username" autocomplete="off" autocapitalize="none" autocorrect="off">
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <input type="text" maxlength="80" id="txtFirstName" name="firstName" placeholder="First Name" autocomplete="off" autocapitalize="none" autocorrect="off">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <input type="text" maxlength="80" id="txtLastName" name="lastName" placeholder="Last Name" autocomplete="off" autocapitalize="none" autocorrect="off">
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <input type="text" maxlength="80" id="txtCompanyName" name="companyName" placeholder="Company" autocomplete="off" autocapitalize="none" autocorrect="off">
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-8">
+                                        <div class="form-group">
+                                            <input type="email" maxlength="40" id="txtEmail" name="email" placeholder="Email" autocomplete="off" autocapitalize="none" autocorrect="off">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="form-group">
+                                            {{#if showConfirmEmailButton}}
+                                                <button type="button" id="btnConfirmEmail" class="form-control btn btn-login btn-warn at-btn submit" data-toggle="modal" data-target="#divConfirmEmail">Please confirm</button>
+                                            {{/if}}
+                                            {{!Modal panel containing form used to confirm e-mail address}}
+                                            <div class="modal" tabindex="-1" role="dialog" id="divConfirmEmail">
+                                                <div class="modal-dialog" role="document">
+                                                    <div class="modal-content">
+                                                        <div class="modal-header">
+                                                            <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                                                            <h4 class="modal-title">Email Confirmation</h4>
+                                                        </div>
+                                                        <div class="modal-body">
+                                                            {{#if emailsDoNotMatch}}
+                                                                <div class="alert alert-danger" role="alert">
+                                                                    <button type="button" id="btnDismissErrorConfirmEmail" class="close" aria-label="Close">
+                                                                        <span aria-hidden="true">&times;</span>
+                                                                    </button>
+                                                                    Emails do not match. Please check entered email.
+                                                                </div>
+                                                            {{else}}
+                                                                <p id="resultEmailConfirmation">Please reenter email to confirm it.</p>
+                                                            {{/if}}
+                                                            <div class="form-group">
+                                                                <input type="email" maxlength="40" id="txtConfirmEmail" name="confirmEmail" placeholder="Confirm Email" autocomplete="off" autocapitalize="none" autocorrect="off">
+                                                            </div>
+                                                            <div class="text-center">
+                                                                <button type="button" class="btn btn-primary" id="checkEmailValidity">Confirm</button>
+                                                            </div>
+                                                        </div>
+                                                        <div class="modal-footer">
+                                                            <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="form-group" style="text-align:left; margin-bottom:30px">
+                                    <label for="selTimeZone" class="input">Time Zone</label><br>
+                                    <select id="selTimeZone" name="timeZone" class="input">
+                                        {{#each timeZone in timeZones}}
+                                        <option value="{{timeZone.value}}" {{timeZone.selected}}>{{timeZone.name}}</option>
+                                        {{/each}}
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <input type="hidden" id="emailConfirmation" name="emailConfirmation" value="notConfirmed">
+                                </div>
+                                <div class="row">
+                                    <div class="col-xs-6 form-group pull-left">
+                                        <button id="btnCancel" type="button" class="form-control btn btn-login at-btn">{{#if isClientCreated}}Back{{else}}Cancel{{/if}}</button>
+                                        <a id="lnkCancel" href="/admin/clients" style="display:none"></a>
+                                    </div>
+                                    {{#if showCreateButton}}
+                                        <div class="col-xs-6 form-group pull-right">
+                                            <button type="submit" id="btnCreate" class="form-control btn btn-login at-btn submit">Create Client</button>
+                                        </div>
+                                    {{/if}}
+                                </div>
+                            </form>
+                        {{/unless}}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </template>

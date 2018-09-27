@@ -72,7 +72,7 @@ export function Application(cipherOnly = false) {
     });
 
     if (!cipherOnly) {
-        if (! isSeedValid(this.masterSeed)) {
+        if (!isSeedValid(this.masterSeed)) {
             throw new Error('Application (master) seed does not match seed currently recorded onto the database');
         }
 

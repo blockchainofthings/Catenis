@@ -1,38 +1,136 @@
 <template name="adminLayout">
-    {{#if isNonProdEnvironment appEnvironment}}
-    <div class="envHeader">{{capitalize appEnvironment}}</div>
-    {{/if}}
-    <div style="text-align:center">
-        <h1>Catenis Enterprise Admin</h1>
-    </div>
+    <!--this is the template that is first rendered at /admin call-->
+{{#unless appEnvironment}}
+    <p style="color:lightgray; margin:1em 1em">Loading...</p>
+{{else}}
     {{#unless currentUser}}
-        {{> login}}
+        {{login}}
     {{else}}
-        <p>User {{currentUser.username}} (<a id="lnkLogout" href="#" role="button">logout</a>)</p>
         {{#if isInRole 'sys-admin'}}
-            <nav>
-                <ul>
-                    <li>
-                        <a href="/admin/bcotprice">BCOT Token Price</a>
+         <div id="wrapper">
+
+             <!--top navigation bar-->
+             <nav id="navBar" class="navbar navbar-default top-navBar">
+                 <div id="fixWrapper">
+                     {{#if isNonProdEnvironment appEnvironment}}
+                         <div class="envHeader">{{capitalize appEnvironment}}</div>
+                     {{/if}}
+                     <div class="container-fluid topNavCustom">
+                         <div class="navbar-header">
+                             <a class="navbar-brand" href="#" style="text-decoration:none">
+                                 <p>Catenis<span class="gray">Enterprise</span></p>
+                             </a>
+                             <div class="pull-left">
+                                 <a href="" class="menu-toggle"><i class="fa fa-bars fa-th-large"></i></a>
+                             </div>
+                             <div class="pull-right" id="userAccount">
+                                 <ul class="nav navbar-nav navbar-right">
+                                     <li class="dropdown">
+                                         <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false"><i class="glyphicon glyphicon-user"></i> {{currentUser.username}} <span class="caret"></span></a>
+                                         <ul class="dropdown-menu">
+                                             <li class="userMenuEntry"><a href="/admin/useraccount">User Account</a></li>
+                                             <li role="separator" class="divider"></li>
+                                             <li class="userMenuEntry"><a id="lnkLogout" href="#" role="button">Sign Out</a></li>
+                                         </ul>
+                                     </li>
+                                 </ul>
+                             </div>
+                         </div>
+                         <!-- Brand and toggle get grouped for better mobile display -->
+                         <!--<a href="#menu-toggle" class="btn btn-default" id="menu-toggle"><a class="navbar-brand noPadding" href="#"><img src="images/CompanyElement_SM_Darkbackgrounds.png" class="logoImage" alt="logo"></a></a>-->
+                     </div><!-- /.container-fluid -->
+                 </div>
+             </nav>
+            <!--end of top nav bar-->
+
+            <!-- Sidebar -->
+            <div id="sidebar-wrapper" style="{{#if isNonProdEnvironment appEnvironment}}top:80px{{/if}}">
+                <ul class="sidebar-nav">
+                    <li class="sideNavButtons">
+                        <a href="/admin/bcotprice" class="show"><i class="glyphicon glyphicon-usd"></i>  BCOT Price</a>
+                        <a href="/admin/bcotprice" class="notshow"><i class="glyphicon glyphicon-usd"></i></a>
                     </li>
-                    <li>
-                        <a href="/admin/sysfunding">System Funding</a>
+                    <li class="sideNavButtons">
+                        <a href="/admin/systemfunding" class="show"><i class="glyphicon glyphicon-bitcoin"></i>  System Funding</a>
+                        <a href="/admin/systemfunding" class="notshow"><i class="glyphicon glyphicon-bitcoin"></i></a>
                     </li>
-                    <li>
-                        <a href="/admin/bcotusagereport">BCOT Token Usage Report</a>
+                    <li class="sideNavButtons">
+                        <a href="/admin/bcotusagereport" class="show"><i class="glyphicon glyphicon-stats"></i>  BCOT Usage Report</a>
+                        <a href="/admin/bcotusagereport" class="notshow"><i class="glyphicon glyphicon-stats"></i></a>
                     </li>
-                    <li>
-                        <a href="/admin/clients">Clients</a>
+                    <li class="sideNavButtons">
+                        <a href="/admin/licenses" class="show"><i class="glyphicon glyphicon-certificate"></i> Licenses</a>
+                        <a href="/admin/licenses" id="menu-toggle" class="notshow"><i class="glyphicon glyphicon-certificate"></i></a>
+                    </li>
+                    <li class="sideNavButtons">
+                        <a href="/admin/clients" class="show"><i class="glyphicon glyphicon-tower"></i> Clients</a>
+                        <a href="/admin/clients" id="menu-toggle" class="notshow"><i class="glyphicon glyphicon-tower"></i></a>
                     </li>
                 </ul>
-            </nav>
-            <article style="text-align:center">
-                {{#if page}}
-                    {{> Template.dynamic template=page data=dataContext}}
-                {{/if}}
-            </article>
+            </div>
+             <script type="text/javascript">
+                 $('#sidebar-wrapper')[0].click();
+             </script>
+            <!-- end of sidebar -->
+
+            <!--start of content-wrapper-->
+            <div id="page-content-wrapper" class="text-center" style="{{#if isNonProdEnvironment appEnvironment}}top:30px{{/if}}">
+                    <div class="row">
+                        <div class="col-md-8 col-md-offset-2">
+                            <article class="text-center">
+                                {{#if page}}
+                                <div class="block">
+                                    {{> Template.dynamic template=page data=dataContext}}
+                                </div>
+                                {{/if}}
+                            </article>
+                        </div>
+                    </div>
+            </div>
+            <!--end of content-wrapper-->
+
+        </div>
+        <!--end of wrapper -->
         {{else}}
-            <p style="color:red">User does not have the necessary permission.</p>
+        <!-- No permission to access resource -->
+        <div id="wrapper">
+            <nav id="navBar" class="navbar navbar-default top-navBar">
+                <div id="fixWrapper">
+                    {{#if isNonProdEnvironment appEnvironment}}
+                        <div class="envHeader">{{capitalize appEnvironment}}</div>
+                    {{/if}}
+                    <div class="container-fluid topNavCustom">
+                        <div class="navbar-header">
+                            <a class="navbar-brand" href="#" style="text-decoration:none">
+                                <p>Catenis<span class="gray">Enterprise</span></p>
+                            </a>
+                            <div class="pull-right" id="userAccount">
+                                <ul class="nav navbar-nav navbar-right">
+                                    <li class="dropdown">
+                                        <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false"><i class="glyphicon glyphicon-user"></i> {{currentUser.username}} <span class="caret"></span></a>
+                                        <ul class="dropdown-menu">
+                                            <li role="separator" class="divider"></li>
+                                            <li><a id="lnkLogout" href="#" role="button">Sign Out</a></li>
+                                        </ul>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div><!-- /.container-fluid -->
+                </div>
+            </nav>
+            <!--end of top nav bar-->
+
+            <!--start of content-wrapper-->
+            <div class="text-center" style="position:relative; {{#if isNonProdEnvironment appEnvironment}}top:30px{{/if}}">
+                <div class="row">
+                    <p style="margin-top:2em">User has no permission of access this resource.</p>
+                </div>
+            </div>
+            <!--end of content-wrapper-->
+        </div>
+        <!--end of wrapper -->
         {{/if}}
     {{/unless}}
+{{/unless}}
 </template>

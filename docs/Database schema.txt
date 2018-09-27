@@ -30,7 +30,7 @@ BitcoinFees {
 BitcoinPrice {
   _id: [string],  // MongoDB internal document ID provided by Meteor
   price: [numeric],  // Current bitcoin price expressed in USD
-  referenceDate: [data/time],  // Date and time when price had been observed
+  referenceDate: [date/time],  // Date and time when price had been observed
   createdDate: [date/time]  // Date and time when doc/rec has been created
 }
 
@@ -46,12 +46,49 @@ IssuedBlockchainAddress {
   parentPath: [string],  // Path of the HD node from which this address is derived
   path: [string],  // The HD node path which identifies this address
   addrIndex: [integer],  // The position occupied by this address within the range of addresses of that type
-  addressHash: [string],  // Base-64 formatted SHA256 hash of blockchain address
+  addrHash: [string],  // Base-64 formatted SHA256 hash of blockchain address
   issuedDate: [date/time],  // Date and time when address has been issued (doc/rec created)
   expirationDate: [date/time],  // Date and time until when this address is considered to be valid to receive payments.
                                 //  If set to null, address never expires; useful for unlocked Colored Coins issuing assets
   status: [string],  // Valid values: 'new' (from creation util expiration date), 'expired' (after expiration date while there are UTXOs associated with it), 'obsolete' (after expiration date if there are no UTXOs associated with it), 'nonexistent' (address for given index does not exist), 'discarded' (excluded from current available range of addresses of that type)
   lastStatusChangedDate: [date/time]  // Date and time when status has been last modified
+}
+
+License {
+  _id: [string],  // MongoDB internal document ID provided by Meteor
+  level: [string],  // Name used to identify the license level
+  order: [integer],  // The order associated with the license level. The lower the order, the less restrictive (e.g. maximum number of devices) the license is
+  type: [string],  // Used to identify any characteristics that differentiate this specific license
+  revision: [integer],  // The revision number of the license. Revisions are used to change some characteristics of a license (level & type) (e.g. maximum number of devices)
+  maximumDevices: [integer],  // Maximum number of client devices that can be active at any time. If this field does not exist,
+                              //  the license has no restriction for the number of devices
+  validityMonths: [integer],  // Period of time, in months, through which this license is valid
+  provisionalRenewalDays: [integer],  // The duration, in days, for the provisional renewal of this license. If this field does not exist,
+                                      //  the license does not support provisional renewal
+  status: [string],  // Indicates the current status of the license. Valid values (from License.status): 'new', 'active', 'inactive'
+                     //  Note: only a single revision of a license (level & type) should be active at any time
+  createdDate: [date/time],  // Date and time when doc/rec has been created
+  activatedDate: [date/time],  // Date and time when license has benn activated
+  deactivatedDate: [date/time]  // Date and time when license has been deactivated
+}
+
+ClientLicense {
+  _id: [string],  // MongoDB internal document ID provided by Meteor
+  client_id: [string],  // MongoDB internal ID of Client doc/rec to which the license is assigned
+  license_id: [string],  // MongoDB internal ID of License doc/rec assigned to the client
+  validity: {
+    startDate: [date/time],  // Date and time from when this license is valid
+    endDate: [date/time]   // Date and time before when this license is still valid
+  },
+  provisionalRenewal: [boolean],  // Indicates whether this is a provisional renewal license
+  observeProvisionalRenewal: [boolean],  // Indicates whether a provisional renewal license should be (automatically) created when this license expires, provided that the associated license supports it
+                                         //  Note: this field does not apply and should not exist for provisional renewal licenses
+  status: [string],  // The current status of the license. Valid values (from ClientLicense.status): 'provisioned', 'active', 'expired'.
+                     //  Note: only a single license can be active at any time for a given client
+  expireRemindNotifySent: [boolean],  // Indicates whether license expiration reminder e-mail notification has already been sent
+  provisionedDate: [date/time],  // Date and time when license has been provisioned
+  activatedDate: [date/time],  // Date and time when license has become active (status changed to active)
+  expiredDate: [date/time]  // Date and time when license has become expired (status changed to expired)
 }
 
 CatenisNode {
@@ -83,6 +120,7 @@ Client {
     lastModifiedDate: [date/time]  // Date and time when one of the client's properties had been last modified
   },
   apiAccessGenKey: [string],  // Key used to generate default secret key used for client's devices to access the Catenis API
+  timeZone: [string],  // The name of time zone (as defined by IANA, https://www.iana.org/time-zones) attributed to this client. This time zone is used amongst other things to determine the start and end date of licenses assigned to clients
   billingMode: [string],  // Identifies the billing mode used for this client. Valid values (from Client.billingMode): 'pre-paid', 'post-paid'
   status: [string],  // Valid values: 'new' (newly created client awaiting activation); 'active' (client is in normal use mode); 'deleted' (client has been logically deleted)
   createdDate: [date/time],  // Date and time when doc/rec has been created

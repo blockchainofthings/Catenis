@@ -1,0 +1,112 @@
+<template name="clientLayout">
+{{#unless appEnvironment}}
+    <p style="color:lightgray; margin:1em 1em">Loading...</p>
+{{else}}
+    {{#unless currentUser}}
+        {{login}}
+    {{else}}
+        {{#if isInRole 'ctn-client'}}
+        <div id="wrapper">
+            <!--top navigation bar-->
+            <nav id="navBar" class="navbar navbar-default top-navBar">
+                <div id="fixWrapper">
+                    {{#if isNonProdEnvironment appEnvironment}}
+                        <div class="envHeader">{{capitalize appEnvironment}}</div>
+                    {{/if}}
+                    <div class="container-fluid topNavCustom">
+                        <div class="navbar-header">
+                            <a class="navbar-brand" href="#" style="text-decoration:none">
+                                <p> Catenis<span class="gray">Enterprise</span></p>
+                            </a>
+                            <div class="pull-left">
+                                <a href="" class="menu-toggle"><i class="fa fa-bars fa-th-large"></i></a>
+                            </div>
+                            <div class="pull-right" id="userAccount">
+                                <ul class="nav navbar-nav navbar-right">
+                                    <li class="dropdown">
+                                        <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false"><i class="glyphicon glyphicon-user"></i> {{currentUser.username}} <span class="caret"></span></a>
+                                        <ul class="dropdown-menu">
+                                            <li class="userMenuEntry"><a id="lnkLogout" href="#" role="button">Sign Out</a></li>
+                                        </ul>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                        <!-- Brand and toggle get grouped for better mobile display -->
+                        <!--<a href="#menu-toggle" class="btn btn-default" id="menu-toggle"><a class="navbar-brand noPadding" href="#"><img src="images/CompanyElement_SM_Darkbackgrounds.png" class="logoImage" alt="logo"></a></a>-->
+                    </div><!-- /.container-fluid -->
+                </div>
+            </nav>
+            <!--end of top nav bar-->
+
+            <!-- Sidebar -->
+            <div id="sidebar-wrapper" style="{{#if isNonProdEnvironment appEnvironment}}top:80px{{/if}}">
+                <ul class="sidebar-nav">
+                </ul>
+            </div>
+             <script type="text/javascript">
+                 $('#sidebar-wrapper')[0].click();
+             </script>
+            <!-- end of sidebar -->
+
+            <!--start of content-wrapper-->
+            <div id="page-content-wrapper" class="text-center" style="{{#if isNonProdEnvironment appEnvironment}}top:30px{{/if}}">
+                    <div class="row">
+                        <div class="col-md-8 col-md-offset-2">
+                            <article class="text-center">
+                                {{#if page}}
+                                <div class="block">
+                                    {{> Template.dynamic template=page data=dataContext}}
+                                </div>
+                                {{/if}}
+                            </article>
+                        </div>
+                    </div>
+            </div>
+            <!--end of content-wrapper-->
+
+        </div>
+        <!--end of wrapper -->
+        {{else}}
+        <!-- No permission to access resource -->
+        <div id="wrapper">
+            <nav id="navBar" class="navbar navbar-default top-navBar">
+                <div id="fixWrapper">
+                    {{#if isNonProdEnvironment appEnvironment}}
+                        <div class="envHeader">{{capitalize appEnvironment}}</div>
+                    {{/if}}
+                    <div class="container-fluid topNavCustom">
+                        <div class="navbar-header">
+                            <a class="navbar-brand" href="#" style="text-decoration:none">
+                                <p>Catenis<span class="gray">Enterprise</span></p>
+                            </a>
+                            <div class="pull-right" id="userAccount">
+                                <ul class="nav navbar-nav navbar-right">
+                                    <li class="dropdown">
+                                        <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false"><i class="glyphicon glyphicon-user"></i> {{currentUser.username}} <span class="caret"></span></a>
+                                        <ul class="dropdown-menu">
+                                            <li role="separator" class="divider"></li>
+                                            <li><a id="lnkLogout" href="#" role="button">Sign Out</a></li>
+                                        </ul>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div><!-- /.container-fluid -->
+                </div>
+            </nav>
+            <!--end of top nav bar-->
+
+            <!--start of content-wrapper-->
+            <div class="text-center" style="position:relative; {{#if isNonProdEnvironment appEnvironment}}top:30px{{/if}}">
+                <div class="row">
+                    <p style="margin-top:2em">User has no permission of access this resource.</p>
+                </div>
+            </div>
+            <!--end of content-wrapper-->
+        </div>
+        <!--end of wrapper -->
+        {{/if}}
+    {{/unless}}
+{{/unless}}
+</template>

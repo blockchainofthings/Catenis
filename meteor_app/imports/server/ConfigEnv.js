@@ -4,6 +4,7 @@
 
 //console.log('[!ConfigEnv.js]: This code just ran.');
 
+
 // Module code
 //
 
@@ -16,6 +17,7 @@
 //  to the environment variable NODE_CONFIG_DIR,
 //  which is used by the config module to set the
 //  default config folder if it is defined.
+
 if (process.env.NODE_CONFIG_DIR === undefined) {
     process.env.NODE_CONFIG_DIR = require('path').join(process.env.PWD, 'config');
 }

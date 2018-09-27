@@ -54,6 +54,14 @@ import { SpendServiceCredit } from './SpendServiceCredit';
 import { BcotUsageReportUI } from './AdminUI/BcotUsageReportUI';
 import { ReceiveAsset } from './ReceiveAsset';
 import { AdminUI } from './AdminUI/AdminUI';
+import { LoginUI } from './AdminUI/LoginUI';
+import { AccountsEmail } from './AccountsEmail';
+import { LicenseExpireEmailNotify } from './LicenseExpireEmailNotify';
+import { LicenseOverdueEmailNotify } from './LicenseOverdueEmailNotify';
+import { LicenseExpireRemindEmailNotify } from './LicenseExpireRemindEmailNotify';
+import { DevicesDisableEmailNotify } from './DevicesDisableEmailNotify';
+import { ClientLicense } from './ClientLicense';
+import { LicensesUI } from './AdminUI/LicensesUI';
 // TEST - begin
 //import { resetBitcoinCore } from './Test/FundSourceTest';
 //import { TestCatenisColoredCoins } from './Test/TestCatenisColoredCoins';
@@ -97,7 +105,13 @@ Meteor.startup(function () {
         Database.removeInconsistentAssetIndices();
         Database.fixBillingExchangeRate();
         Database.removeBcotExchangeRateColl();
+        Database.addMissingClientTimeZone();
         Application.initialize();
+        AccountsEmail.initialize();
+        LicenseExpireEmailNotify.initialize();
+        LicenseOverdueEmailNotify.initialize();
+        LicenseExpireRemindEmailNotify.initialize();
+        DevicesDisableEmailNotify.initialize();
         MalleabilityEventEmitter.initialize();
         BitcoinFees.initialize();
         BitcoinTicker.initialize();
@@ -126,6 +140,7 @@ Meteor.startup(function () {
 
         Database.fixReceivedTransactionBcotPaymentInfo();
 
+        ClientLicense.initialize();
         BcotPayment.initialize();
         ReceiveMessage.initialize();
         ReadConfirmation.initialize();
@@ -145,9 +160,11 @@ Meteor.startup(function () {
 
         // UI support initialization
         AdminUI.initialize();
+        LoginUI.initialize();
         BcotPriceUI.initialize();
         SystemFundingUI.initialize();
         BcotUsageReportUI.initialize();
+        LicensesUI.initialize();
         ClientsUI.initialize();
         DevicesUI.initialize();
 
