@@ -31,40 +31,18 @@ BlazeLayout.setRoot('body');
 // Note: special routes for accounts templates configured at ConfigAccount.js module (via AccountsTemplates.configureRoutes)
 //      since that code needs to be rum on both client and server
 
-// Regular routes
+// Client admin routes
+//
 FlowRouter.route('/', {
     action: function () {
-        BlazeLayout.render('clientLayout');
-    }
-});
-
-FlowRouter.route('/updateProfile', {
-    action: function () {
         BlazeLayout.render('clientLayout', {
-            page: 'updateProfile'
+            page: 'clientHome'
         });
     }
 });
 
-FlowRouter.route('/devices', {
-    action: function() {
-        BlazeLayout.render('clientLayout', {
-            page: 'userNewDevice',
-        });
-    }
-});
-
-FlowRouter.route('/devices/:device_id', {
-    action: function (params) {
-        BlazeLayout.render('clientLayout', {
-            page: 'deviceDetails',
-            dataContext: {
-                device_id: params.device_id
-            }
-        });
-    }
-});
-
+// System administration routes
+//
 FlowRouter.route('/admin', {
     action: function () {
         BlazeLayout.render('adminLayout', {
@@ -270,14 +248,6 @@ FlowRouter.route('/admin/clients/:user_id/newdevice', {
             dataContext: {
                 user_id: params.user_id
             }
-        });
-    }
-});
-
-FlowRouter.route('/credits', {
-    action: function (params, queryParams) {
-        BlazeLayout.render('clientLayout', {
-            page: 'creditPrices'
         });
     }
 });

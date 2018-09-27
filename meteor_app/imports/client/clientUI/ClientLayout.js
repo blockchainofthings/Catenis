@@ -26,9 +26,7 @@ import { Catenis } from '../ClientCatenis';
 import './ClientLayout.html';
 
 // Import dependent templates
-import './UserNewDevice.js';
-import './infoLine.js';
-import './creditPrices.js';
+import './ClientHomeTemplate.js';
 
 
 // Definition of module (private) functions
@@ -59,14 +57,39 @@ function onWindowResize() {
     changeNavStructures(width);
 }
 
+function getSidebarNavEntry(pageName) {
+    const navEntries = $('.sideNavButtons').toArray();
+
+    for (let idx = 0, limit = navEntries.length; idx < limit; idx++) {
+        const navEntry = navEntries[idx];
+
+        if (navEntry.children[0].href.endsWith('/' + pageName)) {
+            return navEntry;
+        }
+    }
+}
+
+function selectSidebarNavEntry(navEntry) {
+    if (navEntry) {
+        navEntry.style.backgroundColor = '#5555bb';
+        Array.from(navEntry.children).forEach(childElem => childElem.style.color = 'white');
+    }
+}
+
 
 // Module code
 //
+
+
+const throttledOnWindowResize = _.throttle(onWindowResize, 200, {
+    leading: false
+});
 
 Template.clientLayout.onCreated(function () {
     this.state = new ReactiveDict();
 
     this.state.set('appEnv', undefined);
+    this.state.set('initializing', true);
 
     Meteor.call('getAppEnvironment', (err, env) => {
         if (err) {
@@ -78,10 +101,6 @@ Template.clientLayout.onCreated(function () {
     });
 
     this.catenisClientsSubs = this.subscribe('catenisClients', Catenis.ctnHubNodeIndex);
-});
-
-const throttledOnWindowResize = _.throttle(onWindowResize, 200, {
-    leading: false
 });
 
 Template.clientLayout.onDestroyed(function(){
@@ -96,54 +115,47 @@ Template.clientLayout.onRendered(function(){
 });
 
 Template.clientLayout.events({
+    'click #sidebar-wrapper'(event, template) {
+        if (template.state.get('initializing')) {
+            template.state.set('initializing', false);
+            selectSidebarNavEntry(getSidebarNavEntry(template.data.page().toLowerCase()));
+        }
+    },
     'click #lnkLogout'(event, template) {
         AccountsTemplates.logout();
         return false;
     },
     'click .menu-toggle'(event, template){
         $("#wrapper").toggleClass("toggled");
-        var sideNavSmall;
-
-        if( "toggled" ==$("#wrapper").attr("class")){
-            //    side nav becomes smaller, check width to see if we want to make the thing re-appear.
-            sideNavSmall= true;
-        }else{
-            sideNavSmall= false;
-        }
-
-        var windowSize = $(window).width();
-        if( windowSize <= 500 && !sideNavSmall ){
-            $(".infoLine").addClass("hidden");
-        }else{
-            $(".infoLine").removeClass("hidden");
-        }
-
         return false;
     },
     'click .sideNavButtons'(event, template){
-        //    change all colors to original color
-        var sideNav= document.getElementsByClassName("sideNavButtons");
+        // Reset color of all sidebar nav entries
+        $('.sideNavButtons').toArray().forEach((navEntry) => {
+            navEntry.style.backgroundColor = '#e8e9ec';
+            Array.from(navEntry.children).forEach(childElem => childElem.style.color = '');
+        });
 
-        for ( var i=0; i< sideNav.length ; i++ ){
-           sideNav[i].style.backgroundColor = "#e8e9ec";
-            $(sideNav[i]).children()[0].style= "";
-            $(sideNav[i]).children()[1].style= "";
-
-            // sideNav[i].style.color = "#333399";
-            sideNav[i].style = "";
-        }
-        (event.currentTarget).style.backgroundColor ="#5555bb";
-
-        $(event.currentTarget).children()[0].style.color="white";
-        $(event.currentTarget).children()[1].style.color="white";
+        // Set color of selected sidebar nav entry
+        event.currentTarget.style.backgroundColor = '#5555bb';
+        Array.from(event.currentTarget.children).forEach(childElem => childElem.style.color = 'white');
     },
     'click .navbar-brand'(event, template) {
+        // Reset color of all sidebar nav entries
+        $('.sideNavButtons').toArray().forEach((navEntry) => {
+            navEntry.style.backgroundColor = '#e8e9ec';
+            Array.from(navEntry.children).forEach(childElem => childElem.style.color = '');
+        });
+
         redirectHome();
         return false;
     },
-    'click #lnkCtnTitle'(event, template) {
-        redirectHome();
-        return false;
+    'click .userMenuEntry'(event, template) {
+        // Reset color of all sidebar nav entries
+        $('.sideNavButtons').toArray().forEach((navEntry) => {
+            navEntry.style.backgroundColor = '#e8e9ec';
+            Array.from(navEntry.children).forEach(childElem => childElem.style.color = '');
+        });
     }
 });
 

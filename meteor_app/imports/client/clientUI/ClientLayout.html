@@ -8,7 +8,7 @@
         {{#if isInRole 'ctn-client'}}
         <div id="wrapper">
             <!--top navigation bar-->
-            <nav class="navbar navbar-default top-navBar">
+            <nav id="navBar" class="navbar navbar-default top-navBar">
                 <div id="fixWrapper">
                     {{#if isNonProdEnvironment appEnvironment}}
                         <div class="envHeader">{{capitalize appEnvironment}}</div>
@@ -24,18 +24,12 @@
                             <div class="pull-right" id="userAccount">
                                 <ul class="nav navbar-nav navbar-right">
                                     <li class="dropdown">
-                                        <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false"><i class="glyphicon glyphicon-user"></i> Account <span class="caret"></span></a>
+                                        <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false"><i class="glyphicon glyphicon-user"></i> {{currentUser.username}} <span class="caret"></span></a>
                                         <ul class="dropdown-menu">
-                                            <li><a>{{currentUser.username}}</a></li>
-                                            <li role="separator" class="divider"></li>
-                                            <li><a href="//updateProfile">Manage Account</a></li>
-                                            <li><a id="lnkLogout" href="#" role="button">Sign Out</a></li>
+                                            <li class="userMenuEntry"><a id="lnkLogout" href="#" role="button">Sign Out</a></li>
                                         </ul>
                                     </li>
                                 </ul>
-                            </div>
-                            <div class="pull-right credit">
-                                <p class="creditDetail">Catenis Credit: 0.12001278</p>
                             </div>
                         </div>
                         <!-- Brand and toggle get grouped for better mobile display -->
@@ -48,43 +42,29 @@
             <!-- Sidebar -->
             <div id="sidebar-wrapper" style="{{#if isNonProdEnvironment appEnvironment}}top:80px{{/if}}">
                 <ul class="sidebar-nav">
-                    <li class="sideNavButtons">
-                        <a href="/devices" class="show "><i class="glyphicon glyphicon-bitcoin"></i> Add Devices</a>
-                        <a href="/devices" class="notshow "><i class="glyphicon glyphicon-bitcoin"></i></a>
-                    </li>
-                    <li class="sideNavButtons">
-                        <a href="/credits" class="show "><i class="glyphicon glyphicon-bitcoin"></i> See Credits</a>
-                        <a href="/credits" class="notshow "><i class="glyphicon glyphicon-bitcoin"></i></a>
-                    </li>
                 </ul>
             </div>
+             <script type="text/javascript">
+                 $('#sidebar-wrapper')[0].click();
+             </script>
             <!-- end of sidebar -->
 
             <!--start of content-wrapper-->
-            <div id="page-content-wrapper" style="{{#if isNonProdEnvironment appEnvironment}}top:30px{{/if}}">
-                    <div class="row infoLineBox">
-                        <div class="col-md-12 fullWidth infoLine">
-                        {{#unless Template.subscriptionsReady}}
-                            <p style="color:lightgray; margin-top:1em">Loading...</p>
-                        {{else}}
-                            {{>infoLine}}
-                        {{/unless}}
-                        </div>
-                    </div>
-
+            <div id="page-content-wrapper" class="text-center" style="{{#if isNonProdEnvironment appEnvironment}}top:30px{{/if}}">
                     <div class="row">
-                        <div class="col-lg-8 col-lg-offset-2">
+                        <div class="col-md-8 col-md-offset-2">
                             <article class="text-center">
                                 {{#if page}}
-                                    <div class="block">
-                                        {{> Template.dynamic template=page data=dataContext}}
-                                    </div>
+                                <div class="block">
+                                    {{> Template.dynamic template=page data=dataContext}}
+                                </div>
                                 {{/if}}
                             </article>
                         </div>
                     </div>
             </div>
             <!--end of content-wrapper-->
+
         </div>
         <!--end of wrapper -->
         {{else}}
