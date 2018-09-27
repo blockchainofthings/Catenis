@@ -61,6 +61,7 @@ import { LicenseOverdueEmailNotify } from './LicenseOverdueEmailNotify';
 import { LicenseExpireRemindEmailNotify } from './LicenseExpireRemindEmailNotify';
 import { DevicesDisableEmailNotify } from './DevicesDisableEmailNotify';
 import { ClientLicense } from './ClientLicense';
+import { LicensesUI } from './AdminUI/LicensesUI';
 // TEST - begin
 //import { resetBitcoinCore } from './Test/FundSourceTest';
 //import { TestCatenisColoredCoins } from './Test/TestCatenisColoredCoins';
@@ -164,6 +165,7 @@ Meteor.startup(function () {
         BcotPriceUI.initialize();
         SystemFundingUI.initialize();
         BcotUsageReportUI.initialize();
+        LicensesUI.initialize();
         ClientsUI.initialize();
         DevicesUI.initialize();
 

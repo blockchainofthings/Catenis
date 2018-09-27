@@ -113,10 +113,31 @@ FlowRouter.route('/admin/bcotusagereport', {
 
 // Note: the last component of the path must match (case insensitive) the page name,
 //  so the corresponding sidebar nav entry can be properly selected upon page load
+FlowRouter.route('/admin/licenses', {
+    action: function () {
+        BlazeLayout.render('adminLayout', {
+            page: 'licenses'
+        });
+    }
+});
+
+// Note: the last component of the path must match (case insensitive) the page name,
+//  so the corresponding sidebar nav entry can be properly selected upon page load
 FlowRouter.route('/admin/clients', {
     action: function () {
         BlazeLayout.render('adminLayout', {
             page: 'clients'
+        });
+    }
+});
+
+FlowRouter.route('/admin/licenses/:license_id', {
+    action: function (params) {
+        BlazeLayout.render('adminLayout', {
+            page: 'licenseDetails',
+            dataContext: {
+                license_id: params.license_id
+            }
         });
     }
 });
