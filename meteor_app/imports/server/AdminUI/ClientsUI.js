@@ -320,14 +320,12 @@ ClientsUI.initialize = function () {
         deleteClient: function (client_id) {
             if (Roles.userIsInRole(this.userId, 'sys-admin')) {
                 try {
-                    const client = Client.getClientByDocId(client_id);
-
-                    client.delete();
+                    Client.getClientByDocId(client_id).delete();
                 }
                 catch (err) {
                     // Error trying to delete client. Log error and throw exception
                     Catenis.logger.ERROR('Failure trying to delete client (doc_id: %s).', client_id, err);
-                    throw new Meteor.Error('client.deleteClient.failure', 'Failure trying to delete client: ' + err.toString());
+                    throw new Meteor.Error('client.delete.failure', 'Failure trying to delete client: ' + err.toString());
                 }
             }
             else {

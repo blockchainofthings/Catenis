@@ -156,14 +156,12 @@ DevicesUI.initialize = function () {
         activateDevice: function (device_id) {
             if (Roles.userIsInRole(this.userId, 'sys-admin')) {
                 try {
-                    const device = Device.getDeviceByDocId(device_id);
-
-                    device.enable();
+                    Device.getDeviceByDocId(device_id).enable();
                 }
                 catch (err) {
                     // Error trying to activate device. Log error and throw exception
                     Catenis.logger.ERROR('Failure trying to activate device (doc_id: %s).', device_id, err);
-                    throw new Meteor.Error('device.activateDevice.failure', 'Failure trying to activate device: ' + err.toString());
+                    throw new Meteor.Error('device.activate.failure', 'Failure trying to activate device: ' + err.toString());
                 }
             }
             else {
@@ -175,14 +173,12 @@ DevicesUI.initialize = function () {
         deactivateDevice: function (device_id) {
             if (Roles.userIsInRole(this.userId, 'sys-admin')) {
                 try {
-                    const device = Device.getDeviceByDocId(device_id);
-
-                    device.disable();
+                    Device.getDeviceByDocId(device_id).disable();
                 }
                 catch (err) {
                     // Error trying to deactivate device. Log error and throw exception
                     Catenis.logger.ERROR('Failure trying to deactivate device (doc_id: %s).', device_id, err);
-                    throw new Meteor.Error('device.deactivateDevice.failure', 'Failure trying to deactivate device: ' + err.toString());
+                    throw new Meteor.Error('device.deactivate.failure', 'Failure trying to deactivate device: ' + err.toString());
                 }
             }
             else {
@@ -194,14 +190,12 @@ DevicesUI.initialize = function () {
         deleteDevice: function (device_id) {
             if (Roles.userIsInRole(this.userId, 'sys-admin')) {
                 try {
-                    const device = Device.getDeviceByDocId(device_id);
-
-                    device.delete();
+                    Device.getDeviceByDocId(device_id).delete();
                 }
                 catch (err) {
                     // Error trying to delete device. Log error and throw exception
                     Catenis.logger.ERROR('Failure trying to delete device (doc_id: %s).', device_id, err);
-                    throw new Meteor.Error('device.deleteDevice.failure', 'Failure trying to delete device: ' + err.toString());
+                    throw new Meteor.Error('device.delete.failure', 'Failure trying to delete device: ' + err.toString());
                 }
             }
             else {
