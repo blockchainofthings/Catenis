@@ -323,6 +323,32 @@ Database.initialize = function() {
                     background: true,
                     w: 1
                 }
+            }, {
+                fields: {
+                    createdDate: 1
+                },
+                opts: {
+                    background: true,
+                    w: 1
+                }
+            }, {
+                fields: {
+                    activatedDate: 1
+                },
+                opts: {
+                    sparse: 1,
+                    background: true,
+                    w: 1
+                }
+            }, {
+                fields: {
+                    deactivatedDate: 1
+                },
+                opts: {
+                    sparse: 1,
+                    background: true,
+                    w: 1
+                }
             }],
             validator: {
                 level: {
