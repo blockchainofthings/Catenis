@@ -147,7 +147,7 @@ Device.prototype.disable = function () {
         throw new Meteor.Error('ctn_device_not_active', util.format('Cannot disable a device that is not active (deviceId: %s)', this.deviceId));
     }
 
-    inactivateDevice.call(this);
+    deactivateDevice.call(this);
 };
 
 Device.prototype.enable = function () {
@@ -2566,7 +2566,7 @@ function activateDevice() {
     });
 }
 
-function inactivateDevice() {
+function deactivateDevice() {
     // Execute code in critical section to avoid DB concurrency
     this.devDbCS.execute(() => {
         // Get current device status and check if it needs to be updated
@@ -2581,7 +2581,7 @@ function inactivateDevice() {
             this.status = curDevDoc.status;
 
             // Log inconsistent condition
-            Catenis.logger.WARN('Trying to inactivate a device that is not active', {deviceId: this.deviceId});
+            Catenis.logger.WARN('Trying to deactivate a device that is not active', {deviceId: this.deviceId});
         }
     });
 }

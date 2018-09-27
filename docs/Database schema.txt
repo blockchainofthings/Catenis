@@ -69,7 +69,7 @@ License {
                      //  Note: only a single revision of a license (level & type) should be active at any time
   createdDate: [date/time],  // Date and time when doc/rec has been created
   activatedDate: [date/time],  // Date and time when license has benn activated
-  inactivatedDate: [date/time]  // Date and time when license has been inactivated
+  deactivatedDate: [date/time]  // Date and time when license has been deactivated
 }
 
 ClientLicense {

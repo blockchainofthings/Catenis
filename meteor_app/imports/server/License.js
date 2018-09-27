@@ -49,7 +49,7 @@ export function License(docLicense) {
     this.status = docLicense.status;
     this.createdDate = docLicense.createdDate;
     this.activatedDate = docLicense.activatedDate;
-    this.inactivatedDate = docLicense.inactivatedDate;
+    this.deactivatedDate = docLicense.deactivatedDate;
 }
 
 
@@ -117,11 +117,11 @@ License.prototype.activate = function () {
     }
 };
 
-License.prototype.inactivate = function () {
+License.prototype.deactivate = function () {
     try {
-        // Make sure that license can be inactivated
-        if (this.status === License.status.active.name) {
-            // Inactivate license
+        // Make sure that license can be deactivated
+        if (this.status === License.status.new.name || this.status === License.status.active.name) {
+            // Deactivate license
             const now = new Date();
 
             Catenis.db.collection.License.update({
@@ -129,23 +129,23 @@ License.prototype.inactivate = function () {
             }, {
                 $set: {
                     status: License.status.inactive.name,
-                    inactivatedDate: now
+                    deactivatedDate: now
                 }
             });
 
             // Update saved data
             this.status = License.status.inactive.name;
-            this.inactivatedDate = now;
+            this.deactivatedDate = now;
         }
         else {
             // Log warning condition
-            Catenis.logger.WARN('License cannot be inactivated', this);
+            Catenis.logger.WARN('License cannot be deactivated', this);
         }
     }
     catch (err) {
         // Log error and throw exception
-        Catenis.logger.ERROR('Error while inactivating license.', err);
-        throw new Meteor.Error('ctn_license_inactivate_error', 'Error while inactivating license: ' + err.toString());
+        Catenis.logger.ERROR('Error while deactivating license.', err);
+        throw new Meteor.Error('ctn_license_deactivate_error', 'Error while deactivating license: ' + err.toString());
     }
 };
 
@@ -159,7 +159,7 @@ License.prototype.inactivate = function () {
 function fixActiveRevision() {
     try {
         // Retrieve all currently active revisions
-        const docIdLicensesToInactivate = [];
+        const docIdLicensesToDeactivate = [];
 
         Catenis.db.collection.License.find({
             level: this.level,
@@ -174,20 +174,20 @@ function fixActiveRevision() {
             }
         }).forEach((doc, idx) => {
             if (idx > 0) {
-                docIdLicensesToInactivate.push(doc._id);
+                docIdLicensesToDeactivate.push(doc._id);
             }
         });
 
-        if (docIdLicensesToInactivate) {
-            // Inactivate licenses
+        if (docIdLicensesToDeactivate) {
+            // Deactivate licenses
             Catenis.db.collection.License.update({
                 _id: {
-                    $in: docIdLicensesToInactivate
+                    $in: docIdLicensesToDeactivate
                 }
             }, {
                 $set: {
                     status: License.status.inactive.name,
-                    inactivatedDate: new Date()
+                    deactivatedDate: new Date()
                 }
             }, {
                 multi: true
@@ -446,7 +446,7 @@ export function conformStrIdField(val) {
     return val ? val.toLowerCase() : val;
 }
 
-function conformTypeToFind(type) {
+export function conformTypeToFind(type) {
     return type ? type : null;
 }
 
