@@ -82,5 +82,9 @@
   // Parameters pertaining to BcotPayment module
   "bcotPayment": {
     "bcotOmniPropertyId": 356  // BCOT token Omni property ID (yet to be defined for production)
+  },
+  // Parameters pertaining to BcotUsageReportUI module
+  "bcotUsageReportUI": {
+    "defaultTimeZone": "US/EST"  // (UTC-05:00) Note: this should match the time zone setting in the BCOT Token app
   }
 }

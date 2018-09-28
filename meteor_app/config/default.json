@@ -731,7 +731,7 @@
       "value": "Asia/JST (UTC+09:00)",
       "name": "Asia - Japan/JST (UTC+09:00)"
     }],
-    "defaultTimeZone": "UTC",
+    "defaultTimeZone": "UTC",  // Note: this should match the time zone setting in the BCOT Token app
     "includeHeaders": true  // Indicates whether report should include a first line with column headers
   },
   // Parameters pertaining to Asset module
