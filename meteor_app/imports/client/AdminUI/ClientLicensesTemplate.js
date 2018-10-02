@@ -86,6 +86,7 @@ Template.clientLicenses.onCreated(function () {
     this.state.set('infoMsgType', 'info');
     this.state.set('actionSuccessClientLicense', undefined);
     this.state.set('replaceActiveClientLicense', false);
+    this.state.set('addMoreRestrictiveLicense', false);
 
     this.state.set('displayDoAddLicenseButton', 'none');
     this.state.set('displayAddLicenseConfirm', 'none');
@@ -198,6 +199,9 @@ Template.clientLicenses.events({
         // Reset indication of replacing currently active client license
         template.state.set('replaceActiveClientLicense', !!form.activeClientLicenseStartDate.value);
 
+        // Reset indication of more restrictive license
+        template.state.set('addMoreRestrictiveLicense', false);
+
         // Reset action confirmation
         $('#itxAddConfirmation')[0].value = '';
         template.state.set('displayAddLicenseConfirm', 'none');
@@ -232,6 +236,26 @@ Template.clientLicenses.events({
 
         // Show do action button
         template.state.set('displayDoAddLicenseButton', 'inline');
+    },
+    'change #selLicense'(event, template) {
+        // Check if a more restrictive license is selected
+        const newLicense_id = event.target.value;
+        const form = event.target.form;
+        let moreRestrictiveLicense = false;
+
+        if (newLicense_id && form.activeClientLicenseOrder.value) {
+            const docNewLicense = Catenis.db.collection.License.findOne({
+                _id: newLicense_id
+            }, {
+                fields: {
+                    order: 1
+                }
+            });
+
+            moreRestrictiveLicense = docNewLicense.order > form.activeClientLicenseOrder.value;
+        }
+
+        template.state.set('addMoreRestrictiveLicense', moreRestrictiveLicense);
     },
     'change #cbxOverrideValidity'(events, template) {
         events.stopPropagation();
@@ -307,7 +331,15 @@ Template.clientLicenses.events({
         let confirmMsg = 'LAST CHANCE!\n\nIf you proceed, the client license will be added';
 
         if (form.replaceActiveClientLicense) {
-            confirmMsg += ', and will REPLACE the currently ACTIVE client\'s license'
+            confirmMsg += ', and will REPLACE the currently ACTIVE client\'s license';
+        }
+
+        if (form.isMoreRestrictiveLicense) {
+            confirmMsg += ', and may FORCE the DEACTIVATION of some of the client\'s virtual devices';
+
+            if (!form.replaceActiveClientLicense) {
+                confirmMsg += ' when it is activated';
+            }
         }
 
         confirmMsg += '.\n\nPLEASE NOTE THAT THIS ACTION CANNOT BE UNDONE.';
@@ -490,5 +522,8 @@ Template.clientLicenses.helpers({
     },
     replaceActiveClientLicense() {
         return Template.instance().state.get('replaceActiveClientLicense');
+    },
+    addMoreRestrictiveLicense() {
+        return Template.instance().state.get('addMoreRestrictiveLicense');
     }
 });

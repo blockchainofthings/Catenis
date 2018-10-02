@@ -352,7 +352,7 @@ Template.clientLicenseDetails.events({
         let confirmMsg = 'LAST CHANCE!\n\nIf you proceed, the client license will be renewed';
 
         if (form.isMoreRestrictiveLicense) {
-            confirmMsg += ', and may FORCE the DEACTIVATION of some of the client\'s virtual devices when it is activated'
+            confirmMsg += ', and may FORCE the DEACTIVATION of some of the client\'s virtual devices when it is activated';
         }
 
         confirmMsg += '.\n\nPLEASE NOTE THAT THIS ACTION CANNOT BE UNDONE.';

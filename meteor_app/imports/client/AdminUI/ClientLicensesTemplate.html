@@ -94,10 +94,19 @@
                                             {{/if}}
                                             <form id="frmAddClientLicense" autocomplete="off">
                                                 <input type="hidden" name="activeClientLicenseStartDate" value="{{formatISODate currentActiveClientLicense.validity.startDate}}"/>
+                                                {{#let license=(clientLicenseLicense currentActiveClientLicense.license_id)}}
+                                                <input type="hidden" name="activeClientLicenseOrder" value="{{license.order}}"/>
+                                                {{/let}}
                                                 {{#if replaceActiveClientLicense}}
                                                     <input type="hidden" name="replaceActiveClientLicense" value="true"/>
                                                     <div class="alert alert-warning" role="alert">
                                                         <b>Warning!</b>&nbsp;This license will <b>replace</b> the currently <b>active</b> client's license.
+                                                    </div>
+                                                {{/if}}
+                                                {{#if addMoreRestrictiveLicense}}
+                                                    <input type="hidden" name="isMoreRestrictiveLicense" value="true"/>
+                                                    <div class="alert alert-warning" role="alert">
+                                                        <b>Warning!</b> The selected license is <b>more restrictive</b> than the currently active client's license, and may force the <b>deactivation</b> of some of the client's virtual devices{{#unless replaceActiveClientLicense}} when it is activated{{/unless}}.
                                                     </div>
                                                 {{/if}}
                                                 <div class="form-group text-left">
