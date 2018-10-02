@@ -116,6 +116,8 @@ ClientLicense.prototype.expire = function (bypassProvisionalRenewal = true) {
                         _id: this.doc_id
                     }, modifier);
 
+                    const actvClientLicenseExpired = this.status === ClientLicense.status.active.name;
+
                     // Update saved data
                     this.status = ClientLicense.status.expired.name;
                     this.expiredDate = now;
@@ -124,7 +126,7 @@ ClientLicense.prototype.expire = function (bypassProvisionalRenewal = true) {
                         this.observeProvisionalRenewal = false;
                     }
 
-                    updateLicenses.call(this);
+                    updateLicenses.call(this, actvClientLicenseExpired ? this.doc_id : undefined);
                 };
 
                 if (this.noDbConcurrency) {
@@ -436,7 +438,7 @@ function loadLicense(noDbConcurrency = false) {
 
 // For the specified client, activate license that should be activated and expired
 //  licenses that should be expired
-function updateLicenses() {
+function updateLicenses(docIdActvClientLicenseExpired) {
     // Get client ID
     const client_id = this.client ? this.client.doc_id : (this.license ? this.client_id : undefined);
 
@@ -446,7 +448,7 @@ function updateLicenses() {
 
             // Retrieve currently active client license
             let docActvClientLicense = Catenis.db.collection.ClientLicense.findOne({
-                client_id: this.client.doc_id,
+                client_id: client_id,
                 status: ClientLicense.status.active.name,
                 'validity.startDate': {
                     $lte: dtNow
@@ -522,7 +524,7 @@ function updateLicenses() {
                 }
             });
 
-            let clientLicenseChanged = false;
+            let clientLicenseChanged = !!docIdActvClientLicenseExpired;
 
             if (docClientLicenseToActivate) {
                 // Activate client license
@@ -558,9 +560,9 @@ function updateLicenses() {
 
             // Look for obsolete active client licenses
             const docIdActvClientLicensesToExpire = [];
-            let docIdPrevActvClientLicense;
+            let docIdPrevActvClientLicense = undefined;
             selector = {
-                client_id: this.client.doc_id,
+                client_id: client_id,
                 status: ClientLicense.status.active.name
             };
 
@@ -603,8 +605,31 @@ function updateLicenses() {
                 });
             }
 
-            if (docIdPrevActvClientLicense && !docActvClientLicense) {
+            if ((docIdPrevActvClientLicense || docIdActvClientLicenseExpired) && !docActvClientLicense) {
                 // Client license has expired
+                if (!docIdPrevActvClientLicense) {
+                    docIdPrevActvClientLicense = docIdActvClientLicenseExpired;
+                }
+                else if (docIdActvClientLicenseExpired) {
+                    // Identify which of the two expired licenses are more recent
+                    docIdPrevActvClientLicense = Catenis.db.collection.ClientLicense.findOne({
+                        _id: {
+                            $in: [
+                                docIdPrevActvClientLicense,
+                                docIdActvClientLicenseExpired
+                            ]
+                        }
+                    }, {
+                        fields: {
+                            _id: 1
+                        },
+                        sort: {
+                            'validity.startDate': -1,
+                            activatedDate: -1
+                        }
+                    })._id;
+                }
+
                 const args = [docIdPrevActvClientLicense];
 
                 if (this.client) {

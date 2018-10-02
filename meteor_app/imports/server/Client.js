@@ -535,7 +535,7 @@ Client.prototype.createDevice = function (props, ownApiAccessKey = false, initRi
     }
 
     // Check if a new device can be created for this client
-    if (this.maximumAllowedDevices && this.devicesInUseCount() >= this.maximumAllowedDevices) {
+    if (this.maximumAllowedDevices !== undefined && this.devicesInUseCount() >= this.maximumAllowedDevices) {
         // Maximum number of allowed devices already reached for this client.
         //  Log error and throw exception
         Catenis.logger.ERROR('Cannot create device; maximum number of allowed devices already reached for client.', {
@@ -650,7 +650,7 @@ Client.prototype.conformNumberOfDevices = function () {
     try {
         if (this.clientLicense) {
             if (this.status === Client.status.active.name) {
-                if (this.maximumAllowedDevices) {
+                if (this.maximumAllowedDevices !== undefined) {
                     const cursorActvDevices = Catenis.db.collection.Device.find({
                         client_id: this.doc_id,
                         status: Device.status.active.name
