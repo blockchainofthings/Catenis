@@ -19,8 +19,8 @@ import { FlowRouter } from 'meteor/kadira:flow-router';
 import { BlazeLayout } from 'meteor/kadira:blaze-layout';
 
 // Import templates
-import './AdminUI/LoginLayout.js';
-import './AdminUI/AdminLayout.js';
+import './adminUI/LoginLayout.js';
+import './adminUI/AdminLayout.js';
 import './clientUI/ClientLayout.js';
 
 // Module code

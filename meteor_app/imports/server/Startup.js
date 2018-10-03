@@ -34,10 +34,10 @@ import { KeyStore } from './KeyStore';
 import { TransactionMonitor } from './TransactionMonitor';
 import './ParseRequestBody';
 import { RestApi } from './RestApi';
-import { BcotPriceUI } from './AdminUI/BcotPriceUI';
-import { SystemFundingUI } from './AdminUI/SystemFundingUI';
-import { ClientsUI } from './AdminUI/ClientsUI';
-import { DevicesUI } from './AdminUI/DevicesUI';
+import { BcotPriceUI } from './adminUI/BcotPriceUI';
+import { SystemFundingUI } from './adminUI/SystemFundingUI';
+import { ClientsUI } from './adminUI/ClientsUI';
+import { DevicesUI } from './adminUI/DevicesUI';
 import { ReceiveMessage } from './ReceiveMessage';
 import { ReadConfirmation } from './ReadConfirmation';
 import { Permission } from './Permission';
@@ -51,20 +51,20 @@ import { BitcoinPrice } from './BitcoinPrice';
 import { BcotPrice } from './BcotPrice';
 import { BcotPayment } from './BcotPayment';
 import { SpendServiceCredit } from './SpendServiceCredit';
-import { BcotUsageReportUI } from './AdminUI/BcotUsageReportUI';
+import { BcotUsageReportUI } from './adminUI/BcotUsageReportUI';
 import { ReceiveAsset } from './ReceiveAsset';
-import { AdminUI } from './AdminUI/AdminUI';
-import { LoginUI } from './AdminUI/LoginUI';
+import { AdminUI } from './adminUI/AdminUI';
+import { LoginUI } from './adminUI/LoginUI';
 import { AccountsEmail } from './AccountsEmail';
 import { LicenseExpireEmailNotify } from './LicenseExpireEmailNotify';
 import { LicenseOverdueEmailNotify } from './LicenseOverdueEmailNotify';
 import { LicenseExpireRemindEmailNotify } from './LicenseExpireRemindEmailNotify';
 import { DevicesDisableEmailNotify } from './DevicesDisableEmailNotify';
 import { ClientLicense } from './ClientLicense';
-import { LicensesUI } from './AdminUI/LicensesUI';
+import { LicensesUI } from './adminUI/LicensesUI';
 // TEST - begin
-//import { resetBitcoinCore } from './Test/FundSourceTest';
-//import { TestCatenisColoredCoins } from './Test/TestCatenisColoredCoins';
+//import { resetBitcoinCore } from './test/FundSourceTest';
+//import { TestCatenisColoredCoins } from './test/TestCatenisColoredCoins';
 // TEST - end
 
 // Config entries
