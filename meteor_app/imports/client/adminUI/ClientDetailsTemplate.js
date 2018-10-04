@@ -377,18 +377,18 @@ Template.clientDetails.helpers({
 
         return user ? user.username : undefined;
     },
-    clientCustomerName(client) {
-        let custName = client.props.firstName;
+    clientContactName(client) {
+        let contactName = client.props.firstName;
 
         if (client.props.lastName) {
-            if (custName) {
-                custName += ' ';
+            if (contactName) {
+                contactName += ' ';
             }
 
-            custName += client.props.lastName;
+            contactName += client.props.lastName;
         }
 
-        return custName;
+        return contactName;
     },
     clientUserEmail(user_id) {
         const user = Meteor.users.findOne({_id: user_id});
