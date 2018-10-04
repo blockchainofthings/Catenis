@@ -9,7 +9,7 @@
 // References to external code
 //
 // Internal node modules
-//import util from 'util';
+import url from 'url';
 // Third-party node modules
 //import config from 'config';
 // Meteor packages
@@ -59,13 +59,14 @@ function onWindowResize() {
     changeNavStructures(width);
 }
 
-function getSidebarNavEntry(pageName) {
+function getSidebarNavEntry() {
+    const currentUrlPath = url.parse(FlowRouter.current().path).pathname.toLowerCase();
     const navEntries = $('.sideNavButtons').toArray();
 
     for (let idx = 0, limit = navEntries.length; idx < limit; idx++) {
         const navEntry = navEntries[idx];
 
-        if (navEntry.children[0].href.endsWith('/' + pageName)) {
+        if (url.parse(navEntry.children[0].href).pathname.toLowerCase() === currentUrlPath) {
             return navEntry;
         }
     }
@@ -114,7 +115,7 @@ Template.clientLayout.events({
     'click #sidebar-wrapper'(event, template) {
         if (template.state.get('initializing')) {
             template.state.set('initializing', false);
-            selectSidebarNavEntry(getSidebarNavEntry(template.data.page().toLowerCase()));
+            selectSidebarNavEntry(getSidebarNavEntry());
         }
     },
     'click #lnkLogout'(event, template) {
