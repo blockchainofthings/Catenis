@@ -42,12 +42,12 @@ Template.clientAccount.onCreated(function () {
     this.state = new ReactiveDict();
 
     // Subscribe to receive database docs/recs updates
-    this.loggedInClientSubs = this.subscribe('loggedInClient');
+    this.currentClientSubs = this.subscribe('currentClient');
 });
 
 Template.clientAccount.onDestroyed(function () {
-    if (this.loggedInClientSubs) {
-        this.loggedInClientSubs.stop();
+    if (this.currentClientSubs) {
+        this.currentClientSubs.stop();
     }
 });
 

@@ -52,7 +52,7 @@ ClientUI.initialize = function () {
     Catenis.logger.TRACE('AdminUI initialization');
 
     // Declaration of publications
-    Meteor.publish('loggedInClient', function () {
+    Meteor.publish('currentClient', function () {
         if (Roles.userIsInRole(this.userId, 'ctn-client')) {
             return Catenis.db.collection.Client.find({
                 user_id: this.userId
