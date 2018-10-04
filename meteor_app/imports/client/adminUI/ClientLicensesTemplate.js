@@ -443,14 +443,20 @@ Template.clientLicenses.helpers({
             }
         });
     },
+    licenseName(license) {
+        let licName = ClientUtil.capitalize(license.level);
+
+        if (license.type) {
+            licName += ' (' + license.type + ')';
+        }
+
+        return licName;
+    },
     formatISODate(date) {
         return (date instanceof Date) && date.toISOString();
     },
     formatShortDate(date, client) {
         return date ? ClientUtil.startOfDayTimeZone(date, client.timeZone, true).format('LL') : undefined;
-    },
-    capitalize(str) {
-        return ClientUtil.capitalize(str);
     },
     statusColor(status) {
         let color;
