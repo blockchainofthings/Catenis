@@ -18,6 +18,7 @@ import { Template } from 'meteor/templating';
 import { ReactiveDict } from 'meteor/reactive-dict';
 import { FlowRouter } from 'meteor/kadira:flow-router';
 import { AccountsTemplates } from 'meteor/useraccounts:core';
+import { _ } from 'meteor/underscore';
 
 // References code in other (Catenis) modules on the client
 import { Catenis } from '../ClientCatenis';
@@ -27,6 +28,7 @@ import './ClientLayout.html';
 
 // Import dependent templates
 import './ClientHomeTemplate.js';
+import './ClientAccountTemplate.js';
 
 
 // Definition of module (private) functions
@@ -45,10 +47,10 @@ function redirectHome() {
 }
 
 function changeNavStructures(width) {
-    var toggled= "toggled" ==$("#wrapper").attr("class") ;
+    const toggled = 'toggled' === $('#wrapper').attr('class') ;
 
     if(width<580 && !toggled){
-        $("#wrapper").addClass("toggled");
+        $('#wrapper').addClass('toggled');
     }
 }
 
@@ -80,7 +82,6 @@ function selectSidebarNavEntry(navEntry) {
 // Module code
 //
 
-
 const throttledOnWindowResize = _.throttle(onWindowResize, 200, {
     leading: false
 });
@@ -99,14 +100,9 @@ Template.clientLayout.onCreated(function () {
             this.state.set('appEnv', env);
         }
     });
-
-    this.catenisClientsSubs = this.subscribe('catenisClients', Catenis.ctnHubNodeIndex);
 });
 
 Template.clientLayout.onDestroyed(function(){
-    if (this.catenisClientsSubs) {
-        this.catenisClientsSubs.stop();
-    }
     $(window).off('resize', throttledOnWindowResize);
 });
 
@@ -126,7 +122,7 @@ Template.clientLayout.events({
         return false;
     },
     'click .menu-toggle'(event, template){
-        $("#wrapper").toggleClass("toggled");
+        $('#wrapper').toggleClass('toggled');
         return false;
     },
     'click .sideNavButtons'(event, template){

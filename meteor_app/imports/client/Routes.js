@@ -41,6 +41,14 @@ FlowRouter.route('/', {
     }
 });
 
+FlowRouter.route('/clientaccount', {
+    action: function () {
+        BlazeLayout.render('clientLayout',{
+            page: 'clientAccount'
+        });
+    }
+});
+
 // System administration routes
 //
 FlowRouter.route('/admin', {
