@@ -149,9 +149,9 @@ export function Client(docClient, ctnNode, initializeDevices, noClientLicense = 
     });
 
     // Instantiate objects to manage blockchain addresses for client
-    this.servAccCreditLineAddr = ClientServiceAccountCreditLineAddress.getInstance(this.ctnNode.ctnNodeIndex, this.clientIndex);
-    this.servAccDebitLineAddr = ClientServiceAccountDebitLineAddress.getInstance(this.ctnNode.ctnNodeIndex, this.clientIndex);
-    this.bcotPaymentAddr = ClientBcotPaymentAddress.getInstance(this.ctnNode.ctnNodeIndex, this.clientIndex);
+    this.servAccCreditLineAddr = new ClientServiceAccountCreditLineAddress(this.ctnNode.ctnNodeIndex, this.clientIndex);
+    this.servAccDebitLineAddr = new ClientServiceAccountDebitLineAddress(this.ctnNode.ctnNodeIndex, this.clientIndex);
+    this.bcotPaymentAddr = new ClientBcotPaymentAddress(this.ctnNode.ctnNodeIndex, this.clientIndex);
 
     // Retrieve (HD node) index of last Device doc/rec created for this client
     const docDevice = Catenis.db.collection.Device.findOne({client_id: this.doc_id}, {fields: {'index.deviceIndex': 1}, sort: {'index.deviceIndex': -1}});

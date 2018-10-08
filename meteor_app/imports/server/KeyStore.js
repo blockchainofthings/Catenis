@@ -161,7 +161,7 @@ import { Meteor } from 'meteor/meteor';
 
 // References code in other (Catenis) modules
 import { Catenis } from './Catenis';
-import { BlockchainAddress } from './BlockchainAddress';
+import { BaseBlockchainAddress } from './BaseBlockchainAddress';
 import { CryptoKeys } from './CryptoKeys';
 
 // Config entries
@@ -284,7 +284,7 @@ KeyStore.prototype.getAddressInfo = function (addr, retrieveObsolete = false, ch
         if (docExtKey !== undefined) {
             if (retrieveObsolete && docExtKey.isObsolete && !obsoleteAddressRetrieved && checkAddressInUse) {
                 // Check if address marked as obsolete is in use and reset its status if so
-                if (BlockchainAddress.checkObsoleteAddress(addr)) {
+                if (BaseBlockchainAddress.checkObsoleteAddress(addr)) {
                     // Address status has been reset (address is not obsolete anymore)
                     docExtKey.isObsolete = false;
                 }
@@ -304,7 +304,7 @@ KeyStore.prototype.getAddressInfo = function (addr, retrieveObsolete = false, ch
                 addrInfo.pathParts = pathParts;
             }
         }
-        else if (retrieveObsolete && BlockchainAddress.retrieveObsoleteAddress(addr, checkAddressInUse)) {
+        else if (retrieveObsolete && BaseBlockchainAddress.retrieveObsoleteAddress(addr, checkAddressInUse)) {
             obsoleteAddressRetrieved = true;
             tryAgain = true;
         }
@@ -327,7 +327,7 @@ KeyStore.prototype.getAddressInfoByPath = function (path, retrieveObsolete = fal
         if (docExtKey !== undefined) {
             if (retrieveObsolete && docExtKey.isObsolete && !obsoleteAddressRetrieved && checkAddressInUse) {
                 // Check if address marked as obsolete is in use and reset its status if so
-                if (BlockchainAddress.checkObsoleteAddress(docExtKey.address)) {
+                if (BaseBlockchainAddress.checkObsoleteAddress(docExtKey.address)) {
                     // Address status has been reset (address is not obsolete anymore)
                     docExtKey.isObsolete = false;
                 }
@@ -347,7 +347,7 @@ KeyStore.prototype.getAddressInfoByPath = function (path, retrieveObsolete = fal
                 addrInfo.pathParts = pathParts;
             }
         }
-        else if (retrieveObsolete && BlockchainAddress.retrieveObsoleteAddressByPath(path, checkAddressInUse)) {
+        else if (retrieveObsolete && BaseBlockchainAddress.retrieveObsoleteAddressByPath(path, checkAddressInUse)) {
             obsoleteAddressRetrieved = true;
             tryAgain = true;
         }

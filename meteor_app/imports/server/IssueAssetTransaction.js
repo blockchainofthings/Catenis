@@ -26,7 +26,7 @@ import {
     cfgSettings as assetCfgSetting
 } from './Asset';
 import { CCMetadata } from './CCMetadata';
-import { BlockchainAddress } from './BlockchainAddress';
+import { BaseBlockchainAddress } from './BaseBlockchainAddress';
 import { Service } from './Service';
 import { FundSource } from './FundSource';
 import { Transaction } from './Transaction';
@@ -264,7 +264,7 @@ IssueAssetTransaction.prototype.buildTransaction = function () {
 
         if (!this.ccTransact.includesMultiSigOutput) {
             // Revert pre-allocated multi-signature signee address
-            BlockchainAddress.revertAddress(multiSigSigneeAddr);
+            BaseBlockchainAddress.revertAddress(multiSigSigneeAddr);
         }
 
         if (this.assetInfo.description === undefined) {

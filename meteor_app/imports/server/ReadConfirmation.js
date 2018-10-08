@@ -24,7 +24,7 @@ import { TransactionMonitor } from './TransactionMonitor';
 import { CriticalSection } from './CriticalSection';
 import { Transaction } from './Transaction';
 import { KeyStore } from './KeyStore';
-import { BlockchainAddress } from './BlockchainAddress';
+import { BaseBlockchainAddress } from './BaseBlockchainAddress';
 import { BitcoinCore } from './BitcoinCore';
 import { Message } from './Message';
 import { Device } from './Device';
@@ -790,7 +790,7 @@ function newReadConfirmTransactionFromDiff(confirmedTransact, lastSentTransact) 
 
                 if (diffOutput.output.payInfo.address === diffOutput.otherOutput.payInfo.address) {
                     // Need to allocated new address
-                    outputToAdd.payInfo.address = BlockchainAddress.getInstance(diffOutput.output.payInfo.addrInfo).newAddressKeys().getAddress();
+                    outputToAdd.payInfo.address = BaseBlockchainAddress.getInstance(diffOutput.output.payInfo.addrInfo).newAddressKeys().getAddress();
                     outputToAdd.payInfo.addrInfo = Catenis.keyStore.getAddressInfo(outputToAdd.payInfo.address);
                 }
 

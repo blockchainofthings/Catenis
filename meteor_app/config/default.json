@@ -137,8 +137,8 @@
     "rpcConnectionTimeout": 15000,  // (15 sec.) Timeout, in miliseconds, for RPC connection with the Omni Core server
     "rescanTimeout": 7200000 // (2 hours) Timeout, in miniseconds, for waiting on Omni Core to finish rescanning the blockchain after importing private key
   },
-  // Parameters pertaining to BlockchainAddress module
-  "blockchainAddress": {
+  // Parameters pertaining to BaseBlockchainAddress module
+  "baseBlockchainAddress": {
     "addressValidity": {  // Time, in seconds, before which a newly issued address expires
       "systemDeviceMain": 900,  // (15 min.)
       "systemFundingPayment":  14400,  // (4 hours)
