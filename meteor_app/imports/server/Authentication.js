@@ -196,7 +196,7 @@ Authentication.signHttpRequest = function (req, info) {
 };
 
 // NOTE: this method is only provided for debugging purpose
-Authentication.genReqSignature = function (apiAccessSecret, timestamp, signDate, host = 'beta.catenis.io', method = 'GET', url = '/api/0.3/messages/mdQP57eQjwmsciBwTssw?encoding=utf8', rawBody = Buffer.from('')) {
+Authentication.genReqSignature = function (apiAccessSecret, timestamp, signDate, host = 'sandbox.catenis.io', method = 'GET', url = '/api/0.3/messages/mdQP57eQjwmsciBwTssw?encoding=utf8', rawBody = Buffer.from('')) {
     if (signDate === undefined) {
         signDate = moment(timestamp).utc().format('YYYYMMDD');
     }
