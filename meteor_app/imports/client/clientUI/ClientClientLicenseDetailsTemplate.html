@@ -1,0 +1,96 @@
+<template name="clientClientLicenseDetails">
+    <div>
+        <div class="panel panel-login minWidthElement noBoxShadow">
+            <div class="panel-body">
+                <div class="row">
+                    <div class="col-lg-12">
+                        {{#unless Template.subscriptionsReady}}
+                            <p style="color:lightgray; margin-top:1em">Loading...</p>
+                        {{else}}
+                            {{#let license=(clientLicenseLicense clientLicense.license_id)}}
+                                <h2>License</h2>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="pull-left">
+                                            <a href="/licenses" role="button" class="btn-login btn paddedBtn">Back to Licenses</a>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                    </div>
+                                </div>
+                                {{#if hasInfoMessage}}
+                                    <div class="alert alert-{{infoMessageType}}" role="alert">
+                                        {{{infoMessage}}}
+                                    </div>
+                                {{/if}}
+                                <div class="row" style="padding-top:1em">
+                                    <div class="col-lg-12">
+                                        <table class="table table-striped text-left">
+                                            <tbody>
+                                            <tr>
+                                                <th><label class="noMargin">Order:</label></th>
+                                                <td>{{license.order}}</td>
+                                            </tr>
+                                            <tr>
+                                                <th><label class="noMargin">Level:</label></th>
+                                                <td>{{capitalize license.level}}</td>
+                                            </tr>
+                                            <tr>
+                                                <th><label class="noMargin">Type:</label></th>
+                                                <td>{{capitalize license.type}}</td>
+                                            </tr>
+                                            <tr>
+                                                <th><label class="noMargin">Revision:</label></th>
+                                                <td>{{license.revision}}</td>
+                                            </tr>
+                                            <tr>
+                                                <th><label class="noMargin">Maximum Devices In Use:</label></th>
+                                                <td>{{license.maximumDevices}}</td>
+                                            </tr>
+                                            <tr>
+                                                <th><label class="noMargin">Validity Start Date (*):</label></th>
+                                                <td>{{formatLongDate clientLicense.validity.startDate client}}</td>
+                                            </tr>
+                                            <tr>
+                                                <th><label class="noMargin">Validity End Date (*):</label></th>
+                                                <td><span style="{{#if isAboutToExpire}}color:red{{/if}}">{{formatLongDate clientLicense.validity.endDate client}}</span></td>
+                                            </tr>
+                                            <tr>
+                                                <th><label class="noMargin">Is Provisional Renewal:</label></th>
+                                                <td>{{clientLicense.provisionalRenewal}}</td>
+                                            </tr>
+                                            <tr>
+                                                <th><label class="noMargin">Status:</label></th>
+                                                <td><span style="color:{{statusColor clientLicense.status}}">{{clientLicense.status}}</span></td>
+                                            </tr>
+                                            <tr>
+                                                <th><label class="noMargin">Provisioned Date:</label></th>
+                                                <td>{{clientLicense.provisionedDate}}</td>
+                                            </tr>
+                                            {{#if clientLicense.activatedDate}}
+                                                <tr>
+                                                    <th><label class="noMargin">Activated Date:</label></th>
+                                                    <td>{{clientLicense.activatedDate}}</td>
+                                                </tr>
+                                            {{/if}}
+                                            {{#if clientLicense.expiredDate}}
+                                                <tr>
+                                                    <th><label class="noMargin">Expired Date:</label></th>
+                                                    <td>{{clientLicense.expiredDate}}</td>
+                                                </tr>
+                                            {{/if}}
+                                            </tbody>
+                                        </table>
+                                        <div class="text-left" style="font-size:10pt; margin-bottom:20px; color:gray">
+                                            (*) Date/time in reference to client's time zone
+                                        </div>
+                                    </div>
+                                </div>
+                            {{/let}}
+                        {{/unless}}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</template>

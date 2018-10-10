@@ -63,6 +63,7 @@ import { DevicesDisableEmailNotify } from './DevicesDisableEmailNotify';
 import { ClientLicense } from './ClientLicense';
 import { LicensesUI } from './adminUI/LicensesUI';
 import { ClientUI } from './clientUI/ClientUI';
+import { ClientLicensesUI } from './clientUI/ClientLicensesUI';
 // TEST - begin
 //import { resetBitcoinCore } from './test/FundSourceTest';
 //import { TestCatenisColoredCoins } from './test/TestCatenisColoredCoins';
@@ -170,6 +171,7 @@ Meteor.startup(function () {
         DevicesUI.initialize();
 
         ClientUI.initialize();
+        ClientLicensesUI.initialize();
 
         Catenis.logger.INFO('Initialization ended.');
 

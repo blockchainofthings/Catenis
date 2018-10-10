@@ -49,6 +49,25 @@ FlowRouter.route('/clientaccount', {
     }
 });
 
+FlowRouter.route('/licenses/', {
+    action: function () {
+        BlazeLayout.render('clientLayout',{
+            page: 'clientClientLicenses'
+        });
+    }
+});
+
+FlowRouter.route('/licenses/:clientLicense_id', {
+    action: function (params) {
+        BlazeLayout.render('clientLayout',{
+            page: 'clientClientLicenseDetails',
+            dataContext: {
+                clientLicense_id: params.clientLicense_id
+            }
+        });
+    }
+});
+
 // System administration routes
 //
 FlowRouter.route('/admin', {

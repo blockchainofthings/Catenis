@@ -18,6 +18,7 @@ import { Meteor } from 'meteor/meteor';
 
 // References code in other (Catenis) modules
 import { Catenis } from '../Catenis';
+import { Client } from '../Client';
 
 
 // Definition of function classes
@@ -49,13 +50,14 @@ export function ClientUI() {
 //
 
 ClientUI.initialize = function () {
-    Catenis.logger.TRACE('AdminUI initialization');
+    Catenis.logger.TRACE('ClientUI initialization');
 
     // Declaration of publications
     Meteor.publish('currentClient', function () {
         if (Roles.userIsInRole(this.userId, 'ctn-client')) {
             return Catenis.db.collection.Client.find({
-                user_id: this.userId
+                user_id: this.userId,
+                status: Client.status.active.name
             });
         }
         else {
