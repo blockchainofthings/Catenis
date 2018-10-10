@@ -25,7 +25,7 @@ import { Service } from './Service';
 import { RbfTransactionInfo } from './RbfTransactionInfo';
 import { FundSource } from './FundSource';
 import { CCFundSource } from './CCFundSource';
-import { BlockchainAddress } from './BlockchainAddress';
+import { BaseBlockchainAddress } from './BaseBlockchainAddress';
 import { MalleabilityEventEmitter } from './MalleabilityEventEmitter';
 import { Transaction } from './Transaction';
 import { CCMetadata } from './CCMetadata';
@@ -351,7 +351,7 @@ SpendServiceCreditTransaction.prototype.payForService = function (client, servic
             }
             else if (clientOutputAddress !== undefined) {
                 // Revert address used to transfer Catenis service credit change which is not needed
-                BlockchainAddress.revertAddress(clientOutputAddress);
+                BaseBlockchainAddress.revertAddress(clientOutputAddress);
             }
 
             // Burn Catenis service credit amount used to pay for the services
@@ -412,7 +412,7 @@ SpendServiceCreditTransaction.prototype.payForService = function (client, servic
 
         if (!newCcTransact.includesMultiSigOutput) {
             // Revert pre-allocated multi-signature signee address
-            BlockchainAddress.revertAddress(multiSigSigneeAddr);
+            BaseBlockchainAddress.revertAddress(multiSigSigneeAddr);
         }
 
         if (this.rbfTxInfo !== undefined) {

@@ -25,7 +25,7 @@ import { _ } from 'meteor/underscore';
 // References code in other (Catenis) modules
 import { Catenis } from './Catenis';
 import { BitcoinCore } from './BitcoinCore';
-import { BlockchainAddress } from './BlockchainAddress';
+import { BaseBlockchainAddress } from './BaseBlockchainAddress';
 import { CriticalSection } from './CriticalSection';
 import { Util } from './Util';
 import { KeyStore } from './KeyStore';
@@ -940,7 +940,7 @@ Transaction.prototype.matches = function (transactFuncClass) {
 
 Transaction.prototype.revertOutputAddresses = function (startPos = 0, endPos) {
     if (this.outputs.length > 0) {
-        BlockchainAddress.revertAddressList(this.listOutputAddresses(startPos, endPos));
+        BaseBlockchainAddress.revertAddressList(this.listOutputAddresses(startPos, endPos));
     }
 };
 

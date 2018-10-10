@@ -22,7 +22,7 @@ import { Asset } from './Asset';
 import { Catenis } from './Catenis';
 import { CCTransaction } from './CCTransaction';
 import { Transaction } from './Transaction';
-import { BlockchainAddress } from './BlockchainAddress';
+import { BaseBlockchainAddress } from './BaseBlockchainAddress';
 import { CCFundSource } from './CCFundSource';
 import { FundSource } from './FundSource';
 import { KeyStore } from './KeyStore';
@@ -195,7 +195,7 @@ TransferAssetTransaction.prototype.buildTransaction = function () {
 
         if (!this.ccTransact.includesMultiSigOutput) {
             // Revert pre-allocated multi-signature signee address
-            BlockchainAddress.revertAddress(multiSigSigneeAddr);
+            BaseBlockchainAddress.revertAddress(multiSigSigneeAddr);
         }
 
         // Finalize transaction

@@ -243,7 +243,7 @@ function disposeSpendServCredTransaction(spendServCredTransact) {
 function getSpendServCredTxByClient(clientId, createNewTx = false) {
     let spendServCredTransact;
 
-    if (this.clientIdSpendServCredTx.has(clientId)) {
+    if (!createNewTx && this.clientIdSpendServCredTx.has(clientId)) {
         spendServCredTransact = this.clientIdSpendServCredTx.get(clientId);
 
         // Make sure that spend service credit transaction associated with client
@@ -254,8 +254,8 @@ function getSpendServCredTxByClient(clientId, createNewTx = false) {
         }
     }
     else {
-        // No spend service credit transaction associated with this client yet.
-        //  Time to allocate a new spend service credit transaction
+        // No spend service credit transaction associated with this client yet, or a new one has
+        //  been requested. Time to allocate a new spend service credit transaction
         spendServCredTransact = allocateServCredTxForClient.call(this, clientId, createNewTx);
     }
 

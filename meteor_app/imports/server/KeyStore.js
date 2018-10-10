@@ -161,7 +161,7 @@ import { Meteor } from 'meteor/meteor';
 
 // References code in other (Catenis) modules
 import { Catenis } from './Catenis';
-import { BlockchainAddress } from './BlockchainAddress';
+import { BaseBlockchainAddress } from './BaseBlockchainAddress';
 import { CryptoKeys } from './CryptoKeys';
 
 // Config entries
@@ -170,8 +170,7 @@ const configKeyStore = config.get('keyStore');
 // Configuration settings
 const cfgSettings = {
     obsoleteExtKeyTimeToPurge: configKeyStore.get('obsoleteExtKeyTimeToPurge'),
-    purgeUnusedExtKeyInterval: configKeyStore.get('purgeUnusedExtKeyInterval'),
-    checkDbConsistency: configKeyStore.get('checkDbConsistency')
+    purgeUnusedExtKeyInterval: configKeyStore.get('purgeUnusedExtKeyInterval')
 };
 
 const clientServCredAddrRootTypes = [{
@@ -284,7 +283,7 @@ KeyStore.prototype.getAddressInfo = function (addr, retrieveObsolete = false, ch
         if (docExtKey !== undefined) {
             if (retrieveObsolete && docExtKey.isObsolete && !obsoleteAddressRetrieved && checkAddressInUse) {
                 // Check if address marked as obsolete is in use and reset its status if so
-                if (BlockchainAddress.checkObsoleteAddress(addr)) {
+                if (BaseBlockchainAddress.checkObsoleteAddress(addr)) {
                     // Address status has been reset (address is not obsolete anymore)
                     docExtKey.isObsolete = false;
                 }
@@ -304,7 +303,7 @@ KeyStore.prototype.getAddressInfo = function (addr, retrieveObsolete = false, ch
                 addrInfo.pathParts = pathParts;
             }
         }
-        else if (retrieveObsolete && BlockchainAddress.retrieveObsoleteAddress(addr, checkAddressInUse)) {
+        else if (retrieveObsolete && BaseBlockchainAddress.retrieveObsoleteAddress(addr, checkAddressInUse)) {
             obsoleteAddressRetrieved = true;
             tryAgain = true;
         }
@@ -327,7 +326,7 @@ KeyStore.prototype.getAddressInfoByPath = function (path, retrieveObsolete = fal
         if (docExtKey !== undefined) {
             if (retrieveObsolete && docExtKey.isObsolete && !obsoleteAddressRetrieved && checkAddressInUse) {
                 // Check if address marked as obsolete is in use and reset its status if so
-                if (BlockchainAddress.checkObsoleteAddress(docExtKey.address)) {
+                if (BaseBlockchainAddress.checkObsoleteAddress(docExtKey.address)) {
                     // Address status has been reset (address is not obsolete anymore)
                     docExtKey.isObsolete = false;
                 }
@@ -347,7 +346,7 @@ KeyStore.prototype.getAddressInfoByPath = function (path, retrieveObsolete = fal
                 addrInfo.pathParts = pathParts;
             }
         }
-        else if (retrieveObsolete && BlockchainAddress.retrieveObsoleteAddressByPath(path, checkAddressInUse)) {
+        else if (retrieveObsolete && BaseBlockchainAddress.retrieveObsoleteAddressByPath(path, checkAddressInUse)) {
             obsoleteAddressRetrieved = true;
             tryAgain = true;
         }
@@ -2983,7 +2982,7 @@ KeyStore.prototype.latestDeviceAssetIssuanceAddressInUse = function (ctnNodeInde
 //      or .bind().
 //
 
-function purgeUnusedExtendedKeys(isInitializing = false) {
+function purgeUnusedExtendedKeys() {
     Catenis.logger.TRACE('Executing process to purge unused HD extended keys from local key storage');
     // Calculate earliest date/time for obsolete HD extended key to have been created/update for it not to be purged
     const obsoleteEarliestTime = new Date(Date.now());
@@ -2993,43 +2992,8 @@ function purgeUnusedExtendedKeys(isInitializing = false) {
 
     // Remove reserved HD extended keys, and HD extended keys that have
     //  turned obsolete for a while
-    const query = {$or: [{isReserved: true}, {$and: [{isObsolete: true}, {'meta.revision': 0}, {'meta.created': {$lt: obsoleteEarliestTimestamp}}]},
-            {$and: [{isObsolete: true}, {'meta.revision': {$gt: 0}}, {'meta.updated': {$lt: obsoleteEarliestTimestamp}}]}]};
-
-    if (!isInitializing && cfgSettings.checkDbConsistency) {
-        // Identify entries that will be removed from in-memory key store database
-        const docsToRemove = this.collExtKey.find(query);
-
-        if (docsToRemove.length > 0) {
-            // Report entries that are about to be removed from in-memory key store database
-            Catenis.logger.DEBUG('Entries about to be removed from in-memory key store database', docsToRemove);
-        }
-    }
-
-    this.collExtKey.findAndRemove(query);
-
-    if (!isInitializing && cfgSettings.checkDbConsistency) {
-        checkDbConsistency.call(this);
-    }
-}
-
-function checkDbConsistency() {
-    Catenis.logger.TRACE('Checking consistency of in-memory key store database');
-    const docsInconsistent = Catenis.db.collection.IssuedBlockchainAddress.find({
-        status: {
-            $in: [
-                'new',
-                'expired'
-            ]
-        },
-        path: {
-            $nin: this.collExtKey.find().map(doc => doc.path)
-        }
-    }).fetch();
-
-    if (docsInconsistent.length > 0) {
-        Catenis.logger.ERROR('In-memory key store database is inconsistent: entries are missing for one or more issued blockchain addresses', docsInconsistent);
-    }
+    this.collExtKey.findAndRemove({$or: [{isReserved: true}, {$and: [{isObsolete: true}, {'meta.revision': 0}, {'meta.created': {$lt: obsoleteEarliestTimestamp}}]},
+            {$and: [{isObsolete: true}, {'meta.revision': {$gt: 0}}, {'meta.updated': {$lt: obsoleteEarliestTimestamp}}]}]});
 }
 
 function storeHDNode(type, path, hdNode, isLeaf, isReserved, isObsolete) {
@@ -3067,7 +3031,7 @@ KeyStore.initialize = function () {
 
     // Execute process to purge unused HD extended keys from local key storage now,
     //  and set recurring timer to execute it periodically
-    purgeUnusedExtendedKeys.call(Catenis.keyStore, true);
+    purgeUnusedExtendedKeys.call(Catenis.keyStore);
     Catenis.logger.TRACE('Setting recurring timer to purge unused HD extended keys from local key storage');
     purgeUnusedExtKeyIntervalHandle = Meteor.setInterval(purgeUnusedExtendedKeys.bind(Catenis.keyStore), cfgSettings.purgeUnusedExtKeyInterval);
 };

@@ -25,7 +25,7 @@ import { BitcoinCore } from './BitcoinCore';
 import { IpfsClient } from './IpfsClient';
 import { IpfsServerMonitor } from './IpfsServerMonitor';
 import { BitcoinFees } from './BitcoinFees';
-import { BlockchainAddress } from './BlockchainAddress';
+import { BaseBlockchainAddress } from './BaseBlockchainAddress';
 import { CatenisNode } from './CatenisNode';
 import { Client } from './Client';
 import { Database } from './Database';
@@ -132,7 +132,7 @@ Meteor.startup(function () {
         // Make sure that all addresses are currently imported onto Bitcoin Core
         CheckImportAddresses(cfgSettings.fixMissingAddresses);
 
-        BlockchainAddress.initialize();
+        BaseBlockchainAddress.initialize();
         Client.initialize();
         Device.initialize();
 

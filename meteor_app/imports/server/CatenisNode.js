@@ -101,17 +101,17 @@ export class CatenisNode extends events.EventEmitter {
         });
 
         // Instantiate objects to manage blockchain addresses for Catenis node
-        this.deviceMainAddr = SystemDeviceMainAddress.getInstance(this.ctnNodeIndex);
-        this.fundingPaymentAddr = SystemFundingPaymentAddress.getInstance(this.ctnNodeIndex);
-        this.fundingChangeAddr = SystemFundingChangeAddress.getInstance(this.ctnNodeIndex);
-        this.payTxExpenseAddr = SystemPayTxExpenseAddress.getInstance(this.ctnNodeIndex);
-        this.readConfirmSpendNotifyAddr = SystemReadConfirmSpendNotifyAddress.getInstance(this.ctnNodeIndex);
-        this.readConfirmSpendOnlyAddr = SystemReadConfirmSpendOnlyAddress.getInstance(this.ctnNodeIndex);
-        this.readConfirmSpendNullAddr = SystemReadConfirmSpendNullAddress.getInstance(this.ctnNodeIndex);
-        this.readConfirmPayTxExpenseAddr = SystemReadConfirmPayTxExpenseAddress.getInstance(this.ctnNodeIndex);
-        this.servCredIssueAddr = SystemServiceCreditIssuingAddress.getInstance(this.ctnNodeIndex);
-        this.servPymtPayTxExpenseAddr = SystemServicePaymentPayTxExpenseAddress.getInstance(this.ctnNodeIndex);
-        this.multiSigSigneeAddr = SystemMultiSigSigneeAddress.getInstance(this.ctnNodeIndex);
+        this.deviceMainAddr = new SystemDeviceMainAddress(this.ctnNodeIndex);
+        this.fundingPaymentAddr = new SystemFundingPaymentAddress(this.ctnNodeIndex);
+        this.fundingChangeAddr = new SystemFundingChangeAddress(this.ctnNodeIndex);
+        this.payTxExpenseAddr = new SystemPayTxExpenseAddress(this.ctnNodeIndex);
+        this.readConfirmSpendNotifyAddr = new SystemReadConfirmSpendNotifyAddress(this.ctnNodeIndex);
+        this.readConfirmSpendOnlyAddr = new SystemReadConfirmSpendOnlyAddress(this.ctnNodeIndex);
+        this.readConfirmSpendNullAddr = new SystemReadConfirmSpendNullAddress(this.ctnNodeIndex);
+        this.readConfirmPayTxExpenseAddr = new SystemReadConfirmPayTxExpenseAddress(this.ctnNodeIndex);
+        this.servCredIssueAddr = new SystemServiceCreditIssuingAddress(this.ctnNodeIndex);
+        this.servPymtPayTxExpenseAddr = new SystemServicePaymentPayTxExpenseAddress(this.ctnNodeIndex);
+        this.multiSigSigneeAddr = new SystemMultiSigSigneeAddress(this.ctnNodeIndex);
 
         // Retrieve (HD node) index of last Client doc/rec created for this Catenis node
         const docClient = Catenis.db.collection.Client.findOne({catenisNode_id: this.doc_id}, {

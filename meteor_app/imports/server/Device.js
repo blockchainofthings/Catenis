@@ -27,7 +27,12 @@ import { DeviceShared } from '../both/DeviceShared';
 import { CriticalSection } from './CriticalSection';
 import { TransactionMonitor } from './TransactionMonitor';
 import { BitcoinCore } from './BitcoinCore';
-import { DeviceMainAddress, DeviceReadConfirmAddress, DeviceAssetAddress, DeviceAssetIssuanceAddress } from './BlockchainAddress';
+import {
+    DeviceMainAddress,
+    DeviceReadConfirmAddress,
+    DeviceAssetAddress,
+    DeviceAssetIssuanceAddress
+} from './BlockchainAddress';
 import { CatenisNode } from './CatenisNode';
 import { FundSource } from './FundSource';
 import { FundTransaction } from './FundTransaction';
@@ -118,10 +123,10 @@ export function Device(docDevice, client) {
     });
 
     // Instantiate objects to manage blockchain addresses for device
-    this.mainAddr = DeviceMainAddress.getInstance(this.client.ctnNode.ctnNodeIndex, this.client.clientIndex, this.deviceIndex);
-    this.readConfirmAddr = DeviceReadConfirmAddress.getInstance(this.client.ctnNode.ctnNodeIndex, this.client.clientIndex, this.deviceIndex);
-    this.assetAddr = DeviceAssetAddress.getInstance(this.client.ctnNode.ctnNodeIndex, this.client.clientIndex, this.deviceIndex);
-    this.assetIssuanceAddr = DeviceAssetIssuanceAddress.getInstance(this.client.ctnNode.ctnNodeIndex, this.client.clientIndex, this.deviceIndex);
+    this.mainAddr = new DeviceMainAddress(this.client.ctnNode.ctnNodeIndex, this.client.clientIndex, this.deviceIndex);
+    this.readConfirmAddr = new DeviceReadConfirmAddress(this.client.ctnNode.ctnNodeIndex, this.client.clientIndex, this.deviceIndex);
+    this.assetAddr = new DeviceAssetAddress(this.client.ctnNode.ctnNodeIndex, this.client.clientIndex, this.deviceIndex);
+    this.assetIssuanceAddr = new DeviceAssetIssuanceAddress(this.client.ctnNode.ctnNodeIndex, this.client.clientIndex, this.deviceIndex);
 
     // Critical section object to avoid concurrent access to database at the
     //  device object level (when updating device status basically)

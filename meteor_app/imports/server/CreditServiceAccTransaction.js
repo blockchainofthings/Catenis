@@ -32,7 +32,7 @@ import {
 import { Service } from './Service';
 import { Asset } from './Asset';
 import { CCMetadata } from './CCMetadata';
-import { BlockchainAddress } from './BlockchainAddress';
+import { BaseBlockchainAddress } from './BaseBlockchainAddress';
 import { KeyStore } from './KeyStore';
 import { Util } from './Util';
 
@@ -220,7 +220,7 @@ CreditServiceAccTransaction.prototype.buildTransaction = function () {
 
             if (!this.ccTransact.includesMultiSigOutput) {
                 // Revert pre-allocated multi-signature signee address
-                BlockchainAddress.revertAddress(multiSigSigneeAddr);
+                BaseBlockchainAddress.revertAddress(multiSigSigneeAddr);
             }
 
             // Finalize transaction
