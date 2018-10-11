@@ -26,6 +26,7 @@ import { ClientLicenseShared } from '../../both/ClientLicenseShared';
 import './ClientClientLicensesTemplate.html';
 
 // Import dependent templates
+import './ClientClientLicenseDetailsTemplate.js';
 
 
 // Definition of module (private) functions

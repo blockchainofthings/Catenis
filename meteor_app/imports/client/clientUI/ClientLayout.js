@@ -30,7 +30,6 @@ import './ClientLayout.html';
 import './ClientHomeTemplate.js';
 import './ClientAccountTemplate.js';
 import './ClientClientLicensesTemplate.js';
-import './ClientClientLicenseDetailsTemplate.js';
 
 
 // Definition of module (private) functions
