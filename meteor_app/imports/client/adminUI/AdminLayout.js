@@ -55,8 +55,8 @@ function redirectHome() {
     }
 }
 
-function getSidebarNavEntry() {
-    const currentUrlPath = url.parse(FlowRouter.current().path).pathname.toLowerCase();
+function getSidebarNavEntry(path) {
+    const currentUrlPath = url.parse(path).pathname.toLowerCase();
     const navEntries = $('.sideNavButtons').toArray();
 
     for (let idx = 0, limit = navEntries.length; idx < limit; idx++) {
@@ -68,7 +68,15 @@ function getSidebarNavEntry() {
     }
 }
 
-function selectSidebarNavEntry(navEntry) {
+function selectSidebarNavEntry(navEntry, clearNavEntries) {
+    if (clearNavEntries) {
+        // Reset color of all sidebar nav entries
+        $('.sideNavButtons').toArray().forEach((navEntry) => {
+            navEntry.style.backgroundColor = '#e8e9ec';
+            Array.from(navEntry.children).forEach(childElem => childElem.style.color = '');
+        });
+    }
+
     if (navEntry) {
         navEntry.style.backgroundColor = '#5555bb';
         Array.from(navEntry.children).forEach(childElem => childElem.style.color = 'white');
@@ -101,8 +109,19 @@ Template.adminLayout.onDestroyed(function () {
 Template.adminLayout.events({
     'click #sidebar-wrapper'(event, template) {
         if (template.state.get('initializing')) {
+            // Sidebar control just loaded on page
             template.state.set('initializing', false);
-            selectSidebarNavEntry(getSidebarNavEntry());
+
+            // Set mechanism to watch for path change and select sidebar nav entry appropriately
+            Tracker.autorun(function() {
+                FlowRouter.watchPathChange();
+
+                const path = FlowRouter.current().path;
+
+                if (path) {
+                    selectSidebarNavEntry(getSidebarNavEntry(path), !template.state.get('initializing'));
+                }
+            });
         }
     },
     'click #lnkLogout'(event, template) {
@@ -113,33 +132,9 @@ Template.adminLayout.events({
         $('#wrapper').toggleClass('toggled');
         return false;
     },
-    'click .sideNavButtons'(event, template) {
-        // Reset color of all sidebar nav entries
-        $('.sideNavButtons').toArray().forEach((navEntry) => {
-            navEntry.style.backgroundColor = '#e8e9ec';
-            Array.from(navEntry.children).forEach(childElem => childElem.style.color = '');
-        });
-
-        // Set color of selected sidebar nav entry
-        event.currentTarget.style.backgroundColor = '#5555bb';
-        Array.from(event.currentTarget.children).forEach(childElem => childElem.style.color = 'white');
-    },
     'click .navbar-brand'(event, template) {
-        // Reset color of all sidebar nav entries
-        $('.sideNavButtons').toArray().forEach((navEntry) => {
-            navEntry.style.backgroundColor = '#e8e9ec';
-            Array.from(navEntry.children).forEach(childElem => childElem.style.color = '');
-        });
-
         redirectHome();
         return false;
-    },
-    'click .userMenuEntry'(event, template) {
-        // Reset color of all sidebar nav entries
-        $('.sideNavButtons').toArray().forEach((navEntry) => {
-            navEntry.style.backgroundColor = '#e8e9ec';
-            Array.from(navEntry.children).forEach(childElem => childElem.style.color = '');
-        });
     }
 });
 
