@@ -56,16 +56,20 @@ function redirectHome() {
 }
 
 function getSidebarNavEntry(path) {
-    const currentUrlPath = url.parse(path).pathname.toLowerCase();
+    const currentUrlPath = addTrailingSlash(url.parse(path).pathname.toLowerCase());
     const navEntries = $('.sideNavButtons').toArray();
 
     for (let idx = 0, limit = navEntries.length; idx < limit; idx++) {
         const navEntry = navEntries[idx];
 
-        if (url.parse(navEntry.children[0].href).pathname.toLowerCase() === currentUrlPath) {
+        if (currentUrlPath.startsWith(addTrailingSlash(url.parse(navEntry.children[0].href).pathname.toLowerCase()))) {
             return navEntry;
         }
     }
+}
+
+function addTrailingSlash(path) {
+    return path.endsWith('/') ? path : path + '/';
 }
 
 function selectSidebarNavEntry(navEntry, clearNavEntries) {
