@@ -49,10 +49,10 @@ function redirectHome() {
 }
 
 function changeNavStructures(width) {
-    const toggled = 'toggled' === $('#wrapper').attr('class') ;
+    const wrapper = $('#wrapper');
 
-    if(width<580 && !toggled){
-        $('#wrapper').addClass('toggled');
+    if (width < 580 && wrapper.attr('class') !== 'toggled') {
+        wrapper.addClass('toggled');
     }
 }
 
