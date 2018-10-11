@@ -201,9 +201,7 @@ ClientsUI.initialize = function () {
         getClientApiAccessSecret: function (client_id) {
             if (Roles.userIsInRole(this.userId, 'sys-admin')) {
                 try {
-                    const client = Client.getClientByDocId(client_id);
-
-                    return client.apiAccessSecret;
+                    return Client.getClientByDocId(client_id).apiAccessSecret;
                 }
                 catch (err) {
                     // Error trying to get client's API access secret. Log error and throw exception
@@ -220,9 +218,7 @@ ClientsUI.initialize = function () {
         resetClientApiAccessSecret: function (client_id, resetAllDevicesToo) {
             if (Roles.userIsInRole(this.userId, 'sys-admin')) {
                 try {
-                    const client = Client.getClientByDocId(client_id);
-
-                    client.renewApiAccessGenKey(resetAllDevicesToo);
+                    Client.getClientByDocId(client_id).renewApiAccessGenKey(resetAllDevicesToo);
                 }
                 catch (err) {
                     // Error trying to reset client's API access secret. Log error and throw exception
