@@ -1,0 +1,20 @@
+<template name="clientDevices">
+    <div>
+        <div class="panel panel-login minWidthElement noBoxShadow">
+            <div class="panel-body">
+                <div class="row">
+                    <div class="col-lg-12">
+                        {{#unless Template.subscriptionsReady}}
+                            <p style="color:lightgray; margin-top:1em">Loading...</p>
+                        {{else}}
+                            <h2>DEVICES</h2>
+                            <div class="row">
+                                <p>Placeholder</p>
+                            </div>
+                        {{/unless}}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</template>

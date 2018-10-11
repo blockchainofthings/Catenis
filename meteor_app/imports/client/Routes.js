@@ -68,6 +68,22 @@ FlowRouter.route('/licenses/:clientLicense_id', {
     }
 });
 
+FlowRouter.route('/apiaccess', {
+    action: function () {
+        BlazeLayout.render('clientLayout',{
+            page: 'clientApiAccess'
+        });
+    }
+});
+
+FlowRouter.route('/devices', {
+    action: function () {
+        BlazeLayout.render('clientLayout',{
+            page: 'clientDevices'
+        });
+    }
+});
+
 // System administration routes
 //
 FlowRouter.route('/admin', {
