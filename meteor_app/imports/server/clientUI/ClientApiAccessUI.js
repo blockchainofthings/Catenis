@@ -79,7 +79,7 @@ ClientApiAccessUI.initialize = function () {
                 else {
                     // No active client is associated with currently logged in user.
                     //  Throw exception
-                    Catenis.logger.ERROR('Logged in user not associated with a valid, active client', {
+                    Catenis.logger.ERROR('getCurrentClientApiAccessSecret remote method: logged in user not associated with a valid, active client', {
                         user_id: this.userId
                     });
                     throw new Meteor.Error('ctn_client_not_valid', 'Logged in user not associated with a valid client');
@@ -117,7 +117,7 @@ ClientApiAccessUI.initialize = function () {
                 else {
                     // No active client is associated with currently logged in user.
                     //  Throw exception
-                    Catenis.logger.ERROR('Logged in user not associated with a valid, active client', {
+                    Catenis.logger.ERROR('resetCurrentClientApiAccessSecret remote method: logged in user not associated with a valid, active client', {
                         user_id: this.userId
                     });
                     throw new Meteor.Error('ctn_client_not_valid', 'Logged in user not associated with a valid client');

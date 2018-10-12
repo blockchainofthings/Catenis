@@ -20,7 +20,6 @@ import { Meteor } from 'meteor/meteor';
 import { Catenis } from '../Catenis';
 import { Client } from '../Client';
 import { CommonClientLicenseUI } from '../commonUI/CommonClientLicenseUI';
-import { ClientLicense } from '../ClientLicense';
 
 
 // Definition of function classes
@@ -76,7 +75,7 @@ ClientLicensesUI.initialize = function () {
                 // No active client is associated with currently logged in user.
                 //  Make sure that publication is not started and throw exception
                 this.stop();
-                Catenis.logger.ERROR('Logged in user not associated with an active client', {
+                Catenis.logger.ERROR('currentClientAllClientLicenses publication: logged in user not associated with a valid, active client', {
                     user_id: this.userId
                 });
                 throw new Meteor.Error('ctn_client_not_valid', 'Logged in user not associated with a valid client');
@@ -90,7 +89,7 @@ ClientLicensesUI.initialize = function () {
         }
     });
 
-    Meteor.publish('currentClientAllClientLicenseLicenses', function(client_id) {
+    Meteor.publish('currentClientAllClientLicenseLicenses', function() {
         if (Roles.userIsInRole(this.userId, 'ctn-client')) {
             // Retrieve database doc/rec of client associated with currently logged in user
             const docCurrentClient = Catenis.db.collection.Client.findOne({
@@ -113,7 +112,7 @@ ClientLicensesUI.initialize = function () {
                 // No active client is associated with currently logged in user.
                 //  Make sure that publication is not started and throw exception
                 this.stop();
-                Catenis.logger.ERROR('Logged in user not associated with a valid, active client', {
+                Catenis.logger.ERROR('currentClientAllClientLicenseLicenses publication: logged in user not associated with a valid, active client', {
                     user_id: this.userId
                 });
                 throw new Meteor.Error('ctn_client_not_valid', 'Logged in user not associated with a valid client');
@@ -148,7 +147,7 @@ ClientLicensesUI.initialize = function () {
                 // No active client is associated with currently logged in user.
                 //  Make sure that publication is not started and throw exception
                 this.stop();
-                Catenis.logger.ERROR('Logged in user not associated with a valid, active client', {
+                Catenis.logger.ERROR('currentClientSingleClientLicense publication: logged in user not associated with a valid, active client', {
                     user_id: this.userId
                 });
                 throw new Meteor.Error('ctn_client_not_valid', 'Logged in user not associated with a valid client');
@@ -196,7 +195,7 @@ ClientLicensesUI.initialize = function () {
                 // No active client is associated with currently logged in user.
                 //  Make sure that publication is not started and throw exception
                 this.stop();
-                Catenis.logger.ERROR('Logged in user not associated with a valid, active client', {
+                Catenis.logger.ERROR('currentClientSingleClientLicenseLicense publication: logged in user not associated with a valid, active client', {
                     user_id: this.userId
                 });
                 throw new Meteor.Error('ctn_client_not_valid', 'Logged in user not associated with a valid client');
