@@ -19,10 +19,10 @@ import { Template } from 'meteor/templating';
 
 // References code in other (Catenis) modules on the client
 import { Catenis } from '../ClientCatenis';
+import { DeviceShared } from '../../both/DeviceShared';
 
 // Import template UI
 import './DevicesTemplate.html';
-import { DeviceShared } from '../../both/DeviceShared';
 
 // Import dependent templates
 import './NewDeviceTemplate.js';
