@@ -174,8 +174,6 @@ Device.prototype.enable = function () {
 };
 
 Device.prototype.renewApiAccessGenKey = function (useClientDefaultKey = false) {
-    console.log(this);
-    console.log(this.apiAccessGenKey);
     // Make sure that device is not deleted
     if (this.status !== Device.status.deleted.name &&
         Catenis.db.collection.Device.findOne({_id: this.doc_id, status: Device.status.deleted.name}, {fields:{_id:1}}) !== undefined) {
@@ -192,7 +190,6 @@ Device.prototype.renewApiAccessGenKey = function (useClientDefaultKey = false) {
 
     // Generate new key
     const key = !useClientDefaultKey ? Random.secret() : null;
-    console.log(key);
 
     try {
         Catenis.db.collection.Device.update({_id: this.doc_id}, {$set: {apiAccessGenKey: key, lastApiAccessGenKeyModifiedDate: new Date()}});
