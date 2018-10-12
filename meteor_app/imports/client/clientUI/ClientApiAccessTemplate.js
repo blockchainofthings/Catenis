@@ -150,7 +150,7 @@ Template.clientApiAccess.events({
                     template.state.set('errMsgs', errMsgs);
                 }
                 else {
-                    template.state.set('infoMsg', 'Default API Access Secret successfully reset.');
+                    template.state.set('infoMsg', 'Default API access secret successfully reset.');
                     template.state.set('infoMsgType', 'success');
                 }
             });
