@@ -2354,7 +2354,7 @@ Device.prototype.listAssetHolders = function (assetId, limit, skip) {
             // Try to get device associated with address
             const addrInfo = Catenis.keyStore.getAddressInfo(address);
 
-            if (addrInfo !== null || addrInfo.type !== KeyStore.extKeyType.dev_asst_addr) {
+            if (addrInfo !== null && addrInfo.type === KeyStore.extKeyType.dev_asst_addr.name) {
                 const holdingDevice = CatenisNode.getCatenisNodeByIndex(addrInfo.pathParts.ctnNodeIndex).getClientByIndex(addrInfo.pathParts.clientIndex).getDeviceByIndex(addrInfo.pathParts.deviceIndex);
 
                 if (!deviceAssetHolder.has(holdingDevice.deviceId)) {
