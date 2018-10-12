@@ -66,6 +66,7 @@ import { ClientUI } from './clientUI/ClientUI';
 import { ClientLicensesUI } from './clientUI/ClientLicensesUI';
 import { ClientApiAccessUI } from './clientUI/ClientApiAccessUI';
 import { ClientServiceAccountUI } from './clientUI/ClientServiceAccountUI';
+import { ClientDevicesUI } from './clientUI/ClientDevicesUI';
 // TEST - begin
 //import { resetBitcoinCore } from './test/FundSourceTest';
 //import { TestCatenisColoredCoins } from './test/TestCatenisColoredCoins';
@@ -176,6 +177,7 @@ Meteor.startup(function () {
         ClientLicensesUI.initialize();
         ClientApiAccessUI.initialize();
         ClientServiceAccountUI.initialize();
+        ClientDevicesUI.initialize();
 
         Catenis.logger.INFO('Initialization ended.');
 

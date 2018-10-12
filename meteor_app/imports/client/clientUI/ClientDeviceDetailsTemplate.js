@@ -1,8 +1,8 @@
 /**
- * Created by Claudio on 2017-05-26.
+ * Created by Claudio on 2017-10-12.
  */
 
-//console.log('[DeviceDetailsTemplate.js]: This code just ran.');
+//console.log('[ClientDeviceDetailsTemplate.js]: This code just ran.');
 
 // Module variables
 //
@@ -23,10 +23,10 @@ import { Catenis } from '../ClientCatenis';
 import { DeviceShared } from '../../both/DeviceShared';
 
 // Import template UI
-import './DeviceDetailsTemplate.html';
+import './ClientDeviceDetailsTemplate.html';
 
 // Import dependent templates
-import './EditDeviceTemplate.js';
+import './ClientEditDeviceTemplate.js';
 
 
 // Definition of module (private) functions
@@ -39,7 +39,7 @@ import './EditDeviceTemplate.js';
 // Module code
 //
 
-Template.deviceDetails.onCreated(function () {
+Template.clientDeviceDetails.onCreated(function () {
     this.state = new ReactiveDict();
 
     this.state.set('errMsgs', []);
@@ -55,26 +55,21 @@ Template.deviceDetails.onCreated(function () {
     this.state.set('displayResetApiAccessSecretButton', 'none');
 
     // Subscribe to receive database docs/recs updates
-    this.clientRecordSubs = this.subscribe('clientRecord', this.data.client_id);
-    this.deviceRecordSubs = this.subscribe('deviceRecord', this.data.device_id);
-    this.clientDevicesInfoSubs = this.subscribe('clientDevicesInfo', this.data.client_id);
+    this.currClntDeviceRecordSubs = this.subscribe('currentClientDeviceRecord', this.data.deviceIndex);
+    this.currClntDevicesInfoSubs = this.subscribe('currentClientDevicesInfo');
 });
 
-Template.deviceDetails.onDestroyed(function () {
-    if (this.clientRecordSubs) {
-        this.clientRecordSubs.stop();
+Template.clientDeviceDetails.onDestroyed(function () {
+    if (this.currClntDeviceRecordSubs) {
+        this.currClntDeviceRecordSubs.stop();
     }
 
-    if (this.deviceRecordSubs) {
-        this.deviceRecordSubs.stop();
-    }
-
-    if (this.clientDevicesInfoSubs) {
-        this.clientDevicesInfoSubs.stop();
+    if (this.currClntDevicesInfoSubs) {
+        this.currClntDevicesInfoSubs.stop();
     }
 });
 
-Template.deviceDetails.events({
+Template.clientDeviceDetails.events({
     'click #btnDismissInfo'(events, template) {
         // Clear info message
         template.state.set('infoMsg', undefined);
@@ -100,7 +95,7 @@ Template.deviceDetails.events({
         template.state.set('displayResetApiAccessSecretForm', 'none');
 
         // About to show device's API key modal window
-        Meteor.call('getDeviceApiAccessSecret', template.data.device_id, (error, apiAccessSecret) => {
+        Meteor.call('getCurrentClientDeviceApiAccessSecret', template.data.deviceIndex, (error, apiAccessSecret) => {
             if (error) {
                 console.log('Error retrieving device API access secret:', error);
             }
@@ -154,7 +149,7 @@ Template.deviceDetails.events({
             template.state.set('infoMsg', undefined);
             template.state.set('infoMsgType', 'info');
 
-            Meteor.call('resetDeviceApiAccessSecret', Template.instance().data.device_id , form.resetToClientDefault.checked, (error, key) => {
+            Meteor.call('resetCurrentClientDeviceApiAccessSecret', Template.instance().data.deviceIndex , form.resetToClientDefault.checked, (error, key) => {
                 if (error) {
                     const errMsgs = template.state.get('errMsgs');
                     errMsgs.push('Error resetting device\'s default API access secret: ' + error.toString());
@@ -208,7 +203,7 @@ Template.deviceDetails.events({
         template.state.set('infoMsg', undefined);
         template.state.set('infoMsgType', 'info');
 
-        Meteor.call('deactivateDevice', template.data.device_id, (error) => {
+        Meteor.call('deactivateCurrentClientDevice', template.data.deviceIndex, (error) => {
             if (error) {
                 const errMsgs = template.state.get('errMsgs');
                 errMsgs.push('Error deactivating device: ' + error.toString());
@@ -255,7 +250,7 @@ Template.deviceDetails.events({
         template.state.set('infoMsg', undefined);
         template.state.set('infoMsgType', 'info');
 
-        Meteor.call('activateDevice', template.data.device_id, (error) => {
+        Meteor.call('activateCurrentClientDevice', template.data.deviceIndex, (error) => {
             if (error) {
                 const errMsgs = template.state.get('errMsgs');
                 errMsgs.push('Error activating device: ' + error.toString());
@@ -305,7 +300,7 @@ Template.deviceDetails.events({
             template.state.set('infoMsg', undefined);
             template.state.set('infoMsgType', 'info');
 
-            Meteor.call('deleteDevice', template.data.device_id, (error) => {
+            Meteor.call('deleteCurrentClientDevice', template.data.deviceIndex, (error) => {
                 if (error) {
                     const errMsgs = template.state.get('errMsgs');
                     errMsgs.push('Error deleting device: ' + error.toString());
@@ -324,21 +319,15 @@ Template.deviceDetails.events({
     }
 });
 
-Template.deviceDetails.helpers({
-    client() {
-        return Catenis.db.collection.Client.findOne({_id: Template.instance().data.client_id});
-    },
+Template.clientDeviceDetails.helpers({
     device() {
-        return Catenis.db.collection.Device.findOne({_id: Template.instance().data.device_id});
+        return Catenis.db.collection.Device.findOne();
     },
     clientDevicesInfo() {
         return Catenis.db.collection.ClientDevicesInfo.findOne(1);
     },
     maximumDevicesReached(clientDevicesInfo) {
         return clientDevicesInfo.maxAllowedDevices <= clientDevicesInfo.numDevicesInUse;
-    },
-    clientTitle(client) {
-        return client.props.name || client.clientId;
     },
     deviceTitle(device) {
         return device.props.name || device.deviceId;

@@ -12,7 +12,7 @@
 // Internal node modules
 //import util from 'util';
 // Third-party node modules
-//import config from 'config';
+import BigNumber from 'bignumber.js';
 // Meteor packages
 //import { Meteor } from 'meteor/meteor';
 import { FlowRouter } from 'meteor/kadira:flow-router';
@@ -88,6 +88,36 @@ FlowRouter.route('/devices', {
     action: function () {
         BlazeLayout.render('clientLayout', {
             page: 'clientDevices'
+        });
+    }
+});
+
+FlowRouter.route('/devices/new', {
+    action: function (params) {
+        BlazeLayout.render('clientLayout', {
+            page: 'clientNewDevice'
+        });
+    }
+});
+
+FlowRouter.route('/devices/:deviceIndex', {
+    action: function (params) {
+        BlazeLayout.render('clientLayout', {
+            page: 'clientDeviceDetails',
+            dataContext: {
+                deviceIndex: new BigNumber(params.deviceIndex).toNumber()
+            }
+        });
+    }
+});
+
+FlowRouter.route('/devices/:deviceIndex/edit', {
+    action: function (params) {
+        BlazeLayout.render('clientLayout', {
+            page: 'clientEditDevice',
+            dataContext: {
+                deviceIndex: new BigNumber(params.deviceIndex).toNumber()
+            }
         });
     }
 });
