@@ -131,19 +131,40 @@ ClientServiceAccountUI.initialize = function () {
 
     Meteor.publish('clientBcotPayment', function(bcotPayAddress) {
         if (Roles.userIsInRole(this.userId, 'ctn-client')) {
-            const addrTypeAndPath = Catenis.keyStore.getTypeAndPathByAddress(bcotPayAddress);
+            // Retrieve database doc/rec of client associated with currently logged in user
+            const docCurrentClient = Catenis.db.collection.Client.findOne({
+                user_id: this.userId,
+                status: Client.status.active.name
+            }, {
+                fields: {
+                    _id: 1
+                }
+            });
 
-            if (addrTypeAndPath !== null && addrTypeAndPath.type === KeyStore.extKeyType.cln_bcot_pay_addr.name) {
-                CommonServiceAccountUI.bcotPayment.call(this, addrTypeAndPath);
+            if (docCurrentClient) {
+                const addrTypeAndPath = Catenis.keyStore.getTypeAndPathByAddress(bcotPayAddress);
+
+                if (Client.getClientByDocId(docCurrentClient._id).isValidBcotPaymentAddress(addrTypeAndPath, true)) {
+                    CommonServiceAccountUI.bcotPayment.call(this, addrTypeAndPath);
+                }
+                else {
+                    // Invalid BCOT payment address.
+                    //  Make sure that publication is not started and throw exception
+                    this.stop();
+                    Catenis.logger.ERROR('clientBcotPayment publication: invalid BCOT payment address', {
+                        user_id: this.userId
+                    });
+                    throw new Meteor.Error('client-srv-account.subscribe.clientBcotPayment.failure', 'Invalid BCOT payment address');
+                }
             }
             else {
-                // Invalid BCOT payment address.
+                // No active client is associated with currently logged in user.
                 //  Make sure that publication is not started and throw exception
                 this.stop();
-                Catenis.logger.ERROR('clientBcotPayment publication: invalid BCOT payment address', {
+                Catenis.logger.ERROR('clientBcotPayment publication: logged in user not associated with a valid, active client', {
                     user_id: this.userId
                 });
-                throw new Meteor.Error('client-srv-account.subscribe.clientBcotPayment.failure', 'Invalid BCOT payment address');
+                throw new Meteor.Error('ctn_client_not_valid', 'Logged in user not associated with a valid client');
             }
         }
         else {

@@ -40,6 +40,7 @@ import { CCFundSource } from './CCFundSource';
 import { ClientLicense } from './ClientLicense';
 import { License } from './License';
 import { Util } from './Util';
+import { KeyStore } from './KeyStore';
 
 // Config entries
 const clientConfig = config.get('client');
@@ -426,6 +427,15 @@ Client.prototype.delete = function (deletedDate) {
 
 Client.prototype.newBcotPaymentAddress = function () {
     return this.bcotPaymentAddr.newAddressKeys().getAddress();
+};
+
+Client.prototype.isValidBcotPaymentAddress = function (address, isAddrTypeAndPath = false) {
+    const addrTypeAndPath = isAddrTypeAndPath ? address : Catenis.keyStore.getTypeAndPathByAddress(address);
+    let addrPathParts;
+
+    return addrTypeAndPath !== null && addrTypeAndPath.type === KeyStore.extKeyType.cln_bcot_pay_addr.name
+            && (addrPathParts = KeyStore.getPathParts(addrTypeAndPath)).ctnNodeIndex === this.ctnNode.ctnNodeIndex
+            && addrPathParts.clientIndex === this.clientIndex;
 };
 
 // Returns current balance of client's service account

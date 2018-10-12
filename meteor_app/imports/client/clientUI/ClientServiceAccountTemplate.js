@@ -43,15 +43,10 @@ Template.clientServiceAccount.onCreated(function () {
     this.state.set('bcotPayAddress', undefined);
 
     // Subscribe to receive database docs/recs updates
-    this.currentClient = this.subscribe('currentClient');
     this.currClntServiceAccountBalanceSubs = this.subscribe('currentClientServiceAccountBalance');
 });
 
 Template.clientServiceAccount.onDestroyed(function () {
-    if (this.currentClient) {
-        this.currentClient.stop();
-    }
-
     if (this.currClntServiceAccountBalanceSubs) {
         this.currClntServiceAccountBalanceSubs.stop();
     }
@@ -95,9 +90,6 @@ Template.clientServiceAccount.events({
 });
 
 Template.clientServiceAccount.helpers({
-    client() {
-        return Catenis.db.collection.Client.findOne();
-    },
     serviceAccountBalance() {
         return Catenis.db.collection.ServiceAccountBalance.findOne(1);
     },
