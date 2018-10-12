@@ -331,28 +331,14 @@ ClientsUI.initialize = function () {
         },
         newBcotPaymentAddress: function (client_id) {
             if (Roles.userIsInRole(this.userId, 'sys-admin')) {
-                // Retrieve Client doc/rec
-                const docClient = Catenis.db.collection.Client.findOne({
-                    _id: client_id
-                }, {
-                    fields: {
-                        clientId: 1
-                    }
-                });
-
-                let client = undefined;
-
-                if (docClient !== undefined) {
-                    client = Client.getClientByClientId(docClient.clientId);
+                try {
+                    return Client.getClientByDocId(client_id).newBcotPaymentAddress();
                 }
-
-                if (client === undefined) {
-                    // Invalid client. Log error and throw exception
-                    Catenis.logger.ERROR('Could not find client to get blockchain address to receive BCOT token payment', {client_id: client_id});
-                    throw new Meteor.Error('clients.bcot-pay-addr.invalid-client', 'Could not find client to get blockchain address to receive BCOT token payment');
+                catch (err) {
+                    // Error trying to retrieve new BCOT payment address. Log error and throw exception
+                    Catenis.logger.ERROR('Failure retrieving BCOT payment address for client (doc_id: %s).', client_id, err);
+                    throw new Meteor.Error('client.newBcotPaymentAddress.failure', 'Failure retrieving BCOT payment address for client: ' + err.toString());
                 }
-
-                return client.newBcotPaymentAddress();
             }
             else {
                 // User not logged in or not a system administrator.
@@ -1007,7 +993,7 @@ ClientsUI.initialize = function () {
         if (Roles.userIsInRole(this.userId, 'sys-admin')) {
             const typeAndPath = Catenis.keyStore.getTypeAndPathByAddress(bcotPayAddress);
 
-            if (typeAndPath === null) {
+            if (typeAndPath === null || typeAndPath.type !== KeyStore.extKeyType.cln_bcot_pay_addr.name) {
                 // Subscription made with an invalid address. Log error and throw exception
                 Catenis.logger.ERROR('Subscription to method \'bcotPayment\' made with an invalid address', {bcotPayAddress: bcotPayAddress});
                 throw new Meteor.Error('clients.subscribe.bcot-payment.invalid-param', 'Subscription to method \'bcotPayment\' made with an invalid address');
