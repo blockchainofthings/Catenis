@@ -24,8 +24,10 @@ import { CatenisNode } from '../CatenisNode';
 import { Client } from '../Client';
 import { ClientLicense } from '../ClientLicense';
 import { License } from '../License';
-import { Util } from '../Util';
 import { CommonClientLicenseUI } from '../commonUI/CommonClientLicenseUI';
+import { CommonServiceAccountUI } from '../commonUI/CommonServiceAccountUI';
+import { KeyStore } from '../KeyStore';
+
 
 // Definition of function classes
 //
@@ -927,59 +929,21 @@ ClientsUI.initialize = function () {
 
     Meteor.publish('serviceAccountBalance', function (client_id) {
         if (Roles.userIsInRole(this.userId, 'sys-admin')) {
-            // Retrieve Client doc/rec
-            const docClient = Catenis.db.collection.Client.findOne({
-                _id: client_id
-            }, {
-                fields: {
-                    clientId: 1
-                }
-            });
+            // Get client object
+            let client;
 
-            let client = undefined;
-
-            if (docClient !== undefined) {
-                client = Client.getClientByClientId(docClient.clientId);
+            try {
+                client = Client.getClientByDocId(client_id);
             }
-
-            if (client === undefined) {
-                // Subscription made with an invalid Client doc/rec ID. Log error and throw exception
+            catch (err) {
+                // Subscription made with an invalid Client doc/rec ID.
+                //  Make sure that publication is not started, log error and throw exception
+                this.stop();
                 Catenis.logger.ERROR('Subscription to method \'serviceAccountBalance\' made with an invalid client', {client_id: client_id});
                 throw new Meteor.Error('clients.subscribe.service-account-balance.invalid-param', 'Subscription to method \'serviceAccountBalance\' made with an invalid client');
             }
 
-            const now = new Date();
-            this.added('ServiceAccountBalance', 1, {
-                balance: Util.formatCatenisServiceCredits(client.serviceAccountBalance())
-            });
-
-            const observeHandle = Catenis.db.collection.SentTransaction.find({
-                sentDate: {
-                    $gte: now
-                },
-                $or: [{
-                    type: 'credit_service_account',
-                    'info.creditServiceAccount.clientId': client.clientId
-                }, {
-                    type: 'spend_service_credit',
-                    'info.spendServiceCredit.clientIds': client.clientId
-                }]
-            }, {
-                fields: {
-                    _id: 1
-                }
-            }).observe({
-                added: (doc) => {
-                    // Get updated service account balance
-                    this.changed('ServiceAccountBalance', 1, {
-                        balance: Util.formatCatenisServiceCredits(client.serviceAccountBalance())
-                    });
-                }
-            });
-
-            this.ready();
-
-            this.onStop(() => observeHandle.stop());
+            CommonServiceAccountUI.clientServiceAccountBalance.call(this, client);
         }
         else {
             // User not logged in or not a system administrator
@@ -999,65 +963,7 @@ ClientsUI.initialize = function () {
                 throw new Meteor.Error('clients.subscribe.bcot-payment.invalid-param', 'Subscription to method \'bcotPayment\' made with an invalid address');
             }
 
-            const receivedAmount = {
-                unconfirmed: 0,
-                confirmed: 0
-            };
-            let initializing = true;
-
-            const observeHandle = Catenis.db.collection.ReceivedTransaction.find({
-                'info.bcotPayment.bcotPayAddressPath': typeAndPath.path
-            }, {
-                fields: {
-                    'confirmation.confirmed': 1,
-                    info: 1
-                }
-            }).observe({
-                added: (doc) => {
-                    // Get paid amount paid to address
-                    if (doc.confirmation.confirmed) {
-                        receivedAmount.confirmed += doc.info.bcotPayment.paidAmount;
-                    }
-                    else {
-                        receivedAmount.unconfirmed += doc.info.bcotPayment.paidAmount;
-                    }
-
-                    if (!initializing) {
-                        this.changed('ReceivedBcotAmount', 1, {
-                            unconfirmed: Util.formatCoins(receivedAmount.unconfirmed),
-                            confirmed: Util.formatCoins(receivedAmount.confirmed)
-                        });
-                    }
-                },
-
-                changed: (newDoc, oldDoc) => {
-                    // Make sure that transaction is being confirmed
-                    if (newDoc.confirmation.confirmed && !oldDoc.confirmation.confirmed) {
-                        // Get total amount paid to address
-                        receivedAmount.confirmed += newDoc.info.bcotPayment.paidAmount;
-                        receivedAmount.unconfirmed -= newDoc.info.bcotPayment.paidAmount;
-
-                        if (receivedAmount.unconfirmed < 0) {
-                            receivedAmount.unconfirmed = 0;
-                        }
-
-                        this.changed('ReceivedBcotAmount', 1, {
-                            unconfirmed: Util.formatCoins(receivedAmount.unconfirmed),
-                            confirmed: Util.formatCoins(receivedAmount.confirmed)
-                        });
-                    }
-                }
-            });
-
-            initializing = false;
-
-            this.added('ReceivedBcotAmount', 1, {
-                unconfirmed: Util.formatCoins(receivedAmount.unconfirmed),
-                confirmed: Util.formatCoins(receivedAmount.confirmed)
-            });
-            this.ready();
-
-            this.onStop(() => observeHandle.stop());
+            CommonServiceAccountUI.bcotPayment.call(this, typeAndPath);
         }
         else {
             // User not logged in or not a system administrator

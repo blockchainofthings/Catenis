@@ -76,6 +76,14 @@ FlowRouter.route('/apiaccess', {
     }
 });
 
+FlowRouter.route('/serviceaccount', {
+    action: function () {
+        BlazeLayout.render('clientLayout',{
+            page: 'clientServiceAccount'
+        });
+    }
+});
+
 FlowRouter.route('/devices', {
     action: function () {
         BlazeLayout.render('clientLayout',{
