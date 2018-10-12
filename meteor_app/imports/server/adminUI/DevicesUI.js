@@ -58,13 +58,11 @@ DevicesUI.initialize = function () {
         getDeviceApiAccessSecret: function (device_id) {
             if (Roles.userIsInRole(this.userId, 'sys-admin')) {
                 try {
-                    const device = Device.getDeviceByDocId(device_id);
-
-                    return device.apiAccessSecret;
+                    return Device.getDeviceByDocId(device_id).apiAccessSecret;
                 }
                 catch (err) {
                     // Error trying to get device's API access secret. Log error and throw exception
-                    Catenis.logger.ERROR('Failure trying to get device\'s API access secret.', err);
+                    Catenis.logger.ERROR('Failure trying to get device\'s (doc_id: %s) API access secret.', device_id, err);
                     throw new Meteor.Error('device.getDeviceApiAccessSecret.failure', 'Failure trying to get device\'s API access secret: ' + err.toString());
                 }
             }
@@ -77,13 +75,11 @@ DevicesUI.initialize = function () {
         resetDeviceApiAccessSecret: function (device_id, resetToClientDefault) {
             if (Roles.userIsInRole(this.userId, 'sys-admin')) {
                 try {
-                    const device = Device.getDeviceByDocId(device_id);
-
-                    device.renewApiAccessGenKey(resetToClientDefault);
+                    Device.getDeviceByDocId(device_id).renewApiAccessGenKey(resetToClientDefault);
                 }
                 catch (err) {
                     // Error trying to reset device's API access secret. Log error and throw exception
-                    Catenis.logger.ERROR('Failure trying to renew device\'s API access generation key.', err);
+                    Catenis.logger.ERROR('Failure trying to renew device\'s (doc_id: %s) API access generation key.', device_id, err);
                     throw new Meteor.Error('device.resetDeviceApiAccessSecret.failure', 'Failure trying to renew device\'s API access generation key: ' + err.toString());
                 }
             }
@@ -95,8 +91,6 @@ DevicesUI.initialize = function () {
         },
         createNewDevice: function (client_id, deviceInfo) {
             if (Roles.userIsInRole(this.userId, 'sys-admin')) {
-                let deviceId;
-
                 try {
                     const props = {};
 
@@ -110,15 +104,13 @@ DevicesUI.initialize = function () {
 
                     props.public = deviceInfo.public;
 
-                    deviceId = Client.getClientByDocId(client_id).createDevice(props, !deviceInfo.assignClientAPIAccessSecret);
+                    return Client.getClientByDocId(client_id).createDevice(props, !deviceInfo.assignClientAPIAccessSecret);
                 }
                 catch (err) {
                     // Error trying to create new device. Log error and throw exception
                     Catenis.logger.ERROR('Failure trying to create new device.', err);
                     throw new Meteor.Error('device.create.failure', 'Failure trying to create new device: ' + err.toString());
                 }
-
-                return deviceId;
             }
             else {
                 // User not logged in or not a system administrator.
@@ -143,7 +135,7 @@ DevicesUI.initialize = function () {
                 }
                 catch (err) {
                     // Error trying to update device data. Log error and throw exception
-                    Catenis.logger.ERROR('Failure trying to update device data.', err);
+                    Catenis.logger.ERROR('Failure trying to update device (doc_id) data.', device_id, err);
                     throw new Meteor.Error('device.update.failure', 'Failure trying to update device data: ' + err.toString());
                 }
             }
