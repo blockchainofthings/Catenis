@@ -43,7 +43,7 @@ FlowRouter.route('/', {
 
 FlowRouter.route('/clientaccount', {
     action: function () {
-        BlazeLayout.render('clientLayout',{
+        BlazeLayout.render('clientLayout', {
             page: 'clientAccount'
         });
     }
@@ -51,7 +51,7 @@ FlowRouter.route('/clientaccount', {
 
 FlowRouter.route('/licenses/', {
     action: function () {
-        BlazeLayout.render('clientLayout',{
+        BlazeLayout.render('clientLayout', {
             page: 'clientClientLicenses'
         });
     }
@@ -59,7 +59,7 @@ FlowRouter.route('/licenses/', {
 
 FlowRouter.route('/licenses/:clientLicense_id', {
     action: function (params) {
-        BlazeLayout.render('clientLayout',{
+        BlazeLayout.render('clientLayout', {
             page: 'clientClientLicenseDetails',
             dataContext: {
                 clientLicense_id: params.clientLicense_id
@@ -70,7 +70,7 @@ FlowRouter.route('/licenses/:clientLicense_id', {
 
 FlowRouter.route('/apiaccess', {
     action: function () {
-        BlazeLayout.render('clientLayout',{
+        BlazeLayout.render('clientLayout', {
             page: 'clientApiAccess'
         });
     }
@@ -78,7 +78,7 @@ FlowRouter.route('/apiaccess', {
 
 FlowRouter.route('/serviceaccount', {
     action: function () {
-        BlazeLayout.render('clientLayout',{
+        BlazeLayout.render('clientLayout', {
             page: 'clientServiceAccount'
         });
     }
@@ -86,7 +86,7 @@ FlowRouter.route('/serviceaccount', {
 
 FlowRouter.route('/devices', {
     action: function () {
-        BlazeLayout.render('clientLayout',{
+        BlazeLayout.render('clientLayout', {
             page: 'clientDevices'
         });
     }
@@ -162,7 +162,7 @@ FlowRouter.route('/admin/licenses/:license_id', {
 });
 
 FlowRouter.route('/admin/clients/new', {
-    action: function (params, queryParams) {
+    action: function (params) {
         BlazeLayout.render('adminLayout', {
             page: 'newClient'
         });
@@ -170,7 +170,7 @@ FlowRouter.route('/admin/clients/new', {
 });
 
 FlowRouter.route('/admin/clients/:client_id', {
-    action: function (params, queryParams) {
+    action: function (params) {
         BlazeLayout.render('adminLayout', {
             page: 'clientDetails',
             dataContext: {
@@ -181,7 +181,7 @@ FlowRouter.route('/admin/clients/:client_id', {
 });
 
 FlowRouter.route('/admin/clients/:client_id/edit', {
-    action: function (params, queryParams) {
+    action: function (params) {
         BlazeLayout.render('adminLayout', {
             page: 'editClient',
             dataContext: {
@@ -192,7 +192,7 @@ FlowRouter.route('/admin/clients/:client_id/edit', {
 });
 
 FlowRouter.route('/admin/clients/:client_id/licenses', {
-    action: function (params, queryParams) {
+    action: function (params) {
         BlazeLayout.render('adminLayout', {
             page: 'clientLicenses',
             dataContext: {
@@ -203,7 +203,7 @@ FlowRouter.route('/admin/clients/:client_id/licenses', {
 });
 
 FlowRouter.route('/admin/clients/:client_id/licenses/new', {
-    action: function (params, queryParams) {
+    action: function (params) {
         BlazeLayout.render('adminLayout', {
             page: 'newClientLicense',
             dataContext: {
@@ -214,7 +214,7 @@ FlowRouter.route('/admin/clients/:client_id/licenses/new', {
 });
 
 FlowRouter.route('/admin/clients/:client_id/licenses/:clientLicense_id', {
-    action: function (params, queryParams) {
+    action: function (params) {
         BlazeLayout.render('adminLayout', {
             page: 'clientLicenseDetails',
             dataContext: {
@@ -226,7 +226,7 @@ FlowRouter.route('/admin/clients/:client_id/licenses/:clientLicense_id', {
 });
 
 FlowRouter.route('/admin/clients/:client_id/serviceaccount', {
-    action: function (params, queryParams) {
+    action: function (params) {
         BlazeLayout.render('adminLayout', {
             page: 'serviceAccount',
             dataContext: {
@@ -237,7 +237,7 @@ FlowRouter.route('/admin/clients/:client_id/serviceaccount', {
 });
 
 FlowRouter.route('/admin/clients/:client_id/devices', {
-    action: function (params, queryParams) {
+    action: function (params) {
         BlazeLayout.render('adminLayout', {
             page: 'devices',
             dataContext: {
@@ -248,7 +248,7 @@ FlowRouter.route('/admin/clients/:client_id/devices', {
 });
 
 FlowRouter.route('/admin/clients/:client_id/devices/new', {
-    action: function (params, queryParams) {
+    action: function (params) {
         BlazeLayout.render('adminLayout', {
             page: 'newDevice',
             dataContext: {
@@ -277,17 +277,6 @@ FlowRouter.route('/admin/clients/:client_id/devices/:device_id/edit', {
             dataContext: {
                 client_id: params.client_id,
                 device_id: params.device_id
-            }
-        });
-    }
-});
-
-FlowRouter.route('/admin/clients/:user_id/newdevice', {
-    action: function (params, queryParams) {
-        BlazeLayout.render('adminLayout', {
-            page: 'newDevice',
-            dataContext: {
-                user_id: params.user_id
             }
         });
     }
