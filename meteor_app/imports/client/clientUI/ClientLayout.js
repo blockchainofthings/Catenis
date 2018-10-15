@@ -31,6 +31,7 @@ import './ClientHomeTemplate.js';
 import './ClientAccountTemplate.js';
 import './ClientClientLicensesTemplate.js';
 import './ClientApiAccessTemplate.js';
+import './ClientPaidServicesTemplate.js';
 import './ClientServiceAccountTemplate.js';
 import './ClientDevicesTemplate.js';
 

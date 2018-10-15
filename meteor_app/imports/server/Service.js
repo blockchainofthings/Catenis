@@ -503,6 +503,8 @@ Service.sendMessageServicePrice = function () {
 //    estimatedServiceCost: [Number], - Estimated cost, in satoshis, of the service
 //    priceMarkup: [Number], - Markup used to calculate the price of the service
 //    btcServicePrice: [Number], - Price of the service expressed in (bitcoin) satoshis
+//    bitcoinPrice: [Number] - Bitcoin price, in USD, used to calculate exchange rate
+//    bcotPrice: [Number] - BCOT token price, in USD, used to calculate exchange rate
 //    exchangeRate: [Number], - Bitcoin to BCOT token exchange rate used to calculate final price
 //    finalServicePrice: [Number] - Price charged for the service expressed in Catenis service credit's lowest units
 //  }
@@ -562,26 +564,31 @@ Service.avrgDebitServAccTxCostPerServCtrl = {
 Service.clientPaidService = Object.freeze({
     log_message: Object.freeze({
         name: 'log_message',
+        label: 'Log Message',
         description: 'Record a message onto the blockchain',
         costFunction: estimatedLogMessageTxCost
     }),
     send_message: Object.freeze({
         name: 'send_message',
+        label: 'Send Message',
         description: 'Record a message onto the blockchain addressing it to another device (with no read confirmation)',
         costFunction: estimatedSendMessageTxCost
     }),
     send_msg_read_confirm: Object.freeze({
         name: 'send_msg_read_confirm',
+        label: 'Send Message w/Read Confirmation',
         description: 'Record a message onto the blockchain addressing it to another device, requesting to receive a read confirm',
         costFunction: estimatedSendMessageReadConfirmTxCost
     }),
     issue_asset: Object.freeze({
         name: 'issue_asset',
+        label: 'Issue Asset',
         description: 'Issue an amount of a new Catenis asset',
         costFunction: estimatedIssueAssetTxCost
     }),
     transfer_asset: Object.freeze({
         name: 'transfer_asset',
+        label: 'Transfer Asset',
         description: 'Transfer an amount of a Catenis asset to another device',
         costFunction: estimatedTransferAssetTxCost
     })
@@ -1035,7 +1042,7 @@ function numPrePaidServices () {
 //    exchangeRate: [Number], - Bitcoin to BCOT token (1 BTC = x BCOT) exchange rate used to calculate final price
 //    finalServicePrice: [Number] - Price charged for the service expressed in Catenis service credit's lowest units
 //  }
-function getServicePrice(paidService) {
+export function getServicePrice(paidService) {
     const result = {
         estimatedServiceCost: paidService.costFunction(),
         priceMarkup: cfgSettings.priceMarkup,

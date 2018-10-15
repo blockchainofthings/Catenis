@@ -38,6 +38,7 @@ import './ClientsTemplate.js';
 import './DeviceDetailsTemplate.js';
 import './NewClientTemplate.js';
 import './NewDeviceTemplate.js';
+import './PaidServicesTemplate.js';
 
 
 // Definition of module (private) functions

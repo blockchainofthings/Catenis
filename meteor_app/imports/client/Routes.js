@@ -76,6 +76,25 @@ FlowRouter.route('/apiaccess', {
     }
 });
 
+FlowRouter.route('/paidservices', {
+    action: function () {
+        BlazeLayout.render('clientLayout', {
+            page: 'clientPaidServices'
+        });
+    }
+});
+
+FlowRouter.route('/paidservices/:service_id', {
+    action: function (params) {
+        BlazeLayout.render('clientLayout', {
+            page: 'clientPaidServiceDetails',
+            dataContext: {
+                service_id: params.service_id
+            }
+        });
+    }
+});
+
 FlowRouter.route('/serviceaccount', {
     action: function () {
         BlazeLayout.render('clientLayout', {
@@ -172,14 +191,6 @@ FlowRouter.route('/admin/licenses', {
     }
 });
 
-FlowRouter.route('/admin/clients', {
-    action: function () {
-        BlazeLayout.render('adminLayout', {
-            page: 'clients'
-        });
-    }
-});
-
 FlowRouter.route('/admin/licenses/:license_id', {
     action: function (params) {
         BlazeLayout.render('adminLayout', {
@@ -187,6 +198,33 @@ FlowRouter.route('/admin/licenses/:license_id', {
             dataContext: {
                 license_id: params.license_id
             }
+        });
+    }
+});
+
+FlowRouter.route('/admin/paidservices', {
+    action: function () {
+        BlazeLayout.render('adminLayout', {
+            page: 'paidServices'
+        });
+    }
+});
+
+FlowRouter.route('/admin/paidservices/:service_id', {
+    action: function (params) {
+        BlazeLayout.render('adminLayout', {
+            page: 'paidServiceDetails',
+            dataContext: {
+                service_id: params.service_id
+            }
+        });
+    }
+});
+
+FlowRouter.route('/admin/clients', {
+    action: function () {
+        BlazeLayout.render('adminLayout', {
+            page: 'clients'
         });
     }
 });

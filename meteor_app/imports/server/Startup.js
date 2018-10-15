@@ -62,9 +62,11 @@ import { LicenseExpireRemindEmailNotify } from './LicenseExpireRemindEmailNotify
 import { DevicesDisableEmailNotify } from './DevicesDisableEmailNotify';
 import { ClientLicense } from './ClientLicense';
 import { LicensesUI } from './adminUI/LicensesUI';
+import { PaidServicesUI } from './adminUI/PaidServicesUI';
 import { ClientUI } from './clientUI/ClientUI';
 import { ClientLicensesUI } from './clientUI/ClientLicensesUI';
 import { ClientApiAccessUI } from './clientUI/ClientApiAccessUI';
+import { ClientPaidServicesUI } from './clientUI/ClientPaidServicesUI';
 import { ClientServiceAccountUI } from './clientUI/ClientServiceAccountUI';
 import { ClientDevicesUI } from './clientUI/ClientDevicesUI';
 // TEST - begin
@@ -170,12 +172,14 @@ Meteor.startup(function () {
         SystemFundingUI.initialize();
         BcotUsageReportUI.initialize();
         LicensesUI.initialize();
+        PaidServicesUI.initialize();
         ClientsUI.initialize();
         DevicesUI.initialize();
 
         ClientUI.initialize();
         ClientLicensesUI.initialize();
         ClientApiAccessUI.initialize();
+        ClientPaidServicesUI.initialize();
         ClientServiceAccountUI.initialize();
         ClientDevicesUI.initialize();
 
