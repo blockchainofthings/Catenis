@@ -377,7 +377,7 @@ Billing {
   clientId: [string],  // ID of client to which service is charged
   deviceId: [string],  // ID of device that actually consumed the service
   billingMode: [string],  // Billing mode used for charging the service. Available values (from Client.billingMode): 'pre-paid', 'post-paid'
-  service: [string],  // Name of the consumed service. Available values (from Service.clientPaidService): 'log_message', 'send_message', 'send_msg_read_confirm', 'issue_locked_asset', 'issue_unlocked_asset', 'transfer_asset'
+  service: [string],  // Name of the consumed service. Available values (from Service.clientPaidService): 'log_message', 'send_message', 'send_msg_read_confirm', 'issue_asset', 'transfer_asset'
   serviceDate: [date/time],  // Date and time when service has been consumed
   serviceTx: {  // Catenis transaction used to convey the consumed service
     txid: [string],  // Blockchain attributed ID (hash) of service transaction
