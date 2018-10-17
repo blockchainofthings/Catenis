@@ -19,7 +19,8 @@ import { Meteor } from 'meteor/meteor';
 // References code in other (Catenis) modules
 import { Catenis } from '../Catenis';
 import { Client } from '../Client';
-import { CommonClientDevicesUI } from '../commonUI/CommonClientDevicesUI';
+import { CommonDevicesUI } from '../commonUI/CommonDevicesUI';
+import { Billing } from '../Billing';
 
 
 // Definition of function classes
@@ -347,7 +348,7 @@ ClientDevicesUI.initialize = function () {
     });
 
     // Declaration of publications
-    Meteor.publish('currentClientDevices', function() {
+    Meteor.publish('currentClientDevices', function(addDeleted = false) {
         if (Roles.userIsInRole(this.userId, 'ctn-client')) {
             // Retrieve database doc/rec of client associated with currently logged in user
             const docCurrentClient = Catenis.db.collection.Client.findOne({
@@ -360,10 +361,17 @@ ClientDevicesUI.initialize = function () {
             });
 
             if (docCurrentClient) {
-                return Catenis.db.collection.Device.find({
-                    client_id: docCurrentClient._id,
-                    status: {$ne: 'deleted'}
-                }, {
+                const selector = {
+                    client_id: docCurrentClient._id
+                };
+
+                if (!addDeleted) {
+                    selector.status = {
+                        $ne: 'deleted'
+                    }
+                }
+
+                return Catenis.db.collection.Device.find(selector, {
                     fields: {
                         _id: 1,
                         client_id: 1,
@@ -451,13 +459,75 @@ ClientDevicesUI.initialize = function () {
             });
 
             if (docCurrentClient) {
-                CommonClientDevicesUI.clientDevicesInfo.call(this, docCurrentClient._id);
+                CommonDevicesUI.clientDevicesInfo.call(this, docCurrentClient._id);
             }
             else {
                 // No active client is associated with currently logged in user.
                 //  Make sure that publication is not started and throw exception
                 this.stop();
                 Catenis.logger.ERROR('currentClientDevicesInfo publication: logged in user not associated with a valid, active client', {
+                    user_id: this.userId
+                });
+                throw new Meteor.Error('ctn_client_not_valid', 'Logged in user not associated with a valid client');
+            }
+        }
+        else {
+            // User not logged in or not a Catenis client.
+            //  Make sure that publication is not started and throw exception
+            this.stop();
+            throw new Meteor.Error('ctn_client_no_permission', 'No permission; must be logged in as a Catenis client to perform this task');
+        }
+    });
+
+    Meteor.publish('currentClientBillingDevice', function(billing_id) {
+        if (Roles.userIsInRole(this.userId, 'ctn-client')) {
+            // Retrieve database doc/rec of client associated with currently logged in user
+            const docCurrentClient = Catenis.db.collection.Client.findOne({
+                user_id: this.userId,
+                status: Client.status.active.name
+            }, {
+                fields: {
+                    _id: 1,
+                    clientId: 1
+                }
+            });
+
+            if (docCurrentClient) {
+                // Make sure that billing record is associated with currently logged in client
+                const docBilling = Catenis.db.collection.Billing.findOne({
+                    _id: billing_id,
+                    type: Billing.docType.original.name,
+                    clientId: docCurrentClient.clientId
+                }, {
+                    fields: {
+                        deviceId: 1
+                    }
+                });
+
+                if (docBilling) {
+                    return Catenis.db.collection.Device.find({
+                        client_id: docCurrentClient._id,
+                        deviceId: docBilling.deviceId
+                    }, {
+                        fields: {
+                            _id: 1,
+                            client_id: 1,
+                            deviceId: 1,
+                            index: 1,
+                            props: 1,
+                            status: 1
+                        }
+                    });
+                }
+                else {
+                    this.ready();
+                }
+            }
+            else {
+                // No active client is associated with currently logged in user.
+                //  Make sure that publication is not started and throw exception
+                this.stop();
+                Catenis.logger.ERROR('currentClientBillingDevice publication: logged in user not associated with a valid, active client', {
                     user_id: this.userId
                 });
                 throw new Meteor.Error('ctn_client_not_valid', 'Logged in user not associated with a valid client');

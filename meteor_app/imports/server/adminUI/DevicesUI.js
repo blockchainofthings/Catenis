@@ -21,7 +21,8 @@ import { Roles } from 'meteor/alanning:roles';
 import { Catenis } from '../Catenis';
 import { Device } from '../Device';
 import { Client } from '../Client';
-import { CommonClientDevicesUI } from '../commonUI/CommonClientDevicesUI';
+import { Billing } from '../Billing';
+import { CommonDevicesUI } from '../commonUI/CommonDevicesUI';
 
 
 // Definition of function classes
@@ -200,12 +201,19 @@ DevicesUI.initialize = function () {
     });
 
     // Declaration of publications
-    Meteor.publish('clientDevices', function (client_id) {
+    Meteor.publish('clientDevices', function (client_id, addDeleted = false) {
         if (Roles.userIsInRole(this.userId, 'sys-admin')) {
-            return Catenis.db.collection.Device.find({
-                client_id: client_id,
-                status: {$ne: 'deleted'}
-            }, {
+            const selector = {
+                client_id: client_id
+            };
+
+            if (!addDeleted) {
+                selector.status = {
+                    $ne: 'deleted'
+                }
+            }
+
+            return Catenis.db.collection.Device.find(selector, {
                 fields: {
                     _id: 1,
                     client_id: 1,
@@ -249,7 +257,44 @@ DevicesUI.initialize = function () {
 
     Meteor.publish('clientDevicesInfo', function(client_id) {
         if (Roles.userIsInRole(this.userId, 'sys-admin')) {
-            CommonClientDevicesUI.clientDevicesInfo.call(this, client_id);
+            CommonDevicesUI.clientDevicesInfo.call(this, client_id);
+        }
+        else {
+            // User not logged in or not a system administrator
+            //  Make sure that publication is not started and throw exception
+            this.stop();
+            throw new Meteor.Error('ctn_admin_no_permission', 'No permission; must be logged in as a system administrator to perform this task');
+        }
+    });
+
+    Meteor.publish('billingDevice', function (billing_id) {
+        if (Roles.userIsInRole(this.userId, 'sys-admin')) {
+            const docBilling = Catenis.db.collection.Billing.findOne({
+                _id: billing_id,
+                type: Billing.docType.original.name
+            }, {
+                fields: {
+                    deviceId: 1
+                }
+            });
+
+            if (docBilling) {
+                return Catenis.db.collection.Device.find({
+                    deviceId: docBilling.deviceId
+                }, {
+                    fields: {
+                        _id: 1,
+                        client_id: 1,
+                        deviceId: 1,
+                        index: 1,
+                        props: 1,
+                        status: 1
+                    }
+                });
+            }
+            else {
+                this.ready();
+            }
         }
         else {
             // User not logged in or not a system administrator

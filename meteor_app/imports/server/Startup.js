@@ -69,6 +69,8 @@ import { ClientApiAccessUI } from './clientUI/ClientApiAccessUI';
 import { ClientPaidServicesUI } from './clientUI/ClientPaidServicesUI';
 import { ClientServiceAccountUI } from './clientUI/ClientServiceAccountUI';
 import { ClientDevicesUI } from './clientUI/ClientDevicesUI';
+import { ServiceBillingUI } from './adminUI/ServiceBillingUI';
+import { ClientServiceBillingUI } from './clientUI/ClientServiceBillingUI';
 // TEST - begin
 //import { resetBitcoinCore } from './test/FundSourceTest';
 //import { TestCatenisColoredCoins } from './test/TestCatenisColoredCoins';
@@ -113,6 +115,7 @@ Meteor.startup(function () {
         Database.fixBillingExchangeRate();
         Database.removeBcotExchangeRateColl();
         Database.addMissingClientTimeZone();
+        Database.addMissingBtcServicePriceField();
         Application.initialize();
         AccountsEmail.initialize();
         LicenseExpireEmailNotify.initialize();
@@ -174,6 +177,7 @@ Meteor.startup(function () {
         LicensesUI.initialize();
         PaidServicesUI.initialize();
         ClientsUI.initialize();
+        ServiceBillingUI.initialize();
         DevicesUI.initialize();
 
         ClientUI.initialize();
@@ -181,6 +185,7 @@ Meteor.startup(function () {
         ClientApiAccessUI.initialize();
         ClientPaidServicesUI.initialize();
         ClientServiceAccountUI.initialize();
+        ClientServiceBillingUI.initialize();
         ClientDevicesUI.initialize();
 
         Catenis.logger.INFO('Initialization ended.');

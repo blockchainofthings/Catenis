@@ -1625,6 +1625,41 @@ Database.addMissingClientTimeZone = function () {
     }
 };
 
+//** Temporary method used to add missing btcServicePrice field of Billing collection docs/recs
+//import BigNumber from 'bignumber.js';
+
+Database.addMissingBtcServicePriceField = function () {
+    let countUpdatedDocs = 0;
+
+    Catenis.db.collection.Billing.find({
+        btcServicePrice: {
+            $exists: false
+        }
+    }, {
+        fields: {
+            _id: 1,
+            estimatedServiceCost:1,
+            priceMarkup: 1
+        }
+    }).fetch().forEach((doc) => {
+        const btcServicePrice = new BigNumber(doc.estimatedServiceCost).multipliedBy(doc.priceMarkup + 1).decimalPlaces(0, BigNumber.ROUND_HALF_EVEN).toNumber();
+
+        Catenis.db.collection.Billing.update({
+            _id: doc._id
+        }, {
+            $set: {
+                btcServicePrice: btcServicePrice
+            }
+        });
+
+        countUpdatedDocs++;
+    });
+
+    if (countUpdatedDocs > 0) {
+        Catenis.logger.INFO('****** BTC Service Price field (btcServicePrice) has been added to %d Billing docs/recs', countUpdatedDocs);
+    }
+};
+
 
 // Module functions used to simulate private Database object methods
 //  NOTE: these functions need to be bound to a Database object reference (this) before

@@ -394,6 +394,7 @@ Billing {
   },
   estimatedServiceCost: [number], - Estimated cost, in satoshis, of the service
   priceMarkup: [number], - Markup used to calculate the price of the service
+  btcServicePrice: [number], - Price of the service expressed in (bitcoin) satoshis
   bitcoinPrice: [number], - Bitcoin price, in USD, used to calculate the exchange rate
   bcotPrice: [number], - BCOT Token price, in USD, used to calculate to exchange rate
   exchangeRate: [number], - Bitcoin to BCOT token (1 BTC = x BCOT) exchange rate used to calculate final price

@@ -10,7 +10,7 @@
 // References to external code
 //
 // Internal node modules
-//import util from 'util';
+import url from 'url';
 // Third-party node modules
 import BigNumber from 'bignumber.js';
 // Meteor packages
@@ -22,6 +22,29 @@ import { BlazeLayout } from 'meteor/kadira:blaze-layout';
 import './adminUI/LoginLayout.js';
 import './adminUI/AdminLayout.js';
 import './clientUI/ClientLayout.js';
+
+
+// Definition of module (private) functions
+//
+
+// NOTE: this function is to be used as a workaround for an issue with FlowRouter when parsing a query string
+//      that has one or more parameters the value of which is a properly escaped sequence of query string
+//      parameters.
+//
+//      Example:
+//        For the url: /example.com/bla?retparams=periodid%3Dcustom%26startdate%3D2018-10-02T03%253A00%253A00.000Z%26enddate%3D2018-10-16T03%253A00%253A00.000Z
+//        The resulting queryParams is: {
+//          retParams: periodid=custom,
+//          startDate: 2018-10-02T03:00:00.000Z,
+//          endDate: 2018-10-16T03:00:00.000Z
+//        }
+//        When the expected queryPrams would be: {
+//          retParams: periodid=custom&startdate=2018-10-02T03%3A00%3A00.000Z&enddate=2018-10-16T03%3A00%3A00.000Z
+//        }
+function getQueryParams() {
+    return url.parse(FlowRouter.current().path, true).query;
+}
+
 
 // Module code
 //
@@ -99,6 +122,37 @@ FlowRouter.route('/serviceaccount', {
     action: function () {
         BlazeLayout.render('clientLayout', {
             page: 'clientServiceAccount'
+        });
+    }
+});
+
+
+FlowRouter.route('/serviceaccount/billing', {
+    action: function (params, queryParams) {
+        BlazeLayout.render('clientLayout', {
+            page: 'clientBillingReport',
+            dataContext: {
+                client_id: params.client_id,
+                device_id: queryParams.deviceid,
+                periodId: queryParams.periodid,
+                startDate: queryParams.startdate,
+                endDate: queryParams.enddate
+            }
+        });
+    }
+});
+
+FlowRouter.route('/serviceaccount/billing/:billing_id', {
+    action: function (params, queryParams) {
+        queryParams = getQueryParams();
+
+        BlazeLayout.render('clientLayout', {
+            page: 'clientBillingEntry',
+            dataContext: {
+                client_id: params.client_id,
+                billing_id: params.billing_id,
+                retParams: queryParams.retparams
+            }
         });
     }
 });
@@ -299,6 +353,36 @@ FlowRouter.route('/admin/clients/:client_id/serviceaccount', {
             page: 'serviceAccount',
             dataContext: {
                 client_id: params.client_id
+            }
+        });
+    }
+});
+
+FlowRouter.route('/admin/clients/:client_id/serviceaccount/billing', {
+    action: function (params, queryParams) {
+        BlazeLayout.render('adminLayout', {
+            page: 'billingReport',
+            dataContext: {
+                client_id: params.client_id,
+                device_id: queryParams.deviceid,
+                periodId: queryParams.periodid,
+                startDate: queryParams.startdate,
+                endDate: queryParams.enddate
+            }
+        });
+    }
+});
+
+FlowRouter.route('/admin/clients/:client_id/serviceaccount/billing/:billing_id', {
+    action: function (params, queryParams) {
+        queryParams = getQueryParams();
+
+        BlazeLayout.render('adminLayout', {
+            page: 'billingEntry',
+            dataContext: {
+                client_id: params.client_id,
+                billing_id: params.billing_id,
+                retParams: queryParams.retparams
             }
         });
     }

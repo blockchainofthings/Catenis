@@ -2,7 +2,7 @@
  * Created by claudio on 2018-10-04.
  */
 
-//console.log('[CommonClientDevicesUI.js]: This code just ran.');
+//console.log('[CommonDevicesUI.js]: This code just ran.');
 
 // Module variables
 //
@@ -32,20 +32,20 @@ const cfgSettings = {
 // Definition of function classes
 //
 
-// CommonClientDevicesUI function class
-export function CommonClientDevicesUI() {
+// CommonDevicesUI function class
+export function CommonDevicesUI() {
 }
 
 
-// Public CommonClientDevicesUI object methods
+// Public CommonDevicesUI object methods
 //
 
-/*CommonClientDevicesUI.prototype.pub_func = function () {
+/*CommonDevicesUI.prototype.pub_func = function () {
 };*/
 
 
-// Module functions used to simulate private CommonClientDevicesUI object methods
-//  NOTE: these functions need to be bound to a CommonClientDevicesUI object reference (this) before
+// Module functions used to simulate private CommonDevicesUI object methods
+//  NOTE: these functions need to be bound to a CommonDevicesUI object reference (this) before
 //      they are called, by means of one of the predefined function methods .call(), .apply()
 //      or .bind().
 //
@@ -54,7 +54,7 @@ export function CommonClientDevicesUI() {
 }*/
 
 
-// CommonClientDevicesUI function class (public) methods
+// CommonDevicesUI function class (public) methods
 //
 
 // Publication auxiliary method for including License database doc/recs associated with all ClientLicense
@@ -62,7 +62,7 @@ export function CommonClientDevicesUI() {
 //
 //  NOTE: this method should be called via the predefined function method .call() passing the context (this)
 //      of the caller publication function (i.e. method.call(this, ...))
-CommonClientDevicesUI.clientDevicesInfo = function (client_id) {
+CommonDevicesUI.clientDevicesInfo = function (client_id) {
     const client = Client.getClientByDocId(client_id);
 
     let clientDevicesInfo = {
@@ -257,10 +257,10 @@ CommonClientDevicesUI.clientDevicesInfo = function (client_id) {
 };
 
 
-// CommonClientDevicesUI function class (public) properties
+// CommonDevicesUI function class (public) properties
 //
 
-/*CommonClientDevicesUI.prop = {};*/
+/*CommonDevicesUI.prop = {};*/
 
 
 // Definition of module (private) functions
@@ -274,4 +274,4 @@ CommonClientDevicesUI.clientDevicesInfo = function (client_id) {
 //
 
 // Lock function class
-Object.freeze(CommonClientDevicesUI);
+Object.freeze(CommonDevicesUI);

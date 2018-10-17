@@ -794,3 +794,12 @@ div#fixWrapper {
 ::-ms-input-placeholder { /* Microsoft Edge */
     color: lightgray;
 }
+
+.simpleTable {
+    width: auto
+}
+
+.simpleTable > tbody > tr > td {
+    border: none;
+    padding: 4px;
+}

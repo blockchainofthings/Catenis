@@ -26,6 +26,7 @@ import './ClientServiceAccountTemplate.html';
 
 // Import dependent templates
 import './ClientBcotPaymentAddressTemplate.js';
+import './ClientBillingReportTemplate.js';
 
 
 // Definition of module (private) functions
