@@ -637,14 +637,12 @@ Client.prototype.createDevice = function (props, ownApiAccessKey = false, initRi
     return docDevice.deviceId;
 };
 
+// This includes all but deleted devices
 Client.prototype.devicesInUseCount = function () {
     return Catenis.db.collection.Device.find({
         client_id: this.doc_id,
         status: {
-            $nin: [
-                Device.status.inactive.name,
-                Device.status.deleted.name
-            ]
+            $ne: Device.status.deleted.name
         }
     }).count();
 };
@@ -653,6 +651,19 @@ Client.prototype.activeDevicesCount = function () {
     return Catenis.db.collection.Device.find({
         client_id: this.doc_id,
         status: Device.status.active.name
+    }).count();
+};
+
+// This includes both active and inactive devices
+Client.prototype.activeInactiveDevicesCount = function () {
+    return Catenis.db.collection.Device.find({
+        client_id: this.doc_id,
+        status: {
+            $in: [
+                Device.status.active.name,
+                Device.status.inactive.name
+            ]
+        }
     }).count();
 };
 

@@ -166,7 +166,7 @@ Device.prototype.enable = function () {
     // Make sure that device is inactive
     if (this.status !== Device.status.inactive.name) {
         // Cannot enable a device that is not inactive. Log error and throw exception
-        Catenis.logger.ERROR('Cannot disable a device that is not inactive', {deviceId: this.deviceId});
+        Catenis.logger.ERROR('Cannot enable a device that is not inactive', {deviceId: this.deviceId});
         throw new Meteor.Error('ctn_device_not_inactive', util.format('Cannot enable a device that is not inactive (deviceId: %s)', this.deviceId));
     }
 
@@ -227,6 +227,7 @@ Device.prototype.delete = function (deletedDate) {
                     _deleted: delField
                 }, $unset: {'props.prodUniqueId': ''}
             });
+            // TODO: free up coins previously allocated to this device to fund its addresses
         }
         catch (err) {
             // Error updating Device doc/rec. Log error and throw exception
@@ -318,8 +319,8 @@ Device.prototype.fundAddresses = function () {
 
         if (newDevStatus !== undefined) {
             // Make sure that device can be activated
-            if (newDevStatus === Device.status.active.name && this.client.maximumAllowedDevices && this.client.activeDevicesCount() >= this.client.maximumAllowedDevices) {
-                // Number of active devices of client already reached the maximum allowed.
+            if (newDevStatus === Device.status.active.name && this.client.maximumAllowedDevices && this.client.activeInactiveDevicesCount() >= this.client.maximumAllowedDevices) {
+                // Number of active/inactive devices of client already reached the maximum allowed.
                 //  Silently reset status to 'inactive'
                 newDevStatus = Device.status.inactive.name;
             }
@@ -2531,7 +2532,7 @@ function activateDevice() {
 
             // Make sure that device can be activated
             if (curDevDoc.status === Device.status.inactive.name) {
-                if (this.client.maximumAllowedDevices && this.client.devicesInUseCount() >= this.client.maximumAllowedDevices) {
+                if (this.client.maximumAllowedDevices && this.client.devicesInUseCount() > this.client.maximumAllowedDevices) {
                     // Number of devices in use of client already reached the maximum allowed.
                     //  Log error and throw exception indicating that device cannot be activated
                     Catenis.logger.ERROR('Cannot activate device; maximum number of allowed devices already reached for client.', {
@@ -2542,8 +2543,8 @@ function activateDevice() {
                 }
             }
             else {  // curDevDoc.status === Device.status.new.name || curDevDoc.status === Device.status.pending.name
-                if (this.client.maximumAllowedDevices && this.client.activeDevicesCount() >= this.client.maximumAllowedDevices) {
-                    // Number of active devices of client already reached the maximum allowed.
+                if (this.client.maximumAllowedDevices && this.client.activeInactiveDevicesCount() >= this.client.maximumAllowedDevices) {
+                    // Number of active/inactive devices of client already reached the maximum allowed.
                     //  Silently reset status to 'inactive'
                     newDevStatus = Device.status.inactive.name;
                 }

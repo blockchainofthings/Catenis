@@ -76,12 +76,10 @@
                                             <button type="button" id="btnDeactivateDevice" class="btn-login btn paddedBtn fullWidth" data-toggle="modal" data-target="#divDeactivateDevice">Deactivate Device</button>
                                         </div>
                                     {{/if}}
-                                    {{#if isInactiveDevice device}}
-                                        {{#unless maximumDevicesReached clientDevicesInfo}}
-                                            <div class="col-md-4">
-                                                <button type="button" id="btnActivateDevice" class="btn-login btn paddedBtn fullWidth" data-toggle="modal" data-target="#divActivateDevice">Activate Device</button>
-                                            </div>
-                                        {{/unless}}
+                                    {{#if canActiveDevice device clientDevicesInfo}}
+                                        <div class="col-md-4">
+                                            <button type="button" id="btnActivateDevice" class="btn-login btn paddedBtn fullWidth" data-toggle="modal" data-target="#divActivateDevice">Activate Device</button>
+                                        </div>
                                     {{/if}}
                                     <div class="col-md-4">
                                         <button type="button" id="btnDeleteDevice" class="btn-login btn paddedBtn btn-warn fullWidth" data-toggle="modal" data-target="#divDeleteDevice">Delete Device</button>

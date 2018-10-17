@@ -4,14 +4,14 @@ Some of the Catenis virtual devices associated with your Catenis Enterprise clie
 
 Client account: username '{!username}' (client ID: {!clientId})
 
-This has been done to comply with the restriction in the number of active virtual devices enforced by your current license.
+This has been done to comply with the restriction in the number of virtual devices in use enforced by your current license.
 
-License: {!licenseLevel}, up to {!maximumAllowedDevices} active devices allowed
+License: {!licenseLevel}, up to {!maximumAllowedDevices} devices in use allowed
 
 Disabled devices:
 {!__repeat_begin.devices} {!devices.order}. Device ID: {!devices.deviceId}
 {!__repeat_end.devices}
-To reenable any of those devices, you would need to disable any of your currently active devices or upgrade your license.
+To reenable any of those devices, you would need to delete any of your other devices or upgrade your license.
 
 To upgrade your license, please contact us.
 

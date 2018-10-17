@@ -326,9 +326,6 @@ Template.clientDeviceDetails.helpers({
     clientDevicesInfo() {
         return Catenis.db.collection.ClientDevicesInfo.findOne(1);
     },
-    maximumDevicesReached(clientDevicesInfo) {
-        return clientDevicesInfo.maxAllowedDevices <= clientDevicesInfo.numDevicesInUse;
-    },
     deviceTitle(device) {
         return device.props.name || device.deviceId;
     },
@@ -365,11 +362,11 @@ Template.clientDeviceDetails.helpers({
     isActiveDevice(device) {
         return device.status === DeviceShared.status.active.name;
     },
-    isInactiveDevice(device) {
-        return device.status === DeviceShared.status.inactive.name;
-    },
     isDeletedDevice(device) {
         return device.status === DeviceShared.status.deleted.name;
+    },
+    canActiveDevice(device, clientDevicesInfo) {
+        return device.status === DeviceShared.status.inactive.name && clientDevicesInfo.numDevicesInUse <= clientDevicesInfo.maxAllowedDevices;
     },
     hasErrorMessage() {
         return Template.instance().state.get('errMsgs').length > 0;
