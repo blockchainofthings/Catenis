@@ -29,6 +29,7 @@ import './ClientLicensesTemplate.html';
 
 // Import dependent templates
 import './ClientLicenseDetailsTemplate.js';
+import querystring from "querystring";
 
 // Module variables
 const minValidityDays = 7;
@@ -78,7 +79,7 @@ function validateAddLicenseFormData(form, errMsgs) {
 Template.clientLicenses.onCreated(function () {
     this.state = new ReactiveDict();
 
-    this.state.set('showExpiredLicenses', false);
+    this.state.set('showExpiredLicenses', this.data.showExpired);
     this.state.set('showAddLicenseEndDate', false);
     this.state.set('addLicenseErrMsgs', []);
     this.state.set('errMsgs', []);
@@ -531,5 +532,14 @@ Template.clientLicenses.helpers({
     },
     addMoreRestrictiveLicense() {
         return Template.instance().state.get('addMoreRestrictiveLicense');
+    },
+    returnQueryString() {
+        if (Template.instance().state.get('showExpiredLicenses')) {
+            return '?' + querystring.stringify({
+                retparams: querystring.stringify({
+                    showexpired: 1
+                })
+            });
+        }
     }
 });

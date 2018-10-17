@@ -27,6 +27,7 @@ import './ClientClientLicensesTemplate.html';
 
 // Import dependent templates
 import './ClientClientLicenseDetailsTemplate.js';
+import querystring from "querystring";
 
 
 // Definition of module (private) functions
@@ -39,7 +40,7 @@ import './ClientClientLicenseDetailsTemplate.js';
 Template.clientClientLicenses.onCreated(function () {
     this.state = new ReactiveDict();
 
-    this.state.set('showExpiredLicenses', false);
+    this.state.set('showExpiredLicenses', this.data.showExpired);
 
     // Subscribe to receive database docs/recs updates
     this.currentClient = this.subscribe('currentClient');
@@ -136,5 +137,14 @@ Template.clientClientLicenses.helpers({
     },
     showHideExpiredLicensesAction() {
         return Template.instance().state.get('showExpiredLicenses') ? 'Hide' : 'Show';
+    },
+    returnQueryString() {
+        if (Template.instance().state.get('showExpiredLicenses')) {
+            return '?' + querystring.stringify({
+                retparams: querystring.stringify({
+                    showexpired: 1
+                })
+            });
+        }
     }
 });

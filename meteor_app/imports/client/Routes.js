@@ -45,6 +45,10 @@ function getQueryParams() {
     return url.parse(FlowRouter.current().path, true).query;
 }
 
+function parseBoolean(strVal) {
+    return !(!strVal || strVal === '0' || strVal.toLowerCase() === 'false');
+}
+
 
 // Module code
 //
@@ -73,19 +77,25 @@ FlowRouter.route('/clientaccount', {
 });
 
 FlowRouter.route('/licenses/', {
-    action: function () {
+    action: function (params, queryParams) {
         BlazeLayout.render('clientLayout', {
-            page: 'clientClientLicenses'
+            page: 'clientClientLicenses',
+            dataContext: {
+                showExpired: parseBoolean(queryParams.showexpired)
+            }
         });
     }
 });
 
 FlowRouter.route('/licenses/:clientLicense_id', {
-    action: function (params) {
+    action: function (params, queryParams) {
+        queryParams = getQueryParams();
+
         BlazeLayout.render('clientLayout', {
             page: 'clientClientLicenseDetails',
             dataContext: {
-                clientLicense_id: params.clientLicense_id
+                clientLicense_id: params.clientLicense_id,
+                retParams: queryParams.retparams
             }
         });
     }
@@ -238,19 +248,25 @@ FlowRouter.route('/admin/bcotusagereport', {
 });
 
 FlowRouter.route('/admin/licenses', {
-    action: function () {
+    action: function (params, queryParams) {
         BlazeLayout.render('adminLayout', {
-            page: 'licenses'
+            page: 'licenses',
+            dataContext: {
+                showInactive: parseBoolean(queryParams.showinactive)
+            }
         });
     }
 });
 
 FlowRouter.route('/admin/licenses/:license_id', {
-    action: function (params) {
+    action: function (params, queryParams) {
+        queryParams = getQueryParams();
+
         BlazeLayout.render('adminLayout', {
             page: 'licenseDetails',
             dataContext: {
-                license_id: params.license_id
+                license_id: params.license_id,
+                retParams: queryParams.retparams
             }
         });
     }
@@ -314,11 +330,12 @@ FlowRouter.route('/admin/clients/:client_id/edit', {
 });
 
 FlowRouter.route('/admin/clients/:client_id/licenses', {
-    action: function (params) {
+    action: function (params, queryParams) {
         BlazeLayout.render('adminLayout', {
             page: 'clientLicenses',
             dataContext: {
-                client_id: params.client_id
+                client_id: params.client_id,
+                showExpired: parseBoolean(queryParams.showexpired)
             }
         });
     }
@@ -336,12 +353,15 @@ FlowRouter.route('/admin/clients/:client_id/licenses/new', {
 });
 
 FlowRouter.route('/admin/clients/:client_id/licenses/:clientLicense_id', {
-    action: function (params) {
+    action: function (params, queryParams) {
+        queryParams = getQueryParams();
+
         BlazeLayout.render('adminLayout', {
             page: 'clientLicenseDetails',
             dataContext: {
                 client_id: params.client_id,
-                clientLicense_id: params.clientLicense_id
+                clientLicense_id: params.clientLicense_id,
+                retParams: queryParams.retparams
             }
         });
     }

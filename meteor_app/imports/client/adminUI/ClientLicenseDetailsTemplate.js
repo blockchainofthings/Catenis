@@ -450,6 +450,11 @@ Template.clientLicenseDetails.events({
 });
 
 Template.clientLicenseDetails.helpers({
+    backQueryString() {
+        const retParams = Template.instance().data.retParams;
+
+        return retParams ? '?' + retParams : undefined;
+    },
     client() {
         return Catenis.db.collection.Client.findOne({_id: Template.instance().data.client_id});
     },

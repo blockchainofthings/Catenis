@@ -29,16 +29,18 @@
                                         </tr>
                                         </thead>
                                         <tbody>
+                                        {{#let retQS=returnQueryString}}
                                         {{#each clientLicense in (clientLicenses client)}}
                                             {{#let license=(clientLicenseLicense clientLicense.license_id)}}
                                                 <tr>
-                                                    <td><a href="/licenses/{{clientLicense._id}}">{{licenseName license}}</a></td>
+                                                    <td><a href="/licenses/{{clientLicense._id}}{{retQS}}">{{licenseName license}}</a></td>
                                                     <td>{{formatShortDate clientLicense.validity.startDate client}}</td>
                                                     <td><span style="{{#if isAboutToExpire clientLicense}}color:red{{/if}}">{{formatShortDate clientLicense.validity.endDate client}}</span></td>
                                                     <td><span style="color:{{statusColor clientLicense.status}}">{{clientLicense.status}}</span></td>
                                                 </tr>
                                             {{/let}}
                                         {{/each}}
+                                        {{/let}}
                                         </tbody>
                                     </table>
                                     <div class="text-left" style="font-size:10pt; margin-bottom:20px; color:gray">
