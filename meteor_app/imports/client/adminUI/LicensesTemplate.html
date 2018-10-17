@@ -53,14 +53,16 @@
                                     </tr>
                                     </thead>
                                     <tbody>
+                                    {{#let retQS=returnQueryString}}
                                     {{#each license in licenses}}
                                         <tr class="{{actionSuccessLicenseRowClass license._id}}">
                                             <td>{{license.order}}</td>
-                                            <td><a href="/admin/licenses/{{license._id}}">{{licenseName license}}</a></td>
+                                            <td><a href="/admin/licenses/{{license._id}}{{retQS}}">{{licenseName license}}</a></td>
                                             <td>{{license.revision}}</td>
                                             <td><span style="color:{{statusColor license.status}}">{{license.status}}</span></td>
                                         </tr>
                                     {{/each}}
+                                    {{/let}}
                                     </tbody>
                                 </table>
                             </div>

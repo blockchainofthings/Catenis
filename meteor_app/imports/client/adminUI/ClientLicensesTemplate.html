@@ -51,23 +51,25 @@
                                     <table class="table table-striped table-responsive text-left">
                                         <thead>
                                             <tr>
-                                                <th>Level</th>
-                                                <th>Type</th>
+                                                <th>License</th>
                                                 <th>Start Date (*)</th>
+                                                <th>End Date (*)</th>
                                                 <th>Status</th>
                                             </tr>
                                         </thead>
                                         <tbody>
+                                        {{#let retQS=returnQueryString}}
                                         {{#each clientLicense in clientLicenses}}
                                             {{#let license=(clientLicenseLicense clientLicense.license_id)}}
                                             <tr class="{{actionSuccessClientLicenseRowClass clientLicense._id}}">
-                                                <td><a href="/admin/clients/{{client._id}}/licenses/{{clientLicense._id}}">{{capitalize license.level}}</a></td>
-                                                <td>{{capitalize license.type}}</td>
+                                                <td><a href="/admin/clients/{{client._id}}/licenses/{{clientLicense._id}}{{retQS}}">{{licenseName license}}</a></td>
                                                 <td>{{formatShortDate clientLicense.validity.startDate client}}</td>
+                                                <td>{{formatShortDate clientLicense.validity.endDate client}}</td>
                                                 <td><span style="color:{{statusColor clientLicense.status}}">{{clientLicense.status}}</span></td>
                                             </tr>
                                             {{/let}}
                                         {{/each}}
+                                        {{/let}}
                                         </tbody>
                                     </table>
                                     <div class="text-left" style="font-size:10pt; margin-bottom:20px; color:gray">

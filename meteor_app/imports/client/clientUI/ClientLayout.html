@@ -26,6 +26,8 @@
                                     <li class="dropdown">
                                         <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false"><i class="glyphicon glyphicon-user"></i> {{currentUser.username}} <span class="caret"></span></a>
                                         <ul class="dropdown-menu">
+                                            <li class="userMenuEntry"><a href="/clientaccount">Client Account</a></li>
+                                            <li role="separator" class="divider"></li>
                                             <li class="userMenuEntry"><a id="lnkLogout" href="#" role="button">Sign Out</a></li>
                                         </ul>
                                     </li>
@@ -42,8 +44,29 @@
             <!-- Sidebar -->
             <div id="sidebar-wrapper" style="{{#if isNonProdEnvironment appEnvironment}}top:80px{{/if}}">
                 <ul class="sidebar-nav">
+                    <li class="sideNavButtons">
+                        <a href="/licenses" class="show"><i class="glyphicon glyphicon-certificate"></i>  Licenses</a>
+                        <a href="/licenses" class="notshow"><i class="glyphicon glyphicon-certificate"></i></a>
+                    </li>
+                    <li class="sideNavButtons">
+                        <a href="/apiaccess" class="show"><i class="glyphicon glyphicon-road"></i>  API Access</a>
+                        <a href="/apiaccess" class="notshow"><i class="glyphicon glyphicon-road"></i></a>
+                    </li>
+                    <li class="sideNavButtons">
+                        <a href="/paidservices" class="show"><i class="glyphicon glyphicon-briefcase"></i>  Paid Services</a>
+                        <a href="/paidservices" class="notshow"><i class="glyphicon glyphicon-briefcase"></i></a>
+                    </li>
+                    <li class="sideNavButtons">
+                        <a href="/serviceaccount" class="show"><i class="glyphicon glyphicon-credit-card"></i>  Service Account</a>
+                        <a href="/serviceaccount" class="notshow"><i class="glyphicon glyphicon-credit-card"></i></a>
+                    </li>
+                    <li class="sideNavButtons">
+                        <a href="/devices" class="show"><i class="glyphicon glyphicon-phone"></i>  Virtual Devices</a>
+                        <a href="/devices" class="notshow"><i class="glyphicon glyphicon-phone"></i></a>
+                    </li>
                 </ul>
             </div>
+            <!-- Script used to signal that sidebar has fully loaded on page -->
              <script type="text/javascript">
                  $('#sidebar-wrapper')[0].click();
              </script>

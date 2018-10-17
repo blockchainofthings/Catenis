@@ -10,7 +10,7 @@
 // References to external code
 //
 // Internal node modules
-//import util from 'util';
+import url from 'url';
 // Third-party node modules
 //import config from 'config';
 // Meteor packages
@@ -38,6 +38,7 @@ import './ClientsTemplate.js';
 import './DeviceDetailsTemplate.js';
 import './NewClientTemplate.js';
 import './NewDeviceTemplate.js';
+import './PaidServicesTemplate.js';
 
 
 // Definition of module (private) functions
@@ -55,19 +56,32 @@ function redirectHome() {
     }
 }
 
-function getSidebarNavEntry(pageName) {
+function getSidebarNavEntry(path) {
+    const currentUrlPath = addTrailingSlash(url.parse(path).pathname.toLowerCase());
     const navEntries = $('.sideNavButtons').toArray();
 
     for (let idx = 0, limit = navEntries.length; idx < limit; idx++) {
         const navEntry = navEntries[idx];
 
-        if (navEntry.children[0].href.endsWith('/' + pageName)) {
+        if (currentUrlPath.startsWith(addTrailingSlash(url.parse(navEntry.children[0].href).pathname.toLowerCase()))) {
             return navEntry;
         }
     }
 }
 
-function selectSidebarNavEntry(navEntry) {
+function addTrailingSlash(path) {
+    return path.endsWith('/') ? path : path + '/';
+}
+
+function selectSidebarNavEntry(navEntry, clearNavEntries) {
+    if (clearNavEntries) {
+        // Reset color of all sidebar nav entries
+        $('.sideNavButtons').toArray().forEach((navEntry) => {
+            navEntry.style.backgroundColor = '#e8e9ec';
+            Array.from(navEntry.children).forEach(childElem => childElem.style.color = '');
+        });
+    }
+
     if (navEntry) {
         navEntry.style.backgroundColor = '#5555bb';
         Array.from(navEntry.children).forEach(childElem => childElem.style.color = 'white');
@@ -100,8 +114,19 @@ Template.adminLayout.onDestroyed(function () {
 Template.adminLayout.events({
     'click #sidebar-wrapper'(event, template) {
         if (template.state.get('initializing')) {
+            // Sidebar control just loaded on page
             template.state.set('initializing', false);
-            selectSidebarNavEntry(getSidebarNavEntry(template.data.page().toLowerCase()));
+
+            // Set mechanism to watch for path change and select sidebar nav entry appropriately
+            Tracker.autorun(function() {
+                FlowRouter.watchPathChange();
+
+                const path = FlowRouter.current().path;
+
+                if (path) {
+                    selectSidebarNavEntry(getSidebarNavEntry(path), !template.state.get('initializing'));
+                }
+            });
         }
     },
     'click #lnkLogout'(event, template) {
@@ -112,33 +137,9 @@ Template.adminLayout.events({
         $('#wrapper').toggleClass('toggled');
         return false;
     },
-    'click .sideNavButtons'(event, template) {
-        // Reset color of all sidebar nav entries
-        $('.sideNavButtons').toArray().forEach((navEntry) => {
-            navEntry.style.backgroundColor = '#e8e9ec';
-            Array.from(navEntry.children).forEach(childElem => childElem.style.color = '');
-        });
-
-        // Set color of selected sidebar nav entry
-        event.currentTarget.style.backgroundColor = '#5555bb';
-        Array.from(event.currentTarget.children).forEach(childElem => childElem.style.color = 'white');
-    },
     'click .navbar-brand'(event, template) {
-        // Reset color of all sidebar nav entries
-        $('.sideNavButtons').toArray().forEach((navEntry) => {
-            navEntry.style.backgroundColor = '#e8e9ec';
-            Array.from(navEntry.children).forEach(childElem => childElem.style.color = '');
-        });
-
         redirectHome();
         return false;
-    },
-    'click .userMenuEntry'(event, template) {
-        // Reset color of all sidebar nav entries
-        $('.sideNavButtons').toArray().forEach((navEntry) => {
-            navEntry.style.backgroundColor = '#e8e9ec';
-            Array.from(navEntry.children).forEach(childElem => childElem.style.color = '');
-        });
     }
 });
 

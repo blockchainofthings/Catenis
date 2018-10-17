@@ -21,6 +21,8 @@ import { Roles } from 'meteor/alanning:roles';
 import { Catenis } from '../Catenis';
 import { Device } from '../Device';
 import { Client } from '../Client';
+import { Billing } from '../Billing';
+import { CommonDevicesUI } from '../commonUI/CommonDevicesUI';
 
 
 // Definition of function classes
@@ -58,13 +60,11 @@ DevicesUI.initialize = function () {
         getDeviceApiAccessSecret: function (device_id) {
             if (Roles.userIsInRole(this.userId, 'sys-admin')) {
                 try {
-                    const device = Device.getDeviceByDocId(device_id);
-
-                    return device.apiAccessSecret;
+                    return Device.getDeviceByDocId(device_id).apiAccessSecret;
                 }
                 catch (err) {
                     // Error trying to get device's API access secret. Log error and throw exception
-                    Catenis.logger.ERROR('Failure trying to get device\'s API access secret.', err);
+                    Catenis.logger.ERROR('Failure trying to get device\'s (doc_id: %s) API access secret.', device_id, err);
                     throw new Meteor.Error('device.getDeviceApiAccessSecret.failure', 'Failure trying to get device\'s API access secret: ' + err.toString());
                 }
             }
@@ -77,13 +77,11 @@ DevicesUI.initialize = function () {
         resetDeviceApiAccessSecret: function (device_id, resetToClientDefault) {
             if (Roles.userIsInRole(this.userId, 'sys-admin')) {
                 try {
-                    const device = Device.getDeviceByDocId(device_id);
-
-                    device.renewApiAccessGenKey(resetToClientDefault);
+                    Device.getDeviceByDocId(device_id).renewApiAccessGenKey(resetToClientDefault);
                 }
                 catch (err) {
                     // Error trying to reset device's API access secret. Log error and throw exception
-                    Catenis.logger.ERROR('Failure trying to renew device\'s API access generation key.', err);
+                    Catenis.logger.ERROR('Failure trying to renew device\'s (doc_id: %s) API access generation key.', device_id, err);
                     throw new Meteor.Error('device.resetDeviceApiAccessSecret.failure', 'Failure trying to renew device\'s API access generation key: ' + err.toString());
                 }
             }
@@ -95,8 +93,6 @@ DevicesUI.initialize = function () {
         },
         createNewDevice: function (client_id, deviceInfo) {
             if (Roles.userIsInRole(this.userId, 'sys-admin')) {
-                let deviceId;
-
                 try {
                     const props = {};
 
@@ -110,15 +106,13 @@ DevicesUI.initialize = function () {
 
                     props.public = deviceInfo.public;
 
-                    deviceId = Client.getClientByDocId(client_id).createDevice(props, !deviceInfo.assignClientAPIAccessSecret);
+                    return Client.getClientByDocId(client_id).createDevice(props, !deviceInfo.assignClientAPIAccessSecret);
                 }
                 catch (err) {
                     // Error trying to create new device. Log error and throw exception
                     Catenis.logger.ERROR('Failure trying to create new device.', err);
                     throw new Meteor.Error('device.create.failure', 'Failure trying to create new device: ' + err.toString());
                 }
-
-                return deviceId;
             }
             else {
                 // User not logged in or not a system administrator.
@@ -143,7 +137,7 @@ DevicesUI.initialize = function () {
                 }
                 catch (err) {
                     // Error trying to update device data. Log error and throw exception
-                    Catenis.logger.ERROR('Failure trying to update device data.', err);
+                    Catenis.logger.ERROR('Failure trying to update device (doc_id) data.', device_id, err);
                     throw new Meteor.Error('device.update.failure', 'Failure trying to update device data: ' + err.toString());
                 }
             }
@@ -207,12 +201,19 @@ DevicesUI.initialize = function () {
     });
 
     // Declaration of publications
-    Meteor.publish('clientDevices', function (client_id) {
+    Meteor.publish('clientDevices', function (client_id, addDeleted = false) {
         if (Roles.userIsInRole(this.userId, 'sys-admin')) {
-            return Catenis.db.collection.Device.find({
-                client_id: client_id,
-                status: {$ne: 'deleted'}
-            }, {
+            const selector = {
+                client_id: client_id
+            };
+
+            if (!addDeleted) {
+                selector.status = {
+                    $ne: 'deleted'
+                }
+            }
+
+            return Catenis.db.collection.Device.find(selector, {
                 fields: {
                     _id: 1,
                     client_id: 1,
@@ -256,194 +257,44 @@ DevicesUI.initialize = function () {
 
     Meteor.publish('clientDevicesInfo', function(client_id) {
         if (Roles.userIsInRole(this.userId, 'sys-admin')) {
-            const client = Client.getClientByDocId(client_id);
+            CommonDevicesUI.clientDevicesInfo.call(this, client_id);
+        }
+        else {
+            // User not logged in or not a system administrator
+            //  Make sure that publication is not started and throw exception
+            this.stop();
+            throw new Meteor.Error('ctn_admin_no_permission', 'No permission; must be logged in as a system administrator to perform this task');
+        }
+    });
 
-            let clientDevicesInfo = {
-                maxAllowedDevices: client.maximumAllowedDevices,
-                numDevicesInUse: client.devicesInUseCount()
-            };
-
-            // Monitor license entries associated with client
-            const observeHandle = Catenis.db.collection.ClientLicense.find({
-                client_id: client_id
+    Meteor.publish('billingDevice', function (billing_id) {
+        if (Roles.userIsInRole(this.userId, 'sys-admin')) {
+            const docBilling = Catenis.db.collection.Billing.findOne({
+                _id: billing_id,
+                type: Billing.docType.original.name
             }, {
                 fields: {
-                    _id: 1,
-                    status: 1
-                }
-            }).observe({
-                added: (doc) => {
-                    // New license entry for client. Retrieve current client devices info
-                    //  and check if it has changed
-                    const client = Client.getClientByDocId(client_id);
-
-                    const currClientDevicesInfo = {
-                        maxAllowedDevices: client.maximumAllowedDevices,
-                        numDevicesInUse: client.devicesInUseCount()
-                    };
-                    const diffClientDevicesInfo = {};
-
-                    if (currClientDevicesInfo.maxAllowedDevices !== clientDevicesInfo.maxAllowedDevices) {
-                        diffClientDevicesInfo.maxAllowedDevices = currClientDevicesInfo.maxAllowedDevices;
-                    }
-
-                    if (currClientDevicesInfo.numDevicesInUse !== clientDevicesInfo.numDevicesInUse) {
-                        diffClientDevicesInfo.numDevicesInUse = currClientDevicesInfo.numDevicesInUse;
-                    }
-
-                    if (Object.keys(diffClientDevicesInfo).length > 0) {
-                        // Indicate that client devices info has changed
-                        this.changed('ClientDevicesInfo', 1, diffClientDevicesInfo);
-                        clientDevicesInfo = currClientDevicesInfo;
-                    }
-                },
-                changed: (newDoc, oldDoc) => {
-                    if (newDoc.status !== oldDoc.status) {
-                        // Status of client license has changed. Retrieve current client devices info
-                        //  and check if it has changed
-                        const client = Client.getClientByDocId(client_id);
-
-                        const currClientDevicesInfo = {
-                            maxAllowedDevices: client.maximumAllowedDevices,
-                            numDevicesInUse: client.devicesInUseCount()
-                        };
-                        const diffClientDevicesInfo = {};
-
-                        if (currClientDevicesInfo.maxAllowedDevices !== clientDevicesInfo.maxAllowedDevices) {
-                            diffClientDevicesInfo.maxAllowedDevices = currClientDevicesInfo.maxAllowedDevices;
-                        }
-
-                        if (currClientDevicesInfo.numDevicesInUse !== clientDevicesInfo.numDevicesInUse) {
-                            diffClientDevicesInfo.numDevicesInUse = currClientDevicesInfo.numDevicesInUse;
-                        }
-
-                        if (Object.keys(diffClientDevicesInfo).length > 0) {
-                            // Indicate that client devices info has changed
-                            this.changed('ClientDevicesInfo', 1, diffClientDevicesInfo);
-                            clientDevicesInfo = currClientDevicesInfo;
-                        }
-                    }
-                },
-                removed: (doc) => {
-                    // Client license has been removed. Retrieve current client devices info
-                    //  and check if it has changed
-                    const client = Client.getClientByDocId(client_id);
-
-                    const currClientDevicesInfo = {
-                        maxAllowedDevices: client.maximumAllowedDevices,
-                        numDevicesInUse: client.devicesInUseCount()
-                    };
-                    const diffClientDevicesInfo = {};
-
-                    if (currClientDevicesInfo.maxAllowedDevices !== clientDevicesInfo.maxAllowedDevices) {
-                        diffClientDevicesInfo.maxAllowedDevices = currClientDevicesInfo.maxAllowedDevices;
-                    }
-
-                    if (currClientDevicesInfo.numDevicesInUse !== clientDevicesInfo.numDevicesInUse) {
-                        diffClientDevicesInfo.numDevicesInUse = currClientDevicesInfo.numDevicesInUse;
-                    }
-
-                    if (Object.keys(diffClientDevicesInfo).length > 0) {
-                        // Indicate that client devices info has changed
-                        this.changed('ClientDevicesInfo', 1, diffClientDevicesInfo);
-                        clientDevicesInfo = currClientDevicesInfo;
-                    }
+                    deviceId: 1
                 }
             });
 
-            // Monitor devices of client
-            const observeHandle2 = Catenis.db.collection.Device.find({
-                client_id: client_id
-            }, {
-                fields: {
-                    _id: 1,
-                    status: 1
-                }
-            }).observe({
-                added: (doc) => {
-                    // New device added for client. Retrieve current client devices info
-                    //  and check if it has changed
-                    const client = Client.getClientByDocId(client_id);
-
-                    const currClientDevicesInfo = {
-                        maxAllowedDevices: client.maximumAllowedDevices,
-                        numDevicesInUse: client.devicesInUseCount()
-                    };
-                    const diffClientDevicesInfo = {};
-
-                    if (currClientDevicesInfo.maxAllowedDevices !== clientDevicesInfo.maxAllowedDevices) {
-                        diffClientDevicesInfo.maxAllowedDevices = currClientDevicesInfo.maxAllowedDevices;
+            if (docBilling) {
+                return Catenis.db.collection.Device.find({
+                    deviceId: docBilling.deviceId
+                }, {
+                    fields: {
+                        _id: 1,
+                        client_id: 1,
+                        deviceId: 1,
+                        index: 1,
+                        props: 1,
+                        status: 1
                     }
-
-                    if (currClientDevicesInfo.numDevicesInUse !== clientDevicesInfo.numDevicesInUse) {
-                        diffClientDevicesInfo.numDevicesInUse = currClientDevicesInfo.numDevicesInUse;
-                    }
-
-                    if (Object.keys(diffClientDevicesInfo).length > 0) {
-                        // Indicate that client devices info has changed
-                        this.changed('ClientDevicesInfo', 1, diffClientDevicesInfo);
-                        clientDevicesInfo = currClientDevicesInfo;
-                    }
-                },
-                changed: (newDoc, oldDoc) => {
-                    if (newDoc.status !== oldDoc.status) {
-                        // Status of client device has changed. Retrieve current client devices info
-                        //  and check if it has changed
-                        const client = Client.getClientByDocId(client_id);
-
-                        const currClientDevicesInfo = {
-                            maxAllowedDevices: client.maximumAllowedDevices,
-                            numDevicesInUse: client.devicesInUseCount()
-                        };
-                        const diffClientDevicesInfo = {};
-
-                        if (currClientDevicesInfo.maxAllowedDevices !== clientDevicesInfo.maxAllowedDevices) {
-                            diffClientDevicesInfo.maxAllowedDevices = currClientDevicesInfo.maxAllowedDevices;
-                        }
-
-                        if (currClientDevicesInfo.numDevicesInUse !== clientDevicesInfo.numDevicesInUse) {
-                            diffClientDevicesInfo.numDevicesInUse = currClientDevicesInfo.numDevicesInUse;
-                        }
-
-                        if (Object.keys(diffClientDevicesInfo).length > 0) {
-                            // Indicate that client devices info has changed
-                            this.changed('ClientDevicesInfo', 1, diffClientDevicesInfo);
-                            clientDevicesInfo = currClientDevicesInfo;
-                        }
-                    }
-                },
-                removed: (doc) => {
-                    // Client device has been deleted. Retrieve current client devices info
-                    //  and check if it has changed
-                    const client = Client.getClientByDocId(client_id);
-
-                    const currClientDevicesInfo = {
-                        maxAllowedDevices: client.maximumAllowedDevices,
-                        numDevicesInUse: client.devicesInUseCount()
-                    };
-                    const diffClientDevicesInfo = {};
-
-                    if (currClientDevicesInfo.maxAllowedDevices !== clientDevicesInfo.maxAllowedDevices) {
-                        diffClientDevicesInfo.maxAllowedDevices = currClientDevicesInfo.maxAllowedDevices;
-                    }
-
-                    if (currClientDevicesInfo.numDevicesInUse !== clientDevicesInfo.numDevicesInUse) {
-                        diffClientDevicesInfo.numDevicesInUse = currClientDevicesInfo.numDevicesInUse;
-                    }
-
-                    if (Object.keys(diffClientDevicesInfo).length > 0) {
-                        // Indicate that client devices info has changed
-                        this.changed('ClientDevicesInfo', 1, diffClientDevicesInfo);
-                        clientDevicesInfo = currClientDevicesInfo;
-                    }
-                }
-            });
-
-            this.added('ClientDevicesInfo', 1, clientDevicesInfo);
-
-            this.ready();
-
-            this.onStop(() => observeHandle.stop());
+                });
+            }
+            else {
+                this.ready();
+            }
         }
         else {
             // User not logged in or not a system administrator

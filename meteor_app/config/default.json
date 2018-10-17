@@ -173,7 +173,7 @@
   "service": {
     "priceMarkup": 0.35,  // Markup used to calculate the service price
     "servicePriceResolution": 100,  // Resolution of service prices. In other words, the price of the services (expressed in Catenis service credit's lowest units) should be a multiple of that value
-    "paymentResolution": 1000,  // Resolution of amount, in satoshis, that should be allocated to pay for tx expenses. In other words, the allocated amount should be a multiple of that amount
+    "paymentResolution": 10,  // Resolution of amount, in satoshis, that should be allocated to pay for tx expenses. In other words, the allocated amount should be a multiple of that amount
     "maxNumAddrsPerFundingTx": 170,  // Maximum number of funding addresses that should be allocated for a single funding transaction
     "systemFunding": {
       "clientsToFund": 10,  // Number of clients to consider when calculating total amount to fund

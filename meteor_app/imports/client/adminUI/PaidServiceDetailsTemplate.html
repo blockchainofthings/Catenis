@@ -1,0 +1,66 @@
+<template name="paidServiceDetails">
+    <div>
+        <div class="panel panel-login minWidthElement noBoxShadow">
+            <div class="panel-body">
+                <div class="row">
+                    <div class="col-lg-12">
+                        {{#unless Template.subscriptionsReady}}
+                            <p style="color:lightgray; margin-top:1em">Loading...</p>
+                        {{else}}
+                            <h2>PAID SERVICE<br><span style="color:dimgray">{{paidService.service}}</span></h2>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="pull-left">
+                                        <a href="/admin/paidservices" role="button" class="btn-login btn paddedBtn">Back to Paid Services</a>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                </div>
+                            </div>
+                            <div class="row" style="padding-top:1em">
+                                <div class="col-lg-12">
+                                    <table class="table table-striped text-left">
+                                        <tbody>
+                                        <tr>
+                                            <th><label class="noMargin">Description:</label></th>
+                                            <td>{{paidService.description}}</td>
+                                        </tr>
+                                        <tr>
+                                            <th><label class="noMargin">Service Cost:</label></th>
+                                            <td>BTC {{formatCoins paidService.estimatedServiceCost}}</td>
+                                        </tr>
+                                        <tr>
+                                            <th><label class="noMargin">Price Markup:</label></th>
+                                            <td>{{paidService.priceMarkup}}</td>
+                                        </tr>
+                                        <tr>
+                                            <th><label class="noMargin">Service Price (Bitcoin):</label></th>
+                                            <td>BTC {{formatCoins paidService.btcServicePrice}}</td>
+                                        </tr>
+                                        <tr>
+                                            <th><label class="noMargin">Bitcoin Price:</label></th>
+                                            <td>USD {{formatCurrency paidService.bitcoinPrice}}</td>
+                                        </tr>
+                                        <tr>
+                                            <th><label class="noMargin">BCOT Token Price:</label></th>
+                                            <td>USD {{formatCurrency paidService.bcotPrice}}</td>
+                                        </tr>
+                                        <tr>
+                                            <th><label class="noMargin">Exchange Rate (1 BTC = <i>x</i> BCOT):</label></th>
+                                            <td>{{paidService.exchangeRate}}</td>
+                                        </tr>
+                                        <tr>
+                                            <th><label class="noMargin">Service Price (Service Credit):</label></th>
+                                            <td>{{formatServiceCredits paidService.finalServicePrice}}</td>
+                                        </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        {{/unless}}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</template>

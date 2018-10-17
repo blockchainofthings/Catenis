@@ -203,6 +203,7 @@ Billing.createNew = function (device, serviceTransact, servicePriceInfo, service
 
     docBilling.estimatedServiceCost = servicePriceInfo.estimatedServiceCost;
     docBilling.priceMarkup = servicePriceInfo.priceMarkup;
+    docBilling.btcServicePrice = servicePriceInfo.btcServicePrice;
     docBilling.bitcoinPrice = servicePriceInfo.bitcoinPrice;
     docBilling.bcotPrice = servicePriceInfo.bcotPrice;
     docBilling.exchangeRate = servicePriceInfo.exchangeRate;

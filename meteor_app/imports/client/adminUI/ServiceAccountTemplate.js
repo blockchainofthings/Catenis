@@ -26,6 +26,7 @@ import './ServiceAccountTemplate.html';
 
 // Import dependent templates
 import './BcotPaymentAddressTemplate.js';
+import './BillingReportTemplate.js';
 
 
 // Definition of module (private) functions
@@ -37,6 +38,8 @@ import './BcotPaymentAddressTemplate.js';
 
 Template.serviceAccount.onCreated(function () {
     this.state = new ReactiveDict();
+
+    this.state.set('errMsgs', []);
 
     this.state.set('bcotPayAddress', undefined);
 
@@ -56,10 +59,22 @@ Template.serviceAccount.onDestroyed(function () {
 });
 
 Template.serviceAccount.events({
+    'click #btnDismissError'(events, template) {
+        // Clear error message
+        template.state.set('errMsgs', []);
+    },
     'click #btnAddCredit'(events, template) {
+        // Reset alert messages
+        template.state.set('errMsgs', []);
+
         Meteor.call('newBcotPaymentAddress', template.data.client_id, (error, addr) => {
             if (error) {
-                console.log('Error calling \'newBcotPaymentAddress\' remote method: ' + error.toString());
+                const errMsgs = template.state.get('errMsgs');
+                errMsgs.push('Error retrieving BCOT payment address: ' + error.toString());
+                template.state.set('errMsgs', errMsgs);
+
+                // Close modal panel
+                $('#divAddServiceCredit').modal('hide');
             }
             else {
                 template.state.set('bcotPayAddress', addr);
@@ -68,7 +83,7 @@ Template.serviceAccount.events({
     },
     'hide.bs.modal #divAddServiceCredit'(event, template) {
         // Modal panel about to close. Ask for confirmation
-        return confirm('WARNING: if you proceed, you will NOT be able to continue monitoring the incoming BCOT tokens.\n\nPLEASE NOTE THAT THIS ACTION CANNOT BE UNDONE.');
+        return template.state.get('errMsgs').length > 0 || confirm('WARNING: if you proceed, you will NOT be able to continue monitoring the incoming BCOT tokens.\n\nPLEASE NOTE THAT THIS ACTION CANNOT BE UNDONE.');
     },
     'hidden.bs.modal #divAddServiceCredit'(event, template) {
         // Modal panel has been closed. Clear BCOT payment address
@@ -91,5 +106,16 @@ Template.serviceAccount.helpers({
     },
     bcotPayAddress() {
         return Template.instance().state.get('bcotPayAddress');
+    },
+    hasErrorMessage() {
+        return Template.instance().state.get('errMsgs').length > 0;
+    },
+    errorMessage() {
+        return Template.instance().state.get('errMsgs').reduce((compMsg, errMsg) => {
+            if (compMsg.length > 0) {
+                compMsg += '<br>';
+            }
+            return compMsg + errMsg;
+        }, '');
     }
 });

@@ -182,6 +182,11 @@ Template.licenseDetails.events({
 });
 
 Template.licenseDetails.helpers({
+    backQueryString() {
+        const retParams = Template.instance().data.retParams;
+
+        return retParams ? '?' + retParams : undefined;
+    },
     license() {
         return Catenis.db.collection.License.findOne({_id: Template.instance().data.license_id});
     },

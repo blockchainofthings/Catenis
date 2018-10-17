@@ -231,7 +231,12 @@ Template.clientDetails.events({
         // About to show client's default API key modal window
         Meteor.call('getClientApiAccessSecret', template.data.client_id, (error, apiAccessSecret) => {
             if (error) {
-                console.log('Error retrieving client API access secret:', error);
+                const errMsgs = template.state.get('errMsgs');
+                errMsgs.push('Error retrieving client\'s API access secret: ' + error.toString());
+                template.state.set('errMsgs', errMsgs);
+
+                // Close modal panel
+                $('#divClientAPIAccessSecret').modal('hide');
             }
             else {
                 template.state.set('apiAccessSecret', apiAccessSecret);

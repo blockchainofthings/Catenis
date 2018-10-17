@@ -1,0 +1,99 @@
+<template name="billingEntry">
+    <div>
+        <div class="panel panel-login minWidthElement noBoxShadow">
+            <div class="panel-body">
+                <div class="row">
+                    <div class="col-lg-12">
+                        {{#unless Template.subscriptionsReady}}
+                            <p style="color:lightgray; margin-top:1em">Loading...</p>
+                        {{else}}
+                            <h2>CLIENT<br><span style="color:dimgray">{{clientTitle client}}</span>
+                                <br><br>Billing Entry</h2>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="pull-left">
+                                        <a href="/admin/clients/{{client_id}}/serviceaccount/billing{{backQueryString}}" role="button" class="btn-login btn paddedBtn">Back to Billing Report</a>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                </div>
+                            </div>
+                            <div class="row" style="padding-top:1em">
+                                <div class="col-lg-12">
+                                    <table class="table table-striped text-left">
+                                        <tbody>
+                                        <tr>
+                                            <th><label class="noMargin">Device ID:</label></th>
+                                            <td>{{billing.deviceId}}</td>
+                                        </tr>
+                                        <tr>
+                                            <th><label class="noMargin">Device Name:</label></th>
+                                            <td>{{deviceName billing.deviceId}}</td>
+                                        </tr>
+                                        <tr>
+                                            <th><label class="noMargin">Billing Mode:</label></th>
+                                            <td>{{billing.billingMode}}</td>
+                                        </tr>
+                                        <tr>
+                                            <th><label class="noMargin">Service:</label></th>
+                                            <td>{{serviceName billing.service}}</td>
+                                        </tr>
+                                        <tr>
+                                            <th><label class="noMargin">Service Date:</label></th>
+                                            <td>{{billing.serviceDate}}</td>
+                                        </tr>
+                                        <tr>
+                                            <th><label class="noMargin">Service Txid:</label></th>
+                                            <td>{{billing.serviceTx.txid}}</td>
+                                        </tr>
+                                        <tr>
+                                            <th><label class="noMargin">Service Cost:</label></th>
+                                            <td>BTC {{formatCoins billing.estimatedServiceCost}}</td>
+                                        </tr>
+                                        <tr>
+                                            <th><label class="noMargin">Price Markup:</label></th>
+                                            <td>{{billing.priceMarkup}}</td>
+                                        </tr>
+                                        <tr>
+                                            <th><label class="noMargin">Service Price (Bitcoin):</label></th>
+                                            <td>BTC {{formatCoins billing.btcServicePrice}}</td>
+                                        </tr>
+                                        <tr>
+                                            <th><label class="noMargin">Bitcoin Price:</label></th>
+                                            <td>USD {{formatCurrency billing.bitcoinPrice}}</td>
+                                        </tr>
+                                        <tr>
+                                            <th><label class="noMargin">BCOT Token Price:</label></th>
+                                            <td>USD {{formatCurrency billing.bcotPrice}}</td>
+                                        </tr>
+                                        <tr>
+                                            <th><label class="noMargin">Exchange Rate (1 BCOT = <i>x</i> BTC):</label></th>
+                                            <td>{{billing.exchangeRate}}</td>
+                                        </tr>
+                                        <tr>
+                                            <th><label class="noMargin">Service Price (Service Credit):</label></th>
+                                            <td>{{formatServiceCredits billing.finalServicePrice}}</td>
+                                        </tr>
+                                        <tr>
+                                            <th><label class="noMargin">Service Payment Txid:</label></th>
+                                            <td>{{billing.servicePaymentTx.txid}}</td>
+                                        </tr>
+                                        <tr>
+                                            <th><label class="noMargin">Service Payment Confirmed:</label></th>
+                                            <td>{{billing.servicePaymentTx.confirmed}}</td>
+                                        </tr>
+                                        <tr>
+                                            <th><label class="noMargin">Created Date:</label></th>
+                                            <td>{{billing.createdDate}}</td>
+                                        </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        {{/unless}}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</template>

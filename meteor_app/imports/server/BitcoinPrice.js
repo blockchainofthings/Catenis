@@ -10,7 +10,7 @@
 // References to external code
 //
 // Internal node modules
-//import util from 'util';
+import events from 'events';
 // Third-party node modules
 import config from 'config';
 // Meteor packages
@@ -19,6 +19,7 @@ import { Meteor } from 'meteor/meteor';
 // References code in other (Catenis) modules
 import { Catenis } from './Catenis';
 import { Util } from './Util';
+import { BcotPrice } from './BcotPrice';
 
 // Config entries
 const btcPriceConfig = config.get('bitcoinPrice');
@@ -36,37 +37,41 @@ const cfgSettings = {
 //
 
 // BitcoinPrice function class
-export function BitcoinPrice() {
-    this.checkingPriceChanged = false;
-    this.boundCheckPriceChange = checkPriceChange.bind(this);
+export class BitcoinPrice extends events.EventEmitter {
+    constructor () {
+        super();
 
-    try {
-        // Retrieve current bitcoin price
-        this.lastTicker = Catenis.btcTicker.getTicker();
-    }
-    catch (err) {
-        // Log error condition
-        Catenis.logger.ERROR('Error getting initial bitcoin ticker.', err);
-    }
+        this.checkingPriceChanged = false;
+        this.boundCheckPriceChange = checkPriceChange.bind(this);
 
-    const lastRecordedBitcoinPrice = getLastRecordedBitcoinPrice.call(this);
-
-    if (this.lastTicker) {
-        if (lastRecordedBitcoinPrice === undefined || !Util.areDatesEqual(this.lastTicker.referenceDate, lastRecordedBitcoinPrice.referenceDate)) {
-            saveBitcoinPrice.call(this);
+        try {
+            // Retrieve current bitcoin price
+            this.lastTicker = Catenis.btcTicker.getTicker();
         }
-    }
-    else if (lastRecordedBitcoinPrice !== undefined) {
-        Catenis.logger.DEBUG('Using last recorded bitcoin price as initial bitcoin ticker');
-        // Use last recorded bitcoin price as last ticker
-        this.lastTicker = lastRecordedBitcoinPrice;
-    }
+        catch (err) {
+            // Log error condition
+            Catenis.logger.ERROR('Error getting initial bitcoin ticker.', err);
+        }
 
-    // Start process to retrieve updated bitcoin price
-    Meteor.setTimeout(updatePrice.bind(this, true), this.lastTicker.referenceDate.getTime() + cfgSettings.updatePriceTimeInterval - Date.now());
+        const lastRecordedBitcoinPrice = getLastRecordedBitcoinPrice.call(this);
 
-    // Start recurring process to purge older bitcoin prices
-    this.purgeInterval = Meteor.setInterval(purgePrices.bind(this), cfgSettings.purgeTimeInterval);
+        if (this.lastTicker) {
+            if (lastRecordedBitcoinPrice === undefined || !Util.areDatesEqual(this.lastTicker.referenceDate, lastRecordedBitcoinPrice.referenceDate)) {
+                saveBitcoinPrice.call(this, lastRecordedBitcoinPrice);
+            }
+        }
+        else if (lastRecordedBitcoinPrice !== undefined) {
+            Catenis.logger.DEBUG('Using last recorded bitcoin price as initial bitcoin ticker');
+            // Use last recorded bitcoin price as last ticker
+            this.lastTicker = lastRecordedBitcoinPrice;
+        }
+
+        // Start process to retrieve updated bitcoin price
+        Meteor.setTimeout(updatePrice.bind(this, true), this.lastTicker.referenceDate.getTime() + cfgSettings.updatePriceTimeInterval - Date.now());
+
+        // Start recurring process to purge older bitcoin prices
+        this.purgeInterval = Meteor.setInterval(purgePrices.bind(this), cfgSettings.purgeTimeInterval);
+    }
 }
 
 
@@ -207,12 +212,19 @@ function getLastRecordedBitcoinPrice() {
     });
 }
 
-function saveBitcoinPrice() {
+function saveBitcoinPrice(lastRecordedBitcoinPrice) {
+    lastRecordedBitcoinPrice = lastRecordedBitcoinPrice || getLastRecordedBitcoinPrice();
+
     Catenis.db.collection.BitcoinPrice.insert({
         price: this.lastTicker.price,
         referenceDate: this.lastTicker.referenceDate,
         createdDate: new Date()
     });
+
+    if (!lastRecordedBitcoinPrice || lastRecordedBitcoinPrice.price !== this.lastTicker.price) {
+        // Issue event indicating that price has been updated
+        this.emit(BitcoinPrice.notifyEvent.new_bitcoin_price.name, this.lastTicker.price);
+    }
 }
 
 
@@ -228,7 +240,12 @@ BitcoinPrice.initialize = function () {
 // BitcoinPrice function class (public) properties
 //
 
-/*BitcoinPrice.prop = {};*/
+BitcoinPrice.notifyEvent = {
+    new_bitcoin_price: Object.freeze({
+        name: 'new_bitcoin_price',
+        description: 'A new bitcoin price has been recorded'
+    })
+};
 
 
 // Definition of module (private) functions

@@ -72,16 +72,14 @@
                                         <button type="button" id="btnApiAccessSecret" class="btn-login btn paddedBtn fullWidth" data-toggle="modal" data-target="#divDeviceAPIAccessSecret">API Access Secret</button>
                                     </div>
                                     {{#if isActiveDevice device}}
-                                    <div class="col-md-4">
-                                        <button type="button" id="btnDeactivateDevice" class="btn-login btn paddedBtn fullWidth" data-toggle="modal" data-target="#divDeactivateDevice">Deactivate Device</button>
-                                    </div>
+                                        <div class="col-md-4">
+                                            <button type="button" id="btnDeactivateDevice" class="btn-login btn paddedBtn fullWidth" data-toggle="modal" data-target="#divDeactivateDevice">Deactivate Device</button>
+                                        </div>
                                     {{/if}}
-                                    {{#if isInactiveDevice device}}
-                                        {{#unless maximumDevicesReached clientDevicesInfo}}
+                                    {{#if canActiveDevice device clientDevicesInfo}}
                                         <div class="col-md-4">
                                             <button type="button" id="btnActivateDevice" class="btn-login btn paddedBtn fullWidth" data-toggle="modal" data-target="#divActivateDevice">Activate Device</button>
                                         </div>
-                                        {{/unless}}
                                     {{/if}}
                                     <div class="col-md-4">
                                         <button type="button" id="btnDeleteDevice" class="btn-login btn paddedBtn btn-warn fullWidth" data-toggle="modal" data-target="#divDeleteDevice">Delete Device</button>
@@ -104,7 +102,7 @@
                                                 <button id="btnCopyClipboard" type="button" class="btn" data-clipboard-text="{{deviceApiAccessSecret}}"><span class="glyphicon glyphicon-copy" aria-hidden="true"></span> Copy to Clipboard</button>
                                             </div>
                                             <div style="display:{{reverseDisplay displayResetApiAccessSecretForm}}">
-                                                <button id="btnResetApiAccessSecret" type="button" class="btn btn-login paddedBtn">Reset API Access Key</button>
+                                                <button id="btnResetApiAccessSecret" type="button" class="btn btn-login paddedBtn">Reset API Access Secret</button>
                                             </div>
                                             <div id="divResetApiAccessSecret" class="panel panel-default" style="padding:1em; display:{{displayResetApiAccessSecretForm}}">
                                                 <form id="frmDeviceApiAccessSecret" autocomplete="off">

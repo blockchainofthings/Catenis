@@ -13,7 +13,6 @@
 //import util form 'util';
 // Third-party node modules
 //import config from 'config';
-import BigNumber from 'bignumber.js';
 // Meteor packages
 import { Meteor } from 'meteor/meteor';
 import { Template } from 'meteor/templating';
@@ -21,6 +20,7 @@ import { ReactiveDict } from 'meteor/reactive-dict';
 
 // References code in other (Catenis) modules on the client
 import { Catenis } from '../ClientCatenis';
+import { ClientUtil } from '../ClientUtil';
 
 // Import template UI
 import './BcotPriceTemplate.html';
@@ -30,10 +30,6 @@ import './BcotPriceTemplate.html';
 
 // Definition of module (private) functions
 //
-
-function formatCurrency(n) {
-    return new BigNumber(n).toFormat(2);
-}
 
 function numberToStr(val) {
     return val === undefined || val === null ? '' : val.toString();
@@ -132,7 +128,7 @@ Template.bcotPrice.events({
         // Initialize form fields
         const form = $('#frmUpdatePrice')[0];
         const bcotTokenPrice = Catenis.db.collection.BcotTokenPrice.findOne(1);
-        form.newPrice.value = formatCurrency(bcotTokenPrice.price);
+        form.newPrice.value = ClientUtil.formatCurrency(bcotTokenPrice.price);
         form.newPrice.disabled = false;
 
         // Reset alert messages
@@ -242,7 +238,7 @@ Template.bcotPrice.helpers({
         return Catenis.db.collection.BcotTokenPrice.findOne(1);
     },
     formatCurrency(n) {
-        return formatCurrency(n) ;
+        return ClientUtil.formatCurrency(n) ;
     },
     hasNewPriceErrorMessage() {
         return Template.instance().state.get('newPriceErrMsgs').length > 0;

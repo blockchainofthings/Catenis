@@ -13,6 +13,7 @@
 //import util from 'util';
 // Third-party node modules
 import moment from 'moment-timezone';
+import BigNumber from 'bignumber.js';
 // Meteor packages
 //import { Meteor } from 'meteor/meteor';
 
@@ -63,6 +64,25 @@ ClientUtil.startOfDayTimeZone = function (date, timeZone, returnMoment = false) 
     const mt = (moment.isMoment(date) ? date : moment(date)).tz(timeZone).startOf('d');
 
     return returnMoment ? mt : mt.toDate();
+};
+
+// Arguments:
+//  amount [Number] - Currency (e.g. dollar) amount
+ClientUtil.formatCurrency = function(amount) {
+    return new BigNumber(amount).toFormat(2);
+};
+
+// Arguments:
+//  amountInSatoshis [Number] - Crypto currency (e.g. bitcoin) amount in satoshis
+ClientUtil.formatCoins = function (amountInSatoshis) {
+    return new BigNumber(amountInSatoshis).dividedBy(100000000).toFormat(8);
+};
+
+// Arguments:
+//  amount: [Number] - Catenis service credit asset amount represented as an integer number of the asset's smallest division (according to the asset divisibility)
+ClientUtil.formatCatenisServiceCredits = function (amount) {
+    // Note: it is assumed the asset divisibility for Catenis service credits to be 7 (decimal places)
+    return new BigNumber(amount).dividedBy(10000000).toFormat(7);
 };
 
 

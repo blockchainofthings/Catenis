@@ -1,0 +1,58 @@
+<template name="clientNewDevice">
+    <div>
+        <div class="panel panel-login minWidthElement noBoxShadow">
+            <div class="panel-body">
+                <div class="row">
+                    <div class="col-lg-12">
+                        {{#unless Template.subscriptionsReady}}
+                            <p style="color:lightgray; margin-top:1em">Loading...</p>
+                        {{else}}
+                            <h2>New Device</h2>
+                            {{#if hasErrorMessage}}
+                                <div class="alert alert-danger" role="alert">
+                                    <button type="button" id="btnDismissError" class="close" aria-label="Close">
+                                        <span aria-hidden="true">&times;</span>
+                                    </button>
+                                    {{{errorMessage}}}
+                                </div>
+                            {{/if}}
+                            {{#if hasInfoMessage}}
+                                <div class="alert alert-{{infoMessageType}}" role="alert">
+                                    <button type="button" id="btnDismissInfo" class="close" aria-label="Close">
+                                        <span aria-hidden="true">&times;</span>
+                                    </button>
+                                    {{infoMessage}}
+                                </div>
+                            {{/if}}
+                            <form id="frmNewDevice" autocomplete="off">
+                                <div class="form-group">
+                                    <input type="text" maxlength="80" id="txtDeviceName" name="deviceName" placeholder="Device Name" autocomplete="off" autocapitalize="none" autocorrect="off">
+                                </div>
+                                <div class="form-group">
+                                    <input type="text" maxlength="80" id="txtProdUniqueId" name="prodUniqueId" placeholder="Product Unique ID" autocomplete="off" autocapitalize="none" autocorrect="off">
+                                </div>
+                                <div class="form-group" style="text-align:left; margin-top:25px">
+                                    <span><input type="checkbox" id="cbxPublic" name="public"/>&nbsp;&nbsp;<label for="cbxPublic" class="input">Public</label></span>
+                                </div>
+                                <div class="form-group" style="text-align:left; margin-top:15px; margin-bottom:30px">
+                                    <span><input type="checkbox" id="cbxAssignClientAPIAccessSecret" name="assignClientAPIAccessSecret"/>&nbsp;&nbsp;<label for="cbxAssignClientAPIAccessSecret" class="input">Assign Default API Access Secret</label></span>
+                                </div>
+                                <div class="row">
+                                    <div class="col-xs-6 form-group pull-left">
+                                        <button id="btnCancel" type="button" class="form-control btn btn-login at-btn">{{#if isDeviceCreated}}Back{{else}}Cancel{{/if}}</button>
+                                        <a id="lnkCancel" href="/devices" style="display:none"></a>
+                                    </div>
+                                    {{#if showCreateButton}}
+                                        <div class="col-xs-6 form-group pull-right">
+                                            <button type="submit" id="btnCreate" class="form-control btn btn-login at-btn submit">Create Device</button>
+                                        </div>
+                                    {{/if}}
+                                </div>
+                            </form>
+                        {{/unless}}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</template>

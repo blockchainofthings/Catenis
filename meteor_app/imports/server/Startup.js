@@ -62,6 +62,15 @@ import { LicenseExpireRemindEmailNotify } from './LicenseExpireRemindEmailNotify
 import { DevicesDisableEmailNotify } from './DevicesDisableEmailNotify';
 import { ClientLicense } from './ClientLicense';
 import { LicensesUI } from './adminUI/LicensesUI';
+import { PaidServicesUI } from './adminUI/PaidServicesUI';
+import { ClientUI } from './clientUI/ClientUI';
+import { ClientLicensesUI } from './clientUI/ClientLicensesUI';
+import { ClientApiAccessUI } from './clientUI/ClientApiAccessUI';
+import { ClientPaidServicesUI } from './clientUI/ClientPaidServicesUI';
+import { ClientServiceAccountUI } from './clientUI/ClientServiceAccountUI';
+import { ClientDevicesUI } from './clientUI/ClientDevicesUI';
+import { ServiceBillingUI } from './adminUI/ServiceBillingUI';
+import { ClientServiceBillingUI } from './clientUI/ClientServiceBillingUI';
 // TEST - begin
 //import { resetBitcoinCore } from './test/FundSourceTest';
 //import { TestCatenisColoredCoins } from './test/TestCatenisColoredCoins';
@@ -106,6 +115,7 @@ Meteor.startup(function () {
         Database.fixBillingExchangeRate();
         Database.removeBcotExchangeRateColl();
         Database.addMissingClientTimeZone();
+        Database.addMissingBtcServicePriceField();
         Application.initialize();
         AccountsEmail.initialize();
         LicenseExpireEmailNotify.initialize();
@@ -165,8 +175,18 @@ Meteor.startup(function () {
         SystemFundingUI.initialize();
         BcotUsageReportUI.initialize();
         LicensesUI.initialize();
+        PaidServicesUI.initialize();
         ClientsUI.initialize();
+        ServiceBillingUI.initialize();
         DevicesUI.initialize();
+
+        ClientUI.initialize();
+        ClientLicensesUI.initialize();
+        ClientApiAccessUI.initialize();
+        ClientPaidServicesUI.initialize();
+        ClientServiceAccountUI.initialize();
+        ClientServiceBillingUI.initialize();
+        ClientDevicesUI.initialize();
 
         Catenis.logger.INFO('Initialization ended.');
 

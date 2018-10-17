@@ -28,6 +28,7 @@ import './LicensesTemplate.html';
 
 // Import dependent templates
 import './LicenseDetailsTemplate.js';
+import querystring from "querystring";
 
 
 // Definition of module (private) functions
@@ -219,13 +220,12 @@ function strToInteger(str) {
 Template.licenses.onCreated(function () {
     this.state = new ReactiveDict();
 
-    
     this.state.set('createLicenseErrMsgs', []);
     this.state.set('errMsgs', []);
     this.state.set('infoMsg', undefined);
     this.state.set('infoMsgType', 'info');
 
-    this.state.set('showInactiveLicenses', false);
+    this.state.set('showInactiveLicenses', this.data.showInactive);
     this.state.set('showProvisionalRenewalDays', false);
     this.state.set('actionSuccessLicense', undefined);
 
@@ -525,5 +525,14 @@ Template.licenses.helpers({
     },
     displayCreateLicenseSubmitButton() {
         return Template.instance().state.get('displayCreateLicenseSubmitButton');
+    },
+    returnQueryString() {
+        if (Template.instance().state.get('showInactiveLicenses')) {
+            return '?' + querystring.stringify({
+                retparams: querystring.stringify({
+                    showinactive: 1
+                })
+            });
+        }
     }
 });
