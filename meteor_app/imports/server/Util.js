@@ -18,7 +18,7 @@ import bitcoinLib from 'bitcoinjs-lib';
 import _und from 'underscore';
 import moment from 'moment-timezone';
 // Meteor packages
-//import { Meteor } from 'meteor/meteor';
+import { Meteor } from 'meteor/meteor';
 
 // References code in other (Catenis) modules
 import { Catenis } from './Catenis';
@@ -273,6 +273,37 @@ Util.capitalize = function (str) {
 
 Util.isUndefinedOrNull = function (val) {
     return val === undefined || val === null;
+};
+
+Util.processItemsAsync = function (itemsToProcess, procFunc, ...procArgs /* arg1, arg2, ..., callbackFunc */) {
+    let callbackFunc;
+
+    if (procArgs.length > 0 && typeof procArgs[procArgs.length - 1] === 'function') {
+        callbackFunc = procArgs.pop();
+    }
+
+    function processControl() {
+        const itemToProcess = itemsToProcess.shift();
+
+        // Do processing
+        const callArgs = [itemToProcess].concat(procArgs);
+
+        procFunc.apply(undefined, callArgs);
+
+        if (itemsToProcess.length > 0) {
+            Meteor.defer(processControl);
+        }
+        else if (callbackFunc) {
+            Meteor.defer(callbackFunc);
+        }
+    }
+
+    if (itemsToProcess.length > 0) {
+        processControl();
+    }
+    else if (callbackFunc) {
+        Meteor.defer(callbackFunc);
+    }
 };
 
 
