@@ -68,7 +68,8 @@
   },
   // Parameter pertaining to IpfsClient module
   "ipfsClient": {
-    "apiHost": "127.0.0.1"
+    "apiHost": "127.0.0.1",
+    "apiPort": 9095  // Connects to IPFS Cluster node (via its HTTP proxy) instead of to IPFS node (port 5001) directly
   },
   // Parameters pertaining to C3NodeClient module
   "c3NodeClient": {

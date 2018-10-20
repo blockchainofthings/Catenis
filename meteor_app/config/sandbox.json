@@ -68,6 +68,11 @@
     "testnetRpcPort": 17332, // Port used to connect with Omni Core server via its RPC interface to interact with bitcoin's testnet blockchain
     "rpcConnectionTimeout": 30000  // (30 sec.) Timeout, in miliseconds, for RPC connection with the Omni Core server
   },
+  // Parameter pertaining to IpfsClient module
+  "ipfsClient": {
+    "apiHost": "127.0.0.1",
+    "apiPort": 9095  // Connects to IPFS Cluster node (via its HTTP proxy) instead of to IPFS node (port 5001) directly
+  },
   // Parameters pertaining to C3NodeClient module
   "c3NodeClient": {
     "serverHost": "127.0.0.1", // Catenis Colored Coins node server host name/IP address
@@ -80,10 +85,6 @@
     "signingCertificateFilePath": "/etc/letsencrypt/live/sandbox.catenis.io/cert.pem",  // Path to file (in PEM format) containing Blockchain of Things' owned SSL certificate used to sign message for asset verification
     "signingCertificateKeyFilePath": "/etc/letsencrypt/live/sandbox.catenis.io/privkey.pem",  // Path to file containing key of SSL certificate used to sign message for asset verification
     "urlContentTimeout": 15000  // (15 sec.) Timeout, in miliseconds, for retrieving content associated with a given URL
-  },
-  // Parameter pertaining to IpfsClient module
-  "ipfsClient": {
-    "apiHost": "127.0.0.1"
   },
   // Parameters pertaining to BcotPayment module
   "bcotPayment": {
