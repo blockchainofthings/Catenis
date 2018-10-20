@@ -45,7 +45,7 @@ export class Ipfs2MessageStorage extends MessageStorage {
     store(message) {
         try {
             // Save message onto IPFS and return its CID
-            return new CID(Catenis.ipfsClient.api.filesAdd(message)[0].hash).buffer;
+            return new CID(Catenis.ipfsClient.filesAdd(message)[0].hash).buffer;
         }
         catch (err) {
             // Error storing message onto external message storage.
@@ -65,7 +65,7 @@ export class Ipfs2MessageStorage extends MessageStorage {
     retrieve(msgRef) {
         try {
             // Retrieve and return (message) contents from IPFS with the given CID
-            return Catenis.ipfsClient.api.filesCat(new CID(msgRef));
+            return Catenis.ipfsClient.filesCat(new CID(msgRef));
         }
         catch (err) {
             // Error retrieving message from external message storage.
