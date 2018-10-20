@@ -55,7 +55,32 @@ export function IpfsClient(host, port, protocol) {
 
 IpfsClient.prototype.filesAdd = function (data, options) {
     try {
-        return this.api.filesAdd(data, options);
+        const retResults = this.api.filesAdd(data, options);
+
+        // NOTE: this is a workaround for an issue with IPFS Cluster ver. 0.6.0. This issue
+        //      is expected to be resolved in the next release of IPFS Cluster though
+        return retResults.map((retResult) => {
+            if (retResult.code === 0 && retResult.message === '') {
+                // Extraneous properties added by IPFS Cluster. Fix result
+                const fixedResult = {};
+
+                if (retResult.Name) {
+                    fixedResult.path = retResult.Name;
+                }
+
+                if (retResult.Hash) {
+                    fixedResult.hash = retResult.Hash;
+                }
+
+                if (retResult.Size) {
+                    fixedResult.size = parseInt(retResult.Size);
+                }
+
+                return fixedResult;
+            }
+
+            return retResult;
+        });
     }
     catch (err) {
         handleError('files.add', err);
