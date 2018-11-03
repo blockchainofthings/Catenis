@@ -6,24 +6,24 @@
     "environment": "production",
     "seedFilename": "seed.dat",
     "cryptoNetwork": "testnet",  // Available values: 'bitcoin' (for Bitcoin's production blockchain), 'testnet' (for Bitcoin's test blockchain)
-    "shutdownTimeout": 30000,   // (30 sec.) Time, in miliseconds, that the application should wait after it receives a terminate request before it actually terminates
+    "shutdownTimeout": 30000,   // (30 sec.) Time, in milliseconds, that the application should wait after it receives a terminate request before it actually terminates
     "adminRole": "sys-admin",  // User role for application administration
     "defaultAdminUser": null,  // (optional) Username of application default admin user
     "defaultAdminPsw": null  // (optional) Chiphered, base64 encoded password for application default admin user
   },
   // Parameters pertaining to the Startup module
   "startup": {
-    "fixMissingAddresses": false, // Indicate if issued blockchain addresses are missing from BitcoinCore wallet they should be automaically included
+    "fixMissingAddresses": false, // Indicate if issued blockchain addresses are missing from BitcoinCore wallet they should be automatically included
     "bypassProcessing": false,     // NOTE: this option is for DEBUG ONLY. Bypass all processing, so the app starts but does not do anything. This allows
-                                  //  for debuging via 'meteor shell' or 'meteor mongo'
+                                  //  for debugging via 'meteor shell' or 'meteor mongo'
     "dataToCipher": null,  // A text that should be ciphered by the application. If set, the Catenis application is started in "bypass processing" mode and will output the ciphered data
-    "pidFilename": "catenis-pid"  // Name of the file containig the ID of the current process that is created/updated whenever that app starts
+    "pidFilename": "catenis-pid"  // Name of the file containing the ID of the current process that is created/updated whenever that app starts
   },
   // Parameters pertaining to e-mail server configuration
   "email": {
     "smtpHost": "localhost",
     "secureProto": null,  // (optional, can be set to null) Secure protocol that should be used with SMTP server. Valid options: 'ssl' or 'tls'
-    "smtpPort": null,  // (optonal, can be set to null) To be set only if different than default (depending on secureProto): none/null (25), ssl (465), tls (587)
+    "smtpPort": null,  // (optional, can be set to null) To be set only if different than default (depending on secureProto): none/null (25), ssl (465), tls (587)
     "username": null,  // (optional, can be set to null) To be set only if required by SMTP host
     "password": null   // (optional, can be set to null) To be set only if required by SMTP host
   },
@@ -58,7 +58,7 @@
       "type": "annual",  // Used to identify any characteristics that differentiate this specific license
       "revision": 0,  // The revision number of the license. Revisions are used to change some characteristics of a license (level & type) (e.g. maximum number of devices)
       // Unlimited number of devices
-      "validityMonths": 12, // Period of time, in months, through which this lincense is valid
+      "validityMonths": 12, // Period of time, in months, through which this license is valid
       "provisionalRenewalDays": 7 // The duration, in days, for the provisional renewal of this license
     }, {
       "level": "Professional",  // Name used to identify the license level
@@ -66,7 +66,7 @@
       "type": "annual",  // Used to identify any characteristics that differentiate this specific license
       "revision": 0,  // The revision number of the license. Revisions are used to change some characteristics of a license (level & type) (e.g. maximum number of devices)
       "maximumDevices": 200,  //Maximum number of client devices that can be active at any time
-      "validityMonths": 12, // Period of time, in months, through which this lincense is valid
+      "validityMonths": 12, // Period of time, in months, through which this license is valid
       "provisionalRenewalDays": 7 // The duration, in days, for the provisional renewal of this license
     }, {
       "level": "Basic",  // Name used to identify the license level
@@ -74,7 +74,7 @@
       "type": "annual",  // Used to identify any characteristics that differentiate this specific license
       "revision": 0,  // The revision number of the license. Revisions are used to change some characteristics of a license (level & type) (e.g. maximum number of devices)
       "maximumDevices": 20,  // Maximum number of client devices that can be active at any time
-      "validityMonths": 12, // Period of time, in months, through which this lincense is valid
+      "validityMonths": 12, // Period of time, in months, through which this license is valid
       "provisionalRenewalDays": 7 // The duration, in days, for the provisional renewal of this license
     }, {
       "level": "Starter",  // Name used to identify the license level
@@ -84,6 +84,25 @@
       "maximumDevices": 2  // Maximum number of client devices that can be active at any time
       // Never expires
       // No provisional renewal
+    }],
+    "defaultBcotProducts": [{
+      "sku": "CTN-0010BCTO",
+      "amount": 1000000000
+    }, {
+      "sku": "CTN-0020BCTO",
+      "amount": 2000000000
+    }, {
+      "sku": "CTN-0050BCTO",
+      "amount": 5000000000
+    }, {
+      "sku": "CTN-0100BCTO",
+      "amount": 10000000000
+    }, {
+      "sku": "CTN-0500BCTO",
+      "amount": 50000000000
+    }, {
+      "sku": "CTN-1000BCTO",
+      "amount": 100000000000
     }]
   },
   // Parameters pertaining to BitcoinFees module
@@ -91,18 +110,18 @@
     "apiVer1Url": "https://bitcoinfees.21.co/api/v1/fees/",  // URL of version 1 of BitcoinFees API provided by 21.co
     "recommendedFeesEndPoint": "recommended",  // Endpoint of BitcoinFees API method for retrieving recommended fees
     "listFeesEndPoint": "list",  // Endpoint of BitcoinFees API method for retrieving complete list of fees
-    "retrieveFeesInterval": 21600000,  // (6 hours) Time interval, in miliseconds, for executing method to retrieve latest bitcoin fees
-    "numDbRecsToMaintain": 2000,  // Number of database docs/recs used to store latest fees that should be maintained when puging the database
+    "retrieveFeesInterval": 21600000,  // (6 hours) Time interval, in milliseconds, for executing method to retrieve latest bitcoin fees
+    "numDbRecsToMaintain": 2000,  // Number of database docs/recs used to store latest fees that should be maintained when purging the database
     "dbPurgeHours": 2,  // Hours component of time when database purge should take place
     "dbPurgeMinutes": 0,  // Minutes component of time when database purge should take place
     "dbPurgeSeconds": 0,  // Seconds component of time when database purge should take place
-    "dbPurgeInterval": 86400000  // (24 hours) Time interval, in miliseconds, for executing process to purge database (delete oldest fees docs/recs)
+    "dbPurgeInterval": 86400000  // (24 hours) Time interval, in milliseconds, for executing process to purge database (delete oldest fees docs/recs)
   },
   // Parameters pertaining to BitcoinTicker module
   "bitcoinTicker": {
     "apiUrl": "https://api.coinmarketcap.com/v2/",  // URL of API (from CoinMarketCap) used to retrieve current market info on different crypto currencies
     "bitcoinTickerEndPoint": "ticker/1",  // API endpoint used to retrieve bitcoin market price
-    "timeout": 20000  // (20 sec.) Timeout, in miliseconds, for connection/request with API server
+    "timeout": 20000  // (20 sec.) Timeout, in milliseconds, for connection/request with API server
   },
   // Parameters pertaining to BitcoinPrice module
   "bitcoinPrice": {
@@ -114,7 +133,7 @@
   // Parameters pertaining to KeyStore module
   "keyStore": {
     "obsoleteExtKeyTimeToPurge": 345600, // (4 days) Time, in seconds, before an obsolete HD extended key is purged from local key storage
-    "purgeUnusedExtKeyInterval": 43200000  // (12 hours) Time interval, in miliseconds, for executing method to purge unused HD extended keys form local key storage
+    "purgeUnusedExtKeyInterval": 43200000  // (12 hours) Time interval, in milliseconds, for executing method to purge unused HD extended keys form local key storage
   },
   // Parameters pertaining to BitcoinCore module
   "bitcoinCore": {
@@ -123,8 +142,8 @@
     "testnetRpcPort": 18332, // Port used to connect with Bitcoin Core server via its RPC interface to interact with bitcoin's testnet blockchain
     "rpcUser": "??????", // Username used to connect with Bitcoin Core server via its RPC interface
     "rpcPassword": "??????", // Password used to connect with Bitcoin Core server via its RPC interface
-    "rpcConnectionTimeout": 15000,  // (15 sec.) Timeout, in miliseconds, for RPC connection with the Bitcoin Core server
-    "rescanTimeout": 7200000 // (2 hours) Timeout, in miniseconds, for waiting on Bitcoin Core to finish rescanning the blockchain after importing private key
+    "rpcConnectionTimeout": 15000,  // (15 sec.) Timeout, in milliseconds, for RPC connection with the Bitcoin Core server
+    "rescanTimeout": 7200000 // (2 hours) Timeout, in milliseconds, for waiting on Bitcoin Core to finish rescanning the blockchain after importing private key
   },
   // Parameters pertaining to OmniCore module
   "omniCore": {
@@ -133,8 +152,8 @@
     "testnetRpcPort": 18332, // Port used to connect with Omni Core server via its RPC interface to interact with bitcoin's testnet blockchain
     "rpcUser": "??????", // Username used to connect with Omni Core server via its RPC interface
     "rpcPassword": "??????", // Password used to connect with Omni Core server via its RPC interface
-    "rpcConnectionTimeout": 15000,  // (15 sec.) Timeout, in miliseconds, for RPC connection with the Omni Core server
-    "rescanTimeout": 7200000 // (2 hours) Timeout, in miniseconds, for waiting on Omni Core to finish rescanning the blockchain after importing private key
+    "rpcConnectionTimeout": 15000,  // (15 sec.) Timeout, in milliseconds, for RPC connection with the Omni Core server
+    "rescanTimeout": 7200000 // (2 hours) Timeout, in milliseconds, for waiting on Omni Core to finish rescanning the blockchain after importing private key
   },
   // Parameters pertaining to BaseBlockchainAddress module
   "baseBlockchainAddress": {
@@ -147,9 +166,10 @@
       "systemReadConfSpendOnly": 900,  // (15 min.)
       "systemReadConfSpendNull": 900,  // (15 min.)
       "systemReadConfPayTxExpense": 900,  // (15 min.)
-      "systemServCredIssuing": 0,   // Indicates that addresses of this type should never expire
+      "systemServCredIssuing": 0,  // Indicates that addresses of this type should never expire
       "systemServPymtPayTxExpense": 900,  // (15 min.)
       "systemMultiSigSignee": 900,  // (15 min.)
+      "systemBcotSaleStock": 0,  // Indicates that addresses of this type should never expire
       "clientServAccCreditLine": 900,  // (15 min.)
       "clientServAccDebitLine": 900,  // (15 min.)
       "clientBcotPayment": 14400,  // (4 hours)
@@ -158,9 +178,9 @@
       "deviceAsset": 900,  // (15 min.)
       "deviceAssetIssuance": 900  // (15 min.)
     },
-    "updateIssuedAddressesInterval": 7200000, // (2 hours) Time interval, in miliseconds, for executing method to update issued addresses
+    "updateIssuedAddressesInterval": 7200000, // (2 hours) Time interval, in milliseconds, for executing method to update issued addresses
     "inactiveObjectTime": 345600,  // (4 days) Time, in seconds, from the time when instantiated object has been last accessed before it is considered inactive
-    "deleteInactiveObjectsInterval": 43200000 // (12 hours) Time interval, in miliseconds, for executing method to delete inactive objects
+    "deleteInactiveObjectsInterval": 43200000 // (12 hours) Time interval, in milliseconds, for executing method to delete inactive objects
   },
   // Parameters pertaining to FundSource module
   "fundSource": {
@@ -181,6 +201,15 @@
       "multiplyFactor": 2  // Multiply factor to use when calculating total amount to fund
     },
     "serviceCreditIssueAddrFunding": {
+      "unitAmount": 600,  // Amount, in satoshis, equivalent to one unit of funding
+      "maxUnitsPerUtxo": 2,  // Maximum number of units of funding that should be accumulated into a single UTXO
+      "minUtxosToFund": 10,  // Number of UTXOs that should be funded before start accumulating funding units into a single UTXO
+      "unitsPerPrePaidClients": 0.1,  // Expected number of units of funding that there should exist per pre-paid clients
+      "unitsPerPostPaidClients": 0.1,  // Expected number of units of funding that there should exist per post-paid clients
+      "prePaidClientsToFund": 100,  // Number of pre-paid clients to consider when calculating total amount to fund
+      "postPaidClientsToFund": 100  // Number of post-paid clients to consider when calculating total amount to fund
+    },
+    "bcotSaleStockAddrFunding": {
       "unitAmount": 600,  // Amount, in satoshis, equivalent to one unit of funding
       "maxUnitsPerUtxo": 2,  // Maximum number of units of funding that should be accumulated into a single UTXO
       "minUtxosToFund": 10,  // Number of UTXOs that should be funded before start accumulating funding units into a single UTXO
@@ -226,7 +255,7 @@
       "servicesToPayToFund": 300  // Number of services to pay to consider when calculating total amount to fund
     },
     "servicePayment": {
-      "paymentResolution": 10,  // Resolution of amount, in satoshis, that should be allocated to pay for the expenses of transactions realted to service payment. In other words, the allocated amount should be a multiple of this amount
+      "paymentResolution": 10,  // Resolution of amount, in satoshis, that should be allocated to pay for the expenses of transactions related to service payment. In other words, the allocated amount should be a multiple of this amount
       // To be used with pre-paid clients
       "spendServiceCredit": {
         "initNumTxInputs": 2,         // Initial number of inputs of a spend service credit transaction (1 client service account credit line, 1 service payment pay tx expense)
@@ -256,7 +285,7 @@
       }
     },
     "sysMessage": {
-      "messagesPerMinute": 4,  // Number of system messages sents per minute that is expected to be sustained
+      "messagesPerMinute": 4,  // Number of system messages sent per minute that is expected to be sustained
       "minutesToConfirm": 300,  // (5 hours) Time, in minutes, within which send system message txs are expected to be confirmed
       "unconfMainAddrReuses": 10,  // Number of times an UTXO associated with a system main addr is expected to be reused
       "mainAddrFunding": {
@@ -273,10 +302,10 @@
       }
     },
     "message": {
-      "messagesPerMinute": 4,  // Number of messages sents per minute that is expected to be sustained
+      "messagesPerMinute": 4,  // Number of messages sent per minute that is expected to be sustained
       "minutesToConfirm": 300,  // (5 hours) Time, in minutes, within which send message txs are expected to be confirmed
       "unconfMainAddrReuses": 10,  // Number of times an UTXO associated with a device main addr is expected to be reused
-      "readConfimAddrAmount": 600,  // Amount, in satoshis, that should be paid to read confirmation address output of send message tx
+      "readConfirmAddrAmount": 600,  // Amount, in satoshis, that should be paid to read confirmation address output of send message tx
       "mainAddrFunding": {
         "unitAmount": 600,  // Amount, in satoshis, equivalent to one unit of funding
         "maxUnitsPerAddr": 10,  // Maximum number of units of funding that should be accumulated into a single UTXO/address (there should be a single UTXO per address)
@@ -373,14 +402,14 @@
       }
     }
   },
-  // Parameters partaining to Client module
+  // Parameters pertaining to Client module
   "client": {
     "firstAccountNumber": 1001,  // Number to be used when generating the very first client account number if no one still exists
     "userNamePrefix": "User for Catenis client",  // Prefix to be used for the name of users created to be associated with a Catenis clients
     "clientRole": "ctn-client",  // Role attributed to users associated with Catenis clients
     "minLicenseValidityDays": 7,  // Minimum number of days for a license validity period (when overriding the default validity period)
                            //  Note: this value must be kept in sync with the minValidityDays constant defined in the ClientLicensesTemplate.js module
-    "minLicenseValDaysToReplace": 2,  // Mininum validity in days for a new license to replace an existing license
+    "minLicenseValDaysToReplace": 2,  // Minimum validity in days for a new license to replace an existing license
     "temporaryLicense": {  // Used to avoid that client devices be disabled for clients created before the license feature was available before an official license is assigned to them
       "active": false,   // Indicate that temporary license should be assigned
       "level": "Basic",  // Level of temporary license to assign
@@ -502,7 +531,7 @@
   "transaction": {
     "txOutputDustAmount": 600,  // Minimum amount that should be allocated to a transaction output - (<output_size> + 148) * <dust_relay_fee>/1000 => (34+148)*3000/1000 = 546 satoshis/kb ~ 600
     "txInputSize": 148, // Size, in bytes, of typical transaction input (spending a P2PKH UTXO)
-                        //  NOTE 1: IMPORTANT - this is an everage size for such inputs. The actual size can vary from 147 up to 149 (in other workds, the actual size is 148 +/- 1)
+                        //  NOTE 1: IMPORTANT - this is an average size for such inputs. The actual size can vary from 147 up to 149 (in other words, the actual size is 148 +/- 1)
                         //  NOTE 2: this value should be reviewed for segwit transactions
     "txOutputSize": 34, // Size, in bytes, of a typical (P2PKH) transaction output
                        //  NOTE: this value should be reviewed for segwit transactions
@@ -514,12 +543,12 @@
   },
   // Parameters pertaining to TransactionMonitor module
   "transactionMonitor": {
-    "blockchainPollingInterval": 15000, // (15 sec.) Time interval, in miliseconds, for polling the blockchain for newly arrived transactions and blocks
+    "blockchainPollingInterval": 15000, // (15 sec.) Time interval, in milliseconds, for polling the blockchain for newly arrived transactions and blocks
     "mempoolExpiryHours": 336,  // (14 days) Time, in hours, after which transactions are evicted from Bitcoin Core' mempool
-    "purgeFoundNewCtnTxsInterval": 3600000,  // (1 hour) Time interval, in miliseconds, for executing method to purge transactions from list of found new Catenis transactions
+    "purgeFoundNewCtnTxsInterval": 3600000,  // (1 hour) Time interval, in milliseconds, for executing method to purge transactions from list of found new Catenis transactions
     "limitTxConfirmTime": 60,  // (1 hour) Time, in minutes, after which it is expected for any Catenis issued transaction to have already been confirmed
-    "checkOldUnconfTxsInterval": 1800000,  // (30 min.) Time interval, in miliseconds, for checking if there are old transactions that have not yet been confirmed
-    "newTxsBatchProcDoneTimeout": 60000  // (1 min.) Timeout, in miliseconds, for waiting for a given new transactions batch to finish processing
+    "checkOldUnconfTxsInterval": 1800000,  // (30 min.) Time interval, in milliseconds, for checking if there are old transactions that have not yet been confirmed
+    "newTxsBatchProcDoneTimeout": 60000  // (1 min.) Timeout, in milliseconds, for waiting for a given new transactions batch to finish processing
   },
   // Parameters pertaining to CatenisMessage module
   "catenisMessage": {
@@ -532,7 +561,7 @@
     "apiPort": 5001,
     "apiProtocol": "http"
   },
-  // Paramenters pertaining to IpfsServerMonitor module
+  // Parameters pertaining to IpfsServerMonitor module
   "ipfsServerMonitor": {
     "enabled": true,
     "checkInterval": 300  // (5 min.) Time, in seconds, defining the period within which IPFS server shall be checked to make sure it is still alive
@@ -548,7 +577,7 @@
   // Parameters pertaining to ReadConfirmation module
   "readConfirmation": {
     "unconfirmedTxTimeout": 10080,  // (7 days) Timeout, in minutes, for waiting for latest read confirmation tx to be confirmed (set to 7 days, which is half the default mempool tx eviction time of 14 days)
-    "txSizeThresholdRatio": 0.9  // Ratio that should be applied to maximum tx size to calculate theshold for read confirmation tx size. Above that size the tx fee rate should be reset so that is is confirmed as soon as possible
+    "txSizeThresholdRatio": 0.9  // Ratio that should be applied to maximum tx size to calculate threshold for read confirmation tx size. Above that size the tx fee rate should be reset so that is is confirmed as soon as possible
   },
   // Parameters pertaining to RestApi module
   "restApi": {
@@ -589,15 +618,15 @@
     "wsNotifyRootPath": "ws",  // Root of all paths to be used as endpoints for establishing WebSocket connections for this notification message dispatcher.
                                //  NOTE: the fully qualified notification root path (see notification section above) shall be prepended to this path to form the qualified base URI path for this dispatcher
     "notifyWsSubprotocol": "notify.catenis.io",  // Name of WebSocket subprotocol to be used for dispatching notification messages
-                                                 //  NOTE: it's a proprietatry protocol that just sends the notification messages straight to the connected client as long as there is an open connection for the given notification event.
-                                                 //    Thus the client needs to open one WebSocket connection for each notification event for which it wishes to receive notifications. There shall be an enpoint URI for each notification event
-    "minNotifyServiceVer": "0.1",  // Minimum version of Catenis notification service that is supportted by the WebSocket notification dispatcher
-    "initVersion": "0.1",   // The initial version of the WebSockert notification message dispatcher
+                                                 //  NOTE: it's a proprietary protocol that just sends the notification messages straight to the connected client as long as there is an open connection for the given notification event.
+                                                 //    Thus the client needs to open one WebSocket connection for each notification event for which it wishes to receive notifications. There shall be an endpoint URI for each notification event
+    "minNotifyServiceVer": "0.1",  // Minimum version of Catenis notification service that is supported by the WebSocket notification dispatcher
+    "initVersion": "0.1",   // The initial version of the WebSocket notification message dispatcher
     "availableVersions": [    // List of all currently available versions of the WebSocket notification message dispatcher
       "0.1"
     ],
-    "heartbeatInterval": 30000,  // (30 sec.) Time interval, in miliseconds, for sending heartbeat ping package to client
-    "authMsgTimeout": 5000   // (5 sec.) Timeout, in miliseconds, for waiting on first message from client used to authenticate itself with the system
+    "heartbeatInterval": 30000,  // (30 sec.) Time interval, in milliseconds, for sending heartbeat ping package to client
+    "authMsgTimeout": 5000   // (5 sec.) Timeout, in milliseconds, for waiting on first message from client used to authenticate itself with the system
   },
   // Parameters pertaining to C3NodeClient module
   "c3NodeClient": {
@@ -605,9 +634,9 @@
     "mainTcpPort": 8033, // TCP port used to connect with the Catenis Colored Coins node server to interact with bitcoin's main blockchain
     "testnetTcpPort": 8043, // TCP port used to connect with the Catenis Colored Coins node server to interact with bitcoin's testnet blockchain
     "inetAddress": "", // IP address of local network interface to use to connect with the Catenis Colored Coins node server. If not specified (empty string) the default network interface is used
-    "user": "??????", // Username used to authenticate the client to the Catenis Colored Coins node server. If not specified (empty string) assume that no authenticaiton is required
+    "user": "??????", // Username used to authenticate the client to the Catenis Colored Coins node server. If not specified (empty string) assume that no authentication is required
     "password": "??????", // Password used to authenticate the client to the Catenis Colored Coins node server
-    "connectionTimeout": 15000,  // (15 sec.) Timeout, in miliseconds, for connection with the Catenis Colored Coins node server
+    "connectionTimeout": 15000,  // (15 sec.) Timeout, in milliseconds, for connection with the Catenis Colored Coins node server
     "methodPath": {
       "parseNow": "/parseNow",
       "getAddressesUtxos": "/getAddressesUtxos",
@@ -638,7 +667,7 @@
     "signingMessageFormat": "Catenis generated asset on %s",  // Format string used to compose message that is to be signed for asset verification purpose
     "signingCertificateFilePath": "/etc/letsencrypt/live/catenis.io/cert.pem",  // Path to file (in PEM format) containing Blockchain of Things' owned SSL certificate used to sign message for asset verification
     "signingCertificateKeyFilePath": "/etc/letsencrypt/live/catenis.io/privkey.pem",  // Path to file containing key of SSL certificate used to sign message for asset verification
-    "urlContentTimeout": 15000,  // (15 sec.) Timeout, in miliseconds, for retrieving content associated with a given URL
+    "urlContentTimeout": 15000,  // (15 sec.) Timeout, in milliseconds, for retrieving content associated with a given URL
     "encryptedUserDataKeyPrefix": "__enc_",  // Prefix that is prepended to user data key when its value is encrypted
     "shareAfterStoring": false  // Indicates whether metadata should be shared right after it is stored (added to Colored Coins metadata server)
   },
@@ -653,16 +682,20 @@
   // Parameters pertaining to CreditServiceAccTransaction module
   "creditServiceAccTransaction": {
     "maxNumCcTransferOutputs": 31,  //  Maximum number of Colored Coins transaction outputs that can exist in this transaction
-    "safeNumCcTransferOutputs": 10,  // Maximum number of Colored Coins transaction outputs used to receive issued asset amount so it is guarranteed that encoded Colored Coins data will fit into transaction
+    "safeNumCcTransferOutputs": 10,  // Maximum number of Colored Coins transaction outputs used to receive issued asset amount so it is guaranteed that encoded Colored Coins data will fit into transaction
     "ccMetadata": {
-      "bcotPayTxidKey": "bcotPayTxid"  // Name (key) of Colored Coins free user metadata used to refer to BCOT Token Payment transaction
+      "bcotPayTxidKey": "bcotPayTxid",  // Name (key) of Colored Coins free user metadata used to refer to BCOT Token Payment transaction
+      "redeemBcotTxidKey": "redeemBcotTxid"  // Name (key) of Colored Coins free user metadata used to refer to Redeem BCOT transaction
     }
+  },
+  // Parameters pertaining to BcotToken module
+  "bcotToken": {
+    "bcotOmniPropertyId": 0,  // BCOT token Omni property ID (should be specifically defined for each environment)
+    "storeBcotAddress": "????"  // Non-Catenis blockchain address to where BCOT tokens used in Catenis (either sent as payment or redeemed after purchase) should be stored
   },
   // Parameters pertaining to BcotPayment module
   "bcotPayment": {
-    "bcotOmniPropertyId": 0,  // BCOT token Omni property ID (yet to be defined for production)
-    "storeBcotAddress": "????",  // Non-Catenis blockchain address to where BCOT tokens received as payment should be stored
-    "usageReportHeaders": [  // List of names to be used as headers for the colomns of the usage report
+    "usageReportHeaders": [  // List of names to be used as headers for the columns of the usage report
       "address",
       "amount",
       "txid",
@@ -672,8 +705,7 @@
   // Parameters pertaining to StoreBcotTransaction module
   "storeBcotTransaction": {
     "bcotStoreAddrAmount": 600,  // Amount, in satohis, to be paid to BCOT store address output
-    "timeToConfirm": 300,  // (5 hours) Time, in minutes, that is expected the store BCOT transaction to be confirmed
-    "omniDataPrefix": "omni"  // Prefix of Omni encoded data to be embedd in transaction
+    "timeToConfirm": 300  // (5 hours) Time, in minutes, that is expected the store BCOT transaction to be confirmed
   },
   // Parameters pertaining to SpendServiceCreditTransaction module
   "spendServiceCreditTransaction": {
@@ -736,8 +768,8 @@
   },
   // Parameters pertaining to Asset module
   "asset": {
-    "largestAssetAmount": 9007199254740991, // (2^53 - 1) Largest amount of assets (expressed in asset's smalles division) that can be issued
-    "maxQueryIssuanceCount": 500,  // Maximum number of aaset issuance entries that can be returned when retrieving asset issuance history
+    "largestAssetAmount": 9007199254740991, // (2^53 - 1) Largest amount of assets (expressed in asset's smallest division) that can be issued
+    "maxQueryIssuanceCount": 500,  // Maximum number of asset issuance entries that can be returned when retrieving asset issuance history
     "maxRetListEntries": 500  // Maximum number of entries that should be returned from asset related API methods that returned a list of items (e.g. List Owned Assets, List Issued Assets, List Asset Holders)
   },
   // Parameters pertaining to EmailContents module
@@ -785,5 +817,20 @@
     "emailName": "DevicesDisabled",  // Reference name of e-mail contents to be used for this notification
     "fromAddress": "Catenis Enterprise <catenisadmin@catenis.io>",  // E-mail address of sender of e-mail notification message
     "replyAddress": "donotreply@catenis.io"  // (optional) E-mail address to be used as the address to be used when replying to notification e-mail message
+  },
+  // Parameters pertaining to BcotProduct module
+  "bcotProduct": {
+    "stdSkuFormat": "CTN-%sBCOT"  // (CTN-0000BCOT) Format string to be used when generating standard BCOT product SKU
+  },
+  // Parameters pertaining to BcotSaleAllocation module
+  "bcotSaleAllocation": {
+    "allocatedProductsReportHeaders": [  // List of names to be used as headers for the columns of the usage report
+      "sku",
+      "purchase_code"
+    ]
+  },
+  // Parameters pertaining to RedeemBcotTransaction module
+  "redeemBcotTransaction": {
+    "timeToConfirm": 300  // (5 hours) Time, in minutes, that is expected the redeem BCOT token transaction to be confirmed
   }
 }

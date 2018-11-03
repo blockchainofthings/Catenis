@@ -13,17 +13,17 @@
 import util from 'util';
 // Third-party node modules
 import config from 'config';
-// noinspection JSFileReferences
-import BigNumber from 'bignumber.js';
 // Meteor packages
 import { Meteor } from 'meteor/meteor';
 
 // References code in other (Catenis) modules
 import { Catenis } from './Catenis';
-import { BcotPayment } from './BcotPayment';
+import { BcotToken } from './BcotToken';
 import { Transaction } from './Transaction';
+import { OmniTransaction } from './OmniTransaction';
 import { BcotPaymentTransaction } from './BcotPaymentTransaction';
 import { FundSource } from './FundSource';
+import { CatenisNode } from './CatenisNode';
 
 // Config entries
 const storeBcotTxConfig = config.get('storeBcotTransaction');
@@ -31,8 +31,7 @@ const storeBcotTxConfig = config.get('storeBcotTransaction');
 // Configuration settings
 const cfgSettings = {
     bcotStoreAddrAmount: storeBcotTxConfig.get('bcotStoreAddrAmount'),
-    timeToConfirm: storeBcotTxConfig.get('timeToConfirm'),
-    omniDataPrefix: storeBcotTxConfig.get('omniDataPrefix')
+    timeToConfirm: storeBcotTxConfig.get('timeToConfirm')
 };
 
 
@@ -64,10 +63,10 @@ export function StoreBcotTransaction(bcotPayTransact) {
         }
 
         // Just initialize instance variables for now
-        this.transact = new Transaction();
+        this.omniTransact = new OmniTransaction(OmniTransaction.omniTxType.simpleSend);
         this.txBuilt = false;
         this.client = bcotPayTransact.client;
-        this.amount = bcotPayTransact.paidAmount;
+        this.amount = bcotPayTransact.bcotAmount;
         this.sendingAddress = bcotPayTransact.payeeAddress;
         this.bcotPayTxid = bcotPayTransact.txid;
     }
@@ -103,19 +102,16 @@ StoreBcotTransaction.prototype.buildTransaction = function () {
             });
         }
 
-        // Add client BCOT payment address input
-        this.transact.addInput(clientBcotPayAddrUtxos[0].txout, this.sendingAddress, Catenis.keyStore.getAddressInfo(this.sendingAddress));
+        // Add client BCOT payment (sending) address input
+        this.omniTransact.addSendingAddressInput(clientBcotPayAddrUtxos[0].txout, this.sendingAddress, Catenis.keyStore.getAddressInfo(this.sendingAddress));
 
         // Add transaction outputs
 
-        // Prepare to add null data output containing encoded Omni data
-        const omniData = Catenis.omniCore.omniCreatePayloadSimpleSend(BcotPayment.bcotOmniPropertyId, new BigNumber(this.amount).dividedBy(100000000).toString());
+        // Add Omni payload (null data) output
+        this.omniTransact.addOmniPayloadOutput(this.amount);
 
-        // Add null data output
-        this.transact.addNullDataOutput(Buffer.concat([Buffer.from(cfgSettings.omniDataPrefix), Buffer.from(omniData, 'hex')]));
-
-        // Add BCOT store address output
-        this.transact.addP2PKHOutput(BcotPayment.storeBcotAddress, cfgSettings.bcotStoreAddrAmount);
+        // Add BCOT store (reference) address output
+        this.omniTransact.addReferenceAddressOutput(BcotToken.storeBcotAddress, cfgSettings.bcotStoreAddrAmount);
 
         // Now, allocate UTXOs to pay for tx expense
         const payTxFundSource = new FundSource(this.client.ctnNode.listFundingAddressesInUse(), {
@@ -123,9 +119,9 @@ StoreBcotTransaction.prototype.buildTransaction = function () {
             smallestChange: true
         });
         const payTxAllocResult = payTxFundSource.allocateFundForTxExpense({
-            txSize: this.transact.estimateSize(),
-            inputAmount: this.transact.totalInputsAmount(),
-            outputAmount: this.transact.totalOutputsAmount()
+            txSize: this.omniTransact.estimateSize(),
+            inputAmount: this.omniTransact.totalInputsAmount(),
+            outputAmount: this.omniTransact.totalOutputsAmount()
         }, false, Catenis.bitcoinFees.getFeeRateByTime(cfgSettings.timeToConfirm));
 
         if (payTxAllocResult === null) {
@@ -143,11 +139,13 @@ StoreBcotTransaction.prototype.buildTransaction = function () {
             }
         });
 
-        this.transact.addInputs(inputs);
+        this.omniTransact.addInputs(inputs);
 
         if (payTxAllocResult.changeAmount >= Transaction.txOutputDustAmount) {
-            // Add new output to receive change making sure that it is the second output of the tx
-            this.transact.addP2PKHOutput(this.client.ctnNode.fundingChangeAddr.newAddressKeys().getAddress(), payTxAllocResult.changeAmount, 1);
+            // Add new output to receive change
+            //  Note: it should be automatically inserted just before the reference address output, so the reference
+            //      address output is the last output of the transaction
+            this.omniTransact.addP2PKHOutput(this.client.ctnNode.fundingChangeAddr.newAddressKeys().getAddress(), payTxAllocResult.changeAmount);
         }
 
         // Indicate that transaction is already built
@@ -161,11 +159,11 @@ StoreBcotTransaction.prototype.sendTransaction = function () {
     // Make sure that transaction is already built
     if (this.txBuilt) {
         // Check if transaction has not yet been created and sent
-        if (this.transact.txid === undefined) {
-            this.transact.sendTransaction();
+        if (this.omniTransact.txid === undefined) {
+            this.omniTransact.sendTransaction();
 
             // Save sent transaction onto local database
-            this.transact.saveSentTransaction(Transaction.type.store_bcot, {
+            this.omniTransact.saveSentTransaction(Transaction.type.store_bcot, {
                 storedAmount: this.amount
             });
 
@@ -173,13 +171,13 @@ StoreBcotTransaction.prototype.sendTransaction = function () {
             Catenis.ctnHubNode.checkFundingBalance();
         }
 
-        return this.transact.txid;
+        return this.omniTransact.txid;
     }
 };
 
 StoreBcotTransaction.prototype.revertOutputAddresses = function () {
     if (this.txBuilt) {
-        this.transact.revertOutputAddresses();
+        this.omniTransact.revertOutputAddresses();
     }
 };
 
@@ -197,14 +195,46 @@ StoreBcotTransaction.prototype.revertOutputAddresses = function () {
 // StoreBcotTransaction function class (public) methods
 //
 
-/*StoreBcotTransaction.class_func = function () {
-};*/
+// Determines if transaction is a valid Store BCOT transaction
+//
+//  Arguments:
+//    omniTransact: [Object(OmniTransaction)] // Object of type OmniTransaction identifying the transaction to be checked
+//
+//  Return:
+//    - If transaction is not valid: undefined
+//    - If transaction is valid: Object of type StoreBcotTransaction created from transaction
+//
+StoreBcotTransaction.checkTransaction = function (omniTransact) {
+    if ((omniTransact instanceof OmniTransaction) && omniTransact.omniTxType === OmniTransaction.omniTxType.simpleSend && omniTransact.propertyId === BcotToken.bcotOmniPropertyId
+            && omniTransact.referenceAddress === BcotToken.storeBcotAddress && omniTransact.matches(StoreBcotTransaction)) {
+        const clnBcotPayAddrInput = omniTransact.getInputAt(0);
+
+        const storeBcotTransact = new StoreBcotTransaction();
+
+        storeBcotTransact.omniTransact = omniTransact;
+        storeBcotTransact.client = CatenisNode.getCatenisNodeByIndex(clnBcotPayAddrInput.addrInfo.pathParts.ctnNodeIndex).getClientByIndex(clnBcotPayAddrInput.addrInfo.pathParts.clientIndex);
+        storeBcotTransact.amount = omniTransact.strAmountToAmount(omniTransact.omniTxInfo.amount);
+        storeBcotTransact.sendingAddress = omniTransact.sendingAddress;
+        storeBcotTransact.bcotPayTxid = clnBcotPayAddrInput.txout.txid;
+
+        return storeBcotTransact;
+    }
+};
 
 
 // StoreBcotTransaction function class (public) properties
 //
 
-/*StoreBcotTransaction.prop = {};*/
+StoreBcotTransaction.matchingPattern = Object.freeze({
+    input: util.format('^(?:%s)(?:(?:%s)|(?:%s))+$',
+        Transaction.ioToken.p2_cln_bcot_pay_addr.token,
+        Transaction.ioToken.p2_sys_fund_pay_addr.token,
+        Transaction.ioToken.p2_sys_fund_chg_addr.token),
+    output: util.format('^(?:%s)(?:%s)?(?:%s)$',
+        Transaction.ioToken.null_data.token,
+        Transaction.ioToken.p2_sys_fund_chg_addr.token,
+        Transaction.ioToken.p2_unknown_addr.token)
+});
 
 
 // Definition of module (private) functions
@@ -216,6 +246,16 @@ StoreBcotTransaction.prototype.revertOutputAddresses = function () {
 
 // Module code
 //
+
+// Definition of properties
+Object.defineProperties(StoreBcotTransaction, {
+    bcotStoreAddrAmount: {
+        get: () => {
+            return cfgSettings.bcotStoreAddrAmount;
+        },
+        enumerable: true
+    }
+});
 
 // Lock function class
 Object.freeze(StoreBcotTransaction);

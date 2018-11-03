@@ -1,5 +1,3 @@
-import { Asset } from './Asset';
-
 /**
  * Created by Claudio on 2016-11-25.
  */
@@ -38,7 +36,8 @@ import {
     SystemReadConfirmPayTxExpenseAddress,
     SystemServiceCreditIssuingAddress,
     SystemServicePaymentPayTxExpenseAddress,
-    SystemMultiSigSigneeAddress
+    SystemMultiSigSigneeAddress,
+    SystemBcotSaleStockAddress
 } from './BlockchainAddress';
 import {
     Client,
@@ -55,6 +54,7 @@ import { BitcoinFees } from './BitcoinFees'
 import { BalanceInfo } from './BalanceInfo';
 import { Permission } from './Permission';
 import { TransactionMonitor } from './TransactionMonitor';
+import { Asset } from './Asset';
 
 // Config entries
 const ctnNodeConfig = config.get('catenisNode');
@@ -114,6 +114,11 @@ export class CatenisNode extends events.EventEmitter {
         this.servCredIssueAddr = new SystemServiceCreditIssuingAddress(this.ctnNodeIndex);
         this.servPymtPayTxExpenseAddr = new SystemServicePaymentPayTxExpenseAddress(this.ctnNodeIndex);
         this.multiSigSigneeAddr = new SystemMultiSigSigneeAddress(this.ctnNodeIndex);
+
+        // Note: the BCOT sale stock address should only exist in the Catenis Hub Node
+        if (this.type === CatenisNode.nodeType.hub.name) {
+            this.bcotSaleStockAddr = new SystemBcotSaleStockAddress(this.ctnNodeIndex);
+        }
 
         // Retrieve (HD node) index of last Client doc/rec created for this Catenis node
         const docClient = Catenis.db.collection.Client.findOne({catenisNode_id: this.doc_id}, {
@@ -200,6 +205,14 @@ CatenisNode.prototype.startNode = function () {
         // Make sure that system service credit issuance is properly provisioned
         this.checkServiceCreditIssuanceProvision();
 
+        if (this.type === CatenisNode.nodeType.hub.name) {
+            // Make sure that BCOT token sale stock info is updated
+            Catenis.bcotSaleStock.checkBcotSaleStock();
+
+            // Make sure that system BCOT token sale stock is properly provisioned
+            this.checkBcotSaleStockProvision();
+        }
+
         // Make sure that system service payment pay tx expense addresses are properly funded
         this.checkServicePaymentPayTxExpenseFundingBalance();
 
@@ -235,6 +248,13 @@ CatenisNode.prototype.getServiceCreditAsset = function () {
     }
 };
 
+// NOTE: this method only applies to (and is only functional for) the Catenis Hub node
+CatenisNode.prototype.getBcotSaleStockAddress = function () {
+    if (this.type === CatenisNode.nodeType.hub.name) {
+        return this.bcotSaleStockAddr.lastAddressKeys().getAddress();
+    }
+};
+
 CatenisNode.prototype.listFundingAddressesInUse = function () {
     return this.fundingPaymentAddr.listAddressesInUse().concat(this.fundingChangeAddr.listAddressesInUse());
 };
@@ -250,7 +270,7 @@ CatenisNode.prototype.checkFundingBalance = function () {
         }
 
         // Emit event notifying that funding balance info has changed
-        this.emit(CatenisNode.notifyEvent.funding_balanced_info_changed.name, {
+        this.emit(CatenisNode.notifyEvent.funding_balance_info_changed.name, {
             fundingBalanceInfo: this.fundingBalanceInfo
         });
     }
@@ -299,6 +319,31 @@ CatenisNode.prototype.checkServiceCreditIssuanceProvision = function () {
     }
 
     return servCredIssuanceBalanceInfo.hasLowBalance();
+};
+
+// NOTE: this method only applies to (and is only functional for) the Catenis Hub node
+//
+// NOTE 2: make sure that this method is called from code executed from the FundSource.utxoCS
+//  critical section object
+CatenisNode.prototype.checkBcotSaleStockProvision = function () {
+    if (this.type === CatenisNode.nodeType.hub.name) {
+        const bcotSaleStockBalanceInfo = new BalanceInfo(Service.getExpectedBcotSaleStockBalance(),
+            this.getBcotSaleStockAddress(), {
+                useSafetyFactor: false
+            });
+
+        if (bcotSaleStockBalanceInfo.hasLowBalance()) {
+            // Prepare to provision system for BCOT token sale stock usage
+
+            // Distribute funds to be allocated
+            const distribFund = Service.distributeBcotSaleStockFund(bcotSaleStockBalanceInfo.getBalanceDifference());
+
+            // And try to fund system BCOT token sale stock address
+            this.provisionBcotSaleStock(distribFund.amountPerAddress);
+        }
+
+        return bcotSaleStockBalanceInfo.hasLowBalance();
+    }
 };
 
 // NOTE: make sure that this method is called from code executed from the FundSource.utxoCS
@@ -691,6 +736,9 @@ CatenisNode.prototype.createClient = function (props, user_id, opts) {
         FundSource.utxoCS.execute(() => {
             // Make sure that system service credit issuance is properly provisioned
             this.checkServiceCreditIssuanceProvision();
+
+            // Make sure that system BCOT token sale stock is properly provisioned
+            this.checkBcotSaleStockProvision();
         });
     }
 
@@ -764,6 +812,42 @@ CatenisNode.prototype.provisionServiceCreditIssuance = function (amountPerUtxo) 
 
         // Rethrows exception
         throw err;
+    }
+};
+
+// NOTE: this method only applies to (and is only functional for) the Catenis Hub node
+//
+// NOTE 2: make sure that this method is called from code executed from the FundSource.utxoCS
+//  critical section object
+CatenisNode.prototype.provisionBcotSaleStock = function (amountPerUtxo) {
+    if (this.type === CatenisNode.nodeType.hub.name) {
+        let fundTransact = undefined;
+
+        try {
+            // Prepare transaction to provision system for BCOT token sale stock usage
+            fundTransact = new FundTransaction(FundTransaction.fundingEvent.provision_bcot_sale_stock);
+
+            fundTransact.addPayees(this.bcotSaleStockAddr, amountPerUtxo, true);
+
+            if (fundTransact.addPayingSource()) {
+                // Now, issue (create and send) the transaction
+                fundTransact.sendTransaction();
+            }
+            else {
+                // Could not allocated UTXOs to pay for transaction fee.
+                //  Throw exception
+                //noinspection ExceptionCaughtLocallyJS
+                throw new Meteor.Error('ctn_sys_no_fund', 'Could not allocate UTXOs from system funding addresses to pay for tx expense');
+            }
+        }
+        catch (err) {
+            // Error provisioning system for BCOT token sale stock usage.
+            //  Log error condition
+            Catenis.logger.ERROR('Error provisioning system for BCOT token sale stock usage.', err);
+
+            // Rethrows exception
+            throw err;
+        }
     }
 };
 
@@ -1208,8 +1292,8 @@ CatenisNode.status = Object.freeze({
 });
 
 CatenisNode.notifyEvent = Object.freeze({
-    funding_balanced_info_changed: Object.freeze({
-        name: 'funding_balanced_info_changed',
+    funding_balance_info_changed: Object.freeze({
+        name: 'funding_balance_info_changed',
         description: 'System funding balance info (either the current balance or the minimum balance) has changed'
     })
 });

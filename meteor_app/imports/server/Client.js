@@ -41,6 +41,9 @@ import { ClientLicense } from './ClientLicense';
 import { License } from './License';
 import { Util } from './Util';
 import { KeyStore } from './KeyStore';
+import { BcotSaleAllocation } from './BcotSaleAllocation';
+import { RedeemBcotTransaction } from './RedeemBcotTransaction';
+import { ServiceAccount } from './ServiceAccount';
 
 // Config entries
 const clientConfig = config.get('client');
@@ -258,6 +261,9 @@ Client.prototype.assignUser = function (user_id) {
         FundSource.utxoCS.execute(() => {
             // Make sure that system service credit issuance is properly provisioned
             this.ctnNode.checkServiceCreditIssuanceProvision();
+
+            // Make sure that system BCOT token sale stock is properly provisioned
+            this.ctnNode.checkBcotSaleStockProvision();
         });
     }
     else {
@@ -291,6 +297,9 @@ Client.prototype.activate = function () {
                 FundSource.utxoCS.execute(() => {
                     // Make sure that system service credit issuance is properly provisioned
                     this.ctnNode.checkServiceCreditIssuanceProvision();
+
+                    // Make sure that system BCOT token sale stock is properly provisioned
+                    this.ctnNode.checkBcotSaleStockProvision();
                 });
 
                 result = true;
@@ -789,17 +798,17 @@ Client.prototype.updateTimeZone = function (newTimeZone) {
         throw new Meteor.Error('ctn_client_invalid_tz', 'Client time zone cannot be updated; invalid time zone');
     }
 
-    // Make sure that it's a different time zone
-    if (newTimeZone !== this.timeZone) {
-        // Retrieve current client time zone
-        const currTimeZone = Catenis.db.collection.Client.findOne({
-            _id: this.doc_id
-        }, {
-            fields: {
-                timeZone: 1
-            }
-        }).timeZone;
+    // Retrieve current client time zone
+    const currTimeZone = Catenis.db.collection.Client.findOne({
+        _id: this.doc_id
+    }, {
+        fields: {
+            timeZone: 1
+        }
+    }).timeZone;
 
+    // Make sure that it's a different time zone
+    if (newTimeZone !== currTimeZone) {
         try {
             // Update Client doc/rec setting the new properties
             Catenis.db.collection.Client.update({
@@ -1121,6 +1130,71 @@ Client.prototype.getDeviceDefaultRights = function() {
 };
 /** End of permission related methods **/
 
+// Redeem purchased BCOT tokens for Catenis service credits
+//
+//  Arguments:
+//   purchaseCodes [String|Array(String)] - Purchase codes received after purchase of BCOT tokens that are being redeemed
+Client.prototype.redeemBcot = function (purchaseCodes) {
+    try {
+        // Execute code in critical section to avoid BcotSaleAllocationItem database collection concurrency
+        BcotSaleAllocation.bcotAllocItemCS.execute(() => {
+            const redeemBcotInfo = BcotSaleAllocation.getRedeemBcotInfo(purchaseCodes);
+
+            if (!redeemBcotInfo) {
+                // Invalid redeem code. Log error and throw exception
+                Catenis.logger.ERROR('BCOT tokens cannot be redeemed: one or more of the purchase codes are invalid or have already been redeemed', {
+                    purchaseCodes: purchaseCodes
+                });
+                throw new Meteor.Error('client_bcot_redeem_invalid_codes', 'BCOT tokens cannot be redeemed: one or more of the purchase codes are invalid or have already been redeemed');
+            }
+
+            // Execute code in critical section to avoid UTXOs concurrency
+            FundSource.utxoCS.execute(() => {
+                // Make sure that BCOT token sale stock is enough to fulfill redemption
+                const bcotSaleStockBalance = Catenis.bcotSaleStock.balance();
+
+                if (bcotSaleStockBalance.isLessThan(redeemBcotInfo.redeemedAmount)) {
+                    // BCOT token sale stock too low. Log error and throw exception
+                    Catenis.logger.ERROR('BCOT tokens cannot be redeemed: BCOT token sale stock too low', {
+                        bcotSaleStockBalance: bcotSaleStockBalance,
+                        amountToRedeem: redeemBcotInfo.redeemedAmount
+                    });
+                    throw new Error('BCOT tokens cannot be redeemed: BCOT token sale stock too low');
+                }
+
+                // Prepare and send redeem BCOT token transaction
+                const redeemBcotTransact = new RedeemBcotTransaction(this, redeemBcotInfo.redeemedAmount.toNumber());
+
+                redeemBcotTransact.buildTransaction();
+
+                redeemBcotTransact.sendTransaction();
+
+                // Mark purchased BCOT products as redeemed
+                BcotSaleAllocation.setBcotRedeemed(redeemBcotInfo, this.clientId, redeemBcotTransact.txid);
+
+                // Credit client's service account
+                ServiceAccount.CreditServiceAccount(redeemBcotTransact);
+
+                if (this.billingMode === Client.billingMode.prePaid) {
+                    // Make sure that system service payment pay tx expense addresses are properly funded
+                    this.ctnNode.checkServicePaymentPayTxExpenseFundingBalance();
+                }
+            });
+        });
+    }
+    catch (err) {
+        // Error while redeeming BCOT tokens. Log error and throw exception
+        if ((err instanceof Meteor.Error) && err.error === 'client_bcot_redeem_invalid_codes') {
+            // Invalid purchase codes. Just rethrow error
+            throw err;
+        }
+        else {
+            // Translate any other error into a more generic one
+            Catenis.logger.ERROR('Error while redeeming BCOT tokens', err);
+            throw new Meteor.Error('client_bcot_redeem_error', 'Error while redeeming purchased BCOT tokens');
+        }
+    }
+};
 
 // Module functions used to simulate private Client object methods
 //  NOTE: these functions need to be bound to a Client object reference (this) before

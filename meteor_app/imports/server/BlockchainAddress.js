@@ -30,6 +30,7 @@ import {
     BaseSystemServiceCreditIssuingAddress,
     BaseSystemServicePaymentPayTxExpenseAddress,
     BaseSystemMultiSigSigneeAddress,
+    BaseSystemBcotSaleStockAddress,
     BaseClientServiceAccountCreditLineAddress,
     BaseClientServiceAccountDebitLineAddress,
     BaseClientBcotPaymentAddress,
@@ -159,6 +160,16 @@ export class SystemMultiSigSigneeAddress extends BlockchainAddress {
 
         // noinspection JSUnusedGlobalSymbols
         this._baseAddr = BaseSystemMultiSigSigneeAddress.getInstance(ctnNodeIndex, KeyStore.systemMultiSigSigneeRootPath(ctnNodeIndex));
+    }
+}
+
+// SystemBcotSaleStockAddress derived class
+export class SystemBcotSaleStockAddress extends BlockchainAddress {
+    constructor (ctnNodeIndex) {
+        super();
+
+        // noinspection JSUnusedGlobalSymbols
+        this._baseAddr = BaseSystemBcotSaleStockAddress.getInstance(ctnNodeIndex, KeyStore.systemBcotSaleStockRootPath(ctnNodeIndex));
     }
 }
 

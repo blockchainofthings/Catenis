@@ -13,33 +13,28 @@
 import util from 'util';
 // Third-party node modules
 import config from 'config';
-// noinspection JSFileReferences
-import BigNumber from 'bignumber.js';
 // Meteor packages
 //import { Meteor } from 'meteor/meteor';
 
 // References code in other (Catenis) modules
 import { Catenis } from './Catenis';
-import { CatenisNode } from './CatenisNode';
 import { TransactionMonitor } from './TransactionMonitor';
 import { FundSource } from './FundSource';
 import { BcotPaymentTransaction } from './BcotPaymentTransaction';
-import { CreditServiceAccTransaction } from './CreditServiceAccTransaction';
 import { StoreBcotTransaction } from './StoreBcotTransaction';
 import { Client } from './Client';
 import { Util } from './Util';
+import { Transaction } from './Transaction';
+import { OmniTransaction } from './OmniTransaction';
+import { ServiceAccount } from './ServiceAccount';
 
 // Config entries
 const bcotPayConfig = config.get('bcotPayment');
 
 // Configuration settings
 const cfgSettings = {
-    bcotOmniPropertyId: bcotPayConfig.get('bcotOmniPropertyId'),
-    storeBcotAddress: bcotPayConfig.get('storeBcotAddress'),
     usageReportHeaders: bcotPayConfig.get('usageReportHeaders')
 };
-
-const bcotTokenDivisibility = 8;
 
 
 // Definition of function classes
@@ -68,10 +63,6 @@ BcotPayment.initialize = function () {
     Catenis.logger.TRACE('BcotPayment initialization');
     // Set up handler to process event indicating that BCOT payment tx has been confirmed
     TransactionMonitor.addEventHandler(TransactionMonitor.notifyEvent.bcot_payment_tx_conf.name, bcotPaymentConfirmed);
-};
-
-BcotPayment.bcotToServiceCredit = function (bcotAmount) {
-    return new BigNumber(bcotAmount).dividedToIntegerBy(Math.pow(10, (bcotTokenDivisibility - CatenisNode.serviceCreditAssetDivisibility))).toNumber();
 };
 
 BcotPayment.encryptSentFromAddress = function (payingAddress, bcotPayAddrInfo) {
@@ -116,16 +107,18 @@ BcotPayment.generateBcotPaymentReport = function (startDate, endDate, addHeaders
         filter.$and = andOperands;
     }
 
+    const dbInfoEntryName = Transaction.type.bcot_payment.dbInfoEntryName;
+
     const reportLines = Catenis.db.collection.ReceivedTransaction.find(filter, {
         txid: 1,
         'confirmation.confirmationDate': 1,
         info: 1
     }).map((doc) => {
-        const bcotPayAddrInfo = Catenis.keyStore.getAddressInfoByPath(doc.info.bcotPayment.bcotPayAddressPath, true, false);
+        const bcotPayAddrInfo = Catenis.keyStore.getAddressInfoByPath(doc.info[dbInfoEntryName].bcotPayAddressPath, true, false);
 
         return util.format('"%s","%s","%s","%s"\n',
-            BcotPayment.decryptSentFromAddress(doc.info.bcotPayment.encSentFromAddress, bcotPayAddrInfo),
-            Util.formatCoins(doc.info.bcotPayment.paidAmount, false),
+            BcotPayment.decryptSentFromAddress(doc.info[dbInfoEntryName].encSentFromAddress, bcotPayAddrInfo),
+            Util.formatCoins(doc.info[dbInfoEntryName].paidAmount, false),
             doc.txid,
             doc.confirmation.confirmationDate.toISOString());
     });
@@ -141,9 +134,7 @@ BcotPayment.generateBcotPaymentReport = function (startDate, endDate, addHeaders
 // BcotPayment function class (public) properties
 //
 
-BcotPayment.bcotOmniPropertyId = cfgSettings.bcotOmniPropertyId;
-
-BcotPayment.storeBcotAddress = cfgSettings.storeBcotAddress;
+/*BcotPayment.prop = {};*/
 
 
 // Definition of module (private) functions
@@ -153,113 +144,85 @@ function bcotPaymentConfirmed(data) {
     Catenis.logger.TRACE('Received notification of confirmation of BCOT payment transaction', data);
     try {
         // Get BCOT payment transaction
-        const bcotPayTransact = BcotPaymentTransaction.checkTransaction(data.txid);
+        const bcotPayTransact = BcotPaymentTransaction.checkTransaction(OmniTransaction.fromTransaction(Transaction.fromTxid(data.txid)));
 
-        // Execute code in critical section to avoid UTXOs concurrency
-        FundSource.utxoCS.execute(() => {
-            // Credit client's service account
-            const convertedPaidAmount = BcotPayment.bcotToServiceCredit(bcotPayTransact.paidAmount);
-            let amountToCredit = convertedPaidAmount;
-            let limitTransferOutputs = false;
-            let ccMetadata = undefined;
+        // Check validity of Omni transaction
+        if (bcotPayTransact.omniTransact.validated) {
+            const omniTxValidity = {
+                isValid: bcotPayTransact.omniTransact.isValid
+            };
 
-            do {
-                let credServAccTransact;
-                let credServAccTxid;
+            if (!omniTxValidity.isValid) {
+                omniTxValidity.invalidReason = bcotPayTransact.omniTransact.invalidReason;
+            }
 
-                try {
-                    // Prepare transaction to credit client's service account
-                    credServAccTransact = new CreditServiceAccTransaction(bcotPayTransact, amountToCredit, limitTransferOutputs);
+            // Update Omni tx validity info onto corresponding ReceivedTransaction database doc/rec
+            const setExpression = {};
+            setExpression[`info.${Transaction.type.bcot_payment.dbInfoEntryName}.omniTxValidity`] = omniTxValidity;
 
-                    // Try to reuse previously created Colored Coins metadata
-                    credServAccTransact.setCcMetadata(ccMetadata);
+            try {
+                Catenis.db.collection.ReceivedTransaction.update({
+                    txid: data.txid
+                }, {
+                    $set: setExpression
+                });
+            }
+            catch (err) {
+                // Log error
+                Catenis.logger.ERROR('Error updating BCOT payment transaction (txid: %s) ReceivedTransaction database doc/rec to set Omni tx validity info', data.txid, err);
+            }
 
-                    // Build transaction
-                    credServAccTransact.buildTransaction();
+            // Now, only do any processing if Omni transaction is valid
+            if (omniTxValidity.isValid) {
+                // Execute code in critical section to avoid UTXOs concurrency
+                FundSource.utxoCS.execute(() => {
+                    // Credit client's service account
+                    ServiceAccount.CreditServiceAccount(bcotPayTransact);
 
-                    if (credServAccTransact.issuingAmount > 0) {
-                        // Send transaction
-                        credServAccTxid = credServAccTransact.sendTransaction();
+                    // Store away BCOT tokens received as payment
+                    let storeBcotTransact;
+                    let storeBcotTxid;
 
-                        // Force polling of blockchain so newly sent transaction is received and processed right away
-                        Catenis.txMonitor.pollNow();
+                    try {
+                        // Prepare transaction to store BCOT tokens
+                        storeBcotTransact = new StoreBcotTransaction(bcotPayTransact);
 
-                        amountToCredit -= credServAccTransact.issuingAmount;
-                        limitTransferOutputs = false;
+                        // Build and send transaction
+                        storeBcotTransact.buildTransaction();
+
+                        storeBcotTxid = storeBcotTransact.sendTransaction();
                     }
-                    else {
-                        // Amount to credit too small to be exchanged for Catenis service credits
-                        if (amountToCredit === convertedPaidAmount) {
-                            // BCOT token amount received too small.
-                            //  Log warning condition
-                            Catenis.logger.WARN('BCOT token amount received too small to be exchanged for Catenis service credits', {
-                                receivedAmount: bcotPayTransact.paidAmount
-                            });
-                        }
-
-                        // Revert output addresses added to transaction, and reset amount to credit
-                        credServAccTransact.revertOutputAddresses();
-                        amountToCredit = 0;
-                    }
-                }
-                catch (err) {
-                    if (credServAccTransact && !credServAccTxid) {
-                        // Revert output addresses added to transaction
-                        credServAccTransact.revertOutputAddresses();
-                    }
-
-                    if ((err instanceof Meteor.Error) && err.error === 'ctn_cctx_ccdata_too_large' && !limitTransferOutputs) {
-                        // Encoded Colored Coins data too large, possibly due too large an amount to issue/transfer.
-                        //  So, try to limit transfer outputs
-                        limitTransferOutputs = true;
-
-                        // Save Colored Coins metadata to be reused
-                        ccMetadata = credServAccTransact.getCcMetadata();
-                    }
-                    else {
-                        // Error crediting client's service account.
+                    catch (err) {
+                        // Error storing BCOT tokens
                         //  Log error condition
-                        Catenis.logger.ERROR('Error crediting client\'s (clientId: %s) credit account.', bcotPayTransact.client, err);
+                        Catenis.logger.ERROR('Error storing BCOT tokens.', err);
+
+                        if (storeBcotTransact && !storeBcotTxid) {
+                            // Revert output addresses added to transaction
+                            storeBcotTransact.revertOutputAddresses();
+                        }
 
                         // Rethrows exception
                         throw err;
                     }
-                }
+
+                    if (bcotPayTransact.client.billingMode === Client.billingMode.prePaid) {
+                        // Make sure that system service payment pay tx expense addresses are properly funded
+                        bcotPayTransact.client.ctnNode.checkServicePaymentPayTxExpenseFundingBalance();
+                    }
+                });
             }
-            while (amountToCredit > 0);
-            
-            // Store away BCOT tokens received as payment
-            let storeBcotTransact;
-            let storeBcotTxid;
-
-            try {
-                // Prepare transaction to store BCOT tokens
-                storeBcotTransact = new StoreBcotTransaction(bcotPayTransact);
-
-                // Build and send transaction
-                storeBcotTransact.buildTransaction();
-
-                storeBcotTxid = storeBcotTransact.sendTransaction();
+            else {
+                // Omni tx not valid. Log warning condition and abort processing
+                Catenis.logger.WARN('Confirmed BCOT payment transaction (txid: %s) is not a valid Omni transaction; aborting tx confirmation processing', data.txid, {
+                    invalidReason: omniTxValidity.invalidReason
+                });
             }
-            catch (err) {
-                // Error storing BCOT tokens
-                //  Log error condition
-                Catenis.logger.ERROR('Error storing BCOT tokens.', err);
-
-                if (storeBcotTransact && !storeBcotTxid) {
-                    // Revert output addresses added to transaction
-                    storeBcotTransact.revertOutputAddresses();
-                }
-
-                // Rethrows exception
-                throw err;
-            }
-
-            if (bcotPayTransact.client.billingMode === Client.billingMode.prePaid) {
-                // Make sure that system service payment pay tx expense addresses are properly funded
-                bcotPayTransact.client.ctnNode.checkServicePaymentPayTxExpenseFundingBalance();
-            }
-        });
+        }
+        else {
+            // Omni transaction not validated. Log error and abort processing
+            Catenis.logger.ERROR('Confirmed BCOT payment transaction (txid: %s) has no indication whether it is a valid Omni transaction or not; aborting tx confirmation processing', data.txid);
+        }
     }
     catch (err) {
         // Error while processing notification of confirmed BCOT payment transaction.

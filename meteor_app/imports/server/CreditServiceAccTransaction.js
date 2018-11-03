@@ -22,7 +22,7 @@ import { CatenisNode } from './CatenisNode';
 import { Client } from './Client';
 import { FundSource } from './FundSource';
 import { Transaction } from './Transaction';
-import { BcotPayment } from './BcotPayment';
+import { BcotToken } from './BcotToken';
 import { BcotPaymentTransaction } from './BcotPaymentTransaction';
 import { CCTransaction } from './CCTransaction';
 import {
@@ -35,6 +35,7 @@ import { CCMetadata } from './CCMetadata';
 import { BaseBlockchainAddress } from './BaseBlockchainAddress';
 import { KeyStore } from './KeyStore';
 import { Util } from './Util';
+import { RedeemBcotTransaction } from './RedeemBcotTransaction';
 
 // Config entries
 const credServAccTxConfig = config.get('creditServiceAccTransaction');
@@ -45,7 +46,8 @@ const cfgSettings = {
     maxNumCcTransferOutputs: credServAccTxConfig.get('maxNumCcTransferOutputs'),
     safeNumCcTransferOutputs: credServAccTxConfig.get('safeNumCcTransferOutputs'),
     ccMetadata: {
-        bcotPayTxidKey: credSrvAccTxCcMetaConfig.get('bcotPayTxidKey')
+        bcotPayTxidKey: credSrvAccTxCcMetaConfig.get('bcotPayTxidKey'),
+        redeemBcotTxidKey: credSrvAccTxCcMetaConfig.get('redeemBcotTxidKey')
     }
 };
 
@@ -56,21 +58,27 @@ const cfgSettings = {
 // CreditServiceAccTransaction function class
 //
 //  Constructor arguments:
-//    bcotPayTransact: [Object] - Object of type BcotPaymentTransaction identifying the received (and already confirmed) transaction
-//                                 used to send BCOT tokens to the system as payments for services for a given client
+//    bcotTransact: [Object] - Object identifying the transaction used to add BCOT tokens to the system (in exchange for Catenis service credits).
+//                              Should be one of these two types of transaction: BcotPaymentTransaction or RedeemBcotTransaction
 //    amountToCredit: [Number] - (optional) Amount, in Catenis service credit's lowest unit, to actually credit the client's service account
 //    limitTransferOutputs: [Boolean] - (optional) Indicates whether number of transaction outputs used to receive issued asset amount should be limited
 //                                       in order to guarantee that encoded Colored Coins data will fit into transaction
 //
 // NOTE: make sure that objects of this function class are instantiated and used (their methods
 //  called) from code executed from the FundSource.utxoCS critical section object
-export function CreditServiceAccTransaction(bcotPayTransact, amountToCredit, limitTransferOutputs) {
-    if (bcotPayTransact !== undefined) {
+export function CreditServiceAccTransaction(bcotTransact, amountToCredit, limitTransferOutputs) {
+    if (bcotTransact !== undefined) {
         // Validate arguments
         const errArg = {};
 
-        if (!(bcotPayTransact instanceof BcotPaymentTransaction)) {
-            errArg.bcotPayTransact = bcotPayTransact;
+        if (bcotTransact instanceof BcotPaymentTransaction) {
+            this.bcotTxType = Transaction.type.bcot_payment;
+        }
+        else if (bcotTransact instanceof RedeemBcotTransaction) {
+            this.bcotTxType = Transaction.type.redeem_bcot;
+        }
+        else {
+            errArg.bcotTransact = bcotTransact;
         }
 
         if (amountToCredit !== undefined && (typeof amountToCredit !== 'number' || amountToCredit <= 0)) {
@@ -91,12 +99,12 @@ export function CreditServiceAccTransaction(bcotPayTransact, amountToCredit, lim
         // Just initialize instance variables for now
         this.ccTransact = new CCTransaction();
         this.txBuilt = false;
-        this.client = bcotPayTransact.client;
+        this.client = bcotTransact.client;
 
-        const convertedPaidAmount = BcotPayment.bcotToServiceCredit(bcotPayTransact.paidAmount);
+        const convertedBcotAmount = BcotToken.bcotToServiceCredit(bcotTransact.bcotAmount);
 
-        this.amount = amountToCredit === undefined || amountToCredit > convertedPaidAmount ? convertedPaidAmount : amountToCredit;
-        this.bcotPayTxid = bcotPayTransact.txid;
+        this.amount = amountToCredit === undefined || amountToCredit > convertedBcotAmount ? convertedBcotAmount : amountToCredit;
+        this.bcotTxid = bcotTransact.txid;
         this.limitTransferOutputs = limitTransferOutputs;
     }
 }
@@ -205,8 +213,14 @@ CreditServiceAccTransaction.prototype.buildTransaction = function () {
                     description: servCredAssetInfo.description
                 });
 
-                // Add BCOT payment transaction ID to Colored Coins metadata
-                this.servCredCcMetadata.setFreeUserData(cfgSettings.ccMetadata.bcotPayTxidKey, Buffer.from(this.bcotPayTxid), true);
+                if (this.bcotTxType === Transaction.type.bcot_payment) {
+                    // Add BCOT payment transaction ID to Colored Coins metadata
+                    this.servCredCcMetadata.setFreeUserData(cfgSettings.ccMetadata.bcotPayTxidKey, Buffer.from(this.bcotTxid), true);
+                }
+                else if (this.bcotTxType === Transaction.type.redeem_bcot) {
+                    // Add redeem BCOT transaction ID to Colored Coins metadata
+                    this.servCredCcMetadata.setFreeUserData(cfgSettings.ccMetadata.redeemBcotTxidKey, Buffer.from(this.bcotTxid), true);
+                }
             }
 
             // Add Colored Coins asset metadata
@@ -301,8 +315,14 @@ CreditServiceAccTransaction.prototype.sendTransaction = function () {
             // Force update of Colored Coins data associated with UTXOs
             Catenis.c3NodeClient.parseNow();
 
-            // Check if system funding balance is still within safe limits
-            Catenis.ctnHubNode.checkFundingBalance();
+            // Make sure that system service credit issuance is properly provisioned
+            if (!Catenis.ctnHubNode.checkServiceCreditIssuanceProvision()) {
+                // Check if system funding balance is still within safe limits
+                //  Note: we only care to do it when system service credit issuance needs to be provisioned
+                //      (has low balance) because the system funding balance is automatically checked when
+                //      that provision takes place
+                Catenis.ctnHubNode.checkFundingBalance();
+            }
         }
 
         return this.ccTransact.txid;
@@ -342,9 +362,10 @@ CreditServiceAccTransaction.checkTransaction = function (ccTransact) {
     let credServAccTransact = undefined;
 
     // First, check if pattern of transaction's inputs and outputs is consistent
-    if (ccTransact.matches(CreditServiceAccTransaction)) {
+    if ((ccTransact instanceof CCTransaction) && ccTransact.matches(CreditServiceAccTransaction)) {
         // Make sure that this is a Colored Coins asset issuing transaction
-        if (ccTransact.issuingInfo !== undefined && ccTransact.ccMetadata !== undefined && ccTransact.ccMetadata.userData !== undefined && (cfgSettings.ccMetadata.bcotPayTxidKey in ccTransact.ccMetadata.userData)) {
+        if (ccTransact.issuingInfo !== undefined && ccTransact.ccMetadata !== undefined && ccTransact.ccMetadata.userData !== undefined
+                && ((cfgSettings.ccMetadata.bcotPayTxidKey in ccTransact.ccMetadata.userData) || (cfgSettings.ccMetadata.redeemBcotTxidKey in ccTransact.ccMetadata.userData))) {
             // Validate and identify input and output addresses
             //  NOTE: no need to check if the variables below are non-null because the transact.matches()
             //      result above already guarantees it
@@ -401,7 +422,17 @@ CreditServiceAccTransaction.checkTransaction = function (ccTransact) {
                     credServAccTransact.ccTransact = ccTransact;
                     credServAccTransact.client = CatenisNode.getCatenisNodeByIndex(servAccCredLineAddrs[0].addrInfo.pathParts.ctnNodeIndex).getClientByIndex(servAccCredLineAddrs[0].addrInfo.pathParts.clientIndex);
                     credServAccTransact.amount = credServAccTransact.issuingAmount = ccTransact.issuingInfo.assetAmount;
-                    credServAccTransact.bcotPayTxid = ccTransact.ccMetadata.userData[cfgSettings.ccMetadata.bcotPayTxidKey];
+
+                    if (cfgSettings.ccMetadata.bcotPayTxidKey in ccTransact.ccMetadata.userData) {
+                        // Credit derived from BCOT payment. Retrieve BCOT payment tx info
+                        credServAccTransact.bcotTxType = Transaction.type.bcot_payment;
+                        credServAccTransact.bcotTxid = ccTransact.ccMetadata.userData[cfgSettings.ccMetadata.bcotPayTxidKey];
+                    }
+                    else if (cfgSettings.ccMetadata.redeemBcotTxidKey in ccTransact.ccMetadata.userData) {
+                        // Credit derived from BCOT redemption. Retrieve redeem BCOT tx info
+                        credServAccTransact.bcotTxType = Transaction.type.redeem_bcot;
+                        credServAccTransact.bcotTxid = ccTransact.ccMetadata.userData[cfgSettings.ccMetadata.redeemBcotTxidKey];
+                    }
                 }
             }
         }

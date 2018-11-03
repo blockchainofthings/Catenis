@@ -19,6 +19,7 @@
 // References code in other (Catenis) modules
 import { Catenis } from '../Catenis';
 import { Util } from '../Util';
+import { Transaction } from '../Transaction';
 
 // Config entries
 /*const config_entryConfig = config.get('config_entry');
@@ -107,44 +108,58 @@ CommonServiceAccountUI.bcotPayment = function (addrTypeAndPath) {
     };
     let initializing = true;
 
-    const observeHandle = Catenis.db.collection.ReceivedTransaction.find({
-        'info.bcotPayment.bcotPayAddressPath': addrTypeAndPath.path
-    }, {
+    const dbInfoEntryName = Transaction.type.bcot_payment.dbInfoEntryName;
+    const selector = {};
+    selector[`info.${dbInfoEntryName}.bcotPayAddressPath`] = addrTypeAndPath.path;
+
+    const observeHandle = Catenis.db.collection.ReceivedTransaction.find(selector, {
         fields: {
             'confirmation.confirmed': 1,
             info: 1
         }
     }).observe({
         added: (doc) => {
-            // Get paid amount paid to address
-            if (doc.confirmation.confirmed) {
-                receivedAmount.confirmed += doc.info.bcotPayment.paidAmount;
+            // Update received amount
+            const changed = {};
+
+            if (!doc.confirmation.confirmed) {
+                receivedAmount.unconfirmed += doc.info[dbInfoEntryName].paidAmount;
+                changed.unconfirmed = Util.formatCoins(receivedAmount.unconfirmed);
             }
-            else {
-                receivedAmount.unconfirmed += doc.info.bcotPayment.paidAmount;
+            else if (doc.info[dbInfoEntryName].omniTxValidity && doc.info[dbInfoEntryName].omniTxValidity.isValid) {
+                receivedAmount.confirmed += doc.info[dbInfoEntryName].paidAmount;
+                changed.confirmed = Util.formatCoins(receivedAmount.confirmed);
             }
 
-            if (!initializing) {
-                this.changed('ReceivedBcotAmount', 1, {
-                    unconfirmed: Util.formatCoins(receivedAmount.unconfirmed),
-                    confirmed: Util.formatCoins(receivedAmount.confirmed)
-                });
+            if (!initializing && Object.values(changed).length > 0) {
+                this.changed('ReceivedBcotAmount', 1, changed);
             }
         },
 
         changed: (newDoc, oldDoc) => {
             // Make sure that transaction is being confirmed
             if (newDoc.confirmation.confirmed && !oldDoc.confirmation.confirmed) {
-                // Get total amount paid to address
-                receivedAmount.confirmed += newDoc.info.bcotPayment.paidAmount;
-                receivedAmount.unconfirmed -= newDoc.info.bcotPayment.paidAmount;
+                // Update unconfirmed received amount.
+                //  NOTE: only adjust unconfirmed amount for now. Confirmed amount shall be adjusted once
+                //      Omni tx validity is updated
+                receivedAmount.unconfirmed -= newDoc.info[dbInfoEntryName].paidAmount;
 
                 if (receivedAmount.unconfirmed < 0) {
                     receivedAmount.unconfirmed = 0;
                 }
 
                 this.changed('ReceivedBcotAmount', 1, {
-                    unconfirmed: Util.formatCoins(receivedAmount.unconfirmed),
+                    unconfirmed: Util.formatCoins(receivedAmount.unconfirmed)
+                });
+            }
+
+            // Check if Omni tx validity is being set
+            if (newDoc.info[dbInfoEntryName].omniTxValidity && !oldDoc.info[dbInfoEntryName].omniTxValidity
+                    && newDoc.info[dbInfoEntryName].omniTxValidity.isValid) {
+                // Update confirmed received amount
+                receivedAmount.confirmed += newDoc.info[dbInfoEntryName].paidAmount;
+
+                this.changed('ReceivedBcotAmount', 1, {
                     confirmed: Util.formatCoins(receivedAmount.confirmed)
                 });
             }

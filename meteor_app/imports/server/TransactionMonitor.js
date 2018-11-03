@@ -43,6 +43,8 @@ import { KeyStore } from './KeyStore';
 import { Transaction } from './Transaction';
 import { BcotPaymentTransaction } from './BcotPaymentTransaction';
 import { BcotPayment } from './BcotPayment';
+import { BcotReplenishmentTransaction } from './BcotReplenishmentTransaction';
+import { OmniTransaction } from './OmniTransaction';
 
 // Config entries
 const txMonitorConfig = config.get('transactionMonitor');
@@ -1028,7 +1030,10 @@ function handleNewTransactions(data) {
                         //noinspection JSUnfilteredForInLoop
                         const voutInfo = parseTxVouts(data.ctnTxs[txid].details);
                         let payments;
+                        let transact = undefined;
+                        let omniTransact = undefined;
                         let bcotPayTransact;
+                        let bcotReplenishTransact;
 
                         if ((payments = sysFundingPayments(voutInfo)).length > 0) {
                             // Transaction used to fund the system has been received
@@ -1065,7 +1070,7 @@ function handleNewTransactions(data) {
 
                             rcvdTxDocsToCreate.push(rcvdTxDoc);
                         }
-                        else if (BcotPaymentTransaction.isValidTxVouts(voutInfo) && (bcotPayTransact = BcotPaymentTransaction.checkTransaction(txid)) !== undefined) {
+                        else if (BcotPaymentTransaction.isValidTxVouts(voutInfo) && (bcotPayTransact = BcotPaymentTransaction.checkTransaction(omniTransact || (omniTransact = OmniTransaction.fromTransaction(transact || (transact = Transaction.fromTxid(txid)))))) !== undefined) {
                             // BCOT payment transaction
 
                             // Prepare to emit event notifying of new transaction received
@@ -1075,7 +1080,7 @@ function handleNewTransactions(data) {
                                 data: {
                                     txid: txid,
                                     clientId: bcotPayTransact.client.clientId,
-                                    paidAmount: bcotPayTransact.paidAmount
+                                    paidAmount: bcotPayTransact.bcotAmount
                                 }
                             });
 
@@ -1095,7 +1100,39 @@ function handleNewTransactions(data) {
                                 clientId: bcotPayTransact.client.clientId,
                                 encSentFromAddress: BcotPayment.encryptSentFromAddress(bcotPayTransact.payingAddress, bcotPayAddrInfo),
                                 bcotPayAddressPath: bcotPayAddrInfo.path,
-                                paidAmount: bcotPayTransact.paidAmount
+                                paidAmount: bcotPayTransact.bcotAmount
+                            };
+
+                            rcvdTxDocsToCreate.push(rcvdTxDoc);
+                        }
+                        else if (BcotReplenishmentTransaction.isValidTxVouts(voutInfo) && (bcotReplenishTransact = BcotReplenishmentTransaction.checkTransaction(omniTransact || (omniTransact = OmniTransaction.fromTransaction(transact || (transact = Transaction.fromTxid(txid)))))) !== undefined) {
+                            // BCOT replenishment transaction
+
+                            // Prepare to emit event notifying of new transaction received
+                            //noinspection JSUnfilteredForInLoop
+                            eventsToEmit.push({
+                                name: TransactionMonitor.notifyEvent.bcot_replenishment_tx_rcvd.name,
+                                data: {
+                                    txid: txid,
+                                    replenishedAmount: bcotReplenishTransact.replenishedAmount
+                                }
+                            });
+
+                            // Prepared to save received tx to the local database
+                            //noinspection JSUnfilteredForInLoop
+                            const rcvdTxDoc = {
+                                type: Transaction.type.bcot_replenishment.name,
+                                txid: txid,
+                                receivedDate: new Date(data.ctnTxs[txid].timereceived * 1000),
+                                confirmation: {
+                                    confirmed: false
+                                },
+                                info: {}
+                            };
+                            const bcotSaleStockAddrInfo = Catenis.keyStore.getAddressInfo(bcotReplenishTransact.payeeAddress);
+                            rcvdTxDoc.info[Transaction.type.bcot_replenishment.dbInfoEntryName] = {
+                                encSentFromAddress: BcotPayment.encryptSentFromAddress(bcotReplenishTransact.payingAddress, bcotSaleStockAddrInfo),
+                                replenishedAmount: bcotReplenishTransact.replenishedAmount
                             };
 
                             rcvdTxDocsToCreate.push(rcvdTxDoc);
@@ -1417,6 +1454,10 @@ TransactionMonitor.notifyEvent = Object.freeze({
         name: 'funding_provision_service_credit_issuance_tx_conf',
         description: 'Funding transaction sent for provisioning system service credit issuance has been confirmed'
     }),
+    funding_provision_bcot_sale_stock_tx_conf: Object.freeze({
+        name: 'funding_provision_bcot_sale_stock_tx_conf',
+        description: 'Funding transaction sent for provisioning system BCOT token sale stock usage has been confirmed'
+    }),
     funding_provision_client_device_tx_conf: Object.freeze({
         name: 'funding_provision_client_device_tx_conf',
         description: 'Funding transaction sent for provisioning a device for a client has been confirmed'
@@ -1436,6 +1477,18 @@ TransactionMonitor.notifyEvent = Object.freeze({
     bcot_payment_tx_conf: Object.freeze({
         name: 'bcot_payment_tx_conf',
         description: 'Transaction used to send BCOT tokens as payment for services for a client has been confirmed'
+    }),
+    store_bcot_tx_conf: Object.freeze({
+        name: 'store_bcot_tx_conf',
+        description: 'Transaction used to store away BCOT tokens received as payment for services for a client has been confirmed'
+    }),
+    bcot_replenishment_tx_conf: Object.freeze({
+        name: 'bcot_replenishment_tx_conf',
+        description: 'Transaction used to replenish stock of BCOT tokens for sale has been confirmed'
+    }),
+    redeem_bcot_tx_conf: Object.freeze({
+        name: 'redeem_bcot_tx_conf',
+        description: 'Transaction used to redeem purchased BCOT tokens for services has been confirmed'
     }),
     credit_service_account_tx_conf: Object.freeze({
         name: 'credit_service_account_tx_conf',
@@ -1465,6 +1518,10 @@ TransactionMonitor.notifyEvent = Object.freeze({
     bcot_payment_tx_rcvd: Object.freeze({
         name: 'bcot_payment_tx_rcvd',
         description: 'Transaction used to send BCOT tokens as payment for services for a client has been received'
+    }),
+    bcot_replenishment_tx_rcvd: Object.freeze({
+        name: 'bcot_replenishment_tx_rcvd',
+        description: 'Transaction used used to replenish stock of BCOT tokens for sale has been received'
     }),
     credit_service_account_tx_rcvd: Object.freeze({
         name: 'credit_service_account_tx_rcvd',
@@ -1510,6 +1567,27 @@ function processConfirmedSentTransactions(doc, eventsToEmit) {
             // Could not get notification event from funding event.
             //  Log error condition
             Catenis.logger.ERROR('Could not get notification event from funding transaction event', {fundingEvent: doc.info.funding.event.name});
+        }
+    }
+    else if (doc.type === Transaction.type.store_bcot.name) {
+        // Prepare to emit event notifying of confirmation of credit service account transaction
+        const notifyEvent = getTxConfNotifyEventFromTxType(doc.type);
+
+        if (notifyEvent) {
+            const txInfo = doc.info[Transaction.type.store_bcot.dbInfoEntryName];
+
+            eventsToEmit.push({
+                name: notifyEvent.name,
+                data: {
+                    txid: doc.txid,
+                    storedAmount: txInfo.storedAmount
+                }
+            });
+        }
+        else {
+            // Could not get notification event from transaction type.
+            //  Log error condition
+            Catenis.logger.ERROR('Could not get notification event from transaction type', {txType: doc.type});
         }
     }
     else if (doc.type === Transaction.type.credit_service_account.name) {
@@ -1644,6 +1722,18 @@ function processConfirmedReceivedTransactions(doc, eventsToEmit) {
                 txid: doc.txid,
                 clientId: txInfo.clientId,
                 paidAmount: txInfo.paidAmount
+            }
+        });
+    }
+    else if (doc.type === Transaction.type.bcot_replenishment.name) {
+        // Prepare to emit event notifying of confirmation of BCOT replenishment transaction
+        const txInfo = doc.info[Transaction.type.bcot_replenishment.dbInfoEntryName];
+
+        eventsToEmit.push({
+            name: TransactionMonitor.notifyEvent.bcot_replenishment_tx_conf.name,
+            data: {
+                txid: doc.txid,
+                replenishedAmount: txInfo.replenishedAmount
             }
         });
     }
