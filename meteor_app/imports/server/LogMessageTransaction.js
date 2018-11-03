@@ -146,7 +146,7 @@ LogMessageTransaction.prototype.buildTransaction = function () {
         if (this.options.encrypted) {
             // Encrypt message
             // noinspection JSUnusedGlobalSymbols
-            msgToLog = this.encryptedMessage = this.deviceMainAddrKeys.encryptData(this.deviceMainAddrKeys, this.message);
+            msgToLog = this.encryptedMessage = this.deviceMainAddrKeys.encryptData(this.message);
         }
         else {
             msgToLog = this.message;
@@ -314,7 +314,7 @@ LogMessageTransaction.checkTransaction = function (transact) {
                 if (ctnMessage.isEncrypted()) {
                     // Try to decrypt message
                     try {
-                        message = devMainAddr.addrInfo.cryptoKeys.decryptData(devMainAddr.addrInfo.cryptoKeys, ctnMessage.getMessage());
+                        message = devMainAddr.addrInfo.cryptoKeys.decryptData(ctnMessage.getMessage());
                     }
                     catch (err) {
                         if (!(err instanceof Meteor.Error) || err.error !== 'ctn_crypto_no_priv_key') {

@@ -291,7 +291,7 @@ CCMetadata.prototype.assemble = function (encCryptoKeys) {
                         const encKey = cfgSettings.encryptedUserDataKeyPrefix + key;
 
                         try {
-                            this.metadata.userData[encKey] = encCryptoKeys.encryptData(encCryptoKeys, this.userData[key]).toString('base64');
+                            this.metadata.userData[encKey] = encCryptoKeys.encryptData(this.userData[key]).toString('base64');
                         }
                         catch (err) {
                             Catenis.logger.ERROR(util.format('Error trying to encrypt Colored Coins metadata user data (key: %s, value: %s).', key, this.userData[key]), err);
@@ -448,7 +448,7 @@ function parseUserData(userData, decCryptoKeys) {
                 if (decCryptoKeys && key.startsWith(cfgSettings.encryptedUserDataKeyPrefix) && key.length > cfgSettings.encryptedUserDataKeyPrefix.length
                         && typeof data === 'string') {
                     try {
-                        data = decCryptoKeys.decryptData(decCryptoKeys, Buffer.from(data, 'base64'));
+                        data = decCryptoKeys.decryptData(Buffer.from(data, 'base64'));
                     }
                     catch (err) {
                         Catenis.logger.ERROR(util.format('Error trying to decrypt Colored Coins user data (key: %s, value: %s).', key, userData[key]), err);

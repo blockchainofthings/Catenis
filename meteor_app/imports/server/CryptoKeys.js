@@ -86,10 +86,12 @@ CryptoKeys.prototype.getAddress = function () {
 //
 //  (Math.floor(data.length / 16) + 1) * 16
 //
-CryptoKeys.prototype.encryptData = function (destKeys, data) {
+CryptoKeys.prototype.encryptData = function (data, destKeys) {
     if (!this.hasPrivateKey()) {
-        throw new Meteor.Error('ctn_crypto_no_priv_key', 'Cannot encrypt data;  missing private key');
+        throw new Meteor.Error('ctn_crypto_no_priv_key', 'Cannot encrypt data; missing private key');
     }
+
+    destKeys = destKeys || this;
 
     // Future required to synchronize call to eccrypto methods, which are asynchronous in nature (via promises)
     const fut = new Future(),
@@ -110,10 +112,12 @@ CryptoKeys.prototype.encryptData = function (destKeys, data) {
     return encData;
 };
 
-CryptoKeys.prototype.decryptData = function (sourceKeys, data) {
+CryptoKeys.prototype.decryptData = function (data, sourceKeys) {
     if (!this.hasPrivateKey()) {
         throw new Meteor.Error('ctn_crypto_no_priv_key', 'Cannot decrypt data; missing private key');
     }
+
+    sourceKeys = sourceKeys || this;
 
     // Future required to synchronize call to eccrypto methods, which are asynchronous in nature (via promises)
     const fut = new Future(),

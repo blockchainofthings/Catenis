@@ -104,7 +104,8 @@ Meteor.startup(function () {
 
         if (cfgSettings.dataToCipher) {
             Application.initialize(true);
-            Catenis.logger.INFO('*** Ciphered data (hex): %s', Catenis.application.cipherData(cfgSettings.dataToCipher).toString('hex'));
+            KeyStore.initialize(true);
+            Catenis.logger.INFO('*** Ciphered data (base64): %s', Catenis.application.cipherData(cfgSettings.dataToCipher).toString('base64'));
         }
     }
     else {

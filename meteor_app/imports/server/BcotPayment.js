@@ -75,11 +75,11 @@ BcotPayment.bcotToServiceCredit = function (bcotAmount) {
 };
 
 BcotPayment.encryptSentFromAddress = function (payingAddress, bcotPayAddrInfo) {
-    return bcotPayAddrInfo.cryptoKeys.encryptData(bcotPayAddrInfo.cryptoKeys, Buffer.from(payingAddress)).toString('base64');
+    return bcotPayAddrInfo.cryptoKeys.encryptData(Buffer.from(payingAddress)).toString('base64');
 };
 
 BcotPayment.decryptSentFromAddress = function (encSentFromAddress, bcotPayAddrInfo) {
-    return bcotPayAddrInfo.cryptoKeys.decryptData(bcotPayAddrInfo.cryptoKeys, Buffer.from(encSentFromAddress, 'base64')).toString();
+    return bcotPayAddrInfo.cryptoKeys.decryptData(Buffer.from(encSentFromAddress, 'base64')).toString();
 };
 
 // Returns a CSV-formatted text document containing a list of BCOT payments confirmed within a given time frame

@@ -217,26 +217,30 @@ let purgeUnusedExtKeyIntervalHandle;
 //      isReserved: [boolean],
 //      isObsolete: [boolean]
 //  }
-export function KeyStore(ctnHubNodeIndex, seed, cryptoNetwork) {
-    this.ctnHubNodeIndex = ctnHubNodeIndex;
-    this.cryptoNetwork = cryptoNetwork;
-
-    // Initialize in-memory database
-    this.db = new Loki();
-    // noinspection JSCheckFunctionSignatures
-    this.collExtKey = this.db.addCollection('ExtendedKey', {indices: ['type', 'path', 'parentPath', 'index', 'address']});
-
-    this.collExtKey.ensureUniqueIndex('path');
-    this.collExtKey.ensureUniqueIndex('address');
-
-    // Create master HD extended key and store it
+export function KeyStore(ctnHubNodeIndex, seed, cryptoNetwork, masterOnly = false) {
+    // Create master HD extended key
     this.masterHDNode = bitcoinLib.HDNode.fromSeedBuffer(seed, cryptoNetwork);
-    storeHDNode.call(this, 'mstr', 'm', this.masterHDNode);
 
-    //  Try to initialize Catenis Hub HD extended keys
-    if (! this.initCatenisNodeHDNodes(ctnHubNodeIndex)) {
-        Catenis.logger.ERROR(util.format('HD extended keys for Catenis Hub (node index %d) could not be initialized', ctnHubNodeIndex));
-        throw new Error(util.format('HD extended keys for Catenis Hub (node index %d) could not be initialized', ctnHubNodeIndex));
+    if (!masterOnly) {
+        this.ctnHubNodeIndex = ctnHubNodeIndex;
+        this.cryptoNetwork = cryptoNetwork;
+
+        // Initialize in-memory database
+        this.db = new Loki();
+        // noinspection JSCheckFunctionSignatures
+        this.collExtKey = this.db.addCollection('ExtendedKey', {indices: ['type', 'path', 'parentPath', 'index', 'address']});
+
+        this.collExtKey.ensureUniqueIndex('path');
+        this.collExtKey.ensureUniqueIndex('address');
+
+        // Store master HD extended key
+        storeHDNode.call(this, 'mstr', 'm', this.masterHDNode);
+
+        //  Try to initialize Catenis Hub HD extended keys
+        if (! this.initCatenisNodeHDNodes(ctnHubNodeIndex)) {
+            Catenis.logger.ERROR(util.format('HD extended keys for Catenis Hub (node index %d) could not be initialized', ctnHubNodeIndex));
+            throw new Error(util.format('HD extended keys for Catenis Hub (node index %d) could not be initialized', ctnHubNodeIndex));
+        }
     }
 }
 
@@ -3024,16 +3028,18 @@ function retrieveHDNode(path) {
 // KeyStore function class (public) methods
 //
 
-KeyStore.initialize = function () {
+KeyStore.initialize = function (masterOnly = false) {
     Catenis.logger.TRACE('KeyStore initialization');
     // Instantiate KeyStore object
-    Catenis.keyStore = new KeyStore(Catenis.application.ctnHubNodeIndex, Catenis.application.masterSeed, Catenis.application.cryptoNetwork);
+    Catenis.keyStore = new KeyStore(Catenis.application.ctnHubNodeIndex, Catenis.application.masterSeed, Catenis.application.cryptoNetwork, masterOnly);
 
-    // Execute process to purge unused HD extended keys from local key storage now,
-    //  and set recurring timer to execute it periodically
-    purgeUnusedExtendedKeys.call(Catenis.keyStore);
-    Catenis.logger.TRACE('Setting recurring timer to purge unused HD extended keys from local key storage');
-    purgeUnusedExtKeyIntervalHandle = Meteor.setInterval(purgeUnusedExtendedKeys.bind(Catenis.keyStore), cfgSettings.purgeUnusedExtKeyInterval);
+    if (!masterOnly) {
+        // Execute process to purge unused HD extended keys from local key storage now,
+        //  and set recurring timer to execute it periodically
+        purgeUnusedExtendedKeys.call(Catenis.keyStore);
+        Catenis.logger.TRACE('Setting recurring timer to purge unused HD extended keys from local key storage');
+        purgeUnusedExtKeyIntervalHandle = Meteor.setInterval(purgeUnusedExtendedKeys.bind(Catenis.keyStore), cfgSettings.purgeUnusedExtKeyInterval);
+    }
 };
 
 KeyStore.isValidPath = function (path) {

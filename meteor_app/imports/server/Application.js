@@ -27,6 +27,7 @@ import { Device } from './Device';
 import { Transaction } from './Transaction';
 import { FundSource } from './FundSource';
 import { removeProcessId } from './Startup';
+import { CryptoKeys } from './CryptoKeys';
 
 // Config entries
 const appConfig = config.get('application');
@@ -238,11 +239,23 @@ Application.prototype.isOmniCoreRescanning = function () {
 };
 
 Application.prototype.cipherData = function (data, decipher = false) {
-    const x = [ 65, 97, 68, 88, 51, 70, 87, 110, 113, 110, 69, 88, 102, 76, 83, 104, 116, 99, 98, 84, 100, 70, 54, 89 ];
-    const y = crypto.createHmac('sha256', Buffer.from(x)).update(this.masterSeed).digest();
-    const cryptoObj = (decipher ? crypto.createDecipher : crypto.createCipher)('des-ede3-cbc', y);
+    const masterKeys = new CryptoKeys(Catenis.keyStore.masterHDNode.keyPair);
 
-    return Buffer.concat([cryptoObj.update(data), cryptoObj.final()]);
+    if (decipher) {
+        if (!Buffer.isBuffer(data)) {
+            // Assume data is base64 encoded string
+            data = Buffer.from(data, 'base64');
+        }
+
+        return masterKeys.decryptData(data);
+    }
+    else {
+        if (!Buffer.isBuffer(data)) {
+            data = Buffer.from(data);
+        }
+
+        return masterKeys.encryptData(data);
+    }
 };
 
 
@@ -269,7 +282,7 @@ function checkAdminUser() {
         // No admin user defined. Create default admin user
         const adminUserId = Accounts.createUser({
             username: cfgSettings.defaultAdminUser,
-            password: this.cipherData(Buffer.from(cfgSettings.defaultAdminPsw, 'hex'), true).toString(),
+            password: this.cipherData(cfgSettings.defaultAdminPsw, true).toString(),
             profile: {
                 name: 'Catenis default admin user'
             }
