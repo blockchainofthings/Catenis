@@ -21,7 +21,7 @@ import { FlowRouter } from 'meteor/kadira:flow-router';
 import { AccountsTemplates } from 'meteor/useraccounts:core';
 
 // References code in other (Catenis) modules on the client
-import { Catenis } from '../ClientCatenis';
+//import { Catenis } from '../ClientCatenis';
 
 // Import template UI
 import './AdminLayout.html';
@@ -30,6 +30,7 @@ import './AdminLayout.html';
 import './LoginTemplate.js';
 import './AdminHomeTemplate.js';
 import './UserAccountTemplate.js';
+import './NewAdminAccountTemplate.js';
 import './BcotPriceTemplate.js';
 import './SystemFundingTemplate.js';
 import './BcotUsageReportTemplate.js';

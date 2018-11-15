@@ -223,6 +223,14 @@ FlowRouter.route('/admin/useraccount', {
     }
 });
 
+FlowRouter.route('/admin/adminaccount/new', {
+    action: function () {
+        BlazeLayout.render('adminLayout',{
+            page: 'newAdminAccount'
+        });
+    }
+});
+
 FlowRouter.route('/admin/bcotprice', {
     action: function () {
         BlazeLayout.render('adminLayout', {

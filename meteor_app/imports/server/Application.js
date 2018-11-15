@@ -258,6 +258,19 @@ Application.prototype.cipherData = function (data, decipher = false) {
     }
 };
 
+Application.prototype.createAdminUser = function (username, password, description) {
+    const adminUserId = Accounts.createUser({
+        username: username,
+        password: password,
+        profile: {
+            name: description
+        }
+    });
+    Roles.addUsersToRoles(adminUserId, cfgSettings.adminRole);
+
+    return adminUserId;
+};
+
 
 // Module functions used to simulate private Application object methods
 //  NOTE: these functions need to be bound to an Application object reference (this) before
@@ -280,14 +293,7 @@ function checkAdminUser() {
     if (Roles.getUsersInRole(cfgSettings.adminRole).count() === 0 && cfgSettings.defaultAdminUser && cfgSettings.defaultAdminPsw) {
         Catenis.logger.INFO('Creating default admin user');
         // No admin user defined. Create default admin user
-        const adminUserId = Accounts.createUser({
-            username: cfgSettings.defaultAdminUser,
-            password: this.cipherData(cfgSettings.defaultAdminPsw, true).toString(),
-            profile: {
-                name: 'Catenis default admin user'
-            }
-        });
-        Roles.addUsersToRoles(adminUserId, cfgSettings.adminRole);
+        this.createAdminUser(cfgSettings.defaultAdminUser, this.cipherData(cfgSettings.defaultAdminPsw, true).toString(), 'Catenis default admin user');
     }
 }
 

@@ -71,6 +71,7 @@ import { ClientServiceAccountUI } from './clientUI/ClientServiceAccountUI';
 import { ClientDevicesUI } from './clientUI/ClientDevicesUI';
 import { ServiceBillingUI } from './adminUI/ServiceBillingUI';
 import { ClientServiceBillingUI } from './clientUI/ClientServiceBillingUI';
+import { AdminAccountUI } from './adminUI/AdminAccountUI';
 // TEST - begin
 //import { resetBitcoinCore } from './test/FundSourceTest';
 //import { TestCatenisColoredCoins } from './test/TestCatenisColoredCoins';
@@ -172,6 +173,7 @@ Meteor.startup(function () {
         // UI support initialization
         AdminUI.initialize();
         LoginUI.initialize();
+        AdminAccountUI.initialize();
         BcotPriceUI.initialize();
         SystemFundingUI.initialize();
         BcotUsageReportUI.initialize();

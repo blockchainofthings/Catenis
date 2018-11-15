@@ -1,0 +1,51 @@
+<template name="newAdminAccount">
+    <div>
+        <div class="panel panel-login minWidthElement noBoxShadow">
+            <div class="panel-body">
+                <div class="row">
+                    <div class="col-lg-12">
+                        <h2>New Admin Account</h2>
+                        {{#if hasErrorMessage}}
+                            <div class="alert alert-danger" role="alert">
+                                <button type="button" id="btnDismissError" class="close" aria-label="Close">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                                {{{errorMessage}}}
+                            </div>
+                        {{/if}}
+                        {{#if hasInfoMessage}}
+                            <div class="alert alert-{{infoMessageType}}" role="alert">
+                                <button type="button" id="btnDismissInfo" class="close" aria-label="Close">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                                {{infoMessage}}
+                            </div>
+                        {{/if}}
+                        <form id="frmNewAdminAccount" autocomplete="off">
+                            <div class="form-group">
+                                <input type="text" maxlength="40" id="txtUsername" name="username" placeholder="Username" autocomplete="off" autocapitalize="none" autocorrect="off">
+                            </div>
+                            <div class="form-group">
+                                <input type="password" maxlength="40" id="txtPassword" name="password" placeholder="Password" autocomplete="off" autocapitalize="none" autocorrect="off">
+                            </div>
+                            <div class="form-group">
+                                <input type="text" maxlength="80" id="txtDescription" name="description" placeholder="Description" autocomplete="off" autocapitalize="none" autocorrect="off">
+                            </div>
+                            <div class="row">
+                                <div class="col-xs-6 form-group pull-left">
+                                    <button id="btnCancel" type="button" class="form-control btn btn-login at-btn">{{#if isAccountCreated}}Back{{else}}Cancel{{/if}}</button>
+                                    <a id="lnkCancel" href="/admin" style="display:none"></a>
+                                </div>
+                                {{#if showCreateButton}}
+                                    <div class="col-xs-6 form-group pull-right">
+                                        <button type="submit" id="btnCreate" class="form-control btn btn-login at-btn submit">Create Account</button>
+                                    </div>
+                                {{/if}}
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</template>
