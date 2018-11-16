@@ -48,6 +48,7 @@ const clientTempLicConfig = clientConfig.get('temporaryLicense');
 
 // Configuration settings
 export const cfgSettings = {
+    firstAccountNumber: clientConfig.get('firstAccountNumber'),
     userNamePrefix: clientConfig.get('userNamePrefix'),
     clientRole: clientConfig.get('clientRole'),
     minLicenseValidityDays: clientConfig.get('minLicenseValidityDays'),
@@ -59,6 +60,8 @@ export const cfgSettings = {
     },
     deviceDefaultRightsByEvent: clientConfig.get('deviceDefaultRightsByEvent')
 };
+
+const accNumberRegEx = /^[A-Z]-(\d{8})$/;
 
 
 // Definition of function classes
@@ -1531,6 +1534,26 @@ function isValidLicenseEndDate(endDate) {
 
 function isValidLicenseDocId(id) {
     return typeof id === 'string' && id.length > 0;
+}
+
+export function parseAccountNumber(strAccNumber) {
+    let number = cfgSettings.firstAccountNumber - 1;
+
+    if (typeof strAccNumber === 'string') {
+        const match = strAccNumber.match(accNumberRegEx);
+
+        if (match) {
+            number = Number.parseInt(match[1]);
+        }
+    }
+
+    return number;
+}
+
+export function formatAccountNumber(number) {
+    const strNumber = number.toString();
+
+    return util.format('%s-%s%s', Catenis.application.environment.toUpperCase().substring(0, 1), '00000000'.substring(strNumber.length), strNumber);
 }
 
 

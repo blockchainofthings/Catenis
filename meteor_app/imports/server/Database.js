@@ -500,8 +500,7 @@ Database.initialize = function() {
                     background: true,
                     w: 1
                 }
-            },
-            {
+            }, {
                 fields: {
                     catenisNode_id: 1
                 },
@@ -509,8 +508,7 @@ Database.initialize = function() {
                     background: true,
                     w: 1
                 }
-            },
-            {
+            }, {
                 fields: {
                     clientId: 1
                 },
@@ -519,8 +517,7 @@ Database.initialize = function() {
                     background: true,
                     w: 1
                 }
-            },
-            {
+            }, {
                 fields: {
                     'index.ctnNodeIndex': 1,
                     'index.clientIndex': 1
@@ -530,8 +527,16 @@ Database.initialize = function() {
                     background: true,
                     w: 1
                 }
-            },
-            {
+            }, {
+                fields: {
+                    'props.accountNumber': 1
+                },
+                opts: {
+                    unique: true,
+                    background: true,
+                    w: 1
+                }
+            }, {
                 fields: {
                     'props.lastModifiedDate': 1
                 },
@@ -539,8 +544,7 @@ Database.initialize = function() {
                     background: true,
                     w: 1
                 }
-            },
-            {
+            }, {
                 fields: {
                     billingMode: 1
                 },
@@ -548,8 +552,7 @@ Database.initialize = function() {
                     background: true,
                     w: 1
                 }
-            },
-            {
+            }, {
                 fields: {
                     status: 1
                 },
@@ -557,8 +560,7 @@ Database.initialize = function() {
                     background: true,
                     w: 1
                 }
-            },
-            {
+            }, {
                 fields: {
                     createdDate: 1
                 },
@@ -566,8 +568,7 @@ Database.initialize = function() {
                     background: true,
                     w: 1
                 }
-            },
-            {
+            }, {
                 fields: {
                     lastStatusChangedDate: 1
                 },
@@ -575,8 +576,7 @@ Database.initialize = function() {
                     background: true,
                     w: 1
                 }
-            },
-            {
+            }, {
                 fields: {
                     lastApiAccessGenKeyModifiedDate: 1
                 },

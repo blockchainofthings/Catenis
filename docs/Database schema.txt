@@ -117,6 +117,8 @@ Client {
   },
   props: {
     name: [string],  // Client name
+    accountNumber: [String],  // Catenis generated code used to uniquely identify a Catenis client outside the system.
+                              //  Format: E-00000000, where E is 'S' for sandbox, and 'P' for production
     lastModifiedDate: [date/time]  // Date and time when one of the client's properties had been last modified
   },
   apiAccessGenKey: [string],  // Key used to generate default secret key used for client's devices to access the Catenis API

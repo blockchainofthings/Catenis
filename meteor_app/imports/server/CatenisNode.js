@@ -42,7 +42,9 @@ import {
 } from './BlockchainAddress';
 import {
     Client,
-    cfgSettings as clientCfgSettings
+    cfgSettings as clientCfgSettings,
+    parseAccountNumber,
+    formatAccountNumber
 } from './Client';
 import { FundSource } from './FundSource';
 import { FundTransaction } from './FundTransaction';
@@ -626,6 +628,9 @@ CatenisNode.prototype.createClient = function (props, user_id, opts) {
         if (user_id) {
             docClient.user_id = user_id;
         }
+
+        // Set client account number
+        docClient.props.accountNumber = newClientAccountNumber();
 
         try {
             // Create new Client doc/rec
@@ -1227,6 +1232,20 @@ function newClientId(ctnNodeIndex, clientIndex) {
     }
 
     return id;
+}
+
+function newClientAccountNumber() {
+    const docClient = Catenis.db.collection.Client.findOne({}, {
+        sort: {
+            'props.accountNumber': -1
+        },
+        fields: {
+            'props.accountNumber': 1
+        }
+    });
+    const latestAccountNumber = docClient && docClient.props ? docClient.props.accountNumber : undefined;
+
+    return formatAccountNumber(parseAccountNumber(latestAccountNumber) + 1);
 }
 
 // Method used to process notification of confirmed credit service account transaction
