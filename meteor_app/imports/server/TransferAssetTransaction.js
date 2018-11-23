@@ -381,7 +381,7 @@ TransferAssetTransaction.checkTransaction = function (ccTransact) {
 //
 
 TransferAssetTransaction.matchingPattern = Object.freeze({
-    input: util.format('^(?:%s)+(?:%s)+$',
+    input: util.format('^(?:%s)+(?:%s)*$',
         Transaction.ioToken.p2_dev_asst_addr.token,
         Transaction.ioToken.p2_sys_pay_tx_exp_addr.token),
     output: util.format('^(?:(?:%s)(?:%s)(?:%s){1,2}(?:%s))?(?:%s)(?:%s){1,2}(?:%s)?$',

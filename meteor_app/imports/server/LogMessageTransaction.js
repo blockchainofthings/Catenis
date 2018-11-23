@@ -361,7 +361,7 @@ LogMessageTransaction.checkTransaction = function (transact) {
 //
 
 LogMessageTransaction.matchingPattern = Object.freeze({
-    input: util.format('^(?:%s)(?:%s)+$',
+    input: util.format('^(?:%s)(?:%s)*$',
         Transaction.ioToken.p2_dev_main_addr.token,
         Transaction.ioToken.p2_sys_pay_tx_exp_addr.token),
     output: util.format('^(?:%s)(?:%s){0,2}(?:%s)?$',
