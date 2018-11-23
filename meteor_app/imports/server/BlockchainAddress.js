@@ -57,11 +57,8 @@ export class SystemDeviceMainAddress extends BlockchainAddress {
     constructor (ctnNodeIndex) {
         super();
 
-        this.baseClass = BaseSystemDeviceMainAddress;
-        this.instanceArgs = [
-            ctnNodeIndex,
-            KeyStore.systemDeviceMainAddressRootPath(ctnNodeIndex)
-        ];
+        // noinspection JSUnusedGlobalSymbols
+        this._baseAddr = BaseSystemDeviceMainAddress.getInstance(ctnNodeIndex, KeyStore.systemDeviceMainAddressRootPath(ctnNodeIndex));
     }
 }
 
@@ -70,11 +67,8 @@ export class SystemFundingPaymentAddress extends BlockchainAddress {
     constructor (ctnNodeIndex) {
         super();
 
-        this.baseClass = BaseSystemFundingPaymentAddress;
-        this.instanceArgs = [
-            ctnNodeIndex,
-            KeyStore.systemFundingPaymentRootPath(ctnNodeIndex)
-        ];
+        // noinspection JSUnusedGlobalSymbols
+        this._baseAddr = BaseSystemFundingPaymentAddress.getInstance(ctnNodeIndex, KeyStore.systemFundingPaymentRootPath(ctnNodeIndex));
     }
 }
 
@@ -83,11 +77,8 @@ export class SystemFundingChangeAddress extends BlockchainAddress {
     constructor (ctnNodeIndex) {
         super();
 
-        this.baseClass = BaseSystemFundingChangeAddress;
-        this.instanceArgs = [
-            ctnNodeIndex,
-            KeyStore.systemFundingChangeRootPath(ctnNodeIndex)
-        ];
+        // noinspection JSUnusedGlobalSymbols
+        this._baseAddr = BaseSystemFundingChangeAddress.getInstance(ctnNodeIndex, KeyStore.systemFundingChangeRootPath(ctnNodeIndex));
     }
 }
 
@@ -96,11 +87,8 @@ export class SystemPayTxExpenseAddress extends BlockchainAddress {
     constructor (ctnNodeIndex) {
         super();
 
-        this.baseClass = BaseSystemPayTxExpenseAddress;
-        this.instanceArgs = [
-            ctnNodeIndex,
-            KeyStore.systemPayTxExpenseRootPath(ctnNodeIndex)
-        ];
+        // noinspection JSUnusedGlobalSymbols
+        this._baseAddr = BaseSystemPayTxExpenseAddress.getInstance(ctnNodeIndex, KeyStore.systemPayTxExpenseRootPath(ctnNodeIndex));
     }
 }
 
@@ -109,11 +97,8 @@ export class SystemReadConfirmSpendNotifyAddress extends BlockchainAddress {
     constructor (ctnNodeIndex) {
         super();
 
-        this.baseClass = BaseSystemReadConfirmSpendNotifyAddress;
-        this.instanceArgs = [
-            ctnNodeIndex,
-            KeyStore.systemReadConfirmSpendNotifyRootPath(ctnNodeIndex)
-        ];
+        // noinspection JSUnusedGlobalSymbols
+        this._baseAddr = BaseSystemReadConfirmSpendNotifyAddress.getInstance(ctnNodeIndex, KeyStore.systemReadConfirmSpendNotifyRootPath(ctnNodeIndex));
     }
 }
 
@@ -122,11 +107,8 @@ export class SystemReadConfirmSpendOnlyAddress extends BlockchainAddress {
     constructor (ctnNodeIndex) {
         super();
 
-        this.baseClass = BaseSystemReadConfirmSpendOnlyAddress;
-        this.instanceArgs = [
-            ctnNodeIndex,
-            KeyStore.systemReadConfirmSpendOnlyRootPath(ctnNodeIndex)
-        ];
+        // noinspection JSUnusedGlobalSymbols
+        this._baseAddr = BaseSystemReadConfirmSpendOnlyAddress.getInstance(ctnNodeIndex, KeyStore.systemReadConfirmSpendOnlyRootPath(ctnNodeIndex));
     }
 }
 
@@ -135,11 +117,8 @@ export class SystemReadConfirmSpendNullAddress extends BlockchainAddress {
     constructor (ctnNodeIndex) {
         super();
 
-        this.baseClass = BaseSystemReadConfirmSpendNullAddress;
-        this.instanceArgs = [
-            ctnNodeIndex,
-            KeyStore.systemReadConfirmSpendNullRootPath(ctnNodeIndex)
-        ];
+        // noinspection JSUnusedGlobalSymbols
+        this._baseAddr = BaseSystemReadConfirmSpendNullAddress.getInstance(ctnNodeIndex, KeyStore.systemReadConfirmSpendNullRootPath(ctnNodeIndex));
     }
 }
 
@@ -148,11 +127,8 @@ export class SystemReadConfirmPayTxExpenseAddress extends BlockchainAddress {
     constructor (ctnNodeIndex) {
         super();
 
-        this.baseClass = BaseSystemReadConfirmPayTxExpenseAddress;
-        this.instanceArgs = [
-            ctnNodeIndex,
-            KeyStore.systemReadConfirmPayTxExpenseRootPath(ctnNodeIndex)
-        ];
+        // noinspection JSUnusedGlobalSymbols
+        this._baseAddr = BaseSystemReadConfirmPayTxExpenseAddress.getInstance(ctnNodeIndex, KeyStore.systemReadConfirmPayTxExpenseRootPath(ctnNodeIndex));
     }
 }
 
@@ -161,11 +137,8 @@ export class SystemServiceCreditIssuingAddress extends BlockchainAddress {
     constructor (ctnNodeIndex) {
         super();
 
-        this.baseClass = BaseSystemServiceCreditIssuingAddress;
-        this.instanceArgs = [
-            ctnNodeIndex,
-            KeyStore.systemServiceCreditIssuingRootPath(ctnNodeIndex)
-        ];
+        // noinspection JSUnusedGlobalSymbols
+        this._baseAddr = BaseSystemServiceCreditIssuingAddress.getInstance(ctnNodeIndex, KeyStore.systemServiceCreditIssuingRootPath(ctnNodeIndex));
     }
 }
 
@@ -174,11 +147,8 @@ export class SystemServicePaymentPayTxExpenseAddress extends BlockchainAddress {
     constructor (ctnNodeIndex) {
         super();
 
-        this.baseClass = BaseSystemServicePaymentPayTxExpenseAddress;
-        this.instanceArgs = [
-            ctnNodeIndex,
-            KeyStore.systemServicePaymentPayTxExpenseRootPath(ctnNodeIndex)
-        ];
+        // noinspection JSUnusedGlobalSymbols
+        this._baseAddr = BaseSystemServicePaymentPayTxExpenseAddress.getInstance(ctnNodeIndex, KeyStore.systemServicePaymentPayTxExpenseRootPath(ctnNodeIndex));
     }
 }
 
@@ -187,11 +157,8 @@ export class SystemMultiSigSigneeAddress extends BlockchainAddress {
     constructor (ctnNodeIndex) {
         super();
 
-        this.baseClass = BaseSystemMultiSigSigneeAddress;
-        this.instanceArgs = [
-            ctnNodeIndex,
-            KeyStore.systemMultiSigSigneeRootPath(ctnNodeIndex)
-        ];
+        // noinspection JSUnusedGlobalSymbols
+        this._baseAddr = BaseSystemMultiSigSigneeAddress.getInstance(ctnNodeIndex, KeyStore.systemMultiSigSigneeRootPath(ctnNodeIndex));
     }
 }
 
@@ -200,12 +167,8 @@ export class ClientServiceAccountCreditLineAddress extends BlockchainAddress {
     constructor (ctnNodeIndex, clientIndex) {
         super();
 
-        this.baseClass = BaseClientServiceAccountCreditLineAddress;
-        this.instanceArgs = [
-            ctnNodeIndex,
-            clientIndex,
-            KeyStore.clientServiceAccountCreditLineAddressRootPath(ctnNodeIndex, clientIndex)
-        ];
+        // noinspection JSUnusedGlobalSymbols
+        this._baseAddr = BaseClientServiceAccountCreditLineAddress.getInstance(ctnNodeIndex, clientIndex, KeyStore.clientServiceAccountCreditLineAddressRootPath(ctnNodeIndex, clientIndex));
     }
 }
 
@@ -214,12 +177,8 @@ export class ClientServiceAccountDebitLineAddress extends BlockchainAddress {
     constructor (ctnNodeIndex, clientIndex) {
         super();
 
-        this.baseClass = BaseClientServiceAccountDebitLineAddress;
-        this.instanceArgs = [
-            ctnNodeIndex,
-            clientIndex,
-            KeyStore.clientServiceAccountDebitLineAddressRootPath(ctnNodeIndex, clientIndex)
-        ];
+        // noinspection JSUnusedGlobalSymbols
+        this._baseAddr = BaseClientServiceAccountDebitLineAddress.getInstance(ctnNodeIndex, clientIndex, KeyStore.clientServiceAccountDebitLineAddressRootPath(ctnNodeIndex, clientIndex));
     }
 }
 
@@ -228,12 +187,8 @@ export class ClientBcotPaymentAddress extends BlockchainAddress {
     constructor (ctnNodeIndex, clientIndex) {
         super();
 
-        this.baseClass = BaseClientBcotPaymentAddress;
-        this.instanceArgs = [
-            ctnNodeIndex,
-            clientIndex,
-            KeyStore.clientBcotPaymentAddressRootPath(ctnNodeIndex, clientIndex)
-        ];
+        // noinspection JSUnusedGlobalSymbols
+        this._baseAddr = BaseClientBcotPaymentAddress.getInstance(ctnNodeIndex, clientIndex, KeyStore.clientBcotPaymentAddressRootPath(ctnNodeIndex, clientIndex));
     }
 }
 
@@ -242,13 +197,8 @@ export class DeviceReadConfirmAddress extends BlockchainAddress {
     constructor (ctnNodeIndex, clientIndex, deviceIndex) {
         super();
 
-        this.baseClass = BaseDeviceReadConfirmAddress;
-        this.instanceArgs = [
-            ctnNodeIndex,
-            clientIndex,
-            deviceIndex,
-            KeyStore.deviceReadConfirmAddressRootPath(ctnNodeIndex, clientIndex, deviceIndex)
-        ];
+        // noinspection JSUnusedGlobalSymbols
+        this._baseAddr = BaseDeviceReadConfirmAddress.getInstance(ctnNodeIndex, clientIndex, deviceIndex, KeyStore.deviceReadConfirmAddressRootPath(ctnNodeIndex, clientIndex, deviceIndex));
     }
 }
 
@@ -257,13 +207,8 @@ export class DeviceMainAddress extends BlockchainAddress {
     constructor (ctnNodeIndex, clientIndex, deviceIndex) {
         super();
 
-        this.baseClass = BaseDeviceMainAddress;
-        this.instanceArgs = [
-            ctnNodeIndex,
-            clientIndex,
-            deviceIndex,
-            KeyStore.deviceMainAddressRootPath(ctnNodeIndex, clientIndex, deviceIndex)
-        ];
+        // noinspection JSUnusedGlobalSymbols
+        this._baseAddr = BaseDeviceMainAddress.getInstance(ctnNodeIndex, clientIndex, deviceIndex, KeyStore.deviceMainAddressRootPath(ctnNodeIndex, clientIndex, deviceIndex));
     }
 }
 
@@ -272,13 +217,8 @@ export class DeviceAssetAddress extends BlockchainAddress {
     constructor (ctnNodeIndex, clientIndex, deviceIndex) {
         super();
 
-        this.baseClass = BaseDeviceAssetAddress;
-        this.instanceArgs = [
-            ctnNodeIndex,
-            clientIndex,
-            deviceIndex,
-            KeyStore.deviceAssetAddressRootPath(ctnNodeIndex, clientIndex, deviceIndex)
-        ];
+        // noinspection JSUnusedGlobalSymbols
+        this._baseAddr = BaseDeviceAssetAddress.getInstance(ctnNodeIndex, clientIndex, deviceIndex, KeyStore.deviceAssetAddressRootPath(ctnNodeIndex, clientIndex, deviceIndex));
     }
 }
 
@@ -287,28 +227,16 @@ export class DeviceAssetIssuanceAddress extends BlockchainAddress {
     constructor (ctnNodeIndex, clientIndex, deviceIndex) {
         super();
 
-        this.baseClass = BaseDeviceAssetIssuanceAddress;
-        this.instanceArgs = [
-            ctnNodeIndex,
-            clientIndex,
-            deviceIndex,
-            KeyStore.deviceAssetIssuanceAddressRootPath(ctnNodeIndex, clientIndex, deviceIndex)
-        ];
+        // noinspection JSUnusedGlobalSymbols
+        this._baseAddr = BaseDeviceAssetIssuanceAddress.getInstance(ctnNodeIndex, clientIndex, deviceIndex, KeyStore.deviceAssetIssuanceAddressRootPath(ctnNodeIndex, clientIndex, deviceIndex));
     }
 }
 
 // BlockchainAddress function class
 function BlockchainAddress() {
-    this.baseClass = undefined;
-    this.instanceArgs = undefined;
+    this._baseAddr = undefined;
 
     Object.defineProperties(this, {
-        _baseAddr: {
-            get: () => {
-                return this.baseClass.getInstance.apply(undefined, this.instanceArgs);
-            },
-            enumerable: true
-        },
         type: {
             get: () => {
                 return this._baseAddr.type;
