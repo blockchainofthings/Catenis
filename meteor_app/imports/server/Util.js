@@ -275,20 +275,43 @@ Util.isUndefinedOrNull = function (val) {
     return val === undefined || val === null;
 };
 
-Util.processItemsAsync = function (itemsToProcess, procFunc, ...procArgs /* arg1, arg2, ..., callbackFunc */) {
+Util.processItemsAsync = function (itemsToProcess, procFunc, ...procArgs /* this, arg1, arg2, ..., callbackFunc */) {
     let callbackFunc;
 
     if (procArgs.length > 0 && typeof procArgs[procArgs.length - 1] === 'function') {
         callbackFunc = procArgs.pop();
     }
 
+    let cbThis = undefined;
+
+    if (procArgs.length > 0) {
+        cbThis = procArgs.shift();
+    }
+
     function processControl() {
-        const itemToProcess = itemsToProcess.shift();
+        const itemToProcess = itemsToProcess[0];
 
         // Do processing
         const callArgs = [itemToProcess].concat(procArgs);
 
-        procFunc.apply(undefined, callArgs);
+        try {
+            procFunc.apply(cbThis, callArgs);
+
+            // Remove processed item from list
+            itemsToProcess.shift();
+        }
+        catch (err) {
+            Catenis.logger.DEBUG('Exception while processing items asynchronously; processing interrupted:', err.toString(), {
+                currentItem: itemToProcess,
+                itemsLeft: itemsToProcess.length
+            });
+            // Interrupt processing and pass error via callback if one was provided
+            if (callbackFunc) {
+                Meteor.defer(callbackFunc.bind(undefined, err));
+            }
+
+            return;
+        }
 
         if (itemsToProcess.length > 0) {
             Meteor.defer(processControl);

@@ -1716,82 +1716,91 @@ function updateIssuedAddresses() {
     }
 }
 
-function updateIssuedAddressesPart2() {
-    Catenis.logger.TRACE('Executing process to update issued blockchain addresses (part 2)');
-    // Identify issued blockchain addresses doc/rec that should be expired
-    const refDate = new Date();
-    const idDocsToProcess = Catenis.db.collection.IssuedBlockchainAddress.find({
-        status: 'new',
-        expirationDate: {
-            $lte: refDate
-        }
-    }, {
-        fields: {
-            _id: 1
-        }
-    }).fetch().map((doc) => doc._id);
+function updateIssuedAddressesPart2(error) {
+    if (error) {
+        Catenis.logger.ERROR('Error while executing process to update issued blockchain addresses.', error);
+    }
+    else {
+        Catenis.logger.TRACE('Executing process to update issued blockchain addresses (part 2)');
+        // Identify issued blockchain addresses doc/rec that should be expired
+        const refDate = new Date();
+        const idDocsToProcess = Catenis.db.collection.IssuedBlockchainAddress.find({
+            status: 'new',
+            expirationDate: {
+                $lte: refDate
+            }
+        }, {
+            fields: {
+                _id: 1
+            }
+        }).fetch().map((doc) => doc._id);
 
-    if (idDocsToProcess.length > 0) {
-        Util.processItemsAsync(idDocsToProcess, (idDocToProcess, refDate) => {
-            // Execute code in critical section to avoid DB concurrency
-            dbCS.execute(() => {
-                // Retrieve issued blockchain address doc/rec making sure that it still should be expired
-                const docIssuedAddr = Catenis.db.collection.IssuedBlockchainAddress.findOne({
-                    _id: idDocToProcess,
-                    status: 'new',
-                    expirationDate: {
-                        $lte: refDate
-                    }
-                }, {
-                    fields: {
-                        _id: 1,
-                        type: 1,
-                        parentPath: 1,
-                        path: 1,
-                        addrIndex: 1,
-                        status: 1
-                    }
-                });
+        if (idDocsToProcess.length > 0) {
+            Util.processItemsAsync(idDocsToProcess, (idDocToProcess, refDate) => {
+                // Execute code in critical section to avoid DB concurrency
+                dbCS.execute(() => {
+                    // Retrieve issued blockchain address doc/rec making sure that it still should be expired
+                    const docIssuedAddr = Catenis.db.collection.IssuedBlockchainAddress.findOne({
+                        _id: idDocToProcess,
+                        status: 'new',
+                        expirationDate: {
+                            $lte: refDate
+                        }
+                    }, {
+                        fields: {
+                            _id: 1,
+                            type: 1,
+                            parentPath: 1,
+                            path: 1,
+                            addrIndex: 1,
+                            status: 1
+                        }
+                    });
 
-                if (docIssuedAddr) {
-                    const issuedAddr = BaseBlockchainAddress.getAddressOfIssuedBlockchainAddress(docIssuedAddr);
+                    if (docIssuedAddr) {
+                        const issuedAddr = BaseBlockchainAddress.getAddressOfIssuedBlockchainAddress(docIssuedAddr);
 
-                    if (issuedAddr) {
-                        if (!BaseBlockchainAddress.isAddressWithBalance(issuedAddr)) {
-                            // Issued blockchain address has no balance.
-                            //  Set it directly as obsolete on local database
-                            Catenis.db.collection.IssuedBlockchainAddress.update({
-                                _id: docIssuedAddr._id
-                            }, {
-                                $set: {
-                                    status: 'obsolete',
-                                    lastStatusChangedDate: new Date()
+                        if (issuedAddr) {
+                            if (!BaseBlockchainAddress.isAddressWithBalance(issuedAddr)) {
+                                // Issued blockchain address has no balance.
+                                //  Set it directly as obsolete on local database
+                                Catenis.db.collection.IssuedBlockchainAddress.update({
+                                    _id: docIssuedAddr._id
+                                }, {
+                                    $set: {
+                                        status: 'obsolete',
+                                        lastStatusChangedDate: new Date()
+                                    }
+                                });
+
+                                // Also set address as obsolete on local key storage
+                                Catenis.keyStore.setAddressAsObsolete(issuedAddr);
+
+                                if (hasInstantiatedObject(docIssuedAddr.parentPath)) {
+                                    // Update address indices on corresponding blockchain address object if currently instantiated
+                                    updateInUseAddressIndices.call(getInstantiatedObject(docIssuedAddr.parentPath));
                                 }
-                            });
-
-                            // Also set address as obsolete on local key storage
-                            Catenis.keyStore.setAddressAsObsolete(issuedAddr);
-
-                            if (hasInstantiatedObject(docIssuedAddr.parentPath)) {
-                                // Update address indices on corresponding blockchain address object if currently instantiated
-                                updateInUseAddressIndices.call(getInstantiatedObject(docIssuedAddr.parentPath));
+                            }
+                            else {
+                                // Set address as expired on local database
+                                Catenis.db.collection.IssuedBlockchainAddress.update({
+                                    _id: docIssuedAddr._id
+                                }, {
+                                    $set: {
+                                        status: 'expired',
+                                        lastStatusChangedDate: new Date()
+                                    }
+                                });
                             }
                         }
-                        else {
-                            // Set address as expired on local database
-                            Catenis.db.collection.IssuedBlockchainAddress.update({
-                                _id: docIssuedAddr._id
-                            }, {
-                                $set: {
-                                    status: 'expired',
-                                    lastStatusChangedDate: new Date()
-                                }
-                            });
-                        }
                     }
+                });
+            }, undefined, refDate, (error) => {
+                if (error) {
+                    Catenis.logger.ERROR('Error while executing process to update issued blockchain addresses (part 2).', error);
                 }
             });
-        }, refDate);
+        }
     }
 }
 
