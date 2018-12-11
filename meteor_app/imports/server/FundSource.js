@@ -272,6 +272,113 @@ FundSource.prototype.getUtxosOfTx = function (txid) {
     });
 };
 
+// Return UTXOs that satisfy the specified predicate (condition)
+//
+//  Arguments:
+//   predicate: [Object] - MongoDB like query condition
+//   includeUnconfirmed: [Boolean] - Indicate whether unconfirmed UTXOs should be included in the result set
+//
+//  result: {
+//    utxos: [{
+//      address: [String],
+//      txout: {
+//        txid: [String],
+//        vout: [Number],
+//        amount: [Number]      // Amount in satoshis
+//      },
+//      scriptPubKey: [String]
+//    }],
+//    allocatedAmount: [Number]
+//  }
+//
+FundSource.prototype.allocateUtxosByPredicate = function (predicate, includeUnconfirmed = true) {
+    let result = null;
+
+    // Retrieve UTXOs sorting them by higher value, and higher confirmations
+    const query = {
+        $and: [{
+            allocated: false
+        }, predicate]
+    };
+    let confCondition = {
+        confirmations: {
+            $gt: 0
+        }
+    };
+
+    if (includeUnconfirmed && this.loadedUnconfirmedUtxos) {
+        const unconfConditions = [];
+
+        if (this.ancestorsCountUpperLimit !== undefined) {
+            unconfConditions.push({ancestorsCount: {$lte: this.ancestorsCountUpperLimit}});
+        }
+
+        if (this.ancestorsSizeUpperLimit !== undefined) {
+            unconfConditions.push({ancestorsSize: {$lte: this.ancestorsSizeUpperLimit}});
+        }
+
+        if (this.descendantsCountUpperLimit !== undefined) {
+            unconfConditions.push({descendantsCount: {$lte: this.descendantsCountUpperLimit}});
+        }
+
+        if (this.descendantsSizeUpperLimit !== undefined) {
+            unconfConditions.push({descendantsSize: {$lte: this.descendantsSizeUpperLimit}});
+        }
+
+        if (unconfConditions.length > 0) {
+            confCondition = {
+                $or: [
+                    confCondition,
+                    unconfConditions.length > 1 ? {$and: unconfConditions} : unconfConditions[0]
+                ]
+            };
+        }
+    }
+
+    query.$and.push(confCondition);
+
+    const docUtxos = this.collUtxo.chain().find(query).compoundsort([
+        ['amount', true],
+        ['confirmations', true],
+        'ancestorsCount',
+        'ancestorsSize',
+        'descendantsCount',
+        'descendantsSize'
+    ]).data();
+
+    if (docUtxos.length > 0) {
+        // UTXO doc/recs have been found. Prepare to return result
+        let allocatedAmount = 0;
+        result = {utxos: []};
+
+        docUtxos.forEach((docUtxo) => {
+            result.utxos.push({
+                address: docUtxo.address,
+                txout: {
+                    txid: docUtxo.txid,
+                    vout: docUtxo.vout,
+                    amount: docUtxo.amount
+                },
+                scriptPubKey: docUtxo.scriptPubKey
+            });
+            allocatedAmount += docUtxo.amount;
+            docUtxo.allocated = true;
+        });
+
+        // Allocated amount (in satoshis)
+        result.allocatedAmount = allocatedAmount;
+
+        // Update local DB setting UTXOs as allocated
+        this.collUtxo.update(docUtxos);
+
+        // NOTE: force the rebuild of the binary index on the 'allocated' property to work around
+        //  an issue found with Lokijs (https://github.com/techfort/LokiJS/issues/639)
+        this.collUtxo.ensureIndex('allocated', true);
+    }
+
+    return result;
+};
+
 //  Arguments:
 //   amount [Number] - Amount, in satoshis, to be allocated
 //
@@ -415,6 +522,7 @@ FundSource.prototype.allocateFund = function (amount) {
 //                   that should be used to calculate the actual transaction fee
 //  amountResolution: [Number] - The resolution, in satoshis, of the calculated amount to be allocated.
 //                                The allocated amount should be a multiple of that amount
+//  maxNumUtxos: [Number] - (optional) Maximum number of UTXOs that can be allocated
 //
 //  result: {
 //    utxos: [{
@@ -429,7 +537,7 @@ FundSource.prototype.allocateFund = function (amount) {
 //    changeAmount: [Number]  // Optional
 //  }
 //
-FundSource.prototype.allocateFundForTxExpense = function (txInfo, isFixedFeed, fee, amountResolution) {
+FundSource.prototype.allocateFundForTxExpense = function (txInfo, isFixedFeed, fee, amountResolution, maxNumUtxos) {
     // Check arguments
     if (fee === undefined) {
         if (!isFixedFeed) {
@@ -524,10 +632,11 @@ FundSource.prototype.allocateFundForTxExpense = function (txInfo, isFixedFeed, f
 
         if (maxUtxoResultSetLength > 0) {
             let allocatedUtxos = undefined;
-    
-            // Try to allocate as little UTXOs as possible to fulfill requested amount, starting
-            //  with one UTXO, and going up to the number of UTXOs returned in result sets
-            for (let numWorkUtxos = 1; numWorkUtxos <= maxUtxoResultSetLength; numWorkUtxos++) {
+
+            // Try to allocate as little UTXOs as possible to fulfill requested amount, starting with one
+            //  UTXO, and going up to the maximum number of UTXOs or the number of UTXOs returned in result sets
+            for (let numWorkUtxos = 1, maxWorkUtxos = typeof maxNumUtxos === 'number' ? Math.min(maxNumUtxos, maxUtxoResultSetLength) : maxUtxoResultSetLength;
+                    numWorkUtxos <= maxWorkUtxos; numWorkUtxos++) {
                 if (!isFixedFeed) {
                     // Not using fixed fee for transaction. Amount to be allocated depends on number
                     //  of UTXO to allocate (numWorkUtxos), so it needs to be recalculated every time it changes

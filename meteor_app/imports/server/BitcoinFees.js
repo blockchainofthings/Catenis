@@ -57,7 +57,7 @@ export class BitcoinFees extends events.EventEmitter {
 // Public BitcoinFees object methods
 //
 
-BitcoinFees.prototype.getFeeRateByTime = function (confirmTime) {
+BitcoinFees.prototype.getFeeRateByTime = function (confirmTime, lowerBoundFee = false) {
     let firstEntryLowestTime = undefined;
 
     const foundEntry = this.list.fees.find((entry) => {
@@ -68,7 +68,25 @@ BitcoinFees.prototype.getFeeRateByTime = function (confirmTime) {
         return entry.maxFee !== 0 && entry.maxMinutes <= confirmTime;
     });
 
-    return foundEntry !== undefined ? foundEntry.maxFee : firstEntryLowestTime.maxFee;
+    const feeBound = lowerBoundFee ? 'minFee' : 'maxFee';
+
+    return foundEntry !== undefined ? foundEntry[feeBound] : firstEntryLowestTime[feeBound];
+};
+
+BitcoinFees.prototype.getTimeByFeeRate = function (feeRate, lowerBoundTime = false) {
+    let entryHighestFee = undefined;
+
+    const foundEntry = this.list.fees.find((entry) => {
+        if (entryHighestFee === undefined || entry.maxFee > entryHighestFee.maxFee) {
+            entryHighestFee = entry;
+        }
+
+        return feeRate <= entry.maxFee;
+    });
+
+    const timeBound = lowerBoundTime ? 'minMinutes' : 'maxMinutes';
+
+    return foundEntry !== undefined ? foundEntry[timeBound] : entryHighestFee[timeBound];
 };
 
 BitcoinFees.prototype.getOptimumFeeRate = function () {

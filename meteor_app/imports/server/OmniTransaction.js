@@ -166,8 +166,10 @@ export class OmniTransaction extends Transaction {
     }
 
     // Converts a string representing a token amount as a decimal number to a number representing the same amount expressed in token's lowest unit
-    strAmountToAmount(strAmount) {
-        return new BigNumber(strAmount).times(Math.pow(10, this.tokenDivisibility)).toNumber();
+    strAmountToAmount(strAmount, returnBigNumber = false) {
+        const bnAmount = new BigNumber(strAmount).times(Math.pow(10, this.tokenDivisibility));
+
+        return returnBigNumber ? bnAmount : bnAmount.toNumber();
     }
 }
 
@@ -274,6 +276,11 @@ OmniTransaction.fromTransaction = function (transact) {
         const omniTransact = new OmniTransaction(omniTxType, omniTxInfo.propertyid);
 
         _und.extendOwn(omniTransact, transact);
+
+        // Make sure that block time is saved if transaction is confirmed
+        if (omniTxInfo.blocktime && !omniTransact.blockDate) {
+            omniTransact.blockDate = new Date(omniTxInfo.blocktime * 1000);
+        }
 
         omniTransact.sendingAddress = omniTxInfo.sendingaddress;
         omniTransact.referenceAddress = omniTxInfo.referenceaddress;
