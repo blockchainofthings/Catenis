@@ -30,6 +30,8 @@ import { successResponse, errorResponse } from './RestApi';
  property: config_entryConfig.get('property_name')
  };*/
 
+const invalidDeviceId = '__invalid_deviceId__';
+
 
 // Definition of module (private) functions
 //
@@ -167,14 +169,28 @@ export function listMessages2() {
 
             if (fromDeviceProdUniqueIds.size > 0) {
                 // Get corresponding Catenis device IDs from device product unique IDs
+                const prodUniqueIdDeviceId = new Map();
+
                 Catenis.db.collection.Device.find({
                     'props.prodUniqueId': {$in: Array.from(fromDeviceProdUniqueIds)}
                 }, {
                     fields: {
-                        deviceId: 1
+                        deviceId: 1,
+                        'props.prodUniqueId': 1
                     }
                 }).forEach((doc) => {
-                    fromDeviceIds.add(doc.deviceId);
+                    prodUniqueIdDeviceId.set(doc.props.prodUniqueId, doc.deviceId);
+                });
+
+                fromDeviceProdUniqueIds.forEach((prodUniqueId) => {
+                    if (prodUniqueIdDeviceId.has(prodUniqueId)) {
+                        fromDeviceIds.add(prodUniqueIdDeviceId.get(prodUniqueId));
+                    }
+                    else {
+                        // No device found with given product unique ID.
+                        //  Add an invalid device ID to the list
+                        fromDeviceIds.add(invalidDeviceId);
+                    }
                 });
             }
         }
@@ -194,14 +210,28 @@ export function listMessages2() {
 
             if (toDeviceProdUniqueIds.size > 0) {
                 // Get corresponding Catenis device IDs from device product unique IDs
+                const prodUniqueIdDeviceId = new Map();
+
                 Catenis.db.collection.Device.find({
                     'props.prodUniqueId': {$in: Array.from(toDeviceProdUniqueIds)}
                 }, {
                     fields: {
-                        deviceId: 1
+                        deviceId: 1,
+                        'props.prodUniqueId': 1
                     }
                 }).forEach((doc) => {
-                    toDeviceIds.add(doc.deviceId);
+                    prodUniqueIdDeviceId.set(doc.props.prodUniqueId, doc.deviceId);
+                });
+
+                toDeviceProdUniqueIds.forEach((prodUniqueId) => {
+                    if (prodUniqueIdDeviceId.has(prodUniqueId)) {
+                        toDeviceIds.add(prodUniqueIdDeviceId.get(prodUniqueId));
+                    }
+                    else {
+                        // No device found with given product unique ID.
+                        //  Add an invalid device ID to the list
+                        toDeviceIds.add(invalidDeviceId);
+                    }
                 });
             }
         }
