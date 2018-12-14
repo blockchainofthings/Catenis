@@ -131,7 +131,7 @@ Template.bcotSaleAllocationDetails.events({
     },
     'click #lnkDownload'(events, template) {
         // Show reminder to set BCOT allocation in use
-        alert('REMINDER: please do not forget to set the BCOT sale allocation IN USE so the associated purchase codes can be redeemed by the end user.');
+        alert('REMINDER: please do not forget to set the BCOT sale allocation IN USE after the report is successfully downloaded.');
 
         // Reset alert messages
         template.state.set('errMsgs', []);

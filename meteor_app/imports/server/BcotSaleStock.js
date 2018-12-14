@@ -93,7 +93,7 @@ function updateBcotSaleStockInfo() {
     };
 
     if (!this.bcotSaleStockInfo.currentBalance.isEqualTo(currBcotSaleStockInfo.currentBalance)
-            || this.bcotSaleStockInfo.minimumBalance.isEqualTo(currBcotSaleStockInfo.minimumBalance)) {
+            || !this.bcotSaleStockInfo.minimumBalance.isEqualTo(currBcotSaleStockInfo.minimumBalance)) {
         this.bcotSaleStockInfo.currentBalance = currBcotSaleStockInfo.currentBalance;
         this.bcotSaleStockInfo.minimumBalance = currBcotSaleStockInfo.minimumBalance;
         hasChanged = true;

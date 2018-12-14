@@ -315,7 +315,7 @@ Template.bcotProducts.helpers({
                 active: 1
             },
             sort: {
-                amount: 1
+                sku: 1
             }
         }).fetch();
     },
