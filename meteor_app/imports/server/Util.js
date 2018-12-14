@@ -37,7 +37,8 @@ export function Util() {
 //
 
 Util.formatCoins = function (amountInSatoshis, thousandsSeparator = true) {
-    const coins = new BigNumber(amountInSatoshis).dividedBy(100000000);
+    const bnAmount = BigNumber.isBigNumber(amountInSatoshis) ? amountInSatoshis : new BigNumber(amountInSatoshis);
+    const coins = bnAmount.dividedBy(100000000);
 
     return thousandsSeparator ? coins.toFormat(8) : coins.toFixed(8);
 };

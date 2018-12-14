@@ -66,6 +66,7 @@ export function OmniCore(network, host, username, password, timeout) {
         //  - 'omni_getinfo'
         //  - 'omni_gettransaction'
         //  - 'omni_createpayload_simplesend'
+        //  - 'omni_getpropertyid'
         command: Meteor.wrapAsync(this.btcClient.cmd, this.btcClient),
         getaddressesbyaccount: Meteor.wrapAsync(this.btcClient.getAddressesByAccount, this.btcClient)  // USE IT AS JUST GET_ADDRESSES (ACCOUNT = "")
     };
@@ -258,6 +259,16 @@ OmniCore.prototype.omniCreatePayloadSimpleSend = function (propertyId, amount) {
         handleError('omni_createpayload_simplesend', err);
     }
 };
+
+OmniCore.prototype.omniGetProperty = function (propertyId) {
+    try {
+        return this.rpcApi.command('omni_getproperty', propertyId);
+    }
+    catch (err) {
+        handleError('omni_getproperty', err);
+    }
+};
+
 
 // OmniCore function class (public) methods
 //

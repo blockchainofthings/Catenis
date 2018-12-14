@@ -79,6 +79,12 @@ ClientUtil.formatCoins = function (amountInSatoshis) {
 };
 
 // Arguments:
+//  amountInSatoshis [Number] - Crypto currency (e.g. bitcoin/BCOT) amount in satoshis
+ClientUtil.formatWholeCoins = function (amountInSatoshis) {
+    return new BigNumber(amountInSatoshis).dividedBy(100000000).integerValue(BigNumber.ROUND_DOWN).toFormat();
+};
+
+// Arguments:
 //  amount: [Number] - Catenis service credit asset amount represented as an integer number of the asset's smallest division (according to the asset divisibility)
 ClientUtil.formatCatenisServiceCredits = function (amount) {
     // Note: it is assumed the asset divisibility for Catenis service credits to be 7 (decimal places)

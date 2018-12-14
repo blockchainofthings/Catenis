@@ -194,7 +194,7 @@ Message {
 
 SentTransaction {
   _id: [string], // MongoDB internal document ID provided by Meteor
-  type: [string], // Identifies the type of transaction that was sent. Valid values (from Catenis.Transaction.type): 'funding', 'credit_service_account', 'store_bcot', 'spend_service_credit', 'send_message', 'log_message', 'read_confirmation', 'issue_asset', 'transfer_asset'
+  type: [string], // Identifies the type of transaction that was sent. Valid values (from Catenis.Transaction.type): 'funding', 'credit_service_account', 'store_bcot', 'redeem_bcot', 'spend_service_credit', 'send_message', 'log_message', 'read_confirmation', 'issue_asset', 'transfer_asset'
   txid: [string], // Blockchain attributed ID (hash) of the sent transaction
   sentDate: [date/time], // Date and time when transaction was sent to the blockchain network
   confirmation: {
@@ -207,7 +207,7 @@ SentTransaction {
   info: {  // Specific information about the transaction according to its type
     funding: {  // Information for funding transactions
       event: {
-        name: [string], // Identifies the event that triggered the funding action. Valid values (from Catenis.FundTransaction.fundingEvent): 'provision_system_device', 'provision_service_credit_issuance', 'provision_client_device', 'add_extra_service_payment_tx_pay_funds', 'add_extra_tx_pay_funds', 'add_extra_read_confirm_tx_pay_funds'
+        name: [string], // Identifies the event that triggered the funding action. Valid values (from Catenis.FundTransaction.fundingEvent): 'provision_system_device', 'provision_service_credit_issuance', 'provision_bcot_sale_stock', 'provision_client_device', 'add_extra_service_payment_tx_pay_funds', 'add_extra_tx_pay_funds', 'add_extra_read_confirm_tx_pay_funds'
         entityId: [string] // Id of the entity associated with the event. Should only exist for 'provision_client_device' events, and it refers to the deviceId
       },
       payees: [Array(string)] // Identifies the type of blockchain addresses that receive the funds. Valid values (from Catenis.KeyStore.extKeyType): 'sys_dev_main_addr', 'sys_pay_tx_exp_addr', 'sys_read_conf_pay_tx_exp_addr', 'sys_serv_cred_issu_addr', 'sys_serv_pymt_pay_tx_exp_addr', 'cln_msg_crd_addr', 'cln_asst_crd_addr', 'dev_main_addr', 'dev_asst_issu_addr'
@@ -217,7 +217,19 @@ SentTransaction {
       creditedAmount: [number]  // Amount, in Catenis service credit "satoshis", to be credited to client's service account
     },
     storeBcot: { // Information for store BCOT transaction
-      storedAmount: [number]  // Amount, in BCOT token "satoshis", stored
+      storedAmount: [number],  // Amount, in BCOT token "satoshis", stored
+      omniTxValidity: {	  // Note: this field only exists after the transaction is confirmed (and the method used to handle the confirmation of such tx has properly checked its validity)
+      	isValid: [boolean],  // Indicates whether this is a valid Omni transaction
+      	invalidReason: [string]  // Reason for this Omni transaction not being valid. Note: this field only exists if Omni transaction is not valid (omniTx.isValid = false)
+      }
+    },
+    redeemBcot: { // Information for redeem BCOT transaction
+      clientId: [string],  // External ID of client for which purchased BCOT tokens have been redeemed for Catenis service credits
+      redeemedAmount: [number],  // Amount, in BCOT token "satoshis", redeemed
+      omniTxValidity: {	  // Note: this field only exists after the transaction is confirmed (and the method used to handle the confirmation of such tx has properly checked its validity)
+      	isValid: [boolean],  // Indicates whether this is a valid Omni transaction
+      	invalidReason: [string]  // Reason for this Omni transaction not being valid. Note: this field only exists if Omni transaction is not valid (omniTx.isValid = false)
+      }
     },
     spendServiceCredit: { // Information for spend service credit transaction
       clientIds: [Array(string)],  // External ID of clients that are the owners of the service account from where Catenis service credits are spent
@@ -268,7 +280,7 @@ SentTransaction {
 
 ReceivedTransaction {
   _id: [string], // MongoDB internal document ID provided by Meteor
-  type: [string], // Identifies the type of transaction that was received. Valid values (from Catenis.Transaction.type): 'sys_funding', 'bcot_payment', 'credit_service_account', 'send_message', 'read_confirmation', 'issue_asset', 'transfer_asset'
+  type: [string], // Identifies the type of transaction that was received. Valid values (from Catenis.Transaction.type): 'sys_funding', 'bcot_payment', 'bcot_replenishment', 'credit_service_account', 'send_message', 'read_confirmation', 'issue_asset', 'transfer_asset'
   txid: [string], // Blockchain attributed ID (hash) of the received transaction
   receivedDate: [date/time], // Date and time when transaction was received. This is derived from timereceived property returned by gettransaction RPC method
   sentTransaction_id: [string], // MongoDB internal ID of SentTransaction doc/rec which corresponds to this transaction. This field should be filled (exist) for all received transactions that have been sent by this Catenis node. Note that for transactions of the 'sys_funding' type this field must never be filled (exist) since those types of transactions are not sent by the system
@@ -288,7 +300,20 @@ ReceivedTransaction {
       encSentFromAddress: [string],  // Base-64 formatted encrypted blockchain address from where the BCOT tokens used for the payment were sent.
                                      //  Note: this address is encrypted using the bcotPayAddress's crypto keys
       bcotPayAddressPath: [string],  // HD node path of the address used to receive the BCOT payment
-      paidAmount: [number]  // Amount, in BCOT token "satoshis", paid
+      paidAmount: [number],  // Amount, in BCOT token "satoshis", paid
+      omniTxValidity: {	  // Note: this field only exists after the transaction is confirmed (and the method used to handle the confirmation of such tx has properly checked its validity)
+      	isValid: [boolean],  // Indicates whether this is a valid Omni transaction
+      	invalidReason: [string]  // Reason for this Omni transaction not being valid. Note: this field only exists if Omni transaction is not valid (omniTx.isValid = false)
+      }
+    },
+    bcotReplenishment: { // Information for BCOT replenishment transaction
+      encSentFromAddress: [string],  // Base-64 formatted encrypted blockchain address from where the BCOT tokens were sent.
+                                     //  Note: this address is encrypted using the BCOT token sale stock address's crypto keys
+      replenishedAmount: [number],  // Amount, in BCOT token "satoshis", sent for the replenishment of the BCOT token sale stock
+      omniTxValidity: {	  // Note: this field only exists after the transaction is confirmed (and the method used to handle the confirmation of such tx has properly checked its validity)
+      	isValid: [boolean],  // Indicates whether this is a valid Omni transaction
+      	invalidReason: [string]  // Reason for this Omni transaction not being valid. Note: this field only exists if Omni transaction is not valid (omniTx.isValid = false)
+      }
     },
     creditServiceAccount: { // Information for credit service account transaction
       clientId: [string], // External ID of client whose service account is being credited
@@ -417,4 +442,37 @@ CCMetadataConversion {
   torrentHash: [string],  // Torrent hash of Colored Coins metadata
   cid: [string],  // Hex encoded CID on IPFS of converted Colored Coins metadata
   createdDate: [date/time]  // Date and time when doc/rec has been created
+}
+
+BcotProduct {
+  _id: [string],  // MongoDB internal document ID provided by Meteor
+  sku: [string],  // Stock keeping unit, for this product (e.g. CTN-0010BCOT)
+  amount: [number]  // Predefined amount, in BCOT token "satoshis", being sold
+  active: [boolean],  // Indicates whether this BCOT product is active and still in use
+  createdDate: [date/time],  // Date and time when doc/rec has been created
+  deactivatedDate: [date/time]  // Date and time when BCOT token product has been deactivated
+}
+
+BcotSaleAllocation {
+  _id: [string],  // MongoDB internal document ID provided by Meteor
+  summary: [{  // Total quantities per SKU allocated
+      sku: [string],  // SKU identifying the allocated BCOT product
+      quantity: [number]  // Quantity of the BCOT product that had been allocated
+  }],
+  status: [string],  // The current status of this BCOT token sale allocation. Valid values (from BcotSaleAllocation.status): 'new', 'in_use'
+  allocationDate: [date/time],  // Date and time when allocation was done
+  lastStatusChangedDate: [date/time]  // Date and time when status has been last modified
+}
+
+BcotSaleAllocationItem {
+  _id: [string],  // MongoDB internal document ID provided by Meteor
+  bcotSaleAllocation_id: [string],  // MongoDB internal ID of BcotSaleAllocation doc/rec to which this allocation item belongs
+  sku: [string],  // SKU identifying the BCOT product that had been allocated for sale
+  purchaseCode: [string],  // Code to be used to redeem the (purchased) BCOT tokens for Catenis service credits
+  redemption: {
+    redeemed: [boolean],  // Indicates whether the purchased BCOT tokens have already been redeemed
+    client_id: [string],  // MongoDB internal ID of Client doc/rec that redeemed the purchased BCOT tokens
+    redeemedDate: [date/time],  // Date and time when purchased BCOT tokens have been redeemed
+    redeemBcotTxid: [string]  // Blockchain attributed ID (hash) of transaction used to redeem purchased BCOT tokens for Catenis service credits
+  }
 }

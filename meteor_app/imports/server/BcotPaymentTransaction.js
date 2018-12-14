@@ -12,17 +12,16 @@
 // Internal node modules
 //import util from 'util';
 // Third-party node modules
-// noinspection JSFileReferences
-import BigNumber from 'bignumber.js';
+//import config from 'config';
 // Meteor packages
-import { Meteor } from 'meteor/meteor';
+//import { Meteor } from 'meteor/meteor';
 
 // References code in other (Catenis) modules
 import { Catenis } from './Catenis';
 import { KeyStore } from './KeyStore';
-import { OmniCore } from './OmniCore';
 import { CatenisNode } from './CatenisNode';
-import { BcotPayment } from './BcotPayment';
+import { BcotToken } from './BcotToken';
+import { OmniTransaction } from './OmniTransaction';
 
 
 // Definition of function classes
@@ -32,40 +31,36 @@ import { BcotPayment } from './BcotPayment';
 //
 //  Constructor arguments:
 //   client: [Object(Client)] - Client to which payment is being made
-//   omniTxInfo: [Object] - Transaction info returned by omni_gettransaction Omni Core's RPC API method
-export function BcotPaymentTransaction(client, omniTxInfo) {
+//   omniTransact: [Object(OmniTransact)] - Deserialized omni transaction
+export function BcotPaymentTransaction(client, omniTransact) {
     this.client = client;
-    this.omniTxInfo = omniTxInfo;
+    this.omniTransact = omniTransact;
 
     Object.defineProperties(this, {
-        paidAmount: {
-            get: function () {
-                // noinspection JSPotentiallyInvalidUsageOfThis
-                return new BigNumber(this.omniTxInfo.amount).times(100000000).toNumber();
+        bcotAmount: {
+            get: () => {
+                return omniTransact.strAmountToAmount(this.omniTransact.omniTxInfo.amount);
             },
             enumerable: true
         },
         payeeAddress: {
-            get: function () {
-                // noinspection JSPotentiallyInvalidUsageOfThis
-                return this.omniTxInfo.referenceaddress;
+            get: () => {
+                return this.omniTransact.referenceAddress;
             },
             enumerable: true
         },
         payingAddress: {
-            get: function () {
-                // noinspection JSPotentiallyInvalidUsageOfThis
-                return this.omniTxInfo.sendingaddress;
+            get: () => {
+                return this.omniTransact.sendingAddress;
             },
             enumerable: true
         },
         txid: {
-            get: function () {
-                // noinspection JSPotentiallyInvalidUsageOfThis
-                return this.omniTxInfo.txid;
+            get: () => {
+                return this.omniTransact.txid;
             }
         }
-    })
+    });
 }
 
 
@@ -105,42 +100,24 @@ BcotPaymentTransaction.isValidTxVouts = function (voutInfo) {
 // Determines if transaction is a valid BCOT Payment transaction
 //
 //  Arguments:
-//    transact: [Object] // Object of type Transaction identifying the transaction to be checked
+//    omniTransact: [Object(OmniTransaction)] // Object of type OmniTransaction identifying the transaction to be checked
 //
 //  Return:
 //    - If transaction is not valid: undefined
 //    - If transaction is valid: Object of type BcotPaymentTransaction created from transaction
 //
-BcotPaymentTransaction.checkTransaction = function (txid) {
-    // Try to get Omni transaction info
-    let omniTxInfo;
-
-    try {
-        omniTxInfo = Catenis.omniCore.omniGetTransaction(txid, false);
-    }
-    catch (err) {
-        if ((err instanceof Meteor.Error) && err.error === 'ctn_omcore_rpc_error' && err.details !== undefined && typeof err.details.code === 'number') {
-            if (err.details.code !== OmniCore.rpcErrorCode.RPC_INVALID_ADDRESS_OR_KEY) {
-                Catenis.logger.DEBUG(err.reason, err.details);
-                throw err;
-            }
-        }
-        else {
-            throw err;
-        }
-    }
-
-    if (omniTxInfo !== undefined && omniTxInfo.type_int === 0 && omniTxInfo.propertyid === BcotPayment.bcotOmniPropertyId) {
+BcotPaymentTransaction.checkTransaction = function (omniTransact) {
+    if ((omniTransact instanceof OmniTransaction) && omniTransact.omniTxType === OmniTransaction.omniTxType.simpleSend && omniTransact.propertyId === BcotToken.bcotOmniPropertyId) {
         // This is a simple send Omni transaction. Get reference (payee) address
-        //  and mke sure that it is a valid client BCOT token payment address
-        const refAddrInfo = Catenis.keyStore.getAddressInfo(omniTxInfo.referenceaddress, true);
+        //  and make sure that it is a valid client BCOT token payment address
+        const refAddrInfo = Catenis.keyStore.getAddressInfo(omniTransact.referenceAddress, true);
 
         if (refAddrInfo !== null && refAddrInfo.type === KeyStore.extKeyType.cln_bcot_pay_addr.name) {
             // This is a valid BCOT payment transaction.
-            //  Returns of new instance of the object
+            //  Returns new instance of the object
             return new BcotPaymentTransaction(
                 CatenisNode.getCatenisNodeByIndex(refAddrInfo.pathParts.ctnNodeIndex).getClientByIndex(refAddrInfo.pathParts.clientIndex),
-                omniTxInfo);
+                omniTransact);
         }
     }
 };

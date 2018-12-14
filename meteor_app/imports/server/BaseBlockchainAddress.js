@@ -41,6 +41,7 @@ const cfgSettings = {
         systemServCredIssuing: configBaseBcAddrValidity.get('systemServCredIssuing'),
         systemServPymtPayTxExpense: configBaseBcAddrValidity.get('systemServPymtPayTxExpense'),
         systemMultiSigSignee: configBaseBcAddrValidity.get('systemMultiSigSignee'),
+        systemBcotSaleStock: configBaseBcAddrValidity.get('systemBcotSaleStock'),
         deviceReadConfirm: configBaseBcAddrValidity.get('deviceReadConfirm'),
         clientServAccCreditLine: configBaseBcAddrValidity.get('clientServAccCreditLine'),
         clientServAccDebitLine: configBaseBcAddrValidity.get('clientServAccDebitLine'),
@@ -589,6 +590,65 @@ export class BaseSystemMultiSigSigneeAddress extends BaseBlockchainAddress {
 
         return hasInstantiatedObject(parentPath) ? getInstantiatedObject(parentPath)
             : new BaseSystemMultiSigSigneeAddress(ctnNodeIndex);
+    }
+}
+
+// BaseSystemBcotSaleStockAddress derived class
+export class BaseSystemBcotSaleStockAddress extends BaseBlockchainAddress {
+    constructor (ctnNodeIndex) {
+        super();
+        this.type = KeyStore.extKeyType.sys_bcot_sale_stck_addr.name;
+        this.parentPath = KeyStore.systemBcotSaleStockRootPath(ctnNodeIndex);
+
+        // Make sure that an object of this class has not been instantiated yet
+        if (hasInstantiatedObject(this.parentPath)) {
+            Catenis.logger.ERROR(util.format('BaseSystemBcotSaleStockAddress object for the given Catenis node index (%d) has already been instantiated', ctnNodeIndex));
+            throw new Error(util.format('BaseSystemBcotSaleStockAddress object for the given Catenis node index (%d) has already been instantiated', ctnNodeIndex));
+        }
+
+        this.addressValidity = cfgSettings.addressValidity.systemBcotSaleStock;
+
+        // Assign address manipulation functions
+        this._getAddressKeys = Catenis.keyStore.getSystemBcotSaleStockAddressKeys.bind(Catenis.keyStore, ctnNodeIndex);
+        this._listAddressesInUse = Catenis.keyStore.listSystemBcotSaleStockAddressesInUse.bind(Catenis.keyStore, ctnNodeIndex);
+
+        // Initialize bounding indices
+        setBoundingIndices.call(this);
+
+        // Save this instance
+        setInstantiatedObject(this.parentPath, this);
+    }
+
+    newAddressKeys() {
+        const addrKeys = Object.getPrototypeOf(BaseSystemBcotSaleStockAddress.prototype).newAddressKeys.call(this);
+
+        if (addrKeys !== null) {
+            // Import address public key onto Omni Core
+            Catenis.omniCore.importPublicKey(addrKeys.exportPublicKey());
+        }
+
+        return addrKeys;
+    }
+
+    // Get instance of this class
+    //
+    //  ctnNodeIndex: [integer]
+    //                or
+    //                {  // Options object
+    //      ctnNodeIndex: [integer]
+    //  }
+    //
+    static getInstance(ctnNodeIndex, parentPath) {
+        if (typeof ctnNodeIndex === 'object') {
+            // Options object passed instead of plain arguments
+            ctnNodeIndex = ctnNodeIndex.ctnNodeIndex;
+        }
+
+        // Check if an instance of this class has already been instantiated
+        parentPath = parentPath || KeyStore.systemBcotSaleStockRootPath(ctnNodeIndex);
+
+        return hasInstantiatedObject(parentPath) ? getInstantiatedObject(parentPath)
+            : new BaseSystemBcotSaleStockAddress(ctnNodeIndex);
     }
 }
 

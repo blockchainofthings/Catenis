@@ -5,19 +5,19 @@
     "environment": "sandbox",
     "seedFilename": "seed.beta2.dat",
     "cryptoNetwork": "testnet",  // Available values: 'bitcoin' (for Bitcoin's production blockchain), 'testnet' (for Bitcoin's test blockchain)
-    "shutdownTimeout": 30000   // (30 sec.) Time, in miliseconds, that the application should wait after it receives a terminate request before it actually terminates
+    "shutdownTimeout": 30000   // (30 sec.) Time, in milliseconds, that the application should wait after it receives a terminate request before it actually terminates
   },
   // Parameters pertaining to the Startup module
   "startup": {
-    "fixMissingAddresses": false, // Indicate if issued blockchain addresses are missing from BitcoinCore wallet they should be automaically included
+    "fixMissingAddresses": false, // Indicate if issued blockchain addresses are missing from BitcoinCore wallet they should be automatically included
     "bypassProcessing": false     // NOTE: this option is for DEBUG ONLY. Bypass all processing, so the app starts but does not do anything. This allows
-                                  //  for debuging via 'meteor shell' or 'meteor mongo'
+                                  //  for debugging via 'meteor shell' or 'meteor mongo'
   },
   // Parameters pertaining to e-mail server configuration
   "email": {
     "smtpHost": "smtpout.secureserver.net",
     "secureProto": "ssl",  // (optional, can be set to null) Secure protocol that should be used with SMTP server. Valid options: 'ssl' or 'tls'
-    "smtpPort": null,  // (optonal, can be set to null) To be set only if different than default (depending on secureProto): none/null (25), ssl (465), tls (587)
+    "smtpPort": null,  // (optional, can be set to null) To be set only if different than default (depending on secureProto): none/null (25), ssl (465), tls (587)
     "username": "???????",  // (optional, can be set to null) To be set only if required by SMTP host
     "password": "???????"   // (optional, can be set to null) To be set only if required by SMTP host
   },
@@ -39,14 +39,36 @@
       "fromAddress": "Catenis [Sandbox] <admin@catenis.io>"
     }
   },
+  // Parameters pertaining to Database module
+  "database": {
+    "defaultBcotProducts": [{
+      "sku": "CTN-0010TBCT",
+      "amount": 1000000000
+    }, {
+      "sku": "CTN-0020TBCT",
+      "amount": 2000000000
+    }, {
+      "sku": "CTN-0050TBCT",
+      "amount": 5000000000
+    }, {
+      "sku": "CTN-0100TBCT",
+      "amount": 10000000000
+    }, {
+      "sku": "CTN-0500TBCT",
+      "amount": 50000000000
+    }, {
+      "sku": "CTN-1000TBCT",
+      "amount": 100000000000
+    }]
+  },
   // Parameters pertaining to BitcoinFees module
   "bitcoinFees": {
-    "retrieveFeesInterval": 86400000,  // (24 hours) Time interval, in miliseconds, for executing method to retrieve latest bitcoin fees
-    "numDbRecsToMaintain": 2000,  // Number of database docs/recs used to store latest fees that should be maintained when puging the database
+    "retrieveFeesInterval": 86400000,  // (24 hours) Time interval, in milliseconds, for executing method to retrieve latest bitcoin fees
+    "numDbRecsToMaintain": 2000,  // Number of database docs/recs used to store latest fees that should be maintained when purging the database
     "dbPurgeHours": 2,  // Hours component of time when database purge should take place
     "dbPurgeMinutes": 0,  // Minutes component of time when database purge should take place
     "dbPurgeSeconds": 0,  // Seconds component of time when database purge should take place
-    "dbPurgeInterval": 86400000  // (24 hours) Time interval, in miliseconds, for executing process to purge database (delete oldest fees docs/recs)
+    "dbPurgeInterval": 86400000  // (24 hours) Time interval, in milliseconds, for executing process to purge database (delete oldest fees docs/recs)
   },
   // Parameters pertaining to BitcoinPrice module
   "bitcoinPrice": {
@@ -55,18 +77,18 @@
   // Parameters pertaining to KeyStore module
   "keyStore": {
     "obsoleteExtKeyTimeToPurge": 86400, // (24 hours) Time, in seconds, before an obsolete HD extended key is purged from local key storage
-    "purgeUnusedExtKeyInterval": 43200000  // (12 hours) Time interval, in miliseconds, for executing method to purge unused HD extended keys form local key storage
+    "purgeUnusedExtKeyInterval": 43200000  // (12 hours) Time interval, in milliseconds, for executing method to purge unused HD extended keys form local key storage
   },
   // Parameters pertaining to BitcoinCore module
   "bitcoinCore": {
     "serverHost": "127.0.0.1", // Bitcoin Core server host name/IP address
-    "rpcConnectionTimeout": 30000  // (30 sec.) Timeout, in miliseconds, for RPC connection with the bitcoin server.
+    "rpcConnectionTimeout": 30000  // (30 sec.) Timeout, in milliseconds, for RPC connection with the bitcoin server.
   },
   // Parameters pertaining to OmniCore module
   "omniCore": {
     "serverHost": "127.0.0.1", // Omni Core server host name/IP address
     "testnetRpcPort": 17332, // Port used to connect with Omni Core server via its RPC interface to interact with bitcoin's testnet blockchain
-    "rpcConnectionTimeout": 30000  // (30 sec.) Timeout, in miliseconds, for RPC connection with the Omni Core server
+    "rpcConnectionTimeout": 30000  // (30 sec.) Timeout, in milliseconds, for RPC connection with the Omni Core server
   },
   // Parameter pertaining to IpfsClient module
   "ipfsClient": {
@@ -76,7 +98,7 @@
   // Parameters pertaining to C3NodeClient module
   "c3NodeClient": {
     "serverHost": "127.0.0.1", // Catenis Colored Coins node server host name/IP address
-    "connectionTimeout": 30000  // (30 sec.) Timeout, in miliseconds, for connection with the Colored Coins Full-Node server
+    "connectionTimeout": 30000  // (30 sec.) Timeout, in milliseconds, for connection with the Colored Coins Full-Node server
   },
   // Parameters pertaining to CCMetadata module
   "ccMetadata": {
@@ -84,10 +106,10 @@
     "ctnAssetsLargeLogoUrl": "https://sandbox.catenis.io/logo/Catenis_large.png", // URL to image file to be used as the large logo image for all assets generated by Catenis
     "signingCertificateFilePath": "/etc/letsencrypt/live/sandbox.catenis.io/cert.pem",  // Path to file (in PEM format) containing Blockchain of Things' owned SSL certificate used to sign message for asset verification
     "signingCertificateKeyFilePath": "/etc/letsencrypt/live/sandbox.catenis.io/privkey.pem",  // Path to file containing key of SSL certificate used to sign message for asset verification
-    "urlContentTimeout": 15000  // (15 sec.) Timeout, in miliseconds, for retrieving content associated with a given URL
+    "urlContentTimeout": 15000  // (15 sec.) Timeout, in milliseconds, for retrieving content associated with a given URL
   },
-  // Parameters pertaining to BcotPayment module
-  "bcotPayment": {
-    "bcotOmniPropertyId": 2147484804  // BCOT token Omni property ID (yet to be defined for production)
+  // Parameters pertaining to BcotToken module
+  "bcotToken": {
+    "bcotOmniPropertyId": 2147484804  // BCOT token Omni property ID
   }
 }

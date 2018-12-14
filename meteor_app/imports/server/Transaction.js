@@ -74,7 +74,7 @@ const dbMalleabilityCS = new CriticalSection();
 //
 //  output: {
 //    type: [String],  - Either 'P2PKH', 'P2SH', 'nullData' or 'multisig'
-//    payInfo: {       - Should not exist for 'P2PKH', 'P2SH', or 'multisig' output types
+//    payInfo: {       - Should only exist for 'P2PKH', 'P2SH', or 'multisig' output types
 //      address: [String|Array(String)], - Blockchain address to where payment should be sent.
 //                                          NOTE: for 'multisig' outputs, this is actually a list of addresses
 //      nSigs: [Number], - Number of signatures required to spend multi-signature output. Should only exist for 'multisig' output type
@@ -399,6 +399,12 @@ Transaction.prototype.lastOutputPosition = function () {
 
 Transaction.prototype.getOutputAt = function (pos) {
     return this.outputs[pos];
+};
+
+Transaction.prototype.getLastOutput = function () {
+    if (this.outputs.length > 0) {
+        return this.outputs[this.outputs.length - 1];
+    }
 };
 
 Transaction.prototype.removeOutputs = function (startPos, numOutputs) {
@@ -1775,13 +1781,23 @@ Transaction.type = Object.freeze({
     }),
     bcot_payment: Object.freeze({
         name: 'bcot_payment',
-        description: 'Transaction used to store away BCOT tokens received as payment in exchange for Catenis service credits',
+        description: 'Transaction issued from outside of the system used to send BCOT tokens as payment for services for a given client',
         dbInfoEntryName: 'bcotPayment'
     }),
     store_bcot: Object.freeze({
         name: 'store_bcot',
-        description: 'Transaction issued from outside of the system used to send BCOT tokens as payment for services a given client',
+        description: 'Transaction used to store away BCOT tokens received as payment in exchange for Catenis service credits',
         dbInfoEntryName: 'storeBcot'
+    }),
+    bcot_replenishment: Object.freeze({
+        name: 'bcot_replenishment',
+        description: 'Transaction issued from outside of the system used to replenish stock of BCOT tokens for sale',
+        dbInfoEntryName: 'bcotReplenishment'
+    }),
+    redeem_bcot: Object.freeze({
+        name: 'redeem_bcot',
+        description: 'Transaction used to redeem purchased BCOT tokens for Catenis service credits',
+        dbInfoEntryName: 'redeemBcot'
     }),
     credit_service_account: Object.freeze({
         name: 'credit_service_account',
@@ -1901,6 +1917,11 @@ Transaction.ioToken = Object.freeze({
         token: '<p2_sys_msig_sign_addr>',
         description: 'Output (or input spending such output) paying to a system multi-signature Colored Coins tx out signee address'
     }),
+    p2_sys_bcot_sale_stck_addr: Object.freeze({
+        name: 'p2_sys_bcot_sale_stck_addr',
+        token: '<p2_sys_bcot_sale_stck_addr>',
+        description: 'Output (or input spending such output) paying to a system BCOT token sale stock address'
+    }),
     p2_cln_srv_acc_cred_ln_addr: Object.freeze({
         name: 'p2_cln_srv_acc_cred_ln_addr',
         token: '<p2_cln_srv_acc_cred_ln_addr>',
@@ -1956,8 +1977,9 @@ function isValidSentTransactionType(type) {
     let isValid = false;
 
     if (typeof type === 'object' && type !== null && typeof type.name === 'string') {
-        isValid = Object.keys(Transaction.type).some((key) => {
-            return Transaction.type[key].name !== Transaction.type.sys_funding.name && Transaction.type[key].name === type.name;
+        isValid = Object.values(Transaction.type).some((txType) => {
+            return txType.name !== Transaction.type.sys_funding.name && txType.name !== Transaction.type.bcot_payment.name
+                    && txType.name !== Transaction.type.bcot_replenishment.name && txType.name === type.name;
         });
     }
 

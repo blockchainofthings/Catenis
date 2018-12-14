@@ -207,6 +207,10 @@ FundTransaction.fundingEvent = Object.freeze({
         name: 'provision_service_credit_issuance',
         description: 'Provision system for service credit issuance'
     }),
+    provision_bcot_sale_stock: Object.freeze({
+        name: 'provision_bcot_sale_stock',
+        description: 'Provision system for BCOT token sale stock usage'
+    }),
     provision_client_device: Object.freeze({
         name: 'provision_client_device',
         description: 'Provision of client device'

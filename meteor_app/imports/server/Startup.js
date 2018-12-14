@@ -72,6 +72,12 @@ import { ClientDevicesUI } from './clientUI/ClientDevicesUI';
 import { ServiceBillingUI } from './adminUI/ServiceBillingUI';
 import { ClientServiceBillingUI } from './clientUI/ClientServiceBillingUI';
 import { AdminAccountUI } from './adminUI/AdminAccountUI';
+import { BcotReplenishment } from './BcotReplenishment';
+import { StoreBcot } from './StoreBcot';
+import { BcotSaleStock } from './BcotSaleStock';
+import { BcotProductsUI } from './adminUI/BcotProductsUI';
+import { BcotSaleAllocationUI } from './adminUI/BcotSaleAllocationUI';
+import { BcotSaleStockUI } from './adminUI/BcotSaleStockUI';
 // TEST - begin
 //import { resetBitcoinCore } from './test/FundSourceTest';
 //import { TestCatenisColoredCoins } from './test/TestCatenisColoredCoins';
@@ -135,9 +141,11 @@ Meteor.startup(function () {
         IpfsClient.initialize();
         IpfsServerMonitor.initialize();
         C3NodeClient.initialize();
-        //ColoredCoins.initialize();
         Permission.initialize();
+        BcotSaleStock.initialize();
         CatenisNode.initialize();
+
+        Database.addMissingOmniTxValidityField();
 
         // Make sure that all addresses are currently imported onto Bitcoin Core
         CheckImportAddresses(cfgSettings.fixMissingAddresses);
@@ -154,6 +162,8 @@ Meteor.startup(function () {
 
         ClientLicense.initialize();
         BcotPayment.initialize();
+        BcotReplenishment.initialize();
+        StoreBcot.initialize();
         ReceiveMessage.initialize();
         ReadConfirmation.initialize();
         ReceiveAsset.initialize();
@@ -175,6 +185,9 @@ Meteor.startup(function () {
         LoginUI.initialize();
         AdminAccountUI.initialize();
         BcotPriceUI.initialize();
+        BcotProductsUI.initialize();
+        BcotSaleAllocationUI.initialize();
+        BcotSaleStockUI.initialize();
         SystemFundingUI.initialize();
         BcotUsageReportUI.initialize();
         LicensesUI.initialize();

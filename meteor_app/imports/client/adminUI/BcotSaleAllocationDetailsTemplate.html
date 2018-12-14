@@ -1,0 +1,133 @@
+<template name="bcotSaleAllocationDetails">
+    <div>
+        <div class="panel panel-login minWidthElement noBoxShadow">
+            <div class="panel-body">
+                <div class="row">
+                    <div class="col-lg-12">
+                        {{#unless andClause isConfigReady Template.subscriptionsReady}}
+                            <p style="color:lightgray; margin-top:1em">Loading...</p>
+                        {{else}}
+                            <h2>BCOT SALE<br><br>
+                                Allocation</h2>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="pull-left">
+                                        <a href="/admin/bcotsale/allocations{{backQueryString}}" role="button" class="btn-login btn paddedBtn">Back to Allocations</a>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                </div>
+                            </div>
+                            <div class="row" style="padding-top:1em">
+                                <div class="col-lg-12">
+                                    <table class="table table-striped text-left">
+                                        <tbody>
+                                        <tr>
+                                            <th><label class="noMargin">Allocation Date:</label></th>
+                                            <td>{{allocation.allocationDate}}</td>
+                                        </tr>
+                                        <tr>
+                                            <th><label class="noMargin">Status:</label></th>
+                                            <td><span style="color:{{statusColor allocation.status}}">{{statusName allocation.status}}</span></td>
+                                        </tr>
+                                        {{#if isInUse allocation.status}}
+                                            <tr>
+                                                <th><label class="noMargin">In Use Since:</label></th>
+                                                <td>{{allocation.lastStatusChangedDate}}</td>
+                                            </tr>
+                                        {{/if}}
+                                        <tr>
+                                            <th><label class="noMargin">Allocated Products:</label></th>
+                                            <td>
+                                                <table class="table table-striped table-responsive text-left">
+                                                    <thead>
+                                                    <tr>
+                                                        <th>SKU</th>
+                                                        <th>Quantity</th>
+                                                    </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                    {{#each prodInfo in allocation.summary}}
+                                                        <tr>
+                                                            <td>{{prodInfo.sku}}</td>
+                                                            <td>{{prodInfo.quantity}}</td>
+                                                        </tr>
+                                                    {{/each}}
+                                                    </tbody>
+                                                </table>
+                                            </td>
+                                        </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            {{#if hasInfoMessage}}
+                                <div class="alert alert-{{infoMessageType}}" role="alert">
+                                    <button type="button" id="btnDismissInfo" class="close" aria-label="Close">
+                                        <span aria-hidden="true">&times;</span>
+                                    </button>
+                                    {{infoMessage}}
+                                </div>
+                            {{/if}}
+                            {{#if hasErrorMessage}}
+                                <div class="alert alert-danger" role="alert">
+                                    <button type="button" id="btnDismissError" class="close" aria-label="Close">
+                                        <span aria-hidden="true">&times;</span>
+                                    </button>
+                                    {{{errorMessage}}}
+                                </div>
+                            {{/if}}
+                            <div class="row">
+                                <div class="col-md-4">
+                                </div>
+                                <div class="col-md-4">
+                                    {{#if canGenerateReport allocation}}
+                                        <button type="button" id="btnGenReport" class="form-control btn btn-login at-btn submit">Generate Report</button>
+                                    {{/if}}
+                                    {{#if canDownloadReport allocation}}
+                                        <a id="lnkDownload" href="data:text/plain;base64,{{reportData}}" download="{{reportFilename}}" role="button" class="btn-login btn paddedBtn">Download Report</a>
+                                    {{/if}}
+                                </div>
+                                {{#if canSetAllocationInUse allocation}}
+                                    <div class="col-md-4">
+                                        <button type="button" id="btnSetAllocationInUse" class="btn-login btn paddedBtn fullWidth" data-toggle="modal" data-target="#divSetAllocationInUse">Set In Use</button>
+                                    </div>
+                                {{/if}}
+                            </div>
+                            {{!Modal panel containing form used to set allocation in use}}
+                            <div id="divSetAllocationInUse" class="modal fade" tabindex="-1" role="dialog">
+                                <div class="modal-dialog" role="document">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <button id="btnCloseSetAllocationInUse1" type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                                            <h4 class="modal-title">Set BCOT Sale Allocation In Use</h4>
+                                        </div>
+                                        <div class="modal-body">
+                                            <div class="alert alert-warning" role="alert">
+                                                <b>Warning!</b>&nbsp;Make sure that you have <b>successfully</b> downloaded the report with the allocated BCOT products before setting the sale allocation in use.
+                                            </div>
+                                            <form id="frmSetAllocationInUse" autocomplete="off">
+                                                <div id="divSetAllocationInUseConfirm" class="panel panel-default" style="padding:1em">
+                                                    <div style="margin-top:1em; margin-bottom:1em">
+                                                        <label>To confirm your action, please type the following text below: <b>yes, I do confirm it</b>
+                                                            <br><input id="itxSetAllocationInUseConfirmation" type="text" size="20" maxlength="20" placeholder="confirmation" autocomplete="off"></label>
+                                                    </div>
+                                                    <div style="margin-top:1em">
+                                                        <button type="submit" class="btn btn-primary" style="display:{{displaySetAllocationInUseSubmitButton}}">Set In Use</button>
+                                                    </div>
+                                                </div>
+                                            </form>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button id="btnCloseSetAllocationInUse2" type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        {{/unless}}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</template>

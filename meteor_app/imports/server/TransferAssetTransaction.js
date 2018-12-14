@@ -301,7 +301,7 @@ TransferAssetTransaction.checkTransaction = function (ccTransact) {
     let transferAssetTransact = undefined;
 
     // First, check if pattern of transaction's inputs and outputs is consistent
-    if (ccTransact.matches(TransferAssetTransaction)) {
+    if ((ccTransact instanceof CCTransaction) && ccTransact.matches(TransferAssetTransaction)) {
         // Make sure that this is a Colored Coins transaction that does not issue asset, with exactly one transfer
         //  input sequence and one or two transfer output
         if (ccTransact.issuingInfo === undefined && ccTransact.transferInputSeqs.length === 1

@@ -28,12 +28,13 @@ import { RbfTransactionInfo } from './RbfTransactionInfo';
 import { Client } from './Client';
 import { Device } from './Device';
 import { Util } from './Util';
-import { BcotPayment } from './BcotPayment';
+import { BcotToken } from './BcotToken';
 
 // Config entries
 const serviceConfig = config.get('service');
 const servSysFundConfig = serviceConfig.get('systemFunding');
 const servServCreditIssueAddrFundConfig = serviceConfig.get('serviceCreditIssueAddrFunding');
+const servBcotSaleStockAddrFundConfig = serviceConfig.get('bcotSaleStockAddrFunding');
 const servServAccFundConfig = serviceConfig.get('serviceAccountFunding');
 const servPayTxExpFundConfig = serviceConfig.get('payTxExpenseFunding');
 const servReadConfPayTxExpFundConfig = serviceConfig.get('readConfirmPayTxExpenseFunding');
@@ -82,6 +83,15 @@ const cfgSettings = {
         unitsPerPostPaidClients: servServCreditIssueAddrFundConfig.get('unitsPerPostPaidClients'),
         prePaidClientsToFund: servServCreditIssueAddrFundConfig.get('prePaidClientsToFund'),
         postPaidClientsToFund: servServCreditIssueAddrFundConfig.get('postPaidClientsToFund')
+    },
+    bcotSaleStockAddrFunding: {
+        unitAmount: servBcotSaleStockAddrFundConfig.get('unitAmount'),
+        maxUnitsPerUtxo: servBcotSaleStockAddrFundConfig.get('maxUnitsPerUtxo'),
+        minUtxosToFund: servBcotSaleStockAddrFundConfig.get('minUtxosToFund'),
+        unitsPerPrePaidClients: servBcotSaleStockAddrFundConfig.get('unitsPerPrePaidClients'),
+        unitsPerPostPaidClients: servBcotSaleStockAddrFundConfig.get('unitsPerPostPaidClients'),
+        prePaidClientsToFund: servBcotSaleStockAddrFundConfig.get('prePaidClientsToFund'),
+        postPaidClientsToFund: servBcotSaleStockAddrFundConfig.get('postPaidClientsToFund')
     },
     serviceAccountFunding: {
         unitAmountSafetyFactor: servServAccFundConfig.get('unitAmountSafetyFactor'),
@@ -164,7 +174,7 @@ const cfgSettings = {
         messagesPerMinute: srvMessageConfig.get('messagesPerMinute'),
         minutesToConfirm: srvMessageConfig.get('minutesToConfirm'),
         unconfMainAddrReuses: srvMessageConfig.get('unconfMainAddrReuses'),
-        readConfimAddrAmount: srvMessageConfig.get('readConfimAddrAmount'),
+        readConfirmAddrAmount: srvMessageConfig.get('readConfirmAddrAmount'),
         mainAddrFunding: {
             unitAmount: srvMsgMainAddrFundConfig.get('unitAmount'),
             maxUnitsPerAddr: srvMsgMainAddrFundConfig.get('maxUnitsPerAddr'),
@@ -303,6 +313,12 @@ Service.getExpectedServiceCreditIssuanceBalance = function () {
             * cfgSettings.serviceCreditIssueAddrFunding.unitAmount;
 };
 
+Service.getExpectedBcotSaleStockBalance = function () {
+    return (Math.ceil(Client.activePrePaidClientsCount() * cfgSettings.bcotSaleStockAddrFunding.unitsPerPrePaidClients)
+        + Math.ceil(Client.activePostPaidClientsCount() * cfgSettings.bcotSaleStockAddrFunding.unitsPerPostPaidClients))
+        * cfgSettings.bcotSaleStockAddrFunding.unitAmount;
+};
+
 Service.getMinimumPayTxExpenseBalance = function () {
     return estimatedSendSystemMessageTxCost() * cfgSettings.payTxExpenseFunding.minBalanceSysMessages + averageEstimatedServiceTxCost() * cfgSettings.payTxExpenseFunding.minBalanceServicesPerDevice * Device.activeDevicesCount();
 };
@@ -328,6 +344,22 @@ Service.distributeServiceCreditIssuanceFund = function (amount) {
     return {
         totalAmount: totalAmount,
         amountPerAddress: distributePayment(totalAmount, cfgSettings.serviceCreditIssueAddrFunding.unitAmount, cfgSettings.serviceCreditIssueAddrFunding.minUtxosToFund, cfgSettings.serviceCreditIssueAddrFunding.maxUnitsPerUtxo)
+    };
+};
+
+Service.distributeBcotSaleStockFund = function (amount) {
+    let totalAmount = Util.roundToResolution(amount, cfgSettings.bcotSaleStockAddrFunding.unitAmount);
+
+    // Make sure that amount to fund is not below minimum
+    const minFundAmount = Service.minBcotSaleStockFundAmount;
+
+    if (totalAmount < minFundAmount) {
+        totalAmount = minFundAmount;
+    }
+
+    return {
+        totalAmount: totalAmount,
+        amountPerAddress: distributePayment(totalAmount, cfgSettings.bcotSaleStockAddrFunding.unitAmount, cfgSettings.bcotSaleStockAddrFunding.minUtxosToFund, cfgSettings.bcotSaleStockAddrFunding.maxUnitsPerUtxo)
     };
 };
 
@@ -599,7 +631,7 @@ Service.clientPaidService = Object.freeze({
 //
 
 function systemFundingCost() {
-    return Service.minServiceCreditIssuanceFundAmount + Service.minPayTxExpenseFundAmount + Service.minReadConfirmPayTxExpenseFundAmount + Service.minServicePaymentPayTxExpenseFundAmount;
+    return Service.minServiceCreditIssuanceFundAmount + Service.minBcotSaleStockFundAmount + Service.minPayTxExpenseFundAmount + Service.minReadConfirmPayTxExpenseFundAmount + Service.minServicePaymentPayTxExpenseFundAmount;
 }
 
 function numActiveSystemDeviceMainAddresses() {
@@ -1055,7 +1087,7 @@ export function getServicePrice(paidService) {
     result.bitcoinPrice = btcExchangeRate.btcPrice;
     result.bcotPrice = btcExchangeRate.bcotPrice;
     result.exchangeRate = btcExchangeRate.exchangeRate;
-    result.finalServicePrice = Util.roundToResolution(BcotPayment.bcotToServiceCredit(bnBtcServicePrice.multipliedBy(btcExchangeRate.exchangeRate).decimalPlaces(0, BigNumber.ROUND_CEIL).toNumber()), cfgSettings.servicePriceResolution);
+    result.finalServicePrice = Util.roundToResolution(BcotToken.bcotToServiceCredit(bnBtcServicePrice.multipliedBy(btcExchangeRate.exchangeRate).decimalPlaces(0, BigNumber.ROUND_CEIL).toNumber()), cfgSettings.servicePriceResolution);
 
     return result;
 }
@@ -1225,7 +1257,7 @@ Object.defineProperties(Service, {
     },
     devReadConfirmAddrAmount: {
         get: function () {
-            return cfgSettings.message.readConfimAddrAmount;
+            return cfgSettings.message.readConfirmAddrAmount;
         },
         enumerable: true
     },
@@ -1283,11 +1315,25 @@ Object.defineProperties(Service, {
         },
         enumerable: true
     },
+    bcotSaleStockAddrAmount: {
+        get: function () {
+            return cfgSettings.bcotSaleStockAddrFunding.unitAmount;
+        },
+        enumerable: true
+    },
     minServiceCreditIssuanceFundAmount: {
         get: function () {
             return (Math.ceil(cfgSettings.serviceCreditIssueAddrFunding.prePaidClientsToFund * cfgSettings.serviceCreditIssueAddrFunding.unitsPerPrePaidClients)
                 + Math.ceil(cfgSettings.serviceCreditIssueAddrFunding.postPaidClientsToFund * cfgSettings.serviceCreditIssueAddrFunding.unitsPerPostPaidClients))
                 * cfgSettings.serviceCreditIssueAddrFunding.unitAmount;
+        },
+        enumerable: true
+    },
+    minBcotSaleStockFundAmount: {
+        get: function () {
+            return (Math.ceil(cfgSettings.bcotSaleStockAddrFunding.prePaidClientsToFund * cfgSettings.bcotSaleStockAddrFunding.unitsPerPrePaidClients)
+                + Math.ceil(cfgSettings.bcotSaleStockAddrFunding.postPaidClientsToFund * cfgSettings.bcotSaleStockAddrFunding.unitsPerPostPaidClients))
+                * cfgSettings.bcotSaleStockAddrFunding.unitAmount;
         },
         enumerable: true
     },

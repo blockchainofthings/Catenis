@@ -29,7 +29,8 @@ const dbConfig = config.get('database');
 // Configuration settings
 const cfgSettings = {
     defaultBcotPrice: dbConfig.get('defaultBcotPrice'),
-    defaultLicenses: dbConfig.get('defaultLicenses')
+    defaultLicenses: dbConfig.get('defaultLicenses'),
+    defaultBcotProducts: dbConfig.get('defaultBcotProducts')
 };
 
 
@@ -1431,6 +1432,151 @@ Database.initialize = function() {
                     w: 1
                 }
             }]
+        },
+        BcotProduct: {
+            initFunc: initBcotProduct,
+            indices: [{
+                fields: {
+                    sku: 1
+                },
+                opts: {
+                    unique: true,
+                    sparse: true,
+                    background: true,
+                    w: 1
+                }
+            }, {
+                fields: {
+                    active: 1
+                },
+                opts: {
+                    background: true,
+                    w: 1
+                }
+            }, {
+                fields: {
+                    createdDate: 1
+                },
+                opts: {
+                    background: true,
+                    w: 1
+                }
+            }, {
+                fields: {
+                    deactivatedDate: 1
+                },
+                opts: {
+                    background: true,
+                    w: 1
+                }
+            }]
+        },
+        BcotSaleAllocation: {
+            indices: [{
+                fields: {
+                    'summary.sku': 1
+                },
+                opts: {
+                    background: true,
+                    w: 1
+                }
+            }, {
+                fields: {
+                    status: 1
+                },
+                opts: {
+                    background: true,
+                    w: 1
+                }
+            }, {
+                fields: {
+                    allocationDate: 1
+                },
+                opts: {
+                    background: true,
+                    w: 1
+                }
+            }, {
+                fields: {
+                    lastStatusChangedDate: 1
+                },
+                opts: {
+                    background: true,
+                    w: 1
+                }
+            }]
+        },
+        BcotSaleAllocationItem: {
+            indices: [{
+                fields: {
+                    bcotSaleAllocation_id: 1
+                },
+                opts: {
+                    background: true,
+                    w: 1
+                }
+            }, {
+                fields: {
+                    sku: 1
+                },
+                opts: {
+                    background: true,
+                    w: 1
+                }
+            }, {
+                fields: {
+                    purchaseCode: 1
+                },
+                opts: {
+                    unique: true,
+                    background: true,
+                    w: 1
+                }
+            }, {
+                fields: {
+                    'redemption.redeemed': 1
+                },
+                opts: {
+                    background: true,
+                    w: 1
+                }
+            }, {
+                fields: {
+                    'redemption.client_id': 1
+                },
+                opts: {
+                    sparse: true,
+                    background: true,
+                    w: 1
+                }
+            }, {
+                fields: {
+                    'redemption.redeemedDate': 1
+                },
+                opts: {
+                    sparse: true,
+                    background: true,
+                    w: 1
+                }
+            }, {
+                fields: {
+                    'redemption.redeemedDate': 1
+                },
+                opts: {
+                    sparse: true,
+                    background: true,
+                    w: 1
+                }
+            }, {
+                fields: {
+                    'redemption.bcotRedeemTxid': 1
+                },
+                opts: {
+                    sparse: true,
+                    background: true,
+                    w: 1
+                }
+            }]
         }
     };
 
@@ -1441,6 +1587,7 @@ Database.initialize = function() {
 //   from info property of ReceivedTransaction docs/recs of type 'bcot_payment'
 import { BcotPaymentTransaction } from './BcotPaymentTransaction';
 import { BcotPayment } from './BcotPayment';
+import { OmniTransaction } from './OmniTransaction';
 
 Database.fixReceivedTransactionBcotPaymentInfo = function () {
     let numUpdatedDocs = 0;
@@ -1464,7 +1611,7 @@ Database.fixReceivedTransactionBcotPaymentInfo = function () {
             info: 1
         }
     }).forEach((doc) => {
-        const bcotPayTransact = BcotPaymentTransaction.checkTransaction(doc.txid);
+        const bcotPayTransact = BcotPaymentTransaction.checkTransaction(OmniTransaction.fromTransaction(Transaction.fromTxid(doc.txid)));
 
         if (bcotPayTransact !== undefined) {
             const bcotPayAddrInfo = Catenis.keyStore.getAddressInfo(bcotPayTransact.payeeAddress);
@@ -1660,6 +1807,153 @@ Database.addMissingBtcServicePriceField = function () {
     }
 };
 
+//** Temporary method used to add missing info omniTxValidity field to some specific doc/recs (depending on the
+//    type of transaction) of the SentTransaction and ReceivedTransaction collections
+import { Transaction } from './Transaction';
+
+Database.addMissingOmniTxValidityField = function () {
+    let countUpdatedDocs = 0;
+    
+    let orOperands = [];
+    
+    [Transaction.type.store_bcot, Transaction.type.redeem_bcot].forEach((txType) => {
+        const orOperand = {
+            type: txType.name
+        };
+        orOperand[`info.${txType.dbInfoEntryName}.omniTxValidity`] = {
+            $exists: false
+        };
+
+        orOperands.push(orOperand);
+    });
+
+    Catenis.db.collection.SentTransaction.find({
+        'confirmation.confirmed': true,
+        $or: orOperands
+    }, {
+        fields: {
+            _id: 1,
+            type: 1,
+            txid: 1
+        }
+    }).fetch().forEach((doc) => {
+        // Retrieve Omni transaction info
+        let omniTxInfo;
+
+        try {
+            omniTxInfo = Catenis.omniCore.omniGetTransaction(doc.txid);
+        }
+        catch (err) {
+            if ((err instanceof Meteor.Error) && err.error === 'ctn_omcore_rpc_error' && err.details !== undefined && typeof err.details.code === 'number'
+                    && err.details.code === OmniCore.rpcErrorCode.RPC_INVALID_ADDRESS_OR_KEY) {
+                // Transaction not recognized as an Omni Transaction. Log error condition
+                Catenis.logger.ERROR('addMissingOmniTxValidityField(): transaction associated with SentTransaction database doc/rec not recognized as an Omni transaction', {
+                    docSentTransaction: doc
+                });
+            }
+            else {
+                throw err;
+            }
+        }
+
+        if (omniTxInfo && 'valid' in omniTxInfo) {
+            const omniTxValidity = {
+                isValid: omniTxInfo.valid
+            };
+            
+            if (!omniTxInfo.valid) {
+                omniTxValidity.invalidReason = omniTxInfo.invalidreason;
+            }
+            
+            const setExpression = {};
+            setExpression[`info.${Transaction.type[doc.type].dbInfoEntryName}.omniTxValidity`] = omniTxValidity;
+            
+            Catenis.db.collection.SentTransaction.update({
+                _id: doc._id
+            }, {
+                $set: setExpression
+            });
+
+            countUpdatedDocs++;
+        }
+    });
+
+    if (countUpdatedDocs > 0) {
+        Catenis.logger.INFO('****** Omni Transaction Validity field (omniTxValidity) has been added to %d SentTransaction docs/recs', countUpdatedDocs);
+    }
+    
+    // Do the same thing for ReceivedTransaction collection now
+    countUpdatedDocs = 0;
+
+    orOperands = [];
+
+    [Transaction.type.bcot_payment, Transaction.type.bcot_replenishment].forEach((txType) => {
+        const orOperand = {
+            type: txType.name
+        };
+        orOperand[`info.${txType.dbInfoEntryName}.omniTxValidity`] = {
+            $exists: false
+        };
+
+        orOperands.push(orOperand);
+    });
+
+    Catenis.db.collection.ReceivedTransaction.find({
+        'confirmation.confirmed': true,
+        $or: orOperands
+    }, {
+        fields: {
+            _id: 1,
+            type: 1,
+            txid: 1
+        }
+    }).fetch().forEach((doc) => {
+        // Retrieve Omni transaction info
+        let omniTxInfo;
+
+        try {
+            omniTxInfo = Catenis.omniCore.omniGetTransaction(doc.txid);
+        }
+        catch (err) {
+            if ((err instanceof Meteor.Error) && err.error === 'ctn_omcore_rpc_error' && err.details !== undefined && typeof err.details.code === 'number'
+                && err.details.code === OmniCore.rpcErrorCode.RPC_INVALID_ADDRESS_OR_KEY) {
+                // Transaction not recognized as an Omni Transaction. Log error condition
+                Catenis.logger.ERROR('addMissingOmniTxValidityField(): transaction associated with ReceivedTransaction database doc/rec not recognized as an Omni transaction', {
+                    docSentTransaction: doc
+                });
+            }
+            else {
+                throw err;
+            }
+        }
+
+        if (omniTxInfo && 'valid' in omniTxInfo) {
+            const omniTxValidity = {
+                isValid: omniTxInfo.valid
+            };
+
+            if (!omniTxInfo.valid) {
+                omniTxValidity.invalidReason = omniTxInfo.invalidreason;
+            }
+
+            const setExpression = {};
+            setExpression[`info.${Transaction.type[doc.type].dbInfoEntryName}.omniTxValidity`] = omniTxValidity;
+
+            Catenis.db.collection.ReceivedTransaction.update({
+                _id: doc._id
+            }, {
+                $set: setExpression
+            });
+
+            countUpdatedDocs++;
+        }
+    });
+
+    if (countUpdatedDocs > 0) {
+        Catenis.logger.INFO('****** Omni Transaction Validity field (omniTxValidity) has been added to %d ReceivedTransaction docs/recs', countUpdatedDocs);
+    }
+};
+
 
 // Module functions used to simulate private Database object methods
 //  NOTE: these functions need to be bound to a Database object reference (this) before
@@ -1760,12 +2054,33 @@ function initBcotPrice() {
     }
 }
 
+function initBcotProduct() {
+    const docProduct = this.collection.BcotProduct.findOne({}, {
+        fields: {
+            _id: 1
+        }
+    });
+
+    if (!docProduct) {
+        // No BCOT token product rec/docs exist yet. Add default products
+        const now = new Date();
+
+        cfgSettings.defaultBcotProducts.forEach((bcotProduct) => {
+            bcotProduct.active = true;
+            bcotProduct.createdDate = now;
+
+            this.collection.BcotProduct.insert(bcotProduct);
+        });
+    }
+}
+
 
 // Definition of module (private) functions
 //
 
 //** Temporary method used to drop any index of a given collection if the 'safe' property is present
 import Future from 'fibers/future';
+import { OmniCore } from './OmniCore';
 
 function dropSafeIndices (collection) {
     const fut1 = new Future();

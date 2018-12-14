@@ -79,7 +79,7 @@ SystemFundingUI.initialize = function () {
             };
 
             // Prepare to receive notification of funding balance info change
-            Catenis.ctnHubNode.on(CatenisNode.notifyEvent.funding_balanced_info_changed.name, processFundingBalanceChange);
+            Catenis.ctnHubNode.on(CatenisNode.notifyEvent.funding_balance_info_changed.name, processFundingBalanceChange);
 
             // Get and pass current funding balance info
             this.added('FundingBalanceInfo', 1, {
@@ -88,7 +88,7 @@ SystemFundingUI.initialize = function () {
             });
             this.ready();
 
-            this.onStop(() => Catenis.ctnHubNode.removeListener(CatenisNode.notifyEvent.funding_balanced_info_changed.name, processFundingBalanceChange));
+            this.onStop(() => Catenis.ctnHubNode.removeListener(CatenisNode.notifyEvent.funding_balance_info_changed.name, processFundingBalanceChange));
         }
         else {
             // User not logged in or not a system administrator.

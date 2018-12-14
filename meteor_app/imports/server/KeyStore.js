@@ -26,6 +26,8 @@
 //
 //      m/k/0/4 -> System asset root HD extended key
 //
+//      m/k/0/5 -> System BCOT token sale root HD extended key (NOTE: this entry should only exist for the Catenis Hub node (k = 0))
+//
 //      m/k/0/0/0 -> System device main addresses root HD extended key
 //      m/k/0/0/1 -> System device (reserved) addresses #2 root HD extended key
 //      m/k/0/0/2 -> System device (reserved) addresses #3 root HD extended key
@@ -80,6 +82,10 @@
 //      m/k/0/4/0/1/* -> System service payment pay tx expense addresses HD extended keys (used to pay for fees of service credit related transactions)
 //
 //      m/k/0/4/1/* -> System multi-signature Colored Coins tx output signee addresses HD extended keys
+//
+//      m/k/0/5/0 -> System BCOT token sale stock root HD extended key
+//
+//      m/k/0/5/0/* -> System BCOT token sale stock addresses HD extended key (NOTE: there should be only a single address generated)
 //
 //      m/k/i (i>=1) -> client #i root HD extended key
 //
@@ -667,6 +673,36 @@ KeyStore.prototype.initCatenisNodeHDNodes = function (ctnNodeIndex) {
 
         // Save newly created HD extended key to store it later
         hdNodesToStore.push({type: 'sys_serv_pymt_pay_tx_exp_root', path: path, hdNode: sysServPymtPayTxExpRootHDNode, isLeaf: false, isReserved: false});
+
+        // Make sure that the following entries are only created for Catenis Hub node
+        if (ctnNodeIndex === 0) {
+            // Create system BCOT token sale root HD extended key
+            path = sysRootPath + '/5';
+            const sysBcotSaleRootHDNode = sysRootHDNode.derive(5);
+
+            if (sysBcotSaleRootHDNode.index !== 5) {
+                Catenis.logger.WARN(util.format('System BCOT token sale root HD extended key (%s) derived with an unexpected index', path), {expectedIndex: 0, returnedIndex: sysBcotSaleRootHDNode.index});
+                return false;
+            }
+
+            // Save newly created HD extended key to store it later
+            hdNodesToStore.push({type: 'sys_bcot_sale_root', path: path, hdNode: sysBcotSaleRootHDNode, isLeaf: false, isReserved: false});
+
+            // Create system BCOT token sale stock root HD extended key
+            path = sysRootPath + '/5/0';
+            const sysBcotSaleStockRootHDNode = sysBcotSaleRootHDNode.derive(0);
+
+            if (sysBcotSaleStockRootHDNode.index !== 0) {
+                Catenis.logger.WARN(util.format('System BCOT token sale stock root HD extended key (%s) derived with an unexpected index', path), {
+                    expectedIndex: 1,
+                    returnedIndex: sysBcotSaleStockRootHDNode.index
+                });
+                return false;
+            }
+
+            // Save newly created HD extended key to store it later
+            hdNodesToStore.push({type: 'sys_bcot_sale_stck_root', path: path, hdNode: sysBcotSaleStockRootHDNode, isLeaf: false, isReserved: false});
+        }
 
         // Store all newly created HD extended keys
         hdNodesToStore.forEach((hdNodeToStore) => {
@@ -1928,6 +1964,134 @@ KeyStore.prototype.listSystemMultiSigSigneeAddressesInUse = function (ctnNodeInd
     return this.listSystemMultiSigSigneeAddresses(ctnNodeIndex, fromAddrIndex, toAddrIndex);
 };
 
+// NOTE: this method only applies to the Catenis Hub node
+KeyStore.prototype.getSystemBcotSaleStockAddressKeys = function (ctnNodeIndex, addrIndex, isObsolete = false) {
+    // Validate arguments
+    const errArg = {};
+
+    if (ctnNodeIndex !== 0) {
+        errArg.ctnNodeIndex = ctnNodeIndex;
+    }
+
+    if (!isValidAddressIndex(addrIndex)) {
+        errArg.addrIndex = addrIndex;
+    }
+
+    if (Object.keys(errArg).length > 0) {
+        const errArgs = Object.keys(errArg);
+
+        Catenis.logger.ERROR(util.format('KeyStore.getSystemBcotSaleStockAddressKeys method called with invalid argument%s', errArgs.length > 1 ? 's' : ''), errArg);
+        throw Error(util.format('Invalid %s argument%s', errArgs.join(', '), errArgs.length > 1 ? 's' : ''));
+    }
+
+    // Try to retrieve system BCOT token sale stock address HD extended key for given Catenis node with the given index
+    const sysBcotSaleStockAddrPath = util.format('m/%d/0/5/0/%d', ctnNodeIndex, addrIndex);
+    let sysBcotSaleStockAddrHDNode = retrieveHDNode.call(this, sysBcotSaleStockAddrPath),
+        sysBcotSaleStockAddrKeys = null;
+
+    if (sysBcotSaleStockAddrHDNode === null) {
+        // System BCOT token sale stock address HD extended key does not exist yet.
+        //  Retrieve parent root HD extended key to create it
+        const path = parentPath(sysBcotSaleStockAddrPath);
+        let sysBcotSaleStockRootHDNode = retrieveHDNode.call(this, path);
+
+        if (sysBcotSaleStockRootHDNode === null) {
+            // System BCOT token sale stock root HD extended key does not exist yet.
+            //  Try to initialize Catenis node HD extended keys
+            if (! this.initCatenisNodeHDNodes(ctnNodeIndex)) {
+                Catenis.logger.ERROR(util.format('HD extended keys for Catenis node with index %d could not be initialized', ctnNodeIndex));
+            }
+            else {
+                // Catenis node HD extended keys successfully initialized.
+                //  Try to retrieve system service credit issuance root HD extended key again
+                sysBcotSaleStockRootHDNode = retrieveHDNode.call(this, path);
+            }
+        }
+
+        if (sysBcotSaleStockRootHDNode === null) {
+            Catenis.logger.ERROR(util.format('System BCOT toke sale stock root HD extended key (%s) for Catenis node with index %d not found', path, ctnNodeIndex));
+        }
+        else {
+            // Try to create system BCOT token sale stock address HD extended key now
+            sysBcotSaleStockAddrHDNode = sysBcotSaleStockRootHDNode.derive(addrIndex);
+
+            if (sysBcotSaleStockAddrHDNode.index !== addrIndex) {
+                Catenis.logger.WARN(util.format('System BCOT token sale stock address HD extended key (%s) derived with an unexpected index', sysBcotSaleStockAddrPath), {expectedIndex: addrIndex, returnedIndex: sysBcotSaleStockAddrHDNode.index});
+                sysBcotSaleStockAddrHDNode = null;
+            }
+            else {
+                // Store created HD extended key
+                storeHDNode.call(this, 'sys_bcot_sale_stck_addr', sysBcotSaleStockAddrPath, sysBcotSaleStockAddrHDNode, true, false, isObsolete);
+            }
+        }
+    }
+
+    if (sysBcotSaleStockAddrHDNode !== null) {
+        sysBcotSaleStockAddrKeys = new CryptoKeys(sysBcotSaleStockAddrHDNode.keyPair);
+    }
+
+    return sysBcotSaleStockAddrKeys;
+};
+
+// NOTE: this method only applies to the Catenis Hub node
+KeyStore.prototype.listSystemBcotSaleStockAddresses = function (ctnNodeIndex, fromAddrIndex, toAddrIndex, onlyInUse) {
+    // Validate arguments
+    const errArg = {},
+        queryTerms = [{parentPath: util.format('m/%d/0/5/0', ctnNodeIndex)}];
+
+    if (ctnNodeIndex !== 0) {
+        errArg.ctnNodeIndex = ctnNodeIndex;
+    }
+
+    if (fromAddrIndex !== undefined) {
+        if (!isValidAddressIndex(fromAddrIndex)) {
+            errArg.fromAddrIndex = fromAddrIndex;
+        }
+        else {
+            queryTerms.push({index: {$gte: fromAddrIndex}});
+        }
+    }
+
+    if (toAddrIndex !== undefined) {
+        if (!isValidAddressIndex(toAddrIndex) || (fromAddrIndex !== undefined && toAddrIndex < fromAddrIndex)) {
+            errArg.toAddrIndex = toAddrIndex;
+        }
+        else {
+            queryTerms.push({index: {$lte: toAddrIndex}});
+        }
+    }
+
+    if (Object.keys(errArg).length > 0) {
+        const errArgs = Object.keys(errArg);
+
+        Catenis.logger.ERROR(util.format('KeyStore.listSystemBcotSaleStockAddresses method called with invalid argument%s', errArgs.length > 1 ? 's' : ''), errArg);
+        throw Error(util.format('Invalid %s argument%s', errArgs.join(', '), errArgs.length > 1 ? 's' : ''));
+    }
+
+    if (onlyInUse) {
+        queryTerms.push({isObsolete: false});
+    }
+
+    // Return existing BCOT token sale stock addresses within the specified range
+    let query;
+
+    if (queryTerms.length > 1) {
+        query = {$and: queryTerms};
+    }
+    else {
+        query = queryTerms[0];
+    }
+
+    return this.collExtKey.chain().find(query).simplesort('index').data().map((docExtKey) => {
+        return docExtKey.address;
+    });
+};
+
+// NOTE: this method only applies to the Catenis Hub node
+KeyStore.prototype.listSystemBcotSaleStockAddressesInUse = function (ctnNodeIndex, fromAddrIndex, toAddrIndex) {
+    return this.listSystemBcotSaleStockAddresses(ctnNodeIndex, fromAddrIndex, toAddrIndex);
+};
+
 KeyStore.prototype.getSystemDeviceAddressKeys = function (ctnNodeIndex, addrRootIndex, addrIndex, isObsolete = false) {
     // Validate arguments
     const errArg = {};
@@ -3146,6 +3310,16 @@ KeyStore.systemMultiSigSigneeRootPath = function (ctnNodeIndex) {
     return util.format('m/%d/0/4/1', ctnNodeIndex);
 };
 
+KeyStore.systemBcotSaleStockRootPath = function (ctnNodeIndex) {
+    // Validate Catenis node index
+    if (!isValidCatenisNodeIndex(ctnNodeIndex)) {
+        Catenis.logger.ERROR('KeyStore.systemBcotSaleStockRootPath method called with invalid argument', {ctnNodeIndex: ctnNodeIndex});
+        throw Error('Invalid ctnNodeIndex argument');
+    }
+
+    return util.format('m/%d/0/5/0', ctnNodeIndex);
+};
+
 KeyStore.systemDeviceMainAddressRootPath = function (ctnNodeIndex) {
     // Validate Catenis node index
     if (!isValidCatenisNodeIndex(ctnNodeIndex)) {
@@ -3412,6 +3586,14 @@ KeyStore.extKeyType = Object.freeze({
             1: 'ctnNodeIndex'
         }
     }),
+    sys_bcot_sale_root: Object.freeze({
+        name: 'sys_bcot_sale_root',
+        description: 'system BCOT token sale root',
+        pathRegEx: /^m\/(\d+)\/0\/5$/,
+        pathParts: {
+            1: 'ctnNodeIndex'
+        }
+    }),
     sys_dev_main_addr_root: Object.freeze({
         name: 'sys_dev_main_addr_root',
         description: 'System device main addresses root',
@@ -3621,6 +3803,23 @@ KeyStore.extKeyType = Object.freeze({
         name: 'sys_msig_sign_addr',
         description: 'system multi-signature Colored Coins tx out signee address',
         pathRegEx: /^m\/(\d+)\/0\/4\/1\/(\d+)$/,
+        pathParts: {
+            1: 'ctnNodeIndex',
+            2: 'addrIndex'
+        }
+    }),
+    sys_bcot_sale_stck_root: Object.freeze({
+        name: 'sys_bcot_sale_stck_root',
+        description: 'system BCOT token sale stock root',
+        pathRegEx: /^m\/(\d+)\/0\/5\/0$/,
+        pathParts: {
+            1: 'ctnNodeIndex'
+        }
+    }),
+    sys_bcot_sale_stck_addr: Object.freeze({
+        name: 'sys_bcot_sale_stck_addr',
+        description: 'system BCOT token sale stock address',
+        pathRegEx: /^m\/(\d+)\/0\/5\/0\/(\d+)$/,
         pathParts: {
             1: 'ctnNodeIndex',
             2: 'addrIndex'
