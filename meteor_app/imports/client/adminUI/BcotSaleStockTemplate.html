@@ -9,8 +9,15 @@
                         {{#unless Template.subscriptionsReady}}
                             <p style="color:lightgray; margin-top:1em">Loading...</p>
                         {{else}}
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="pull-left">
+                                        <a href="/admin/bcotsale" role="button" class="btn-login btn paddedBtn">Back to BCOT Sale</a>
+                                    </div>
+                                </div>
+                            </div>
                             {{#if lowBalance balanceInfo}}
-                                <div class="alert alert-danger" role="alert">
+                                <div class="alert alert-danger" role="alert" style="margin-top:1em">
                                     BCOT sale stock is currently <b>low</b>. Please replenish stock <b>now</b>.
                                 </div>
                             {{/if}}
