@@ -65,7 +65,7 @@ BcotSaleStock.prototype.checkBcotSaleStock = function () {
 
         // Emit event notifying that BCOT token sale stock info has changed
         this.emit(BcotSaleStock.notifyEvent.bcot_sale_stock_info_changed.name, {
-            bcotSaleStockInfo: BcotSaleStock.bcotSaleStockInfo
+            bcotSaleStockInfo: this.bcotSaleStockInfo
         });
     }
 };

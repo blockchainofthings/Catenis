@@ -20,7 +20,6 @@ import { Meteor } from 'meteor/meteor';
 import { Catenis } from '../Catenis';
 import { Client } from '../Client';
 import { CommonServiceAccountUI } from '../commonUI/CommonServiceAccountUI';
-import { KeyStore } from '../KeyStore';
 
 
 // Definition of function classes
@@ -93,6 +92,50 @@ ClientServiceAccountUI.initialize = function () {
                 throw new Meteor.Error('ctn_client_no_permission', 'No permission; must be logged in as a Catenis client to perform this task');
             }
         },
+        redeemBcotCurrentClient: function (purchaseCodes) {
+            if (Roles.userIsInRole(this.userId, 'ctn-client')) {
+                // Retrieve database doc/rec of client associated with currently logged in user
+                const docCurrentClient = Catenis.db.collection.Client.findOne({
+                    user_id: this.userId,
+                    status: Client.status.active.name
+                }, {
+                    fields: {
+                        _id: 1
+                    }
+                });
+
+                if (docCurrentClient) {
+                    try {
+                        return Client.getClientByDocId(docCurrentClient._id).redeemBcot(purchaseCodes);
+                    }
+                    catch (err) {
+                        // Error trying to redeem purchased BCOT tokens. Log error and throw exception
+                        Catenis.logger.ERROR('Failure redeeming purchased BCOT tokens (purchase codes: %s).', purchaseCodes, err);
+                        if ((err instanceof Meteor.Error) && err.error === 'client_bcot_redeem_invalid_codes') {
+                            // Invalid purchase codes. Throw customized error
+                            throw new Meteor.Error('client-srv-account.redeemBcotCurrentClient.failure', err.reason);
+                        }
+                        else {
+                            // Otherwise, throw generic exception
+                            throw new Meteor.Error('client-srv-account.redeemBcotCurrentClient.failure', 'Failure redeeming purchased BCOT tokens');
+                        }
+                    }
+                }
+                else {
+                    // No active client is associated with currently logged in user.
+                    //  Throw exception
+                    Catenis.logger.ERROR('redeemBcotCurrentClient remote method: logged in user not associated with a valid, active client', {
+                        user_id: this.userId
+                    });
+                    throw new Meteor.Error('ctn_client_not_valid', 'Logged in user not associated with a valid client');
+                }
+            }
+            else {
+                // User not logged in or not a Catenis client.
+                //  Throw exception
+                throw new Meteor.Error('ctn_client_no_permission', 'No permission; must be logged in as a Catenis client to perform this task');
+            }
+        }
     });
 
     // Declaration of publications

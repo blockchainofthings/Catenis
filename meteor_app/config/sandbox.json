@@ -39,6 +39,28 @@
       "fromAddress": "Catenis [Sandbox] <admin@catenis.io>"
     }
   },
+  // Parameters pertaining to Database module
+  "database": {
+    "defaultBcotProducts": [{
+      "sku": "CTN-0010TBCT",
+      "amount": 1000000000
+    }, {
+      "sku": "CTN-0020TBCT",
+      "amount": 2000000000
+    }, {
+      "sku": "CTN-0050TBCT",
+      "amount": 5000000000
+    }, {
+      "sku": "CTN-0100TBCT",
+      "amount": 10000000000
+    }, {
+      "sku": "CTN-0500TBCT",
+      "amount": 50000000000
+    }, {
+      "sku": "CTN-1000TBCT",
+      "amount": 100000000000
+    }]
+  },
   // Parameters pertaining to BitcoinFees module
   "bitcoinFees": {
     "retrieveFeesInterval": 86400000,  // (24 hours) Time interval, in milliseconds, for executing method to retrieve latest bitcoin fees

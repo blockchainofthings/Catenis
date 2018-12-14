@@ -10,7 +10,7 @@
 // References to external code
 //
 // Internal node modules
-//import util from 'util';
+import querystring from "querystring";
 // Third-party node modules
 import BigNumber from 'bignumber.js';
 // Meteor packages
@@ -28,7 +28,6 @@ import './LicensesTemplate.html';
 
 // Import dependent templates
 import './LicenseDetailsTemplate.js';
-import querystring from "querystring";
 
 
 // Definition of module (private) functions

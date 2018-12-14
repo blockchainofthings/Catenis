@@ -1,0 +1,67 @@
+<template name="bcotSaleStock">
+    <div>
+        <div class="panel panel-login minWidthElement noBoxShadow">
+            <div class="panel-body">
+                <div class="row">
+                    <div class="col-lg-12">
+                        <h2>BCOT SALE<br><br>
+                        Stock</h2>
+                        {{#unless Template.subscriptionsReady}}
+                            <p style="color:lightgray; margin-top:1em">Loading...</p>
+                        {{else}}
+                            {{#if lowBalance balanceInfo}}
+                                <div class="alert alert-danger" role="alert">
+                                    BCOT sale stock is currently <b>low</b>. Please replenish stock <b>now</b>.
+                                </div>
+                            {{/if}}
+                            <table class="table table-striped" style="width:80%; margin-left:auto; margin-right:auto">
+                                <thead>
+                                <tr>
+                                    <th>
+                                        <label>Minimum balance</label>
+                                    </th>
+                                    <th>
+                                        <label>Current balance</label>
+                                    </th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                <tr>
+                                    <th>
+                                        <span>BCOT {{balanceInfo.minimumBalance}}</span>
+                                    </th>
+                                    <th>
+                                        <span style="color:{{#if lowBalance balanceInfo}}red{{else}}green{{/if}}">BCOT {{balanceInfo.currentBalance}}</span>
+                                    </th>
+                                </tr>
+                                </tbody>
+                            </table>
+                            <div class="center">
+                                <button type="button" id="btnReplenishStock" class="btn-login btn paddedBtn" data-toggle="modal" data-target="#divReplenishStock">Replenish Stock</button>
+                            </div>
+                            {{!Modal panel containing form used to send BCOT tokens to replenish sale stock}}
+                            <div id="divReplenishStock" class="modal fade" data-backdrop="static" tabindex="-1" role="dialog">
+                                <div class="modal-dialog" role="document">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <button id="btnCloseReplenishStock1" type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                                            <h4 class="modal-title">Replenish BCOT Sale Stock</h4>
+                                        </div>
+                                        <div class="modal-body">
+                                            {{#if saleStockAddress}}
+                                                {{> bcotSaleStockAddress saleStockAddress=saleStockAddress}}
+                                            {{/if}}
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button id="btnCloseReplenishStock2" type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        {{/unless}}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</template>

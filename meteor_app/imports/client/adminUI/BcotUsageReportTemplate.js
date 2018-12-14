@@ -207,7 +207,7 @@ Template.bcotUsageReport.events({
             template.state.set('infoMsg', 'Generating report...');
             template.state.set('infoMsgType', 'info');
 
-            // Call remote method to create client
+            // Call remote method to generate report
             Meteor.call('downloadBcotUsageReport', reportPeriod.startDate, reportPeriod.endDate, (error, report) => {
                 template.state.set('doingDownload', false);
 

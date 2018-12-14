@@ -446,7 +446,7 @@ CCMetadataConversion {
 
 BcotProduct {
   _id: [string],  // MongoDB internal document ID provided by Meteor
-  sku: [string],  // Stock keeping unit, for this product (e.g. CTN-0010BCOT). Note: this field should only exist for ACTIVE products
+  sku: [string],  // Stock keeping unit, for this product (e.g. CTN-0010BCOT)
   amount: [number]  // Predefined amount, in BCOT token "satoshis", being sold
   active: [boolean],  // Indicates whether this BCOT product is active and still in use
   createdDate: [date/time],  // Date and time when doc/rec has been created

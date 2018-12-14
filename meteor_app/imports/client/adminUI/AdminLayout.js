@@ -32,6 +32,7 @@ import './AdminHomeTemplate.js';
 import './UserAccountTemplate.js';
 import './NewAdminAccountTemplate.js';
 import './BcotPriceTemplate.js';
+import './BcotSaleTemplate.js';
 import './SystemFundingTemplate.js';
 import './BcotUsageReportTemplate.js';
 import './LicensesTemplate.js';

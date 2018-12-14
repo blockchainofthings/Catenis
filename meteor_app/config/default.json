@@ -85,25 +85,7 @@
       // Never expires
       // No provisional renewal
     }],
-    "defaultBcotProducts": [{
-      "sku": "CTN-0010BCTO",
-      "amount": 1000000000
-    }, {
-      "sku": "CTN-0020BCTO",
-      "amount": 2000000000
-    }, {
-      "sku": "CTN-0050BCTO",
-      "amount": 5000000000
-    }, {
-      "sku": "CTN-0100BCTO",
-      "amount": 10000000000
-    }, {
-      "sku": "CTN-0500BCTO",
-      "amount": 50000000000
-    }, {
-      "sku": "CTN-1000BCTO",
-      "amount": 100000000000
-    }]
+    "defaultBcotProducts": [] // Should be defined on each environment's config file
   },
   // Parameters pertaining to BitcoinFees module
   "bitcoinFees": {
@@ -820,14 +802,18 @@
   },
   // Parameters pertaining to BcotProduct module
   "bcotProduct": {
-    "stdSkuFormat": "CTN-%sBCOT"  // (CTN-0000BCOT) Format string to be used when generating standard BCOT product SKU
+    "stdSkuFormat": "CTN-%s%s"  // (e.g. CTN-0000BCOT, for production) Format string to be used when generating standard BCOT product SKU
   },
   // Parameters pertaining to BcotSaleAllocation module
   "bcotSaleAllocation": {
-    "allocatedProductsReportHeaders": [  // List of names to be used as headers for the columns of the usage report
-      "sku",
-      "purchase_code"
-    ]
+    "allocatedProductsReport": {
+      "baseFilename": "bcot_sale_alloc_prods",  // Base name of the generated file containing the produced report
+      "fileExtension": "csv",  // File extension to be used in the report filename
+      "headers": [  // List of names to be used as headers for the columns of the usage report
+        "sku",
+        "purchase_code"
+      ]
+    }
   },
   // Parameters pertaining to RedeemBcotTransaction module
   "redeemBcotTransaction": {

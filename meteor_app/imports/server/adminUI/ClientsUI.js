@@ -347,6 +347,23 @@ ClientsUI.initialize = function () {
                 //  Throw exception
                 throw new Meteor.Error('ctn_admin_no_permission', 'No permission; must be logged in as a system administrator to perform this task');
             }
+        },
+        redeemBcot: function (client_id, purchaseCodes) {
+            if (Roles.userIsInRole(this.userId, 'sys-admin')) {
+                try {
+                    return Client.getClientByDocId(client_id).redeemBcot(purchaseCodes);
+                }
+                catch (err) {
+                    // Error trying to redeem purchased BCOT tokens. Log error and throw exception
+                    Catenis.logger.ERROR('Failure redeeming purchased BCOT tokens (purchase codes: %s).', purchaseCodes, err);
+                    throw new Meteor.Error('client.redeemBcot.failure', 'Failure redeeming purchased BCOT tokens: ' + err.toString());
+                }
+            }
+            else {
+                // User not logged in or not a system administrator.
+                //  Throw exception
+                throw new Meteor.Error('ctn_admin_no_permission', 'No permission; must be logged in as a system administrator to perform this task');
+            }
         }
     });
 

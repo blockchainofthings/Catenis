@@ -28,6 +28,28 @@
       "logLevel": "ACTION"
     }
   },
+  // Parameters pertaining to Database module
+  "database": {
+    "defaultBcotProducts": [{
+      "sku": "CTN-0010XBCT",
+      "amount": 1000000000
+    }, {
+      "sku": "CTN-0020XBCT",
+      "amount": 2000000000
+    }, {
+      "sku": "CTN-0050XBCT",
+      "amount": 5000000000
+    }, {
+      "sku": "CTN-0100XBCT",
+      "amount": 10000000000
+    }, {
+      "sku": "CTN-0500XBCT",
+      "amount": 50000000000
+    }, {
+      "sku": "CTN-1000XBCT",
+      "amount": 100000000000
+    }]
+  },
   // Parameters pertaining to BitcoinFees module
   "bitcoinFees": {
     "retrieveFeesInterval": 86400000,  // (24 hours) Time interval, in milliseconds, for executing method to retrieve latest bitcoin fees

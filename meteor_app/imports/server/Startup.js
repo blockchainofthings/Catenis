@@ -75,6 +75,9 @@ import { AdminAccountUI } from './adminUI/AdminAccountUI';
 import { BcotReplenishment } from './BcotReplenishment';
 import { StoreBcot } from './StoreBcot';
 import { BcotSaleStock } from './BcotSaleStock';
+import { BcotProductsUI } from './adminUI/BcotProductsUI';
+import { BcotSaleAllocationUI } from './adminUI/BcotSaleAllocationUI';
+import { BcotSaleStockUI } from './adminUI/BcotSaleStockUI';
 // TEST - begin
 //import { resetBitcoinCore } from './test/FundSourceTest';
 //import { TestCatenisColoredCoins } from './test/TestCatenisColoredCoins';
@@ -182,6 +185,9 @@ Meteor.startup(function () {
         LoginUI.initialize();
         AdminAccountUI.initialize();
         BcotPriceUI.initialize();
+        BcotProductsUI.initialize();
+        BcotSaleAllocationUI.initialize();
+        BcotSaleStockUI.initialize();
         SystemFundingUI.initialize();
         BcotUsageReportUI.initialize();
         LicensesUI.initialize();

@@ -20,14 +20,20 @@ import { Random } from 'meteor/random';
 
 // References code in other (Catenis) modules
 import { Catenis } from './Catenis';
+import { BcotSaleAllocationShared } from '../both/BcotSaleAllocationShared';
 import { CriticalSection } from './CriticalSection';
 
 // Config entries
 const bcotSaleAllocConfig = config.get('bcotSaleAllocation');
+const bcotSaleAllocProdsRprtConfig = bcotSaleAllocConfig.get('allocatedProductsReport');
 
 // Configuration settings
-const cfgSettings = {
-    allocatedProductsReportHeaders: bcotSaleAllocConfig.get('allocatedProductsReportHeaders')
+export const cfgSettings = {
+    allocatedProductsReport: {
+        baseFilename: bcotSaleAllocProdsRprtConfig.get('baseFilename'),
+        fileExtension: bcotSaleAllocProdsRprtConfig.get('fileExtension'),
+        headers: bcotSaleAllocProdsRprtConfig.get('headers')
+    }
 };
 
 
@@ -114,7 +120,7 @@ BcotSaleAllocation.prototype.generateAllocatedProductsReport = function (addHead
     reportLines = this.items.filter(item => !item.redemption.redeemed).map(item => util.format('"%s","%s"\n', item.sku, item.purchaseCode));
 
     if (addHeaders && reportLines.length > 0) {
-        reportLines.unshift(cfgSettings.allocatedProductsReportHeaders.map(header => '"' + header + '"').join(',') + '\n');
+        reportLines.unshift(cfgSettings.allocatedProductsReport.headers.map(header => '"' + header + '"').join(',') + '\n');
     }
 
     return reportLines.join('');
@@ -295,8 +301,10 @@ BcotSaleAllocation.getRedeemBcotInfo = function (purchaseCodes) {
                 $in: docBcotSaleAllocItems.map(doc => doc.sku)
             }
         }, {
-            sku: 1,
-            amount: 1
+            fields: {
+                sku: 1,
+                amount: 1
+            }
         }).forEach((doc) => {
             skuAmount.set(doc.sku, doc.amount);
         });
@@ -355,16 +363,7 @@ BcotSaleAllocation.setBcotRedeemed = function (redeemBcotInfo, clientId, redeemB
 // Critical section object to avoid concurrent access to BcotSaleAllocationItem database collection
 BcotSaleAllocation.bcotAllocItemCS = new CriticalSection();
 
-BcotSaleAllocation.status = Object.freeze({
-    new: Object.freeze({
-        name: 'new',
-        description: 'BCOT token sale allocation newly created'
-    }),
-    in_use: Object.freeze({
-        name: 'in_use',
-        description: 'Report of BCOT products allocated for sale has already been downloaded and they should be available for sale'
-    })
-});
+BcotSaleAllocation.status = BcotSaleAllocationShared.status;
 
 
 // Definition of module (private) functions

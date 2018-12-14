@@ -96,7 +96,7 @@ BcotProduct.getBcotProductByDocId = function (bcotProduct_id, onlyActive = true)
     };
 
     if (onlyActive) {
-        selector.active = false;
+        selector.active = true;
     }
 
     const docBcotProduct = Catenis.db.collection.BcotProduct.findOne(selector);
@@ -232,7 +232,28 @@ function generateStdSku(amount) {
         nStr = new BigNumber(amount).dividedToIntegerBy(1000000000000000).toString() + 'P';
     }
 
-    return util.format(cfgSettings.stdSkuFormat, '0000'.substring(nStr.length) + nStr);
+    return util.format(cfgSettings.stdSkuFormat, '0000'.substring(nStr.length) + nStr, skuSuffix());
+}
+
+// Generate suffix for standard SKU dependent on the Catenis environment
+function skuSuffix() {
+    let prefix;
+
+    switch (Catenis.application.environment) {
+        case 'production':
+            prefix = 'BCOT';
+            break;
+
+        case 'sandbox':
+            prefix = 'TBCT';
+            break;
+
+        default:
+            prefix = 'XBCT';
+            break;
+    }
+
+    return prefix;
 }
 
 

@@ -239,6 +239,72 @@ FlowRouter.route('/admin/bcotprice', {
     }
 });
 
+FlowRouter.route('/admin/bcotsale', {
+    action: function () {
+        BlazeLayout.render('adminLayout', {
+            page: 'bcotSale'
+        });
+    }
+});
+
+FlowRouter.route('/admin/bcotsale/products', {
+    action: function (params, queryParams) {
+        BlazeLayout.render('adminLayout', {
+            page: 'bcotProducts',
+            dataContext: {
+                showInactive: parseBoolean(queryParams.showinactive)
+            }
+        });
+    }
+});
+
+FlowRouter.route('/admin/bcotsale/products/:bcotProduct_id', {
+    action: function (params, queryParams) {
+        queryParams = getQueryParams();
+
+        BlazeLayout.render('adminLayout', {
+            page: 'bcotProductDetails',
+            dataContext: {
+                bcotProduct_id: params.bcotProduct_id,
+                retParams: queryParams.retparams
+            }
+        });
+    }
+});
+
+FlowRouter.route('/admin/bcotsale/allocations', {
+    action: function (params, queryParams) {
+        BlazeLayout.render('adminLayout', {
+            page: 'bcotSaleAllocations',
+            dataContext: {
+                showInUse: parseBoolean(queryParams.showinuse)
+            }
+        });
+    }
+});
+
+FlowRouter.route('/admin/bcotsale/allocations/:bcotSaleAllocation_id', {
+    action: function (params, queryParams) {
+        queryParams = getQueryParams();
+
+        BlazeLayout.render('adminLayout', {
+            page: 'bcotSaleAllocationDetails',
+            dataContext: {
+                bcotSaleAllocation_id: params.bcotSaleAllocation_id,
+                retParams: queryParams.retparams
+            }
+        });
+    }
+});
+
+FlowRouter.route('/admin/bcotsale/stock', {
+    action: function () {
+        BlazeLayout.render('adminLayout', {
+            page: 'bcotSaleStock'
+        });
+    }
+});
+
 FlowRouter.route('/admin/systemfunding', {
     action: function () {
         BlazeLayout.render('adminLayout', {
