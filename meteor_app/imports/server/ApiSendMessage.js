@@ -175,7 +175,7 @@ export function sendMessage() {
         }
 
         // Make sure that buffer's contents match the original message
-        if (msg.toString(optEncoding) !== this.bodyParams.message) {
+        if (msg.toString(optEncoding) !== (optEncoding === 'hex' ? this.bodyParams.message.toLowerCase() : this.bodyParams.message)) {
             Catenis.logger.DEBUG('Incompatible encoding for \'message\' parameter of \'messages/send\' API request', this.bodyParams);
             return errorResponse.call(this, 400, 'Invalid parameters');
         }
