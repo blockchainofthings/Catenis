@@ -242,7 +242,7 @@ Template.clientServiceAccount.events({
                 ]);
             }
             else {
-                template.state.set('infoMsg', 'Purchased BCOT tokens successfully redeemed');
+                template.state.set('infoMsg', 'Purchased Catenis credits successfully redeemed');
                 template.state.set('infoMsgType', 'success');
 
                 // Close modal panel

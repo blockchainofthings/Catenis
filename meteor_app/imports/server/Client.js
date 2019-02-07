@@ -1130,10 +1130,10 @@ Client.prototype.getDeviceDefaultRights = function() {
 };
 /** End of permission related methods **/
 
-// Redeem purchased BCOT tokens for Catenis service credits
+// Redeem purchased Catenis credits (BCOT tokens that get converted into Catenis credits)
 //
 //  Arguments:
-//   purchaseCodes [String|Array(String)] - Purchase codes received after purchase of BCOT tokens that are being redeemed
+//   purchaseCodes [String|Array(String)] - Purchase codes received after purchase of Catenis credits that are being redeemed
 Client.prototype.redeemBcot = function (purchaseCodes) {
     try {
         // Execute code in critical section to avoid BcotSaleAllocationItem database collection concurrency
@@ -1142,10 +1142,10 @@ Client.prototype.redeemBcot = function (purchaseCodes) {
 
             if (!redeemBcotInfo) {
                 // Invalid redeem code. Log error and throw exception
-                Catenis.logger.ERROR('BCOT tokens cannot be redeemed: one or more of the purchase codes are invalid or have already been redeemed', {
+                Catenis.logger.ERROR('Catenis credits cannot be redeemed: one or more of the purchase codes are invalid or have already been redeemed', {
                     purchaseCodes: purchaseCodes
                 });
-                throw new Meteor.Error('client_bcot_redeem_invalid_codes', 'BCOT tokens cannot be redeemed: one or more of the purchase codes are invalid or have already been redeemed');
+                throw new Meteor.Error('client_bcot_redeem_invalid_codes', 'Catenis credits cannot be redeemed: one or more of the purchase codes are invalid or have already been redeemed');
             }
 
             // Execute code in critical section to avoid UTXOs concurrency
@@ -1155,11 +1155,11 @@ Client.prototype.redeemBcot = function (purchaseCodes) {
 
                 if (bcotSaleStockBalance.isLessThan(redeemBcotInfo.redeemedAmount)) {
                     // BCOT token sale stock too low. Log error and throw exception
-                    Catenis.logger.ERROR('BCOT tokens cannot be redeemed: BCOT token sale stock too low', {
+                    Catenis.logger.ERROR('Catenis credits cannot be redeemed: BCOT token sale stock too low', {
                         bcotSaleStockBalance: bcotSaleStockBalance,
                         amountToRedeem: redeemBcotInfo.redeemedAmount
                     });
-                    throw new Error('BCOT tokens cannot be redeemed: BCOT token sale stock too low');
+                    throw new Error('Catenis credits cannot be redeemed: BCOT token sale stock too low');
                 }
 
                 // Prepare and send redeem BCOT token transaction
@@ -1193,8 +1193,8 @@ Client.prototype.redeemBcot = function (purchaseCodes) {
         }
         else {
             // Translate any other error into a more generic one
-            Catenis.logger.ERROR('Error while redeeming BCOT tokens', err);
-            throw new Meteor.Error('client_bcot_redeem_error', 'Error while redeeming purchased BCOT tokens');
+            Catenis.logger.ERROR('Error while redeeming Catenis credits', err);
+            throw new Meteor.Error('client_bcot_redeem_error', 'Error while redeeming purchased Catenis credits');
         }
     }
 };

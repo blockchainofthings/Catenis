@@ -110,14 +110,14 @@ ClientServiceAccountUI.initialize = function () {
                     }
                     catch (err) {
                         // Error trying to redeem purchased BCOT tokens. Log error and throw exception
-                        Catenis.logger.ERROR('Failure redeeming purchased BCOT tokens (purchase codes: %s).', purchaseCodes, err);
+                        Catenis.logger.ERROR('Failure redeeming purchased Catenis credits (purchase codes: %s).', purchaseCodes, err);
                         if ((err instanceof Meteor.Error) && err.error === 'client_bcot_redeem_invalid_codes') {
                             // Invalid purchase codes. Throw customized error
                             throw new Meteor.Error('client-srv-account.redeemBcotCurrentClient.failure', err.reason);
                         }
                         else {
                             // Otherwise, throw generic exception
-                            throw new Meteor.Error('client-srv-account.redeemBcotCurrentClient.failure', 'Failure redeeming purchased BCOT tokens');
+                            throw new Meteor.Error('client-srv-account.redeemBcotCurrentClient.failure', 'Failure redeeming purchased Catenis credits');
                         }
                     }
                 }

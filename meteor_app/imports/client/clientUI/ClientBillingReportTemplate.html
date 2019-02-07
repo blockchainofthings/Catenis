@@ -46,7 +46,7 @@
                                         <th>Date</th>
                                         <th>Device</th>
                                         <th>Service</th>
-                                        <th>Price (Service Credit)</th>
+                                        <th>Price (Catenis Credit)</th>
                                     </tr>
                                     </thead>
                                     <tbody>
@@ -74,7 +74,7 @@
                                         <div class="modal-body">
                                             <form id="frmResetFilter" autocomplete="off">
                                                 <div class="form-group text-left">
-                                                    <label for="selDevice" class="input">License</label><br>
+                                                    <label for="selDevice" class="input">Device</label><br>
                                                     <select id="selDevice" name="device" class="input">
                                                         {{#each deviceOption in deviceOptions}}
                                                             <option value="{{deviceOption.value}}" {{deviceOption.selected}}>{{deviceOption.label}}</option>
@@ -82,7 +82,7 @@
                                                     </select>
                                                 </div>
                                                 <div class="form-group text-left">
-                                                    <label for="selPeriod" class="input">License</label><br>
+                                                    <label for="selPeriod" class="input">Period</label><br>
                                                     <select id="selPeriod" name="period" class="input">
                                                         {{#each periodOption in periodOptions}}
                                                             <option value="{{periodOption.value}}" {{periodOption.selected}}>{{periodOption.label}}</option>

@@ -42,7 +42,7 @@ function validateCreateProductFormData(form, errMsgs) {
 
     if (value.length === 0) {
         // Amount not supplied. Report error
-        errMsgs.push('Please enter a BCOT amount');
+        errMsgs.push('Please enter a credit amount');
         hasError = true;
 
         if (!focusSet) {
@@ -288,7 +288,7 @@ Template.bcotProducts.events({
                 // New product successfully added
                 template.state.set('actionSuccessProduct', bcotProduct_id);
 
-                template.state.set('infoMsg', 'New BCOT product successfully added');
+                template.state.set('infoMsg', 'New Catenis Credit product successfully added');
                 template.state.set('infoMsgType', 'success');
 
                 // Close modal panel

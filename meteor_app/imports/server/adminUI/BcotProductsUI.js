@@ -60,8 +60,8 @@ BcotProductsUI.initialize = function () {
                 }
                 catch (err) {
                     // Error trying to create new BCOT product. Log error and throw exception
-                    Catenis.logger.ERROR('Failure trying to create new BCOT product.', util.inspect({productInfo: productInfo}), err);
-                    throw new Meteor.Error('bcotProduct.create.failure', 'Failure trying to create new BCOT product: ' + err.toString());
+                    Catenis.logger.ERROR('Failure trying to create new Catenis credit product.', util.inspect({productInfo: productInfo}), err);
+                    throw new Meteor.Error('bcotProduct.create.failure', 'Failure trying to create new Catenis credit product: ' + err.toString());
                 }
             }
             else {
@@ -77,8 +77,8 @@ BcotProductsUI.initialize = function () {
                 }
                 catch (err) {
                     // Error trying to deactivate BCOT product. Log error and throw exception
-                    Catenis.logger.ERROR('Failure trying to deactivate BCOT product (doc_id: %s).', bcotProduct_id, err);
-                    throw new Meteor.Error('bcotProduct.deactivate.failure', 'Failure trying to deactivate BCOT product: ' + err.toString());
+                    Catenis.logger.ERROR('Failure trying to deactivate Catenis credit product (doc_id: %s).', bcotProduct_id, err);
+                    throw new Meteor.Error('bcotProduct.deactivate.failure', 'Failure trying to deactivate Catenis credit product: ' + err.toString());
                 }
             }
             else {
