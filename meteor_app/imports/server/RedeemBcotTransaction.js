@@ -190,9 +190,6 @@ RedeemBcotTransaction.prototype.sendTransaction = function () {
                 redeemedAmount: this.bcotAmount
             });
 
-            // Make sure that BCOT token sale stock info is updated
-            Catenis.bcotSaleStock.checkBcotSaleStock();
-
             // Make sure that system BCOT token sale stock is properly provisioned
             if (!Catenis.ctnHubNode.checkBcotSaleStockProvision()) {
                 // Check if system funding balance is still within safe limits

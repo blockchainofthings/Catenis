@@ -1172,6 +1172,9 @@ Client.prototype.redeemBcot = function (purchaseCodes) {
                 // Mark purchased BCOT products as redeemed
                 BcotSaleAllocation.setBcotRedeemed(redeemBcotInfo, this.clientId, redeemBcotTransact.txid);
 
+                // Make sure that BCOT token sale stock info is updated
+                Catenis.bcotSaleStock.checkBcotSaleStock();
+
                 // Credit client's service account
                 ServiceAccount.CreditServiceAccount(redeemBcotTransact);
 
