@@ -947,38 +947,42 @@ function handleNewTransactions(data) {
                             const eventData = {
                                 txid: doc.txid
                             };
+                            const txInfo = getDocTxInfo(doc);
 
-                            if (doc.type === Transaction.type.credit_service_account.name) {
-                                const txInfo = doc.info[Transaction.type.credit_service_account.dbInfoEntryName];
+                            switch (doc.type) {
+                                case Transaction.type.credit_service_account.name:
+                                    eventData.clientId = txInfo.clientId;
+                                    eventData.issuedAmount = txInfo.issuedAmount;
+                                    
+                                    break;
+                                    
+                                case Transaction.type.send_message.name:
+                                    eventData.originDeviceId = txInfo.originDeviceId;
+                                    eventData.targetDeviceId = txInfo.targetDeviceId;
 
-                                eventData.clientId = txInfo.clientId;
-                                eventData.issuedAmount = txInfo.issuedAmount;
-                            }
-                            else if (doc.type === Transaction.type.send_message.name) {
-                                const txInfo = doc.info[Transaction.type.send_message.dbInfoEntryName];
+                                    break;
+                                    
+                                case Transaction.type.read_confirmation.name:
+                                    eventData.spentReadConfirmTxOuts = spentReadConfirmTxOuts;
+                                    
+                                    break;
+                                    
+                                case Transaction.type.issue_asset.name:
+                                    eventData.assetId = txInfo.assetId;
+                                    eventData.issuingDeviceId = txInfo.issuingDeviceId;
+                                    eventData.holdingDeviceId = txInfo.holdingDeviceId;
+                                    eventData.amount = txInfo.amount;
+                                    
+                                    break;
+                                    
+                                case Transaction.type.transfer_asset.name:
+                                    eventData.assetId = txInfo.assetId;
+                                    eventData.sendingDeviceId = txInfo.sendingDeviceId;
+                                    eventData.receivingDeviceId = txInfo.receivingDeviceId;
+                                    eventData.amount = txInfo.amount;
+                                    eventData.changeAmount = txInfo.changeAmount;
 
-                                eventData.originDeviceId = txInfo.originDeviceId;
-                                eventData.targetDeviceId = txInfo.targetDeviceId;
-                            }
-                            else if (doc.type === Transaction.type.read_confirmation.name) {
-                                eventData.spentReadConfirmTxOuts = spentReadConfirmTxOuts;
-                            }
-                            else if (doc.type === Transaction.type.issue_asset.name) {
-                                const txInfo = doc.info[Transaction.type.issue_asset.dbInfoEntryName];
-
-                                eventData.assetId = txInfo.assetId;
-                                eventData.issuingDeviceId = txInfo.issuingDeviceId;
-                                eventData.holdingDeviceId = txInfo.holdingDeviceId;
-                                eventData.amount = txInfo.amount;
-                            }
-                            else if (doc.type === Transaction.type.transfer_asset.name) {
-                                const txInfo = doc.info[Transaction.type.transfer_asset.dbInfoEntryName];
-
-                                eventData.assetId = txInfo.assetId;
-                                eventData.sendingDeviceId = txInfo.sendingDeviceId;
-                                eventData.receivingDeviceId = txInfo.receivingDeviceId;
-                                eventData.amount = txInfo.amount;
-                                eventData.changeAmount = txInfo.changeAmount;
+                                    break;
                             }
 
                             eventsToEmit.push({
@@ -1498,6 +1502,10 @@ TransactionMonitor.notifyEvent = Object.freeze({
         name: 'spend_service_credit_tx_conf',
         description: 'Transaction used to spend an amount of Catenis service credits from a client\'s service account to pay for a service has been confirmed'
     }),
+    send_message_tx_conf: Object.freeze({
+        name: 'send_message_tx_conf',
+        description: 'Transaction used to send data message between devices has been confirmed'
+    }),
     read_confirmation_tx_conf: Object.freeze({
         name: 'read_confirmation_tx_conf',
         description: 'Transaction sent for marking and notifying that send message transactions have already been read has been confirmed'
@@ -1569,129 +1577,58 @@ function processConfirmedSentTransactions(doc, eventsToEmit) {
             Catenis.logger.ERROR('Could not get notification event from funding transaction event', {fundingEvent: doc.info.funding.event.name});
         }
     }
-    else if (doc.type === Transaction.type.store_bcot.name) {
-        // Prepare to emit event notifying of confirmation of credit service account transaction
+    else {
+        // Prepare to emit event notifying of transaction confirmed
         const notifyEvent = getTxConfNotifyEventFromTxType(doc.type);
 
         if (notifyEvent) {
-            const txInfo = doc.info[Transaction.type.store_bcot.dbInfoEntryName];
+            const eventData = {
+                txid: doc.txid
+            };
+            const txInfo = getDocTxInfo(doc);
+
+            switch (doc.type) {
+                case Transaction.type.store_bcot.name:
+                    eventData.storedAmount = txInfo.storedAmount;
+                    
+                    break;
+
+                case Transaction.type.credit_service_account.name:
+                    eventData.clientId = txInfo.clientId;
+                    eventData.issuedAmount = txInfo.issuedAmount;
+                    
+                    break;
+
+                case Transaction.type.spend_service_credit.name:
+                    eventData.serviceTxids = txInfo.serviceTxids;
+
+                    break;
+
+                case Transaction.type.read_confirmation.name:
+
+                    break;
+
+                case Transaction.type.issue_asset.name:
+                    eventData.assetId = txInfo.assetId;
+                    eventData.issuingDeviceId = txInfo.issuingDeviceId;
+                    eventData.holdingDeviceId = txInfo.holdingDeviceId;
+                    eventData.amount = txInfo.amount;
+
+                    break;
+
+                case Transaction.type.transfer_asset.name:
+                    eventData.assetId = txInfo.assetId;
+                    eventData.sendingDeviceId = txInfo.sendingDeviceId;
+                    eventData.receivingDeviceId = txInfo.receivingDeviceId;
+                    eventData.amount = txInfo.amount;
+                    eventData.changeAmount = txInfo.changeAmount;
+
+                    break;
+            }
 
             eventsToEmit.push({
                 name: notifyEvent.name,
-                data: {
-                    txid: doc.txid,
-                    storedAmount: txInfo.storedAmount
-                }
-            });
-        }
-        else {
-            // Could not get notification event from transaction type.
-            //  Log error condition
-            Catenis.logger.ERROR('Could not get notification event from transaction type', {txType: doc.type});
-        }
-    }
-    else if (doc.type === Transaction.type.credit_service_account.name) {
-        // Prepare to emit event notifying of confirmation of credit service account transaction
-        const notifyEvent = getTxConfNotifyEventFromTxType(doc.type);
-
-        if (notifyEvent) {
-            const txInfo = doc.info[Transaction.type.credit_service_account.dbInfoEntryName];
-
-            eventsToEmit.push({
-                name: notifyEvent.name,
-                data: {
-                    txid: doc.txid,
-                    clientId: txInfo.clientId,
-                    issuedAmount: txInfo.issuedAmount
-                }
-            });
-        }
-        else {
-            // Could not get notification event from transaction type.
-            //  Log error condition
-            Catenis.logger.ERROR('Could not get notification event from transaction type', {txType: doc.type});
-        }
-    }
-    else if (doc.type === Transaction.type.spend_service_credit.name) {
-        // Prepare to emit event notifying of confirmation of spend service credit transaction
-        const notifyEvent = getTxConfNotifyEventFromTxType(doc.type);
-
-        if (notifyEvent) {
-            const txInfo = doc.info[Transaction.type.spend_service_credit.dbInfoEntryName];
-
-            eventsToEmit.push({
-                name: notifyEvent.name,
-                data: {
-                    txid: doc.txid,
-                    serviceTxids: txInfo.serviceTxids
-                }
-            });
-        }
-        else {
-            // Could not get notification event from transaction type.
-            //  Log error condition
-            Catenis.logger.ERROR('Could not get notification event from transaction type', {txType: doc.type});
-        }
-    }
-    else if (doc.type === Transaction.type.read_confirmation.name) {
-        // Prepare to emit event notifying of confirmation of read confirmation transaction
-        const notifyEvent = getTxConfNotifyEventFromTxType(doc.type);
-
-        if (notifyEvent) {
-            eventsToEmit.push({
-                name: notifyEvent.name,
-                data: {
-                    txid: doc.txid
-                }
-            });
-        }
-        else {
-            // Could not get notification event from transaction type.
-            //  Log error condition
-            Catenis.logger.ERROR('Could not get notification event from transaction type', {txType: doc.type});
-        }
-    }
-    else if (doc.type === Transaction.type.issue_asset.name) {
-        // Prepare to emit event notifying of confirmation of issue asset transaction
-        const notifyEvent = getTxConfNotifyEventFromTxType(doc.type);
-
-        if (notifyEvent) {
-            const txInfo = doc.info[Transaction.type[doc.type].dbInfoEntryName];
-
-            eventsToEmit.push({
-                name: notifyEvent.name,
-                data: {
-                    txid: doc.txid,
-                    assetId: txInfo.assetId,
-                    issuingDeviceId: txInfo.issuingDeviceId,
-                    holdingDeviceId: txInfo.holdingDeviceId,
-                    amount: txInfo.amount
-                }
-            });
-        }
-        else {
-            // Could not get notification event from transaction type.
-            //  Log error condition
-            Catenis.logger.ERROR('Could not get notification event from transaction type', {txType: doc.type});
-        }
-    }
-    else if (doc.type === Transaction.type.transfer_asset.name) {
-        // Prepare to emit event notifying of confirmation of transfer asset transaction
-        const notifyEvent = getTxConfNotifyEventFromTxType(doc.type);
-
-        if (notifyEvent) {
-            const txInfo = doc.info[Transaction.type[doc.type].dbInfoEntryName];
-
-            eventsToEmit.push({
-                name: notifyEvent.name,
-                data: {
-                    txid: doc.txid,
-                    assetId: txInfo.assetId,
-                    sendingDeviceId: txInfo.sendingDeviceId,
-                    receivingDeviceId: txInfo.receivingDeviceId,
-                    amount: txInfo.amount,
-                    changeAmount: txInfo.changeAmount
-                }
+                data: eventData
             });
         }
         else {
@@ -1703,39 +1640,41 @@ function processConfirmedSentTransactions(doc, eventsToEmit) {
 }
 
 function processConfirmedReceivedTransactions(doc, eventsToEmit) {
-    if (doc.type === Transaction.type.sys_funding.name) {
-        // Prepare to emit event notifying of confirmation of system funding transaction
-        eventsToEmit.push({
-            name: TransactionMonitor.notifyEvent.sys_funding_tx_conf.name,
-            data: {
-                txid: doc.txid
-            }
-        });
-    }
-    else if (doc.type === Transaction.type.bcot_payment.name) {
-        // Prepare to emit event notifying of confirmation of BCOT payment transaction
-        const txInfo = doc.info[Transaction.type.bcot_payment.dbInfoEntryName];
+    // Prepare to emit event notifying of transaction confirmed
+    const notifyEvent = getTxConfNotifyEventFromTxType(doc.type);
+
+    if (notifyEvent) {
+        const eventData = {
+            txid: doc.txid
+        };
+        const txInfo = getDocTxInfo(doc);
+
+        switch (doc.type) {
+            case Transaction.type.sys_funding.name:
+
+                break;
+
+            case Transaction.type.bcot_payment.name:
+                eventData.clientId = txInfo.clientId;
+                eventData.paidAmount = txInfo.paidAmount;
+
+                break;
+
+            case Transaction.type.bcot_replenishment.name:
+                eventData.replenishedAmount = txInfo.replenishedAmount;
+
+                break;
+        }
 
         eventsToEmit.push({
-            name: TransactionMonitor.notifyEvent.bcot_payment_tx_conf.name,
-            data: {
-                txid: doc.txid,
-                clientId: txInfo.clientId,
-                paidAmount: txInfo.paidAmount
-            }
+            name: notifyEvent.name,
+            data: eventData
         });
     }
-    else if (doc.type === Transaction.type.bcot_replenishment.name) {
-        // Prepare to emit event notifying of confirmation of BCOT replenishment transaction
-        const txInfo = doc.info[Transaction.type.bcot_replenishment.dbInfoEntryName];
-
-        eventsToEmit.push({
-            name: TransactionMonitor.notifyEvent.bcot_replenishment_tx_conf.name,
-            data: {
-                txid: doc.txid,
-                replenishedAmount: txInfo.replenishedAmount
-            }
-        });
+    else {
+        // Could not get notification event from transaction type.
+        //  Log error condition
+        Catenis.logger.ERROR('Could not get notification event from transaction type', {txType: doc.type});
     }
 }
 
@@ -1755,6 +1694,10 @@ function getTxRcvdNotifyEventFromTxType(txTypeName) {
     const notifyEventName = txTypeName + '_tx_rcvd';
 
     return TransactionMonitor.notifyEvent[notifyEventName];
+}
+
+function getDocTxInfo(doc) {
+    return doc.info[Transaction.type[doc.type].dbInfoEntryName];
 }
 
 function parseTxVouts(txDetails) {
