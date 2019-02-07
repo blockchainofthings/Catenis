@@ -1593,6 +1593,11 @@ function processConfirmedSentTransactions(doc, eventsToEmit) {
                     
                     break;
 
+                case Transaction.type.redeem_bcot.name:
+                    eventData.redeemedAmount = txInfo.redeemedAmount;
+
+                    break;
+
                 case Transaction.type.credit_service_account.name:
                     eventData.clientId = txInfo.clientId;
                     eventData.issuedAmount = txInfo.issuedAmount;

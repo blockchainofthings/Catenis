@@ -74,6 +74,7 @@ import { ClientServiceBillingUI } from './clientUI/ClientServiceBillingUI';
 import { AdminAccountUI } from './adminUI/AdminAccountUI';
 import { BcotReplenishment } from './BcotReplenishment';
 import { StoreBcot } from './StoreBcot';
+import { RedeemBcot } from './RedeemBcot';
 import { BcotSaleStock } from './BcotSaleStock';
 import { BcotProductsUI } from './adminUI/BcotProductsUI';
 import { BcotSaleAllocationUI } from './adminUI/BcotSaleAllocationUI';
@@ -164,6 +165,7 @@ Meteor.startup(function () {
         BcotPayment.initialize();
         BcotReplenishment.initialize();
         StoreBcot.initialize();
+        RedeemBcot.initialize();
         ReceiveMessage.initialize();
         ReadConfirmation.initialize();
         ReceiveAsset.initialize();
