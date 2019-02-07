@@ -47,7 +47,7 @@ const periods = {
     last_month: {
         label: 'Last month',
         getStartDate: () => moment().add(-1, 'M').startOf('month').toISOString(),
-        getEndDate: () => moment().add(-1, 'M').endOf('month')
+        getEndDate: () => moment().add(-1, 'M').endOf('month').toISOString()
     },
     last_2_months: {
         label: 'Last 2 months',
@@ -77,7 +77,7 @@ const periods = {
     last_year: {
         label: 'Last year',
         getStartDate: () => moment().add(-1, 'y').startOf('year').toISOString(),
-        getEndDate: () => moment().add(-1, 'y').endOf('year')
+        getEndDate: () => moment().add(-1, 'y').endOf('year').toISOString()
     },
     custom: {
         label: 'Custom'
