@@ -26,6 +26,9 @@ import './ClientApiAccessTemplate.html';
 
 // Import dependent templates
 
+// Module variables
+const confirmPhrase = 'yes, i do confirm it';
+
 
 // Definition of module (private) functions
 //
@@ -118,10 +121,23 @@ Template.clientApiAccess.events({
 
         return false;
     },
-    'change #itxActionConfirmation'(event, template) {
-        if (event.target.value.trim().toLowerCase() === 'yes, i do confirm it') {
-            // Show button to reset API access secret
+    'input #itxActionConfirmation'(event, template) {
+        // Suppress spaces from beginning of input
+        let inputValue = event.target.value = event.target.value.replace(/^\s+/, '');
+
+        if (inputValue.length > confirmPhrase.length) {
+            // Limit length of input
+            inputValue = event.target.value = inputValue.substring(0, confirmPhrase.length);
+        }
+
+        // Check if input matches confirmation phrase
+        if (inputValue.toLowerCase() === confirmPhrase) {
+            // Show button to confirm action
             template.state.set('displayResetApiAccessSecretButton', 'inline');
+        }
+        else {
+            // Hide button to confirm action
+            template.state.set('displayResetApiAccessSecretButton', 'none');
         }
     },
     'submit #formClientApiAccessSecret'(event, template) {

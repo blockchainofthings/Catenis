@@ -33,6 +33,9 @@ import './EditClientTemplate.js';
 import './ServiceAccountTemplate.js';
 import './DevicesTemplate.js';
 
+// Module variables
+const confirmPhrase = 'yes, i do confirm it';
+
 
 // Definition of module (private) functions
 //
@@ -114,10 +117,23 @@ Template.clientDetails.events({
         //  activate modal panel is not selected
         $('#btnResendEnrollment').blur();
     },
-    'change #itxResendEnrollmentConfirmation'(event, template) {
-        if (event.target.value.trim().toLowerCase() === 'yes, i do confirm it') {
+    'input #itxResendEnrollmentConfirmation'(event, template) {
+        // Suppress spaces from beginning of input
+        let inputValue = event.target.value = event.target.value.replace(/^\s+/, '');
+
+        if (inputValue.length > confirmPhrase.length) {
+            // Limit length of input
+            inputValue = event.target.value = inputValue.substring(0, confirmPhrase.length);
+        }
+
+        // Check if input matches confirmation phrase
+        if (inputValue.toLowerCase() === confirmPhrase) {
             // Show button to confirm action
             template.state.set('displayResendEnrollmentSubmitButton', 'inline');
+        }
+        else {
+            // Hide button to confirm action
+            template.state.set('displayResendEnrollmentSubmitButton', 'none');
         }
     },
     'submit #frmResendEnrollment'(event, template) {
@@ -172,10 +188,23 @@ Template.clientDetails.events({
         //  activate modal panel is not selected
         $('#btnResetPassword').blur();
     },
-    'change #itxResetPasswordConfirmation'(event, template) {
-        if (event.target.value.trim().toLowerCase() === 'yes, i do confirm it') {
+    'input #itxResetPasswordConfirmation'(event, template) {
+        // Suppress spaces from beginning of input
+        let inputValue = event.target.value = event.target.value.replace(/^\s+/, '');
+
+        if (inputValue.length > confirmPhrase.length) {
+            // Limit length of input
+            inputValue = event.target.value = inputValue.substring(0, confirmPhrase.length);
+        }
+
+        // Check if input matches confirmation phrase
+        if (inputValue.toLowerCase() === confirmPhrase) {
             // Show button to confirm action
             template.state.set('displayResetPasswordSubmitButton', 'inline');
+        }
+        else {
+            // Hide button to confirm action
+            template.state.set('displayResetPasswordSubmitButton', 'none');
         }
     },
     'submit #frmResetPassword'(event, template) {
@@ -269,10 +298,23 @@ Template.clientDetails.events({
 
         return false;
     },
-    'change #itxActionConfirmation'(event, template) {
-        if (event.target.value.trim().toLowerCase() === 'yes, i do confirm it') {
-            // Show button to reset API access secret
+    'input #itxActionConfirmation'(event, template) {
+        // Suppress spaces from beginning of input
+        let inputValue = event.target.value = event.target.value.replace(/^\s+/, '');
+
+        if (inputValue.length > confirmPhrase.length) {
+            // Limit length of input
+            inputValue = event.target.value = inputValue.substring(0, confirmPhrase.length);
+        }
+
+        // Check if input matches confirmation phrase
+        if (inputValue.toLowerCase() === confirmPhrase) {
+            // Show button to confirm action
             template.state.set('displayResetApiAccessSecretButton', 'inline');
+        }
+        else {
+            // Hide button to confirm action
+            template.state.set('displayResetApiAccessSecretButton', 'none');
         }
     },
     'submit #formClientApiAccessSecret'(event, template) {
@@ -330,10 +372,23 @@ Template.clientDetails.events({
         //  activate modal panel is not selected
         $('#btnDeleteClient').blur();
     },
-    'change #itxDeleteClientConfirmation'(event, template) {
-        if (event.target.value.trim().toLowerCase() === 'yes, i do confirm it') {
+    'input #itxDeleteClientConfirmation'(event, template) {
+        // Suppress spaces from beginning of input
+        let inputValue = event.target.value = event.target.value.replace(/^\s+/, '');
+
+        if (inputValue.length > confirmPhrase.length) {
+            // Limit length of input
+            inputValue = event.target.value = inputValue.substring(0, confirmPhrase.length);
+        }
+
+        // Check if input matches confirmation phrase
+        if (inputValue.toLowerCase() === confirmPhrase) {
             // Show button to confirm action
             template.state.set('displayDeleteClientSubmitButton', 'inline');
+        }
+        else {
+            // Hide button to confirm action
+            template.state.set('displayDeleteClientSubmitButton', 'none');
         }
     },
     'submit #frmDeleteClient'(event, template) {

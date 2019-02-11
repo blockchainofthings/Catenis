@@ -33,6 +33,7 @@ import querystring from "querystring";
 
 // Module variables
 const minValidityDays = 7;
+const confirmPhrase = 'yes, i do confirm it';
 
 
 // Definition of module (private) functions
@@ -213,10 +214,23 @@ Template.clientLicenses.events({
         //  activate modal panel is not selected
         $('#btnAddClientLicense').blur();
     },
-    'change #itxAddConfirmation'(event, template) {
-        if (event.target.value.trim().toLowerCase() === 'yes, i do confirm it') {
+    'input #itxAddConfirmation'(event, template) {
+        // Suppress spaces from beginning of input
+        let inputValue = event.target.value = event.target.value.replace(/^\s+/, '');
+
+        if (inputValue.length > confirmPhrase.length) {
+            // Limit length of input
+            inputValue = event.target.value = inputValue.substring(0, confirmPhrase.length);
+        }
+
+        // Check if input matches confirmation phrase
+        if (inputValue.toLowerCase() === confirmPhrase) {
             // Show button to confirm action
             template.state.set('displayAddLicenseSubmitButton', 'inline');
+        }
+        else {
+            // Hide button to confirm action
+            template.state.set('displayAddLicenseSubmitButton', 'none');
         }
     },
     'click #btnCancelAddLicenseConfirm'(event, template) {

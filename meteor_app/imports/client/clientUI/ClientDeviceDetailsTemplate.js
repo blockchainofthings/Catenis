@@ -28,6 +28,9 @@ import './ClientDeviceDetailsTemplate.html';
 // Import dependent templates
 import './ClientEditDeviceTemplate.js';
 
+// Module variables
+const confirmPhrase = 'yes, i do confirm it';
+
 
 // Definition of module (private) functions
 //
@@ -130,10 +133,23 @@ Template.clientDeviceDetails.events({
 
         return false;
     },
-    'change #itxResetApitAccessSecretConfirmation'(event, template) {
-        if (event.target.value.trim().toLowerCase() === 'yes, i do confirm it') {
-            // Show button to reset API access secret
+    'input #itxResetApitAccessSecretConfirmation'(event, template) {
+        // Suppress spaces from beginning of input
+        let inputValue = event.target.value = event.target.value.replace(/^\s+/, '');
+
+        if (inputValue.length > confirmPhrase.length) {
+            // Limit length of input
+            inputValue = event.target.value = inputValue.substring(0, confirmPhrase.length);
+        }
+
+        // Check if input matches confirmation phrase
+        if (inputValue.toLowerCase() === confirmPhrase) {
+            // Show button to confirm action
             template.state.set('displayResetApiAccessSecretButton', 'inline');
+        }
+        else {
+            // Hide button to confirm action
+            template.state.set('displayResetApiAccessSecretButton', 'none');
         }
     },
     'submit #frmDeviceApiAccessSecret'(event, template) {
@@ -185,10 +201,23 @@ Template.clientDeviceDetails.events({
         //  activate modal panel is not selected
         $('#btnDeactivateDevice').blur();
     },
-    'change #itxDeactivateDeviceConfirmation'(event, template) {
-        if (event.target.value.trim().toLowerCase() === 'yes, i do confirm it') {
+    'input #itxDeactivateDeviceConfirmation'(event, template) {
+        // Suppress spaces from beginning of input
+        let inputValue = event.target.value = event.target.value.replace(/^\s+/, '');
+
+        if (inputValue.length > confirmPhrase.length) {
+            // Limit length of input
+            inputValue = event.target.value = inputValue.substring(0, confirmPhrase.length);
+        }
+
+        // Check if input matches confirmation phrase
+        if (inputValue.toLowerCase() === confirmPhrase) {
             // Show button to confirm action
             template.state.set('displayDeactivateDeviceSubmitButton', 'inline');
+        }
+        else {
+            // Hide button to confirm action
+            template.state.set('displayDeactivateDeviceSubmitButton', 'none');
         }
     },
     'submit #frmDeactivateDevice'(event, template) {
@@ -232,10 +261,23 @@ Template.clientDeviceDetails.events({
         //  activate modal panel is not selected
         $('#btnActivateDevice').blur();
     },
-    'change #itxActivateDeviceConfirmation'(event, template) {
-        if (event.target.value.trim().toLowerCase() === 'yes, i do confirm it') {
+    'input #itxActivateDeviceConfirmation'(event, template) {
+        // Suppress spaces from beginning of input
+        let inputValue = event.target.value = event.target.value.replace(/^\s+/, '');
+
+        if (inputValue.length > confirmPhrase.length) {
+            // Limit length of input
+            inputValue = event.target.value = inputValue.substring(0, confirmPhrase.length);
+        }
+
+        // Check if input matches confirmation phrase
+        if (inputValue.toLowerCase() === confirmPhrase) {
             // Show button to confirm action
             template.state.set('displayActivateDeviceSubmitButton', 'inline');
+        }
+        else {
+            // Hide button to confirm action
+            template.state.set('displayActivateDeviceSubmitButton', 'none');
         }
     },
     'submit #frmActivateDevice'(event, template) {
@@ -279,10 +321,23 @@ Template.clientDeviceDetails.events({
         //  activate modal panel is not selected
         $('#btnDeleteDevice').blur();
     },
-    'change #itxDeleteDeviceConfirmation'(event, template) {
-        if (event.target.value.trim().toLowerCase() === 'yes, i do confirm it') {
+    'input #itxDeleteDeviceConfirmation'(event, template) {
+        // Suppress spaces from beginning of input
+        let inputValue = event.target.value = event.target.value.replace(/^\s+/, '');
+
+        if (inputValue.length > confirmPhrase.length) {
+            // Limit length of input
+            inputValue = event.target.value = inputValue.substring(0, confirmPhrase.length);
+        }
+
+        // Check if input matches confirmation phrase
+        if (inputValue.toLowerCase() === confirmPhrase) {
             // Show button to confirm action
             template.state.set('displayDeleteDeviceSubmitButton', 'inline');
+        }
+        else {
+            // Hide button to confirm action
+            template.state.set('displayDeleteDeviceSubmitButton', 'none');
         }
     },
     'submit #frmDeleteDevice'(event, template) {

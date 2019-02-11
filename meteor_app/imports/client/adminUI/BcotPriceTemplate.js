@@ -27,6 +27,9 @@ import './BcotPriceTemplate.html';
 
 // Import dependent templates
 
+// Module variables
+const confirmPhrase = 'yes, i do confirm it';
+
 
 // Definition of module (private) functions
 //
@@ -150,10 +153,23 @@ Template.bcotPrice.events({
         //  activate modal panel is not selected
         $('#btnUpdatePrice').blur();
     },
-    'change #itxUpdatePriceConfirmation'(event, template) {
-        if (event.target.value.trim().toLowerCase() === 'yes, i do confirm it') {
+    'input #itxUpdatePriceConfirmation'(event, template) {
+        // Suppress spaces from beginning of input
+        let inputValue = event.target.value = event.target.value.replace(/^\s+/, '');
+
+        if (inputValue.length > confirmPhrase.length) {
+            // Limit length of input
+            inputValue = event.target.value = inputValue.substring(0, confirmPhrase.length);
+        }
+
+        // Check if input matches confirmation phrase
+        if (inputValue.toLowerCase() === confirmPhrase) {
             // Show button to confirm action
             template.state.set('displayUpdatePriceSubmitButton', 'inline');
+        }
+        else {
+            // Hide button to confirm action
+            template.state.set('displayUpdatePriceSubmitButton', 'none');
         }
     },
     'click #btnCancelUpdatePriceConfirm'(event, template) {

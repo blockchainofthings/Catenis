@@ -29,7 +29,9 @@ import './BcotSaleAllocationsTemplate.html';
 // Import dependent templates
 import './BcotSaleAllocationDetailsTemplate.js';
 
+// Module variables
 const defaultProductRows = [1, 2, 3, 4, 5];
+const confirmPhrase = 'yes, i do confirm it';
 
 
 // Definition of module (private) functions
@@ -198,10 +200,23 @@ Template.bcotSaleAllocations.events({
         //  activate modal panel is not selected
         $('#btnCreateAllocation').blur();
     },
-    'change #itxCreateAllocationConfirmation'(event, template) {
-        if (event.target.value.trim().toLowerCase() === 'yes, i do confirm it') {
+    'input #itxCreateAllocationConfirmation'(event, template) {
+        // Suppress spaces from beginning of input
+        let inputValue = event.target.value = event.target.value.replace(/^\s+/, '');
+
+        if (inputValue.length > confirmPhrase.length) {
+            // Limit length of input
+            inputValue = event.target.value = inputValue.substring(0, confirmPhrase.length);
+        }
+
+        // Check if input matches confirmation phrase
+        if (inputValue.toLowerCase() === confirmPhrase) {
             // Show button to confirm action
             template.state.set('displayCreateAllocationSubmitButton', 'inline');
+        }
+        else {
+            // Hide button to confirm action
+            template.state.set('displayCreateAllocationSubmitButton', 'none');
         }
     },
     'click #btnCancelCreateAllocationConfirm'(event, template) {

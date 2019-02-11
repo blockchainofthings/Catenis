@@ -29,6 +29,9 @@ import './ClientLicenseDetailsTemplate.html';
 
 // Import dependent templates
 
+// Module variables
+const confirmPhrase = 'yes, i do confirm it';
+
 
 // Definition of module (private) functions
 //
@@ -195,10 +198,23 @@ Template.clientLicenseDetails.events({
         //  activate modal panel is not selected
         $('#btnRenewLicense').blur();
     },
-    'change #itxRenewConfirmation'(event, template) {
-        if (event.target.value.trim().toLowerCase() === 'yes, i do confirm it') {
+    'input #itxRenewConfirmation'(event, template) {
+        // Suppress spaces from beginning of input
+        let inputValue = event.target.value = event.target.value.replace(/^\s+/, '');
+
+        if (inputValue.length > confirmPhrase.length) {
+            // Limit length of input
+            inputValue = event.target.value = inputValue.substring(0, confirmPhrase.length);
+        }
+
+        // Check if input matches confirmation phrase
+        if (inputValue.toLowerCase() === confirmPhrase) {
             // Show button to confirm action
             template.state.set('displayRenewLicenseSubmitButton', 'inline');
+        }
+        else {
+            // Hide button to confirm action
+            template.state.set('displayRenewLicenseSubmitButton', 'none');
         }
     },
     'hidden.bs.modal #divUpgradeClientLicense'(events, template) {
@@ -206,10 +222,23 @@ Template.clientLicenseDetails.events({
         //  activate modal panel is not selected
         $('#btnUpgradeLicense').blur();
     },
-    'change #itxUpgradeConfirmation'(event, template) {
-        if (event.target.value.trim().toLowerCase() === 'yes, i do confirm it') {
+    'input #itxUpgradeConfirmation'(event, template) {
+        // Suppress spaces from beginning of input
+        let inputValue = event.target.value = event.target.value.replace(/^\s+/, '');
+
+        if (inputValue.length > confirmPhrase.length) {
+            // Limit length of input
+            inputValue = event.target.value = inputValue.substring(0, confirmPhrase.length);
+        }
+
+        // Check if input matches confirmation phrase
+        if (inputValue.toLowerCase() === confirmPhrase) {
             // Show button to confirm action
             template.state.set('displayUpgradeLicenseSubmitButton', 'inline');
+        }
+        else {
+            // Hide button to confirm action
+            template.state.set('displayUpgradeLicenseSubmitButton', 'none');
         }
     },
     'hidden.bs.modal #divExpireClientLicense'(events, template) {
@@ -217,10 +246,23 @@ Template.clientLicenseDetails.events({
         //  activate modal panel is not selected
         $('#btnExpireLicense').blur();
     },
-    'change #itxExpireConfirmation'(event, template) {
-        if (event.target.value.trim().toLowerCase() === 'yes, i do confirm it') {
+    'input #itxExpireConfirmation'(event, template) {
+        // Suppress spaces from beginning of input
+        let inputValue = event.target.value = event.target.value.replace(/^\s+/, '');
+
+        if (inputValue.length > confirmPhrase.length) {
+            // Limit length of input
+            inputValue = event.target.value = inputValue.substring(0, confirmPhrase.length);
+        }
+
+        // Check if input matches confirmation phrase
+        if (inputValue.toLowerCase() === confirmPhrase) {
             // Show button to confirm action
             template.state.set('displayExpireLicenseSubmitButton', 'inline');
+        }
+        else {
+            // Hide button to confirm action
+            template.state.set('displayExpireLicenseSubmitButton', 'none');
         }
     },
     'click #btnCancelRenewLicenseConfirm'(event, template) {
