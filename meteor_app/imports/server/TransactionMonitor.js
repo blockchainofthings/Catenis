@@ -1506,6 +1506,10 @@ TransactionMonitor.notifyEvent = Object.freeze({
         name: 'send_message_tx_conf',
         description: 'Transaction used to send data message between devices has been confirmed'
     }),
+    log_message_tx_conf: Object.freeze({
+        name: 'log_message_tx_conf',
+        description: 'Transaction used to log data message has been confirmed'
+    }),
     read_confirmation_tx_conf: Object.freeze({
         name: 'read_confirmation_tx_conf',
         description: 'Transaction sent for marking and notifying that send message transactions have already been read has been confirmed'
