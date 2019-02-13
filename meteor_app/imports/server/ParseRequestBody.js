@@ -12,6 +12,7 @@
 // Internal node modules
 //import util from 'util';
 // Third-party node modules
+import config from 'config';
 import bodyParser from 'body-parser';
 // Meteor packages
 import { WebApp } from 'meteor/webapp';
@@ -20,12 +21,23 @@ import { WebApp } from 'meteor/webapp';
 import { Catenis } from './Catenis';
 import { restApiRootPath } from './RestApi';
 
+// Config entries
+const parseReqBodyConfig = config.get('parseRequestBody');
+
+// Configuration settings
+const cfgSettings = {
+    maxFileSizeMB: parseReqBodyConfig.get('maxFileSizeMB'),
+    fileHeaderSize: parseReqBodyConfig.get('fileHeaderSize'),
+    msgApiMethodOverhead: parseReqBodyConfig.get('msgApiMethodOverhead'),
+    bodySizeLimitSafetyFactor: parseReqBodyConfig.get('bodySizeLimitSafetyFactor')
+};
+
 
 // Definition of function classes
 //
 
 // ParseRequestBody function class
-function ParseRequestBody() {
+export function ParseRequestBody() {
 }
 
 
@@ -36,7 +48,8 @@ function ParseRequestBody() {
 //  as a JSON but still preserve the raw body contents which is required for authenticating
 //  the request.
 ParseRequestBody.parser = function (req, res, next) {
-    ParseRequestBody.rawBody.parser = ParseRequestBody.rawBody.parser || bodyParser.raw({limit: '50mb', type: 'application/json'});
+    ParseRequestBody.rawBody.limit = ParseRequestBody.rawBody.limit || calculateBodySizeLimit();
+    ParseRequestBody.rawBody.parser = ParseRequestBody.rawBody.parser || bodyParser.raw({limit: ParseRequestBody.rawBody.limit, type: 'application/json'});
 
     // Get raw body
     ParseRequestBody.rawBody.parser(req, res, (err) => {
@@ -82,6 +95,7 @@ ParseRequestBody.parser = function (req, res, next) {
 //
 
 ParseRequestBody.rawBody = {
+    limit: undefined,
     parser: undefined
 };
 
@@ -96,6 +110,24 @@ function sendError(res, errMsg, statusCode) {
         status: 'error',
         message: errMsg
     }));
+}
+
+function calculateBodySizeLimit() {
+    let extraBytes = cfgSettings.fileHeaderSize + cfgSettings.msgApiMethodOverhead;
+
+    // Round it up to next power of 2
+    extraBytes = Math.pow(2, Math.ceil(Math.log(extraBytes) / Math.log(2)));
+
+    let lenFileContents = cfgSettings.maxFileSizeMB * 1024 * 1024;
+
+    // Calculate final file contents length when using base-64 encoding
+    lenFileContents = Math.ceil((lenFileContents / 3) * 4);
+
+    // Calculate total size in MB
+    const totalMBytes = Math.ceil((lenFileContents + extraBytes) / (1024 * 1024));
+
+    // Apply safety factor and return size limit
+    return Math.ceil(totalMBytes * (1 + cfgSettings.bodySizeLimitSafetyFactor)) + 'mb';
 }
 
 
