@@ -30,6 +30,7 @@
   // Parameters pertaining to logging mechanism
   "logging": {
     "exitOnError": true,
+    "objInspectionDepth": 4,
     "console": {
       "active": true,
       "logLevel": "INFO" // Valid options: ALL, TRACE, DEBUG, INFO, WARN, ACTION, ERROR, FATAL
@@ -38,7 +39,7 @@
       "active": true,
       "logLevel": "DEBUG", // Valid options: ALL, TRACE, DEBUG, INFO, WARN, ACTION, ERROR, FATAL
       "logDir": "log",
-      "logFilename": "catenis.log",
+      "logFilename": "catenis-%DATE%.log",
       "maxDays": 90
     },
     "email": {

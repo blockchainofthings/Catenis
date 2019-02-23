@@ -40,10 +40,11 @@
     "openssl-wrapper": "^0.3.4",
     "secp256k1": "^2.0.10",
     "stack-trace": "0.0.9",
+    "triple-beam": "^1.3.0",
     "underscore": "^1.8.3",
-    "winston": "^2.4.0",
-    "winston-daily-rotate-file": "^1.7.2",
-    "winston-mail": "^1.3.0",
+    "winston": "^3.2.1",
+    "winston-daily-rotate-file": "^3.7.0",
+    "winston-mail": "^1.5.2",
     "ws": "^3.3.3"
   },
   "repository": "git@bitbucket.org:blockchainofthings/catenis.git"
