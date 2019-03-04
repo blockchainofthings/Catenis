@@ -983,7 +983,7 @@ function licenseExpired(clientLicense_id, client) {
         }
         else {
             // Warn that license has expired
-            Catenis.licExpEmailNtfy.send(clientLicense);
+            Catenis.licExpEmailNtfy.send(expiredClientLicense);
         }
     }
 }
