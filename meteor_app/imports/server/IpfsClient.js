@@ -14,6 +14,7 @@ import util from 'util';
 // Third-party node modules
 import config from 'config';
 import ipfsApi from 'ipfs-api';
+import ipfsHttpClient from 'ipfs-http-client';
 // Meteor packages
 import { Meteor } from 'meteor/meteor';
 
@@ -36,15 +37,16 @@ const cfgSettings = {
 
 // IpfsClient function class
 export function IpfsClient(host, port, protocol) {
-    this.ipfs = ipfsApi({
+    this.ipfs = ipfsHttpClient({
         host: host,
         port: port,
         protocol: protocol
     });
 
     this.api = {
-        filesAdd: Meteor.wrapAsync(this.ipfs.files.add, this.ipfs.files),
-        filesCat: Meteor.wrapAsync(this.ipfs.files.cat, this.ipfs.files),
+        add: Meteor.wrapAsync(this.ipfs.add, this.ipfs),
+        addAsync: this.ipfs.files.add,
+        cat: Meteor.wrapAsync(this.ipfs.cat, this.ipfs),
         id: Meteor.wrapAsync(this.ipfs.id, this.ipfs)
     };
 }
@@ -53,46 +55,39 @@ export function IpfsClient(host, port, protocol) {
 // Public IpfsClient object methods
 //
 
-IpfsClient.prototype.filesAdd = function (data, options) {
+IpfsClient.prototype.add = function (data, options) {
     try {
-        const retResults = this.api.filesAdd(data, options);
-
-        // NOTE: this is a workaround for an issue with IPFS Cluster ver. 0.6.0. This issue
-        //      is expected to be resolved in the next release of IPFS Cluster though
-        return retResults.map((retResult) => {
-            if (retResult.code === 0 && retResult.message === '') {
-                // Extraneous properties added by IPFS Cluster. Fix result
-                const fixedResult = {};
-
-                if (retResult.Name) {
-                    fixedResult.path = retResult.Name;
-                }
-
-                if (retResult.Hash) {
-                    fixedResult.hash = retResult.Hash;
-                }
-
-                if (retResult.Size) {
-                    fixedResult.size = parseInt(retResult.Size);
-                }
-
-                return fixedResult;
-            }
-
-            return retResult;
-        });
+        return fixIpfsClusterAddResults(this.api.add(data, options));
     }
     catch (err) {
-        handleError('files.add', err);
+        handleError('add', err);
     }
 };
 
-IpfsClient.prototype.filesCat = function (ipfsPath) {
+IpfsClient.prototype.addAsync = function (data, options, callback) {
+    if (typeof options === 'function') {
+        // Assume that this is a progress function. Set options accordingly
+        options = {
+            progress: options
+        };
+    }
+
+    this.api.addAsync(data, options, (err, results) => {
+        if (err) {
+            handleError('add', err);
+            return;
+        }
+
+        callback(null, fixIpfsClusterAddResults(results));
+    });
+};
+
+IpfsClient.prototype.cat = function (ipfsPath) {
     try {
-        return this.api.filesCat(ipfsPath);
+        return this.api.cat(ipfsPath);
     }
     catch (err) {
-        handleError('files.cat', err);
+        handleError('cat', err);
     }
 };
 
@@ -135,12 +130,46 @@ IpfsClient.initialize = function () {
 // Definition of module (private) functions
 //
 
-function handleError(methodName, err) {
+function handleError(methodName, err, callback) {
     let errMsg = util.format('Error calling IPFS API \'%s\' method.', methodName);
 
     // Log error and rethrow it
     Catenis.logger.DEBUG(errMsg, err);
-    throw new Meteor.Error('ctn_ipfs_api_error', errMsg, err);
+    const error = new Meteor.Error('ctn_ipfs_api_error', errMsg, err);
+
+    if (callback) {
+        callback(error);
+    }
+    else {
+        throw error;
+    }
+}
+
+// This is a workaround for an issue with IPFS Cluster ver. 0.6.0. This issue
+//  is expected to be resolved in the next release of IPFS Cluster though
+function fixIpfsClusterAddResults(results) {
+    return results.map((result) => {
+        if (result.code === 0 && result.message === '') {
+            // Extraneous properties added by IPFS Cluster. Fix result
+            const fixedResult = {};
+
+            if (result.Name) {
+                fixedResult.path = result.Name;
+            }
+
+            if (result.Hash) {
+                fixedResult.hash = result.Hash;
+            }
+
+            if (result.Size) {
+                fixedResult.size = parseInt(result.Size);
+            }
+
+            return fixedResult;
+        }
+
+        return result;
+    });
 }
 
 

@@ -79,6 +79,7 @@ import { BcotSaleStock } from './BcotSaleStock';
 import { BcotProductsUI } from './adminUI/BcotProductsUI';
 import { BcotSaleAllocationUI } from './adminUI/BcotSaleAllocationUI';
 import { BcotSaleStockUI } from './adminUI/BcotSaleStockUI';
+import { ProvisionalMessage } from './ProvisionalMessage';
 // TEST - begin
 //import { resetBitcoinCore } from './test/FundSourceTest';
 //import { TestCatenisColoredCoins } from './test/TestCatenisColoredCoins';
@@ -144,6 +145,7 @@ Meteor.startup(function () {
         C3NodeClient.initialize();
         Permission.initialize();
         BcotSaleStock.initialize();
+        ProvisionalMessage.initialize();
         CatenisNode.initialize();
 
         Database.addMissingOmniTxValidityField();

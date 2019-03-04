@@ -55,7 +55,7 @@ ParseRequestBody.parser = function (req, res, next) {
     ParseRequestBody.rawBody.parser(req, res, (err) => {
         if (err) {
             Catenis.logger.ERROR('Error parsing request body.', err);
-            sendError(res, 'Error parsing request body');
+            sendParsedError(res, err);
         }
         else {
             if (req._body) {
@@ -74,7 +74,7 @@ ParseRequestBody.parser = function (req, res, next) {
                             sendError(res, 'Request body is not a well-formed JSON', 400);
                         }
                         else {
-                            sendError(res, 'Error parsing request body as JSON');
+                            sendError(res, 'Internal server error');
                         }
                         return;
                     }
@@ -110,6 +110,18 @@ function sendError(res, errMsg, statusCode) {
         status: 'error',
         message: errMsg
     }));
+}
+
+function sendParsedError(res, error) {
+    if ((error instanceof Error) && (typeof error.status === 'number' || typeof error.statusCode === 'number')) {
+        const statusCode = typeof error.status === 'number' ? error.status : error.statusCode;
+        const errMsg = statusCode < 500 ? error.message : 'Internal server error';
+
+        return sendError(res, errMsg, statusCode);
+    }
+    else {
+        return sendError(res, 'Internal server error');
+    }
 }
 
 function calculateBodySizeLimit() {

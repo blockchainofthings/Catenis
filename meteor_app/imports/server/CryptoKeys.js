@@ -23,6 +23,8 @@ import { Meteor } from 'meteor/meteor';
 
 // References code in other (Catenis) modules
 import { Catenis } from './Catenis';
+import { ECCipher } from './ECCipher';
+import { ECDecipher } from './ECDecipher';
 
 // Initialization vector - generated as: crypto.randomBytes(16).toJSON()
 const iv = [128,54,254,30,235,181,211,89,160,214,109,196,40,175,106,102];
@@ -93,23 +95,87 @@ CryptoKeys.prototype.encryptData = function (data, destKeys) {
 
     destKeys = destKeys || this;
 
-    // Future required to synchronize call to eccrypto methods, which are asynchronous in nature (via promises)
-    const fut = new Future(),
-        opts = {iv: Buffer(iv), ephemPrivateKey: this.getPrivateKey()};
-    let encData = undefined;
+    try {
+        const ecCipher = new ECCipher(this.getPrivateKey(), destKeys.getUncompressedPublicKey());
 
-    // NOTE: only works with UNCOMPRESSED public key
-    eccrypto.encrypt(destKeys.getUncompressedPublicKey(), data, opts).then((encrypted) => {
-        encData = encrypted.ciphertext;
-        fut.return();
-    }, (error) => {
-        fut.throw(new Error('Failure encrypting data to send: ' + error));
-        fut.return();
-    });
+        return Buffer.concat([ecCipher.update(data), ecCipher.final()]);
+    }
+    catch (err) {
+        throw new Error('Failure while encrypting data: ' + err.toString());
+    }
+};
 
-    fut.wait();
+// Start encrypting data
+//
+//  Arguments:
+//   data [Object(Buffer)] - Buffer containing the first block of data to be encrypted
+//   destKeys [Object(CryptoKeys)] - The crypto keys of the destine party
+//
+//  Returns:
+//   chipheredData [Object(Buffer)] - Buffer containing the first part of the resulting ciphered data
+CryptoKeys.prototype.startEncryptData = function (data, destKeys) {
+    if (!this.hasPrivateKey()) {
+        throw new Meteor.Error('ctn_crypto_no_priv_key', 'Cannot start encrypting data; missing private key');
+    }
 
-    return encData;
+    destKeys = destKeys || this;
+
+    try {
+        this.ecCipher = new ECCipher(this.getPrivateKey(), destKeys.getUncompressedPublicKey());
+
+        return this.ecCipher.update(data);
+    }
+    catch (err) {
+        throw new Error('Failure while starting to encrypt data: ' + err.toString());
+    }
+};
+
+// Check if data encryption is underway
+//
+//  Returns:
+//   encryptingData [Boolean]
+CryptoKeys.prototype.encryptingData = function () {
+    return this.ecCipher !== undefined;
+};
+
+// Continue encrypting data
+//
+//  Arguments:
+//   data [Object(Buffer)] - (optional) Buffer containing the next block of data to be encrypted. When no data is passed
+//                            (undefined or null), it signals the end of the encryption and the last part of the ciphered
+//                            data is retrieved
+//   isFinal [Boolean] - (optional, default: false) Indicates whether this is the last block of data to be encrypted.
+//                        Note that this parameter is only taken into account when some data is passed
+//
+//  Returns:
+//   chipheredData [Object(Buffer)] - Buffer containing the next/last part of the resulting ciphered data
+CryptoKeys.prototype.continueEncryptData = function (data, isFinal = false) {
+    if (!this.ecCipher) {
+        throw new Meteor.Error('ctn_crypto_encrypt_not_started', 'Cannot continue encrypting data; encryption has not been started');
+    }
+
+    let cipheredData;
+
+    try {
+        if (data) {
+            cipheredData = this.ecCipher.update(data);
+        }
+        else {
+            isFinal = true;
+        }
+
+        if (isFinal) {
+            const finalCipheredData = this.ecCipher.final();
+            cipheredData = cipheredData ? Buffer.concat([cipheredData, finalCipheredData], cipheredData.length + finalCipheredData.length)
+                : finalCipheredData;
+            this.ecCipher = undefined;
+        }
+    }
+    catch (err) {
+        throw new Error('Failure while continuing to encrypt data: ' + err.toString());
+    }
+
+    return cipheredData;
 };
 
 CryptoKeys.prototype.decryptData = function (data, sourceKeys) {
@@ -119,27 +185,87 @@ CryptoKeys.prototype.decryptData = function (data, sourceKeys) {
 
     sourceKeys = sourceKeys || this;
 
-    // Future required to synchronize call to eccrypto methods, which are asynchronous in nature (via promises)
-    const fut = new Future(),
-        // NOTE: only works with UNCOMPRESSED public key
-        opts = {iv: Buffer(iv), ephemPublicKey: sourceKeys.getUncompressedPublicKey(), ciphertext: data},
-        privKey = this.getPrivateKey();
-    let decData = undefined;
+    try {
+        const ecDecipher = new ECDecipher(this.getPrivateKey(), sourceKeys.getUncompressedPublicKey());
 
-    opts.mac = calcMacEncData(privKey, opts);
+        return Buffer.concat([ecDecipher.update(data), ecDecipher.final()]);
+    }
+    catch (err) {
+        throw new Error('Failure while decrypting data: ' + err.toString());
+    }
+};
 
-    //noinspection JSCheckFunctionSignatures
-    eccrypto.decrypt(this.getPrivateKey(), opts).then((plaindata) => {
-        decData = plaindata;
-        fut.return();
-    }, (error) => {
-        fut.throw(new Error ('Failure decrypting received data: ' + error));
-        fut.return();
-    });
+// Start decrypting ciphered data
+//
+//  Arguments:
+//   data [Object(Buffer)] - Buffer containing the first block of ciphered data to be decrypted
+//   sourceKeys [Object(CryptoKeys)] - The crypto keys of the origin party
+//
+//  Returns:
+//   plainData [Object(Buffer)] - Buffer containing the first part of the resulting deciphered data
+CryptoKeys.prototype.startDecryptData = function (data, sourceKeys) {
+    if (!this.hasPrivateKey()) {
+        throw new Meteor.Error('ctn_crypto_no_priv_key', 'Cannot start decrypting data; missing private key');
+    }
 
-    fut.wait();
+    sourceKeys = sourceKeys || this;
 
-    return decData;
+    try {
+        this.ecDecipher = new ECDecipher(this.getPrivateKey(), sourceKeys.getUncompressedPublicKey());
+
+        return this.ecDecipher.update(data);
+    }
+    catch (err) {
+        throw new Error('Failure while starting to decrypt data: ' + err.toString());
+    }
+};
+
+// Check if data decryption is underway
+//
+//  Returns:
+//   decryptingData [Boolean]
+CryptoKeys.prototype.decryptingData = function () {
+    return this.ecDecipher !== undefined;
+};
+
+// Continue decrypting data
+//
+//  Arguments:
+//   data [Object(Buffer)] - (optional) Buffer containing the next block of ciphered data to be decrypted. When no data is
+//                            passed (undefined or null), it signals the end of the decryption and the last part of the
+//                            deciphered data is retrieved
+//   isFinal [Boolean] - (optional, default: false) Indicates whether this is the last block of ciphered data to be decrypted.
+//                        Note that this parameter is only taken into account when some data is passed
+//
+//  Returns:
+//   plainData [Object(Buffer)] - Buffer containing the next/last part of the resulting deciphered data
+CryptoKeys.prototype.continueDecryptData = function (data, isFinal = false) {
+    if (!this.ecDecipher) {
+        throw new Meteor.Error('ctn_crypto_encrypt_not_started', 'Cannot continue decrypting data; decryption has not been started');
+    }
+
+    let plainData;
+
+    try {
+        if (data) {
+            plainData = this.ecDecipher.update(data);
+        }
+        else {
+            isFinal = true;
+        }
+
+        if (isFinal) {
+            const finalPlainData = this.ecDecipher.final();
+            plainData = plainData ? Buffer.concat([plainData, finalPlainData], plainData.length + finalPlainData.length)
+                : finalPlainData;
+            this.ecDecipher = undefined;
+        }
+    }
+    catch (err) {
+        throw new Error('Failure while continuing to decrypt data: ' + err.toString());
+    }
+
+    return plainData;
 };
 
 CryptoKeys.prototype.signText = function (textToSign) {
@@ -183,11 +309,11 @@ CryptoKeys.toExportPrivateKeyList = function (listKeys) {
 //
 
 function sha512(msg) {
-    return crypto.createHash("sha512").update(msg).digest();
+    return crypto.createHash('sha512').update(msg).digest();
 }
 
 function hmacSha256(key, msg) {
-    return crypto.createHmac("sha256", key).update(msg).digest();
+    return crypto.createHmac('sha256', key).update(msg).digest();
 }
 
 // Mac required to validated encrypted message

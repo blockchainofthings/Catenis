@@ -20,6 +20,7 @@ import { Meteor } from 'meteor/meteor';
 import { Catenis } from './Catenis';
 import { IpfsMessageStorage } from './IpfsMessageStorage';
 import { Ipfs2MessageStorage } from './Ipfs2MessageStorage';
+import { BufferMessageReadable } from './BufferMessageReadable';
 
 // Config entries
 const ctnMessageConfig = config.get('catenisMessage');
@@ -42,7 +43,7 @@ const versionNumber = 0;    // Current version in use. This number is limited to
 // CatenisMessage function class
 //
 //  Constructor arguments:
-//    message: [Object] // Object of type Buffer containing the message to be sent
+//    messageReadable: [Object(MessageReadable)] // Stream used to read message's contents
 //    funcByte: [Number] // A field of the CatenisMessage.functionByte property identifying the type of function expressed by this message
 //    options: {
 //      encrypted: [Boolean], // Indicates whether message is encrypted or not
@@ -51,9 +52,9 @@ const versionNumber = 0;    // Current version in use. This number is limited to
 //      storageProvider: [Object] // (optional, default: defaultStorageProvider) A field of the CatenisMessage.storageProvider property identifying the type of external storage to be used to store the message that should not be embedded
 //    }
 //
-export function CatenisMessage(message, funcByte, options) {
-    if (message !== undefined) {
-        this.message = message;
+export function CatenisMessage(messageReadable, funcByte, options) {
+    if (messageReadable !== undefined) {
+        this.messageReadable = messageReadable;
         this.verNum = versionNumber;
         this.funcByte = funcByte;
         this.options = {};
@@ -75,7 +76,9 @@ export function CatenisMessage(message, funcByte, options) {
 
         this.options.encrypted = options.encrypted;
 
-        if (options.storageScheme === CatenisMessage.storageScheme.embedded || (options.storageScheme === CatenisMessage.storageScheme.auto && message.length <= cfgSettings.nullDataMaxSize - bytesWritten - 1)) {
+        this.msgPayload = undefined;
+
+        if (options.storageScheme === CatenisMessage.storageScheme.embedded || (options.storageScheme === CatenisMessage.storageScheme.auto && (this.msgPayload = messageReadable.read(cfgSettings.nullDataMaxSize - bytesWritten), this.msgPayload.length) <= cfgSettings.nullDataMaxSize - bytesWritten - 1)) {
             // Message should be embedded
             optsByte += CatenisMessage.optionBit.embedding;
             this.options.embedded = true;
@@ -87,15 +90,29 @@ export function CatenisMessage(message, funcByte, options) {
         // Write message options byte
         bytesWritten = this.data.writeUInt8(optsByte, bytesWritten);
 
-        this.msgPayload = undefined;
-
         if (this.options.embedded) {
-            this.msgPayload = message;
+            if (!this.msgPayload) {
+                // Read message's contents up to 1 byte above the available space to make sure that it will fit
+                this.msgPayload = messageReadable.read(cfgSettings.nullDataMaxSize - (bytesWritten - 1));
+            }
         }
         else {
+            if (this.msgPayload) {
+                // Part of message had already been read to probe for fitness in tx nulldata output (embedded message).
+                //  So put read data back before proceeding
+                if (messageReadable.readable) {
+                    messageReadable.unshift(this.msgPayload);
+                }
+                else {
+                    // Message stream has already ended (the whole message has been read).
+                    //  So create a new message stream with the already read data
+                    messageReadable = new BufferMessageReadable(this.msgPayload);
+                }
+            }
+
             this.options.storageProvider = options.storageProvider !== undefined ? options.storageProvider : CatenisMessage.defaultStorageProvider;
             const msgStorage = CatenisMessage.getMessageStorageInstance(this.options.storageProvider);
-            this.extMsgRef = msgStorage.store(message);
+            this.extMsgRef = msgStorage.store(messageReadable);
 
             this.msgPayload = Buffer.allocUnsafe(this.extMsgRef.length + 1);
 
@@ -134,8 +151,8 @@ CatenisMessage.prototype.getData = function () {
     return this.data;
 };
 
-CatenisMessage.prototype.getMessage = function () {
-    return this.message;
+CatenisMessage.prototype.getMessageReadable = function () {
+    return this.messageReadable;
 };
 
 CatenisMessage.prototype.getExternalMessageReference = function () {
@@ -271,6 +288,7 @@ CatenisMessage.isValidStorageProvider = function (sp) {
 
 // Arguments:
 //   data: [Object] // Object of type Buffer containing the data stored in the tx's null data output
+// TODO: this method should take one additional parameter: a MessageDuplex stream (either CachedMessageDuplex or BufferMessageDuplex) object that shall be used to read the (possibly encrypted) message from its origianl repository (tx null data or external storage) and write its contents (already decrypted) to the local repository (Buffer or CachedMessage) and make it available to be read
 CatenisMessage.fromData = function (data, logError = true) {
     try {
         // Parse message data
@@ -328,11 +346,12 @@ CatenisMessage.fromData = function (data, logError = true) {
         data.copy(msgPayload, 0, bytesRead);
 
         // Extract message from payload
-        let message,
+        let messageReadable,
             extMsgRef;
 
         if (options.embedded) {
-            message = msgPayload;
+            // TODO: create a BufferMessageReadable from msgPayload and pipe it to the received MessageDuplex parameter (and then assign it to messageReadable)
+            messageReadable = msgPayload;
         }
         else {
             // Read message storage provider byte code
@@ -354,7 +373,8 @@ CatenisMessage.fromData = function (data, logError = true) {
 
             const msgStorage = CatenisMessage.getMessageStorageInstance(storageProvider);
 
-            message = msgStorage.retrieve(extMsgRef);
+            // TODO: method retrieve of message storage provider should return a Readable stream. Then pipe returned readable stream to the received MessageDuplex parameter (and then assign it to messageReadable)
+            messageReadable = msgStorage.retrieve(extMsgRef);
         }
 
         const ctnMessage = new CatenisMessage();
@@ -364,7 +384,7 @@ CatenisMessage.fromData = function (data, logError = true) {
         ctnMessage.funcByte = funcByte;
         ctnMessage.options = options;
         ctnMessage.msgPayload = msgPayload;
-        ctnMessage.message = message;
+        ctnMessage.messageReadable = messageReadable;
 
         if (!options.embedded) {
             ctnMessage.extMsgRef = extMsgRef;

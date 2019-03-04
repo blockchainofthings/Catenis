@@ -29,6 +29,7 @@ import {
     getAddrAndAddrInfo,
     areAddressesFromSameDevice
 } from './SendMessageTransaction';
+import { MessageReadable } from './MessageReadable';
 
 // Definition of function classes
 //
@@ -37,7 +38,7 @@ import {
 //
 //  Constructor arguments:
 //    device: [Object] // Object of type Device identifying the device that is logging the message
-//    message: [Object] // Object of type Buffer containing the message to be logged
+//    messageReadable: [Object(MessageReadable)] // Stream used to read contents of message to be logged
 //    options: {
 //      encrypted: [Boolean], // Indicates whether message should be encrypted before storing it
 //      storageScheme: [String], // A field of the CatenisMessage.storageScheme property identifying how the message should be stored
@@ -47,7 +48,7 @@ import {
 //
 // NOTE: make sure that objects of this function class are instantiated and used (their methods
 //  called) from code executed from the FundSource.utxoCS critical section object
-export function LogMessageTransaction(device, message, options) {
+export function LogMessageTransaction(device, messageReadable, options) {
     // Properties definition
     Object.defineProperties(this, {
         txid: {
@@ -74,8 +75,8 @@ export function LogMessageTransaction(device, message, options) {
             errArg.device = device;
         }
 
-        if (!Buffer.isBuffer(message)) {
-            errArg.message = message;
+        if (!(messageReadable instanceof MessageReadable)) {
+            errArg.messageReadable = messageReadable;
         }
 
         if (typeof options !== 'object' || options === null || !('encrypted' in options) || !('storageScheme' in options) || !CatenisMessage.isValidStorageScheme(options.storageScheme)
@@ -94,7 +95,7 @@ export function LogMessageTransaction(device, message, options) {
         this.transact = new Transaction();
         this.txBuilt = false;
         this.device = device;
-        this.message = message;
+        this.messageReadable = messageReadable;
         this.options = options;
     }
 }
@@ -141,19 +142,13 @@ LogMessageTransaction.prototype.buildTransaction = function () {
         // Add transaction outputs
 
         // Prepare to add null data output containing message data
-        let msgToLog = undefined;
-
         if (this.options.encrypted) {
-            // Encrypt message
-            // noinspection JSUnusedGlobalSymbols
-            msgToLog = this.encryptedMessage = this.deviceMainAddrKeys.encryptData(this.message);
-        }
-        else {
-            msgToLog = this.message;
+            // Set up message stream to encrypt message's contents as it is read
+            this.messageReadable.setEncryption(this.deviceMainAddrKeys);
         }
 
         // Prepare message to log
-        const ctnMessage = new CatenisMessage(msgToLog, CatenisMessage.functionByte.logMessage, this.options);
+        const ctnMessage = new CatenisMessage(this.messageReadable, CatenisMessage.functionByte.logMessage, this.options);
 
         if (!ctnMessage.isEmbedded()) {
             this.extMsgRef = ctnMessage.getExternalMessageReference();
@@ -314,7 +309,7 @@ LogMessageTransaction.checkTransaction = function (transact) {
                 if (ctnMessage.isEncrypted()) {
                     // Try to decrypt message
                     try {
-                        message = devMainAddr.addrInfo.cryptoKeys.decryptData(ctnMessage.getMessage());
+                        message = devMainAddr.addrInfo.cryptoKeys.decryptData(ctnMessage.getMessageReadable());
                     }
                     catch (err) {
                         if (!(err instanceof Meteor.Error) || err.error !== 'ctn_crypto_no_priv_key') {
@@ -325,7 +320,7 @@ LogMessageTransaction.checkTransaction = function (transact) {
                     }
                 }
                 else {
-                    message = ctnMessage.getMessage();
+                    message = ctnMessage.getMessageReadable();
                 }
 
                 if (message !== undefined) {
@@ -338,7 +333,7 @@ LogMessageTransaction.checkTransaction = function (transact) {
                     logMsgTransact.message = message;       // Original contents of message as provided by device (always unencrypted)
                                                             //  NOTE: could be undefined if message could not be decrypted due to missing private key
                                                             //      for device that recorded the message (possibly because it belongs to a different Node)
-                    logMsgTransact.rawMessage = ctnMessage.getMessage();    // Contents of message as it was recorded (encrypted, if encryption was used)
+                    logMsgTransact.rawMessage = ctnMessage.getMessageReadable();    // Contents of message as it was recorded (encrypted, if encryption was used)
                     logMsgTransact.options = {
                         encrypted: ctnMessage.isEncrypted(),
                         storageScheme: ctnMessage.isEmbedded() ? CatenisMessage.storageScheme.embedded : CatenisMessage.storageScheme.external

@@ -578,7 +578,8 @@
       "0.3",
       "0.4",
       "0.5",
-      "0.6"
+      "0.6",
+      "0.7"
     ]
   },
   // Parameters pertaining to Authentication module
@@ -827,5 +828,20 @@
   // Parameters pertaining to RedeemBcotTransaction module
   "redeemBcotTransaction": {
     "timeToConfirm": 300  // (5 hours) Time, in minutes, that is expected the redeem BCOT token transaction to be confirmed
+  },
+  // Parameters pertaining to ProvisionalMessage module
+  "provisionalMessage": {
+    "timeContinueMsg": 300,  // (5 min.) Maximum time, in seconds, to wait until message continuation chunk is recorded
+    "timeKeepProcessedMsg": 86400, // (24 hours) Minimum time, in seconds, to keep provisional messages after they have already been processed
+    "timeKeepIncompleteMsg": 3600,  // (1 hour) Minimum time, in seconds, to keep provisional messages that have not been finalized (a final chunk has never been recorded)
+    "purgeOldMessagesInterval": 43200000  // (12 hours) Time interval, in milliseconds, for executing method to purge old provisional messages
+  },
+  // Parameters pertaining to ProvisionalMessageReadable module
+  "provisionalMessageReadable": {
+    "highWaterMark": 1048576  // (1 MB) The maximum number of bytes to store in the internal buffer of stream before ceasing to read from the underlying resource
+  },
+  // Parameters pertaining to BufferMessageReadable module
+  "bufferMessageReadable": {
+    "highWaterMark": 1048576  // (1 MB) The maximum number of bytes to store in the internal buffer of stream before ceasing to read from the underlying resource
   }
 }

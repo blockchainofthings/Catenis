@@ -25,6 +25,7 @@ import { Device } from './Device';
 import { ApiVersion } from './ApiVersion';
 import { Authentication } from './Authentication';
 import { logMessage } from './ApiLogMessage';
+import { logMessage2 } from './ApiLogMessage2';
 import { sendMessage } from './ApiSendMessage';
 import { sendMessage2 } from './ApiSendMessage2';
 import { readMessage } from './ApiReadMessage';
@@ -97,7 +98,7 @@ export function RestApi(apiVersion) {
             //
             //  Refer to the source file where the action function is defined for a detailed description of the endpoint
             post: {
-                action: logMessage
+                action: this.apiVer.gt('0.6') ? logMessage2 : logMessage
             }
         });
 

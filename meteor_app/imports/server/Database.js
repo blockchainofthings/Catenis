@@ -814,6 +814,249 @@ Database.initialize = function() {
                 }
             }]
         },
+        ProvisionalMessage: {
+            indices: [{
+                fields: {
+                    provisionalMessageId: 1
+                },
+                opts: {
+                    unique: true,
+                    background: true,
+                    w: 1
+                }
+            }, {
+                fields: {
+                    deviceId: 1
+                },
+                opts: {
+                    background: true,
+                    w: 1
+                }
+            }, {
+                fields: {
+                    'progress.done': 1
+                },
+                opts: {
+                    background: true,
+                    sparse: true,
+                    w: 1
+                }
+            }, {
+                fields: {
+                    'progress.success': 1
+                },
+                opts: {
+                    background: true,
+                    sparse: true,
+                    w: 1
+                }
+            }, {
+                fields: {
+                    'progress.error.code': 1
+                },
+                opts: {
+                    background: true,
+                    sparse: true,
+                    w: 1
+                }
+            }, {
+                fields: {
+                    'progress.error.message': 1
+                },
+                opts: {
+                    background: true,
+                    sparse: true,
+                    w: 1
+                }
+            }, {
+                fields: {
+                    'progress.finishDate': 1
+                },
+                opts: {
+                    background: true,
+                    sparse: true,
+                    w: 1
+                }
+            }, {
+                fields: {
+                    'messageId': 1
+                },
+                opts: {
+                    background: true,
+                    sparse: true,
+                    w: 1
+                }
+            }, {
+                fields: {
+                    createdDate: 1
+                },
+                opts: {
+                    background: true,
+                    w: 1
+                }
+            }]
+        },
+        CachedMessage: {
+            indices: [{
+                fields: {
+                    cachedMessageId: 1
+                },
+                opts: {
+                    unique: true,
+                    background: true,
+                    w: 1
+                }
+            }, {
+                fields: {
+                    deviceId: 1
+                },
+                opts: {
+                    background: true,
+                    w: 1
+                }
+            }, {
+                fields: {
+                    messageId: 1
+                },
+                opts: {
+                    background: true,
+                    w: 1
+                }
+            }, {
+                fields: {
+                    'progress.done': 1
+                },
+                opts: {
+                    background: true,
+                    sparse: true,
+                    w: 1
+                }
+            }, {
+                fields: {
+                    'progress.success': 1
+                },
+                opts: {
+                    background: true,
+                    sparse: true,
+                    w: 1
+                }
+            }, {
+                fields: {
+                    'progress.error.code': 1
+                },
+                opts: {
+                    background: true,
+                    sparse: true,
+                    w: 1
+                }
+            }, {
+                fields: {
+                    'progress.error.message': 1
+                },
+                opts: {
+                    background: true,
+                    sparse: true,
+                    w: 1
+                }
+            }, {
+                fields: {
+                    'progress.finishDate': 1
+                },
+                opts: {
+                    background: true,
+                    sparse: true,
+                    w: 1
+                }
+            }, {
+                fields: {
+                    'readFinalized': 1
+                },
+                opts: {
+                    background: true,
+                    sparse: true,
+                    w: 1
+                }
+            }, {
+                fields: {
+                    'lastReadDate': 1
+                },
+                opts: {
+                    background: true,
+                    sparse: true,
+                    w: 1
+                }
+            }, {
+                fields: {
+                    createdDate: 1
+                },
+                opts: {
+                    background: true,
+                    w: 1
+                }
+            }]
+        },
+        MessageChunk: {
+            indices: [{
+                fields: {
+                    messageChunkId: 1
+                },
+                opts: {
+                    unique: true,
+                    background: true,
+                    w: 1
+                }
+            }, {
+                fields: {
+                    type: 1
+                },
+                opts: {
+                    background: true,
+                    w: 1
+                }
+            }, {
+                fields: {
+                    ephemeralMessage_id: 1,
+                    order: 1
+                },
+                opts: {
+                    unique: true,
+                    background: true,
+                    w: 1
+                }
+            }, {
+                fields: {
+                    ephemeralMessage_id: 1
+                },
+                opts: {
+                    background: true,
+                    w: 1
+                }
+            }, {
+                fields: {
+                    order: 1
+                },
+                opts: {
+                    background: true,
+                    w: 1
+                }
+            }, {
+                fields: {
+                    isFinal: 1
+                },
+                opts: {
+                    background: true,
+                    w: 1
+                }
+            }, {
+                fields: {
+                    createdDate: 1
+                },
+                opts: {
+                    background: true,
+                    w: 1
+                }
+            }]
+        },
         SentTransaction: {
             indices: [{
                 fields: {
@@ -2117,7 +2360,7 @@ function dropSafeIndices (collection) {
                 fut1.return();
             }
             else {
-                if (!(error.name === 'MongoError' && error.message.match(/^Collection [A-Za-z0-9_\-\.]+ doesn't exist$/)) ) {
+                if (!(error.name === 'MongoError' && error.message.match(/^ns does not exist:/)) ) {
                     // Error retrieving indices. Log error
                     Catenis.logger.ERROR('Error retrieving indices from %s DB collection.', collection.s.name, error);
                     throw new Error('Error retrieving indices from DB collection');

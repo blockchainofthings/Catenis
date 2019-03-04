@@ -16,6 +16,7 @@ import crypto from 'crypto';
 import _und from 'underscore';      // NOTE: we dot not use the underscore library provided by Meteor because we need
                                     //        a feature (_und.omit(obj,predicate)) that is not available in that version
 import BigNumber from 'bignumber.js';
+import Future from 'fibers/future';
 // Meteor packages
 import { Meteor } from 'meteor/meteor';
 // noinspection NpmUsedModulesInstalled
@@ -59,6 +60,9 @@ import { CCTransaction } from './CCTransaction';
 import { IssueAssetTransaction } from './IssueAssetTransaction';
 import { TransferAssetTransaction } from './TransferAssetTransaction';
 import { KeyStore } from './KeyStore';
+import { MessageChunk } from './MessageChunk';
+import { ProvisionalMessage } from './ProvisionalMessage';
+import { BufferMessageReadable } from './BufferMessageReadable';
 
 
 // Definition of function classes
@@ -554,7 +558,7 @@ Device.prototype.sendMessage = function (targetDeviceId, message, readConfirmati
             }
         }
 
-        let sendMsgTransact = undefined;
+        let sendMsgTransact;
 
         // Execute code in critical section to avoid UTXOs concurrency
         FundSource.utxoCS.execute(() => {
@@ -628,18 +632,48 @@ Device.prototype.sendMessage = function (targetDeviceId, message, readConfirmati
     return messageId;
 };
 
+
 // Log message on the blockchain
 //
 //  Arguments:
-//    message: [Object] // Object of type Buffer containing the message to be logged
-//    encryptMessage: [Boolean], // (optional, default: true) Indicates whether message should be encrypted before logging it
-//    storageScheme: [String], // (optional, default: 'auto') A field of the CatenisMessage.storageScheme property identifying how the message should be stored
-//    storageProvider: [Object] // (optional, default: defaultStorageProvider) A field of the CatenisMessage.storageProvider property
-//                              //    identifying the type of external storage to be used to store the message that should not be embedded
+//    message [Object(Buffer)] - Object of type Buffer containing the message to be logged
+//    encryptMessage [Boolean] - (optional, default: true) Indicates whether message should be encrypted before logging it
+//    storageScheme [String]   - (optional, default: 'auto') A field of the CatenisMessage.storageScheme property identifying how the message should be stored
+//    storageProvider [Object] - (optional, default: defaultStorageProvider) A field of the CatenisMessage.storageProvider property
+//                                identifying the type of external storage to be used to store the message that should not be embedded
 //
 //  Return value:
 //    messageId: [String]       // ID of logged message
 Device.prototype.logMessage = function (message, encryptMessage = true, storageScheme = 'auto', storageProvider) {
+    return this.logMessage2(message, encryptMessage, storageScheme, storageProvider).messageId;
+};
+
+// Log message on the blockchain
+//
+//  Arguments:
+//    message [Buffer(Buffer)|Object] {  - The message to be logged. If a Buffer object is passed, it is assumed to be the whole message's contents.
+//                                          Otherwise, it is expected that the message be passed in chunks using the following object to control it:
+//      dataChunk: [Object(Buffer)], - The current message data chunk. The actual message's contents should be comprised of one or more data chunks
+//      isFinal: [Boolean],         - Indicates whether this is the final (or the single) message data chunk
+//      continuationToken: [String] - (optional) - Indicates that this is a continuation message data chunk. This should be filled with the value
+//                                     returned in the 'continuationToken' field of the response from the previously sent message data chunk
+//    }
+//    encryptMessage [Boolean] - (optional, default: true) Indicates whether message should be encrypted before logging it
+//    storageScheme [String]   - (optional, default: 'auto') A field of the CatenisMessage.storageScheme property identifying how the message should be stored
+//    storageProvider [Object] - (optional, default: defaultStorageProvider) A field of the CatenisMessage.storageProvider property
+//                                identifying the type of external storage to be used to store the message that should not be embedded
+//    async [Boolean] - (optional, default: false) Indicates whether processing should be done asynchronously. If set to true, the returned
+//                       message ID is actually a provisional message ID, which should be used to retrieve the outcome of the processing by calling
+//                       the MessageProgress API method
+//
+//  Return value:
+//    msgResponse: {
+//      continuationToken: [String] - (optional) Token to be used when sending the following message data chunk. Returned if message passed in chunks
+//                                     and last message data chunk was not final
+//      messageId: [String]  - (optional) ID of logged message. Returned after the whole message's contents is sent if not doing asynchronous processing
+//      provisionalMessageId: [String]  - (optional) Provisional message ID. Returned after the whole message's contents is sent if doing asynchronous processing
+//    }
+Device.prototype.logMessage2 = function (message, encryptMessage = true, storageScheme = 'auto', storageProvider, async = false) {
     // Make sure that device is not deleted
     if (this.status === Device.status.deleted.name) {
         // Cannot log message for a deleted device. Log error and throw exception
@@ -654,98 +688,223 @@ Device.prototype.logMessage = function (message, encryptMessage = true, storageS
         throw new Meteor.Error('ctn_device_not_active', util.format('Cannot log message for a device that is not active (deviceId: %s)', this.deviceId));
     }
 
-    let messageId = undefined;
-
-    // Execute code in critical section to avoid Colored Coins UTXOs concurrency
-    CCFundSource.utxoCS.execute(() => {
-        const servicePriceInfo = Service.logMessageServicePrice();
-
-        if (this.client.billingMode === Client.billingMode.prePaid) {
-            // Make sure that client has enough service credits to pay for service
-            const serviceAccountBalance = this.client.serviceAccountBalance();
-
-            if (serviceAccountBalance < servicePriceInfo.finalServicePrice) {
-                // Client does not have enough credits to pay for service.
-                //  Log error condition and throw exception
-                Catenis.logger.ERROR('Client does not have enough credits to pay for log message service', {
-                    serviceAccountBalance: serviceAccountBalance,
-                    servicePrice: servicePriceInfo.finalServicePrice
-                });
-                throw new Meteor.Error('ctn_device_low_service_acc_balance', 'Client does not have enough credits to pay for log message service');
+    if (Buffer.isBuffer(message)) {
+        // The whole message passed at once (not in chunks)
+        if (async) {
+            // Asynchronous processing requested. So treat as if message was passed in chunks (with a single chunk)
+            message = {
+                dataChunk: message,
+                isFinal: true
             }
         }
+    }
+    else {
+        // Message passed in chunks
+        if (message.isFinal && !message.continuationToken && !async) {
+            // This is the only message data chunk, and no asynchronous processing requested.
+            //  So treat it as if it was passed not in chunks
+            message = message.dataChunk;
+        }
+    }
 
-        let logMsgTransact = undefined;
+    let messageReadable;
+    let provisionalMessageId;
 
-        // Execute code in critical section to avoid UTXOs concurrency
-        FundSource.utxoCS.execute(() => {
-            try {
-                // Prepare transaction to log message
-                logMsgTransact = new LogMessageTransaction(this, message, {
-                    encrypted: encryptMessage,
-                    storageScheme: storageScheme,
-                    storageProvider: storageProvider
-                });
+    if (!Buffer.isBuffer(message)) {
+        // Message passed in chunks
 
-                // Build and send transaction
-                logMsgTransact.buildTransaction();
+        // Check whether client can pay for service ahead of time to avoid that client wastes resources
+        //  sending a large message to only later find out that it cannot pay for it.
+        //  Note, however, that a definitive check shall still be done once the actual processing to log
+        //  the message is executed
 
-                logMsgTransact.sendTransaction();
+        // Execute code in critical section to avoid Colored Coins UTXOs concurrency
+        CCFundSource.utxoCS.execute(() => {
+            const servicePriceInfo = Service.logMessageServicePrice();
 
-                // Force polling of blockchain so newly sent transaction is received and processed right away
-                Catenis.txMonitor.pollNow();
+            if (this.client.billingMode === Client.billingMode.prePaid) {
+                // Make sure that client has enough service credits to pay for service
+                const serviceAccountBalance = this.client.serviceAccountBalance();
 
-                // Create message and save it to local database
-                messageId = Message.createLocalMessage(logMsgTransact);
-            }
-            catch (err) {
-                // Error logging message
-                //  Log error condition
-                Catenis.logger.ERROR('Error logging message.', err);
-
-                if (logMsgTransact && !logMsgTransact.txid) {
-                    // Revert output addresses added to transaction
-                    logMsgTransact.revertOutputAddresses();
+                if (serviceAccountBalance < servicePriceInfo.finalServicePrice) {
+                    // Client does not have enough credits to pay for service.
+                    //  Log error condition and throw exception
+                    Catenis.logger.ERROR('Client does not have enough credits to pay for log message service', {
+                        serviceAccountBalance: serviceAccountBalance,
+                        servicePrice: servicePriceInfo.finalServicePrice
+                    });
+                    throw new Meteor.Error('ctn_device_low_service_acc_balance', 'Client does not have enough credits to pay for log message service');
                 }
-
-                // Rethrows exception
-                throw err;
             }
         });
 
-        try {
-            // Record billing info for service
-            const billing = Billing.createNew(this, logMsgTransact, servicePriceInfo);
+        // Gather message chunks before processing it
+        let continuationToken;
 
-            let servicePayTransact;
+        // Execute code in critical section to avoid database concurrency
+        MessageChunk.dbCS.execute(() => {
+            const provisionalMessage = ProvisionalMessage.recordNewMessageChunk(this.deviceId, message.continuationToken, message.dataChunk, message.isFinal);
 
-            if (this.client.billingMode === Client.billingMode.prePaid) {
-                servicePayTransact = Catenis.spendServCredit.payForService(this.client, logMsgTransact.txid, servicePriceInfo.finalServicePrice);
-            }
-            else if (this.client.billingMode === Client.billingMode.postPaid) {
-                // Not yet implemented
-                Catenis.logger.ERROR('Processing for postpaid billing mode not yet implemented');
-                // noinspection ExceptionCaughtLocallyJS
-                throw new Error('Processing for postpaid billing mode not yet implemented');
-            }
-
-            billing.setServicePaymentTransaction(servicePayTransact);
-        }
-        catch (err) {
-            if ((err instanceof Meteor.Error) && err.error === 'ctn_spend_serv_cred_tx_rejected') {
-                // Spend service credit transaction has been rejected.
-                //  Log warning condition
-                Catenis.logger.WARN('Billing for log message service (serviceTxid: %s) recorded with no service payment transaction', logMsgTransact.txid);
+            if (!provisionalMessage.isMessageComplete()) {
+                // Message not yet complete. Prepare to return continuation token
+                continuationToken = provisionalMessage.getContinuationToken()
             }
             else {
-                // Error recording billing info for log message service.
-                //  Just log error condition
-                Catenis.logger.ERROR('Error recording billing info for log message service (serviceTxid: %s),', logMsgTransact.txid, err);
+                // The whole message has been received. Get stream to read message's contents
+                //  from provisional message, and provisional message reference (ID)
+                messageReadable = provisionalMessage.getReadableStream();
+                provisionalMessageId = provisionalMessage.provisionalMessageId;
+            }
+        });
+
+        if (continuationToken) {
+            // Returns continuation token
+            return {
+                continuationToken: continuationToken
             }
         }
-    });
+    }
+    else {
+        // The whole message passed at once (not in chunks).
+        //  Create stream to read message's contents from buffer
+        messageReadable = new BufferMessageReadable(message);
+    }
 
-    return messageId;
+    let messageId = undefined;
+
+    const doProcessing = () => {
+        // Execute code in critical section to avoid Colored Coins UTXOs concurrency
+        CCFundSource.utxoCS.execute(() => {
+            const servicePriceInfo = Service.logMessageServicePrice();
+
+            if (this.client.billingMode === Client.billingMode.prePaid) {
+                // Make sure that client has enough service credits to pay for service
+                const serviceAccountBalance = this.client.serviceAccountBalance();
+
+                if (serviceAccountBalance < servicePriceInfo.finalServicePrice) {
+                    // Client does not have enough credits to pay for service.
+                    //  Log error condition and throw exception
+                    Catenis.logger.ERROR('Client does not have enough credits to pay for log message service', {
+                        serviceAccountBalance: serviceAccountBalance,
+                        servicePrice: servicePriceInfo.finalServicePrice
+                    });
+                    throw new Meteor.Error('ctn_device_low_service_acc_balance', 'Client does not have enough credits to pay for log message service');
+                }
+            }
+
+            let logMsgTransact;
+
+            // Execute code in critical section to avoid UTXOs concurrency
+            FundSource.utxoCS.execute(() => {
+                try {
+                    // Prepare transaction to log message
+                    logMsgTransact = new LogMessageTransaction(this, messageReadable, {
+                        encrypted: encryptMessage,
+                        storageScheme: storageScheme,
+                        storageProvider: storageProvider
+                    });
+
+                    // Build and send transaction
+                    logMsgTransact.buildTransaction();
+
+                    logMsgTransact.sendTransaction();
+
+                    // Force polling of blockchain so newly sent transaction is received and processed right away
+                    Catenis.txMonitor.pollNow();
+
+                    // Create message and save it to local database
+                    messageId = Message.createLocalMessage(logMsgTransact);
+                }
+                catch (err) {
+                    // Error logging message
+                    //  Log error condition
+                    Catenis.logger.ERROR('Error logging message.', err);
+
+                    if (logMsgTransact && !logMsgTransact.txid) {
+                        // Revert output addresses added to transaction
+                        logMsgTransact.revertOutputAddresses();
+                    }
+
+                    // Rethrows exception
+                    throw err;
+                }
+            });
+
+            try {
+                // Record billing info for service
+                const billing = Billing.createNew(this, logMsgTransact, servicePriceInfo);
+
+                let servicePayTransact;
+
+                if (this.client.billingMode === Client.billingMode.prePaid) {
+                    servicePayTransact = Catenis.spendServCredit.payForService(this.client, logMsgTransact.txid, servicePriceInfo.finalServicePrice);
+                }
+                else if (this.client.billingMode === Client.billingMode.postPaid) {
+                    // Not yet implemented
+                    Catenis.logger.ERROR('Processing for postpaid billing mode not yet implemented');
+                    // noinspection ExceptionCaughtLocallyJS
+                    throw new Error('Processing for postpaid billing mode not yet implemented');
+                }
+
+                billing.setServicePaymentTransaction(servicePayTransact);
+            }
+            catch (err) {
+                if ((err instanceof Meteor.Error) && err.error === 'ctn_spend_serv_cred_tx_rejected') {
+                    // Spend service credit transaction has been rejected.
+                    //  Log warning condition
+                    Catenis.logger.WARN('Billing for log message service (serviceTxid: %s) recorded with no service payment transaction', logMsgTransact.txid);
+                }
+                else {
+                    // Error recording billing info for log message service.
+                    //  Just log error condition
+                    Catenis.logger.ERROR('Error recording billing info for log message service (serviceTxid: %s),', logMsgTransact.txid, err);
+                }
+            }
+        });
+    };
+
+    if (async) {
+        // Execute processing asynchronously
+        Future.task(doProcessing).resolve((err) => {
+            ProvisionalMessage.finalizeProcessing(provisionalMessageId, Message.action.log, err, messageId);
+        });
+
+        // Returns provisional message ID, so processing progress can be monitored
+        return {
+            provisionalMessageId: provisionalMessageId
+        };
+    }
+    else {
+        // Execute processing immediately (synchronously)
+        if (provisionalMessageId) {
+            // Make sure to register processing outcome in provisional message
+            let error;
+
+            try {
+                doProcessing();
+            }
+            catch (err) {
+                error = err;
+            }
+
+            if (provisionalMessageId) {
+                ProvisionalMessage.finalizeProcessing(provisionalMessageId, Message.action.log, error, messageId);
+            }
+
+            if (error) {
+                // Just re-throws error
+                throw error;
+            }
+        }
+        else {
+            doProcessing();
+        }
+
+        // Returns resulting message Id
+        return {
+            messageId: messageId
+        };
+    }
 };
 
 // Read message previously sent/logged

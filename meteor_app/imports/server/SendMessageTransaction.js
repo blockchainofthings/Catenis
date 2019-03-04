@@ -354,7 +354,7 @@ SendMessageTransaction.checkTransaction = function (transact) {
                 if (ctnMessage.isEncrypted()) {
                     // Try to decrypt message
                     try {
-                        message = trgtDevMainAddr.addrInfo.cryptoKeys.decryptData(ctnMessage.getMessage(), origDevMainAddr.addrInfo.cryptoKeys);
+                        message = trgtDevMainAddr.addrInfo.cryptoKeys.decryptData(ctnMessage.getMessageReadable(), origDevMainAddr.addrInfo.cryptoKeys);
                     }
                     catch (err) {
                         if (!(err instanceof Meteor.Error) || err.error !== 'ctn_crypto_no_priv_key') {
@@ -365,7 +365,7 @@ SendMessageTransaction.checkTransaction = function (transact) {
                     }
                 }
                 else {
-                    message = ctnMessage.getMessage();
+                    message = ctnMessage.getMessageReadable();
                 }
 
                 // Instantiate send message transaction
@@ -379,7 +379,7 @@ SendMessageTransaction.checkTransaction = function (transact) {
                 sendMsgTransact.message = message;      // Original contents of message as provided by origin device (always unencrypted)
                                                         //  NOTE: could be undefined if message could not be decrypted due to missing private key
                                                         //      for target device
-                sendMsgTransact.rawMessage = ctnMessage.getMessage();    // Contents of message as it was recorded (encrypted, if encryption was used)
+                sendMsgTransact.rawMessage = ctnMessage.getMessageReadable();    // Contents of message as it was recorded (encrypted, if encryption was used)
                 sendMsgTransact.options = {
                     readConfirmation: trgtDevReadConfirmAddr !== undefined,
                     encrypted: ctnMessage.isEncrypted(),
