@@ -133,12 +133,9 @@ export function CatenisMessage(messageReadable, funcByte, options) {
             }
         }
         else {
-            // Data too long to fit into null data output. Log error condition and throw exception
-            Catenis.logger.ERROR('Message data too long to fit into null data output.', {
-                msgDataLength: this.msgPayload.length,
-                limit: cfgSettings.nullDataMaxSize - bytesWritten
-            });
-            throw new Meteor.Error('ctn_msg_data_too_long', util.format('Message data too long to fit into null data output. Message data length: %d, limit: %d', this.msgPayload.length, cfgSettings.nullDataMaxSize - bytesWritten));
+            // Data too long to fit into null data output. Throw exception
+            Catenis.logger.DEBUG('Message data too long to fit into null data output; exceeded limit: %d bytes', cfgSettings.nullDataMaxSize - bytesWritten);
+            throw new Meteor.Error('ctn_msg_data_too_long', 'Message data too long to fit into null data output');
         }
     }
 }
