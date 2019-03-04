@@ -25,6 +25,7 @@ import { FundSource } from './FundSource';
 import { KeyStore } from './KeyStore';
 import { Service } from './Service';
 import { Transaction } from './Transaction';
+import { MessageReadable } from './MessageReadable';
 
 
 // Definition of function classes
@@ -35,7 +36,7 @@ import { Transaction } from './Transaction';
 //  Constructor arguments:
 //    originDevice: [Object(Device)] - Object of type Device identifying the device that is sending the message
 //    targetDevice: [Object(Device)] - Object of type Device identifying the device to which the message is sent
-//    message: [Object(Buffer)]      - Object of type Buffer containing the message to be sent
+//    messageReadable: [Object(MessageReadable)] // Stream used to read contents of message to be sent
 //    options: {
 //      readConfirmation: [Boolean], - Indicates whether transaction should include support for read confirmation in it
 //      encrypted: [Boolean], - Indicates whether message should be encrypted before storing it
@@ -46,7 +47,7 @@ import { Transaction } from './Transaction';
 //
 // NOTE: make sure that objects of this function class are instantiated and used (their methods
 //  called) from code executed from the FundSource.utxoCS critical section object
-export function SendMessageTransaction(originDevice, targetDevice, message, options) {
+export function SendMessageTransaction(originDevice, targetDevice, messageReadable, options) {
     // Properties definition
     Object.defineProperties(this, {
         txid: {
@@ -77,8 +78,8 @@ export function SendMessageTransaction(originDevice, targetDevice, message, opti
             errArg.targetDevice = targetDevice;
         }
 
-        if (!Buffer.isBuffer(message)) {
-            errArg.message = message;
+        if (!(messageReadable instanceof MessageReadable)) {
+            errArg.messageReadable = messageReadable;
         }
 
         if (typeof options !== 'object' || options === null || !('readConfirmation' in options) || !('encrypted' in options) || !('storageScheme' in options) || !CatenisMessage.isValidStorageScheme(options.storageScheme)
@@ -98,7 +99,7 @@ export function SendMessageTransaction(originDevice, targetDevice, message, opti
         this.txBuilt = false;
         this.originDevice = originDevice;
         this.targetDevice = targetDevice;
-        this.message = message;
+        this.messageReadable = messageReadable;
         this.options = options;
     }
 }
@@ -159,19 +160,13 @@ SendMessageTransaction.prototype.buildTransaction = function () {
         }
 
         // Prepare to add null data output containing message data
-        let msgToSend = undefined;
-
         if (this.options.encrypted) {
-            // Encrypt message
-            // noinspection JSUnusedGlobalSymbols
-            msgToSend = this.encryptedMessage = this.originDeviceMainAddrKeys.encryptData(this.message, this.targetDeviceMainAddrKeys);
-        }
-        else {
-            msgToSend = this.message;
+            // Set up message stream to encrypt message's contents as it is read
+            this.messageReadable.setEncryption(this.originDeviceMainAddrKeys, this.targetDeviceMainAddrKeys);
         }
 
         // Prepare message to send
-        const ctnMessage = new CatenisMessage(msgToSend, CatenisMessage.functionByte.sendMessage, this.options);
+        const ctnMessage = new CatenisMessage(this.messageReadable, CatenisMessage.functionByte.sendMessage, this.options);
 
         if (!ctnMessage.isEmbedded()) {
             this.extMsgRef = ctnMessage.getExternalMessageReference();

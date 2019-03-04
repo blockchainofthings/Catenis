@@ -28,6 +28,7 @@ import { logMessage } from './ApiLogMessage';
 import { logMessage2 } from './ApiLogMessage2';
 import { sendMessage } from './ApiSendMessage';
 import { sendMessage2 } from './ApiSendMessage2';
+import { sendMessage3 } from './ApiSendMessage3';
 import { readMessage } from './ApiReadMessage';
 import { readMessage2 } from './ApiReadMessage2';
 import { retrieveMessageContainer } from './ApiMessageContainer';
@@ -107,7 +108,7 @@ export function RestApi(apiVersion) {
             //
             //  Refer to the source file where the action function is defined for a detailed description of the endpoint
             post: {
-                action: this.apiVer.gt('0.4') ? sendMessage2 : sendMessage
+                action: this.apiVer.gt('0.4') ? (this.apiVer.gt('0.6') ? sendMessage3 : sendMessage2) : sendMessage
             }
         });
 

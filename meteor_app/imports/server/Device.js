@@ -481,15 +481,47 @@ Device.prototype.fixFundAddresses = function () {
 //  Arguments:
 //    targetDeviceId: [String]   - Device ID identifying the device to which the message should be sent
 //    message: [Object(Buffer)]  - Object of type Buffer containing the message to be sent
-//    readConfirmation: [Boolean], - (optional, default: false) Indicates whether message should be sent with read confirmation enabled
-//    encryptMessage: [Boolean],   - (optional, default: true) Indicates whether message should be encrypted before sending it
-//    storageScheme: [String],     - (optional, default: 'auto') A field of the CatenisMessage.storageScheme property identifying how the message should be stored
-//    storageProvider: [Object]    - (optional, default: defaultStorageProvider) A field of the CatenisMessage.storageProvider property
-//                                 -   identifying the type of external storage to be used to store the message that should not be embedded
+//    readConfirmation: [Boolean] - (optional, default: false) Indicates whether message should be sent with read confirmation enabled
+//    encryptMessage: [Boolean]   - (optional, default: true) Indicates whether message should be encrypted before sending it
+//    storageScheme: [String]     - (optional, default: 'auto') A field of the CatenisMessage.storageScheme property identifying how the message should be stored
+//    storageProvider: [Object]   - (optional, default: defaultStorageProvider) A field of the CatenisMessage.storageProvider property
+//                                   identifying the type of external storage to be used to store the message that should not be embedded
 //
 //  Return value: {
 //    messageId: [String]       - ID of sent message
 Device.prototype.sendMessage = function (targetDeviceId, message, readConfirmation = false, encryptMessage = true, storageScheme = 'auto', storageProvider) {
+    return this.sendMessage2(message, targetDeviceId, encryptMessage, storageScheme, readConfirmation, storageProvider).messageId;
+};
+
+// Send message to another device
+//
+//  Arguments:
+//    message: [Object(Buffer)]  - Object of type Buffer containing the message to be sent
+//    message [Buffer(Buffer)|Object] {  - The message to be sent. If a Buffer object is passed, it is assumed to be the whole message's contents.
+//                                          Otherwise, it is expected that the message be passed in chunks using the following object to control it:
+//      dataChunk: [Object(Buffer)], - The current message data chunk. The actual message's contents should be comprised of one or more data chunks
+//      isFinal: [Boolean],         - Indicates whether this is the final (or the single) message data chunk
+//      continuationToken: [String] - (optional) - Indicates that this is a continuation message data chunk. This should be filled with the value
+//                                     returned in the 'continuationToken' field of the response from the previously sent message data chunk
+//    }
+//    targetDeviceId: [String]   - (optional) Device ID identifying the device to which the message should be sent
+//    encryptMessage: [Boolean]   - (optional, default: true) Indicates whether message should be encrypted before sending it
+//    storageScheme: [String]     - (optional, default: 'auto') A field of the CatenisMessage.storageScheme property identifying how the message should be stored
+//    readConfirmation: [Boolean] - (optional, default: false) Indicates whether message should be sent with read confirmation enabled
+//    storageProvider: [Object]   - (optional, default: defaultStorageProvider) A field of the CatenisMessage.storageProvider property
+//                                   identifying the type of external storage to be used to store the message that should not be embedded
+//    async [Boolean] - (optional, default: false) Indicates whether processing should be done asynchronously. If set to true, the returned
+//                       message ID is actually a provisional message ID, which should be used to retrieve the outcome of the processing by calling
+//                       the MessageProgress API method
+//
+//  Return value: {
+//    msgResponse: {
+//      continuationToken: [String] - (optional) Token to be used when sending the following message data chunk. Returned if message passed in chunks
+//                                     and last message data chunk was not final
+//      messageId: [String]  - (optional) ID of sent message. Returned after the whole message's contents is sent if not doing asynchronous processing
+//      provisionalMessageId: [String]  - (optional) Provisional message ID. Returned after the whole message's contents is sent if doing asynchronous processing
+//    }
+Device.prototype.sendMessage2 = function (message, targetDeviceId, encryptMessage = true, storageScheme = 'auto', readConfirmation = false, storageProvider, async = false) {
     // Make sure that device is not deleted
     if (this.status === Device.status.deleted.name) {
         // Cannot send message from a deleted device. Log error and throw exception
@@ -506,130 +538,257 @@ Device.prototype.sendMessage = function (targetDeviceId, message, readConfirmati
 
     let targetDevice = undefined;
 
-    try {
-        targetDevice = Device.getDeviceByDeviceId(targetDeviceId);
+    if (targetDeviceId) {
+        try {
+            targetDevice = Device.getDeviceByDeviceId(targetDeviceId);
 
-        // Make sure that target device is not deleted
-        if (targetDevice.status === Device.status.deleted.name) {
-            // Cannot send message to a deleted device. Log error and throw exception
-            Catenis.logger.ERROR('Cannot send message to a deleted device', {deviceId: targetDeviceId});
-            //noinspection ExceptionCaughtLocallyJS
-            throw new Meteor.Error('ctn_device_target_deleted', util.format('Cannot send message to a deleted device (deviceId: %s)', targetDeviceId));
+            // Make sure that target device is not deleted
+            if (targetDevice.status === Device.status.deleted.name) {
+                // Cannot send message to a deleted device. Log error and throw exception
+                Catenis.logger.ERROR('Cannot send message to a deleted device', {deviceId: targetDeviceId});
+                //noinspection ExceptionCaughtLocallyJS
+                throw new Meteor.Error('ctn_device_target_deleted', util.format('Cannot send message to a deleted device (deviceId: %s)', targetDeviceId));
+            }
+
+            // Make sure that target device is active
+            if (targetDevice.status !== Device.status.active.name) {
+                // Cannot send message to a device that is not active. Log error condition and throw exception
+                Catenis.logger.ERROR('Cannot send message to a device that is not active', {deviceId: targetDeviceId});
+                //noinspection ExceptionCaughtLocallyJS
+                throw new Meteor.Error('ctn_device_target_not_active', util.format('Cannot send message to a device that is not active (deviceId: %s)', targetDeviceId));
+            }
         }
-
-        // Make sure that target device is active
-        if (targetDevice.status !== Device.status.active.name) {
-            // Cannot send message to a device that is not active. Log error condition and throw exception
-            Catenis.logger.ERROR('Cannot send message to a device that is not active', {deviceId: targetDeviceId});
-            //noinspection ExceptionCaughtLocallyJS
-            throw new Meteor.Error('ctn_device_target_not_active', util.format('Cannot send message to a device that is not active (deviceId: %s)', targetDeviceId));
+        catch (err) {
+            if ((err instanceof Meteor.Error) && err.error === 'ctn_device_not_found') {
+                // No target device available with given device ID. Log error and throw exception
+                Catenis.logger.ERROR('Could not find target device with given device ID', {deviceId: targetDeviceId});
+                throw new Meteor.Error('ctn_device_target_not_found', util.format('Could not find target device with given device ID (%s)', targetDeviceId));
+            }
+            else {
+                // Otherwise, just re-throws exception
+                throw err;
+            }
         }
     }
-    catch (err) {
-        if ((err instanceof Meteor.Error) && err.error === 'ctn_device_not_found') {
-            // No target device available with given device ID. Log error and throw exception
-            Catenis.logger.ERROR('Could not find target device with given device ID', {deviceId: targetDeviceId});
-            throw new Meteor.Error('ctn_device_target_not_found', util.format('Could not find target device with given device ID (%s)', targetDeviceId));
+
+    if (Buffer.isBuffer(message)) {
+        // The whole message passed at once (not in chunks)
+        if (async) {
+            // Asynchronous processing requested. So treat as if message was passed in chunks (with a single chunk)
+            message = {
+                dataChunk: message,
+                isFinal: true
+            }
         }
-        else {
-            // Otherwise, just re-throws exception
-            throw err;
+    }
+    else {
+        // Message passed in chunks
+        if (message.isFinal && !message.continuationToken && !async) {
+            // This is the only message data chunk, and no asynchronous processing requested.
+            //  So treat it as if it was passed not in chunks
+            message = message.dataChunk;
         }
+    }
+
+    let messageReadable;
+    let provisionalMessageId;
+
+    if (!Buffer.isBuffer(message)) {
+        // Message passed in chunks
+
+        // Check whether client can pay for service ahead of time to avoid that client wastes resources
+        //  sending a large message to only later find out that it cannot pay for it.
+        //  Note, however, that a definitive check shall still be done once the actual processing to log
+        //  the message is executed
+
+        // Execute code in critical section to avoid Colored Coins UTXOs concurrency
+        CCFundSource.utxoCS.execute(() => {
+            const servicePriceInfo = Service.sendMessageServicePrice();
+
+            if (this.client.billingMode === Client.billingMode.prePaid) {
+                // Make sure that client has enough service credits to pay for service
+                const serviceAccountBalance = this.client.serviceAccountBalance();
+
+                if (serviceAccountBalance < servicePriceInfo.finalServicePrice) {
+                    // Client does not have enough credits to pay for service.
+                    //  Log error condition and throw exception
+                    Catenis.logger.ERROR('Client does not have enough credits to pay for send message service', {
+                        serviceAccountBalance: serviceAccountBalance,
+                        servicePrice: servicePriceInfo.finalServicePrice
+                    });
+                    throw new Meteor.Error('ctn_device_low_service_acc_balance', 'Client does not have enough credits to pay for send message service');
+                }
+            }
+        });
+
+        // Gather message chunks before processing it
+        let continuationToken;
+
+        // Execute code in critical section to avoid database concurrency
+        MessageChunk.dbCS.execute(() => {
+            const provisionalMessage = ProvisionalMessage.recordNewMessageChunk(this.deviceId, message.continuationToken, message.dataChunk, message.isFinal);
+
+            if (!provisionalMessage.isMessageComplete()) {
+                // Message not yet complete. Prepare to return continuation token
+                continuationToken = provisionalMessage.getContinuationToken()
+            }
+            else {
+                // The whole message has been received. Get stream to read message's contents
+                //  from provisional message, and provisional message reference (ID)
+                messageReadable = provisionalMessage.getReadableStream();
+                provisionalMessageId = provisionalMessage.provisionalMessageId;
+            }
+        });
+
+        if (continuationToken) {
+            // Returns continuation token
+            return {
+                continuationToken: continuationToken
+            }
+        }
+    }
+    else {
+        // The whole message passed at once (not in chunks).
+        //  Create stream to read message's contents from buffer
+        messageReadable = new BufferMessageReadable(message);
     }
 
     let messageId = undefined;
 
-    // Execute code in critical section to avoid Colored Coins UTXOs concurrency
-    CCFundSource.utxoCS.execute(() => {
-        const servicePriceInfo = Service.sendMessageServicePrice();
-
-        if (this.client.billingMode === Client.billingMode.prePaid) {
-            // Make sure that client has enough service credits to pay for service
-            const serviceAccountBalance = this.client.serviceAccountBalance();
-
-            if (serviceAccountBalance < servicePriceInfo.finalServicePrice) {
-                // Client does not have enough credits to pay for service.
-                //  Log error condition and throw exception
-                Catenis.logger.ERROR('Client does not have enough credits to pay for send message service', {
-                    serviceAccountBalance: serviceAccountBalance,
-                    servicePrice: servicePriceInfo.finalServicePrice
-                });
-                throw new Meteor.Error('ctn_device_low_service_acc_balance', 'Client does not have enough credits to pay for send message service');
-            }
-        }
-
-        let sendMsgTransact;
-
-        // Execute code in critical section to avoid UTXOs concurrency
-        FundSource.utxoCS.execute(() => {
-            try {
-                // Prepare transaction to send message to a device
-                sendMsgTransact = new SendMessageTransaction(this, targetDevice, message, {
-                    readConfirmation: readConfirmation,
-                    encrypted: encryptMessage,
-                    storageScheme: storageScheme,
-                    storageProvider: storageProvider
-                });
-
-                // Build and send transaction
-                sendMsgTransact.buildTransaction();
-
-                sendMsgTransact.sendTransaction();
-
-                // Force polling of blockchain so newly sent transaction is received and processed right away
-                Catenis.txMonitor.pollNow();
-
-                // Create message and save it to local database
-                messageId = Message.createLocalMessage(sendMsgTransact);
-            }
-            catch (err) {
-                // Error sending message to another device.
-                //  Log error condition
-                Catenis.logger.ERROR('Error sending message to another device.', err);
-
-                if (sendMsgTransact && !sendMsgTransact.txid) {
-                    // Revert output addresses added to transaction
-                    sendMsgTransact.revertOutputAddresses();
-                }
-
-                // Rethrows exception
-                throw err;
-            }
-        });
-
-        try {
-            // Record billing info for service
-            const billing = Billing.createNew(this, sendMsgTransact, servicePriceInfo);
-
-            let servicePayTransact;
+    const doProcessing = () => {
+        // Execute code in critical section to avoid Colored Coins UTXOs concurrency
+        CCFundSource.utxoCS.execute(() => {
+            const servicePriceInfo = Service.sendMessageServicePrice();
 
             if (this.client.billingMode === Client.billingMode.prePaid) {
-                servicePayTransact = Catenis.spendServCredit.payForService(this.client, sendMsgTransact.txid, servicePriceInfo.finalServicePrice);
-            }
-            else if (this.client.billingMode === Client.billingMode.postPaid) {
-                // Not yet implemented
-                Catenis.logger.ERROR('Processing for postpaid billing mode not yet implemented');
-                // noinspection ExceptionCaughtLocallyJS
-                throw new Error('Processing for postpaid billing mode not yet implemented');
+                // Make sure that client has enough service credits to pay for service
+                const serviceAccountBalance = this.client.serviceAccountBalance();
+
+                if (serviceAccountBalance < servicePriceInfo.finalServicePrice) {
+                    // Client does not have enough credits to pay for service.
+                    //  Log error condition and throw exception
+                    Catenis.logger.ERROR('Client does not have enough credits to pay for send message service', {
+                        serviceAccountBalance: serviceAccountBalance,
+                        servicePrice: servicePriceInfo.finalServicePrice
+                    });
+                    throw new Meteor.Error('ctn_device_low_service_acc_balance', 'Client does not have enough credits to pay for send message service');
+                }
             }
 
-            billing.setServicePaymentTransaction(servicePayTransact);
-        }
-        catch (err) {
-            if ((err instanceof Meteor.Error) && err.error === 'ctn_spend_serv_cred_tx_rejected') {
-                // Spend service credit transaction has been rejected.
-                //  Log warning condition
-                Catenis.logger.WARN('Billing for send message service (serviceTxid: %s) recorded with no service payment transaction', sendMsgTransact.txid);
-            }
-            else {
-                // Error recording billing info for send message service.
-                //  Just log error condition
-                Catenis.logger.ERROR('Error recording billing info for send message service (serviceTxid: %s),', sendMsgTransact.txid, err);
-            }
-        }
-    });
+            let sendMsgTransact;
 
-    return messageId;
+            // Execute code in critical section to avoid UTXOs concurrency
+            FundSource.utxoCS.execute(() => {
+                try {
+                    // Prepare transaction to send message to a device
+                    sendMsgTransact = new SendMessageTransaction(this, targetDevice, messageReadable, {
+                        readConfirmation: readConfirmation,
+                        encrypted: encryptMessage,
+                        storageScheme: storageScheme,
+                        storageProvider: storageProvider
+                    });
+
+                    // Build and send transaction
+                    sendMsgTransact.buildTransaction();
+
+                    sendMsgTransact.sendTransaction();
+
+                    // Force polling of blockchain so newly sent transaction is received and processed right away
+                    Catenis.txMonitor.pollNow();
+
+                    // Create message and save it to local database
+                    messageId = Message.createLocalMessage(sendMsgTransact);
+                }
+                catch (err) {
+                    // Error sending message to another device.
+                    //  Log error condition
+                    Catenis.logger.ERROR('Error sending message to another device.', err);
+
+                    if (sendMsgTransact && !sendMsgTransact.txid) {
+                        // Revert output addresses added to transaction
+                        sendMsgTransact.revertOutputAddresses();
+                    }
+
+                    // Rethrows exception
+                    throw err;
+                }
+            });
+
+            try {
+                // Record billing info for service
+                const billing = Billing.createNew(this, sendMsgTransact, servicePriceInfo);
+
+                let servicePayTransact;
+
+                if (this.client.billingMode === Client.billingMode.prePaid) {
+                    servicePayTransact = Catenis.spendServCredit.payForService(this.client, sendMsgTransact.txid, servicePriceInfo.finalServicePrice);
+                }
+                else if (this.client.billingMode === Client.billingMode.postPaid) {
+                    // Not yet implemented
+                    Catenis.logger.ERROR('Processing for postpaid billing mode not yet implemented');
+                    // noinspection ExceptionCaughtLocallyJS
+                    throw new Error('Processing for postpaid billing mode not yet implemented');
+                }
+
+                billing.setServicePaymentTransaction(servicePayTransact);
+            }
+            catch (err) {
+                if ((err instanceof Meteor.Error) && err.error === 'ctn_spend_serv_cred_tx_rejected') {
+                    // Spend service credit transaction has been rejected.
+                    //  Log warning condition
+                    Catenis.logger.WARN('Billing for send message service (serviceTxid: %s) recorded with no service payment transaction', sendMsgTransact.txid);
+                }
+                else {
+                    // Error recording billing info for send message service.
+                    //  Just log error condition
+                    Catenis.logger.ERROR('Error recording billing info for send message service (serviceTxid: %s),', sendMsgTransact.txid, err);
+                }
+            }
+        });
+    };
+
+    if (async) {
+        // Execute processing asynchronously
+        Future.task(doProcessing).resolve((err) => {
+            ProvisionalMessage.finalizeProcessing(provisionalMessageId, Message.action.send, err, messageId);
+        });
+
+        // Returns provisional message ID, so processing progress can be monitored
+        return {
+            provisionalMessageId: provisionalMessageId
+        };
+    }
+    else {
+        // Execute processing immediately (synchronously)
+        if (provisionalMessageId) {
+            // Make sure to register processing outcome in provisional message
+            let error;
+
+            try {
+                doProcessing();
+            }
+            catch (err) {
+                error = err;
+            }
+
+            if (provisionalMessageId) {
+                ProvisionalMessage.finalizeProcessing(provisionalMessageId, Message.action.send, error, messageId);
+            }
+
+            if (error) {
+                // Just re-throws error
+                throw error;
+            }
+        }
+        else {
+            doProcessing();
+        }
+
+        // Returns resulting message Id
+        return {
+            messageId: messageId
+        };
+    }
 };
 
 
