@@ -13,6 +13,7 @@
 import util from 'util';
 // Third-party node modules
 import config from 'config';
+import Future from 'fibers/future';
 // Meteor packages
 import { Meteor } from 'meteor/meteor';
 
@@ -78,6 +79,7 @@ export function CatenisMessage(messageReadable, funcByte, options) {
 
         this.msgPayload = undefined;
 
+        // noinspection CommaExpressionJS
         if (options.storageScheme === CatenisMessage.storageScheme.embedded || (options.storageScheme === CatenisMessage.storageScheme.auto && (this.msgPayload = messageReadable.read(cfgSettings.nullDataMaxSize - bytesWritten), this.msgPayload.length) <= cfgSettings.nullDataMaxSize - bytesWritten - 1)) {
             // Message should be embedded
             optsByte += CatenisMessage.optionBit.embedding;
@@ -89,6 +91,20 @@ export function CatenisMessage(messageReadable, funcByte, options) {
 
         // Write message options byte
         bytesWritten = this.data.writeUInt8(optsByte, bytesWritten);
+
+        // Prepare to write message payload
+
+        // Monitor errors while reading message's contents
+        const messageReadableErrorHandler = (err) => {
+            // Error reading message's contents. Abort processing and throw exception
+            Catenis.logger.ERROR('Error reading message\'s contents while composing Catenis message.', err);
+
+            messageReadable.destroy();
+
+            throw new Meteor.Error('ctn_msg_read_error', 'Error reading message\'s contents while composing Catenis message');
+        };
+
+        messageReadable.once('error', messageReadableErrorHandler);
 
         if (this.options.embedded) {
             if (!this.msgPayload) {
@@ -106,6 +122,20 @@ export function CatenisMessage(messageReadable, funcByte, options) {
                 else {
                     // Message stream has already ended (the whole message has been read).
                     //  So create a new message stream with the already read data
+                    //
+                    //  NOTE: this condition can actually never take place even if indeed the whole contents
+                    //      of the message is read. This is due to the following:
+                    //      a) firstly, because the stream shall only signal its end if one tries to read beyond
+                    //      the total available bytes, and, in our case, if that happens, the message would be
+                    //      embedded and this code would never been reached, because we limit the read to exactly
+                    //      1 byte above the available space in the tx's nulldata output. So, in the worst case
+                    //      scenario, the message has exactly the size of the available space plus 1 byte, and we
+                    //      read exactly that many bytes (but not beyond it). In this case, the message of course
+                    //      cannot be embedded. However, the stream is still readable because we have not tried to
+                    //      read beyond end of the message.
+                    //      b) lastly, even if we tried to read beyond the end of the message, the 'readable' state
+                    //      is only changed in the next process tick, and while that state does not change the read
+                    //      contents can still be put back.
                     messageReadable = new BufferMessageReadable(this.msgPayload);
                 }
             }
@@ -119,6 +149,9 @@ export function CatenisMessage(messageReadable, funcByte, options) {
             this.msgPayload.writeUInt8(this.options.storageProvider.byteCode, 0);
             this.extMsgRef.copy(this.msgPayload, 1);
         }
+
+        // Stop monitoring errors
+        messageReadable.removeListener('error', messageReadableErrorHandler);
 
         // Just write the data making sure that it will fit
         if (this.msgPayload.length <= cfgSettings.nullDataMaxSize - bytesWritten) {
@@ -284,9 +317,10 @@ CatenisMessage.isValidStorageProvider = function (sp) {
 
 
 // Arguments:
-//   data: [Object] // Object of type Buffer containing the data stored in the tx's null data output
-// TODO: this method should take one additional parameter: a MessageDuplex stream (either CachedMessageDuplex or BufferMessageDuplex) object that shall be used to read the (possibly encrypted) message from its origianl repository (tx null data or external storage) and write its contents (already decrypted) to the local repository (Buffer or CachedMessage) and make it available to be read
-CatenisMessage.fromData = function (data, logError = true) {
+//   data: [Object] - Object of type Buffer containing the data stored in the tx's null data output
+//   messageDuplex: [Object(MessageDuplex)] - Stream used to write retrieve message's contents
+//   logError: [Boolean] - Indicates whether error should be logged or not
+CatenisMessage.fromData = function (data, messageDuplex, logError = true) {
     try {
         // Parse message data
 
@@ -337,18 +371,63 @@ CatenisMessage.fromData = function (data, logError = true) {
 
         bytesRead++;
 
+        if (!options.encrypted) {
+            // Make sure that message contents shall not be decrypted
+            messageDuplex.unsetDecryption();
+        }
+
         // Read message payload
         const msgPayload = Buffer.allocUnsafe(data.length - bytesRead);
 
         data.copy(msgPayload, 0, bytesRead);
 
         // Extract message from payload
+        const fut = new Future();
+
+        // Monitor errors while writing/piping message's contents
+        const messageDuplexErrorHandler = (err) => {
+            // Error writing message's contents. Abort processing and throw exception
+
+            // Determine which error should actually be reported
+            let error;
+
+            if ((err instanceof Meteor.Error) && (err.error === 'ctn_buf_msg_capacity_exceeded' || err.error === 'ctn_cach_msg_not_fit_one_chunk')) {
+                // Errors indicating that message is too large to be read at once.
+                //  So report specific error
+                error = err;
+            }
+            else {
+                // Report generic write error
+                Catenis.logger.ERROR('Error writing message\'s contents while parsing Catenis message.', err);
+                error = new Meteor.Error('ctn_msg_write_error', 'Error writing message\'s contents while parsing Catenis message');
+            }
+
+            messageDuplex.destroy();
+            messageDuplex.removeListener('finish', messageDuplexFinishHandler);
+
+            if (!fut.isResolved()) {
+                fut.throw(error);
+            }
+        };
+
+        messageDuplex.once('error', messageDuplexErrorHandler);
+
+        // Monitor end of writing of message's contents
+        const messageDuplexFinishHandler = () => {
+            if (!fut.isResolved()) {
+                // Just continue processing
+                fut.return();
+            }
+        };
+
+        messageDuplex.on('finish', messageDuplexFinishHandler);
+
         let messageReadable,
             extMsgRef;
 
         if (options.embedded) {
-            // TODO: create a BufferMessageReadable from msgPayload and pipe it to the received MessageDuplex parameter (and then assign it to messageReadable)
-            messageReadable = msgPayload;
+            // Read the message's contents directly from the message payload into the message duplex stream
+            messageReadable = new BufferMessageReadable(msgPayload).pipe(messageDuplex);
         }
         else {
             // Read message storage provider byte code
@@ -370,9 +449,16 @@ CatenisMessage.fromData = function (data, logError = true) {
 
             const msgStorage = CatenisMessage.getMessageStorageInstance(storageProvider);
 
-            // TODO: method retrieve of message storage provider should return a Readable stream. Then pipe returned readable stream to the received MessageDuplex parameter (and then assign it to messageReadable)
-            messageReadable = msgStorage.retrieve(extMsgRef);
+            // Read contents of retrieved message into the message duplex stream
+            messageReadable = msgStorage.retrieve(extMsgRef).pipe(messageDuplex);
         }
+
+        // Wait until the whole message's contents is written before proceeding
+        fut.wait();
+
+        // Stop monitoring errors and end of writing
+        messageDuplex.removeListener('finish', messageDuplexFinishHandler);
+        messageDuplex.removeListener('error', messageDuplexErrorHandler);
 
         const ctnMessage = new CatenisMessage();
 
@@ -392,10 +478,24 @@ CatenisMessage.fromData = function (data, logError = true) {
     catch (err) {
         // Error parsing Catenis message data.
         //  Log error condition and throw exception
-        if (logError)
-            Catenis.logger.ERROR('Error parsing Catenis message data.', err);
 
-        throw new Meteor.Error('ctn_msg_data_parse_error', util.format('Error parsing Catenis message data: %s', err.message), err.stack);
+        // Determine which error should actually be reported
+        let error;
+
+        if ((err instanceof Meteor.Error) && (err.error === 'ctn_buf_msg_capacity_exceeded' || err.error === 'ctn_cach_msg_not_fit_one_chunk')) {
+            // Report specific error
+            error = err;
+        }
+        else {
+            // Report generic parse error
+            error = new Meteor.Error('ctn_msg_data_parse_error', util.format('Error parsing Catenis message data: %s', err.message), err.stack);
+        }
+
+        if (logError) {
+            Catenis.logger.ERROR('Error parsing Catenis message data.', err);
+        }
+
+        throw error;
     }
 };
 

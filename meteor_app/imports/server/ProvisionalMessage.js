@@ -23,7 +23,6 @@ import { Random } from 'meteor/random';
 import { Catenis } from './Catenis';
 import { ProvisionalMessageReadable } from './ProvisionalMessageReadable';
 import { MessageChunk } from './MessageChunk';
-import { KeyStore } from './KeyStore';
 
 // Config entries
 const provisionalMsgConfig = config.get('provisionalMessage');
@@ -31,8 +30,8 @@ const provisionalMsgConfig = config.get('provisionalMessage');
 // Configuration settings
 const cfgSettings = {
     timeContinueMsg: provisionalMsgConfig.get('timeContinueMsg'),
-    timeKeepProcessedMsg: provisionalMsgConfig.get('timeKeepProcessedMsg'),
     timeKeepIncompleteMsg: provisionalMsgConfig.get('timeKeepIncompleteMsg'),
+    timeKeepProcessedMsg: provisionalMsgConfig.get('timeKeepProcessedMsg'),
     purgeOldMessagesInterval: provisionalMsgConfig.get('purgeOldMessagesInterval')
 };
 
@@ -46,7 +45,7 @@ let purgeOldMessagesIntervalHandle;
 //
 //  Constructor arguments:
 //    docProvisionalMessage [Object] - ProvisionalMessage database doc/rec
-//    loadAllMessageChunks [Boolean] - Indicates whether all message chunks already recorded for this message should
+//    loadAllMessageChunks [Boolean] - Indicates whether all message chunks already recorded for this message
 //                                      should be loaded. Otherwise, only the last chunk shall be loaded
 //
 // NOTE: make sure that objects of this function class are instantiated and used (their methods
@@ -55,6 +54,7 @@ export function ProvisionalMessage(docProvisionalMessage, loadAllMessageChunks =
     this.doc_id = docProvisionalMessage._id;
     this.provisionalMessageId = docProvisionalMessage.provisionalMessageId;
     this.deviceId = docProvisionalMessage.deviceId;
+    this.createdDate = docProvisionalMessage.createdDate;
 
     if (docProvisionalMessage.progress) {
         this.bytesProcessed = docProvisionalMessage.progress.bytesProcessed;
@@ -159,7 +159,7 @@ function resetLastMessageChunk() {
 // ProvisionalMessage function class (public) methods
 //
 
-ProvisionalMessage.initialize = function (masterOnly = false) {
+ProvisionalMessage.initialize = function () {
     Catenis.logger.TRACE('ProvisionalMessage initialization');
 
     // Execute process to purge old provisional messages
@@ -181,7 +181,7 @@ ProvisionalMessage.createProvisionalMessage = function (deviceId) {
     }
     catch (err) {
         // Error creating new provisional message. Log error and throw exception
-        Catenis.logger.ERROR(util.format('Error trying to create new provisional message for device (deviceId: %s).', deviceId), err);
+        Catenis.logger.ERROR('Error trying to create new provisional message for device (deviceId: %s).', deviceId, err);
         throw new Meteor.Error('ctn_prov_msg_insert_error', util.format('Error trying to create new provisional message for device (deviceId: %s).', deviceId), err.stack);
     }
 
@@ -306,21 +306,25 @@ ProvisionalMessage.finalizeProcessing = function (provisionalMessageId, msgActio
                 const progress = {
                     done: true
                 };
+                const set = {
+                    progress: progress
+                };
 
                 if (error) {
                     progress.error = conformProcessingError(provisionalMessageId, msgAction, error);
                 }
                 else {
                     progress.success = true;
+
+                    if (messageId) {
+                        set.messageId = messageId;
+                    }
                 }
 
                 progress.finishDate = new Date();
 
                 modifier = {
-                    $set: {
-                        progress: progress,
-                        messageId: messageId
-                    }
+                    $set: set
                 }
             }
             else {
@@ -334,10 +338,13 @@ ProvisionalMessage.finalizeProcessing = function (provisionalMessageId, msgActio
                     }
                     else {
                         set['progress.success'] = true;
+
+                        if (messageId) {
+                            set.messageId = messageId;
+                        }
                     }
 
                     set['progress.finishDate'] = new Date();
-                    set.messageId = messageId;
 
                     modifier = {
                         $set: set
@@ -385,7 +392,12 @@ function purgeOldProvisionalMessages() {
         // Identify incomplete provisional messages that should be removed
         const earliestDateIncompleteMessages = moment(refMoment).subtract(cfgSettings.timeKeepIncompleteMsg, 'seconds').toDate();
 
+        // noinspection JSUnresolvedFunction
         await Catenis.db.mongoCollection.MessageChunk.aggregate([{
+            $match: {
+                type: MessageChunk.type.provisional.name
+            }
+        }, {
             $sort: {
                 ephemeralMessage_id: 1,
                 order: 1
@@ -405,6 +417,29 @@ function purgeOldProvisionalMessages() {
                 latestIsFinal: false,
                 latestCreatedDate: {
                     $lt: earliestDateIncompleteMessages
+                }
+            }
+        }]).forEach(doc => idDocsToRemove.add(doc._id));
+
+        // Include provisional messages with no message chunks
+        // noinspection JSUnresolvedFunction
+        await Catenis.db.mongoCollection.ProvisionalMessage.aggregate([{
+            $match: {
+                createdDate: {
+                    $lt: earliestDateIncompleteMessages
+                }
+            }
+        }, {
+            $lookup: {
+                from: 'MessageChunk',
+                localField: '_id',
+                foreignField: 'ephemeralMessage_id',
+                as: 'messageChunks'
+            }
+        }, {
+            $match: {
+                messageChunks: {
+                    $size: 0
                 }
             }
         }]).forEach(doc => idDocsToRemove.add(doc._id));
@@ -440,15 +475,15 @@ function purgeOldProvisionalMessages() {
                         $in: idProvisionalMessagesToRemove
                     }
                 });
-                Catenis.logger.DEBUG('Number of MessageChunk docs/recs associated with old provisional messages that have been remove: %d', numMessageChunksRemoved);
+                Catenis.logger.DEBUG('Number of MessageChunk docs/recs associated with old provisional messages that have been removed: %d', numMessageChunksRemoved);
 
-                // Now remove the message provisional themselves
+                // Now remove the provisional messages themselves
                 const numProvisionalMessagesRemoved = Catenis.db.collection.ProvisionalMessage.remove({
                     _id: {
                         $in: idProvisionalMessagesToRemove
                     }
                 });
-                Catenis.logger.DEBUG('Number of old ProvisionalMessage doc/recs that have been remove: %d', numProvisionalMessagesRemoved);
+                Catenis.logger.DEBUG('Number of old ProvisionalMessage doc/recs that have been removed: %d', numProvisionalMessagesRemoved);
             }
         });
     }

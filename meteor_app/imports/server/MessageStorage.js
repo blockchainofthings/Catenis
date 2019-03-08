@@ -28,11 +28,12 @@ export class MessageStorage {
     // Method used to store the message contents onto the external storage
     //
     //  Arguments:
-    //    message: [Object] // Object of type Buffer containing the message to be stored
+    //    message: [Object(Readable)] // A readable stream from where the contents of the message to be stored should be read
     //
     //  Return: [Object] // Object of type Buffer containing the reference (a unique ID) to the stored message
     //
     //  NOTE: this method should be implemented in the derived class
+    // noinspection JSUnusedLocalSymbols
     store(message) {
         Catenis.logger.WARN('Method not implemented.');
     }
@@ -40,12 +41,13 @@ export class MessageStorage {
     // Method used to retrieve the message contents stored on the external storage
     //
     //  Arguments:
-    //    msgRef: [Object] // Object of type Buffer containing tthe reference (a unique ID) to the stored message
+    //    msgRef: [Object] // Object of type Buffer containing the reference (a unique ID) to the stored message
     //                     //  (as returned by the 'store' method)
     //
-    //  Return: [Object] // Object of type Buffer containing the retrieved message
+    //  Return: [Object(Readable)] // A readable stream from where the contents of the retrieved message should be read
     //
     //  NOTE: this method should be implemented in the derived class
+    // noinspection JSUnusedLocalSymbols
     retrieve(msgRef) {
         Catenis.logger.WARN('Method not implemented');
     }
@@ -54,7 +56,7 @@ export class MessageStorage {
     //  is actually stored from the message reference (returned from the 'store' method)
     //
     //  Arguments:
-    //    msgRef: [Object] // Object of type Buffer containing tthe reference (a unique ID) to the stored message
+    //    msgRef: [Object] // Object of type Buffer containing the reference (a unique ID) to the stored message
     //                     //  (as returned by the 'store' method)
     //
     //  Return: [String]  // Serialized version of native storage reference

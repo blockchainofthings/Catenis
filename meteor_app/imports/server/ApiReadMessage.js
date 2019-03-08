@@ -12,8 +12,7 @@
 // Internal node modules
 //import util from 'util';
 // Third-party node modules
-import _und from 'underscore';      // NOTE: we do not use the underscore library provided by Meteor because we need
-                                    //        a feature (_und.omit(obj,predicate)) that is not available in that version
+//import config from 'config';
 // Meteor packages
 import { Meteor } from 'meteor/meteor';
 
@@ -21,7 +20,6 @@ import { Meteor } from 'meteor/meteor';
 import { Catenis } from './Catenis';
 import { successResponse, errorResponse } from './RestApi';
 import { isValidMsgEncoding } from './ApiLogMessage';
-import { Message } from './Message';
 
 // Config entries
 /*const config_entryConfig = config.get('config_entry');
@@ -86,10 +84,10 @@ export function readMessage() {
         }
 
         // Execute method to read message
-        let msgInfo;
+        let readResult;
 
         try {
-            msgInfo = this.user.device.readMessage(this.urlParams.messageId);
+            readResult = this.user.device.readMessage(this.urlParams.messageId, optEncoding);
         }
         catch (err) {
             let error;
@@ -123,31 +121,8 @@ export function readMessage() {
             return error;
         }
 
-        // Prepare result
-        const result = {};
-
-        if (msgInfo.originDevice.deviceId !== this.user.device.deviceId) {
-            result.from = {
-                deviceId: msgInfo.originDevice.deviceId
-            };
-
-            // Add origin device public properties
-            _und.extend(result.from, msgInfo.originDevice.discloseMainPropsTo(this.user.device));
-        }
-
-        if (msgInfo.action === Message.action.send && msgInfo.targetDevice.deviceId !== this.user.device.deviceId) {
-            result.to = {
-                deviceId: msgInfo.targetDevice.deviceId
-            };
-
-            // Add target device public properties
-            _und.extend(result.to, msgInfo.targetDevice.discloseMainPropsTo(this.user.device));
-        }
-
-        result.message = msgInfo.message.toString(optEncoding);
-
         // Return success
-        return successResponse.call(this, result);
+        return successResponse.call(this, readResult);
     }
     catch (err) {
         Catenis.logger.ERROR('Error processing \'messages/:messageId\' API request.', err);

@@ -92,6 +92,11 @@
     "enabled": false,
     "checkInterval": 300  // (5 min.) Time, in seconds, defining the period within which IPFS server shall be checked to make sure it is still alive
   },
+  // Parameters pertaining to Message module
+  "message": {
+    "minSizeReadDataChunk": 10,  // (10 bytes) Mininum size, in bytes, of data chunks that should be used when reading message in chunks
+    "maxSizeReadDataChunk": 256  // (255 bytes) Maximum size, in bytes, of data chunks that should be used when reading message in chunks
+  },
   // Parameters pertaining to C3NodeClient module
   "c3NodeClient": {
     "serverHost": "catenis-local", // Catenis Colored Coins node server host name/IP address (access via VPN)
@@ -121,5 +126,20 @@
   // Parameters pertaining to ClientLicense module
   "clientLicense": {
     "licenseMonitorInterval": 5  // Time interval, in minutes, used to monitor client licenses for update and expiration reminder.
+  },
+  // Parameters pertaining to ProvisionalMessage module
+  "provisionalMessage": {
+    "timeContinueMsg": 900,  // (15 min.) Maximum time, in seconds, to wait until message continuation chunk is recorded
+    "timeKeepIncompleteMsg": 3600,  // (1 hour) Minimum time, in seconds, to keep provisional messages that have not been finalized (a final chunk has never been recorded)
+    "timeKeepProcessedMsg": 86400, // (24 hours) Minimum time, in seconds, to keep provisional messages after they have already been processed
+    "purgeOldMessagesInterval": 43200000  // (12 hours) Time interval, in milliseconds, for executing method to purge old provisional messages
+  },
+  // Parameters pertaining to CachedMessage module
+  "cachedMessage": {
+    "timeContinueMsg": 900,  // (5 min.) Maximum time, in seconds, to wait until message continuation chunk is read
+    "timeKeepIncompleteMsg": 3600,  // (1 hour) Minimum time, in seconds, to keep provisional messages that have not been finalized (a final chunk has never been recorded)
+    "timeKeepUnreadMsg": 3600,  // (1 hour) Minimum time, in seconds, to keep cached messages that have not been fully read (not all of its data chunks read)
+    "timeKeepReadMsg": 86400, // (24 hours) Minimum time, in seconds, to keep cached messages after they have been fully read (all of its data chunks read)
+    "purgeOldMessagesInterval": 43200000  // (12 hours) Time interval, in milliseconds, for executing method to purge old cached messages
   }
 }

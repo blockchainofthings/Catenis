@@ -559,7 +559,9 @@
   },
   // Parameters pertaining to Message module
   "message": {
-    "maxQueryCount": 500  // Maximum number of messages entries that can be returned when querying for messages
+    "maxQueryCount": 500,  // Maximum number of messages entries that can be returned when querying for messages
+    "minSizeReadDataChunk": 1024,  // (1 KB) Mininum size, in bytes, of data chunks that should be used when reading message in chunks
+    "maxSizeReadDataChunk": 5242880  // (5 MB) Maximum size, in bytes, of data chunks that should be used when reading message in chunks
   },
   // Parameters pertaining to RbfTransactionInfo module
   "rbfTransactionInfo": {
@@ -832,8 +834,8 @@
   // Parameters pertaining to ProvisionalMessage module
   "provisionalMessage": {
     "timeContinueMsg": 300,  // (5 min.) Maximum time, in seconds, to wait until message continuation chunk is recorded
-    "timeKeepProcessedMsg": 86400, // (24 hours) Minimum time, in seconds, to keep provisional messages after they have already been processed
     "timeKeepIncompleteMsg": 3600,  // (1 hour) Minimum time, in seconds, to keep provisional messages that have not been finalized (a final chunk has never been recorded)
+    "timeKeepProcessedMsg": 86400, // (24 hours) Minimum time, in seconds, to keep provisional messages after they have already been processed
     "purgeOldMessagesInterval": 43200000  // (12 hours) Time interval, in milliseconds, for executing method to purge old provisional messages
   },
   // Parameters pertaining to ProvisionalMessageReadable module
@@ -842,6 +844,22 @@
   },
   // Parameters pertaining to BufferMessageReadable module
   "bufferMessageReadable": {
+    "highWaterMark": 1048576  // (1 MB) The maximum number of bytes to store in the internal buffer of stream before ceasing to read from the underlying resource
+  },
+  // Parameters pertaining to CachedMessage module
+  "cachedMessage": {
+    "timeContinueMsg": 300,  // (5 min.) Maximum time, in seconds, to wait until message continuation chunk is read
+    "timeKeepIncompleteMsg": 3600,  // (1 hour) Minimum time, in seconds, to keep provisional messages that have not been finalized (a final chunk has never been recorded)
+    "timeKeepUnreadMsg": 3600,  // (1 hour) Minimum time, in seconds, to keep cached messages that have not been fully read (not all of its data chunks read)
+    "timeKeepReadMsg": 86400, // (24 hours) Minimum time, in seconds, to keep cached messages after they have been fully read (all of its data chunks read)
+    "purgeOldMessagesInterval": 43200000  // (12 hours) Time interval, in milliseconds, for executing method to purge old cached messages
+  },
+  // Parameters pertaining to CachedMessageDuplex module
+  "cachedMessageDuplex": {
+    "highWaterMark": 1048576  // (1 MB) The maximum number of bytes to store in the internal buffer of stream before ceasing to read from the underlying resource
+  },
+  // Parameters pertaining to BufferMessageDuplex module
+  "bufferMessageDuplex": {
     "highWaterMark": 1048576  // (1 MB) The maximum number of bytes to store in the internal buffer of stream before ceasing to read from the underlying resource
   }
 }

@@ -13,7 +13,6 @@
 import util from 'util';
 // Third-party node modules
 import config from 'config';
-import ipfsApi from 'ipfs-api';
 import ipfsHttpClient from 'ipfs-http-client';
 // Meteor packages
 import { Meteor } from 'meteor/meteor';
@@ -43,10 +42,11 @@ export function IpfsClient(host, port, protocol) {
         protocol: protocol
     });
 
+    // noinspection JSUnresolvedVariable
     this.api = {
         add: Meteor.wrapAsync(this.ipfs.add, this.ipfs),
-        addAsync: this.ipfs.files.add,
         cat: Meteor.wrapAsync(this.ipfs.cat, this.ipfs),
+        catReadableStream: this.ipfs.catReadableStream,
         id: Meteor.wrapAsync(this.ipfs.id, this.ipfs)
     };
 }
@@ -64,30 +64,21 @@ IpfsClient.prototype.add = function (data, options) {
     }
 };
 
-IpfsClient.prototype.addAsync = function (data, options, callback) {
-    if (typeof options === 'function') {
-        // Assume that this is a progress function. Set options accordingly
-        options = {
-            progress: options
-        };
-    }
-
-    this.api.addAsync(data, options, (err, results) => {
-        if (err) {
-            handleError('add', err);
-            return;
-        }
-
-        callback(null, fixIpfsClusterAddResults(results));
-    });
-};
-
 IpfsClient.prototype.cat = function (ipfsPath) {
     try {
         return this.api.cat(ipfsPath);
     }
     catch (err) {
         handleError('cat', err);
+    }
+};
+
+IpfsClient.prototype.catReadableStream = function (ipfsPath) {
+    try {
+        return this.api.catReadableStream(ipfsPath);
+    }
+    catch (err) {
+        handleError('catReadableStream', err);
     }
 };
 
@@ -157,10 +148,12 @@ function fixIpfsClusterAddResults(results) {
                 fixedResult.path = result.Name;
             }
 
+            // noinspection JSUnresolvedVariable
             if (result.Hash) {
                 fixedResult.hash = result.Hash;
             }
 
+            // noinspection JSUnresolvedVariable
             if (result.Size) {
                 fixedResult.size = parseInt(result.Size);
             }

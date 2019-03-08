@@ -34,11 +34,25 @@ const cfgSettings = {
 // MessageReadable class
 export class MessageReadable extends Readable {
     // Constructor arguments:
-    //  provisionalMessage_id [String] - ProvisionalMessage database collection doc/rec ID
-    constructor (highWaterMark) {
-        super({
-            highWaterMark: highWaterMark
-        });
+    //  highWaterMark [Number] - Threshold, in number of bytes, of stream's internal buffer
+    //  options [Object] - Readable stream options object
+    constructor (options) {
+        super(options);
+
+        this.open = true;
+    }
+
+    _destroy(err, callback) {
+        if (err) {
+            Catenis.logger.DEBUG('Message readable stream is being destroyed because of an error:', err);
+        }
+
+        // Close stream
+        this.open = false;
+
+        process.nextTick(() => this.emit('close'));
+
+        callback(null);
     }
 
     setEncryption(sourceKeys, destKeys) {

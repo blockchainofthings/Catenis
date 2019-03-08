@@ -31,6 +31,7 @@ import { sendMessage2 } from './ApiSendMessage2';
 import { sendMessage3 } from './ApiSendMessage3';
 import { readMessage } from './ApiReadMessage';
 import { readMessage2 } from './ApiReadMessage2';
+import { readMessage3 } from './ApiReadMessage3';
 import { retrieveMessageContainer } from './ApiMessageContainer';
 import { listMessages } from './ApiListMessages';
 import { listMessages2 } from './ApiListMessages2';
@@ -94,6 +95,7 @@ export function RestApi(apiVersion) {
     });
 
     if (this.apiVer.gte('0.2')) {
+        // noinspection JSUnresolvedFunction
         this.api.addRoute('messages/log', {authRequired: true}, {
             // Record a message to blockchain
             //
@@ -103,6 +105,7 @@ export function RestApi(apiVersion) {
             }
         });
 
+        // noinspection JSUnresolvedFunction
         this.api.addRoute('messages/send', {authRequired: true}, {
             // Record a message to blockchain directing it to another device
             //
@@ -112,16 +115,18 @@ export function RestApi(apiVersion) {
             }
         });
 
+        // noinspection JSUnresolvedFunction
         this.api.addRoute('messages/:messageId', {authRequired: true}, {
             // Retrieve a given message from blockchain
             //
             //  Refer to the source file where the action function is defined for a detailed description of the endpoint
             get: {
                 // Different implementations depending on the version of the API
-                action: this.apiVer.gt('0.2') ? readMessage2 : readMessage
+                action: this.apiVer.gt('0.2') ? (this.apiVer.gt('0.6') ? readMessage3: readMessage2) : readMessage
             }
         });
 
+        // noinspection JSUnresolvedFunction
         this.api.addRoute('messages/:messageId/container', {authRequired: true}, {
             // Retrieve information about where a given message is recorded
             //
@@ -133,6 +138,7 @@ export function RestApi(apiVersion) {
     }
 
     if (this.apiVer.gte('0.3')) {
+        // noinspection JSUnresolvedFunction
         this.api.addRoute('messages', {authRequired: true}, {
             // Retrieve a list of message entries filtered by a given criteria
             //
@@ -144,6 +150,7 @@ export function RestApi(apiVersion) {
     }
 
     if (this.apiVer.gte('0.4')) {
+        // noinspection JSUnresolvedFunction
         this.api.addRoute('permission/events', {authRequired: true}, {
             // Retrieve a list of system defined permission events
             //
@@ -153,6 +160,7 @@ export function RestApi(apiVersion) {
             }
         });
 
+        // noinspection JSUnresolvedFunction
         this.api.addRoute('permission/events/:eventName/rights', {authRequired: true}, {
             // Retrieve permission rights currently set for the specified event
             //
@@ -168,6 +176,7 @@ export function RestApi(apiVersion) {
             }
         });
 
+        // noinspection JSUnresolvedFunction
         this.api.addRoute('permission/events/:eventName/rights/:deviceId', {authRequired: true}, {
             // Check effective permission right applied to a given device for the specified event
             //
@@ -177,6 +186,7 @@ export function RestApi(apiVersion) {
             }
         });
 
+        // noinspection JSUnresolvedFunction
         this.api.addRoute('notification/events', {authRequired: true}, {
             // Retrieve a list of system defined notification events
             //
@@ -186,6 +196,7 @@ export function RestApi(apiVersion) {
             }
         });
 
+        // noinspection JSUnresolvedFunction
         this.api.addRoute('devices/:deviceId', {authRequired: true}, {
             // Retrieve basic identification information of a given device
             //
@@ -197,6 +208,7 @@ export function RestApi(apiVersion) {
     }
 
     if (this.apiVer.gte('0.6')) {
+        // noinspection JSUnresolvedFunction
         this.api.addRoute('assets/issue', {authRequired: true}, {
             // Issue an amount of a new asset
             //
@@ -206,6 +218,7 @@ export function RestApi(apiVersion) {
             }
         });
 
+        // noinspection JSUnresolvedFunction
         this.api.addRoute('assets/:assetId/issue', {authRequired: true}, {
             // Issue an additional amount of an existing asset
             //
@@ -215,6 +228,7 @@ export function RestApi(apiVersion) {
             }
         });
 
+        // noinspection JSUnresolvedFunction
         this.api.addRoute('assets/:assetId/transfer', {authRequired: true}, {
             // Transfer an amount of an asset to a device
             //
@@ -224,6 +238,7 @@ export function RestApi(apiVersion) {
             }
         });
 
+        // noinspection JSUnresolvedFunction
         this.api.addRoute('assets/:assetId', {authRequired: true}, {
             // Retrieve information about a given asset
             //
@@ -233,6 +248,7 @@ export function RestApi(apiVersion) {
             }
         });
 
+        // noinspection JSUnresolvedFunction
         this.api.addRoute('assets/:assetId/balance', {authRequired: true}, {
             // Get the current balance of a given asset held by the device
             //
@@ -242,6 +258,7 @@ export function RestApi(apiVersion) {
             }
         });
 
+        // noinspection JSUnresolvedFunction
         this.api.addRoute('assets/owned', {authRequired: true}, {
             // List assets owned by the device
             //
@@ -251,6 +268,7 @@ export function RestApi(apiVersion) {
             }
         });
 
+        // noinspection JSUnresolvedFunction
         this.api.addRoute('assets/issued', {authRequired: true}, {
             // List assets issued by the device
             //
@@ -260,6 +278,7 @@ export function RestApi(apiVersion) {
             }
         });
 
+        // noinspection JSUnresolvedFunction
         this.api.addRoute('assets/:assetId/issuance', {authRequired: true}, {
             // Retrieve issuance history for a given asset
             //
@@ -269,6 +288,7 @@ export function RestApi(apiVersion) {
             }
         });
 
+        // noinspection JSUnresolvedFunction
         this.api.addRoute('assets/:assetId/holders', {authRequired: true}, {
             // List devices that currently hold any amount of a given asset
             //
@@ -328,6 +348,7 @@ function authenticateDevice() {
         let device = undefined;
 
         try {
+            // noinspection JSValidateTypes
             device = Device.getDeviceByDeviceId(authData.deviceId, false);
         }
         catch (err) {

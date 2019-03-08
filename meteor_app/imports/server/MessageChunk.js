@@ -96,6 +96,25 @@ MessageChunk.prototype.getData = function (storeId = false) {
     return data;
 };
 
+MessageChunk.prototype.setFinal = function () {
+    if (!this.isFinal) {
+        try {
+            Catenis.db.collection.MessageChunk.update(this.doc_id, {
+                $set: {
+                    isFinal: true
+                }
+            });
+
+            this.isFinal = true;
+        }
+        catch (err) {
+            // Error setting message chunk as final. Log error and throw exception
+            Catenis.logger.ERROR('Error setting message chunk (doc_id: %s) as final.', this.doc_id, err);
+            throw new Error(util.format('Error setting message chunk (doc_id: %s) as final', this.doc_id));
+        }
+    }
+};
+
 
 // Module functions used to simulate private MessageChunk object methods
 //  NOTE: these functions need to be bound to a MessageChunk object reference (this) before
@@ -166,6 +185,61 @@ MessageChunk.createProvisionalMessageChunk = function (provisionalMessage_id, da
 };
 
 // NOTE: this method should be called from code executed from the MessageChunk.dbCS critical section object
+MessageChunk.createCachedMessageChunk = function (cachedMessage_id, data, isFinal = false, order, loadData = false) {
+    try {
+        if (!order) {
+            // Determine the next chunk order for the specified cached message
+            let docLatestMessageChunk;
+
+            try {
+                Catenis.db.collection.MessageChunk.findOne({
+                    ephemeralMessage_id: cachedMessage_id
+                }, {
+                    sort: {
+                        order: -1
+                    },
+                    fields: {
+                        order: 1
+                    }
+                });
+            }
+            catch (err) {
+                // noinspection ExceptionCaughtLocallyJS
+                throw new Error('Error retrieving latest message chunk of cached message to determine next order: ' + err.toString());
+            }
+
+            order = docLatestMessageChunk ? docLatestMessageChunk.order + 1 : 1;
+        }
+
+        const doc_id = Catenis.db.collection.MessageChunk.insert({
+            messageChunkId: newMessageChunkId(),
+            type: MessageChunk.type.cached.name,
+            ephemeralMessage_id: cachedMessage_id,
+            order: order,
+            isFinal: isFinal,
+            data: new Uint8Array(data), // NOTE: convert Buffer object into a TypedArray so the data is stored as a binary stream
+            createdDate: new Date()
+        });
+
+        // Retrieve newly created doc/rec
+        const findOpts = {};
+
+        if (!loadData) {
+            findOpts.fields = {
+                data: 0
+            }
+        }
+
+        return new MessageChunk(Catenis.db.collection.MessageChunk.findOne(doc_id, findOpts));
+    }
+    catch (err) {
+        // Error creating new message chunk. Log error and throw exception
+        Catenis.logger.ERROR(util.format('Error trying to create new message chunk for cached message (doc_id: %s).', cachedMessage_id), err);
+        throw new Meteor.Error('ctn__msg_chunk_insert_error', util.format('Error trying to create new message chunk for cached message (doc_id: %s).', cachedMessage_id), err.stack);
+    }
+};
+
+// NOTE: this method should be called from code executed from the MessageChunk.dbCS critical section object
 MessageChunk.getMessageChunksForProvisionalMessage = function (provisionalMessage_id, lastOnly = false, loadData = false) {
     const messageChunks = [];
 
@@ -206,6 +280,28 @@ MessageChunk.getMessageChunksForProvisionalMessage = function (provisionalMessag
 };
 
 // NOTE: this method should be called from code executed from the MessageChunk.dbCS critical section object
+MessageChunk.getMessageChunkForCachedMessage = function (cachedMessage_id, order, loadData = false) {
+    const findOpts = loadData ? {fields: {data: 0}} : undefined;
+
+    try {
+        const docMessageChunk = Catenis.db.collection.MessageChunk.findOne({
+            type: MessageChunk.type.cached.name,
+            ephemeralMessage_id: cachedMessage_id,
+            order: order
+        }, findOpts);
+
+        if (docMessageChunk) {
+            return new MessageChunk(docMessageChunk);
+        }
+    }
+    catch (err) {
+        // Error retrieving message chunk of cached message. Log error and throw exception
+        Catenis.logger.ERROR(util.format('Error retrieving message chunk (order: %d) of cached message (doc_id: %s).', order, cachedMessage_id), err);
+        throw new Meteor.Error('ctn_msg_chunk_load_error', util.format('Error retrieving message chunk (order: %d) of cached message (doc_id: %s).', order, cachedMessage_id));
+    }
+};
+
+// NOTE: this method should be called from code executed from the MessageChunk.dbCS critical section object
 MessageChunk.getEphemeralMsgRefFOfProvisionalMessageChunk = function (messageChunkId) {
     const docMessageChunk = Catenis.db.collection.MessageChunk.findOne({
         messageChunkId: messageChunkId,
@@ -220,6 +316,26 @@ MessageChunk.getEphemeralMsgRefFOfProvisionalMessageChunk = function (messageChu
         // No provisional message chunk found. Log error and throw exception
         Catenis.logger.ERROR('No provisional message chunk found with the given message chunk ID (%s)', messageChunkId);
         throw new Error(util.format('No provisional message chunk found with the given message chunk ID (%s)', messageChunkId));
+    }
+
+    return docMessageChunk.ephemeralMessage_id;
+};
+
+// NOTE: this method should be called from code executed from the MessageChunk.dbCS critical section object
+MessageChunk.getEphemeralMsgRefFOfCachedMessageChunk = function (messageChunkId) {
+    const docMessageChunk = Catenis.db.collection.MessageChunk.findOne({
+        messageChunkId: messageChunkId,
+        type: MessageChunk.type.cached.name
+    } , {
+        fields: {
+            ephemeralMessage_id: 1
+        }
+    });
+
+    if (!docMessageChunk) {
+        // No cached message chunk found. Log error and throw exception
+        Catenis.logger.ERROR('No cached message chunk found with the given message chunk ID (%s)', messageChunkId);
+        throw new Error(util.format('No cached message chunk found with the given message chunk ID (%s)', messageChunkId));
     }
 
     return docMessageChunk.ephemeralMessage_id;

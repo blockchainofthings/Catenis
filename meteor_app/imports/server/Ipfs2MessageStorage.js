@@ -39,12 +39,13 @@ export class Ipfs2MessageStorage extends MessageStorage {
     // Method used to store the message contents onto the external storage
     //
     //  Arguments:
-    //    message: [Object] // Object of type Buffer containing the message to be stored
+    //    message: [Object(Readable)] // A readable stream from where the contents of the message to be stored should be read
     //
     //  Return: [Object] // Object of type Buffer containing the reference (a unique ID) to the stored message
     store(message) {
         try {
             // Save message onto IPFS and return its CID
+            // noinspection JSUnresolvedVariable
             return new CID(Catenis.ipfsClient.add(message)[0].hash).buffer;
         }
         catch (err) {
@@ -61,11 +62,11 @@ export class Ipfs2MessageStorage extends MessageStorage {
     //    msgRef: [Object] // Object of type Buffer containing the reference (a unique ID) to the stored message
     //                     //  (as returned by the 'store' method)
     //
-    //  Return: [Object] // Object of type Buffer containing the retrieved message
+    //  Return: [Object(Readable)] // A readable stream from where the contents of the retrieved message should be read
     retrieve(msgRef) {
         try {
             // Retrieve and return (message) contents from IPFS with the given CID
-            return Catenis.ipfsClient.cat(new CID(msgRef));
+            return Catenis.ipfsClient.catReadableStream(new CID(msgRef));
         }
         catch (err) {
             // Error retrieving message from external message storage.
@@ -84,6 +85,7 @@ export class Ipfs2MessageStorage extends MessageStorage {
     //
     //  Return: [String]  // Serialized version of native storage reference
     static getNativeMsgRef(msgRef) {
+        // noinspection JSUnresolvedFunction
         return new CID(msgRef).toBaseEncodedString();
     }
 }

@@ -26,8 +26,10 @@ import { CatenisMessage } from './CatenisMessage';
 const messageConfig = config.get('message');
 
 // Configuration settings
-const cfgSettings = {
-    maxQueryCount: messageConfig.get('maxQueryCount')
+export const cfgSettings = {
+    maxQueryCount: messageConfig.get('maxQueryCount'),
+    minSizeReadDataChunk: messageConfig.get('minSizeReadDataChunk'),
+    maxSizeReadDataChunk: messageConfig.get('maxSizeReadDataChunk')
 };
 
 
@@ -356,6 +358,7 @@ Message.query = function (issuerDeviceId, filter) {
 
     if (hasFilter && (filter.action === Message.action.log || filter.action === undefined)) {
         // Log message action
+        // noinspection JSValidateTypes
         logSelector = {
             action: Message.action.log
         };
@@ -392,6 +395,7 @@ Message.query = function (issuerDeviceId, filter) {
 
     if (hasFilter && (filter.action === Message.action.send || filter.action === undefined)) {
         // Send message action
+        // noinspection JSValidateTypes
         sendSelector = {
             action: Message.action.send
         };
@@ -403,6 +407,7 @@ Message.query = function (issuerDeviceId, filter) {
         if (filter.direction === undefined || filter.direction === Message.direction.inbound) {
             // Inbound message direction.
             //  Make sure that only received messages are included
+            // noinspection JSValidateTypes
             inboundSelector = {
                 targetDeviceId: issuerDeviceId,
                 receivedDate: {
@@ -446,6 +451,7 @@ Message.query = function (issuerDeviceId, filter) {
 
         if (filter.direction === undefined || filter.direction === Message.direction.outbound) {
             // Outbound message direction
+            // noinspection JSValidateTypes
             outboundSelector = {
                 originDeviceId: issuerDeviceId
             };
@@ -493,6 +499,7 @@ Message.query = function (issuerDeviceId, filter) {
 
         if (outboundSelector !== undefined) {
             if (directionSelector !== undefined) {
+                // noinspection JSValidateTypes
                 directionSelector = {
                     $or: [
                         directionSelector,
@@ -506,6 +513,7 @@ Message.query = function (issuerDeviceId, filter) {
         }
 
         if (directionSelector !== undefined) {
+            // noinspection JSValidateTypes
             sendSelector = {
                 $and: [
                     sendSelector,
@@ -522,6 +530,7 @@ Message.query = function (issuerDeviceId, filter) {
 
     if (sendSelector !== undefined) {
         if (selector !== undefined) {
+            // noinspection JSValidateTypes
             selector = {
                 $or: [
                     selector,
@@ -605,6 +614,7 @@ Message.query = function (issuerDeviceId, filter) {
             };
         }
 
+        // noinspection JSValidateTypes
         selector = {
             $or: [
                 sentSelector,

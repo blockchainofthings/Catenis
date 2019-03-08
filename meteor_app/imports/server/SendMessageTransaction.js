@@ -26,6 +26,7 @@ import { KeyStore } from './KeyStore';
 import { Service } from './Service';
 import { Transaction } from './Transaction';
 import { MessageReadable } from './MessageReadable';
+import { BufferMessageDuplex } from './BufferMessageDuplex';
 
 
 // Definition of function classes
@@ -280,13 +281,14 @@ SendMessageTransaction.prototype.revertOutputAddresses = function () {
 // Determines if transaction is a valid Catenis Send Message transaction
 //
 //  Arguments:
-//    transact: [Object] // Object of type Transaction identifying the transaction to be checked
+//    transact: [Object] - Object of type Transaction identifying the transaction to be checked
+//    messageDuplex: [Object(MessageDuplex)] - (optional) Stream used to write retrieve message's contents
 //
 //  Return:
 //    - If transaction is not valid: undefined
 //    - If transaction is valid: Object of type SendMessageTransaction created from transaction
 //
-SendMessageTransaction.checkTransaction = function (transact) {
+SendMessageTransaction.checkTransaction = function (transact, messageDuplex) {
     let sendMsgTransact = undefined;
 
     // First, check if pattern of transaction's inputs and outputs is consistent
@@ -329,11 +331,25 @@ SendMessageTransaction.checkTransaction = function (transact) {
         if (trgtDevMainAddr.address !== origDevMainAddr.address &&
                 (origDevMainRefundChangeAddr1 === undefined || (origDevMainRefundChangeAddr1.address !== origDevMainAddr.address && areAddressesFromSameDevice(origDevMainRefundChangeAddr1.addrInfo, origDevMainAddr.addrInfo))) &&
                 (origDevMainRefundChangeAddr2 === undefined || (origDevMainRefundChangeAddr2.address !== origDevMainAddr.address && areAddressesFromSameDevice(origDevMainRefundChangeAddr2.addrInfo, origDevMainAddr.addrInfo)))) {
-            // Now, check if data in null data output is correctly formatted
+            // Prepare to retrieve message's contents
+
+            // If no message stream passed, create a new one to write the retrieved message's contents to a buffer
+            messageDuplex = messageDuplex ? messageDuplex : new BufferMessageDuplex();
+
+            // Note: if for some reason the message is actually encrypted but no private keys are available,
+            //      possibly because the (origin) device belongs to a different Catenis node, the message
+            //      shall be retrieved in its encrypted form
+            if (trgtDevMainAddr.addrInfo.cryptoKeys.hasPrivateKey()) {
+                // Assume that message needs to be decrypted. Note: it shall be unset when the message
+                //  data is parsed and the message is actually not encrypted
+                messageDuplex.setDecryption(trgtDevMainAddr.addrInfo.cryptoKeys, origDevMainAddr.addrInfo.cryptoKeys);
+            }
+
+            // Parse the message data from the null data output
             let ctnMessage = undefined;
 
             try {
-                ctnMessage = CatenisMessage.fromData(transact.getNullDataOutput().data, false);
+                ctnMessage = CatenisMessage.fromData(transact.getNullDataOutput().data, messageDuplex, false);
             }
             catch(err) {
                 if (!(err instanceof Meteor.Error) || err.error !== 'ctn_msg_data_parse_error') {
@@ -344,26 +360,8 @@ SendMessageTransaction.checkTransaction = function (transact) {
             }
 
             if (ctnMessage !== undefined && ctnMessage.isSendMessage()) {
-                let message = undefined;
-
-                if (ctnMessage.isEncrypted()) {
-                    // Try to decrypt message
-                    try {
-                        message = trgtDevMainAddr.addrInfo.cryptoKeys.decryptData(ctnMessage.getMessageReadable(), origDevMainAddr.addrInfo.cryptoKeys);
-                    }
-                    catch (err) {
-                        if (!(err instanceof Meteor.Error) || err.error !== 'ctn_crypto_no_priv_key') {
-                            // An exception other than indication that message was not decrypted because
-                            //  target device has no private key. Just re-throws it
-                            throw err;
-                        }
-                    }
-                }
-                else {
-                    message = ctnMessage.getMessageReadable();
-                }
-
                 // Instantiate send message transaction
+                // noinspection JSValidateTypes
                 sendMsgTransact = new SendMessageTransaction();
 
                 sendMsgTransact.transact = transact;
@@ -371,10 +369,7 @@ SendMessageTransaction.checkTransaction = function (transact) {
                 sendMsgTransact.targetDevice = CatenisNode.getCatenisNodeByIndex(trgtDevMainAddr.addrInfo.pathParts.ctnNodeIndex).getClientByIndex(trgtDevMainAddr.addrInfo.pathParts.clientIndex).getDeviceByIndex(trgtDevMainAddr.addrInfo.pathParts.deviceIndex);
                 sendMsgTransact.originDeviceMainAddrKeys = origDevMainAddr.addrInfo.cryptoKeys;
                 sendMsgTransact.targetDeviceMainAddrKeys = trgtDevMainAddr.addrInfo.cryptoKeys;
-                sendMsgTransact.message = message;      // Original contents of message as provided by origin device (always unencrypted)
-                                                        //  NOTE: could be undefined if message could not be decrypted due to missing private key
-                                                        //      for target device
-                sendMsgTransact.rawMessage = ctnMessage.getMessageReadable();    // Contents of message as it was recorded (encrypted, if encryption was used)
+                sendMsgTransact.messageReadable = ctnMessage.getMessageReadable();
                 sendMsgTransact.options = {
                     readConfirmation: trgtDevReadConfirmAddr !== undefined,
                     encrypted: ctnMessage.isEncrypted(),

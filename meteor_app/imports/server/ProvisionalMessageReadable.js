@@ -23,11 +23,11 @@ import { MessageReadable } from './MessageReadable';
 import { ProvisionalMessage } from './ProvisionalMessage';
 
 // Config entries
-const provMsgReadbleConfig = config.get('provisionalMessageReadable');
+const provMsgReadableConfig = config.get('provisionalMessageReadable');
 
 // Configuration settings
 const cfgSettings = {
-    highWaterMark: provMsgReadbleConfig.get('highWaterMark')
+    highWaterMark: provMsgReadableConfig.get('highWaterMark')
 };
 
 
@@ -38,8 +38,15 @@ const cfgSettings = {
 export class ProvisionalMessageReadable extends MessageReadable {
     // Constructor arguments:
     //  provisionalMessage [Object(ProvisionalMessage)] - Provisional message object
-    constructor (provisionalMessage) {
-        super(cfgSettings.highWaterMark);
+    //  options [Object] - Readable stream options object
+    constructor (provisionalMessage, options) {
+        options = options || {};
+
+        if (!options.highWaterMark) {
+            options.highWaterMark = cfgSettings.highWaterMark;
+        }
+
+        super(options);
 
         // Save provisional message ID
         this.provisionalMessageId = provisionalMessage.provisionalMessageId;
@@ -53,8 +60,11 @@ export class ProvisionalMessageReadable extends MessageReadable {
     }
 
     _read(size) {
-        if (!this.processingRead) {
-            this._processRead(size);
+        // Only do any processing if stream is still open
+        if (this.open) {
+            if (!this.processingRead) {
+                this._processRead(size);
+            }
         }
     }
 }

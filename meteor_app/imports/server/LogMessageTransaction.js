@@ -30,6 +30,7 @@ import {
     areAddressesFromSameDevice
 } from './SendMessageTransaction';
 import { MessageReadable } from './MessageReadable';
+import { BufferMessageDuplex } from './BufferMessageDuplex';
 
 // Definition of function classes
 //
@@ -253,13 +254,14 @@ LogMessageTransaction.prototype.revertOutputAddresses = function () {
 // Determines if transaction is a valid Catenis Log Message transaction
 //
 //  Arguments:
-//    transact: [Object] // Object of type Transaction identifying the transaction to be checked
+//    transact: [Object] - Object of type Transaction identifying the transaction to be checked
+//    messageDuplex: [Object(MessageDuplex)] - (optional) Stream used to write retrieve message's contents
 //
 //  Return:
 //    - If transaction is not valid: undefined
 //    - If transaction is valid: Object of type LogMessageTransaction created from transaction
 //
-LogMessageTransaction.checkTransaction = function (transact) {
+LogMessageTransaction.checkTransaction = function (transact, messageDuplex) {
     let logMsgTransact = undefined;
 
     // First, check if pattern of transaction's inputs and outputs is consistent
@@ -289,11 +291,25 @@ LogMessageTransaction.checkTransaction = function (transact) {
 
         if ((devMainRefundChangeAddr1 === undefined || (devMainRefundChangeAddr1.address !== devMainAddr.address && areAddressesFromSameDevice(devMainRefundChangeAddr1.addrInfo, devMainAddr.addrInfo))) &&
                 (devMainRefundChangeAddr2 === undefined || (devMainRefundChangeAddr2.address !== devMainAddr.address && areAddressesFromSameDevice(devMainRefundChangeAddr2.addrInfo, devMainAddr.addrInfo)))) {
-            // Now, check if data in null data output is correctly formatted
+            // Prepare to retrieve message's contents
+
+            // If no message stream passed, create a new one to write the retrieved message's contents to a buffer
+            messageDuplex = messageDuplex ? messageDuplex : new BufferMessageDuplex();
+
+            // Note: if for some reason the message is actually encrypted but no private keys are available,
+            //      possibly because the (origin) device belongs to a different Catenis node, the message
+            //      shall be retrieved in its encrypted form
+            if (devMainAddr.addrInfo.cryptoKeys.hasPrivateKey()) {
+                // Assume that message needs to be decrypted. Note: it shall be unset when the message
+                //  data is parsed and the message is actually not encrypted
+                messageDuplex.setDecryption(devMainAddr.addrInfo.cryptoKeys);
+            }
+
+            // Parse the message data from the null data output
             let ctnMessage = undefined;
 
             try {
-                ctnMessage = CatenisMessage.fromData(transact.getNullDataOutput().data, false);
+                ctnMessage = CatenisMessage.fromData(transact.getNullDataOutput().data, messageDuplex, false);
             }
             catch(err) {
                 if (!(err instanceof Meteor.Error) || err.error !== 'ctn_msg_data_parse_error') {
@@ -304,45 +320,22 @@ LogMessageTransaction.checkTransaction = function (transact) {
             }
 
             if (ctnMessage !== undefined && ctnMessage.isLogMessage()) {
-                let message = undefined;
+                // Instantiate log message transaction
+                // noinspection JSValidateTypes
+                logMsgTransact = new LogMessageTransaction();
 
-                if (ctnMessage.isEncrypted()) {
-                    // Try to decrypt message
-                    try {
-                        message = devMainAddr.addrInfo.cryptoKeys.decryptData(ctnMessage.getMessageReadable());
-                    }
-                    catch (err) {
-                        if (!(err instanceof Meteor.Error) || err.error !== 'ctn_crypto_no_priv_key') {
-                            // An exception other than indication that message was not decrypted because
-                            //  device has no private key. Just re-throws it
-                            throw err;
-                        }
-                    }
-                }
-                else {
-                    message = ctnMessage.getMessageReadable();
-                }
+                logMsgTransact.transact = transact;
+                logMsgTransact.device = CatenisNode.getCatenisNodeByIndex(devMainAddr.addrInfo.pathParts.ctnNodeIndex).getClientByIndex(devMainAddr.addrInfo.pathParts.clientIndex).getDeviceByIndex(devMainAddr.addrInfo.pathParts.deviceIndex);
+                logMsgTransact.deviceMainAddrKeys = devMainAddr.addrInfo.cryptoKeys;
+                logMsgTransact.messageReadable = ctnMessage.getMessageReadable();
+                logMsgTransact.options = {
+                    encrypted: ctnMessage.isEncrypted(),
+                    storageScheme: ctnMessage.isEmbedded() ? CatenisMessage.storageScheme.embedded : CatenisMessage.storageScheme.external
+                };
 
-                if (message !== undefined) {
-                    // Instantiate send message transaction
-                    logMsgTransact = new LogMessageTransaction();
-
-                    logMsgTransact.transact = transact;
-                    logMsgTransact.device = CatenisNode.getCatenisNodeByIndex(devMainAddr.addrInfo.pathParts.ctnNodeIndex).getClientByIndex(devMainAddr.addrInfo.pathParts.clientIndex).getDeviceByIndex(devMainAddr.addrInfo.pathParts.deviceIndex);
-                    logMsgTransact.deviceMainAddrKeys = devMainAddr.addrInfo.cryptoKeys;
-                    logMsgTransact.message = message;       // Original contents of message as provided by device (always unencrypted)
-                                                            //  NOTE: could be undefined if message could not be decrypted due to missing private key
-                                                            //      for device that recorded the message (possibly because it belongs to a different Node)
-                    logMsgTransact.rawMessage = ctnMessage.getMessageReadable();    // Contents of message as it was recorded (encrypted, if encryption was used)
-                    logMsgTransact.options = {
-                        encrypted: ctnMessage.isEncrypted(),
-                        storageScheme: ctnMessage.isEmbedded() ? CatenisMessage.storageScheme.embedded : CatenisMessage.storageScheme.external
-                    };
-
-                    if (!ctnMessage.isEmbedded()) {
-                        logMsgTransact.options.storageProvider = ctnMessage.getStorageProvider();
-                        logMsgTransact.extMsgRef = ctnMessage.getExternalMessageReference();
-                    }
+                if (!ctnMessage.isEmbedded()) {
+                    logMsgTransact.options.storageProvider = ctnMessage.getStorageProvider();
+                    logMsgTransact.extMsgRef = ctnMessage.getExternalMessageReference();
                 }
             }
         }

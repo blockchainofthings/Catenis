@@ -44,16 +44,16 @@ const cfgSettings = {
 //    },
 //    "options": {
 //      "encoding": [String],   - (optional, default: "utf8") One of the following values identifying the encoding of the message: "utf8"|"base64"|"hex"
-//      "encrypt":  [Boolean],  - (optional, default: true) Indicates whether message should be encrypted before storing. Note that, when message is passed
-//                                 in chunks, this option is only taken into consideration for the final message data chunk, and it shall be applied to the
-//                                 message's contents as a whole
-//      "storage": [String],    - (optional, default: "auto") - One of the following values identifying where the message should be stored: "auto"|"embedded"|"external".
-//                                 Note that, when message is passed in chunks, this option is only taken into consideration for the final message data chunk,
+//      "encrypt":  [Boolean],  - (optional, default: true) Indicates whether message should be encrypted before storing. NOTE that, when message is passed
+//                                 in chunks, this option is only taken into consideration (and thus should only be passed) for the final message data chunk,
 //                                 and it shall be applied to the message's contents as a whole
+//      "storage": [String],    - (optional, default: "auto") - One of the following values identifying where the message should be stored: "auto"|"embedded"|"external".
+//                                 NOTE that, when message is passed in chunks, this option is only taken into consideration (and thus should only be passed)
+//                                 for the final message data chunk, and it shall be applied to the message's contents as a whole
 //      "async": [Boolean]      - (optional, default: "false") - Indicates whether processing should be done asynchronously. If set to true, a provisional
 //                                 message ID is returned, which should be used to retrieve the processing outcome by calling the MessageProgress API method.
-//                                 Note that, when message is passed in chunks, this option is only taken into consideration for the final message data chunk,
-//                                 and it shall be applied to the message's contents as a whole
+//                                 NOTE that, when message is passed in chunks, this option is only taken into consideration (and thus should only be passed)
+//                                 for the final message data chunk, and it shall be applied to the message's contents as a whole
 //    }
 //  }
 //
@@ -69,7 +69,7 @@ export function logMessage2() {
 
         // message param
         if (!((typeof this.bodyParams.message === 'string' && this.bodyParams.message.length > 0) || (typeof this.bodyParams.message === 'object' && this.bodyParams.message !== null))) {
-            Catenis.logger.DEBUG('Invalid \'message\' parameter for \'messages/log\' API request', this.bodyParams);
+            Catenis.logger.DEBUG('Invalid \'message\' parameter for POST \'messages/log\' API request', this.bodyParams);
             return errorResponse.call(this, 400, 'Invalid parameters');
         }
 
@@ -79,7 +79,7 @@ export function logMessage2() {
         if (typeof this.bodyParams.message === 'object') {
             // message.data param
             if (!(typeof this.bodyParams.message.data === 'string' && this.bodyParams.message.data.length > 0)) {
-                Catenis.logger.DEBUG('Invalid \'message.data\' parameter for \'messages/log\' API request', this.bodyParams);
+                Catenis.logger.DEBUG('Invalid \'message.data\' parameter for POST \'messages/log\' API request', this.bodyParams);
                 return errorResponse.call(this, 400, 'Invalid parameters');
             }
 
@@ -87,7 +87,7 @@ export function logMessage2() {
 
             // message.isFinal param
             if (!(typeof this.bodyParams.message.isFinal === 'undefined' || typeof this.bodyParams.message.isFinal === 'boolean')) {
-                Catenis.logger.DEBUG('Invalid \'message.isFinal\' parameter for \'messages/log\' API request', this.bodyParams);
+                Catenis.logger.DEBUG('Invalid \'message.isFinal\' parameter for POST \'messages/log\' API request', this.bodyParams);
                 return errorResponse.call(this, 400, 'Invalid parameters');
             }
 
@@ -95,7 +95,7 @@ export function logMessage2() {
 
             // message.continuationToken param
             if (!(typeof this.bodyParams.message.continuationToken === 'undefined' || (typeof this.bodyParams.message.continuationToken === 'string' && this.bodyParams.message.continuationToken.length > 0))) {
-                Catenis.logger.DEBUG('Invalid \'message.continuationToken\' parameter for \'messages/log\' API request', this.bodyParams);
+                Catenis.logger.DEBUG('Invalid \'message.continuationToken\' parameter for POST \'messages/log\' API request', this.bodyParams);
                 return errorResponse.call(this, 400, 'Invalid parameters');
             }
         }
@@ -110,14 +110,14 @@ export function logMessage2() {
 
         // options param
         if (!(typeof this.bodyParams.options === 'undefined' || (typeof this.bodyParams.options === 'object' && this.bodyParams.options !== null))) {
-            Catenis.logger.DEBUG('Invalid \'options\' parameter for \'messages/log\' API request', this.bodyParams);
+            Catenis.logger.DEBUG('Invalid \'options\' parameter for POST \'messages/log\' API request', this.bodyParams);
             return errorResponse.call(this, 400, 'Invalid parameters');
         }
 
         if (typeof this.bodyParams.options !== 'undefined') {
             // options.encoding
             if (!(typeof this.bodyParams.options.encoding === 'undefined' || (typeof this.bodyParams.options.encoding === 'string' && isValidMsgEncoding(this.bodyParams.options.encoding)))) {
-                Catenis.logger.DEBUG('Invalid \'options.encoding\' parameter for \'messages/log\' API request', this.bodyParams);
+                Catenis.logger.DEBUG('Invalid \'options.encoding\' parameter for POST \'messages/log\' API request', this.bodyParams);
                 return errorResponse.call(this, 400, 'Invalid parameters');
             }
 
@@ -130,7 +130,7 @@ export function logMessage2() {
             if (!nonFinalDataChunk) {
                 // options.encrypt
                 if (!(typeof this.bodyParams.options.encrypt === 'undefined' || typeof this.bodyParams.options.encrypt === 'boolean')) {
-                    Catenis.logger.DEBUG('Invalid \'options.encrypt\' parameter for \'messages/log\' API request', this.bodyParams);
+                    Catenis.logger.DEBUG('Invalid \'options.encrypt\' parameter for POST \'messages/log\' API request', this.bodyParams);
                     return errorResponse.call(this, 400, 'Invalid parameters');
                 }
 
@@ -140,7 +140,7 @@ export function logMessage2() {
 
                 // options.storage
                 if (!(typeof this.bodyParams.options.storage === 'undefined' || (typeof this.bodyParams.options.storage === 'string' && isValidMsgStorage(this.bodyParams.options.storage)))) {
-                    Catenis.logger.DEBUG('Invalid \'options.storage\' parameter for \'messages/log\' API request', this.bodyParams);
+                    Catenis.logger.DEBUG('Invalid \'options.storage\' parameter for POST \'messages/log\' API request', this.bodyParams);
                     return errorResponse.call(this, 400, 'Invalid parameters');
                 }
 
@@ -150,7 +150,7 @@ export function logMessage2() {
 
                 // options.async
                 if (!(typeof this.bodyParams.options.async === 'undefined' || typeof this.bodyParams.options.async === 'boolean')) {
-                    Catenis.logger.DEBUG('Invalid \'options.async\' parameter for \'messages/log\' API request', this.bodyParams);
+                    Catenis.logger.DEBUG('Invalid \'options.async\' parameter for POST \'messages/log\' API request', this.bodyParams);
                     return errorResponse.call(this, 400, 'Invalid parameters');
                 }
 
@@ -210,10 +210,10 @@ export function logMessage2() {
         }
 
         // Execute method to log message
-        let msgResponse;
+        let logResult;
 
         try {
-            msgResponse = this.user.device.logMessage2(msg, optEncrypt, optStorage, undefined, optAsync);
+            logResult = this.user.device.logMessage2(msg, optEncrypt, optStorage, undefined, optAsync);
         }
         catch (err) {
             let error;
@@ -229,8 +229,8 @@ export function logMessage2() {
                 else if (err.error === 'ctn_prov_msg_already_complete') {
                     error = errorResponse.call(this, 400, 'Message already complete');
                 }
-                else if (err.error === 'ctn_prov_msg_invalid_cont_token') {
-                    error = errorResponse.call(this, 400, 'Unexpected continuation token');
+                else if (err.error === 'ctn_prov_msg_not_found' || err.error === 'ctn_prov_msg_wrong_device' || err.error === 'ctn_prov_msg_invalid_cont_token') {
+                    error = errorResponse.call(this, 400, 'Invalid or unexpected continuation token');
                 }
                 else if (err.error === 'ctn_prov_msg_expired') {
                     error = errorResponse.call(this, 400, 'Message has expired');
@@ -257,7 +257,7 @@ export function logMessage2() {
         }
 
         // Return success
-        return successResponse.call(this, msgResponse);
+        return successResponse.call(this, logResult);
     }
     catch (err) {
         Catenis.logger.ERROR('Error processing \'messages/log\' API request.', err);

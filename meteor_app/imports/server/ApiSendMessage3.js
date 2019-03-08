@@ -83,7 +83,7 @@ export function sendMessage3() {
 
         // message param
         if (!((typeof this.bodyParams.message === 'string' && this.bodyParams.message.length > 0) || (typeof this.bodyParams.message === 'object' && this.bodyParams.message !== null))) {
-            Catenis.logger.DEBUG('Invalid \'message\' parameter POST for \'messages/send\' API request', this.bodyParams);
+            Catenis.logger.DEBUG('Invalid \'message\' parameter POST for POST \'messages/send\' API request', this.bodyParams);
             return errorResponse.call(this, 400, 'Invalid parameters');
         }
 
@@ -93,7 +93,7 @@ export function sendMessage3() {
         if (typeof this.bodyParams.message === 'object') {
             // message.data param
             if (!(typeof this.bodyParams.message.data === 'string' && this.bodyParams.message.data.length > 0)) {
-                Catenis.logger.DEBUG('Invalid \'message.data\' parameter for \'messages/send\' API request', this.bodyParams);
+                Catenis.logger.DEBUG('Invalid \'message.data\' parameter for POST \'messages/send\' API request', this.bodyParams);
                 return errorResponse.call(this, 400, 'Invalid parameters');
             }
 
@@ -101,7 +101,7 @@ export function sendMessage3() {
 
             // message.isFinal param
             if (!(typeof this.bodyParams.message.isFinal === 'undefined' || typeof this.bodyParams.message.isFinal === 'boolean')) {
-                Catenis.logger.DEBUG('Invalid \'message.isFinal\' parameter for \'messages/send\' API request', this.bodyParams);
+                Catenis.logger.DEBUG('Invalid \'message.isFinal\' parameter for POST \'messages/send\' API request', this.bodyParams);
                 return errorResponse.call(this, 400, 'Invalid parameters');
             }
 
@@ -109,7 +109,7 @@ export function sendMessage3() {
 
             // message.continuationToken param
             if (!(typeof this.bodyParams.message.continuationToken === 'undefined' || (typeof this.bodyParams.message.continuationToken === 'string' && this.bodyParams.message.continuationToken.length > 0))) {
-                Catenis.logger.DEBUG('Invalid \'message.continuationToken\' parameter for \'messages/send\' API request', this.bodyParams);
+                Catenis.logger.DEBUG('Invalid \'message.continuationToken\' parameter for POST \'messages/send\' API request', this.bodyParams);
                 return errorResponse.call(this, 400, 'Invalid parameters');
             }
         }
@@ -124,20 +124,20 @@ export function sendMessage3() {
         if (!nonFinalDataChunk) {
             // targetDevice param
             if (!(typeof this.bodyParams.targetDevice === 'object' && this.bodyParams.targetDevice !== null)) {
-                Catenis.logger.DEBUG('Invalid \'targetDevice\' parameter POST for \'messages/send\' API request', this.bodyParams);
+                Catenis.logger.DEBUG('Invalid \'targetDevice\' parameter POST for POST \'messages/send\' API request', this.bodyParams);
                 return errorResponse.call(this, 400, 'Invalid parameters');
             }
 
             if (typeof this.bodyParams.targetDevice === 'object') {
                 // targetDevice.id param
                 if (!(typeof this.bodyParams.targetDevice.id === 'string' && this.bodyParams.targetDevice.id.length > 0)) {
-                    Catenis.logger.DEBUG('Invalid \'targetDevice.id\' parameter POST for \'messages/send\' API request', this.bodyParams);
+                    Catenis.logger.DEBUG('Invalid \'targetDevice.id\' parameter POST for POST \'messages/send\' API request', this.bodyParams);
                     return errorResponse.call(this, 400, 'Invalid parameters');
                 }
 
                 // targetDevice.isProdUniqueId param
                 if (!(typeof this.bodyParams.targetDevice.isProdUniqueId === 'undefined' || typeof this.bodyParams.targetDevice.isProdUniqueId === 'boolean')) {
-                    Catenis.logger.DEBUG('Invalid \'targetDevice.isProdUniqueId\' parameter POST for \'messages/send\' API request', this.bodyParams);
+                    Catenis.logger.DEBUG('Invalid \'targetDevice.isProdUniqueId\' parameter POST for POST \'messages/send\' API request', this.bodyParams);
                     return errorResponse.call(this, 400, 'Invalid parameters');
                 }
 
@@ -177,14 +177,14 @@ export function sendMessage3() {
 
         // options param
         if (!(typeof this.bodyParams.options === 'undefined' || (typeof this.bodyParams.options === 'object' && this.bodyParams.options !== null))) {
-            Catenis.logger.DEBUG('Invalid \'options\' parameter POST for \'messages/send\' API request', this.bodyParams);
+            Catenis.logger.DEBUG('Invalid \'options\' parameter POST for POST \'messages/send\' API request', this.bodyParams);
             return errorResponse.call(this, 400, 'Invalid parameters');
         }
 
         if (typeof this.bodyParams.options !== 'undefined') {
             // options.encoding
             if (!(typeof this.bodyParams.options.encoding === 'undefined' || (typeof this.bodyParams.options.encoding === 'string' && isValidMsgEncoding(this.bodyParams.options.encoding)))) {
-                Catenis.logger.DEBUG('Invalid \'options.encoding\' parameter POST for \'messages/send\' API request', this.bodyParams);
+                Catenis.logger.DEBUG('Invalid \'options.encoding\' parameter POST for POST \'messages/send\' API request', this.bodyParams);
                 return errorResponse.call(this, 400, 'Invalid parameters');
             }
 
@@ -197,7 +197,7 @@ export function sendMessage3() {
             if (!nonFinalDataChunk) {
                 // options.encrypt
                 if (!(typeof this.bodyParams.options.encrypt === 'undefined' || typeof this.bodyParams.options.encrypt === 'boolean')) {
-                    Catenis.logger.DEBUG('Invalid \'options.encrypt\' parameter POST for \'messages/send\' API request', this.bodyParams);
+                    Catenis.logger.DEBUG('Invalid \'options.encrypt\' parameter POST for POST \'messages/send\' API request', this.bodyParams);
                     return errorResponse.call(this, 400, 'Invalid parameters');
                 }
 
@@ -207,7 +207,7 @@ export function sendMessage3() {
 
                 // options.storage
                 if (!(typeof this.bodyParams.options.storage === 'undefined' || (typeof this.bodyParams.options.storage === 'string' && isValidMsgStorage(this.bodyParams.options.storage)))) {
-                    Catenis.logger.DEBUG('Invalid \'options.storage\' parameter POST for \'messages/send\' API request', this.bodyParams);
+                    Catenis.logger.DEBUG('Invalid \'options.storage\' parameter POST for POST \'messages/send\' API request', this.bodyParams);
                     return errorResponse.call(this, 400, 'Invalid parameters');
                 }
 
@@ -217,7 +217,7 @@ export function sendMessage3() {
 
                 // options.readConfirmation
                 if (!(typeof this.bodyParams.options.readConfirmation === 'undefined' || typeof this.bodyParams.options.readConfirmation === 'boolean')) {
-                    Catenis.logger.DEBUG('Invalid \'options.readConfirmation\' parameter POST for \'messages/send\' API request', this.bodyParams);
+                    Catenis.logger.DEBUG('Invalid \'options.readConfirmation\' parameter POST for POST \'messages/send\' API request', this.bodyParams);
                     return errorResponse.call(this, 400, 'Invalid parameters');
                 }
 
@@ -227,7 +227,7 @@ export function sendMessage3() {
 
                 // options.async
                 if (!(typeof this.bodyParams.options.async === 'undefined' || typeof this.bodyParams.options.async === 'boolean')) {
-                    Catenis.logger.DEBUG('Invalid \'options.async\' parameter for \'messages/send\' API request', this.bodyParams);
+                    Catenis.logger.DEBUG('Invalid \'options.async\' parameter for POST \'messages/send\' API request', this.bodyParams);
                     return errorResponse.call(this, 400, 'Invalid parameters');
                 }
 
@@ -287,10 +287,10 @@ export function sendMessage3() {
         }
 
         // Execute method to send message
-        let msgResponse;
+        let sendResult;
 
         try {
-            msgResponse = this.user.device.sendMessage2(msg, targetDeviceId, optEncrypt, optStorage, optReadConfirmation, undefined, optAsync);
+            sendResult = this.user.device.sendMessage2(msg, targetDeviceId, optEncrypt, optStorage, optReadConfirmation, undefined, optAsync);
         }
         catch (err) {
             let error;
@@ -306,8 +306,8 @@ export function sendMessage3() {
                 else if (err.error === 'ctn_prov_msg_already_complete') {
                     error = errorResponse.call(this, 400, 'Message already complete');
                 }
-                else if (err.error === 'ctn_prov_msg_invalid_cont_token') {
-                    error = errorResponse.call(this, 400, 'Unexpected continuation token');
+                else if (err.error === 'ctn_prov_msg_not_found' || err.error === 'ctn_prov_msg_wrong_device' || err.error === 'ctn_prov_msg_invalid_cont_token') {
+                    error = errorResponse.call(this, 400, 'Invalid or unexpected continuation token');
                 }
                 else if (err.error === 'ctn_prov_msg_expired') {
                     error = errorResponse.call(this, 400, 'Message has expired');
@@ -338,7 +338,7 @@ export function sendMessage3() {
         }
 
         // Return success
-        return successResponse.call(this, msgResponse);
+        return successResponse.call(this, sendResult);
     }
     catch (err) {
         Catenis.logger.ERROR('Error processing \'messages/send\' API request.', err);
