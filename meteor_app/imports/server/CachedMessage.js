@@ -52,33 +52,31 @@ export function CachedMessage(docCachedMessage) {
     this.doc_id = docCachedMessage._id;
     this.cachedMessageId = docCachedMessage.cachedMessageId;
     this.deviceId = docCachedMessage.deviceId;
+    this.action = docCachedMessage.action;
     this.messageId = docCachedMessage.messageId;
     this.dataChunkSize = docCachedMessage.dataChunkSize;
     this.createdDate = docCachedMessage.createdDate;
 
-    if (docCachedMessage.progress) {
-        this.bytesProcessed = docCachedMessage.progress.bytesProcessed;
-        this.processDone = docCachedMessage.progress.done;
-        this.processSucceeded = docCachedMessage.progress.success;
-        this.processFinishDate = docCachedMessage.progress.finishDate;
+    this.bytesProcessed = docCachedMessage.progress.bytesProcessed;
+    this.progressDone = docCachedMessage.progress.done;
 
-        if (docCachedMessage.progress.error) {
-            this.processErrorCode = docCachedMessage.progress.error.code;
-            this.processErrorMessage = docCachedMessage.progress.error.message;
-        }
+    if (this.progressDone) {
+        this.progressSucceeded = docCachedMessage.progress.success;
+        this.progressFinishDate = docCachedMessage.progress.finishDate;
 
-        if (this.processSucceeded) {
-            if (docCachedMessage.msgInfo) {
-                this.msgInfo = docCachedMessage.msgInfo;
-            }
-
+        if (this.progressSucceeded) {
+            this.msgInfo = docCachedMessage.msgInfo;
             this.chunksRead = docCachedMessage.chunksRead;
             this.readFinalized = docCachedMessage.readFinalized;
             this.lastReadDate = docCachedMessage.lastReadDate;
         }
-
-        getNextMessageChunk.call(this);
+        else {
+            this.progressErrorCode = docCachedMessage.progress.error.code;
+            this.progressErrorMessage = docCachedMessage.progress.error.message;
+        }
     }
+
+    getNextMessageChunk.call(this);
 
     this.refMoment = moment();
 }
@@ -92,7 +90,7 @@ CachedMessage.prototype.getDataChunk = function (continuationToken) {
     let errMsg = 'Cannot read message chunk of cached message';
     let errCode;
 
-    if (!this.processDone || !this.processSucceeded) {
+    if (!this.progressDone || !this.progressSucceeded) {
         errMsg += '; message not available';
         errCode = 'ctn_cach_msg_not_available';
     }
@@ -155,6 +153,51 @@ CachedMessage.prototype.hasFirstMessageChunk = function () {
     return this.nextMessageChunk && this.nextMessageChunk.order === 1;
 };
 
+CachedMessage.prototype.getMessageProgress = function () {
+    // Get cached message progress
+    const msgProgress = {
+        action: this.action,
+        progress: undefined
+    };
+
+    if (this.progressDone && this.progressSucceeded) {
+        // Make sure that reading of message has not yet started
+        if (!this.hasFirstMessageChunk()) {
+            Catenis.logger.DEBUG('Progress of cached message (doc_id: %s) cannot be returned; read already started', this.doc_id);
+            throw new Meteor.Error('ctn_cach_msg_read_already_started', util.format('Progress of cached message (doc_id: %s) cannot be returned; read already started', this.doc_id));
+        }
+
+        msgProgress.result = {
+            messageId: this.messageId,
+            continuationToken: this.getContinuationToken()
+        }
+    }
+
+    const progress = {
+        bytesProcessed: this.bytesProcessed,
+        done: this.progressDone
+    };
+
+    if (this.progressDone) {
+        if (this.progressSucceeded) {
+            progress.succeeded = true;
+        }
+        else {
+            progress.succeeded = false;
+            progress.error = {
+                code: this.progressErrorCode,
+                message: this.progressErrorMessage
+            }
+        }
+
+        progress.finishDate = this.progressFinishDate;
+    }
+
+    msgProgress.progress = progress;
+
+    return msgProgress;
+};
+
 
 // Module functions used to simulate private CachedMessage object methods
 //  NOTE: these functions need to be bound to a CachedMessage object reference (this) before
@@ -183,15 +226,20 @@ CachedMessage.initialize = function () {
 };
 
 // NOTE: this method should be called from code executed from the MessageChunk.dbCS critical section object
-CachedMessage.createCachedMessage = function (deviceId, messageId, dataChunkSize) {
+CachedMessage.createCachedMessage = function (deviceId, action, messageId, dataChunkSize) {
     let cachedMessage_id;
 
     try {
         cachedMessage_id = Catenis.db.collection.CachedMessage.insert({
             cachedMessageId: newCachedMessageId(),
             deviceId: deviceId,
+            action: action,
             messageId: messageId,
             dataChunkSize: dataChunkSize,
+            progress: {
+                bytesProcessed: 0,
+                done: false
+            },
             createdDate: new Date()
         });
     }
@@ -205,17 +253,30 @@ CachedMessage.createCachedMessage = function (deviceId, messageId, dataChunkSize
 };
 
 // NOTE: this method should be called from code executed from the MessageChunk.dbCS critical section object
-CachedMessage.getCachedMessageByMessageId = function (cachedMessageId) {
-    let docCachedMessage;
+CachedMessage.getCachedMessageByMessageId = function (cachedMessageId, deviceId, logError = true) {
+    const docCachedMessage = Catenis.db.collection.CachedMessage.findOne({cachedMessageId: cachedMessageId});
 
-    try {
-        docCachedMessage = Catenis.db.collection.CachedMessage.findOne({cachedMessageId: cachedMessageId});
-    }
-    catch (err) {
+    if (!docCachedMessage) {
         // No cached message found containing the given message ID.
         //  Log error and throw exception
-        Catenis.logger.ERROR('Could not find cached message with given message ID (cachedMessageId: %s)', cachedMessageId);
+        if (logError) {
+            Catenis.logger.ERROR('Could not find cached message with given message ID (cachedMessageId: %s)', cachedMessageId);
+        }
+
         throw new Meteor.Error('ctn_cach_msg_not_found', util.format('Could not find cached message with given message ID (cachedMessageId: %s)', cachedMessageId));
+    }
+
+    // Make sure that cached message belongs to same device if necessary
+    if (deviceId && docCachedMessage.deviceId !== deviceId) {
+        // Cached message belongs to a different device. Log error and throw exception
+        if (logError) {
+            Catenis.logger.ERROR('Trying to read message chunk from a cached message that belongs to a different device', {
+                cachedMessageDeviceId: docCachedMessage.deviceId,
+                messageChunkDeviceId: deviceId
+            });
+        }
+
+        throw new Meteor.Error('ctn_cach_msg_wrong_device', 'Trying to read message chunk from a cached message that belongs to a different device');
     }
 
     return new CachedMessage(docCachedMessage);
@@ -270,36 +331,18 @@ CachedMessage.updateProcessingProgress = function (cachedMessageId, bytesWritten
         });
 
         if (docCachedMessage) {
-            let modifier;
-
-            if (!docCachedMessage.progress) {
-                modifier = {
+            if (!docCachedMessage.progress.done) {
+                Catenis.db.collection.CachedMessage.update(docCachedMessage._id, {
                     $set: {
-                        progress: {
-                            bytesProcessed: bytesWritten,
-                            done: false
-                        }
+                        'progress.bytesProcessed': docCachedMessage.progress.bytesProcessed + bytesWritten
                     }
-                }
+                });
             }
             else {
-                if (!docCachedMessage.progress.done) {
-                    modifier = {
-                        $set: {
-                            'progress.bytesProcessed': docCachedMessage.progress.bytesProcessed + bytesWritten
-                        }
-                    }
-                }
-                else {
-                    // Cannot update processing progress of cached message; processing already finalized.
-                    //  Throw exception
-                    // noinspection ExceptionCaughtLocallyJS
-                    throw new Error(util.format('Cannot update processing progress of cached message (cachedMessageId: %s); processing already finalized', cachedMessageId));
-                }
-            }
-
-            if (modifier) {
-                Catenis.db.collection.CachedMessage.update(docCachedMessage._id, modifier);
+                // Cannot update processing progress of cached message; processing already finalized.
+                //  Throw exception
+                // noinspection ExceptionCaughtLocallyJS
+                throw new Error(util.format('Cannot update processing progress of cached message (cachedMessageId: %s); processing already finalized', cachedMessageId));
             }
         }
         else {
@@ -326,21 +369,17 @@ CachedMessage.finalizeProcessing = function (cachedMessageId, error, msgInfo) {
         });
 
         if (docCachedMessage) {
-            let modifier;
-
-            if (!docCachedMessage.progress) {
-                const progress = {
-                    done: true
-                };
+            if (!docCachedMessage.progress.done) {
                 const set = {
-                    progress: progress
+                    'progress.done': true
                 };
 
                 if (error) {
-                    progress.error = conformProcessingError(cachedMessageId, error);
+                    set['progress.success'] = false;
+                    set['progress.error'] = conformProcessingError(cachedMessageId, error);
                 }
                 else {
-                    progress.success = true;
+                    set['progress.success'] = true;
 
                     if (msgInfo) {
                         set.msgInfo = msgInfo;
@@ -350,48 +389,17 @@ CachedMessage.finalizeProcessing = function (cachedMessageId, error, msgInfo) {
                     set.readFinalized = false;
                 }
 
-                progress.finishDate = new Date();
+                set['progress.finishDate'] = new Date();
 
-                modifier = {
+                Catenis.db.collection.CachedMessage.update(docCachedMessage._id, {
                     $set: set
-                }
+                });
             }
             else {
-                if (!docCachedMessage.progress.done) {
-                    const set = {
-                        'progress.done': true
-                    };
-
-                    if (error) {
-                        set['progress.error'] = conformProcessingError(cachedMessageId, error);
-                    }
-                    else {
-                        set['progress.success'] = true;
-
-                        if (msgInfo) {
-                            set.msgInfo = msgInfo;
-                        }
-
-                        set.chunksRead = 0;
-                        set.readFinalized = false;
-                    }
-
-                    set['progress.finishDate'] = new Date();
-
-                    modifier = {
-                        $set: set
-                    }
-                }
-                else {
-                    // Cannot update processing progress of cached message; processing already finalized.
-                    //  Throw exception
-                    // noinspection ExceptionCaughtLocallyJS
-                    throw new Error(util.format('Cannot update processing progress of cached message (cachedMessageId: %s); processing already finalized', cachedMessageId));
-                }
-            }
-
-            if (modifier) {
-                Catenis.db.collection.CachedMessage.update(docCachedMessage._id, modifier);
+                // Cannot update processing progress of cached message; processing already finalized.
+                //  Throw exception
+                // noinspection ExceptionCaughtLocallyJS
+                throw new Error(util.format('Cannot update processing progress of cached message (cachedMessageId: %s); processing already finalized', cachedMessageId));
             }
         }
         else {

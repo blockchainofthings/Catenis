@@ -197,6 +197,7 @@ ProvisionalMessage {
   _id: [string],  // MongoDB internal document ID provided by Meteor
   provisionalMessageId: [string],  // External ID used to uniquely identify this provisional message
   deviceId: [string],  // External ID of device to which this message belongs
+  action: [string],   // Identifies the action to be performed on the message. Valid values (from Message.action): 'log', 'send'
   progress: {   // Note: this field should not exist until the message's final message chunk is recorded (received by Catenis but not yet stored to external storage/added to the blockchain)
     bytesProcessed: [number],  // Total number of bytes of message that had already been processed (stored to external storage)
     done: [boolean],           // Indicates whether processing had been finalized (message added to blockchain), either successfully or with error
@@ -217,6 +218,7 @@ CachedMessage {
   _id: [string],  // MongoDB internal document ID provided by Meteor
   cachedMessageId: [string],  // External ID used to uniquely identify this cached message
   deviceId: [string],  // External ID of device to which this message belongs
+  action: [string],   // Identifies the action to be performed on the message. Valid values (from Message.action): 'read'
   messageId: [string],  // External ID of message being read
   dataChunkSize: [number],  // Maximum size, in bytes, of the data chunks of this message
   progress: {

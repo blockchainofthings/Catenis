@@ -630,7 +630,7 @@ Device.prototype.sendMessage2 = function (message, targetDeviceId, encryptMessag
 
         // Execute code in critical section to avoid database concurrency
         MessageChunk.dbCS.execute(() => {
-            const provisionalMessage = ProvisionalMessage.recordNewMessageChunk(this.deviceId, message.continuationToken, message.dataChunk, message.isFinal);
+            const provisionalMessage = ProvisionalMessage.recordNewMessageChunk(this.deviceId, Message.action.send, message.continuationToken, message.dataChunk, message.isFinal);
 
             if (!provisionalMessage.isMessageComplete()) {
                 // Message not yet complete. Prepare to return continuation token
@@ -641,6 +641,9 @@ Device.prototype.sendMessage2 = function (message, targetDeviceId, encryptMessag
                 //  from provisional message, and provisional message reference (ID)
                 messageReadable = provisionalMessage.getReadableStream();
                 provisionalMessageId = provisionalMessage.provisionalMessageId;
+
+                // Initialize progress info
+                ProvisionalMessage.updateProcessingProgress(provisionalMessageId, 0);
             }
         });
 
@@ -910,7 +913,7 @@ Device.prototype.logMessage2 = function (message, encryptMessage = true, storage
 
         // Execute code in critical section to avoid database concurrency
         MessageChunk.dbCS.execute(() => {
-            const provisionalMessage = ProvisionalMessage.recordNewMessageChunk(this.deviceId, message.continuationToken, message.dataChunk, message.isFinal);
+            const provisionalMessage = ProvisionalMessage.recordNewMessageChunk(this.deviceId, Message.action.log, message.continuationToken, message.dataChunk, message.isFinal);
 
             if (!provisionalMessage.isMessageComplete()) {
                 // Message not yet complete. Prepare to return continuation token
@@ -921,6 +924,9 @@ Device.prototype.logMessage2 = function (message, encryptMessage = true, storage
                 //  from provisional message, and provisional message reference (ID)
                 messageReadable = provisionalMessage.getReadableStream();
                 provisionalMessageId = provisionalMessage.provisionalMessageId;
+
+                // Initialize progress info
+                ProvisionalMessage.updateProcessingProgress(provisionalMessageId, 0);
             }
         });
 
@@ -1253,7 +1259,7 @@ Device.prototype.readMessage3 = function (messageId, encoding, continuationToken
             // Execute code in critical section to avoid database concurrency
             MessageChunk.dbCS.execute(() => {
                 // Get stream to write retrieved message's contents to cached message
-                const cachedMessage = CachedMessage.createCachedMessage(this.deviceId, messageId, dataChunkSize);
+                const cachedMessage = CachedMessage.createCachedMessage(this.deviceId, Message.action.read, messageId, dataChunkSize);
 
                 messageDuplex = new CachedMessageDuplex(cachedMessage);
                 
@@ -1487,6 +1493,98 @@ Device.prototype.readMessage3 = function (messageId, encoding, continuationToken
 
         return readResult;
     }
+};
+
+// Issue an amount of an asset
+//
+//  Arguments:
+//    ephemeralMessageId [String] - ID of ephemeral message (either a provisional or a cached message) for which to return processing progress
+//
+//  Return value:
+//    msgProgress: {
+//      action: [String]            - The action that was to be performed on the message. One of: 'send', 'log' or 'read'
+//      progress: {
+//        bytesProcessed: [Number], - Total number of bytes of message that had already been processed
+//        done: [Boolean],          - Indicates whether processing had been finalized, either successfully or with error
+//        success: [Boolean],       - (optional) Indicates whether message had been successfully processed. Only returned after processing
+//                                     is finished (done = true)
+//        error: {      - (optional) Only returned after processing is finished with error (done = true & success = false)
+//          code: [Number],      - Code number of error that took place while processing the message
+//          message: [String]    - Text describing the error that took place while processing the message
+//        },
+//        finishDate: [Date]         - (optional) Date and time when processing was finalized. Only returned after processing is finished (done = true)
+//      },
+//      result: {  - (optional) Only returned after processing is finished successfully
+//        messageId: [String]         - ID of the Catenis message. When sending or logging (action = send or log), it is the ID of the
+//                                       resulting message. When reading (action = read), it references the message being read
+//        continuationToken: [String] - The token that should be used to complete the read of the message. Only return if action = read
+//      }
+//    }
+Device.prototype.getMessageProgress = function (ephemeralMessageId) {
+    // Make sure that device is not deleted
+    if (this.status === Device.status.deleted.name) {
+        // Cannot read message for a deleted device. Log error and throw exception
+        Catenis.logger.ERROR('Cannot read message for a deleted device', {deviceId: this.deviceId});
+        throw new Meteor.Error('ctn_device_deleted', util.format('Cannot read message for a deleted device (deviceId: %s)', this.deviceId));
+    }
+
+    // Make sure that device is active
+    if (this.status !== Device.status.active.name) {
+        // Cannot read message for a device that is not active. Log error and throw exception
+        Catenis.logger.ERROR('Cannot read message for a device that is not active', {deviceId: this.deviceId});
+        throw new Meteor.Error('ctn_device_not_active', util.format('Cannot read message for a device that is not active (deviceId: %s)', this.deviceId));
+    }
+
+    let msgProgress;
+
+    // Execute code in critical section to avoid database concurrency
+    MessageChunk.dbCS.execute(() => {
+        // Get ephemeral message. Try first as a provisional message
+        let provisionalMessage;
+
+        try {
+            provisionalMessage = ProvisionalMessage.getProvisionalMessageByMessageId(ephemeralMessageId, this.deviceId, false);
+        }
+        catch (err) {
+            if (!((err instanceof Meteor.Error) && err.error === 'ctn_prov_msg_not_found')) {
+                throw err;
+            }
+        }
+
+        let cachedMessage;
+
+        if (!provisionalMessage) {
+            // Try now as cached message
+            try {
+                cachedMessage = CachedMessage.getCachedMessageByMessageId(ephemeralMessageId, this.deviceId, false);
+            }
+            catch (err) {
+                let error;
+
+                if ((err instanceof Meteor.Error) && err.error === 'ctn_cach_msg_not_found') {
+                    // Throw error indicating that ephemeral was not found
+                    error = new Meteor.Error('ctn_ephem_msg_not_found', util.format('Could not find ephemeral message with given message ID (ephemeralMessageId: %s)', ephemeralMessageId));
+                }
+                else {
+                    error = err;
+                }
+
+                throw error;
+            }
+        }
+
+        if (provisionalMessage) {
+            // Get provisional message progress
+            msgProgress = provisionalMessage.getMessageProgress();
+        }
+        else {
+            // Get cached message progress
+            msgProgress = cachedMessage.getMessageProgress();
+        }
+    });
+
+    // noinspection JSUnusedAssignment
+    return msgProgress;
 };
 
 // Retrieve info about where a message previously sent/logged is recorded

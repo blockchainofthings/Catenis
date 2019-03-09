@@ -50,6 +50,7 @@ import { listOwnedAssets } from './ApiOwnedAssets';
 import { listIssuedAssets } from './ApiIssuedAssets';
 import { retrieveAssetIssuanceHistory } from './ApiAssetIssuance';
 import { listAssetHolders } from './ApiAssetHolders';
+import { retrieveMessageProgress } from './ApiMessageProgress';
 
 // Config entries
 const restApiConfig = config.get('restApi');
@@ -295,6 +296,18 @@ export function RestApi(apiVersion) {
             //  Refer to the source file where the action function is defined for a detailed description of the endpoint
             get: {
                 action: listAssetHolders
+            }
+        });
+    }
+
+    if (this.apiVer.gte('0.7')) {
+        // noinspection JSUnresolvedFunction
+        this.api.addRoute('messages/:messageId/progress', {authRequired: true}, {
+            // Retrieve asynchronous message processing progress
+            //
+            //  Refer to the source file where the action function is defined for a detailed description of the endpoint
+            get: {
+                action: retrieveMessageProgress
             }
         });
     }

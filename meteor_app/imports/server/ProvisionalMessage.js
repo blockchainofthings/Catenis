@@ -54,22 +54,25 @@ export function ProvisionalMessage(docProvisionalMessage, loadAllMessageChunks =
     this.doc_id = docProvisionalMessage._id;
     this.provisionalMessageId = docProvisionalMessage.provisionalMessageId;
     this.deviceId = docProvisionalMessage.deviceId;
+    this.action = docProvisionalMessage.action;
     this.createdDate = docProvisionalMessage.createdDate;
 
     if (docProvisionalMessage.progress) {
         this.bytesProcessed = docProvisionalMessage.progress.bytesProcessed;
-        this.processDone = docProvisionalMessage.progress.done;
-        this.processSucceeded = docProvisionalMessage.progress.success;
-        this.processFinishDate = docProvisionalMessage.progress.finishDate;
+        this.progressDone = docProvisionalMessage.progress.done;
 
-        if (docProvisionalMessage.progress.error) {
-            this.processErrorCode = docProvisionalMessage.progress.error.code;
-            this.processErrorMessage = docProvisionalMessage.progress.error.message;
+        if (this.progressDone) {
+            this.progressSucceeded = docProvisionalMessage.progress.success;
+            this.progressFinishDate = docProvisionalMessage.progress.finishDate;
+
+            if (this.progressSucceeded) {
+                this.messageId = docProvisionalMessage.messageId;
+            }
+            else {
+                this.progressErrorCode = docProvisionalMessage.progress.error.code;
+                this.progressErrorMessage = docProvisionalMessage.progress.error.message;
+            }
         }
-    }
-
-    if (docProvisionalMessage.messageId) {
-        this.messageId = docProvisionalMessage.messageId;
     }
 
     this.refMoment = moment();
@@ -137,6 +140,48 @@ ProvisionalMessage.prototype.recordNewMessageChunk = function (continuationToken
     resetLastMessageChunk.call(this);
 };
 
+ProvisionalMessage.prototype.getMessageProgress = function () {
+    if (this.bytesProcessed !== undefined) {
+        const progress = {
+            bytesProcessed: this.bytesProcessed,
+            done: this.progressDone
+        };
+
+        if (this.progressDone) {
+            if (this.progressSucceeded) {
+                progress.succeeded = true;
+            }
+            else {
+                progress.succeeded = false;
+                progress.error = {
+                    code: this.progressErrorCode,
+                    message: this.progressErrorMessage
+                }
+            }
+
+            progress.finishDate = this.progressFinishDate;
+        }
+
+        const msgProgress = {
+            action: this.action,
+            progress: progress
+        };
+
+        if (this.progressDone && this.progressSucceeded) {
+            msgProgress.result = {
+                messageId: this.messageId
+            }
+        }
+
+        return msgProgress;
+    }
+    else {
+        // Progress not available. Throw exception
+        Catenis.logger.DEBUG('Cannot retrieve processing progress of provisional message (doc_id: %s); progress not available', this.doc_id);
+        throw new Meteor.Error('ctn_prov_msg_progress_not_available', 'Cannot retrieve processing progress of provisional message; progress not available');
+    }
+};
+
 
 // Module functions used to simulate private ProvisionalMessage object methods
 //  NOTE: these functions need to be bound to a ProvisionalMessage object reference (this) before
@@ -169,13 +214,14 @@ ProvisionalMessage.initialize = function () {
 };
 
 // NOTE: this method should be called from code executed from the MessageChunk.dbCS critical section object
-ProvisionalMessage.createProvisionalMessage = function (deviceId) {
+ProvisionalMessage.createProvisionalMessage = function (deviceId, action) {
     let provisionalMessage_id;
 
     try {
         provisionalMessage_id = Catenis.db.collection.ProvisionalMessage.insert({
             provisionalMessageId: newProvisionalMessageId(),
             deviceId: deviceId,
+            action: action,
             createdDate: new Date()
         });
     }
@@ -186,6 +232,36 @@ ProvisionalMessage.createProvisionalMessage = function (deviceId) {
     }
 
     return new ProvisionalMessage(Catenis.db.collection.ProvisionalMessage.findOne(provisionalMessage_id));
+};
+
+// NOTE: this method should be called from code executed from the MessageChunk.dbCS critical section object
+ProvisionalMessage.getProvisionalMessageByMessageId = function (provisionalMessageId, deviceId, logError = true) {
+    const docProvisionalMessage = Catenis.db.collection.ProvisionalMessage.findOne({provisionalMessageId: provisionalMessageId});
+
+    if (!docProvisionalMessage) {
+        // No provisional message found containing the given message ID.
+        //  Log error and throw exception
+        if (logError) {
+            Catenis.logger.ERROR('Could not find provisional message with given message ID (provisionalMessageId: %s)', provisionalMessageId);
+        }
+
+        throw new Meteor.Error('ctn_prov_msg_not_found', util.format('Could not find provisional message with given message ID (provisionalMessageId: %s)', provisionalMessageId));
+    }
+
+    // Make sure that provisional message belongs to same device if necessary
+    if (deviceId && docProvisionalMessage.deviceId !== deviceId) {
+        // Provisional message belongs to a different device. Log error and throw exception
+        if (logError) {
+            Catenis.logger.ERROR('Trying to record message chunk to a provisional message that belongs to a different device', {
+                provisionalMessageDeviceId: docProvisionalMessage.deviceId,
+                messageChunkDeviceId: deviceId
+            });
+        }
+
+        throw new Meteor.Error('ctn_prov_msg_wrong_device', 'Trying to record message chunk to a provisional message that belongs to a different device');
+    }
+
+    return new ProvisionalMessage(docProvisionalMessage);
 };
 
 // NOTE: this method should be called from code executed from the MessageChunk.dbCS critical section object
@@ -206,12 +282,12 @@ ProvisionalMessage.getProvisionalMessageByMessageChunkId = function (messageChun
 };
 
 // NOTE: this method should be called from code executed from the MessageChunk.dbCS critical section object
-ProvisionalMessage.recordNewMessageChunk = function (deviceId, continuationToken, data, isFinal) {
+ProvisionalMessage.recordNewMessageChunk = function (deviceId, action, continuationToken, data, isFinal) {
     let provisionalMessage;
 
     if (!continuationToken) {
         // Assign message chunk to a new provisional message
-        provisionalMessage = ProvisionalMessage.createProvisionalMessage(deviceId);
+        provisionalMessage = ProvisionalMessage.createProvisionalMessage(deviceId, action);
     }
     else {
         provisionalMessage = ProvisionalMessage.getProvisionalMessageByMessageChunkId(continuationToken);
@@ -300,66 +376,34 @@ ProvisionalMessage.finalizeProcessing = function (provisionalMessageId, msgActio
         });
 
         if (docProvisionalMessage) {
-            let modifier;
-
-            if (!docProvisionalMessage.progress) {
-                const progress = {
-                    done: true
-                };
+            if (!docProvisionalMessage.progress.done) {
                 const set = {
-                    progress: progress
+                    'progress.done': true
                 };
 
                 if (error) {
-                    progress.error = conformProcessingError(provisionalMessageId, msgAction, error);
+                    set['progress.success'] = false;
+                    set['progress.error'] = conformProcessingError(provisionalMessageId, msgAction, error);
                 }
                 else {
-                    progress.success = true;
+                    set['progress.success'] = true;
 
                     if (messageId) {
                         set.messageId = messageId;
                     }
                 }
 
-                progress.finishDate = new Date();
+                set['progress.finishDate'] = new Date();
 
-                modifier = {
+                Catenis.db.collection.ProvisionalMessage.update(docProvisionalMessage._id, {
                     $set: set
-                }
+                });
             }
             else {
-                if (!docProvisionalMessage.progress.done) {
-                    const set = {
-                        'progress.done': true
-                    };
-
-                    if (error) {
-                        set['progress.error'] = conformProcessingError(provisionalMessageId, msgAction, error);
-                    }
-                    else {
-                        set['progress.success'] = true;
-
-                        if (messageId) {
-                            set.messageId = messageId;
-                        }
-                    }
-
-                    set['progress.finishDate'] = new Date();
-
-                    modifier = {
-                        $set: set
-                    }
-                }
-                else {
-                    // Cannot update processing progress of provisional message; processing already finalized.
-                    //  Throw exception
-                    // noinspection ExceptionCaughtLocallyJS
-                    throw new Error(util.format('Cannot update processing progress of provisional message (provisionalMessageId: %s); processing already finalized', provisionalMessageId));
-                }
-            }
-
-            if (modifier) {
-                Catenis.db.collection.ProvisionalMessage.update(docProvisionalMessage._id, modifier);
+                // Cannot update processing progress of provisional message; processing already finalized.
+                //  Throw exception
+                // noinspection ExceptionCaughtLocallyJS
+                throw new Error(util.format('Cannot update processing progress of provisional message (provisionalMessageId: %s); processing already finalized', provisionalMessageId));
             }
         }
         else {

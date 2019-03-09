@@ -655,7 +655,8 @@ Message.query = function (issuerDeviceId, filter) {
 
 Message.action = Object.freeze({
     log: 'log',
-    send: 'send'
+    send: 'send',
+    read: 'read'    // Special action used exclusively when reading messages in chunks
 });
 
 Message.source = Object.freeze({

@@ -81,6 +81,8 @@ export function readMessage3() {
     try {
         // Process request parameters
 
+        // From URL
+        //
         // messageId param
         if (!(typeof this.urlParams.messageId === 'string' && this.urlParams.messageId.length > 0)) {
             Catenis.logger.DEBUG('Invalid \'messageId\' parameter for GET \'messages/:messageId\' API request', this.urlParams);
