@@ -1198,7 +1198,7 @@ Device.prototype.readMessage = function (messageId, encoding) {
 //      message: [String] - The message's contents formatted using the specified encoding
 //    }
 Device.prototype.readMessage2 = function (messageId, encoding) {
-    const readResult = this.readMessage2(messageId, encoding);
+    const readResult = this.readMessage3(messageId, encoding);
 
     // Merge message's contents with message info
     readResult.msgInfo.message = readResult.msgData;
