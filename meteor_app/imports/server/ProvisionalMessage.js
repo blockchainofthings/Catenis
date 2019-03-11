@@ -140,6 +140,40 @@ ProvisionalMessage.prototype.recordNewMessageChunk = function (continuationToken
     resetLastMessageChunk.call(this);
 };
 
+ProvisionalMessage.prototype.finalizeMessage = function (continuationToken) {
+    if (!this.lastMessageChunk || !this.acceptNewMessageChunk(continuationToken)) {
+        // Provisional message cannot be finalized. Identify reason
+        //  then log and throw exception
+        let errMsg = 'Provisional message cannot be finalized';
+        let errCode;
+
+        if (!this.lastMessageChunk) {
+            errMsg += '; message has no contents';
+            errCode = 'ctn_prov_msg_no_contents';
+        }
+        if (this.lastMessageChunk.isFinal) {
+            errMsg += '; message already complete';
+            errCode = 'ctn_prov_msg_already_complete';
+        }
+        else if (this.lastMessageChunk.messageChunkId !== continuationToken) {
+            errMsg += '; unexpected continuation token';
+            errCode = 'ctn_prov_msg_invalid_cont_token';
+        }
+        else {
+            errMsg += '; message expired';
+            errCode = 'ctn_prov_msg_expired';
+        }
+
+        Catenis.logger.ERROR(errMsg, {
+            provisionalMessage: this,
+            continuationToken: continuationToken
+        });
+        throw new Meteor.Error(errCode, errMsg);
+    }
+
+    this.lastMessageChunk.setFinal();
+};
+
 ProvisionalMessage.prototype.getMessageProgress = function () {
     if (this.bytesProcessed !== undefined) {
         const progress = {

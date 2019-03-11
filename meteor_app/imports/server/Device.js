@@ -503,9 +503,9 @@ Device.prototype.sendMessage = function (targetDeviceId, message, readConfirmati
 //  Arguments:
 //    message [Buffer(Buffer)|Object] {  - The message to be sent. If a Buffer object is passed, it is assumed to be the whole message's contents.
 //                                          Otherwise, it is expected that the message be passed in chunks using the following object to control it:
-//      dataChunk: [Object(Buffer)], - The current message data chunk. The actual message's contents should be comprised of one or more data chunks
+//      dataChunk: [Object(Buffer)], - (optional) The current message data chunk. The actual message's contents should be comprised of one or more data chunks
 //      isFinal: [Boolean],         - Indicates whether this is the final (or the single) message data chunk
-//      continuationToken: [String] - (optional) - Indicates that this is a continuation message data chunk. This should be filled with the value
+//      continuationToken: [String] - (optional) Indicates that this is a continuation message data chunk. This should be filled with the value
 //                                     returned in the 'continuationToken' field of the response from the previously sent message data chunk
 //    }
 //    targetDeviceId: [String]   - (optional) Device ID identifying the device to which the message should be sent
@@ -600,58 +600,78 @@ Device.prototype.sendMessage2 = function (message, targetDeviceId, encryptMessag
     if (!Buffer.isBuffer(message)) {
         // Message passed in chunks
 
-        // Check whether client can pay for service ahead of time to avoid that client wastes resources
-        //  sending a large message to only later find out that it cannot pay for it.
-        //  Note, however, that a definitive check shall still be done once the actual processing to log
-        //  the message is executed
+        if (message.dataChunk) {
+            // Check whether client can pay for service ahead of time to avoid that client wastes resources
+            //  sending a large message to only later find out that it cannot pay for it.
+            //  Note, however, that a definitive check shall still be done once the actual processing to log
+            //  the message is executed
 
-        // Execute code in critical section to avoid Colored Coins UTXOs concurrency
-        CCFundSource.utxoCS.execute(() => {
-            const servicePriceInfo = Service.sendMessageServicePrice();
+            // Execute code in critical section to avoid Colored Coins UTXOs concurrency
+            CCFundSource.utxoCS.execute(() => {
+                const servicePriceInfo = Service.sendMessageServicePrice();
 
-            if (this.client.billingMode === Client.billingMode.prePaid) {
-                // Make sure that client has enough service credits to pay for service
-                const serviceAccountBalance = this.client.serviceAccountBalance();
+                if (this.client.billingMode === Client.billingMode.prePaid) {
+                    // Make sure that client has enough service credits to pay for service
+                    const serviceAccountBalance = this.client.serviceAccountBalance();
 
-                if (serviceAccountBalance < servicePriceInfo.finalServicePrice) {
-                    // Client does not have enough credits to pay for service.
-                    //  Log error condition and throw exception
-                    Catenis.logger.ERROR('Client does not have enough credits to pay for send message service', {
-                        serviceAccountBalance: serviceAccountBalance,
-                        servicePrice: servicePriceInfo.finalServicePrice
-                    });
-                    throw new Meteor.Error('ctn_device_low_service_acc_balance', 'Client does not have enough credits to pay for send message service');
+                    if (serviceAccountBalance < servicePriceInfo.finalServicePrice) {
+                        // Client does not have enough credits to pay for service.
+                        //  Log error condition and throw exception
+                        Catenis.logger.ERROR('Client does not have enough credits to pay for send message service', {
+                            serviceAccountBalance: serviceAccountBalance,
+                            servicePrice: servicePriceInfo.finalServicePrice
+                        });
+                        throw new Meteor.Error('ctn_device_low_service_acc_balance', 'Client does not have enough credits to pay for send message service');
+                    }
+                }
+            });
+
+            // Gather message chunks before processing it
+            let continuationToken;
+
+            // Execute code in critical section to avoid database concurrency
+            MessageChunk.dbCS.execute(() => {
+                const provisionalMessage = ProvisionalMessage.recordNewMessageChunk(this.deviceId, Message.action.send, message.continuationToken, message.dataChunk, message.isFinal);
+
+                if (!provisionalMessage.isMessageComplete()) {
+                    // Message not yet complete. Prepare to return continuation token
+                    continuationToken = provisionalMessage.getContinuationToken()
+                }
+                else {
+                    // The whole message has been received. Get stream to read message's contents
+                    //  from provisional message, and provisional message reference (ID)
+                    messageReadable = provisionalMessage.getReadableStream();
+                    provisionalMessageId = provisionalMessage.provisionalMessageId;
+
+                    // Initialize progress info
+                    ProvisionalMessage.updateProcessingProgress(provisionalMessageId, 0);
+                }
+            });
+
+            if (continuationToken) {
+                // Returns continuation token
+                return {
+                    continuationToken: continuationToken
                 }
             }
-        });
+        }
+        else {
+            // No data chunk received. Assumes that this is an indication that last data chunk was the final one
 
-        // Gather message chunks before processing it
-        let continuationToken;
+            // Execute code in critical section to avoid database concurrency
+            MessageChunk.dbCS.execute(() => {
+                const provisionalMessage = ProvisionalMessage.getProvisionalMessageByMessageChunkId(message.continuationToken);
 
-        // Execute code in critical section to avoid database concurrency
-        MessageChunk.dbCS.execute(() => {
-            const provisionalMessage = ProvisionalMessage.recordNewMessageChunk(this.deviceId, Message.action.send, message.continuationToken, message.dataChunk, message.isFinal);
+                // Finalize message and prepare to continue processing
+                provisionalMessage.finalizeMessage(message.continuationToken);
 
-            if (!provisionalMessage.isMessageComplete()) {
-                // Message not yet complete. Prepare to return continuation token
-                continuationToken = provisionalMessage.getContinuationToken()
-            }
-            else {
-                // The whole message has been received. Get stream to read message's contents
-                //  from provisional message, and provisional message reference (ID)
+                // Get stream to read message's contents from provisional message, and provisional message reference (ID)
                 messageReadable = provisionalMessage.getReadableStream();
                 provisionalMessageId = provisionalMessage.provisionalMessageId;
 
                 // Initialize progress info
                 ProvisionalMessage.updateProcessingProgress(provisionalMessageId, 0);
-            }
-        });
-
-        if (continuationToken) {
-            // Returns continuation token
-            return {
-                continuationToken: continuationToken
-            }
+            });
         }
     }
     else {
@@ -834,9 +854,9 @@ Device.prototype.logMessage = function (message, encryptMessage = true, storageS
 //  Arguments:
 //    message [Buffer(Buffer)|Object] {  - The message to be logged. If a Buffer object is passed, it is assumed to be the whole message's contents.
 //                                          Otherwise, it is expected that the message be passed in chunks using the following object to control it:
-//      dataChunk: [Object(Buffer)], - The current message data chunk. The actual message's contents should be comprised of one or more data chunks
+//      dataChunk: [Object(Buffer)], - (optional) The current message data chunk. The actual message's contents should be comprised of one or more data chunks
 //      isFinal: [Boolean],         - Indicates whether this is the final (or the single) message data chunk
-//      continuationToken: [String] - (optional) - Indicates that this is a continuation message data chunk. This should be filled with the value
+//      continuationToken: [String] - (optional) Indicates that this is a continuation message data chunk. This should be filled with the value
 //                                     returned in the 'continuationToken' field of the response from the previously sent message data chunk
 //    }
 //    encryptMessage [Boolean] - (optional, default: true) Indicates whether message should be encrypted before logging it
@@ -893,58 +913,78 @@ Device.prototype.logMessage2 = function (message, encryptMessage = true, storage
     if (!Buffer.isBuffer(message)) {
         // Message passed in chunks
 
-        // Check whether client can pay for service ahead of time to avoid that client wastes resources
-        //  sending a large message to only later find out that it cannot pay for it.
-        //  Note, however, that a definitive check shall still be done once the actual processing to log
-        //  the message is executed
+        if (message.dataChunk) {
+            // Check whether client can pay for service ahead of time to avoid that client wastes resources
+            //  sending a large message to only later find out that it cannot pay for it.
+            //  Note, however, that a definitive check shall still be done once the actual processing to log
+            //  the message is executed
 
-        // Execute code in critical section to avoid Colored Coins UTXOs concurrency
-        CCFundSource.utxoCS.execute(() => {
-            const servicePriceInfo = Service.logMessageServicePrice();
+            // Execute code in critical section to avoid Colored Coins UTXOs concurrency
+            CCFundSource.utxoCS.execute(() => {
+                const servicePriceInfo = Service.logMessageServicePrice();
 
-            if (this.client.billingMode === Client.billingMode.prePaid) {
-                // Make sure that client has enough service credits to pay for service
-                const serviceAccountBalance = this.client.serviceAccountBalance();
+                if (this.client.billingMode === Client.billingMode.prePaid) {
+                    // Make sure that client has enough service credits to pay for service
+                    const serviceAccountBalance = this.client.serviceAccountBalance();
 
-                if (serviceAccountBalance < servicePriceInfo.finalServicePrice) {
-                    // Client does not have enough credits to pay for service.
-                    //  Log error condition and throw exception
-                    Catenis.logger.ERROR('Client does not have enough credits to pay for log message service', {
-                        serviceAccountBalance: serviceAccountBalance,
-                        servicePrice: servicePriceInfo.finalServicePrice
-                    });
-                    throw new Meteor.Error('ctn_device_low_service_acc_balance', 'Client does not have enough credits to pay for log message service');
+                    if (serviceAccountBalance < servicePriceInfo.finalServicePrice) {
+                        // Client does not have enough credits to pay for service.
+                        //  Log error condition and throw exception
+                        Catenis.logger.ERROR('Client does not have enough credits to pay for log message service', {
+                            serviceAccountBalance: serviceAccountBalance,
+                            servicePrice: servicePriceInfo.finalServicePrice
+                        });
+                        throw new Meteor.Error('ctn_device_low_service_acc_balance', 'Client does not have enough credits to pay for log message service');
+                    }
+                }
+            });
+
+            // Gather message chunks before processing it
+            let continuationToken;
+
+            // Execute code in critical section to avoid database concurrency
+            MessageChunk.dbCS.execute(() => {
+                const provisionalMessage = ProvisionalMessage.recordNewMessageChunk(this.deviceId, Message.action.log, message.continuationToken, message.dataChunk, message.isFinal);
+
+                if (!provisionalMessage.isMessageComplete()) {
+                    // Message not yet complete. Prepare to return continuation token
+                    continuationToken = provisionalMessage.getContinuationToken()
+                }
+                else {
+                    // The whole message has been received. Get stream to read message's contents
+                    //  from provisional message, and provisional message reference (ID)
+                    messageReadable = provisionalMessage.getReadableStream();
+                    provisionalMessageId = provisionalMessage.provisionalMessageId;
+
+                    // Initialize progress info
+                    ProvisionalMessage.updateProcessingProgress(provisionalMessageId, 0);
+                }
+            });
+
+            if (continuationToken) {
+                // Returns continuation token
+                return {
+                    continuationToken: continuationToken
                 }
             }
-        });
+        }
+        else {
+            // No data chunk received. Assumes that this is an indication that last data chunk was the final one
 
-        // Gather message chunks before processing it
-        let continuationToken;
+            // Execute code in critical section to avoid database concurrency
+            MessageChunk.dbCS.execute(() => {
+                const provisionalMessage = ProvisionalMessage.getProvisionalMessageByMessageChunkId(message.continuationToken);
 
-        // Execute code in critical section to avoid database concurrency
-        MessageChunk.dbCS.execute(() => {
-            const provisionalMessage = ProvisionalMessage.recordNewMessageChunk(this.deviceId, Message.action.log, message.continuationToken, message.dataChunk, message.isFinal);
+                // Finalize message and prepare to continue processing
+                provisionalMessage.finalizeMessage(message.continuationToken);
 
-            if (!provisionalMessage.isMessageComplete()) {
-                // Message not yet complete. Prepare to return continuation token
-                continuationToken = provisionalMessage.getContinuationToken()
-            }
-            else {
-                // The whole message has been received. Get stream to read message's contents
-                //  from provisional message, and provisional message reference (ID)
+                // Get stream to read message's contents from provisional message, and provisional message reference (ID)
                 messageReadable = provisionalMessage.getReadableStream();
                 provisionalMessageId = provisionalMessage.provisionalMessageId;
 
                 // Initialize progress info
                 ProvisionalMessage.updateProcessingProgress(provisionalMessageId, 0);
-            }
-        });
-
-        if (continuationToken) {
-            // Returns continuation token
-            return {
-                continuationToken: continuationToken
-            }
+            });
         }
     }
     else {

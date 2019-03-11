@@ -39,7 +39,9 @@ import { isValidMsgEncoding, isValidMsgStorage } from './ApiLogMessage2';
 //  JSON payload: {
 //    "message": [String|Object] {  - The message to send. If a string is passed, it is assumed to be the whole message's contents. Otherwise, it is
 //                                     expected that the message be passed in chunks using the following object to control it
-//      "data": [String],               - The current message data chunk. The actual message's contents should be comprised of one or more data chunks
+//      "data": [String],               - (optional) The current message data chunk. The actual message's contents should be comprised of one or more data chunks.
+//                                         NOTE that, when sending a final message data chunk (isFinal = true and continuationToken specified), this parameter
+//                                         may either be omitted or have an empty string value
 //      "isFinal": [Boolean],           - (optional, default: "true") Indicates whether this is the final (or the single) message data chunk
 //      "continuationToken": [String]   - (optional) - Indicates that this is a continuation message data chunk. This should be filled with the value
 //                                         returned in the 'continuationToken' field of the response from the previously sent message data chunk
@@ -88,16 +90,14 @@ export function sendMessage3() {
         }
 
         let messageData;
-        let nonFinalDataChunk = false;
+        let isMessageComplete = true;
 
         if (typeof this.bodyParams.message === 'object') {
             // message.data param
-            if (!(typeof this.bodyParams.message.data === 'string' && this.bodyParams.message.data.length > 0)) {
+            if (!(typeof this.bodyParams.message.data === 'undefined' || typeof this.bodyParams.message.data === 'string')) {
                 Catenis.logger.DEBUG('Invalid \'message.data\' parameter for POST \'messages/send\' API request', this.bodyParams);
                 return errorResponse.call(this, 400, 'Invalid parameters');
             }
-
-            messageData = this.bodyParams.message.data;
 
             // message.isFinal param
             if (!(typeof this.bodyParams.message.isFinal === 'undefined' || typeof this.bodyParams.message.isFinal === 'boolean')) {
@@ -105,11 +105,20 @@ export function sendMessage3() {
                 return errorResponse.call(this, 400, 'Invalid parameters');
             }
 
-            nonFinalDataChunk = !this.bodyParams.message.isFinal;
+            isMessageComplete = this.bodyParams.message.isFinal !== undefined ? this.bodyParams.message.isFinal : true;
 
             // message.continuationToken param
             if (!(typeof this.bodyParams.message.continuationToken === 'undefined' || (typeof this.bodyParams.message.continuationToken === 'string' && this.bodyParams.message.continuationToken.length > 0))) {
                 Catenis.logger.DEBUG('Invalid \'message.continuationToken\' parameter for POST \'messages/send\' API request', this.bodyParams);
+                return errorResponse.call(this, 400, 'Invalid parameters');
+            }
+
+            // Make sure that message is specified if not sending a final message data chunk
+            if (typeof this.bodyParams.message.data !== 'undefined' && this.bodyParams.message.data.length > 0) {
+                messageData = this.bodyParams.message.data;
+            }
+            else if (!(isMessageComplete && typeof this.bodyParams.message.continuationToken !== 'undefined')) {
+                Catenis.logger.DEBUG('Invalid \'message.data\' parameter for POST \'messages/log\' API request', this.bodyParams);
                 return errorResponse.call(this, 400, 'Invalid parameters');
             }
         }
@@ -117,11 +126,11 @@ export function sendMessage3() {
             messageData = this.bodyParams.message;
         }
 
-        // Only take the following parameter into consideration if message not passed in chunks or this
-        //  is the final chunk of the message
+        // Only take the following parameter into consideration if message is complete (not passed in chunks or this
+        //  is the final chunk of the message)
         let targetDeviceId;
 
-        if (!nonFinalDataChunk) {
+        if (isMessageComplete) {
             // targetDevice param
             if (!(typeof this.bodyParams.targetDevice === 'object' && this.bodyParams.targetDevice !== null)) {
                 Catenis.logger.DEBUG('Invalid \'targetDevice\' parameter POST for POST \'messages/send\' API request', this.bodyParams);
@@ -194,7 +203,7 @@ export function sendMessage3() {
 
             // Only take the following options into consideration if message not passed in chunks or this
             //  is the final chunk of the message
-            if (!nonFinalDataChunk) {
+            if (!isMessageComplete) {
                 // options.encrypt
                 if (!(typeof this.bodyParams.options.encrypt === 'undefined' || typeof this.bodyParams.options.encrypt === 'boolean')) {
                     Catenis.logger.DEBUG('Invalid \'options.encrypt\' parameter POST for POST \'messages/send\' API request', this.bodyParams);
@@ -246,28 +255,30 @@ export function sendMessage3() {
         // Prepare message
         let bufMsg;
 
-        try {
-            bufMsg = Buffer.from(messageData, optEncoding);
-        }
-        catch (err) {
-            let error;
+        if (messageData) {
+            try {
+                bufMsg = Buffer.from(messageData, optEncoding);
+            }
+            catch (err) {
+                let error;
 
-            if (err.name === 'TypeError') {
-                error = errorResponse.call(this, 400, 'Invalid parameters');
+                if (err.name === 'TypeError') {
+                    error = errorResponse.call(this, 400, 'Invalid parameters');
+                    Catenis.logger.DEBUG('Incompatible encoding for \'message\' parameter of \'messages/send\' API request', this.bodyParams);
+                }
+                else {
+                    error = errorResponse.call(this, 500, 'Internal server error');
+                    Catenis.logger.ERROR('Error processing \'messages/send\' API request.', err);
+                }
+
+                return error;
+            }
+
+            // Make sure that buffer's contents match the original message
+            if (bufMsg.toString(optEncoding) !== (optEncoding === 'hex' ? messageData.toLowerCase() : messageData)) {
                 Catenis.logger.DEBUG('Incompatible encoding for \'message\' parameter of \'messages/send\' API request', this.bodyParams);
+                return errorResponse.call(this, 400, 'Invalid parameters');
             }
-            else {
-                error = errorResponse.call(this, 500, 'Internal server error');
-                Catenis.logger.ERROR('Error processing \'messages/send\' API request.', err);
-            }
-
-            return error;
-        }
-
-        // Make sure that buffer's contents match the original message
-        if (bufMsg.toString(optEncoding) !== (optEncoding === 'hex' ? messageData.toLowerCase() : messageData)) {
-            Catenis.logger.DEBUG('Incompatible encoding for \'message\' parameter of \'messages/send\' API request', this.bodyParams);
-            return errorResponse.call(this, 400, 'Invalid parameters');
         }
 
         let msg;
@@ -275,7 +286,7 @@ export function sendMessage3() {
         if (typeof this.bodyParams.message === 'object') {
             msg = {
                 dataChunk: bufMsg,
-                isFinal: this.bodyParams.message.isFinal !== undefined ? this.bodyParams.message.isFinal : true
+                isFinal: isMessageComplete
             };
 
             if (this.bodyParams.message.continuationToken) {
@@ -306,7 +317,7 @@ export function sendMessage3() {
                 else if (err.error === 'ctn_prov_msg_already_complete') {
                     error = errorResponse.call(this, 400, 'Message already complete');
                 }
-                else if (err.error === 'ctn_prov_msg_not_found' || err.error === 'ctn_prov_msg_wrong_device' || err.error === 'ctn_prov_msg_invalid_cont_token') {
+                else if (err.error === 'ctn_prov_msg_not_found' || err.error === 'ctn_prov_msg_wrong_device' || err.error === 'ctn_prov_msg_invalid_cont_token' || err.error === 'ctn_prov_msg_no_contents') {
                     error = errorResponse.call(this, 400, 'Invalid or unexpected continuation token');
                 }
                 else if (err.error === 'ctn_prov_msg_expired') {
@@ -345,8 +356,3 @@ export function sendMessage3() {
         return errorResponse.call(this, 500, 'Internal server error');
     }
 }
-
-
-// Module code
-//
-
