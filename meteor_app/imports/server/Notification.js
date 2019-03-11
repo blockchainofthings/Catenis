@@ -177,6 +177,12 @@ Notification.event = Object.freeze({
         description: 'An amount of an asset that was pending due to an asset transfer has been confirmed',
         minNotifyServiceVer: '0.2',
         minApiVer: '0.6'
+    }),
+    final_msg_progress: Object.freeze({
+        name: 'final-msg-progress',
+        description: 'Progress of asynchronous message processing has come to an end',
+        minNotifyServiceVer: '0.3',
+        minApiVer: '0.7'
     })
 });
 

@@ -762,6 +762,16 @@ Device.prototype.sendMessage2 = function (message, targetDeviceId, encryptMessag
         // Execute processing asynchronously
         Future.task(doProcessing).resolve((err) => {
             ProvisionalMessage.finalizeProcessing(provisionalMessageId, Message.action.send, err, messageId);
+
+            try {
+                // Send notification advising that progress of asynchronous message processing has come to an end
+                // noinspection JSUnusedAssignment
+                this.notifyFinalMessageProgress(provisionalMessageId, ProvisionalMessage.getProvisionalMessageByMessageId(provisionalMessageId).getMessageProgress());
+            }
+            catch (err) {
+                // Error sending notification message. Log error
+                Catenis.logger.ERROR('Error sending final message progress notification event for device (doc_id: %s)', this.doc_id, err);
+            }
         });
 
         // Returns provisional message ID, so processing progress can be monitored
@@ -1044,6 +1054,16 @@ Device.prototype.logMessage2 = function (message, encryptMessage = true, storage
         // Execute processing asynchronously
         Future.task(doProcessing).resolve((err) => {
             ProvisionalMessage.finalizeProcessing(provisionalMessageId, Message.action.log, err, messageId);
+
+            try {
+                // Send notification advising that progress of asynchronous message processing has come to an end
+                // noinspection JSUnusedAssignment
+                this.notifyFinalMessageProgress(provisionalMessageId, ProvisionalMessage.getProvisionalMessageByMessageId(provisionalMessageId).getMessageProgress());
+            }
+            catch (err) {
+                // Error sending notification message. Log error
+                Catenis.logger.ERROR('Error sending final message progress notification event for device (doc_id: %s)', this.doc_id, err);
+            }
         });
 
         // Returns provisional message ID, so processing progress can be monitored
@@ -1390,9 +1410,17 @@ Device.prototype.readMessage3 = function (messageId, encoding, continuationToken
         // Execute processing asynchronously
         Future.task(doProcessing).resolve((err) => {
             CachedMessage.finalizeProcessing(cachedMessageId, err, msgInfo);
-        });
 
-        // TODO: issue 'msg_process_end' notification event advising that message processing (log/send/read) has been finalized, and informing of the process outcome
+            try {
+                // Send notification advising that progress of asynchronous message processing has come to an end
+                // noinspection JSUnusedAssignment
+                this.notifyFinalMessageProgress(cachedMessageId, CachedMessage.getCachedMessageByMessageId(cachedMessageId).getMessageProgress());
+            }
+            catch (err) {
+                // Error sending notification message. Log error
+                Catenis.logger.ERROR('Error sending final message progress notification event for device (doc_id: %s)', this.doc_id, err);
+            }
+        });
 
         // Returns cached message ID, so processing progress can be monitored
         // noinspection JSUnusedAssignment
@@ -2458,6 +2486,14 @@ Device.prototype.notifyAssetConfirmed = function (asset, amount, sendingDevice, 
 
     // Dispatch notification message
     Catenis.notification.dispatchNotifyMessage(this.deviceId, Notification.event.asset_confirmed.name, JSON.stringify(msgInfo));
+};
+
+Device.prototype.notifyFinalMessageProgress = function (ephemeralMessageId, msgProgress) {
+    // Dispatch notification message
+    Catenis.notification.dispatchNotifyMessage(this.deviceId, Notification.event.final_msg_progress.name, JSON.stringify({
+        ephemeralMessageId: ephemeralMessageId,
+        ...msgProgress
+    }));
 };
 /** End of notification related methods **/
 

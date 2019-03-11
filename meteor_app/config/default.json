@@ -604,7 +604,8 @@
     "initVersion": "0.1",   // Initial version of the Catenis notification service
     "availableVersions": [    // List of all currently available versions of the Catenis notification service
       "0.1",
-      "0.2"
+      "0.2",
+      "0.3"
     ]
   },
   // Parameters pertaining to WebSocketNotifyMsgDispatcher module
