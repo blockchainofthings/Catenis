@@ -47,23 +47,24 @@ const cfgSettings = {
 //    "options": {
 //      "encoding": [String],   - (optional, default: "utf8") One of the following values identifying the encoding of the message: "utf8"|"base64"|"hex"
 //      "encrypt":  [Boolean],  - (optional, default: true) Indicates whether message should be encrypted before storing. NOTE that, when message is passed
-//                                 in chunks, this option is only taken into consideration (and thus should only be passed) for the final message data chunk,
+//                                 in chunks, this option is only taken into consideration (and thus only needs to be passed) for the final message data chunk,
 //                                 and it shall be applied to the message's contents as a whole
 //      "storage": [String],    - (optional, default: "auto") - One of the following values identifying where the message should be stored: "auto"|"embedded"|"external".
-//                                 NOTE that, when message is passed in chunks, this option is only taken into consideration (and thus should only be passed)
+//                                 NOTE that, when message is passed in chunks, this option is only taken into consideration (and thus only needs to be passed)
 //                                 for the final message data chunk, and it shall be applied to the message's contents as a whole
-//      "async": [Boolean]      - (optional, default: "false") - Indicates whether processing should be done asynchronously. If set to true, a provisional
-//                                 message ID is returned, which should be used to retrieve the processing outcome by calling the MessageProgress API method.
-//                                 NOTE that, when message is passed in chunks, this option is only taken into consideration (and thus should only be passed)
-//                                 for the final message data chunk, and it shall be applied to the message's contents as a whole
+//      "async": [Boolean]      - (optional, default: "false") - Indicates whether processing (storage of message to the blockchain) should be done asynchronously.
+//                                 If set to true, a provisional message ID is returned, which should be used to retrieve the processing outcome by calling
+//                                 the MessageProgress API method. NOTE that, when message is passed in chunks, this option is only taken into consideration
+//                                 (and thus only needs to be passed) for the final message data chunk, and it shall be applied to the message's contents as a whole
 //    }
 //  }
 //
 //  Success data returned: {
-//    "continuationToken": [String] - (optional) Token to be used when sending the following message data chunk. Returned if message passed in chunks
-//                                     and last message data chunk was not final
-//    "messageId": [String]  - (optional) ID of logged message. Returned after the whole message's contents is sent if not doing asynchronous processing
-//    "provisionalMessageId": [String]  - (optional) Provisional message ID. Returned after the whole message's contents is sent if doing asynchronous processing
+//    "continuationToken": [String]    - (optional) Token to be used when sending the following message data chunk. Returned if message passed in chunks
+//                                        and last message data chunk was not final
+//    "messageId": [String]            - (optional) ID of logged message. Returned after the whole message's contents is received and stored to the blockchain
+//                                        if not doing asynchronous processing
+//    "provisionalMessageId": [String] - (optional) Provisional message ID. Returned right after the whole message's contents is received if doing asynchronous processing
 //  }
 export function logMessage2() {
     try {

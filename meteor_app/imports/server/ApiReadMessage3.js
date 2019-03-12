@@ -44,14 +44,15 @@ import {
 //  Query string (optional) parameters:
 //    encoding [String]   - (default: utf8) One of the following values identifying the encoding that should be used for the returned message: utf8|base64|hex
 //    continuationToken [String]  - Indicates that this is a continuation call and that the following message data chunk should be returned
-//    dataChunkSize [Number]  - Size, in bytes, of the largest message data chunk that should be returned. This is effectively used to signal that the message
-//                               should be retrieved/read in chunks. NOTE that this option is only taken into consideration (and thus should only be passed)
-//                               for the initial call to this API method with a given message ID (no continuation token), and it shall be applied to the
-//                               message's contents as a whole
-//    async [Boolean]  - (default: "false") Indicates whether processing should be done asynchronously. If set to true, a cached message ID is returned,
-//                        which should be used to retrieve the processing outcome by calling the MessageProgress API method. NOTE that this option is only
-//                        taken into consideration (and thus should only the passed) for the initial call to this API method with a given message ID
-//                        (no continuation token), and it shall be applied to the message's contents as a whole
+//    dataChunkSize [Number]  - Size, in bytes, of the largest message data chunk that should be returned. This is effectively used to signal
+//                              that the message should be retrieved/read in chunks. NOTE that this option is only taken into consideration (and
+//                              thus only needs to be passed) for the initial call to this API method with a given message ID (no continuation
+//                              token), and it shall be applied to the message's contents as a whole
+//    async [Boolean]  - (default: false) Indicates whether processing (retrieval of message from the blockchain) should be done asynchronously.
+//                        If set to true, a cached message ID is returned, which should be used to retrieve the processing outcome by calling the
+//                        Retrieve Message Progress API method. NOTE that this option is only taken into consideration (and thus only needs to be
+//                        passed) for the initial call to this API method with a given message ID (no continuation token), and it shall be
+//                        applied to the message's contents as a whole
 //
 //  Success data returned: {
 //    "msgInfo": {  - (optional) Returned along with the 'messageData' field for the first (or the only) part of the message's contents returned for a
