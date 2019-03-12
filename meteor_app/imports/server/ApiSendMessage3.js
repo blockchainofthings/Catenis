@@ -204,7 +204,7 @@ export function sendMessage3() {
 
             // Only take the following options into consideration if message not passed in chunks or this
             //  is the final chunk of the message
-            if (!isMessageComplete) {
+            if (isMessageComplete) {
                 // options.encrypt
                 if (!(typeof this.bodyParams.options.encrypt === 'undefined' || typeof this.bodyParams.options.encrypt === 'boolean')) {
                     Catenis.logger.DEBUG('Invalid \'options.encrypt\' parameter POST for POST \'messages/send\' API request', this.bodyParams);
