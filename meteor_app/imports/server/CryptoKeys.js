@@ -28,7 +28,7 @@ import { ECDecipher } from './ECDecipher';
 // Definition of function classes
 //
 
-// CrytoKeys function class
+// CryptoKeys function class
 export function CryptoKeys(keyPair) {
     this.keyPair = keyPair;
 }
@@ -107,7 +107,7 @@ CryptoKeys.prototype.encryptData = function (data, destKeys) {
 //   destKeys [Object(CryptoKeys)] - The crypto keys of the destine party
 //
 //  Returns:
-//   chipheredData [Object(Buffer)] - Buffer containing the first part of the resulting ciphered data
+//   cipheredData [Object(Buffer)] - Buffer containing the first part of the resulting ciphered data
 CryptoKeys.prototype.startEncryptData = function (data, destKeys) {
     if (!this.hasPrivateKey()) {
         throw new Meteor.Error('ctn_crypto_no_priv_key', 'Cannot start encrypting data; missing private key');
@@ -143,7 +143,7 @@ CryptoKeys.prototype.encryptingData = function () {
 //                        Note that this parameter is only taken into account when some data is passed
 //
 //  Returns:
-//   chipheredData [Object(Buffer)] - Buffer containing the next/last part of the resulting ciphered data
+//   cipheredData [Object(Buffer)] - Buffer containing the next/last part of the resulting ciphered data
 CryptoKeys.prototype.continueEncryptData = function (data, isFinal = false) {
     if (!this.ecCipher) {
         throw new Meteor.Error('ctn_crypto_encrypt_not_started', 'Cannot continue encrypting data; encryption has not been started');
