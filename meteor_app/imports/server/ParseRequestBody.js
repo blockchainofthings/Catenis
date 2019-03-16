@@ -115,7 +115,8 @@ function sendError(res, errMsg, statusCode) {
 function sendParsedError(res, error) {
     if ((error instanceof Error) && (typeof error.status === 'number' || typeof error.statusCode === 'number')) {
         const statusCode = typeof error.status === 'number' ? error.status : error.statusCode;
-        const errMsg = statusCode < 500 ? error.message : 'Internal server error';
+        // Filter 413 (Request entity too large) status code so a custom message is returned
+        const errMsg = statusCode < 500 ? (statusCode === 413 ? 'Request data too large to be processed' : error.message) : 'Internal server error';
 
         return sendError(res, errMsg, statusCode);
     }
