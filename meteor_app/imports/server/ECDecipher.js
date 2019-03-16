@@ -81,8 +81,7 @@ function createDecipher() {
     const ecdh = crypto.createECDH('secp256k1');
     ecdh.setPrivateKey(this.privateKeyTo);
 
-    //const encryptionKey = sha512(ecdh.computeSecret(this.publicKeyFrom)).slice(0, 32);
-    const encryptionKey = ecdh.computeSecret(this.publicKeyFrom);
+    const encryptionKey = sha512(ecdh.computeSecret(this.publicKeyFrom)).slice(0, 32);
 
     this.decipher = crypto.createDecipheriv('aes-256-cbc', encryptionKey, this.iv);
 }
