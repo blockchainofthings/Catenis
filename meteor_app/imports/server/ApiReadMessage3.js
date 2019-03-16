@@ -163,6 +163,7 @@ export function readMessage3() {
                     error = errorResponse.call(this, 403, 'No permission to read message');
                 }
                 else if (err.error === 'ctn_cach_msg_not_available') {
+                    // This should never happen
                     error = errorResponse.call(this, 400, 'Message not available');
                 }
                 else if (err.error === 'ctn_cach_msg_already_read') {
