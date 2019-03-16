@@ -29,7 +29,6 @@
     "cids": "^0.5.7",
     "clipboard": "^2.0.1",
     "config": "^1.29.1",
-    "eccrypto": "^1.0.3",
     "fibers": "^2.0.0",
     "ipfs-api": "^25.0.0",
     "ipfs-http-client": "^29.1.1",

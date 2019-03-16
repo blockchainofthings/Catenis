@@ -12,11 +12,9 @@
 // References to external code
 //
 // Internal node modules
-import crypto from 'crypto';
+//import util from 'util';
 // Third-party node modules
-import eccrypto from 'eccrypto';
 import secp256k1 from 'secp256k1';
-import Future from 'fibers/future';
 import bitcoinMessage from 'bitcoinjs-message';
 // Meteor packages
 import { Meteor } from 'meteor/meteor';
@@ -25,9 +23,6 @@ import { Meteor } from 'meteor/meteor';
 import { Catenis } from './Catenis';
 import { ECCipher } from './ECCipher';
 import { ECDecipher } from './ECDecipher';
-
-// Initialization vector - generated as: crypto.randomBytes(16).toJSON()
-const iv = [128,54,254,30,235,181,211,89,160,214,109,196,40,175,106,102];
 
 
 // Definition of function classes
@@ -308,35 +303,8 @@ CryptoKeys.toExportPrivateKeyList = function (listKeys) {
 // Definitions of module (private) functions
 //
 
-function sha512(msg) {
-    return crypto.createHash('sha512').update(msg).digest();
-}
-
-function hmacSha256(key, msg) {
-    return crypto.createHmac('sha256', key).update(msg).digest();
-}
-
-// Mac required to validated encrypted message
-function calcMacEncData(privKey, encResult) {
-    // Future required to synchronize call to eccrypto methods, which are asynchronous in nature (via promises)
-    const fut = new Future();
-    let mac = undefined;
-
-    eccrypto.derive(privKey, encResult.ephemPublicKey).then((Px) => {
-        const hash = sha512(Px);
-        const macKey = hash.slice(32);
-        const dataToMac = Buffer.concat([encResult.iv, encResult.ephemPublicKey, encResult.ciphertext]);
-        mac = hmacSha256(macKey, dataToMac);
-        fut.return();
-    }, (error) => {
-        fut.throw(new Error ('Failure deriving shared secret for private & public keys: ' + error));
-        fut.return();
-    });
-
-    fut.wait();
-
-    return mac;
-}
+/*function module_func() {
+}*/
 
 
 // Module code
