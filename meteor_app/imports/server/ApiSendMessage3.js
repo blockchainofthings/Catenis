@@ -322,7 +322,7 @@ export function sendMessage3() {
                     error = errorResponse.call(this, 400, 'Invalid or unexpected continuation token');
                 }
                 else if (err.error === 'ctn_prov_msg_expired') {
-                    error = errorResponse.call(this, 400, 'Message has expired');
+                    error = errorResponse.call(this, 400, 'Message expired');
                 }
                 else if (err.error === 'ctn_device_target_deleted' || err.error === 'ctn_device_target_not_active'
                     || err.error === 'ctn_device_target_not_found') {

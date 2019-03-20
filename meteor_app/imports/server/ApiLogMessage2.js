@@ -245,7 +245,7 @@ export function logMessage2() {
                     error = errorResponse.call(this, 400, 'Invalid or unexpected continuation token');
                 }
                 else if (err.error === 'ctn_prov_msg_expired') {
-                    error = errorResponse.call(this, 400, 'Message has expired');
+                    error = errorResponse.call(this, 400, 'Message expired');
                 }
                 else if (err.error === 'ctn_device_low_service_acc_balance') {
                     error = errorResponse.call(this, 400, 'Not enough credits to pay for log message service');
