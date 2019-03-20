@@ -561,7 +561,7 @@
   "message": {
     "maxQueryCount": 500,  // Maximum number of messages entries that can be returned when querying for messages
     "minSizeReadDataChunk": 1024,  // (1 KB) Mininum size, in bytes, of data chunks that should be used when reading message in chunks
-    "maxSizeReadDataChunk": 5242880  // (5 MB) Maximum size, in bytes, of data chunks that should be used when reading message in chunks
+    "maxSizeReadDataChunk": 104857600  // (100 MB) Maximum size, in bytes, of data chunks that should be used when reading message in chunks
   },
   // Parameters pertaining to RbfTransactionInfo module
   "rbfTransactionInfo": {
