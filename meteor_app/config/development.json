@@ -95,7 +95,7 @@
   // Parameters pertaining to Message module
   "message": {
     "minSizeReadDataChunk": 10,  // (10 bytes) Mininum size, in bytes, of data chunks that should be used when reading message in chunks
-    "maxSizeReadDataChunk": 256  // (255 bytes) Maximum size, in bytes, of data chunks that should be used when reading message in chunks
+    "maxSizeReadDataChunk": 1048576  // (1 MB) Maximum size, in bytes, of data chunks that should be used when reading message in chunks
   },
   // Parameters pertaining to C3NodeClient module
   "c3NodeClient": {
