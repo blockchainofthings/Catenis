@@ -183,10 +183,10 @@ ProvisionalMessage.prototype.getMessageProgress = function () {
 
         if (this.progressDone) {
             if (this.progressSucceeded) {
-                progress.succeeded = true;
+                progress.success = true;
             }
             else {
-                progress.succeeded = false;
+                progress.success = false;
                 progress.error = {
                     code: this.progressErrorCode,
                     message: this.progressErrorMessage
