@@ -43,7 +43,9 @@ import {
 //
 //  Query string (optional) parameters:
 //    encoding [String]   - (default: utf8) One of the following values identifying the encoding that should be used for the returned message: utf8|base64|hex
-//    continuationToken [String]  - Indicates that this is a continuation call and that the following message data chunk should be returned
+//    continuationToken [String]  - Indicates that this is a continuation call and that the following message data chunk should be returned. This
+//                                   should be filled with the value returned in the 'continuationToken' field of the response from the previous call,
+//                                   or the response from the Retrieve Message Progress API method
 //    dataChunkSize [Number]  - Size, in bytes, of the largest message data chunk that should be returned. This is effectively used to signal
 //                              that the message should be retrieved/read in chunks. NOTE that this option is only taken into consideration (and
 //                              thus only needs to be passed) for the initial call to this API method with a given message ID (no continuation
