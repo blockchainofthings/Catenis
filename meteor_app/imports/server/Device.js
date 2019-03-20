@@ -1219,7 +1219,7 @@ Device.prototype.readMessage2 = function (messageId, encoding) {
 //
 //  Return value:
 //    readResult: {
-//      msgInfo: {  - (optional) Returned along with the 'messageData' field for the first (or the only) part of the message's contents returned for a
+//      msgInfo: {  - (optional) Returned along with the 'msgData' field for the first (or the only) part of the message's contents returned for a
 //                         given message ID
 //        action: [String],    - Action originally performed on the message; either 'log' or 'send'
 //        from: {         - Note: only returned if origin device different than device that issued the request, unless
@@ -1237,7 +1237,7 @@ Device.prototype.readMessage2 = function (messageId, encoding) {
 //      msgData: [String],   - (optional) The message's contents formatted using the specified encoding. Returned as a response to the initial call to this API method
 //                             with a given message ID (no continuation token) if not doing asynchronous processing, or as a response for a continuation call
 //                             (continuation token was passed)
-//      continuationToken: [String],  - (optional) Token to be used when requesting the following message data chunk. This is returned along with the 'messageData'
+//      continuationToken: [String],  - (optional) Token to be used when requesting the following message data chunk. This is returned along with the 'msgData'
 //                                       field if the whole message's contents has not yet been returned
 //      cachedMessageId: [String]  - (optional) Cached message ID. Returned as a response to the initial call to this API method with a given message ID
 //                                    (no continuation token) if doing asynchronous processing
