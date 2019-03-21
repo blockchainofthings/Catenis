@@ -472,8 +472,20 @@ function purgeOldCachedMessages() {
         }, {
             $lookup: {
                 from: 'MessageChunk',
-                localField: '_id',
-                foreignField: 'ephemeralMessage_id',
+                let: {
+                    cachedMessage_id: "$_id"
+                },
+                pipeline: [{
+                    $match: {
+                        $expr: {
+                            $eq: ['$ephemeralMessage_id', '$$cachedMessage_id']
+                        }
+                    }
+                }, {
+                    $project: {
+                        _id: 1
+                    }
+                }],
                 as: 'messageChunks'
             }
         }, {

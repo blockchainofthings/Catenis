@@ -510,8 +510,20 @@ function purgeOldProvisionalMessages() {
         }, {
             $lookup: {
                 from: 'MessageChunk',
-                localField: '_id',
-                foreignField: 'ephemeralMessage_id',
+                let: {
+                    provisionalMessage_id: "$_id"
+                },
+                pipeline: [{
+                    $match: {
+                        $expr: {
+                            $eq: ['$ephemeralMessage_id', '$$provisionalMessage_id']
+                        }
+                    }
+                }, {
+                    $project: {
+                        _id: 1
+                    }
+                }],
                 as: 'messageChunks'
             }
         }, {
