@@ -56,15 +56,12 @@ export class ProvisionalMessageReadable extends MessageReadable {
         this.msgChunkIndex = 0;
 
         this._processRead = Meteor.bindEnvironment(processRead, 'Internal read method of ProvisionalMessageReadable stream', this);
-        this.processingRead = false;
     }
 
     _read(size) {
         // Only do any processing if stream is still open
         if (this.open) {
-            if (!this.processingRead) {
-                this._processRead(size);
-            }
+            this._processRead(size);
         }
     }
 }
@@ -78,7 +75,6 @@ export class ProvisionalMessageReadable extends MessageReadable {
 
 function processRead(size) {
     try {
-        this.processingRead = true;
         const numMessageChunks = this.messageChunks.length;
 
         if (this.msgChunkIndex >= numMessageChunks) {
@@ -138,9 +134,6 @@ function processRead(size) {
     catch (err) {
         Catenis.logger.ERROR('Error reading provisional message readable stream.', err);
         process.nextTick(() => this.emit('error', new Error('Error reading provisional message readable stream: ' + err.toString())));
-    }
-    finally {
-        this.processingRead = false;
     }
 }
 

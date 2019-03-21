@@ -74,7 +74,6 @@ export class CachedMessageDuplex extends MessageDuplex {
         this._processWrite = Meteor.bindEnvironment(processWrite, 'Internal write method of CachedMessageDuplex stream', this);
         this._processFinal = Meteor.bindEnvironment(processFinal, 'Internal final method of CachedMessageDuplex stream', this);
         this._processRead = Meteor.bindEnvironment(processRead, 'Internal read method of CachedMessageDuplex stream', this);
-        this.processingRead = false;
     }
 
     _write(chunk, encoding, callback) {
@@ -100,9 +99,7 @@ export class CachedMessageDuplex extends MessageDuplex {
     _read(size) {
         // Only do any processing if stream is still open
         if (this.open) {
-            if (!this.processingRead) {
-                this._processRead(size);
-            }
+            this._processRead(size);
         }
     }
 }
@@ -213,7 +210,6 @@ function processFinal(callback) {
 
 function processRead(size) {
     try {
-        this.processingRead = true;
         const numMessageChunks = this.messageChunks.length;
 
         if (this.readMsgChunkIndex >= numMessageChunks) {
@@ -247,9 +243,6 @@ function processRead(size) {
     catch (err) {
         Catenis.logger.ERROR('Error reading provisional message readable stream.', err);
         process.nextTick(() => this.emit('error', new Error('Error reading provisional message readable stream: ' + err.toString())));
-    }
-    finally {
-        this.processingRead = false;
     }
 }
 
