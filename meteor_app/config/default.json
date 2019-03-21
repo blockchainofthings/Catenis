@@ -561,7 +561,8 @@
   "message": {
     "maxQueryCount": 500,  // Maximum number of messages entries that can be returned when querying for messages
     "minSizeReadDataChunk": 1024,  // (1 KB) Mininum size, in bytes, of data chunks that should be used when reading message in chunks
-    "maxSizeReadDataChunk": 104857600  // (100 MB) Maximum size, in bytes, of data chunks that should be used when reading message in chunks
+    "maxSizeReadDataChunk": 15728640  // (15 MB) Maximum size, in bytes, of data chunks that should be used when reading message in chunks
+                                      //  Note: this must be below 16 MB, which is the maximum size of a MongoDB doc/rec, since the whole data chunk is stored in a single database doc/rec (of the MessageChunk collection)
   },
   // Parameters pertaining to RbfTransactionInfo module
   "rbfTransactionInfo": {
