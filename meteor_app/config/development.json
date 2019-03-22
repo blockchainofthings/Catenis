@@ -50,6 +50,10 @@
       "amount": 100000000000
     }]
   },
+  // Parameters pertaining to ParseRequestBody module
+  "parseRequestBody": {
+    "reqBodySizeLimit": 1  // Maximum size, in MB, of data that can be received as the body of requests to the Catenis API methods
+  },
   // Parameters pertaining to BitcoinFees module
   "bitcoinFees": {
     "retrieveFeesInterval": 86400000,  // (24 hours) Time interval, in milliseconds, for executing method to retrieve latest bitcoin fees

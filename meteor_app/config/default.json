@@ -90,11 +90,7 @@
   },
   // Parameters pertaining to ParseRequestBody module
   "parseRequestBody": {
-    "maxFileSizeMB": 100,  // Maximum file size, in MB, that is guarranteed to be processed by Catenis
-    "fileHeaderSize": 177,  // Estimated size, in bytes, of file header ({"fn":"<file_name>","mt":"<mime_type>"})
-                            // NOTE: this file header is NOT added (to the message to be logged/sent) by Catenis but rather by client apps (e.g. Catenis Blocks WordPress plugin) developped by BCoT
-    "msgApiMethodOverhead": 229,  // Estimated size, in bytes, of extra info that is sent to message API methods in additional no actual file contents
-    "bodySizeLimitSafetyFactor": 0.05  // Safety factor to be used when calculating body size limit
+    "reqBodySizeLimit": 15  // Maximum size, in MB, of data that can be received as the body of requests to the Catenis API methods
   },
   // Parameters pertaining to BitcoinFees module
   "bitcoinFees": {
