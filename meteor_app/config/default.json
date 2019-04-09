@@ -94,7 +94,7 @@
   },
   // Parameters pertaining to BitcoinFees module
   "bitcoinFees": {
-    "apiVer1Url": "https://bitcoinfees.21.co/api/v1/fees/",  // URL of version 1 of BitcoinFees API provided by 21.co
+    "apiVer1Url": "https://bitcoinfees.earn.com/api/v1/fees/",  // URL of version 1 of BitcoinFees API provided by Earn.com (former 21.co)
     "recommendedFeesEndPoint": "recommended",  // Endpoint of BitcoinFees API method for retrieving recommended fees
     "listFeesEndPoint": "list",  // Endpoint of BitcoinFees API method for retrieving complete list of fees
     "retrieveFeesInterval": 21600000,  // (6 hours) Time interval, in milliseconds, for executing method to retrieve latest bitcoin fees
