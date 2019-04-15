@@ -44,11 +44,25 @@ export class MessageStorage {
     //    msgRef: [Object] // Object of type Buffer containing the reference (a unique ID) to the stored message
     //                     //  (as returned by the 'store' method)
     //
-    //  Return: [Object(Readable)] // A readable stream from where the contents of the retrieved message should be read
+    //  Return: [Object] // Object of type Buffer containing the retrieved message
     //
     //  NOTE: this method should be implemented in the derived class
     // noinspection JSUnusedLocalSymbols
     retrieve(msgRef) {
+        Catenis.logger.WARN('Method not implemented');
+    }
+
+    // Method used to get readable stream to retrieve the message contents stored on the external storage
+    //
+    //  Arguments:
+    //    msgRef: [Object] // Object of type Buffer containing the reference (a unique ID) to the stored message
+    //                     //  (as returned by the 'store' method)
+    //
+    //  Return: [Object(Readable)] // A readable stream from where the contents of the retrieved message should be read
+    //
+    //  NOTE: this method should be implemented in the derived class
+    // noinspection JSUnusedLocalSymbols
+    retrieveReadableStream(msgRef) {
         Catenis.logger.WARN('Method not implemented');
     }
 
