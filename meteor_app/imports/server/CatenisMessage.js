@@ -449,8 +449,25 @@ CatenisMessage.fromData = function (data, messageDuplex, logError = true) {
 
             const msgStorage = CatenisMessage.getMessageStorageInstance(storageProvider);
 
-            // Read contents of retrieved message into the message duplex stream
-            messageReadable = msgStorage.retrieve(extMsgRef).pipe(messageDuplex);
+            // Get readable stream to retrieve message from external message storage...
+            const msgStoreReadable = msgStorage.retrieveReadableStream(extMsgRef);
+
+            msgStoreReadable.on('error', (err) => {
+                // Error reading message contents from external message storage.
+                //  Log error condition and throw exception
+                Catenis.logger.ERROR('Error reading message contents from external message storage.', err);
+                const error = new Meteor.Error('ctn_msg_storage_read_error', util.format('Error reading message contents from external message storage: %s', err.toString()));
+
+                messageDuplex.destroy();
+                messageDuplex.removeListener('finish', messageDuplexFinishHandler);
+
+                if (!fut.isResolved()) {
+                    fut.throw(error);
+                }
+            });
+
+            // ... and read contents of retrieved message into the message duplex stream
+            messageReadable = msgStoreReadable.pipe(messageDuplex);
         }
 
         // Wait until the whole message's contents is written before proceeding
