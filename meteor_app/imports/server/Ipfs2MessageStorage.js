@@ -62,17 +62,40 @@ export class Ipfs2MessageStorage extends MessageStorage {
     //    msgRef: [Object] // Object of type Buffer containing the reference (a unique ID) to the stored message
     //                     //  (as returned by the 'store' method)
     //
-    //  Return: [Object(Readable)] // A readable stream from where the contents of the retrieved message should be read
+    //  Return: [Object] // Object of type Buffer containing the retrieved message
+    //
+    //  NOTE: this method should be implemented in the derived class
+    // noinspection JSUnusedLocalSymbols
     retrieve(msgRef) {
         try {
-            // Retrieve and return (message) contents from IPFS with the given CID
-            return Catenis.ipfsClient.catReadableStream(new CID(msgRef));
+            // Retrieve and return (message) contents with the given CID from IPFS
+            return Catenis.ipfsClient.cat(new CID(msgRef));
         }
         catch (err) {
             // Error retrieving message from external message storage.
             //  Log error condition and throw exception
             Catenis.logger.ERROR('Error retrieving message from Enhanced IPFS message storage.', err);
             throw new Meteor.Error('ctn_ipfs2_msg_retrieve_error', util.format('Error retrieving message from Enhanced IPFS message storage: %s', err.message), err.stack);
+        }
+    }
+
+    // Method used to get readable stream to retrieve the message contents stored on the external storage
+    //
+    //  Arguments:
+    //    msgRef: [Object] // Object of type Buffer containing the reference (a unique ID) to the stored message
+    //                     //  (as returned by the 'store' method)
+    //
+    //  Return: [Object(Readable)] // A readable stream from where the contents of the retrieved message should be read
+    retrieveReadableStream(msgRef) {
+        try {
+            // Return readable stream to retrieve (message) contents with the given CID from IPFS
+            return Catenis.ipfsClient.catReadableStream(new CID(msgRef));
+        }
+        catch (err) {
+            // Error getting readable stream to retrieve message from external message storage.
+            //  Log error condition and throw exception
+            Catenis.logger.ERROR('Error getting readable stream to retrieve message from Enhanced IPFS message storage.', err);
+            throw new Meteor.Error('ctn_ipfs2_msg_retrieve_read_str_error', util.format('Error getting readable stream to retrieve message from Enhanced IPFS message storage: %s', err.message), err.stack);
         }
     }
 
