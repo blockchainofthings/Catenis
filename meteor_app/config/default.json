@@ -106,8 +106,8 @@
   },
   // Parameters pertaining to BitcoinTicker module
   "bitcoinTicker": {
-    "apiUrl": "https://api.coinmarketcap.com/v2/",  // URL of API (from CoinMarketCap) used to retrieve current market info on different crypto currencies
-    "bitcoinTickerEndPoint": "ticker/1",  // API endpoint used to retrieve bitcoin market price
+    "apiUrl": "https://apiv2.bitcoinaverage.com/indices/global/",  // URL of API (from BitcoinAverage) used to retrieve current market info on different crypto currencies
+    "bitcoinTickerEndPoint": "ticker/short?crypto=BTC&fiat=USD",  // API endpoint used to retrieve bitcoin market price
     "timeout": 20000  // (20 sec.) Timeout, in milliseconds, for connection/request with API server
   },
   // Parameters pertaining to BitcoinPrice module

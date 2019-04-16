@@ -57,6 +57,7 @@ export class BitcoinPrice extends events.EventEmitter {
 
         if (this.lastTicker) {
             if (lastRecordedBitcoinPrice === undefined || !Util.areDatesEqual(this.lastTicker.referenceDate, lastRecordedBitcoinPrice.referenceDate)) {
+                Catenis.logger.TRACE('Updated bitcoin price', this.lastTicker);
                 saveBitcoinPrice.call(this, lastRecordedBitcoinPrice);
             }
         }
@@ -97,30 +98,45 @@ BitcoinPrice.prototype.getCurrentBitcoinPrice = function () {
 //
 
 function checkPriceChange() {
-    Catenis.logger.TRACE('Time to check for new bitcoin price');
+    Catenis.logger.TRACE('Time to check for new bitcoin price (ticker entry)');
     if (!this.checkingPriceChanged) {
         this.checkingPriceChanged = true;
 
         try {
-            // Retrieve current bitcoin price and check if it has changed
+            // Retrieve current bitcoin price (ticker entry) and check if it has changed
             const ticker = Catenis.btcTicker.getTicker();
 
             if (!Util.areDatesEqual(ticker.referenceDate, this.lastTicker.referenceDate)) {
-                Catenis.logger.TRACE('Bitcoin price has changed', ticker);
-                // Bitcoin price has changed. Record it and stop recurring process to check when it changes
+                Catenis.logger.TRACE('Bitcoin price (ticker entry) has changed', ticker);
+                // Bitcoin price (ticker entry) has changed. Record it and stop recurring process
+                //  to check when it changes
                 this.lastTicker = ticker;
                 saveBitcoinPrice.call(this);
                 clearInterval(this.priceChangeInterval);
                 this.priceChangeInterval = undefined;
+
+                Catenis.logger.TRACE('Restarting recurring process to retrieve updated bitcoin price');
+                // Restart recurring process to retrieve updated bitcoin price
+                this.updateInterval = Meteor.setInterval(updatePrice.bind(this), cfgSettings.updatePriceTimeInterval);
             }
         }
         catch (err) {
             // Error processing timer to check for bitcoin price change
-            Catenis.logger.ERROR('Error processing timer to check for bitcoin price change.', err);
+            Catenis.logger.ERROR('Error processing timer to check for bitcoin price (ticker entry) change.', err);
 
             // Stop recurring process to check when price changes
             clearInterval(this.priceChangeInterval);
             this.priceChangeInterval = undefined;
+
+            try {
+                Catenis.logger.TRACE('Restarting recurring process to retrieve updated bitcoin price');
+                // Restart recurring process to retrieve updated bitcoin price
+                this.updateInterval = Meteor.setInterval(updatePrice.bind(this), cfgSettings.updatePriceTimeInterval);
+            }
+            catch (err2) {
+                // Error trying to restart recurring process to retrieve updated bitcoin price.
+                Catenis.logger.ERROR('Error trying to restart recurring process to retrieve updated bitcoin price.', err2);
+            }
         }
         finally {
             this.checkingPriceChanged = false;
@@ -150,7 +166,18 @@ function updatePrice(initializing) {
             saveBitcoinPrice.call(this);
         }
         else {
-            // Same bitcoin price as last one recorded. Start recurring process to check when it changes
+            // Same bitcoin price (ticker entry) as last one recorded.
+            //  NOTE: it is very unlikely that this is going to happen, since it is expected that the
+            //      bitcoin price (ticker entry) be updated every second or so. This code is kept for
+            //      robustness though
+            if (this.updateInterval) {
+                // Stop recurring process to retrieve updated bitcoin price. We shall then only
+                //  restart it once the a new price (ticker entry) is retrieved
+                clearInterval(this.updateInterval);
+                this.updateInterval = undefined;
+            }
+
+            // Start recurring process to check when bitcoin price (ticker entry) changes
             this.priceChangeInterval = Meteor.setInterval(this.boundCheckPriceChange, cfgSettings.priceChangeTimeInterval);
         }
     }

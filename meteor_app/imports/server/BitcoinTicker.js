@@ -69,8 +69,8 @@ BitcoinTicker.prototype.getTicker = function () {
 
     // Successful response
     return {
-        price: getResponse.data.data.quotes.USD.price,
-        referenceDate: new Date(getResponse.data.data.last_updated * 1000)
+        price: getResponse.data.BTCUSD.last,
+        referenceDate: new Date(getResponse.data.BTCUSD.timestamp * 1000)
     };
 };
 
