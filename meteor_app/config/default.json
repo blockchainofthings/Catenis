@@ -703,6 +703,10 @@
   "spendServiceCreditTransaction": {
     "maxNumClients": 12,  // Maximum number of clients that can be assigned to a single spend service credit transaction
     "ccMetadata": {
+      "placeholder": {
+        "key": "metaPlaceholder",
+        "value": "Catenis Colored Coins metadata placeholder"
+      },
       "servTxidsKey": "servTxids"  // Name (key) of Colored Coins free user metadata used to refer to BCOT Token Payment transaction
     },
     "unconfirmedTxTimeout": 10080,  // (7 days) Timeout, in minutes, for waiting for latest sent spend service credit tx to be confirmed (set to 7 days, which is half the default mempool tx eviction time of 14 days)

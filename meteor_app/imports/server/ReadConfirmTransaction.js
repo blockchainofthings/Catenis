@@ -820,6 +820,7 @@ ReadConfirmTransaction.prototype.fundTransaction = function () {
                         deltaFee -= this.change;
 
                         // Try to allocate UTXOs to pay for transaction additional fee
+                        //  Note: recall that txs that are to replace a previous tx as per RBF must NOT spend any new unconfirmed UTXOs
                         if (readConfirmPayTxExpenseFundSource === undefined) {
                             // Object used to allocate UTXOs is not instantiated yet. Instantiate it now,
                             //  making sure that, if allocating funds for a tx that is to replace a previous one,

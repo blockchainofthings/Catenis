@@ -931,6 +931,32 @@ CCTransaction.prototype.setCcMetadata = function (ccMetadata) {
     this.ccMetadata = ccMetadata;
 };
 
+// Replace the Colored Coins metadata reassembling the Colored Coins transaction if already assembled
+//
+//  Arguments:
+//   ccMetadata: [Object(CCMetadata0] - The Colored Coins metadata
+CCTransaction.prototype.replaceCcMetadata = function (ccMetadata) {
+    // Only does anything if metadata is already set
+    if (this.ccMetadata) {
+        let reassemble = false;
+        let multiSigAddress;
+
+        if (this.isAssembled) {
+            if (this.includesMultiSigOutput) {
+                multiSigAddress = this.getMultiSigOutputPositions()[0].payInfo.address[0];
+            }
+
+            reassemble = true;
+        }
+
+        this.setCcMetadata(ccMetadata);
+
+        if (reassemble) {
+            this.assemble(multiSigAddress);
+        }
+    }
+};
+
 // Assemble Colored Coins data and add Colored Coins related outputs to transaction
 //
 //  Arguments:
@@ -1646,6 +1672,7 @@ CCTransaction.fromTransaction = function (transact) {
                     }
                     else if (ccData.multiSig.length === 1) {
                         // Get SHA2 of metadata from multi-signature output
+                        // noinspection JSObjectNullOrUndefined
                         sha2 = multiSigTxOutput.payInfo.addrInfo[1].substr(2 * (txCfgSettings.pubKeySize - cfgSettings.sha2Size));
 
                         ccTransact.includesMultiSigOutput = true;

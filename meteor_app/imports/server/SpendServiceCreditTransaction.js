@@ -15,6 +15,7 @@ import events from 'events';
 // Third-party node modules
 import config from 'config';
 import BigNumber from 'bignumber.js';
+import _und from 'underscore';
 // Meteor packages
 import { Meteor } from 'meteor/meteor';
 
@@ -37,11 +38,16 @@ import { CreditServiceAccTransaction } from './CreditServiceAccTransaction';
 // Config entries
 const spendServCredTxConfig = config.get('spendServiceCreditTransaction');
 const spndSrvCrdTxCcMetaConfig = spendServCredTxConfig.get('ccMetadata');
+const spndSrvCrdTxCcMetaPlhdConfig = spndSrvCrdTxCcMetaConfig.get('placeholder');
 
 // Configuration settings
 const cfgSettings = {
     maxNumClients: spendServCredTxConfig.get('maxNumClients'),
     ccMetadata: {
+        placeholder: {
+            key: spndSrvCrdTxCcMetaPlhdConfig.get('key'),
+            value: spndSrvCrdTxCcMetaPlhdConfig.get('value')
+        },
         servTxidsKey: spndSrvCrdTxCcMetaConfig.get('servTxidsKey')
     },
     unconfirmedTxTimeout: spendServCredTxConfig.get('unconfirmedTxTimeout'),
@@ -91,15 +97,15 @@ export class SpendServiceCreditTransaction extends events.EventEmitter {
             this.clientIds = [];
 
             this.ccTransact.transferInputSeqs.forEach((inputSeq) => {
-                const address = getClientOutputAddress.call(this, inputSeq.startPos);
+                const addrInfo = getInputSeqClientServAccCredLineAddressInfo.call(this, inputSeq);
 
-                if (address !== undefined) {
-                    const addrInfo = Catenis.keyStore.getAddressInfo(address, true);
-
+                if (addrInfo) {
                     if (addrInfo.type !== KeyStore.extKeyType.cln_srv_acc_cred_ln_addr.name) {
-                        // Invalid address associated with client service account credit line output.
+                        // Invalid address type associated with input sequence of spend service credit transaction.
                         //  Log error condition, and throw exception
-                        Catenis.logger.ERROR('Invalid address associated with client service account credit line address output for spend service credit transaction', {
+                        Catenis.logger.ERROR('Invalid address type associated with input sequence of spend service credit transaction', {
+                            spendServCredCCTransact: this.ccTransact,
+                            inputSeq: inputSeq,
                             addressInfo: addrInfo
                         });
                         throw new Error('Invalid address associated with client service account credit line address output for spend service credit transaction');
@@ -108,12 +114,13 @@ export class SpendServiceCreditTransaction extends events.EventEmitter {
                     this.clientIds.push(CatenisNode.getCatenisNodeByIndex(addrInfo.pathParts.ctnNodeIndex).getClientByIndex(addrInfo.pathParts.clientIndex, true).clientId);
                 }
                 else {
-                    // Could not retrieve address associated with client service account credit line output.
+                    // Could not retrieve address info of client service account credit line input sequence of spend service credit transaction.
                     //  Log error condition, and throw exception
-                    Catenis.logger.ERROR('Could not retrieve address associated with client service account credit line output', {
-                        ccTransact: ccTransact
+                    Catenis.logger.ERROR('Could not retrieve address info of client service account credit line input sequence of spend service credit transaction', {
+                        spendServCredCCTransact: this.ccTransact,
+                        inputSeq: inputSeq
                     });
-                    throw new Error('Could not retrieve address associated with client service account credit line output');
+                    throw new Error('Could not retrieve address info of client service account credit line input sequence of spend service credit transaction');
                 }
             });
 
@@ -172,7 +179,10 @@ export class SpendServiceCreditTransaction extends events.EventEmitter {
             }
 
             this.txFunded = false;
-            this.noMorePaymentsAccepted = this.ccTransact.realSize() > Transaction.maxTxSize * cfgSettings.txSizeThresholdRatio;
+
+            // Make sure that more payments are not accepted if service txs with no billing had been added to the
+            //  list of service tx ids (txChanged == true)
+            this.noMorePaymentsAccepted = this.txChanged || this.ccTransact.realSize() > Transaction.maxTxSize * cfgSettings.txSizeThresholdRatio;
 
             // Instantiate RBF tx info object
             initRbfTxInfo.call(this);
@@ -208,9 +218,32 @@ export class SpendServiceCreditTransaction extends events.EventEmitter {
     }
 }
 
+function getInputSeqClientServAccCredLineAddressInfo(inputSeq) {
+    const transferInputs = this.ccTransact.getTransferInputs(inputSeq.startPos);
+
+    if (transferInputs) {
+        return transferInputs[0].addrInfo;
+    }
+}
 
 // Public SpendServiceCreditTransaction object methods
 //
+
+SpendServiceCreditTransaction.prototype.clone = function () {
+    const clone = Util.cloneObj(this);
+
+    clone.ccTransact = clone.ccTransact.clone();
+
+    if (clone.rbfTxInfo) {
+        clone.rbfTxInfo = clone.rbfTxInfo.clone();
+    }
+
+    clone.clientIds = _und.clone(clone.clientIds);
+    clone.serviceTxids = _und.clone(clone.serviceTxids);
+    clone.txids = _und.clone(clone.txids);
+
+    return clone;
+};
 
 // Checks whether a transaction output is used to pay for last sent transaction expense
 SpendServiceCreditTransaction.prototype.isTxOutputUsedToPayLastSentTxExpense = function (txout) {
@@ -279,20 +312,21 @@ SpendServiceCreditTransaction.prototype.payForService = function (client, servic
                 // Needs to allocate more Catenis service credits to pay for service.
 
                 if (this.lastSentCcTransact !== undefined) {
-                    const lastTxClientInputSeqStartPos = getClientTransferInputSeq.call(this, client.clientId, this.lastSentCcTransact);
+                    const lastTxClientInputSeq = getClientTransferInputSeq.call(this, client.clientId, this.lastSentCcTransact);
 
-                    // Make sure that client was present is last sent tx
-                    if (lastTxClientInputSeqStartPos !== undefined) {
-                        // Make sure that Catenis service credit transfer change output of
-                        //  last sent transaction is excluded
-                        excludeUtxos = this.lastSentCcTransact.getTransferTxOutputs(lastTxClientInputSeqStartPos);
+                    // Make sure that client was present in last sent tx
+                    if (lastTxClientInputSeq !== undefined) {
+                        // Make sure that Catenis service credit transfer change outputs of
+                        //  last sent transaction are excluded
+                        excludeUtxos = this.lastSentCcTransact.getTransferTxOutputs(lastTxClientInputSeq.startPos);
 
-                        // Make sure that UTXOs allocated for last sent tx are included
-                        addUtxoTxInputs = this.lastSentCcTransact.getTransferInputs(lastTxClientInputSeqStartPos);
+                        // Make sure that UTXOs allocated for last sent tx (that otherwise would not be listed as
+                        //  UTXOs) be also available for allocation
+                        addUtxoTxInputs = this.lastSentCcTransact.getTransferInputs(lastTxClientInputSeq.startPos);
                     }
                 }
 
-                // Exclude current transfer input sequence
+                // Exclude current transfer input sequence and reset amount to be allocated
                 newCcTransact.removeTransferInputSequence(clientInputSeqStartPos);
 
                 servCredAmountToAllocate += totalPricePaid;
@@ -309,12 +343,16 @@ SpendServiceCreditTransaction.prototype.payForService = function (client, servic
 
         if (allocateServiceCredit) {
             // Prepare to allocate Catenis service credit from client's service account credit line
-            Catenis.logger.DEBUG('>>>>>> About to allocate funds for client service account credit line address outputs', {
-                unconfUtxoInfo: undefined,
-                higherAmountUtxos: true,
-                excludeUtxos: excludeUtxos,
-                selectUnconfUtxos: this.lastSentCcTransact === undefined ? CreditServiceAccTransaction.clientServAccCredLineAddrsUnconfUtxos(client.clientId) : undefined,
-                addUtxoTxInputs: addUtxoTxInputs
+            //  Note: recall that txs that are to replace a previous tx as per RBF must NOT spend any new unconfirmed UTXOs
+            Catenis.logger.DEBUG('>>>>>> About to allocate funds for client service account credit line address inputs', {
+                ccFundSourceOptions: {
+                    unconfUtxoInfo: undefined,
+                    higherAmountUtxos: true,
+                    excludeUtxos: excludeUtxos,
+                    selectUnconfUtxos: this.lastSentCcTransact === undefined ? CreditServiceAccTransaction.clientServAccCredLineAddrsUnconfUtxos(client.clientId) : undefined,
+                    addUtxoTxInputs: addUtxoTxInputs
+                },
+                servCredAmountToAllocate: servCredAmountToAllocate
             });
             const servAccCredFundSource = new CCFundSource(client.ctnNode.getServiceCreditAsset().ccAssetId, client.servAccCreditLineAddr.listAddressesInUse(), {
                 unconfUtxoInfo: undefined,
@@ -358,17 +396,25 @@ SpendServiceCreditTransaction.prototype.payForService = function (client, servic
             newCcTransact.setChangeBurnOutput(clientInputSeqStartPos);
         }
 
-        // Save ID of service transaction the service provided by which is being paid and
-        //  add it to Colored Coins metadata
-        const newServiceTxids = this.serviceTxids.concat();
-        newServiceTxids.push(serviceTxid);
-
+        let newServiceTxids;
         const ccMetadata = new CCMetadata();
-        ccMetadata.setFreeUserData(cfgSettings.ccMetadata.servTxidsKey, Buffer.from(JSON.stringify(newServiceTxids)), true);
-        Catenis.logger.DEBUG('>>>>>> New spend service credit Colored Coins metadata', {
-            newServiceTxids: newServiceTxids,
-            ccMetadata: ccMetadata
-        });
+
+        if (serviceTxid) {
+            // Save ID of service transaction the service provided by which is being paid and
+            //  add it to Colored Coins metadata
+            newServiceTxids = this.serviceTxids.concat();
+            newServiceTxids.push(serviceTxid);
+
+            ccMetadata.setFreeUserData(cfgSettings.ccMetadata.servTxidsKey, Buffer.from(JSON.stringify(newServiceTxids)), true);
+            Catenis.logger.DEBUG('>>>>>> New spend service credit Colored Coins metadata', {
+                newServiceTxids: newServiceTxids,
+                ccMetadata: ccMetadata
+            });
+        }
+        else {
+            // No service transaction ID passed. Add a placeholder metadata for now
+            ccMetadata.setFreeUserData(cfgSettings.ccMetadata.placeholder.key, cfgSettings.ccMetadata.placeholder.value);
+        }
 
         newCcTransact.setCcMetadata(ccMetadata);
 
@@ -458,7 +504,10 @@ SpendServiceCreditTransaction.prototype.payForService = function (client, servic
 
         // Now, update spend service credit transaction
         this.ccTransact = newCcTransact;
-        this.serviceTxids = newServiceTxids;
+
+        if (newServiceTxids) {
+            this.serviceTxids = newServiceTxids;
+        }
 
         if (newClient) {
             // Save client Id
@@ -474,6 +523,25 @@ SpendServiceCreditTransaction.prototype.payForService = function (client, servic
         //  Throw exception
         throw new Meteor.Error('ctn_spend_serv_cred_no_more_payments', 'No more payments can be processed by this spend service credit transaction');
     }
+};
+
+SpendServiceCreditTransaction.prototype.setServiceTxid = function (serviceTxid) {
+    // Save ID of service transaction the service provided by which is being paid and
+    //  add it to Colored Coins metadata
+    const newServiceTxids = this.serviceTxids.concat();
+    newServiceTxids.push(serviceTxid);
+
+    const ccMetadata = new CCMetadata();
+
+    ccMetadata.setFreeUserData(cfgSettings.ccMetadata.servTxidsKey, Buffer.from(JSON.stringify(newServiceTxids)), true);
+    Catenis.logger.DEBUG('>>>>>> New spend service credit Colored Coins metadata', {
+        newServiceTxids: newServiceTxids,
+        ccMetadata: ccMetadata
+    });
+
+    this.ccTransact.replaceCcMetadata(ccMetadata);
+
+    this.serviceTxids = newServiceTxids;
 };
 
 // NOTE: make sure that this method is called from code executed from the FundSource.utxoCS critical section object
@@ -649,12 +717,13 @@ SpendServiceCreditTransaction.prototype.fundTransaction = function () {
                     tryAgain = false;
 
                     // Allocate UTXOs to pay for transaction expense
+                    //  Note: recall that txs that are to replace a previous tx as per RBF must NOT spend any new unconfirmed UTXOs
                     if (payTxExpFundSource === undefined) {
                         payTxExpFundSource = new FundSource(Catenis.ctnHubNode.servPymtPayTxExpenseAddr.listAddressesInUse(), {
-                            unconfUtxoInfo: this.spendServCredCtrl.numUnconfirmedSpendServCredTxs === 0 ? {} : undefined,
+                            unconfUtxoInfo: this.lastSentCcTransact === undefined && this.spendServCredCtrl.numUnconfirmedSpendServCredTxs === 0 ? {} : undefined,
                             higherAmountUtxos: true,
                             excludeUtxos: excludeUtxos,
-                            selectUnconfUtxos: this.spendServCredCtrl.terminalSpendServCredTxsChangeTxouts,
+                            selectUnconfUtxos: this.lastSentCcTransact === undefined ? this.spendServCredCtrl.terminalSpendServCredTxsChangeTxouts : undefined,
                             addUtxoTxInputs: addUtxoTxInputs
                         });
                     }
@@ -664,7 +733,7 @@ SpendServiceCreditTransaction.prototype.fundTransaction = function () {
                     if (payTxExpAllocResult === null) {
                         // Unable to allocate UTXOs. Log error condition and throw exception
                         Catenis.logger.ERROR('Unable to allocate UTXOs for system service payment pay tx expense addresses');
-                        throw new Meteor.Error('ctn_spend_serv_cred_utxo_alloc_error', 'Unable to allocate UTXOs for system service payment pay tx expense addresses');
+                        throw new Meteor.Error('ctn_spend_serv_cred_fund_utxo_alloc_error', 'Unable to allocate UTXOs for system service payment pay tx expense addresses');
                     }
 
                     // Make sure that number of allocated UTXOs match expected number of pay tx expense inputs

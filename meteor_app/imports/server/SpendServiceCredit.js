@@ -27,6 +27,7 @@ import { FundSource } from './FundSource';
 import { TransactionMonitor } from './TransactionMonitor';
 import { Billing } from './Billing';
 import { Client } from './Client';
+import { CCFundSource } from './CCFundSource';
 
 // Config entries
 /*const config_entryConfig = config.get('config_entry');
@@ -37,7 +38,7 @@ const cfgSettings = {
 };*/
 
 // Critical section object used to serialize processing tasks
-const procCS = new CriticalSection();
+export const procCS = new CriticalSection();
 
 
 // Definition of function classes
@@ -124,6 +125,198 @@ export function SpendServiceCredit() {
 // Public SpendServiceCredit object methods
 //
 
+// Provision a spend service credit transaction to be used to pay for a Catenis service
+//
+//  Arguments:
+//   client [Object(Client)] - Client object of client for which the service to be paid in being provided
+//   price [Number] - Price to be paid for the service expressed in Catenis service credit's lowest units
+//
+//  Return:
+//   paymentProvisionInfo: {
+//     clientId: [String],   - Client ID of client for which the service to be paid in being provided
+//     spendServCredTransact: [Object], - The provisioned spend service credit transaction
+//     newAllocated: [Boolean], - Indicated whether a new spend service credit transaction was allocated
+//     origSpendServCredTransact: [Object] - The original spend service credit transaction that is being replaced.
+//                                            Note: this field only exists when newAllocated == false
+//   }
+//
+// NOTE: make sure that this method is called from code executed from the CCFundSource.utxoCS, FundSource.utxoCS, and
+//      the local procCS critical section objects
+SpendServiceCredit.prototype.provisionPaymentForService = function (client, price) {
+    let tryAgain = false;
+    let createNewTx = false;
+
+    const paymentProvisionInfo = {
+        clientId: client.clientId
+    };
+
+    do {
+        let spendServCredTransact = getSpendServCredTxByClient.call(this, client.clientId, createNewTx, true);
+
+        if (spendServCredTransact) {
+            // Provision already in use spend service credit transaction
+            paymentProvisionInfo.origSpendServCredTransact = spendServCredTransact;
+            spendServCredTransact = spendServCredTransact.clone();
+
+            paymentProvisionInfo.newAllocated = false;
+        }
+        else {
+            // Provision new spend service credit transaction
+            spendServCredTransact = newSpendServCredTransaction.call(this);
+
+            paymentProvisionInfo.newAllocated = true;
+        }
+
+        // Save provisioned spend service credit transaction
+        paymentProvisionInfo.spendServCredTransact = spendServCredTransact;
+        Catenis.logger.DEBUG('>>>>>> Spend service credit transaction provisioned for client (clientId: %s): %s', client.clientId, util.inspect(spendServCredTransact, {depth: 2}));
+
+        try {
+            spendServCredTransact.payForService(client, null, price);
+            tryAgain = false;
+        }
+        catch (err) {
+            if ((err instanceof Meteor.Error)) {
+                // Note: we do not care checking if have already tried again because, once we try again
+                //  for this purpose, it is guaranteed that the client will be assigned to another
+                //  spend service credit transaction that can still process more payments, which in turn
+                //  shall never re-trigger this same error
+                if (err.error === 'ctn_spend_serv_cred_no_more_payments') {
+                    tryAgain = true;
+                }
+                // Note: we do not care checking if have already tried again because, once we try again
+                //  for this purpose, it is guaranteed that the client will be assigned to another
+                //  spend service credit transaction that can still fit one more client, which in turn
+                //  shall never re-trigger this same error
+                else if (err.error === 'ctn_spend_serv_cred_no_more_client') {
+                    // Try again for client to be assigned to another spend service credit transaction
+                    tryAgain = true;
+                }
+                else if (err.error === 'ctn_spend_serv_cred_utxo_alloc_error') {
+                    Catenis.logger.DEBUG('>>>>>> Error returned from SpendServiceCreditTransaction.provisionPaymentForService(): unable to allocate UTXOs for client service account credit line address inputs');
+                    // Note: we do not care checking if have already tried again because, once we try again
+                    //  for this purpose, a new spend service credit transaction is used, which in turn
+                    //  is guaranteed that spendServCredTransact.lastSentCcTransact be undefined
+                    if (spendServCredTransact.lastSentCcTransact !== undefined) {
+                        Catenis.logger.DEBUG('>>>>>> Force that a new spend service credit transaction be provisioned for the client and try again');
+                        // Try again forcing that a new spend service credit transaction be provisioned
+                        createNewTx = true;
+                        tryAgain = true;
+                    }
+                    else {
+                        Catenis.logger.DEBUG('>>>>>> Just throw error');
+                        throw err;
+                    }
+                }
+                else {
+                    throw err;
+                }
+            }
+            else {
+                throw err;
+            }
+        }
+    }
+    while (tryAgain);
+
+    if (paymentProvisionInfo.spendServCredTransact.needsToFund()) {
+        try {
+            // Fund spend service credit tx
+            paymentProvisionInfo.spendServCredTransact.fundTransaction();
+        }
+        catch (err) {
+            // Error funding provisioned spend service credit transaction.
+            //  Log error condition and rethrows exception
+            Catenis.logger.ERROR('Error funding provisioned spend service credit transaction.', err);
+
+            throw err;
+        }
+    }
+
+    Catenis.logger.DEBUG('>>>>>> Payment provision info:', paymentProvisionInfo);
+    return paymentProvisionInfo;
+};
+
+// Confirm the use of a previously provisioned spend service credit transaction
+//
+//  Arguments:
+//   paymentProvisionInfo [Object] - Object containing information about the payment provision (as returned by the provisionPaymentForService() method)
+//   serviceTxid [String] - Blockchain attributed ID of Catenis transaction used to convey the provided service
+//
+// NOTE: make sure that this method is called from code executed from the CCFundSource.utxoCS, FundSource.utxoCS, and
+//      the local procCS critical section objects
+SpendServiceCredit.prototype.confirmPaymentForService = function (paymentProvisionInfo, serviceTxid) {
+    const spendServCredTransact = paymentProvisionInfo.spendServCredTransact;
+
+    // Save service transaction ID onto spend service credit transaction
+    spendServCredTransact.setServiceTxid(serviceTxid);
+
+    // Update all references to provisioned spend service credit transaction...
+    if (paymentProvisionInfo.newAllocated) {
+        this.unconfSpendServCredTxs.add(spendServCredTransact);
+    }
+    else {
+        const origSpendServCredTransact = paymentProvisionInfo.origSpendServCredTransact;
+
+        if (this.unconfSpendServCredTxs.has(origSpendServCredTransact)) {
+            this.unconfSpendServCredTxs.delete(origSpendServCredTransact);
+            this.unconfSpendServCredTxs.add(spendServCredTransact);
+        }
+
+        if (this.terminalSpendServCredTxs.has(origSpendServCredTransact)) {
+            this.terminalSpendServCredTxs.delete(origSpendServCredTransact);
+            this.terminalSpendServCredTxs.add(spendServCredTransact);
+        }
+    }
+
+    this.clientIdSpendServCredTx.set(paymentProvisionInfo.clientId, spendServCredTransact);
+
+    // ... and send it
+    if (spendServCredTransact.needsToSend()) {
+        const lastSentTxid = spendServCredTransact.lastSentCcTransact !== undefined ? spendServCredTransact.lastSentCcTransact.txid : undefined;
+
+        try {
+            // Send spend service credit tx
+            spendServCredTransact.sendTransaction();
+            Catenis.logger.DEBUG('>>>>>> Sent spend service credit transaction:', spendServCredTransact);
+        }
+        catch (err) {
+            // Error sending spend service credit transaction
+            if ((err instanceof Meteor.Error) && err.error === 'ctn_btcore_rpc_error' && err.details !== undefined && typeof err.details.code === 'number'
+                && (err.details.code === BitcoinCore.rpcErrorCode.RPC_VERIFY_ERROR || err.details.code === BitcoinCore.rpcErrorCode.RPC_VERIFY_REJECTED)) {
+                // Transaction has been rejected
+                if (lastSentTxid) {
+                    let txInfo;
+
+                    try {
+                        // Check if it is due to the fact that previous tx that would have been replaced was confirmed
+                        txInfo = Catenis.bitcoinCore.getTransaction(lastSentTxid, false);
+                    }
+                    catch (err2) {
+                        Catenis.logger.ERROR('Error trying to get confirmation status of previously sent transaction (txid: %s) of spend service credit transaction that failed to be sent', lastSentTxid, err);
+                    }
+
+                    if (txInfo !== undefined && txInfo.confirmations !== 0) {
+                        // Last sent spend service credit tx has either been confirmed or replaced.
+                        //  Log warning condition
+                        Catenis.logger.WARN('Spend service credit transaction has been rejected when trying to send it', {
+                            transact: spendServCredTransact.ccTransact
+                        });
+                        throw new Meteor.Error('ctn_spend_serv_cred_tx_rejected', 'Spend service credit transaction has been rejected when trying to send it');
+                    }
+                }
+            }
+
+            // Log error condition and rethrows it
+            Catenis.logger.ERROR('Error sending spend service credit transaction: %s', util.inspect(spendServCredTransact, {depth: 6}), err);
+
+            throw err;
+        }
+    }
+
+    return spendServCredTransact;
+};
+
 // NOTE: make sure that this method is called from code executed from the CCFundSource.utxoCS critical section object
 SpendServiceCredit.prototype.payForService = function (client, serviceTxid, price, sendNow = true) {
     let spendServCredTransact = undefined;
@@ -155,13 +348,13 @@ SpendServiceCredit.prototype.payForService = function (client, serviceTxid, pric
                     //  spend service credit transaction that can still fit one more client, which in turn
                     //  shall never re-trigger this same error
                     else if (err.error === 'ctn_spend_serv_cred_no_more_client') {
-                        // Cancel current client assignment before trying again to for client to be
+                        // Cancel current client assignment before trying again for client to be
                         //  assigned to another spend service credit transaction
                         this.clientIdSpendServCredTx.delete(client.clientId);
                         tryAgain = true;
                     }
                     else if (err.error === 'ctn_spend_serv_cred_utxo_alloc_error') {
-                        Catenis.logger.DEBUG('>>>>>> Error returned from SpendServiceCreditTransaction.payForService(): unable to allocate UTXOs for client service account credit line address outputs');
+                        Catenis.logger.DEBUG('>>>>>> Error returned from SpendServiceCreditTransaction.payForService(): unable to allocate UTXOs for client service account credit line address inputs');
                         // Note: we do not care checking if have already tried again because, once we try again
                         //  for this purpose, a new spend service credit transaction is used, which in turn
                         //  is guaranteed that spendServCredTransact.lastSentCcTransact be undefined
@@ -177,6 +370,7 @@ SpendServiceCredit.prototype.payForService = function (client, serviceTxid, pric
                                 // Same error even after trying to assign client to a new spend service credit transaction.
                                 //  So, cancel this assignment before throwing error
                                 this.clientIdSpendServCredTx.delete(client.clientId);
+                                this.unconfSpendServCredTxs.delete(spendServCredTransact);
                             }
 
                             throw err;
@@ -240,48 +434,53 @@ function disposeSpendServCredTransaction(spendServCredTransact) {
     }
 }
 
-function getSpendServCredTxByClient(clientId, createNewTx = false) {
+function getSpendServCredTxByClient(clientId, forceCreateNewTx = false, preAllocOnly = false) {
     let spendServCredTransact;
 
-    if (!createNewTx && this.clientIdSpendServCredTx.has(clientId)) {
+    if (!forceCreateNewTx && this.clientIdSpendServCredTx.has(clientId)) {
         spendServCredTransact = this.clientIdSpendServCredTx.get(clientId);
 
         // Make sure that spend service credit transaction associated with client
         //  is still unconfirmed and can accept more payments
         if (!this.unconfSpendServCredTxs.has(spendServCredTransact) || spendServCredTransact.noMorePaymentsAccepted) {
             // Time to allocate a new spend service credit transaction
-            spendServCredTransact = allocateServCredTxForClient.call(this, clientId);
+            spendServCredTransact = allocateServCredTxForClient.call(this, clientId, false, preAllocOnly);
         }
     }
     else {
         // No spend service credit transaction associated with this client yet, or a new one has
         //  been requested. Time to allocate a new spend service credit transaction
-        spendServCredTransact = allocateServCredTxForClient.call(this, clientId, createNewTx);
+        spendServCredTransact = allocateServCredTxForClient.call(this, clientId, forceCreateNewTx, preAllocOnly);
     }
 
     return spendServCredTransact;
 }
 
-function allocateServCredTxForClient(clientId, createNewTx = false) {
-    if (!createNewTx && this.unconfSpendServCredTxs.size > 0) {
+function allocateServCredTxForClient(clientId, forceCreateNewTx = false, preAllocOnly = false) {
+    if (!forceCreateNewTx && this.unconfSpendServCredTxs.size > 0) {
         // Look for first unconfirmed spend service credit transaction that can still fit a new client
         //  and process more payments
-        for (let spendServCredTransct of this.unconfSpendServCredTxs) {
-            if (!this.terminalSpendServCredTxs.has(spendServCredTransct) && !spendServCredTransct.maxNumClientsReached && !spendServCredTransct.noMorePaymentsAccepted) {
-                // Assign client to this unconfirmed spend service credit transaction
-                this.clientIdSpendServCredTx.set(clientId, spendServCredTransct);
-                return spendServCredTransct;
+        for (let spendServCredTransact of this.unconfSpendServCredTxs) {
+            if (!this.terminalSpendServCredTxs.has(spendServCredTransact) && !spendServCredTransact.maxNumClientsReached && !spendServCredTransact.noMorePaymentsAccepted) {
+                if (!preAllocOnly) {
+                    // Assign client to this unconfirmed spend service credit transaction
+                    this.clientIdSpendServCredTx.set(clientId, spendServCredTransact);
+                }
+
+                return spendServCredTransact;
             }
         }
     }
 
-    // Create a new spend service credit transaction and allocated it to client
-    const spendServCredTransact = newSpendServCredTransaction.call(this);
+    if (!preAllocOnly) {
+        // Create a new spend service credit transaction and allocated it to client
+        const spendServCredTransact = newSpendServCredTransaction.call(this);
 
-    this.unconfSpendServCredTxs.add(spendServCredTransact);
-    this.clientIdSpendServCredTx.set(clientId, spendServCredTransact);
+        this.unconfSpendServCredTxs.add(spendServCredTransact);
+        this.clientIdSpendServCredTx.set(clientId, spendServCredTransact);
 
-    return spendServCredTransact;
+        return spendServCredTransact;
+    }
 }
 
 function getSpendServCredTxByTxid(txid) {
@@ -567,8 +766,8 @@ function spendServCredTxConfirmed(data) {
                 Billing.recordServicePaymentTransaction(confirmedSpendServiceCreditTransact !== undefined ? confirmedSpendServiceCreditTransact : spendServCredTransact);
 
                 if (missingServTxids.length > 0) {
-                    // Reprocess missing service transactions
-                    Meteor.defer(reprocessServiceTransactions.bind(this, missingServTxids));
+                    // Reprocess payment of missing service transactions
+                    Meteor.defer(reprocessServicePayments.bind(this, missingServTxids));
                 }
             }
             else {
@@ -590,40 +789,80 @@ function spendServCredTxConfirmed(data) {
     }
 }
 
-function reprocessServiceTransactions(serviceTxids) {
-    Catenis.logger.TRACE('About to reprocess service transactions', {serviceTxids: serviceTxids});
+function reprocessServicePayments(serviceTxids) {
+    Catenis.logger.TRACE('About to reprocess payment of services', {serviceTxids: serviceTxids});
     try {
         const spendServCredTxsToSend = new Set();
+        const spendServCredTxBillings = new Map();
 
-        serviceTxids.forEach((txid) => {
-            // Try to retrieve associated billing entry for service transaction
-            const billing = Billing.getBillingByServiceTxid(txid);
+        // Execute code in critical section to avoid Colored Coins UTXOs concurrency
+        CCFundSource.utxoCS.execute(() => {
+            serviceTxids.forEach((txid) => {
+                try {
+                    // Try to retrieve associated billing entry for service transaction
+                    const billing = Billing.getBillingByServiceTxid(txid);
 
-            if (billing !== undefined) {
-                spendServCredTxsToSend.add(this.payForService(Client.getClientByClientId(billing.clientId, true), txid, billing.finalServicePrice, false));
-            }
-            else {
-                // Billing entry for service transaction not found.
-                //  Log error condition and throw exception
-                Catenis.logger.ERROR('Billing entry for service transaction (txid: %s) not found', txid);
-                throw new Error(util.format('Billing entry for service transaction (txid: %s) not found', txid));
-            }
-        });
+                    if (billing !== undefined) {
+                        const spendServCredTransact = this.payForService(Client.getClientByClientId(billing.clientId, true), txid, billing.finalServicePrice, false);
 
-        // Execute code in critical section to make sure task is serialized
-        procCS.execute(() => {
-            for (let spendServCredTransact of spendServCredTxsToSend) {
-                if (spendServCredTransact.needsToFund() || spendServCredTransact.needsToSend()) {
-                    // Send spend service credit transaction
-                    sendSpendServCredTransaction(spendServCredTransact);
+                        spendServCredTxsToSend.add(spendServCredTransact);
+
+                        // Save billing entry
+                        if (spendServCredTxBillings.has(spendServCredTransact)) {
+                            spendServCredTxBillings.get(spendServCredTransact).push(billing);
+                        }
+                        else {
+                            spendServCredTxBillings.set(spendServCredTransact, [billing]);
+                        }
+                    }
+                    else {
+                        // Billing entry for service transaction not found.
+                        //  Log error condition and throw exception
+                        Catenis.logger.ERROR('Billing entry for service transaction (txid: %s) not found', txid);
+                        // noinspection ExceptionCaughtLocallyJS
+                        throw new Error(util.format('Billing entry for service transaction (txid: %s) not found', txid));
+                    }
                 }
+                catch (err) {
+                    // Error allocating spend service credit transaction to reprocess payment of service
+                    Catenis.logger.ERROR('Error allocating spend service credit transaction to reprocess payment of service (serviceTxid: %s).', txid, err);
+                }
+            });
+
+            if (spendServCredTxsToSend.size > 0) {
+                // Execute code in critical section to make sure task is serialized
+                procCS.execute(() => {
+                    for (let spendServCredTransact of spendServCredTxsToSend) {
+                        try {
+                            if (spendServCredTransact.needsToFund() || spendServCredTransact.needsToSend()) {
+                                // Send spend service credit transaction
+                                sendSpendServCredTransaction(spendServCredTransact);
+
+                                // Update billing info for services the payment of which had been reprocessed
+                                spendServCredTxBillings.get(spendServCredTransact).forEach((billing) => {
+                                    try {
+                                        billing.setServicePaymentTransaction(spendServCredTransact);
+                                    }
+                                    catch (err) {
+                                        // Error update billing info for service the payment of which had been reprocessed
+                                        Catenis.logger.ERROR('Error update billing info (doc_id: %s) for service the payment of which had been reprocessed.', billing.doc_id, err);
+                                    }
+                                });
+                            }
+                        }
+                        catch (err) {
+                            // Error sending spend service credit transaction to reprocess payment of services
+                            Catenis.logger.ERROR('Error sending spend service credit transaction to reprocess payment of services (serviceTxids: %s).', spendServCredTransact.serviceTxids.join(', '), err);
+                        }
+                    }
+                });
             }
         });
     }
     catch (err) {
         // Error while reprocessing service transactions.
         //  Log error condition
-        Catenis.logger.ERROR('Error while reprocessing service transactions (serviceTxids: %s).', serviceTxids.join(', '), err);
+        Catenis.logger.ERROR('Error while reprocessing payment of services (serviceTxids: %s).', serviceTxids.join(', '), err);
     }
 }
 

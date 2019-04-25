@@ -444,6 +444,18 @@ Transaction.prototype.removeOutputAt = function (pos) {
     return output;
 };
 
+Transaction.prototype.getMultiSigOutputPositions = function () {
+    const poss = [];
+
+    for (let pos = 0, lastPos = this.outputs.length - 1; pos <= lastPos; pos++) {
+        if (this.outputs[pos].type === Transaction.outputType.multisig) {
+            poss.push(pos);
+        }
+    }
+
+    return poss.length > 0 ? poss : undefined;
+};
+
 Transaction.prototype.getNullDataOutputPosition = function () {
     let pos = undefined;
 

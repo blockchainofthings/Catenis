@@ -13,6 +13,7 @@
 //import util from 'util';
 // Third-party node modules
 import config from 'config';
+import _und from 'underscore';
 // Meteor packages
 //import { Meteor } from 'meteor/meteor';
 
@@ -114,6 +115,15 @@ export class RbfTransactionInfo {
             },
             enumerable: false
         });
+    }
+
+    clone() {
+        const clone = Util.cloneObj(this);
+
+        clone.numPubKeysMultiSigTxOutputs = _und.clone(clone.numPubKeysMultiSigTxOutputs);
+        clone.txSize = clone.txSize.clone();
+
+        return clone;
     }
 
     setNumTxInputs(num) {
@@ -312,6 +322,10 @@ class TxSize {
         numPubKeysMultiSigOutputs.forEach((numPubKeys) => {
             this.addMultiSigOutput(numPubKeys);
         })
+    }
+
+    clone() {
+        return Util.cloneObj(this);
     }
 
     addInputs(count) {

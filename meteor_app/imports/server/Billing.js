@@ -98,10 +98,10 @@ Billing.prototype.setServicePaymentTransaction = function (servicePayTransaction
     // Make sure that it is a valid service transaction
     if (!(servicePayTransaction instanceof SpendServiceCreditTransaction) || servicePayTransaction.lastSentCcTransact === undefined) {
         // Log error condition and throw exception
-        Catenis.logger.ERROR('Billing.recordServicePaymentTransaction method called with invalid service transaction', {
+        Catenis.logger.ERROR('Billing.setServicePaymentTransaction method called with invalid service transaction', {
             serviceTransaction: servicePayTransaction
         });
-        throw new Error('Billing.recordServicePaymentTransaction method called with invalid service transaction');
+        throw new Error('Billing.setServicePaymentTransaction method called with invalid service transaction');
     }
 
     if (this.servicePaymentTx === undefined) {
@@ -195,7 +195,7 @@ Billing.createNew = function (device, serviceTransact, servicePriceInfo, service
     };
 
     // Make sure service price info has been given
-    if (typeof servicePriceInfo !== 'object' || serviceTransact === null) {
+    if (typeof servicePriceInfo !== 'object' || servicePriceInfo === null) {
         // Log error condition and throw exception
         Catenis.logger.ERROR('No service price info for billing');
         throw new Meteor.Error('ctn_billing_no_price', 'No service price info for billing');

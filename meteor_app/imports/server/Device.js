@@ -68,6 +68,7 @@ import {
     cfgSettings as messageCfgSettings
 } from './Message';
 import { CachedMessage } from './CachedMessage';
+import { procCS as spendServCredProcCS } from './SpendServiceCredit';
 
 
 // Definition of function classes
@@ -685,96 +686,109 @@ Device.prototype.sendMessage2 = function (message, targetDeviceId, encryptMessag
     const doProcessing = () => {
         // Execute code in critical section to avoid Colored Coins UTXOs concurrency
         CCFundSource.utxoCS.execute(() => {
-            const servicePriceInfo = Service.sendMessageServicePrice();
-
-            if (this.client.billingMode === Client.billingMode.prePaid) {
-                // Make sure that client has enough service credits to pay for service
-                const serviceAccountBalance = this.client.serviceAccountBalance();
-
-                if (serviceAccountBalance < servicePriceInfo.finalServicePrice) {
-                    // Client does not have enough credits to pay for service.
-                    //  Log error condition and throw exception
-                    Catenis.logger.ERROR('Client does not have enough credits to pay for send message service', {
-                        serviceAccountBalance: serviceAccountBalance,
-                        servicePrice: servicePriceInfo.finalServicePrice
-                    });
-                    throw new Meteor.Error('ctn_device_low_service_acc_balance', 'Client does not have enough credits to pay for send message service');
-                }
-            }
-
-            let sendMsgTransact;
-
             // Execute code in critical section to avoid UTXOs concurrency
             FundSource.utxoCS.execute(() => {
-                try {
-                    // Prepare transaction to send message to a device
-                    sendMsgTransact = new SendMessageTransaction(this, targetDevice, messageReadable, {
-                        readConfirmation: readConfirmation,
-                        encrypted: encryptMessage,
-                        storageScheme: storageScheme,
-                        storageProvider: storageProvider
-                    });
+                // Execute code in critical section to avoid concurrent spend service credit tasks
+                spendServCredProcCS.execute(() => {
+                    const servicePriceInfo = Service.sendMessageServicePrice();
+                    let paymentProvisionInfo;
 
-                    // Build and send transaction
-                    sendMsgTransact.buildTransaction();
-
-                    sendMsgTransact.sendTransaction();
-
-                    // Force polling of blockchain so newly sent transaction is received and processed right away
-                    Catenis.txMonitor.pollNow();
-
-                    // Create message and save it to local database
-                    messageId = Message.createLocalMessage(sendMsgTransact);
-                }
-                catch (err) {
-                    // Error sending message to another device.
-                    //  Log error condition
-                    Catenis.logger.ERROR('Error sending message to another device.', err);
-
-                    if (sendMsgTransact && !sendMsgTransact.txid) {
-                        // Revert output addresses added to transaction
-                        sendMsgTransact.revertOutputAddresses();
+                    if (this.client.billingMode === Client.billingMode.prePaid) {
+                        try {
+                            paymentProvisionInfo = Catenis.spendServCredit.provisionPaymentForService(this.client, servicePriceInfo.finalServicePrice);
+                        }
+                        catch (err) {
+                            if ((err instanceof Meteor.Error) && err.error === 'ctn_spend_serv_cred_utxo_alloc_error') {
+                                // Unable to allocate service credits from client service account to pay for service.
+                                //  Log error and throw exception
+                                Catenis.logger.ERROR('Client does not have enough credits to pay for send message service', {
+                                    serviceAccountBalance: this.client.serviceAccountBalance(),
+                                    servicePrice: servicePriceInfo.finalServicePrice
+                                });
+                                throw new Meteor.Error('ctn_device_low_service_acc_balance', 'Client does not have enough credits to pay for send message service');
+                            }
+                            else {
+                                // Error provisioning spend service credit transaction to pay for service.
+                                //  Log error and throw exception
+                                Catenis.logger.ERROR('Error provisioning spend service credit transaction to pay for send message service.', err);
+                                throw new Error('Error provisioning spend service credit transaction to pay for send message service');
+                            }
+                        }
+                    }
+                    else if (this.client.billingMode === Client.billingMode.postPaid) {
+                        // Not yet implemented
+                        Catenis.logger.ERROR('Processing for postpaid billing mode not yet implemented');
+                        throw new Error('Processing for postpaid billing mode not yet implemented');
                     }
 
-                    // Rethrows exception
-                    throw err;
-                }
+                    let sendMsgTransact;
+
+                    try {
+                        // Prepare transaction to send message to a device
+                        sendMsgTransact = new SendMessageTransaction(this, targetDevice, messageReadable, {
+                            readConfirmation: readConfirmation,
+                            encrypted: encryptMessage,
+                            storageScheme: storageScheme,
+                            storageProvider: storageProvider
+                        });
+
+                        // Build and send transaction
+                        sendMsgTransact.buildTransaction();
+
+                        sendMsgTransact.sendTransaction();
+
+                        // Force polling of blockchain so newly sent transaction is received and processed right away
+                        Catenis.txMonitor.pollNow();
+
+                        // Create message and save it to local database
+                        messageId = Message.createLocalMessage(sendMsgTransact);
+                    }
+                    catch (err) {
+                        // Error sending message to another device.
+                        //  Log error condition
+                        Catenis.logger.ERROR('Error sending message to another device.', err);
+
+                        if (sendMsgTransact && !sendMsgTransact.txid) {
+                            // Revert output addresses added to transaction
+                            sendMsgTransact.revertOutputAddresses();
+                        }
+
+                        // Rethrows exception
+                        throw err;
+                    }
+
+                    try {
+                        // Record billing info for service
+                        const billing = Billing.createNew(this, sendMsgTransact, servicePriceInfo);
+
+                        let servicePayTransact;
+
+                        if (this.client.billingMode === Client.billingMode.prePaid) {
+                            servicePayTransact = Catenis.spendServCredit.confirmPaymentForService(paymentProvisionInfo, sendMsgTransact.txid);
+                        }
+                        else if (this.client.billingMode === Client.billingMode.postPaid) {
+                            // Not yet implemented
+                            Catenis.logger.ERROR('Processing for postpaid billing mode not yet implemented');
+                            // noinspection ExceptionCaughtLocallyJS
+                            throw new Error('Processing for postpaid billing mode not yet implemented');
+                        }
+
+                        billing.setServicePaymentTransaction(servicePayTransact);
+                    }
+                    catch (err) {
+                        if ((err instanceof Meteor.Error) && err.error === 'ctn_spend_serv_cred_tx_rejected') {
+                            // Spend service credit transaction has been rejected.
+                            //  Log warning condition
+                            Catenis.logger.WARN('Billing for send message service (serviceTxid: %s) recorded with no service payment transaction', sendMsgTransact.txid);
+                        }
+                        else {
+                            // Error recording billing info for send message service.
+                            //  Just log error condition
+                            Catenis.logger.ERROR('Error recording billing info for send message service (serviceTxid: %s),', sendMsgTransact.txid, err);
+                        }
+                    }
+                });
             });
-
-            try {
-                // Record billing info for service
-                // noinspection JSUnusedAssignment
-                const billing = Billing.createNew(this, sendMsgTransact, servicePriceInfo);
-
-                let servicePayTransact;
-
-                if (this.client.billingMode === Client.billingMode.prePaid) {
-                    // noinspection JSUnusedAssignment
-                    servicePayTransact = Catenis.spendServCredit.payForService(this.client, sendMsgTransact.txid, servicePriceInfo.finalServicePrice);
-                }
-                else if (this.client.billingMode === Client.billingMode.postPaid) {
-                    // Not yet implemented
-                    Catenis.logger.ERROR('Processing for postpaid billing mode not yet implemented');
-                    // noinspection ExceptionCaughtLocallyJS
-                    throw new Error('Processing for postpaid billing mode not yet implemented');
-                }
-
-                billing.setServicePaymentTransaction(servicePayTransact);
-            }
-            catch (err) {
-                if ((err instanceof Meteor.Error) && err.error === 'ctn_spend_serv_cred_tx_rejected') {
-                    // Spend service credit transaction has been rejected.
-                    //  Log warning condition
-                    // noinspection JSUnusedAssignment
-                    Catenis.logger.WARN('Billing for send message service (serviceTxid: %s) recorded with no service payment transaction', sendMsgTransact.txid);
-                }
-                else {
-                    // Error recording billing info for send message service.
-                    //  Just log error condition
-                    // noinspection JSUnusedAssignment
-                    Catenis.logger.ERROR('Error recording billing info for send message service (serviceTxid: %s),', sendMsgTransact.txid, err);
-                }
-            }
         });
     };
 
@@ -998,95 +1012,108 @@ Device.prototype.logMessage2 = function (message, encryptMessage = true, storage
     const doProcessing = () => {
         // Execute code in critical section to avoid Colored Coins UTXOs concurrency
         CCFundSource.utxoCS.execute(() => {
-            const servicePriceInfo = Service.logMessageServicePrice();
-
-            if (this.client.billingMode === Client.billingMode.prePaid) {
-                // Make sure that client has enough service credits to pay for service
-                const serviceAccountBalance = this.client.serviceAccountBalance();
-
-                if (serviceAccountBalance < servicePriceInfo.finalServicePrice) {
-                    // Client does not have enough credits to pay for service.
-                    //  Log error condition and throw exception
-                    Catenis.logger.ERROR('Client does not have enough credits to pay for log message service', {
-                        serviceAccountBalance: serviceAccountBalance,
-                        servicePrice: servicePriceInfo.finalServicePrice
-                    });
-                    throw new Meteor.Error('ctn_device_low_service_acc_balance', 'Client does not have enough credits to pay for log message service');
-                }
-            }
-
-            let logMsgTransact;
-
             // Execute code in critical section to avoid UTXOs concurrency
             FundSource.utxoCS.execute(() => {
-                try {
-                    // Prepare transaction to log message
-                    logMsgTransact = new LogMessageTransaction(this, messageReadable, {
-                        encrypted: encryptMessage,
-                        storageScheme: storageScheme,
-                        storageProvider: storageProvider
-                    });
+                // Execute code in critical section to avoid concurrent spend service credit tasks
+                spendServCredProcCS.execute(() => {
+                    const servicePriceInfo = Service.logMessageServicePrice();
+                    let paymentProvisionInfo;
 
-                    // Build and send transaction
-                    logMsgTransact.buildTransaction();
-
-                    logMsgTransact.sendTransaction();
-
-                    // Force polling of blockchain so newly sent transaction is received and processed right away
-                    Catenis.txMonitor.pollNow();
-
-                    // Create message and save it to local database
-                    messageId = Message.createLocalMessage(logMsgTransact);
-                }
-                catch (err) {
-                    // Error logging message
-                    //  Log error condition
-                    Catenis.logger.ERROR('Error logging message.', err);
-
-                    if (logMsgTransact && !logMsgTransact.txid) {
-                        // Revert output addresses added to transaction
-                        logMsgTransact.revertOutputAddresses();
+                    if (this.client.billingMode === Client.billingMode.prePaid) {
+                        try {
+                            paymentProvisionInfo = Catenis.spendServCredit.provisionPaymentForService(this.client, servicePriceInfo.finalServicePrice);
+                        }
+                        catch (err) {
+                            if ((err instanceof Meteor.Error) && err.error === 'ctn_spend_serv_cred_utxo_alloc_error') {
+                                // Unable to allocate service credits from client service account to pay for service.
+                                //  Log error and throw exception
+                                Catenis.logger.ERROR('Client does not have enough credits to pay for log message service', {
+                                    serviceAccountBalance: this.client.serviceAccountBalance(),
+                                    servicePrice: servicePriceInfo.finalServicePrice
+                                });
+                                throw new Meteor.Error('ctn_device_low_service_acc_balance', 'Client does not have enough credits to pay for log message service');
+                            }
+                            else {
+                                // Error provisioning spend service credit transaction to pay for service.
+                                //  Log error and throw exception
+                                Catenis.logger.ERROR('Error provisioning spend service credit transaction to pay for log message service.', err);
+                                throw new Error('Error provisioning spend service credit transaction to pay for log message service');
+                            }
+                        }
+                    }
+                    else if (this.client.billingMode === Client.billingMode.postPaid) {
+                        // Not yet implemented
+                        Catenis.logger.ERROR('Processing for postpaid billing mode not yet implemented');
+                        throw new Error('Processing for postpaid billing mode not yet implemented');
                     }
 
-                    // Rethrows exception
-                    throw err;
-                }
+                    let logMsgTransact;
+
+                    try {
+                        // Prepare transaction to log message
+                        logMsgTransact = new LogMessageTransaction(this, messageReadable, {
+                            encrypted: encryptMessage,
+                            storageScheme: storageScheme,
+                            storageProvider: storageProvider
+                        });
+
+                        // Build and send transaction
+                        logMsgTransact.buildTransaction();
+
+                        logMsgTransact.sendTransaction();
+
+                        // Force polling of blockchain so newly sent transaction is received and processed right away
+                        Catenis.txMonitor.pollNow();
+
+                        // Create message and save it to local database
+                        messageId = Message.createLocalMessage(logMsgTransact);
+                    }
+                    catch (err) {
+                        // Error logging message
+                        //  Log error condition
+                        Catenis.logger.ERROR('Error logging message.', err);
+
+                        if (logMsgTransact && !logMsgTransact.txid) {
+                            // Revert output addresses added to transaction
+                            logMsgTransact.revertOutputAddresses();
+                        }
+
+                        // Rethrows exception
+                        throw err;
+                    }
+
+                    try {
+                        // Record billing info for service
+                        const billing = Billing.createNew(this, logMsgTransact, servicePriceInfo);
+
+                        let servicePayTransact;
+
+                        if (this.client.billingMode === Client.billingMode.prePaid) {
+                            servicePayTransact = Catenis.spendServCredit.confirmPaymentForService(paymentProvisionInfo, logMsgTransact.txid);
+                        }
+                        else if (this.client.billingMode === Client.billingMode.postPaid) {
+                            // Not yet implemented
+                            Catenis.logger.ERROR('Processing for postpaid billing mode not yet implemented');
+                            // noinspection ExceptionCaughtLocallyJS
+                            throw new Error('Processing for postpaid billing mode not yet implemented');
+                        }
+
+                        billing.setServicePaymentTransaction(servicePayTransact);
+                    }
+                    catch (err) {
+                        if ((err instanceof Meteor.Error) && err.error === 'ctn_spend_serv_cred_tx_rejected') {
+                            // Spend service credit transaction has been rejected.
+                            //  Log warning condition
+                            Catenis.logger.WARN('Billing for log message service (serviceTxid: %s) recorded with no service payment transaction', logMsgTransact.txid);
+                        }
+                        else {
+                            // Error recording billing info for log message service.
+                            //  Just log error condition
+                            Catenis.logger.ERROR('Error recording billing info for log message service (serviceTxid: %s),', logMsgTransact.txid, err);
+                        }
+                    }
+                });
             });
-
-            try {
-                // Record billing info for service
-                // noinspection JSUnusedAssignment
-                const billing = Billing.createNew(this, logMsgTransact, servicePriceInfo);
-
-                let servicePayTransact;
-
-                if (this.client.billingMode === Client.billingMode.prePaid) {
-                    // noinspection JSUnusedAssignment
-                    servicePayTransact = Catenis.spendServCredit.payForService(this.client, logMsgTransact.txid, servicePriceInfo.finalServicePrice);
-                }
-                else if (this.client.billingMode === Client.billingMode.postPaid) {
-                    // Not yet implemented
-                    Catenis.logger.ERROR('Processing for postpaid billing mode not yet implemented');
-                    // noinspection ExceptionCaughtLocallyJS
-                    throw new Error('Processing for postpaid billing mode not yet implemented');
-                }
-
-                billing.setServicePaymentTransaction(servicePayTransact);
-            }
-            catch (err) {
-                if ((err instanceof Meteor.Error) && err.error === 'ctn_spend_serv_cred_tx_rejected') {
-                    // Spend service credit transaction has been rejected.
-                    //  Log warning condition
-                    // noinspection JSUnusedAssignment
-                    Catenis.logger.WARN('Billing for log message service (serviceTxid: %s) recorded with no service payment transaction', logMsgTransact.txid);
-                }
-                else {
-                    // Error recording billing info for log message service.
-                    //  Just log error condition
-                    // noinspection JSUnusedAssignment
-                    Catenis.logger.ERROR('Error recording billing info for log message service (serviceTxid: %s),', logMsgTransact.txid, err);
-                }
-            }
         });
     };
 
@@ -1925,93 +1952,107 @@ Device.prototype.issueAsset = function (amount, assetInfo, holdingDeviceId) {
 
     // Execute code in critical section to avoid Colored Coins UTXOs concurrency
     CCFundSource.utxoCS.execute(() => {
-        const servicePriceInfo = Service.issueAssetServicePrice();
-
-        if (this.client.billingMode === Client.billingMode.prePaid) {
-            // Make sure that client has enough service credits to pay for service
-            const serviceAccountBalance = this.client.serviceAccountBalance();
-
-            if (serviceAccountBalance < servicePriceInfo.finalServicePrice) {
-                // Client does not have enough credits to pay for service.
-                //  Log error condition and throw exception
-                Catenis.logger.ERROR('Client does not have enough credits to pay for issue asset service', {
-                    serviceAccountBalance: serviceAccountBalance,
-                    servicePrice: servicePriceInfo.finalServicePrice
-                });
-                throw new Meteor.Error('ctn_device_low_service_acc_balance', 'Client does not have enough credits to pay for issue asset service');
-            }
-        }
-
-        let issueAssetTransact = undefined;
-
         // Execute code in critical section to avoid UTXOs concurrency
         FundSource.utxoCS.execute(() => {
-            try {
-                // Prepare transaction to issue asset
-                // noinspection JSValidateTypes
-                issueAssetTransact = new IssueAssetTransaction(this, holdingDevice, amount, assetInfo);
+            // Execute code in critical section to avoid concurrent spend service credit tasks
+            spendServCredProcCS.execute(() => {
+                const servicePriceInfo = Service.issueAssetServicePrice();
+                let paymentProvisionInfo;
 
-                // Build and send transaction
-                issueAssetTransact.buildTransaction();
-
-                issueAssetTransact.sendTransaction();
-
-                // Force polling of blockchain so newly sent transaction is received and processed right away
-                Catenis.txMonitor.pollNow();
-            }
-            catch (err) {
-                // Error issuing asset. Log error condition
-                Catenis.logger.ERROR('Error issuing asset.', err);
-
-                if (issueAssetTransact && !issueAssetTransact.txid) {
-                    // Revert output addresses added to transaction
-                    issueAssetTransact.revertOutputAddresses();
+                if (this.client.billingMode === Client.billingMode.prePaid) {
+                    try {
+                        paymentProvisionInfo = Catenis.spendServCredit.provisionPaymentForService(this.client, servicePriceInfo.finalServicePrice);
+                    }
+                    catch (err) {
+                        if ((err instanceof Meteor.Error) && err.error === 'ctn_spend_serv_cred_utxo_alloc_error') {
+                            // Unable to allocate service credits from client service account to pay for service.
+                            //  Log error and throw exception
+                            Catenis.logger.ERROR('Client does not have enough credits to pay for issue asset service', {
+                                serviceAccountBalance: this.client.serviceAccountBalance(),
+                                servicePrice: servicePriceInfo.finalServicePrice
+                            });
+                            throw new Meteor.Error('ctn_device_low_service_acc_balance', 'Client does not have enough credits to pay for issue asset service');
+                        }
+                        else {
+                            // Error provisioning spend service credit transaction to pay for service.
+                            //  Log error and throw exception
+                            Catenis.logger.ERROR('Error provisioning spend service credit transaction to pay for issue asset service.', err);
+                            throw new Error('Error provisioning spend service credit transaction to pay for issue asset service');
+                        }
+                    }
+                }
+                else if (this.client.billingMode === Client.billingMode.postPaid) {
+                    // Not yet implemented
+                    Catenis.logger.ERROR('Processing for postpaid billing mode not yet implemented');
+                    throw new Error('Processing for postpaid billing mode not yet implemented');
                 }
 
-                // Rethrows exception
-                throw err;
-            }
+                let issueAssetTransact;
+
+                try {
+                    // Prepare transaction to issue asset
+                    issueAssetTransact = new IssueAssetTransaction(this, holdingDevice, amount, assetInfo);
+
+                    // Build and send transaction
+                    issueAssetTransact.buildTransaction();
+
+                    issueAssetTransact.sendTransaction();
+
+                    // Force polling of blockchain so newly sent transaction is received and processed right away
+                    Catenis.txMonitor.pollNow();
+                }
+                catch (err) {
+                    // Error issuing asset. Log error condition
+                    Catenis.logger.ERROR('Error issuing asset.', err);
+
+                    if (issueAssetTransact && !issueAssetTransact.txid) {
+                        // Revert output addresses added to transaction
+                        issueAssetTransact.revertOutputAddresses();
+                    }
+
+                    // Rethrows exception
+                    throw err;
+                }
+
+                assetId = issueAssetTransact.assetId;
+
+                if (issueAssetTransact.bnPrevTotalExistentBalance) {
+                    // Add final total existent asset balance to result
+                    totalExistentBalance = issueAssetTransact.asset.smallestDivisionAmountToAmount(issueAssetTransact.bnPrevTotalExistentBalance.plus(issueAssetTransact.amount));
+                }
+
+                try {
+                    // Record billing info for service
+                    const billing = Billing.createNew(this, issueAssetTransact, servicePriceInfo);
+
+                    let servicePayTransact;
+
+                    if (this.client.billingMode === Client.billingMode.prePaid) {
+                        servicePayTransact = Catenis.spendServCredit.confirmPaymentForService(paymentProvisionInfo, issueAssetTransact.txid);
+                    }
+                    else if (this.client.billingMode === Client.billingMode.postPaid) {
+                        // Not yet implemented
+                        Catenis.logger.ERROR('Processing for postpaid billing mode not yet implemented');
+                        // noinspection ExceptionCaughtLocallyJS
+                        throw new Error('Processing for postpaid billing mode not yet implemented');
+                    }
+
+                    billing.setServicePaymentTransaction(servicePayTransact);
+                }
+                catch (err) {
+                    if ((err instanceof Meteor.Error) && err.error === 'ctn_spend_serv_cred_tx_rejected') {
+                        // Spend service credit transaction has been rejected.
+                        //  Log warning condition
+                        Catenis.logger.WARN('Billing for issue asset service (serviceTxid: %s) recorded with no service payment transaction', issueAssetTransact.txid);
+                    }
+                    else {
+                        // Error recording billing info for issue asset service.
+                        //  Just log error condition
+                        Catenis.logger.ERROR('Error recording billing info for issue asset service (serviceTxid: %s),', issueAssetTransact.txid, err);
+                    }
+                }
+            });
         });
-
-        // noinspection JSObjectNullOrUndefined
-        assetId = issueAssetTransact.assetId;
-
-        // noinspection JSObjectNullOrUndefined
-        if (issueAssetTransact.bnPrevTotalExistentBalance) {
-            // Add final total existent asset balance to result
-            totalExistentBalance = issueAssetTransact.asset.smallestDivisionAmountToAmount(issueAssetTransact.bnPrevTotalExistentBalance.plus(issueAssetTransact.amount));
-        }
-
-        try {
-            // Record billing info for service
-            const billing = Billing.createNew(this, issueAssetTransact, servicePriceInfo);
-
-            let servicePayTransact;
-
-            if (this.client.billingMode === Client.billingMode.prePaid) {
-                servicePayTransact = Catenis.spendServCredit.payForService(this.client, issueAssetTransact.txid, servicePriceInfo.finalServicePrice);
-            }
-            else if (this.client.billingMode === Client.billingMode.postPaid) {
-                // Not yet implemented
-                Catenis.logger.ERROR('Processing for postpaid billing mode not yet implemented');
-                // noinspection ExceptionCaughtLocallyJS
-                throw new Error('Processing for postpaid billing mode not yet implemented');
-            }
-
-            billing.setServicePaymentTransaction(servicePayTransact);
-        }
-        catch (err) {
-            if ((err instanceof Meteor.Error) && err.error === 'ctn_spend_serv_cred_tx_rejected') {
-                // Spend service credit transaction has been rejected.
-                //  Log warning condition
-                Catenis.logger.WARN('Billing for issue asset service (serviceTxid: %s) recorded with no service payment transaction', issueAssetTransact.txid);
-            }
-            else {
-                // Error recording billing info for issue asset service.
-                //  Just log error condition
-                Catenis.logger.ERROR('Error recording billing info for issue asset service (serviceTxid: %s),', issueAssetTransact.txid, err);
-            }
-        }
     });
 
     // noinspection JSUnusedAssignment
@@ -2104,87 +2145,102 @@ Device.prototype.transferAsset = function (receivingDeviceId, amount, assetId) {
 
     // Execute code in critical section to avoid Colored Coins UTXOs concurrency
     CCFundSource.utxoCS.execute(() => {
-        const servicePriceInfo = Service.transferAssetServicePrice();
-
-        if (this.client.billingMode === Client.billingMode.prePaid) {
-            // Make sure that client has enough service credits to pay for service
-            const serviceAccountBalance = this.client.serviceAccountBalance();
-
-            if (serviceAccountBalance < servicePriceInfo.finalServicePrice) {
-                // Client does not have enough credits to pay for service.
-                //  Log error condition and throw exception
-                Catenis.logger.ERROR('Client does not have enough credits to pay for transfer asset service', {
-                    serviceAccountBalance: serviceAccountBalance,
-                    servicePrice: servicePriceInfo.finalServicePrice
-                });
-                throw new Meteor.Error('ctn_device_low_service_acc_balance', 'Client does not have enough credits to pay for transfer asset service');
-            }
-        }
-
-        let transferAssetTransact = undefined;
-
         // Execute code in critical section to avoid UTXOs concurrency
         FundSource.utxoCS.execute(() => {
-            try {
-                // Prepare transaction to transfer asset
-                // noinspection JSValidateTypes
-                transferAssetTransact = new TransferAssetTransaction(this, receivingDevice, amount, assetId);
+            // Execute code in critical section to avoid concurrent spend service credit tasks
+            spendServCredProcCS.execute(() => {
+                const servicePriceInfo = Service.transferAssetServicePrice();
+                let paymentProvisionInfo;
 
-                // Build and send transaction
-                transferAssetTransact.buildTransaction();
-
-                transferAssetTransact.sendTransaction();
-
-                // Force polling of blockchain so newly sent transaction is received and processed right away
-                Catenis.txMonitor.pollNow();
-            }
-            catch (err) {
-                // Error transferring asset. Log error condition
-                Catenis.logger.ERROR('Error transferring asset.', err);
-
-                if (transferAssetTransact && !transferAssetTransact.txid) {
-                    // Revert output addresses added to transaction
-                    transferAssetTransact.revertOutputAddresses();
+                if (this.client.billingMode === Client.billingMode.prePaid) {
+                    try {
+                        paymentProvisionInfo = Catenis.spendServCredit.provisionPaymentForService(this.client, servicePriceInfo.finalServicePrice);
+                    }
+                    catch (err) {
+                        if ((err instanceof Meteor.Error) && err.error === 'ctn_spend_serv_cred_utxo_alloc_error') {
+                            // Unable to allocate service credits from client service account to pay for service.
+                            //  Log error and throw exception
+                            Catenis.logger.ERROR('Client does not have enough credits to pay for transfer asset service', {
+                                serviceAccountBalance: this.client.serviceAccountBalance(),
+                                servicePrice: servicePriceInfo.finalServicePrice
+                            });
+                            throw new Meteor.Error('ctn_device_low_service_acc_balance', 'Client does not have enough credits to pay for transfer asset service');
+                        }
+                        else {
+                            // Error provisioning spend service credit transaction to pay for service.
+                            //  Log error and throw exception
+                            Catenis.logger.ERROR('Error provisioning spend service credit transaction to pay for transfer asset service.', err);
+                            throw new Error('Error provisioning spend service credit transaction to pay for transfer asset service');
+                        }
+                    }
+                }
+                else if (this.client.billingMode === Client.billingMode.postPaid) {
+                    // Not yet implemented
+                    Catenis.logger.ERROR('Processing for postpaid billing mode not yet implemented');
+                    throw new Error('Processing for postpaid billing mode not yet implemented');
                 }
 
-                // Rethrows exception
-                throw err;
-            }
+                let transferAssetTransact;
+
+                try {
+                    // Prepare transaction to transfer asset
+                    transferAssetTransact = new TransferAssetTransaction(this, receivingDevice, amount, assetId);
+
+                    // Build and send transaction
+                    transferAssetTransact.buildTransaction();
+
+                    transferAssetTransact.sendTransaction();
+
+                    // Force polling of blockchain so newly sent transaction is received and processed right away
+                    Catenis.txMonitor.pollNow();
+                }
+                catch (err) {
+                    // Error transferring asset. Log error condition
+                    Catenis.logger.ERROR('Error transferring asset.', err);
+
+                    if (transferAssetTransact && !transferAssetTransact.txid) {
+                        // Revert output addresses added to transaction
+                        transferAssetTransact.revertOutputAddresses();
+                    }
+
+                    // Rethrows exception
+                    throw err;
+                }
+
+                remainingBalance = transferAssetTransact.asset.smallestDivisionAmountToAmount(new BigNumber(transferAssetTransact.prevTotalBalance).minus(transferAssetTransact.amount));
+
+                try {
+                    // Record billing info for service
+                    const billing = Billing.createNew(this, transferAssetTransact, servicePriceInfo);
+
+                    let servicePayTransact;
+
+                    if (this.client.billingMode === Client.billingMode.prePaid) {
+                        servicePayTransact = Catenis.spendServCredit.confirmPaymentForService(paymentProvisionInfo, transferAssetTransact.txid);
+                    }
+                    else if (this.client.billingMode === Client.billingMode.postPaid) {
+                        // Not yet implemented
+                        Catenis.logger.ERROR('Processing for postpaid billing mode not yet implemented');
+                        // noinspection ExceptionCaughtLocallyJS
+                        throw new Error('Processing for postpaid billing mode not yet implemented');
+                    }
+
+                    billing.setServicePaymentTransaction(servicePayTransact);
+                }
+                catch (err) {
+                    if ((err instanceof Meteor.Error) && err.error === 'ctn_spend_serv_cred_tx_rejected') {
+                        // Spend service credit transaction has been rejected.
+                        //  Log warning condition
+                        Catenis.logger.WARN('Billing for transfer asset service (serviceTxid: %s) recorded with no service payment transaction', transferAssetTransact.txid);
+                    }
+                    else {
+                        // Error recording billing info for transfer asset service.
+                        //  Just log error condition
+                        Catenis.logger.ERROR('Error recording billing info for transfer asset service (serviceTxid: %s),', transferAssetTransact.txid, err);
+                    }
+                }
+            });
         });
-
-        // noinspection JSObjectNullOrUndefined
-        remainingBalance = transferAssetTransact.asset.smallestDivisionAmountToAmount(new BigNumber(transferAssetTransact.prevTotalBalance).minus(transferAssetTransact.amount));
-
-        try {
-            // Record billing info for service
-            const billing = Billing.createNew(this, transferAssetTransact, servicePriceInfo);
-
-            let servicePayTransact;
-
-            if (this.client.billingMode === Client.billingMode.prePaid) {
-                servicePayTransact = Catenis.spendServCredit.payForService(this.client, transferAssetTransact.txid, servicePriceInfo.finalServicePrice);
-            }
-            else if (this.client.billingMode === Client.billingMode.postPaid) {
-                // Not yet implemented
-                Catenis.logger.ERROR('Processing for postpaid billing mode not yet implemented');
-                // noinspection ExceptionCaughtLocallyJS
-                throw new Error('Processing for postpaid billing mode not yet implemented');
-            }
-
-            billing.setServicePaymentTransaction(servicePayTransact);
-        }
-        catch (err) {
-            if ((err instanceof Meteor.Error) && err.error === 'ctn_spend_serv_cred_tx_rejected') {
-                // Spend service credit transaction has been rejected.
-                //  Log warning condition
-                Catenis.logger.WARN('Billing for transfer asset service (serviceTxid: %s) recorded with no service payment transaction', transferAssetTransact.txid);
-            }
-            else {
-                // Error recording billing info for transfer asset service.
-                //  Just log error condition
-                Catenis.logger.ERROR('Error recording billing info for transfer asset service (serviceTxid: %s),', transferAssetTransact.txid, err);
-            }
-        }
     });
 
     // noinspection JSUnusedAssignment
