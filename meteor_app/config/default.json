@@ -548,9 +548,19 @@
     "apiPort": 5001,
     "apiProtocol": "http"
   },
+  // Parameter pertaining to IpfsClusterClient module
+  "ipfsClusterClient": {
+    "apiUrl": "http://catenis-ipfs:9094/",  // URL of IPFS Cluster REST API
+    "localAddress": null,  // (optional, can be set to null) IP address of local network interface to use to connect to the IPFS Cluster RESP API. If not specified, the default network interface is used
+    "timeout": 20000  // (20 sec.) (optinal, can be set to null) Timeout, in milliseconds, for connection/request with API server
+  },
   // Parameters pertaining to IpfsServerMonitor module
   "ipfsServerMonitor": {
     "enabled": true,
+    "ipfsCluster": {
+      "inUse": false,  // Indicates whether IPFS Cluster in being used
+      "numberOfPeers": 0  // Expected number of active IPFS Cluster nodes
+    },
     "checkInterval": 300  // (5 min.) Time, in seconds, defining the period within which IPFS server shall be checked to make sure it is still alive
   },
   // Parameters pertaining to Message module

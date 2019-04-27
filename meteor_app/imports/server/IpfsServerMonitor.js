@@ -10,7 +10,7 @@
 // References to external code
 //
 // Internal node modules
-//import util from 'util';
+import util from 'util';
 // Third-party node modules
 import config from 'config';
 // Meteor packages
@@ -21,10 +21,15 @@ import { Catenis } from './Catenis';
 
 // Config entries
 const ipfsSrvMonitorConfig = config.get('ipfsServerMonitor');
+const ipfsSrvMonIpfsClusterConfig = ipfsSrvMonitorConfig.get('ipfsCluster');
 
 // Configuration settings
 const cfgSettings = {
     enabled: ipfsSrvMonitorConfig.get('enabled'),
+    ipfsCluster: {
+        inUse: ipfsSrvMonIpfsClusterConfig.get('inUse'),
+        numberOfPeers: ipfsSrvMonIpfsClusterConfig.get('numberOfPeers')
+    },
     checkInterval: ipfsSrvMonitorConfig.get('checkInterval')
 };
 
@@ -102,14 +107,50 @@ IpfsServerMonitor.initialize = function () {
 //
 
 function checkServer() {
-    Catenis.logger.TRACE('Checking if IPFS server is alive');
+    if (cfgSettings.ipfsCluster.inUse) {
+        checkIpfsCluster();
+    }
+    else {
+        checkIpfsNode();
+    }
+}
+
+function checkIpfsNode() {
+    Catenis.logger.TRACE('Checking if IPFS node is alive');
     try {
         // Try to retrieve info about IPFS node
         Catenis.ipfsClient.id();
     }
     catch (err) {
-        // If call did not return successfully, just log error
-        Catenis.logger.ERROR('Failure while checking if IPFS server is alive.', err);
+        // Log error
+        Catenis.logger.ERROR('Failure while checking if IPFS node is alive.', err);
+    }
+}
+
+function checkIpfsCluster() {
+    Catenis.logger.TRACE('Checking if IPFS Cluster is healthy');
+    try {
+        // Retrieve information about cluster peers
+        const peers = Catenis.ipfsClusterClient.getPeers();
+
+        // Make sure that number of returned cluster peers is consistent
+        if (peers.length !== cfgSettings.ipfsCluster.numberOfPeers) {
+            Catenis.logger.ERROR('Inconsistent number of IPFS Cluster peers', util.format('\nExpected number of peers: %d; returned: %d', cfgSettings.ipfsCluster.numberOfPeers, peers.length), peers);
+        }
+
+        peers.forEach((peer, idx) => {
+            if (peer.error) {
+                Catenis.logger.ERROR('Error in IPFS Cluster peer #%d', idx + 1, util.format('\nCluster peer error: %s', peer.error), peers);
+            }
+
+            if (peer.ipfs.error) {
+                Catenis.logger.ERROR('Error in IPFS node of IPFS Cluster peer #%d', idx + 1, util.format('\nIPFS error: %s', peer.ipfs.error), peers);
+            }
+        });
+    }
+    catch (err) {
+        // Log error
+        Catenis.logger.ERROR('Failure while checking if IPFS Cluster is healthy.', err);
     }
 }
 
