@@ -143,7 +143,7 @@ function checkIpfsCluster() {
                 Catenis.logger.ERROR('Error in IPFS Cluster peer #%d', idx + 1, util.format('\nCluster peer error: %s', peer.error), peers);
             }
 
-            if (peer.ipfs.error) {
+            if (peer.ipfs && peer.ipfs.error) {
                 Catenis.logger.ERROR('Error in IPFS node of IPFS Cluster peer #%d', idx + 1, util.format('\nIPFS error: %s', peer.ipfs.error), peers);
             }
         });
