@@ -1105,7 +1105,6 @@ Database.initialize = function() {
                     replacedByTxid: 1
                 },
                 opts: {
-                    unique: true,
                     sparse: true,
                     background: true,
                     w: 1

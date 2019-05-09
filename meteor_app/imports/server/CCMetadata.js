@@ -25,6 +25,7 @@ import { HTTP } from 'meteor/http';
 
 // References code in other (Catenis) modules
 import { Catenis } from './Catenis';
+import { Util } from './Util';
 
 // Config entries
 const ccMetadataConfig = config.get('ccMetadata');
@@ -103,6 +104,28 @@ export function CCMetadata(metadata, decCryptoKeys) {
 
 // Public CCMetadata object methods
 //
+
+CCMetadata.prototype.clone = function () {
+    const clone = Util.cloneObj(this);
+
+    clone.urls = Util.cloneObjArray(clone.urls);
+
+    if (clone.userData) {
+        clone.userData = Util.cloneObj(clone.userData);
+    }
+
+    clone.encryptUserDataKeys = new Set(clone.encryptUserDataKeys);
+
+    if (clone.metadata) {
+        clone.metadata = Util.cloneObj(clone.metadata);
+    }
+
+    if (clone.storeResult) {
+        clone.storeResult = Util.cloneObj(clone.storeResult);
+    }
+
+    return clone;
+};
 
 // Specify metadata for the asset (being issued)
 //

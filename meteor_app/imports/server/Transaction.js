@@ -18,9 +18,9 @@ import config from 'config';
 import bitcoinLib from 'bitcoinjs-lib';
 // noinspection JSFileReferences
 import BigNumber from 'bignumber.js';
+import _und from 'underscore';
 // Meteor packages
 import { Meteor } from 'meteor/meteor';
-import { _ } from 'meteor/underscore';
 
 // References code in other (Catenis) modules
 import { Catenis } from './Catenis';
@@ -2036,11 +2036,11 @@ function addressFromPublicKey(pubKey) {
 }
 
 export function fixClone(clone) {
-    clone.inputs = _.clone(clone.inputs);
-    clone.outputs = _.clone(clone.outputs);
+    clone.inputs = Util.cloneObjArray(clone.inputs);
+    clone.outputs = Util.cloneObjArray(clone.outputs);
 
     if (clone.savedSizeProfile !== undefined) {
-        clone.savedSizeProfile = _.clone(clone.savedSizeProfile);
+        clone.savedSizeProfile = _und.clone(clone.savedSizeProfile);
     }
 
     return clone;

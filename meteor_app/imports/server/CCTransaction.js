@@ -370,9 +370,7 @@ CCTransaction.prototype.removeTransferInputSequence = function (startPos) {
         this.removeTransferOutputs(inputSeq.startPos);
 
         // Remove inputs from transaction
-        for (let pos = inputSeq.startPos, limit = inputSeq.startPos + inputSeq.nInputs; pos < limit; pos++) {
-            this.removeInputAt(pos);
-        }
+        this.removeInputs(inputSeq.startPos, inputSeq.nInputs);
 
         // Now remove transfer input sequence entry...
         this.transferInputSeqs.splice(getTransferInputSeqIndex.call(this, inputSeq.startPos), 1);
@@ -539,14 +537,14 @@ CCTransaction.prototype.setTransferOutputs = function (outputs, inputSeqStartPos
                         }
                         else {
                             // Set transfer output to be removed
-                            let length,
-                                lastEntry;
+                            let firstEntry;
 
-                            if ((length = transferOutputsToRemove.length) > 0 && (lastEntry = transferOutputsToRemove[length - 1]) && lastEntry[0] + lastEntry[1] === idx) {
-                                lastEntry[1]++;
+                            if (transferOutputsToRemove.length > 0 && (firstEntry = transferOutputsToRemove[0]) && firstEntry[0] + firstEntry[1] === idx) {
+                                firstEntry[1]++;
                             }
                             else {
-                                transferOutputsToRemove.push([idx, 1]);
+                                // Add to beginning of list so removal is done from the higher to the lower index
+                                transferOutputsToRemove.unshift([idx, 1]);
                             }
 
                             if (adjustedAssetAmount < 0) {
@@ -777,14 +775,14 @@ CCTransaction.prototype.removeTransferOutputs = function (inputSeqStartPos) {
 
             if (transferOutput.inputSeqStartPos === inputSeqStartPos && transferOutput.address !== undefined) {
                 // Set transfer output to be removed
-                let length,
-                    lastEntry;
+                let firstEntry;
 
-                if ((length = transferOutputsToRemove.length) > 0 && (lastEntry = transferOutputsToRemove[length - 1]) && lastEntry[0] + lastEntry[1] === idx) {
-                    lastEntry[1]++;
+                if (transferOutputsToRemove.length > 0 && (firstEntry = transferOutputsToRemove[0]) && firstEntry[0] + firstEntry[1] === idx) {
+                    firstEntry[1]++;
                 }
                 else {
-                    transferOutputsToRemove.push([idx, 1]);
+                    // Add to beginning of list so removal is done from the higher to the lower index
+                    transferOutputsToRemove.unshift([idx, 1]);
                 }
             }
         }
@@ -1271,8 +1269,12 @@ CCTransaction.prototype.totalBurnAssetAmount = function (startInputPos = 0, endI
 CCTransaction.prototype.clone = function () {
     const clone = txFixClone(Util.cloneObj(this));
 
-    clone.transferInputSeqs = _und.clone(clone.transferInputSeqs);
-    clone.transferOutputs = _und.clone(clone.transferOutputs);
+    clone.transferInputSeqs = Util.cloneObjArray(clone.transferInputSeqs);
+    clone.transferOutputs = Util.cloneObjArray(clone.transferOutputs);
+
+    if (clone.ccMetadata) {
+        clone.ccMetadata = clone.ccMetadata.clone();
+    }
 
     return clone;
 };

@@ -239,6 +239,20 @@ Util.cloneObj = function (obj) {
     return cloneObj;
 };
 
+// Clone an object or an array. If the array contains objects, the objects are also cloned. If those objects
+//  are arrays, the process repeats itself
+Util.cloneObjArray = function (arr) {
+    if (typeof arr === 'object') {
+        if (Array.isArray(arr)) {
+            return _und.map(arr, Util.cloneObjArray);
+        }
+
+        return Util.cloneObj(arr);
+    }
+
+    return arr;
+};
+
 // Method used to escape special characters in an string that is to be used as a regular expression pattern
 Util.escapeRegExp = function (str) {
     return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // $& means the whole matched string

@@ -169,7 +169,7 @@ SpendServiceCredit.prototype.provisionPaymentForService = function (client, pric
 
         // Save provisioned spend service credit transaction
         paymentProvisionInfo.spendServCredTransact = spendServCredTransact;
-        Catenis.logger.DEBUG('>>>>>> Spend service credit transaction provisioned for client (clientId: %s): %s', client.clientId, util.inspect(spendServCredTransact, {depth: 2}));
+        Catenis.logger.DEBUG('>>>>>> Spend service credit transaction provisioned for client (clientId: %s):', client.clientId, spendServCredTransact);
 
         try {
             spendServCredTransact.payForService(client, null, price);
@@ -219,6 +219,7 @@ SpendServiceCredit.prototype.provisionPaymentForService = function (client, pric
     }
     while (tryAgain);
 
+    Catenis.logger.DEBUG('>>>>>> Provisioned spend service credit transaction after paying for service:', paymentProvisionInfo.spendServCredTransact);
     if (paymentProvisionInfo.spendServCredTransact.needsToFund()) {
         try {
             // Fund spend service credit tx
@@ -328,7 +329,7 @@ SpendServiceCredit.prototype.payForService = function (client, serviceTxid, pric
 
         do {
             spendServCredTransact = getSpendServCredTxByClient.call(this, client.clientId, createNewTx);
-            Catenis.logger.DEBUG('>>>>>> Spend service credit transaction allocated for client (clientId: %s): %s', client.clientId, util.inspect(spendServCredTransact, {depth: 2}));
+            Catenis.logger.DEBUG('>>>>>> Spend service credit transaction allocated for client (clientId: %s):', client.clientId, spendServCredTransact);
 
             try {
                 spendServCredTransact.payForService(client, serviceTxid, price);

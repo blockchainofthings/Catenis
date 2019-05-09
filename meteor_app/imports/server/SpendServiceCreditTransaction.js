@@ -352,7 +352,13 @@ SpendServiceCreditTransaction.prototype.payForService = function (client, servic
                     selectUnconfUtxos: this.lastSentCcTransact === undefined ? CreditServiceAccTransaction.clientServAccCredLineAddrsUnconfUtxos(client.clientId) : undefined,
                     addUtxoTxInputs: addUtxoTxInputs
                 },
-                servCredAmountToAllocate: servCredAmountToAllocate
+                servCredAmountToAllocate: servCredAmountToAllocate,
+                newCcTransact: {
+                    inputs: newCcTransact.inputs,
+                    outputs: newCcTransact.outputs,
+                    transferInputSeqs: newCcTransact.transferInputSeqs,
+                    transferOutputs: newCcTransact.transferOutputs
+                }
             });
             const servAccCredFundSource = new CCFundSource(client.ctnNode.getServiceCreditAsset().ccAssetId, client.servAccCreditLineAddr.listAddressesInUse(), {
                 unconfUtxoInfo: undefined,
@@ -362,6 +368,7 @@ SpendServiceCreditTransaction.prototype.payForService = function (client, servic
                 addUtxoTxInputs: addUtxoTxInputs
             });
             const servAccCredAllocResult = servAccCredFundSource.allocateFund(servCredAmountToAllocate);
+            Catenis.logger.DEBUG('>>>>>> Allocation results:', servAccCredAllocResult);
 
             // Make sure that UTXOs have been correctly allocated
             if (servAccCredAllocResult === null) {
@@ -651,7 +658,9 @@ SpendServiceCreditTransaction.prototype.fundTransaction = function () {
                 }
                 else {
                     // Current fee is already enough to cover required fee.
-                    //  Just indicate that no more UTXOs should be allocated to pay for tx expense
+                    //  Indicate that transaction change should not be updated and that no more UTXOs should
+                    //  be allocated to pay for tx expense
+                    newChange = -1;
                     allocatePayTxExpense = false;
                 }
             }
@@ -698,7 +707,9 @@ SpendServiceCreditTransaction.prototype.fundTransaction = function () {
                     // Adjust RBF tx info to discount change out that is not used
                     this.rbfTxInfo.incrementNumTxOutputs(-1);
 
-                    // And indicate that no more UTXOs should be allocated to pay for tx expense
+                    // And Indicate that transaction change should not be updated and that no more UTXOs should
+                    //  be allocated to pay for tx expense
+                    newChange = -1;
                     allocatePayTxExpense = false;
                 }
             }
@@ -719,6 +730,15 @@ SpendServiceCreditTransaction.prototype.fundTransaction = function () {
                     // Allocate UTXOs to pay for transaction expense
                     //  Note: recall that txs that are to replace a previous tx as per RBF must NOT spend any new unconfirmed UTXOs
                     if (payTxExpFundSource === undefined) {
+                        Catenis.logger.DEBUG('>>>>>> Prepare to allocate funds to pay for spend service credit transaction expense', {
+                            fundSourceOptions: {
+                                unconfUtxoInfo: this.lastSentCcTransact === undefined && this.spendServCredCtrl.numUnconfirmedSpendServCredTxs === 0 ? {} : undefined,
+                                higherAmountUtxos: true,
+                                excludeUtxos: excludeUtxos,
+                                selectUnconfUtxos: this.lastSentCcTransact === undefined ? this.spendServCredCtrl.terminalSpendServCredTxsChangeTxouts : undefined,
+                                addUtxoTxInputs: addUtxoTxInputs
+                            }
+                        });
                         payTxExpFundSource = new FundSource(Catenis.ctnHubNode.servPymtPayTxExpenseAddr.listAddressesInUse(), {
                             unconfUtxoInfo: this.lastSentCcTransact === undefined && this.spendServCredCtrl.numUnconfirmedSpendServCredTxs === 0 ? {} : undefined,
                             higherAmountUtxos: true,
@@ -727,7 +747,15 @@ SpendServiceCreditTransaction.prototype.fundTransaction = function () {
                             addUtxoTxInputs: addUtxoTxInputs
                         });
                     }
+                    Catenis.logger.DEBUG('>>>>>> About to allocate funds to pay for spend service credit transaction expense', {
+                        amountToAllocate: txExpenseAmount,
+                        ccTransact: {
+                            inputs: this.ccTransact.inputs,
+                            outputs: this.ccTransact.outputs
+                        }
+                    });
                     payTxExpAllocResult = payTxExpFundSource.allocateFund(txExpenseAmount);
+                    Catenis.logger.DEBUG('>>>>>> Allocation results:', payTxExpAllocResult);
 
                     // Make sure that UTXOs have been correctly allocated
                     if (payTxExpAllocResult === null) {
@@ -794,7 +822,7 @@ SpendServiceCreditTransaction.prototype.fundTransaction = function () {
                         this.ccTransact.removeOutputAt(changeOutputPos);
                     }
 
-                    // Adjust RBF tx info to discount change out that is not used
+                    // Adjust RBF tx info to discount change output that is not used
                     this.rbfTxInfo.incrementNumTxOutputs(-1);
                 }
             }
@@ -819,7 +847,17 @@ SpendServiceCreditTransaction.prototype.fundTransaction = function () {
                     this.rbfTxInfo.incrementNumTxInputs(-expectNumPayTxExpInputs);
                 }
 
-                if (newChange === 0) {
+                if (newChange > 0) {
+                    if (changeOutputPos >= 0) {
+                        // Change output already exists, so just reset its amount
+                        this.ccTransact.resetOutputAmount(changeOutputPos, newChange);
+                    }
+                    else {
+                        // Add change output
+                        this.ccTransact.addP2PKHOutput(Catenis.ctnHubNode.servPymtPayTxExpenseAddr.newAddressKeys().getAddress(), newChange);
+                    }
+                }
+                else {
                     // No change output needed
                     if (changeOutputPos >= 0) {
                         // Remove existing change output
@@ -827,7 +865,7 @@ SpendServiceCreditTransaction.prototype.fundTransaction = function () {
                         this.ccTransact.removeOutputAt(changeOutputPos);
                     }
 
-                    // Adjust RBF tx info to discount change out that is not used
+                    // Adjust RBF tx info to discount change output that is not used
                     this.rbfTxInfo.incrementNumTxOutputs(-1);
                 }
             }
@@ -836,10 +874,13 @@ SpendServiceCreditTransaction.prototype.fundTransaction = function () {
         // Update transaction fee and change and indicate that transaction is funded
         this.fee = newFee;
         this.rbfTxInfo.adjustNewTxFee(this.fee);
-        
-        this.change = newChange;
+
+        if (newChange >= 0) {
+            this.change = newChange;
+        }
 
         this.txFunded = true;
+        this.rbfTxInfo.confirmTxFee();
         Catenis.logger.DEBUG('>>>>>> RbfTxInfo for spend service credit tx (after funding):', {
             rbfTxInfo: this.rbfTxInfo
         });
