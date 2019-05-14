@@ -36,27 +36,38 @@ export function BcotPaymentTransaction(client, omniTransact) {
     this.client = client;
     this.omniTransact = omniTransact;
 
+    //  NOTE: arrow functions should NOT be used for the getter/setter of the defined properties.
+    //      This is to avoid that, if `this` is referred from within the getter/setter body, it
+    //      refers to the object from where the properties have been defined rather than to the
+    //      object from where the property is being accessed. Normally, this does not represent
+    //      an issue (since the object from where the property is accessed is the same object
+    //      from where the property has been defined), but it is especially dangerous if the
+    //      object can be cloned.
     Object.defineProperties(this, {
         bcotAmount: {
-            get: () => {
+            get: function () {
+                // noinspection JSPotentiallyInvalidUsageOfThis
                 return omniTransact.strAmountToAmount(this.omniTransact.omniTxInfo.amount);
             },
             enumerable: true
         },
         payeeAddress: {
-            get: () => {
+            get: function () {
+                // noinspection JSPotentiallyInvalidUsageOfThis
                 return this.omniTransact.referenceAddress;
             },
             enumerable: true
         },
         payingAddress: {
-            get: () => {
+            get: function () {
+                // noinspection JSPotentiallyInvalidUsageOfThis
                 return this.omniTransact.sendingAddress;
             },
             enumerable: true
         },
         txid: {
-            get: () => {
+            get: function () {
+                // noinspection JSPotentiallyInvalidUsageOfThis
                 return this.omniTransact.txid;
             }
         }

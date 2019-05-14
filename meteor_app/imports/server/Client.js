@@ -102,14 +102,22 @@ export function Client(docClient, ctnNode, initializeDevices, noClientLicense = 
     this.billingMode = docClient.billingMode;
     this.status = docClient.status;
 
+    //  NOTE: arrow functions should NOT be used for the getter/setter of the defined properties.
+    //      This is to avoid that, if `this` is referred from within the getter/setter body, it
+    //      refers to the object from where the properties have been defined rather than to the
+    //      object from where the property is being accessed. Normally, this does not represent
+    //      an issue (since the object from where the property is accessed is the same object
+    //      from where the property has been defined), but it is especially dangerous if the
+    //      object can be cloned.
     Object.defineProperties(this, {
         apiAccessSecret: {
-            get: () => {
+            get: function () {
+                // noinspection JSPotentiallyInvalidUsageOfThis
                 return crypto.createHmac('sha512', this.apiAccessGenKey).update('And here it is: the Catenis API key for client' + this.clientId).digest('hex');
             }
         },
         userAccountUsername: {
-            get: () => {
+            get: function () {
                 if (!this._user) {
                     getUser.call(this);
                 }
@@ -121,7 +129,7 @@ export function Client(docClient, ctnNode, initializeDevices, noClientLicense = 
             enumerate: true
         },
         userAccountEmail: {
-            get: () => {
+            get: function () {
                 if (!this._user) {
                     getUser.call(this);
                 }
@@ -147,7 +155,8 @@ export function Client(docClient, ctnNode, initializeDevices, noClientLicense = 
             enumerate: true
         },
         maximumAllowedDevices: {
-            get: () => {
+            get: function () {
+                // noinspection JSPotentiallyInvalidUsageOfThis
                 return this.clientLicense && this.clientLicense.hasLicense() ? this.clientLicense.license.maximumDevices
                     : (this.clientLicense ? 0 : undefined);
             },

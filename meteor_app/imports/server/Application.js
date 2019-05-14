@@ -66,6 +66,13 @@ export function Application(cipherOnly = false) {
     const appSeedPath = path.join(process.env.PWD, cfgSettings.seedFilename),
         encData = fs.readFileSync(appSeedPath, {encoding: 'utf8'});
 
+    //  NOTE: arrow functions should NOT be used for the getter/setter of the defined properties.
+    //      This is to avoid that, if `this` is referred from within the getter/setter body, it
+    //      refers to the object from where the properties have been defined rather than to the
+    //      object from where the property is being accessed. Normally, this does not represent
+    //      an issue (since the object from where the property is accessed is the same object
+    //      from where the property has been defined), but it is especially dangerous if the
+    //      object can be cloned.
     Object.defineProperty(this, 'masterSeed', {
         get: function () {
             return conformSeed(Buffer.from(encData, 'base64'));
@@ -78,13 +85,24 @@ export function Application(cipherOnly = false) {
         }
 
         // Save environment and Catenis node index associated with application
+        //  NOTE: arrow functions should NOT be used for the getter/setter of the defined properties.
+        //      This is to avoid that, if `this` is referred from within the getter/setter body, it
+        //      refers to the object from where the properties have been defined rather than to the
+        //      object from where the property is being accessed. Normally, this does not represent
+        //      an issue (since the object from where the property is accessed is the same object
+        //      from where the property has been defined), but it is especially dangerous if the
+        //      object can be cloned.
         Object.defineProperties(this, {
             environment: {
-                get: () => cfgSettings.environment,
+                get: function () {
+                    return cfgSettings.environment;
+                },
                 enumerable: true
             },
             ctnHubNodeIndex: {
-                get: () => ctnHubNodeIndex,
+                get: function () {
+                    return ctnHubNodeIndex;
+                },
                 enumerable: true
             }
         });
@@ -98,6 +116,13 @@ export function Application(cipherOnly = false) {
 
         const encCommonSeed = generateCommonSeed(this.testPrefix);
 
+        //  NOTE: arrow functions should NOT be used for the getter/setter of the defined properties.
+        //      This is to avoid that, if `this` is referred from within the getter/setter body, it
+        //      refers to the object from where the properties have been defined rather than to the
+        //      object from where the property is being accessed. Normally, this does not represent
+        //      an issue (since the object from where the property is accessed is the same object
+        //      from where the property has been defined), but it is especially dangerous if the
+        //      object can be cloned.
         Object.defineProperty(this, 'commonSeed', {
             get: function () {
                 return conformSeed(encCommonSeed, true, false);

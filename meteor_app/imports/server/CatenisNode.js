@@ -95,6 +95,13 @@ export class CatenisNode extends events.EventEmitter {
         this.props = docCtnNode.props;
         this.status = docCtnNode.status;
 
+        //  NOTE: arrow functions should NOT be used for the getter/setter of the defined properties.
+        //      This is to avoid that, if `this` is referred from within the getter/setter body, it
+        //      refers to the object from where the properties have been defined rather than to the
+        //      object from where the property is being accessed. Normally, this does not represent
+        //      an issue (since the object from where the property is accessed is the same object
+        //      from where the property has been defined), but it is especially dangerous if the
+        //      object can be cloned.
         Object.defineProperty(this, 'internalName', {
             get: function () {
                 return this.type === CatenisNode.nodeType.hub.name ? 'Catenis Hub node' : util.format('Catenis Gateway #%d node', this.ctnNodeIndex);
