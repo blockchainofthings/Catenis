@@ -26,6 +26,7 @@ import { Service } from './Service';
 import { Transaction } from './Transaction';
 import { Util } from './Util';
 import { BitcoinCore } from './BitcoinCore';
+import { AncestorTransactions } from './AncestorTransactions';
 
 // Config entries
 const fundSourceConfig = config.get('fundSource');
@@ -63,11 +64,18 @@ export const cfgSettings = {
 //                                           - if not defined, a default diff of 1 (one) is used, so the upper limit is set to (maxCount-1)
 //                                           - if a non-negative value is passed, the upper limit is set to (maxCount-value)
 //                                           - if a negative value is passed, no upper limit is set (all UTXOs are used)
-//        descendantsSizeDiff: [Number] - (optional) Amount to be deducted from maximum size (in bytes) of (unconfirmed) descendant txs for tx to be accepted into mempool (to be relayed).
-//                                         The resulting amount shall be used as an upper limit to filter UTXOs that should be used as fund source
-//                                         - if not defined, a default diff of 1000 (1K) is used, so the upper limit is set to (maxSize-1000)
-//                                         - if a non-negative value is passed, the upper limit is set to (maxSize-value)
-//                                         - if a negative value is passed, no upper limit is set (all UTXOs are used)
+//        descendantsSizeDiff: [Number], - (optional) Amount to be deducted from maximum size (in bytes) of (unconfirmed) descendant txs for tx to be accepted into mempool (to be relayed).
+//                                          The resulting amount shall be used as an upper limit to filter UTXOs that should be used as fund source
+//                                          - if not defined, a default diff of 1000 (1K) is used, so the upper limit is set to (maxSize-1000)
+//                                          - if a non-negative value is passed, the upper limit is set to (maxSize-value)
+//                                          - if a negative value is passed, no upper limit is set (all UTXOs are used)
+//        initTxInputs: [Array(Object)|Object] [{ - (optional) Transaction inputs (or a single input) to be used to initialize ancestor transactions
+//          txout: {
+//            txid: [String],
+//            ...
+//          }
+//          ...
+//        }]
 //      },
 //      smallestChange: [boolean], - (optional, default: false) Indicates that the allocated UTXOs will favor the smallest change amount, if the exact amount is not met
 //                                    Note: this option only takes effect if the 'higherAmountUtxos' is not set
@@ -87,17 +95,23 @@ export const cfgSettings = {
 export function FundSource(addresses, options) {
     // Initialize in-memory database to hold UTXOs
     //  Structure of collUtxo collection: {
-    //      address: [string],
-    //      txid: [string],
-    //      vout: [number],
-    //      scriptPubKey: [string],
-    //      amount: [number],   // Amount in satoshis
-    //      confirmations: [number],
-    //      allocated: [boolean],   // Local control
-    //      ancestorsCount: [number],   // Should only exist for confirmations = 0
-    //      ancestorsSize: [number],   // Should only exist for confirmations = 0
-    //      descendantsCount: [number],   // Should only exist for confirmations = 0
-    //      descendantsSize: [number]   // Should only exist for confirmations = 0
+    //      txout: [string],                - String representation (format: `txid:vout`) of transaction output
+    //      address: [string],              - Bitcoin address that holds the spent amount
+    //      txid: [string],                 - ID/hash of the transaction that contains the UTXO (UTXO transaction)
+    //      vout: [number],                 - Order/index of output of the UTXO transaction
+    //      scriptPubKey: [string],         - Public key script of the UTXO
+    //      amount: [number],               - Spent amount, in satoshis
+    //      confirmations: [number],        - Number of confirmations for the UTXO transaction
+    //      allocated: [boolean],           - Indicates whether this entry has already been allocated
+    //      ancestorsCount: [number],       - Number of ancestor transactions of the UTXO transaction, including itself. This should only exist for confirmations = 0
+    //      ancestorsSize: [number],        - Total size, in bytes, of ancestor transactions of the UTXO transaction, including itself. This should only exist for confirmations = 0
+    //      descendantsCount: [number],     - Number of descendant transactions of the UTXO transaction, including itself. This should only exist for confirmations = 0
+    //      descendantsSize: [number],      - Total size, in bytes, of descendant transactions of the UTXO transaction, including itself. This should only exist for confirmations = 0
+    //      size: [number],                 - Size, in bytes, of the UTXO transaction. This should only exist for confirmations = 0
+    //      ancestors: [array(object)] [{   - List with data about all the ancestor transactions of the UTXO transaction. This should only exist for confirmations = 0
+    //        txid: [string],                   - ID/hash of the ancestor transaction
+    //        size: [number]                    - Size, in bytes, of the ancestor transaction
+    //      }]
     //  }
     this.db = new Loki();
     // noinspection JSCheckFunctionSignatures
@@ -132,6 +146,20 @@ export function FundSource(addresses, options) {
             this.ancestorsSizeUpperLimit = options.unconfUtxoInfo.ancestorsSizeDiff === undefined ? cfgSettings.maxAncestorsSize - 1000 : (options.unconfUtxoInfo.ancestorsSizeDiff >= 0 ? cfgSettings.maxAncestorsSize - options.unconfUtxoInfo.ancestorsSizeDiff : undefined);
             this.descendantsCountUpperLimit = options.unconfUtxoInfo.descendantsCountDiff === undefined ? cfgSettings.maxDescendantsCount - 1 : (options.unconfUtxoInfo.descendantsCountDiff >= 0 ? cfgSettings.maxDescendantsCount - options.unconfUtxoInfo.descendantsCountDiff : undefined);
             this.descendantsSizeUpperLimit = options.unconfUtxoInfo.descendantsSizeDiff === undefined ? cfgSettings.maxDescendantsSize - 1000 : (options.unconfUtxoInfo.descendantsSizeDiff >= 0 ? cfgSettings.maxDescendantsSize - options.unconfUtxoInfo.descendantsSizeDiff : undefined);
+
+            // Instantiate ancestor transactions control object
+            this.mempoolTxInfoCache = new Map();
+            const ancTxsOptions = {
+                ancestorsCountLimit: this.ancestorsCountUpperLimit === undefined ? null : this.ancestorsCountUpperLimit,
+                ancestorsSizeLimit: this.ancestorsSizeUpperLimit === undefined ? null : this.ancestorsSizeUpperLimit,
+                mempoolTxInfoCache: this.mempoolTxInfoCache
+            };
+
+            if (options.unconfUtxoInfo.initTxInputs) {
+                ancTxsOptions.initTxInputs = options.unconfUtxoInfo.initTxInputs;
+            }
+
+            this.ancestorTxs = new AncestorTransactions(ancTxsOptions);
         }
 
         if (options.smallestChange !== undefined) {
@@ -172,14 +200,19 @@ export function FundSource(addresses, options) {
 
 FundSource.prototype.getBalance = function (includeUnconfirmed = true, includeAllocated = false) {
     const conditions = [];
+    let filterResult = false;
 
     if (includeUnconfirmed && this.loadedUnconfirmedUtxos) {
         if (this.ancestorsCountUpperLimit !== undefined) {
             conditions.push({ancestorsCount: {$lte: this.ancestorsCountUpperLimit}});
+
+            filterResult = true;
         }
 
         if (this.ancestorsSizeUpperLimit !== undefined) {
             conditions.push({ancestorsSize: {$lte: this.ancestorsSizeUpperLimit}});
+
+            filterResult = true;
         }
 
         if (this.descendantsCountUpperLimit !== undefined) {
@@ -200,21 +233,44 @@ FundSource.prototype.getBalance = function (includeUnconfirmed = true, includeAl
 
     const query = conditions.length > 1 ? {$and: conditions} : conditions[0];
 
-    return this.collUtxo.find(query).reduce((sum, docUtxo) => {
-            return sum + docUtxo.amount;
-        }, 0);
+    let docUtxos;
+
+    if (filterResult) {
+        const ancestorTxs = this.ancestorTxs.clone();
+
+        docUtxos = this.collUtxo.chain().find(query).compoundsort([
+            ['amount', true],
+            ['confirmations', true],
+            'ancestorsCount',
+            'ancestorsSize',
+            'descendantsCount',
+            'descendantsSize'
+        ]).data().filter(docUtxo => ancestorTxs.checkAddUtxo(docUtxo));
+    }
+    else {
+        docUtxos = this.collUtxo.find(query);
+    }
+
+    return docUtxos.reduce((sum, docUtxo) => {
+        return sum + docUtxo.amount;
+    }, 0);
 };
 
 FundSource.prototype.getBalancePerAddress = function (includeUnconfirmed = true, includeAllocated = false) {
     const conditions = [];
+    let filterResult = false;
 
     if (includeUnconfirmed && this.loadedUnconfirmedUtxos) {
         if (this.ancestorsCountUpperLimit !== undefined) {
             conditions.push({ancestorsCount: {$lte: this.ancestorsCountUpperLimit}});
+
+            filterResult = true;
         }
 
         if (this.ancestorsSizeUpperLimit !== undefined) {
             conditions.push({ancestorsSize: {$lte: this.ancestorsSizeUpperLimit}});
+
+            filterResult = true;
         }
 
         if (this.descendantsCountUpperLimit !== undefined) {
@@ -235,9 +291,27 @@ FundSource.prototype.getBalancePerAddress = function (includeUnconfirmed = true,
 
     const query = conditions.length > 1 ? {$and: conditions} : conditions[0];
 
+    let docUtxos;
+
+    if (filterResult) {
+        const ancestorTxs = this.ancestorTxs.clone();
+
+        docUtxos = this.collUtxo.chain().find(query).compoundsort([
+            ['amount', true],
+            ['confirmations', true],
+            'ancestorsCount',
+            'ancestorsSize',
+            'descendantsCount',
+            'descendantsSize'
+        ]).data().filter(docUtxo => ancestorTxs.checkAddUtxo(docUtxo));
+    }
+    else {
+        docUtxos = this.collUtxo.find(query);
+    }
+
     const addressBalance = {};
 
-    this.collUtxo.find(query).forEach((docUtxo) => {
+    docUtxos.forEach((docUtxo) => {
         if (Object.keys(addressBalance).findIndex(addr => addr === docUtxo.address) !== -1) {
             addressBalance[docUtxo.address] += docUtxo.amount;
         }
@@ -305,16 +379,21 @@ FundSource.prototype.allocateUtxosByPredicate = function (predicate, includeUnco
             $gt: 0
         }
     };
+    let filterResult = false;
 
     if (includeUnconfirmed && this.loadedUnconfirmedUtxos) {
         const unconfConditions = [];
 
         if (this.ancestorsCountUpperLimit !== undefined) {
             unconfConditions.push({ancestorsCount: {$lte: this.ancestorsCountUpperLimit}});
+
+            filterResult = true;
         }
 
         if (this.ancestorsSizeUpperLimit !== undefined) {
             unconfConditions.push({ancestorsSize: {$lte: this.ancestorsSizeUpperLimit}});
+
+            filterResult = true;
         }
 
         if (this.descendantsCountUpperLimit !== undefined) {
@@ -337,7 +416,7 @@ FundSource.prototype.allocateUtxosByPredicate = function (predicate, includeUnco
 
     query.$and.push(confCondition);
 
-    const docUtxos = this.collUtxo.chain().find(query).compoundsort([
+    let docUtxos = this.collUtxo.chain().find(query).compoundsort([
         ['amount', true],
         ['confirmations', true],
         'ancestorsCount',
@@ -345,6 +424,10 @@ FundSource.prototype.allocateUtxosByPredicate = function (predicate, includeUnco
         'descendantsCount',
         'descendantsSize'
     ]).data();
+
+    if (filterResult) {
+        docUtxos = docUtxos.filter(docUtxo => this.ancestorTxs.checkAddUtxo(docUtxo));
+    }
 
     if (docUtxos.length > 0) {
         // UTXO doc/recs have been found. Prepare to return result
@@ -559,7 +642,7 @@ FundSource.prototype.allocateFundForTxExpense = function (txInfo, isFixedFeed, f
     // NOTE: the following variables only apply to non-fixed fee
     let txExpense = 0,
         deltaFeePerInput = 0,
-        deltaFeePerOuput = 0;
+        deltaFeePerOutput = 0;
 
     if (isFixedFeed) {
         // Using a fixed fee for transaction. Calculate amount to be allocated now (and only once).
@@ -581,7 +664,7 @@ FundSource.prototype.allocateFundForTxExpense = function (txInfo, isFixedFeed, f
         else {
             // Prepare values to be used when adjusting tx expense later on
             deltaFeePerInput = Transaction.txInputSize * fee;  // Increment in tx fee due to adding a new input to the tx
-            deltaFeePerOuput = Transaction.txOutputSize * fee; // Increment in tx fee due to adding a new output to the tx
+            deltaFeePerOutput = Transaction.txOutputSize * fee; // Increment in tx fee due to adding a new output to the tx
         }
     }
 
@@ -659,7 +742,7 @@ FundSource.prototype.allocateFundForTxExpense = function (txInfo, isFixedFeed, f
                     else {
                         // Could not allocate exact amount (with no change). Recalculate amount,
                         //  this time assuming there will be one additional tx out (for the change)
-                        const newAmount = Math.ceil((txExpense + deltaFeePerOuput) / amountResolution) * amountResolution;
+                        const newAmount = Math.ceil((txExpense + deltaFeePerOutput) / amountResolution) * amountResolution;
 
                         if (newAmount > amount) {
                             // New amount is different (actually larger) than original amount. Reset amount
@@ -753,6 +836,9 @@ FundSource.prototype.clearAllocatedUtxos = function () {
         // noinspection JSCheckFunctionSignatures
         docAllocatedUtxos.forEach((docUtxo) => {
             docUtxo.allocated = false;
+
+            // Remove included ancestor transaction
+            this.ancestorTxs.removeUtxo(docUtxo);
         });
 
         this.collUtxo.update(docAllocatedUtxos);
@@ -823,68 +909,84 @@ function loadUtxos() {
         const txidsToDelete = new Set();
 
         for (let txid of unconfTxids) {
-            this.collUtxo.find({txid: txid}).forEach((doc) => {
+            this.collUtxo.find({txid: txid}).forEach((docUtxo) => {
                 // Retrieve memory pool entry for given unconfirmed transaction
-                try {
-                    const mempoolTx = Catenis.bitcoinCore.getMempoolEntry(txid, false);
+                let mempoolTxInfo;
 
-                    doc.descendantsCount = mempoolTx.descendantcount;
-                    doc.descendantsSize = mempoolTx.descendantsize;
-                    doc.ancestorsCount = mempoolTx.ancestorcount;
-                    doc.ancestorsSize = mempoolTx.ancestorsize;
+                if (this.mempoolTxInfoCache.has(docUtxo.txid)) {
+                    // Get memory pool entry from cache
+                    mempoolTxInfo = this.mempoolTxInfoCache.get(docUtxo.txid);
+                }
+                else {
+                    try {
+                        mempoolTxInfo = Catenis.bitcoinCore.getMempoolEntryWithAncestors(txid, false);
+                    }
+                    catch (err) {
+                        if ((err instanceof Meteor.Error) && err.error === 'ctn_btcore_rpc_error' && err.details !== undefined && typeof err.details.code === 'number') {
+                            // Error returned from calling Bitcoin Core API method
+                            if (err.details.code === BitcoinCore.rpcErrorCode.RPC_INVALID_ADDRESS_OR_KEY) {
+                                // Transaction of UTXO not in mempool. Indicate it by setting tx info to null
+                                mempoolTxInfo = null;
+                            }
+                            else {
+                                // Log error from calling Bitcoin Core API method, and throws exception
+                                Catenis.logger.DEBUG(err.reason, err.details);
+                                throw err;
+                            }
+                        }
+                        else {
+                            // Any other error; just rethrows it
+                            throw err;
+                        }
+                    }
+                }
+
+                if (mempoolTxInfo !== null) {
+                    docUtxo.descendantsCount = mempoolTxInfo.descendantcount;
+                    docUtxo.descendantsSize = mempoolTxInfo.descendantsize;
+                    docUtxo.ancestorsCount = mempoolTxInfo.ancestorcount;
+                    docUtxo.ancestorsSize = mempoolTxInfo.ancestorsize;
+                    docUtxo.size = mempoolTxInfo.size;
+                    docUtxo.ancestors = mempoolTxInfo.ancestors;
 
                     // Indicate that unconfirmed UTXOs have been loaded
                     this.loadedUnconfirmedUtxos = true;
                 }
-                catch (err) {
-                    if ((err instanceof Meteor.Error) && err.error === 'ctn_btcore_rpc_error' && err.details !== undefined && typeof err.details.code === 'number') {
-                        // Error returned from calling Bitcoin Core API method
-                        if (err.details.code === BitcoinCore.rpcErrorCode.RPC_INVALID_ADDRESS_OR_KEY) {
-                            // Transaction of UTXO not in mempool; it must have been already confirmed
-                            //  (in the meantime between the calls to 'bitcoinCore.listUnspent()'
-                            //  and 'bitcoinCore.getMempoolEntry()'). So retrieve transaction information to
-                            //  get confirmation status
-                            Catenis.logger.DEBUG('Transaction of UTXO not in mempool', {txid: txid, vout: doc.vout});
-                            let txInfo = txidTxInfo.get(txid);
+                else {
+                    // Transaction of UTXO not in mempool; it must have been already confirmed
+                    //  (in the meantime between the calls to 'bitcoinCore.listUnspent()'
+                    //  and 'bitcoinCore.getMempoolEntryWithAncestors()'). So retrieve transaction
+                    //  information to get confirmation status
+                    Catenis.logger.DEBUG('Transaction of UTXO not in mempool', {txid: txid, vout: docUtxo.vout});
+                    let txInfo = txidTxInfo.get(txid);
 
-                            if (txInfo === undefined) {
-                                try {
-                                    txInfo = Catenis.bitcoinCore.getTransaction(txid, false);
-                                    txidTxInfo.set(txid, txInfo);
-                                }
-                                catch (err2) {
-                                    Catenis.logger.ERROR('Error trying to get confirmation status of transaction (txid: %s) associated with UTXO that is not in the mempool', txid, err);
-                                }
-                            }
-
-                            if (txInfo !== undefined && txInfo.confirmations > 0) {
-                                // Transaction has indeed been confirmed. So prepare to update its confirmation status
-                                doc.confirmations = txInfo.confirmations;
-                            }
-                            else {
-                                // Either confirmation status could not be retrieved or it indicates that
-                                //  transaction has been replaced by another one (confirmations < 0).
-                                //  In either case, prepare to delete all UTXOs associated with that transaction
-                                Catenis.logger.DEBUG('Set to delete all UTXOs associated with transaction', {
-                                    txid: txid,
-                                    confirmations: txInfo !== undefined ? txInfo.confirmations : undefined
-                                });
-                                txidsToDelete.add(txid);
-                            }
+                    if (txInfo === undefined) {
+                        try {
+                            txInfo = Catenis.bitcoinCore.getTransaction(txid, false);
+                            txidTxInfo.set(txid, txInfo);
                         }
-                        else {
-                            // Log error from calling Bitcoin Core API method, and throws exception
-                            Catenis.logger.DEBUG(err.reason, err.details);
-                            throw err;
+                        catch (err2) {
+                            Catenis.logger.ERROR('Error trying to get confirmation status of transaction (txid: %s) associated with UTXO that is not in the mempool', txid, err2);
                         }
                     }
+
+                    if (txInfo !== undefined && txInfo.confirmations > 0) {
+                        // Transaction has indeed been confirmed. So prepare to update its confirmation status
+                        docUtxo.confirmations = txInfo.confirmations;
+                    }
                     else {
-                        // Any other error; just rethrows it
-                        throw err;
+                        // Either confirmation status could not be retrieved or it indicates that
+                        //  transaction has been replaced by another one (confirmations < 0).
+                        //  In either case, prepare to delete all UTXOs associated with that transaction
+                        Catenis.logger.DEBUG('Set to delete all UTXOs associated with transaction', {
+                            txid: txid,
+                            confirmations: txInfo !== undefined ? txInfo.confirmations : undefined
+                        });
+                        txidsToDelete.add(txid);
                     }
                 }
 
-                this.collUtxo.update(doc);
+                this.collUtxo.update(docUtxo);
             });
         }
 
@@ -917,17 +1019,36 @@ function allocateUtxos(amount, utxoResultSets, numWorkUtxos, work) {
             continue;
         }
 
+        // Save current ancestor transactions state
+        let tempAncestorTxs = this.ancestorTxs.clone();
+
         // Initialize reference to working UTXOs. Start working with
         //  first UTXOs from result set
-        const workUtxos = [];
+        let workUtxos = [];
         let totalWorkAmount = 0;
 
-        for (let utxoIdx = 0; utxoIdx < numWorkUtxos; utxoIdx++) {
-            workUtxos.push({
-                utxoIdx: utxoIdx,
-                amount: docUtxos[utxoIdx].amount
+        for (let utxoIdx = 0; utxoIdx < numUtxos && workUtxos.length < numWorkUtxos; utxoIdx++) {
+            const docUtxo = docUtxos[utxoIdx];
+
+            // Make sure that UTXO does not exceed ancestor transactions limits
+            if (tempAncestorTxs.checkAddUtxo(docUtxo)) {
+                workUtxos.push({
+                    utxoIdx: utxoIdx,
+                    amount: docUtxo.amount
+                });
+                totalWorkAmount += docUtxos[utxoIdx].amount;
+            }
+        }
+
+        if (workUtxos.length < numWorkUtxos) {
+            // Unable to find enough acceptable UTXOs (ancestor txs limits not exceeded).
+            //  Remove included ancestor txs...
+            workUtxos.forEach((workUtxo) => {
+                tempAncestorTxs.removeUtxo(docUtxos[workUtxo.utxoIdx]);
             });
-            totalWorkAmount += docUtxos[utxoIdx].amount;
+
+            // ... and try with next UTXO result set
+            continue;
         }
 
         const lastWorkIdx = numWorkUtxos - 1;
@@ -948,6 +1069,9 @@ function allocateUtxos(amount, utxoResultSets, numWorkUtxos, work) {
 
             exactAmountAllocated = false;
 
+            // Save current ancestor transactions state
+            let tempAncestorTxs2 = tempAncestorTxs.clone();
+
             do {
                 prevEntriesAdjusted = false;
 
@@ -957,6 +1081,10 @@ function allocateUtxos(amount, utxoResultSets, numWorkUtxos, work) {
                     docAllocatedUtxos = workUtxos.map((workUtxo) => {
                         return docUtxos[workUtxo.utxoIdx];
                     });
+
+                    // Update ancestor transactions state
+                    tempAncestorTxs = tempAncestorTxs2;
+
                     exactAmountAllocated = true;
                 }
                 else if (totalWorkAmount > amount) {
@@ -967,6 +1095,10 @@ function allocateUtxos(amount, utxoResultSets, numWorkUtxos, work) {
                         docAllocatedUtxos = workUtxos.map((workUtxo) => {
                             return docUtxos[workUtxo.utxoIdx];
                         });
+
+                        // Update ancestor transactions state
+                        tempAncestorTxs = tempAncestorTxs2;
+                        tempAncestorTxs2 = tempAncestorTxs.clone();
                     }
 
                     // ...proceed to try if exact amount can be allocated
@@ -975,35 +1107,54 @@ function allocateUtxos(amount, utxoResultSets, numWorkUtxos, work) {
                     // Search for a UTXO with a lower amount for the last working entry, so the
                     //  total amount of working entries matches the requested amount
                     for (let utxoIdx = workUtxos[lastWorkIdx].utxoIdx + 1; utxoIdx < numUtxos; utxoIdx++) {
-                        let currentWorkAmount = prevEntriesAmount + docUtxos[utxoIdx].amount;
+                        const docUtxo = docUtxos[utxoIdx];
 
-                        if (currentWorkAmount === amount) {
-                            // We managed to allocate the exact requested amount.
-                            //  Save allocated UTXOs and finish processing
-                            workUtxos[lastWorkIdx] = {
-                                utxoIdx: utxoIdx,
-                                amount: docUtxos[utxoIdx].amount
-                            };
-                            docAllocatedUtxos = workUtxos.map((workUtxo) => {
-                                return docUtxos[workUtxo.utxoIdx];
-                            });
-                            exactAmountAllocated = true;
-                            break;
-                        }
-                        else if (currentWorkAmount < amount) {
-                            // Amount too low. Stop search
-                            break;
-                        }
-                        else if (this.smallestChange) {
-                            // Save newly allocated amount that is smaller than previously
-                            //  allocated one but not yet small enough
-                            workUtxos[lastWorkIdx] = {
-                                utxoIdx: utxoIdx,
-                                amount: docUtxos[utxoIdx].amount
-                            };
-                            docAllocatedUtxos = workUtxos.map((workUtxo) => {
-                                return docUtxos[workUtxo.utxoIdx];
-                            });
+                        // Save current ancestor transactions state, and remove ancestor txs of
+                        //  (last work entry) UTXO that will eventually be replaced
+                        const tempAncestorTxs3 = tempAncestorTxs2.clone();
+                        tempAncestorTxs3.removeUtxo(docUtxos[workUtxos[lastWorkIdx].utxoIdx]);
+
+                        // Make sure that UTXO does not exceed ancestor transactions limits
+                        if (tempAncestorTxs3.checkAddUtxo(docUtxo)) {
+                            const currentWorkAmount = prevEntriesAmount + docUtxo.amount;
+
+                            if (currentWorkAmount === amount) {
+                                // We managed to allocate the exact requested amount.
+                                //  Save allocated UTXOs and finish processing
+                                workUtxos[lastWorkIdx] = {
+                                    utxoIdx: utxoIdx,
+                                    amount: docUtxo.amount
+                                };
+                                docAllocatedUtxos = workUtxos.map((workUtxo) => {
+                                    return docUtxos[workUtxo.utxoIdx];
+                                });
+
+                                // Update ancestor transactions state
+                                tempAncestorTxs = tempAncestorTxs3;
+
+                                exactAmountAllocated = true;
+
+                                break;
+                            }
+                            else if (currentWorkAmount < amount) {
+                                // Amount too low. Stop search
+                                break;
+                            }
+                            else if (this.smallestChange) {
+                                // Save newly allocated amount that is smaller than previously
+                                //  allocated one but not yet small enough
+                                workUtxos[lastWorkIdx] = {
+                                    utxoIdx: utxoIdx,
+                                    amount: docUtxo.amount
+                                };
+                                docAllocatedUtxos = workUtxos.map((workUtxo) => {
+                                    return docUtxos[workUtxo.utxoIdx];
+                                });
+
+                                // Update ancestor transactions state
+                                tempAncestorTxs = tempAncestorTxs3;
+                                tempAncestorTxs2 = tempAncestorTxs.clone();
+                            }
                         }
                     }
 
@@ -1017,35 +1168,94 @@ function allocateUtxos(amount, utxoResultSets, numWorkUtxos, work) {
                         for (let workIdx = lastWorkIdx - 1; workIdx >= 0; workIdx--) {
                             let currentEntryAmount = workUtxos[workIdx].amount;
 
+                            // Save current ancestor transactions state, and remove ancestor txs of
+                            //  first UTXO that will eventually be replaced
+                            let tempAncestorTxs3 = tempAncestorTxs2.clone();
+                            tempAncestorTxs3.removeUtxo(docUtxos[workUtxos[workIdx].utxoIdx]);
+
                             // Search for a UTXO with an amount lower than the amount of the current entry
-                            for (let utxoIdx = workUtxos[workIdx].utxoIdx + 1; utxoIdx < numUtxos - (numWorkUtxos - (workIdx + 1)); utxoIdx++) {
-                                if (docUtxos[utxoIdx].amount < currentEntryAmount) {
-                                    // UTXO found. Adjust working UTXO entries
-                                    totalWorkAmount = 0;
+                            for (let utxoIdx = workUtxos[workIdx].utxoIdx + 1, limit = numUtxos - (numWorkUtxos - (workIdx + 1)); utxoIdx < limit; utxoIdx++) {
+                                const docUtxo = docUtxos[utxoIdx];
 
-                                    for (let workIdx2 = 0; workIdx2 < numWorkUtxos; workIdx2++) {
-                                        if (workIdx2 >= workIdx) {
+                                // Save current ancestor transactions state
+                                let tempAncestorTxs4 = tempAncestorTxs3.clone();
+
+                                // And make sure that UTXO does not exceed ancestor transactions limits
+                                if (docUtxo.amount < currentEntryAmount && tempAncestorTxs4.checkAddUtxo(docUtxo)) {
+                                    // UTXO found. Try to adjust working UTXO entries
+                                    const newWorkUtxos = Util.cloneObjArray(workUtxos);
+                                    let newTotalWorkAmount = 0;
+                                    let newWorkIdx = 0;
+
+                                    // NOTE: `limit2` below is calculated to guarantee that index of replacing UTXO
+                                    //      (`entryUtxoIdx`) does not exceed `numUtxos`
+                                    for (let replaceIdx = 0, limit2 = numUtxos - (utxoIdx - workIdx); newWorkIdx < numWorkUtxos && replaceIdx < limit2; replaceIdx++) {
+                                        if (newWorkIdx >= workIdx) {  // This also implies that replaceIdx >= workIdx
                                             // Starting from the working entry for which a UTXO with a lower amount
-                                            //  has been, each following entry should be associated with a successive
-                                            //  UTXO from the result set
-                                            let entryUtxoIdx = utxoIdx + (workIdx2 - workIdx);
+                                            //  has been found, each following entry should be associated with a successive
+                                            //  UTXO that matches the ancestors limit criteria from the result set
+                                            let entryUtxoIdx = utxoIdx + (replaceIdx - workIdx);
+                                            const docUtxo2 = docUtxos[entryUtxoIdx];
 
-                                            workUtxos[workIdx2] = {
-                                                utxoIdx: entryUtxoIdx,
-                                                amount: docUtxos[entryUtxoIdx].amount
+                                            // NOTE: we only care to check if UTXO does not exceed ancestor transactions
+                                            //      limits for indices > workIdx because the replacing entry for index
+                                            //      workIdx has already been checked (`if` just before `for` loop)
+                                            if (newWorkIdx !== workIdx) {  // newWorkIdx > workIdx
+                                                // A UTXO beyond the first one is to be replaced
+
+                                                // Save current ancestor transactions state, and remove ancestor txs of
+                                                //  UTXO that will eventually be replaced...
+                                                const tempAncestorTxs5 = tempAncestorTxs4.clone();
+                                                tempAncestorTxs5.removeUtxo(docUtxos[newWorkUtxos[newWorkIdx].utxoIdx]);
+
+                                                // ... and make sure that UTXO that should be used as replacement
+                                                //  does not exceed ancestor transactions limits
+                                                if (!tempAncestorTxs5.checkAddUtxo(docUtxo2)) {
+                                                    // UTXO cannot be accepted. Look for another one
+                                                    continue;
+                                                }
+                                                else {
+                                                    // Update ancestor transactions state
+                                                    tempAncestorTxs4 = tempAncestorTxs5;
+                                                }
                                             }
-                                        }
 
-                                        totalWorkAmount += workUtxos[workIdx2].amount;
+                                            // Replace UTXO
+                                            newWorkUtxos[newWorkIdx] = {
+                                                utxoIdx: entryUtxoIdx,
+                                                amount: docUtxo2.amount
+                                            };
+
+                                            newTotalWorkAmount += newWorkUtxos[newWorkIdx].amount;
+                                            newWorkIdx++;
+                                        }
+                                        else {
+                                            // The first `workIdx` entries are kept the same (no replacement)
+                                            newTotalWorkAmount += newWorkUtxos[newWorkIdx].amount;
+                                            newWorkIdx++;
+                                        }
                                     }
 
-                                    // Indicate that previous entries have been adjusted
-                                    prevEntriesAdjusted = true;
-                                    break;
+                                    // Make sure that all required UTXOs have been replaced
+                                    if (newWorkIdx === numWorkUtxos) {
+                                        // Validate replaced UTXOs
+                                        workUtxos = newWorkUtxos;
+                                        totalWorkAmount = newTotalWorkAmount;
+
+                                        // Update ancestor transactions state
+                                        tempAncestorTxs3 = tempAncestorTxs4;
+
+                                        // Indicate that previous entries have been adjusted
+                                        prevEntriesAdjusted = true;
+                                        break;
+                                    }
                                 }
                             }
 
                             if (prevEntriesAdjusted) {
+                                // Update ancestor transactions state
+                                tempAncestorTxs2 = tempAncestorTxs3;
+
                                 break;
                             }
                         }
@@ -1056,7 +1266,9 @@ function allocateUtxos(amount, utxoResultSets, numWorkUtxos, work) {
         }
 
         if (docAllocatedUtxos !== undefined) {
-            // UTXOs have been allocated. Stop processing
+            // UTXOs have been allocated. Update ancestor transactions state and stop processing
+            this.ancestorTxs = tempAncestorTxs;
+
             if (work !== undefined) {
                 // Make sure that work info only returned in case of failure
                 delete work.largestTriedDeltaAmount;

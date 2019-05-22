@@ -63,6 +63,7 @@ export function BitcoinCore(network, host, username, password, timeout) {
         //  - 'getmempoolentry'
         //  - 'getblockheader'
         //  - 'abandontransaction'
+        //  - 'getmempoolancestors'
         command: Meteor.wrapAsync(this.btcClient.cmd, this.btcClient),
         getnetworkinfo: Meteor.wrapAsync(this.btcClient.getNetworkInfo, this.btcClient),
         getblockchaininfo: Meteor.wrapAsync(this.btcClient.getBlockchainInfo, this.btcClient),
@@ -563,6 +564,15 @@ BitcoinCore.prototype.getBlockHeader = function (blockHash, verbose) {
     }
 };
 
+BitcoinCore.prototype.getMempoolAncestors = function (txid, verbose, logError = true) {
+    try {
+        return this.rpcApi.command('getmempoolancestors', txid, !!verbose);
+    }
+    catch (err) {
+        handleError('getmempoolancestors', err, logError);
+    }
+};
+
 // The following are special (more complex) methods that do not
 //  match directly to only one RPC method
 //
@@ -625,6 +635,20 @@ BitcoinCore.prototype.getDecodedRawTransactionCheck = function (txid, logError =
             handleError('getrawtransaction', err, logError);
         }
     }
+};
+
+BitcoinCore.prototype.getMempoolEntryWithAncestors = function(txid, logError = true) {
+    const mempoolEntry = this.getMempoolEntry(txid, logError);
+    const ancestors = this.getMempoolAncestors(txid, true, logError);
+
+    mempoolEntry.ancestors = Object.keys(ancestors).map((txid) => {
+        return {
+            txid: txid,
+            ...ancestors[txid]
+        }
+    });
+
+    return mempoolEntry;
 };
 
 
