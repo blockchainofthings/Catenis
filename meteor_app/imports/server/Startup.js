@@ -188,6 +188,9 @@ Meteor.startup(function () {
         // TEST - End
         RestApi.initialize();
 
+        // Make sure that admin user account is defined
+        Catenis.application.checkAdminUser();
+
         // UI support initialization
         AdminUI.initialize();
         LoginUI.initialize();

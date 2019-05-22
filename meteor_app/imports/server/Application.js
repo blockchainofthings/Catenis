@@ -140,9 +140,6 @@ export function Application(cipherOnly = false) {
         // Set initial application status
         this.status = Application.processingStatus.stopped;
 
-        // Make sure that admin user account is defined
-        checkAdminUser.call(this);
-
         // Set up handler to gracefully shutdown the application
         process.on('SIGTERM', Meteor.bindEnvironment(shutdownHandler, 'Catenis application SIGTERM handler', this));
 
@@ -283,6 +280,15 @@ Application.prototype.cipherData = function (data, decipher = false) {
     }
 };
 
+// Note this method must be called ONLY AFTER the KeyStore module is initialized
+Application.prototype.checkAdminUser = function () {
+    if (Roles.getUsersInRole(cfgSettings.adminRole).count() === 0 && cfgSettings.defaultAdminUser && cfgSettings.defaultAdminPsw) {
+        Catenis.logger.INFO('Creating default admin user');
+        // No admin user defined. Create default admin user
+        this.createAdminUser(cfgSettings.defaultAdminUser, this.cipherData(cfgSettings.defaultAdminPsw, true).toString(), 'Catenis default admin user');
+    }
+};
+
 Application.prototype.createAdminUser = function (username, password, description) {
     const adminUserId = Accounts.createUser({
         username: username,
@@ -311,14 +317,6 @@ function pauseNoFunds() {
 
         // Make sure that blockchain transaction monitoring is on
         Catenis.txMonitor.startMonitoring();
-    }
-}
-
-function checkAdminUser() {
-    if (Roles.getUsersInRole(cfgSettings.adminRole).count() === 0 && cfgSettings.defaultAdminUser && cfgSettings.defaultAdminPsw) {
-        Catenis.logger.INFO('Creating default admin user');
-        // No admin user defined. Create default admin user
-        this.createAdminUser(cfgSettings.defaultAdminUser, this.cipherData(cfgSettings.defaultAdminPsw, true).toString(), 'Catenis default admin user');
     }
 }
 
