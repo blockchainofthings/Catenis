@@ -77,7 +77,9 @@ export class AncestorTransactions {
             if (options.initTxInputs) {
                 const initTxInputs = Array.isArray(options.initTxInputs) ? options.initTxInputs : [options.initTxInputs];
 
-                initAncestors.call(this, initTxInputs);
+                if (initTxInputs.length > 0) {
+                    initAncestors.call(this, initTxInputs);
+                }
             }
         }
     }
