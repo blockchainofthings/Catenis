@@ -81,7 +81,11 @@ StoreBcotTransaction.prototype.buildTransaction = function () {
         // Add transaction inputs
 
         // Prepare to add client BCOT payment address input
-        const clientBcotPayAddFundSource = new FundSource(this.sendingAddress, {unconfUtxoInfo: {}});
+        const clientBcotPayAddFundSource = new FundSource(this.sendingAddress, {
+            unconfUtxoInfo: {
+                initTxInputs: this.omniTransact.inputs
+            }
+        });
 
         // Make sure we get the exact same UTXO that was used to send BCOT tokens in BCOT payment transaction
         const clientBcotPayAddrUtxos = clientBcotPayAddFundSource.getUtxosOfTx(this.bcotPayTxid);
@@ -115,7 +119,9 @@ StoreBcotTransaction.prototype.buildTransaction = function () {
 
         // Now, allocate UTXOs to pay for tx expense
         const payTxFundSource = new FundSource(this.client.ctnNode.listFundingAddressesInUse(), {
-            unconfUtxoInfo: {},
+            unconfUtxoInfo: {
+                initTxInputs: this.omniTransact.inputs
+            },
             smallestChange: true
         });
         const payTxAllocResult = payTxFundSource.allocateFundForTxExpense({

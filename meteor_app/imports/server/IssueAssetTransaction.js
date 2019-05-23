@@ -223,7 +223,11 @@ IssueAssetTransaction.prototype.buildTransaction = function () {
         const devAssetIssueAddr = this.assetIssuanceAddr ? this.assetIssuanceAddr : this.issuingDevice.getAssetIssuanceAddressesInUseExcludeUnlocked();
 
         // Prepare to add Colored Coins asset issuing input
-        const devAssetIssueAddrFundSource = new FundSource(devAssetIssueAddr, {unconfUtxoInfo: {}});
+        const devAssetIssueAddrFundSource = new FundSource(devAssetIssueAddr, {
+            unconfUtxoInfo: {
+                initTxInputs: this.ccTransact.inputs
+            }
+        });
         const devAssetIssueAddrAllocResult = devAssetIssueAddrFundSource.allocateFund(Service.devAssetIssuanceAddrAmount);
 
         // Make sure that UTXOs have been correctly allocated
@@ -314,7 +318,9 @@ IssueAssetTransaction.prototype.buildTransaction = function () {
 
         // Now, allocate UTXOs to pay for tx expense
         const payTxFundSource = new FundSource(this.issuingDevice.client.ctnNode.payTxExpenseAddr.listAddressesInUse(), {
-            unconfUtxoInfo: {},
+            unconfUtxoInfo: {
+                initTxInputs: this.ccTransact.inputs
+            },
             smallestChange: true
         });
         const payTxAllocResult = payTxFundSource.allocateFundForTxExpense({

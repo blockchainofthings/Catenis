@@ -117,7 +117,11 @@ LogMessageTransaction.prototype.buildTransaction = function () {
         // Add transaction inputs
 
         // Prepare to add device main address input
-        const devMainAddrFundSource = new FundSource(this.device.mainAddr.listAddressesInUse(), {unconfUtxoInfo: {}});
+        const devMainAddrFundSource = new FundSource(this.device.mainAddr.listAddressesInUse(), {
+            unconfUtxoInfo: {
+                initTxInputs: this.transact.inputs
+            }
+        });
         const devMainAddrBalance = devMainAddrFundSource.getBalance();
         const devMainAddrAllocResult = devMainAddrFundSource.allocateFund(Service.devMainAddrAmount);
 
@@ -183,7 +187,9 @@ LogMessageTransaction.prototype.buildTransaction = function () {
 
         // Now, allocate UTXOs to pay for tx expense
         const payTxFundSource = new FundSource(Catenis.ctnHubNode.payTxExpenseAddr.listAddressesInUse(), {
-            unconfUtxoInfo: {},
+            unconfUtxoInfo: {
+                initTxInputs: this.transact.inputs
+            },
             smallestChange: true
         });
         const payTxAllocResult = payTxFundSource.allocateFundForTxExpense({

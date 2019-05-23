@@ -739,7 +739,9 @@ SpendServiceCreditTransaction.prototype.fundTransaction = function () {
                     if (payTxExpFundSource === undefined) {
                         Catenis.logger.DEBUG('>>>>>> Prepare to allocate funds to pay for spend service credit transaction expense', {
                             fundSourceOptions: {
-                                unconfUtxoInfo: this.lastSentCcTransact === undefined && this.spendServCredCtrl.numUnconfirmedSpendServCredTxs === 0 ? {} : undefined,
+                                unconfUtxoInfo: this.lastSentCcTransact === undefined && this.spendServCredCtrl.numUnconfirmedSpendServCredTxs === 0 ? {
+                                    initTxInputs: this.ccTransact.inputs
+                                } : undefined,
                                 higherAmountUtxos: true,
                                 excludeUtxos: excludeUtxos,
                                 selectUnconfUtxos: this.lastSentCcTransact === undefined ? this.spendServCredCtrl.terminalSpendServCredTxsChangeTxouts : undefined,
@@ -747,7 +749,9 @@ SpendServiceCreditTransaction.prototype.fundTransaction = function () {
                             }
                         });
                         payTxExpFundSource = new FundSource(Catenis.ctnHubNode.servPymtPayTxExpenseAddr.listAddressesInUse(), {
-                            unconfUtxoInfo: this.lastSentCcTransact === undefined && this.spendServCredCtrl.numUnconfirmedSpendServCredTxs === 0 ? {} : undefined,
+                            unconfUtxoInfo: this.lastSentCcTransact === undefined && this.spendServCredCtrl.numUnconfirmedSpendServCredTxs === 0 ? {
+                                initTxInputs: this.ccTransact.inputs
+                            } : undefined,
                             higherAmountUtxos: true,
                             excludeUtxos: excludeUtxos,
                             selectUnconfUtxos: this.lastSentCcTransact === undefined ? this.spendServCredCtrl.terminalSpendServCredTxsChangeTxouts : undefined,

@@ -212,7 +212,9 @@ TransferAssetTransaction.prototype.buildTransaction = function () {
 
         // Allocate UTXOs to pay for tx expense
         const payTxFundSource = new FundSource(this.sendingDevice.client.ctnNode.payTxExpenseAddr.listAddressesInUse(), {
-            unconfUtxoInfo: {},
+            unconfUtxoInfo: {
+                initTxInputs: this.ccTransact.inputs
+            },
             smallestChange: true
         });
         const payTxAllocResult = payTxFundSource.allocateFundForTxExpense({

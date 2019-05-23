@@ -169,7 +169,11 @@ CreditServiceAccTransaction.prototype.buildTransaction = function () {
             //
 
             // Prepare to add Colored Coins asset issuing input
-            const servCredIssueAddrFundSource = new FundSource(servCredIssueAddr, {unconfUtxoInfo: {}});
+            const servCredIssueAddrFundSource = new FundSource(servCredIssueAddr, {
+                unconfUtxoInfo: {
+                    initTxInputs: this.ccTransact.inputs
+                }
+            });
             const servCredIssueAddrAllocResult = servCredIssueAddrFundSource.allocateFund(Service.serviceCreditIssuanceAddrAmount);
 
             // Make sure that UTXOs have been correctly allocated
@@ -255,7 +259,9 @@ CreditServiceAccTransaction.prototype.buildTransaction = function () {
 
             // Now, allocate UTXOs to pay for tx expense
             const payTxFundSource = new FundSource(this.client.ctnNode.listFundingAddressesInUse(), {
-                unconfUtxoInfo: {},
+                unconfUtxoInfo: {
+                    initTxInputs: this.ccTransact.inputs
+                },
                 smallestChange: true
             });
             const payTxAllocResult = payTxFundSource.allocateFundForTxExpense({
