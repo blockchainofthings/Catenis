@@ -160,7 +160,9 @@ TransferAssetTransaction.prototype.buildTransaction = function () {
 
         // Try to allocate (Colored Coins) asset amount to transfer
         const devAssetAddrFundSource = new CCFundSource(this.asset.ccAssetId, this.sendingDevice.assetAddr.listAddressesInUse(), {
-            unconfUtxoInfo: {},
+            unconfUtxoInfo: {
+                initTxInputs: this.ccTransact.inputs
+            },
             smallestChange: true
         });
         const devAssetAddrAllocResult = devAssetAddrFundSource.allocateFund(this.amount);
