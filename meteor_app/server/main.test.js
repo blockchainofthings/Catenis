@@ -13,6 +13,7 @@ import { Application } from '../imports/server/Application';
 
 // Load test cases
 import '/imports/server/test/FundSourceTest.js';
+import '/imports/server/test/CCFundSourceTest.js';
 
 // Initialize required modules
 Logger.initialize();
