@@ -83,7 +83,6 @@ import { BcotSaleStockUI } from './adminUI/BcotSaleStockUI';
 import { ProvisionalMessage } from './ProvisionalMessage';
 import { CachedMessage } from './CachedMessage';
 // TEST - begin
-//import { resetBitcoinCore } from './test/FundSourceTest';
 //import { TestCatenisColoredCoins } from './test/TestCatenisColoredCoins';
 // TEST - end
 
@@ -104,120 +103,119 @@ const cfgSettings = {
 
 // Initialization code (on the server)
 Meteor.startup(function () {
-    // Record ID of current process
-    saveProcessId();
+    if (!Meteor.isTest) {
+        // Record ID of current process
+        saveProcessId();
 
-    // TEST - begin
-    //resetBitcoinCore();
-    // TEST - end
-    if (cfgSettings.bypassProcessing || cfgSettings.dataToCipher) {
-        Catenis.logger.INFO('Bypassing processing...');
+        if (cfgSettings.bypassProcessing || cfgSettings.dataToCipher) {
+            Catenis.logger.INFO('Bypassing processing...');
 
-        if (cfgSettings.dataToCipher) {
-            Application.initialize(true);
-            KeyStore.initialize(true);
-            Catenis.logger.INFO('*** Ciphered data (base64): %s', Catenis.application.cipherData(cfgSettings.dataToCipher).toString('base64'));
+            if (cfgSettings.dataToCipher) {
+                Application.initialize(true);
+                KeyStore.initialize(true);
+                Catenis.logger.INFO('*** Ciphered data (base64): %s', Catenis.application.cipherData(cfgSettings.dataToCipher).toString('base64'));
+            }
         }
-    }
-    else {
-        // Normal processing
-        Catenis.logger.INFO('Starting initialization...');
-        Database.initialize();
-        Database.removeInconsistentAssetIndices();
-        Database.fixBillingExchangeRate();
-        Database.removeBcotExchangeRateColl();
-        Database.addMissingClientTimeZone();
-        Database.addMissingBtcServicePriceField();
-        Application.initialize();
-        AccountsEmail.initialize();
-        LicenseExpireEmailNotify.initialize();
-        LicenseOverdueEmailNotify.initialize();
-        LicenseExpireRemindEmailNotify.initialize();
-        DevicesDisableEmailNotify.initialize();
-        MalleabilityEventEmitter.initialize();
-        BitcoinFees.initialize();
-        BitcoinTicker.initialize();
-        BitcoinPrice.initialize();
-        BcotPrice.initialize();
-        KeyStore.initialize();
-        BitcoinCore.initialize();
-        OmniCore.initialize();
-        IpfsClient.initialize();
-        IpfsClusterClient.initialize();
-        IpfsServerMonitor.initialize();
-        C3NodeClient.initialize();
-        Permission.initialize();
-        BcotSaleStock.initialize();
-        ProvisionalMessage.initialize();
-        CachedMessage.initialize();
-        CatenisNode.initialize();
+        else {
+            // Normal processing
+            Catenis.logger.INFO('Starting initialization...');
+            Database.initialize();
+            Database.removeInconsistentAssetIndices();
+            Database.fixBillingExchangeRate();
+            Database.removeBcotExchangeRateColl();
+            Database.addMissingClientTimeZone();
+            Database.addMissingBtcServicePriceField();
+            Application.initialize();
+            AccountsEmail.initialize();
+            LicenseExpireEmailNotify.initialize();
+            LicenseOverdueEmailNotify.initialize();
+            LicenseExpireRemindEmailNotify.initialize();
+            DevicesDisableEmailNotify.initialize();
+            MalleabilityEventEmitter.initialize();
+            BitcoinFees.initialize();
+            BitcoinTicker.initialize();
+            BitcoinPrice.initialize();
+            BcotPrice.initialize();
+            KeyStore.initialize();
+            BitcoinCore.initialize();
+            OmniCore.initialize();
+            IpfsClient.initialize();
+            IpfsClusterClient.initialize();
+            IpfsServerMonitor.initialize();
+            C3NodeClient.initialize();
+            Permission.initialize();
+            BcotSaleStock.initialize();
+            ProvisionalMessage.initialize();
+            CachedMessage.initialize();
+            CatenisNode.initialize();
 
-        Database.addMissingOmniTxValidityField();
+            Database.addMissingOmniTxValidityField();
 
-        // Make sure that all addresses are currently imported onto Bitcoin Core
-        CheckImportAddresses(cfgSettings.fixMissingAddresses);
+            // Make sure that all addresses are currently imported onto Bitcoin Core
+            CheckImportAddresses(cfgSettings.fixMissingAddresses);
 
-        BaseBlockchainAddress.initialize();
-        Client.initialize();
-        Device.initialize();
+            BaseBlockchainAddress.initialize();
+            Client.initialize();
+            Device.initialize();
 
-        // Make sure that permission rights are set for all clients, devices and permission events
-        Client.checkDeviceDefaultRights();
-        Device.checkDeviceInitialRights();
+            // Make sure that permission rights are set for all clients, devices and permission events
+            Client.checkDeviceDefaultRights();
+            Device.checkDeviceInitialRights();
 
-        Database.fixReceivedTransactionBcotPaymentInfo();
+            Database.fixReceivedTransactionBcotPaymentInfo();
 
-        ClientLicense.initialize();
-        BcotPayment.initialize();
-        BcotReplenishment.initialize();
-        StoreBcot.initialize();
-        RedeemBcot.initialize();
-        ReceiveMessage.initialize();
-        ReadConfirmation.initialize();
-        ReceiveAsset.initialize();
-        SpendServiceCredit.initialize();
-        TransactionMonitor.initialize();
+            ClientLicense.initialize();
+            BcotPayment.initialize();
+            BcotReplenishment.initialize();
+            StoreBcot.initialize();
+            RedeemBcot.initialize();
+            ReceiveMessage.initialize();
+            ReadConfirmation.initialize();
+            ReceiveAsset.initialize();
+            SpendServiceCredit.initialize();
+            TransactionMonitor.initialize();
 
-        // Initialize all notification message dispatchers first
-        WebSocketNotifyMsgDispatcher.initialize();
-        // Then the notification module itself
-        Notification.initialize();
+            // Initialize all notification message dispatchers first
+            WebSocketNotifyMsgDispatcher.initialize();
+            // Then the notification module itself
+            Notification.initialize();
 
-        // TEST - Begin
-        //TestCatenisColoredCoins.init();
-        // TEST - End
-        RestApi.initialize();
+            // TEST - Begin
+            //TestCatenisColoredCoins.init();
+            // TEST - End
+            RestApi.initialize();
 
-        // Make sure that admin user account is defined
-        Catenis.application.checkAdminUser();
+            // Make sure that admin user account is defined
+            Catenis.application.checkAdminUser();
 
-        // UI support initialization
-        AdminUI.initialize();
-        LoginUI.initialize();
-        AdminAccountUI.initialize();
-        BcotPriceUI.initialize();
-        BcotProductsUI.initialize();
-        BcotSaleAllocationUI.initialize();
-        BcotSaleStockUI.initialize();
-        SystemFundingUI.initialize();
-        BcotUsageReportUI.initialize();
-        LicensesUI.initialize();
-        PaidServicesUI.initialize();
-        ClientsUI.initialize();
-        ServiceBillingUI.initialize();
-        DevicesUI.initialize();
+            // UI support initialization
+            AdminUI.initialize();
+            LoginUI.initialize();
+            AdminAccountUI.initialize();
+            BcotPriceUI.initialize();
+            BcotProductsUI.initialize();
+            BcotSaleAllocationUI.initialize();
+            BcotSaleStockUI.initialize();
+            SystemFundingUI.initialize();
+            BcotUsageReportUI.initialize();
+            LicensesUI.initialize();
+            PaidServicesUI.initialize();
+            ClientsUI.initialize();
+            ServiceBillingUI.initialize();
+            DevicesUI.initialize();
 
-        ClientUI.initialize();
-        ClientLicensesUI.initialize();
-        ClientApiAccessUI.initialize();
-        ClientPaidServicesUI.initialize();
-        ClientServiceAccountUI.initialize();
-        ClientServiceBillingUI.initialize();
-        ClientDevicesUI.initialize();
+            ClientUI.initialize();
+            ClientLicensesUI.initialize();
+            ClientApiAccessUI.initialize();
+            ClientPaidServicesUI.initialize();
+            ClientServiceAccountUI.initialize();
+            ClientServiceBillingUI.initialize();
+            ClientDevicesUI.initialize();
 
-        Catenis.logger.INFO('Initialization ended.');
+            Catenis.logger.INFO('Initialization ended.');
 
-        Catenis.application.startProcessing();
+            Catenis.application.startProcessing();
+        }
     }
 });
 

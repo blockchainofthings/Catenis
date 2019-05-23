@@ -45,10 +45,15 @@ kadira:blaze-layout@2.3.0
 kadira:flow-router@2.12.1
 launch-screen@1.1.1
 livedata@1.0.18
+lmieulet:meteor-coverage@1.1.4
 localstorage@1.2.0
 logging@1.1.20
 meteor@1.9.3
 meteor-base@1.4.0
+meteorhacks:picker@1.0.3
+meteortesting:browser-tests@1.0.0
+meteortesting:mocha@1.1.2
+meteortesting:mocha-core@1.0.1
 meteortoys:allthings@4.0.0
 meteortoys:authenticate@4.0.0
 meteortoys:autopub@4.0.0

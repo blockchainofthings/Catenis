@@ -35,3 +35,4 @@ meteortoys:allthings@4.0.0
 useraccounts:flow-routing@1.14.2
 underscore@1.0.10
 tsega:bootstrap3-datetimepicker
+meteortesting:mocha
