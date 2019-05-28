@@ -74,7 +74,7 @@ export class WebSocketNotifyMsgDispatcher extends NotifyMsgDispatcher {
 
         this.serverOn = false;
         this.heartbeatInterval = undefined;
-        this.deviceEventClient = new Map();
+        this.deviceEventClients = new Map();
         this.pendingAuthClientConnInfo = new Map();
 
         this.startServer();
@@ -120,35 +120,35 @@ export class WebSocketNotifyMsgDispatcher extends NotifyMsgDispatcher {
         let result = false;
 
         // Look for device entry
-        if (this.deviceEventClient.has(deviceId)) {
-            const eventClient = this.deviceEventClient.get(deviceId);
+        if (this.deviceEventClients.has(deviceId)) {
+            const eventClients = this.deviceEventClients.get(deviceId);
 
-            if (eventName in eventClient) {
-                const ws = eventClient[eventName];
-
-                // Make sure the client connection is open
-                if (ws.readyState === WebSocket.OPEN) {
-                    // Send message to client
-                    ws.send(data, {
-                        compress: false,
-                        binary: false,
-                        fin: true
-                    }, () => {
-                        Catenis.logger.TRACE('WebSocket notification message dispatcher - Message has been sent to client', {
+            if (eventName in eventClients) {
+                for (let ws of eventClients[eventName]) {
+                    // Make sure the client connection is open
+                    if (ws.readyState === WebSocket.OPEN) {
+                        // Send message to client
+                        ws.send(data, {
+                            compress: false,
+                            binary: false,
+                            fin: true
+                        }, () => {
+                            Catenis.logger.TRACE('WebSocket notification message dispatcher - Message has been sent to client', {
+                                deviceId: deviceId,
+                                eventName: eventName,
+                                data: data
+                            });
+                            result = true;
+                        });
+                    }
+                    else {
+                        // Client connection not yet open; notification message cannot be sent
+                        Catenis.logger.DEBUG('WebSocket notification message dispatcher - Client connection not yet open; notification message cannot be sent', {
                             deviceId: deviceId,
                             eventName: eventName,
                             data: data
                         });
-                        result = true;
-                    });
-                }
-                else {
-                    // Client connection not yet open; notification message cannot be sent
-                    Catenis.logger.DEBUG('WebSocket notification message dispatcher - Client connection not yet open; notification message cannot be sent', {
-                        deviceId: deviceId,
-                        eventName: eventName,
-                        data: data
-                    });
+                    }
                 }
             }
         }
@@ -360,40 +360,25 @@ function processIncomingMessage(ws, message) {
 
 function saveAuthenticatedClientConnection(ws) {
     // Check if a connection for the given device and notification event already exists
-    if (!this.deviceEventClient.has(ws.ctnNotify.deviceId)) {
+    if (!this.deviceEventClients.has(ws.ctnNotify.deviceId)) {
         // Create new entry for device and save client connection for that notification event
-        const eventClient = {};
-        eventClient[ws.ctnNotify.eventName] = ws;
+        const eventClients = {};
+        eventClients[ws.ctnNotify.eventName] = new Set([ws]);
 
-        this.deviceEventClient.set(ws.ctnNotify.deviceId, eventClient);
+        this.deviceEventClients.set(ws.ctnNotify.deviceId, eventClients);
     }
     else {
         // Entry for that device already exists
-        const eventClient = this.deviceEventClient.get(ws.ctnNotify.deviceId);
+        const eventClients = this.deviceEventClients.get(ws.ctnNotify.deviceId);
 
-        if (!(ws.ctnNotify.eventName in eventClient)) {
+        if (!(ws.ctnNotify.eventName in eventClients)) {
             // Save client connection for that notification event
-            eventClient[ws.ctnNotify.eventName] =  ws;
+            eventClients[ws.ctnNotify.eventName] =  new Set([ws]);
         }
         else {
-            // There is already a client connection for that notification event.
-            //  Make sure that this is a different client connection
-            const currWs = eventClient[ws.ctnNotify.eventName];
-
-            if (currWs !== ws) {
-                // Not the same client connection. Check its current state
-                if (currWs.readyState === WebSocket.CONNECTING || currWs.readyState === WebSocket.OPEN) {
-                    // Current client connection is active. So close it before replacing it with new one
-                    currWs.close(1011, 'A new WebSocket client connection for this device and notification event has been established');
-                }
-
-                // Replace current existing connection with the new one
-                eventClient[ws.ctnNotify.eventName] = ws;
-            }
-            else {
-                // Same client connection. Nothing to do
-                Catenis.logger.TRACE('WebSocket notification message dispatcher - The same client connection already exists for this device and notification event', ws.ctnNotify);
-            }
+            // There is already at least one client connection for that notification event.
+            //  Add the new client connection
+            eventClients[ws.ctnNotify.eventName].add(ws);
         }
     }
 }
@@ -402,25 +387,28 @@ function clearClientConnection(ws) {
     // Make sure that client has already been authenticated
     if (ws.ctnNotify.deviceId !== undefined) {
         // Retrieve device entry and make sure that it exists
-        const eventClient = this.deviceEventClient.get(ws.ctnNotify.deviceId);
+        const eventClients = this.deviceEventClients.get(ws.ctnNotify.deviceId);
 
-        if (eventClient !== undefined) {
-            // Check if a client connection for that notification event already exists
-            const currWs = eventClient[ws.ctnNotify.eventName];
+        if (eventClients !== undefined) {
+            // Make sure that client connection is associated with the corresponding notification event
+            const wsSet = eventClients[ws.ctnNotify.eventName];
 
-            // Make sure that they are the same client connection
-            if (currWs === ws) {
+            if (wsSet && wsSet.has(ws)) {
                 // Make sure that client connection is closed before clearing it up
-                if (currWs.readyState === WebSocket.CLOSED) {
-                    delete eventClient[ws.ctnNotify.eventName];
+                if (ws.readyState === WebSocket.CLOSED) {
+                    wsSet.delete(ws);
 
-                    if (Object.keys(eventClient).length === 0) {
-                        this.deviceEventClient.delete(ws.ctnNotify.deviceId);
+                    if (wsSet.size === 0) {
+                        delete eventClients[ws.ctnNotify.eventName];
+
+                        if (Object.keys(eventClients).length === 0) {
+                            this.deviceEventClients.delete(ws.ctnNotify.deviceId);
+                        }
                     }
                 }
-                else if (currWs.readyState !== WebSocket.CLOSING) {
+                else if (ws.readyState !== WebSocket.CLOSING) {
                     // Client connection still active. So just close it
-                    currWs.close(1011, 'WebSocket client connection is being clear by server');
+                    ws.close(1011, 'WebSocket client connection is being cleared by server');
                 }
             }
             else {
