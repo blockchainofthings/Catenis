@@ -37,27 +37,31 @@ import { AncestorTransactions } from './AncestorTransactions';
 //    ccAssetId [String] - Colored Coins attributed ID of asset that should be used for the funding
 //    addresses [String|Array(String)] - Addresses to be used as the fund source
 //    options { - (optional)
-//      unconfUtxoInfo: {  - (optional) To be used in case unconfirmed UTXOs should be used as the fund source
+//      useUnconfirmedUtxo: [Boolean] - (optional, default: false) Indicate whether (any available) unconfirmed UTXOs should be used for allocating funds
+//      selectUnconfUtxos: [string|Array(string)], - (optional) List of selected unconfirmed UTXOs (formatted as "txid:n") that should be taken into consideration
+//                                                    even though unconfirmed UTXOs have not been set to be used (`useUnconfirmedUtxo` = false)
+//      unconfUtxoInfo: {  - (optional) To be used in case unconfirmed UTXOs are effectively in use (either `useUnconfirmedUtxos` = true or `selectUnconfUtxos` set)
+//                            NOTE: if not set and unconfirmed UTXOs are effectively in use, the parameters below are set to their corresponding default value
 //        ancestorsCountDiff: [Number], - (optional) Amount to be deducted from maximum count of (unconfirmed) ancestor txs for tx to be accepted into mempool (to be relayed).
 //                                         The resulting amount shall be used as an upper limit to filter UTXOs that should be used as fund source
 //                                         - if not defined, a default diff of 1 (one) is used, so the upper limit is set to (maxCount-1)
 //                                         - if a non-negative value is passed, the upper limit is set to (maxCount-value)
-//                                         - if a negative value is passed, no upper limit is set (all UTXOs are used)
+//                                         - if a negative value is passed, no upper limit shall be enforced
 //        ancestorsSizeDiff: [Number], - (optional) Amount to be deducted from maximum size (in bytes) of (unconfirmed) ancestor txs for tx to be accepted into mempool (to be relayed).
 //                                        The resulting amount shall be used as an upper limit to filter UTXOs that should be used as fund source
 //                                        - if not defined, a default diff of 1000 (1K) is used, so the upper limit is set to (maxSize-1000)
 //                                        - if a non-negative value is passed, the upper limit is set to (maxSize-value)
-//                                        - if a negative value is passed, no upper limit is set (all UTXOs are used)
+//                                        - if a negative value is passed, no upper limit shall be enforced
 //        descendantsCountDiff: [Number], - (optional) Amount to be deducted from maximum count of (unconfirmed) descendant txs for tx to be accepted into mempool (to be relayed).
 //                                           The resulting amount shall be used as an upper limit to filter UTXOs that should be used as fund source
 //                                           - if not defined, a default diff of 1 (one) is used, so the upper limit is set to (maxCount-1)
 //                                           - if a non-negative value is passed, the upper limit is set to (maxCount-value)
-//                                           - if a negative value is passed, no upper limit is set (all UTXOs are used)
+//                                           - if a negative value is passed, no upper limit shall be enforced
 //        descendantsSizeDiff: [Number], - (optional) Amount to be deducted from maximum size (in bytes) of (unconfirmed) descendant txs for tx to be accepted into mempool (to be relayed).
 //                                          The resulting amount shall be used as an upper limit to filter UTXOs that should be used as fund source
 //                                          - if not defined, a default diff of 1000 (1K) is used, so the upper limit is set to (maxSize-1000)
 //                                          - if a non-negative value is passed, the upper limit is set to (maxSize-value)
-//                                          - if a negative value is passed, no upper limit is set (all UTXOs are used)
+//                                          - if a negative value is passed, no upper limit shall be enforced
 //        initTxInputs: [Array(Object)|Object] [{ - (optional) Transaction inputs (or a single input) to be used to initialize ancestor transactions
 //          txout: {
 //            txid: [String],
@@ -72,10 +76,8 @@ import { AncestorTransactions } from './AncestorTransactions';
 //      excludeUtxos: [string|Array(string)], - (optional) List of UTXOs (formatted as "txid:n") that should not be taken into account when allocating new UTXOs
 //                                               (because those UTXOs are associated with txs that use opt-in RBF (Replace By Fee) as such can be replaced by
 //                                               other txs and have their own outputs invalidated)
-//      selectUnconfUtxos: [string|Array(string)], - (optional) List of unconfirmed UTXOs (formatted as "txid:n") that should be taken into consideration even though unconfirmed
-//                                                   UTXOs has not been set to be used as the fund source
 //      addUtxoTxInputs: [Object|Array(Object)] - (optional) List of transaction input objects (the same as used by the inputs property of the Transaction object)
-//                                                  the UTXOs spent by them should be added to the list of available UTXOs. These inputs should belong transactions
+//                                                  the UTXOs spent by them should be added to the list of available UTXOs. These inputs should belong to transactions
 //                                                  that use opt-in RBF that are being replaced
 //    }
 //
@@ -133,26 +135,62 @@ export function CCFundSource(ccAssetId, addresses, options) {
     this.higherAmountUtxos = false;
 
     if (options !== undefined) {
-        if (options.unconfUtxoInfo !== undefined) {
-            this.useUnconfirmedUtxo = true;
+        if (options.useUnconfirmedUtxo) {
+            this.useUnconfirmedUtxo = !!options.useUnconfirmedUtxo;
+        }
 
-            this.ancestorsCountUpperLimit = options.unconfUtxoInfo.ancestorsCountDiff === undefined ? cfgSettings.maxAncestorsCount - 1 : (options.unconfUtxoInfo.ancestorsCountDiff >= 0 ? cfgSettings.maxAncestorsCount - options.unconfUtxoInfo.ancestorsCountDiff : undefined);
-            this.ancestorsSizeUpperLimit = options.unconfUtxoInfo.ancestorsSizeDiff === undefined ? cfgSettings.maxAncestorsSize - 1000 : (options.unconfUtxoInfo.ancestorsSizeDiff >= 0 ? cfgSettings.maxAncestorsSize - options.unconfUtxoInfo.ancestorsSizeDiff : undefined);
-            this.descendantsCountUpperLimit = options.unconfUtxoInfo.descendantsCountDiff === undefined ? cfgSettings.maxDescendantsCount - 1 : (options.unconfUtxoInfo.descendantsCountDiff >= 0 ? cfgSettings.maxDescendantsCount - options.unconfUtxoInfo.descendantsCountDiff : undefined);
-            this.descendantsSizeUpperLimit = options.unconfUtxoInfo.descendantsSizeDiff === undefined ? cfgSettings.maxDescendantsSize - 1000 : (options.unconfUtxoInfo.descendantsSizeDiff >= 0 ? cfgSettings.maxDescendantsSize - options.unconfUtxoInfo.descendantsSizeDiff : undefined);
+        if (options.selectUnconfUtxos) {
+            this.selectUnconfUtxos = new Set(options.selectUnconfUtxos);
+        }
 
-            // Instantiate ancestor transactions control object
+        // NOTE: if additional UTXOs are passed (`addUtxoTxInputs`), assume that it might
+        //      include unconfirmed UTXOs and thus do all required setup. Later, when
+        //      the additional UTXOs are computed (see below), if not unconfirmed UTXOs
+        //      are included, just unset things.
+        if (this.useUnconfirmedUtxo || this.selectUnconfUtxos || options.addUtxoTxInputs) {
+            // Prepare to instantiate ancestor transactions control object
             this.mempoolTxInfoCache = new Map();
             const ancTxsOptions = {
-                ancestorsCountLimit: this.ancestorsCountUpperLimit === undefined ? null : this.ancestorsCountUpperLimit,
-                ancestorsSizeLimit: this.ancestorsSizeUpperLimit === undefined ? null : this.ancestorsSizeUpperLimit,
                 mempoolTxInfoCache: this.mempoolTxInfoCache
             };
 
-            if (options.unconfUtxoInfo.initTxInputs) {
-                ancTxsOptions.initTxInputs = options.unconfUtxoInfo.initTxInputs;
+            // Initialize ancestor and descendant transactions limits to use
+            let ancestorsCountDiff = 1;
+            let ancestorsSizeDiff = 1000;
+            let descendantsCountDiff = 1;
+            let descendantsSizeDiff = 1000;
+
+            if (options.unconfUtxoInfo !== undefined) {
+                if (options.unconfUtxoInfo.ancestorsCountDiff !== undefined) {
+                    ancestorsCountDiff = options.unconfUtxoInfo.ancestorsCountDiff >= 0 ? options.unconfUtxoInfo.ancestorsCountDiff : undefined;
+                }
+
+                if (options.unconfUtxoInfo.ancestorsSizeDiff !== undefined) {
+                    ancestorsSizeDiff = options.unconfUtxoInfo.ancestorsSizeDiff >= 0 ? options.unconfUtxoInfo.ancestorsSizeDiff : undefined;
+                }
+
+                if (options.unconfUtxoInfo.descendantsCountDiff !== undefined) {
+                    descendantsCountDiff = options.unconfUtxoInfo.descendantsCountDiff >= 0 ? options.unconfUtxoInfo.descendantsCountDiff : undefined;
+                }
+
+                if (options.unconfUtxoInfo.descendantsSizeDiff !== undefined) {
+                    descendantsSizeDiff = options.unconfUtxoInfo.descendantsSizeDiff >= 0 ? options.unconfUtxoInfo.descendantsSizeDiff : undefined
+                }
+
+                if (options.unconfUtxoInfo.initTxInputs) {
+                    ancTxsOptions.initTxInputs = options.unconfUtxoInfo.initTxInputs;
+                }
             }
 
+            this.ancestorsCountUpperLimit = ancestorsCountDiff !== undefined ? cfgSettings.maxAncestorsCount - ancestorsCountDiff : undefined;
+            this.ancestorsSizeUpperLimit = ancestorsSizeDiff !== undefined ? cfgSettings.maxAncestorsSize - ancestorsSizeDiff : undefined;
+            this.descendantsCountUpperLimit = descendantsCountDiff !== undefined ? cfgSettings.maxDescendantsCount - descendantsCountDiff : undefined;
+            this.descendantsSizeUpperLimit = descendantsSizeDiff !== undefined ? cfgSettings.maxDescendantsSize - descendantsSizeDiff : undefined;
+
+            ancTxsOptions.ancestorsCountLimit = this.ancestorsCountUpperLimit === undefined ? null : this.ancestorsCountUpperLimit;
+            ancTxsOptions.ancestorsSizeLimit = this.ancestorsSizeUpperLimit === undefined ? null : this.ancestorsSizeUpperLimit;
+
+            // Instantiate ancestor transactions control object
             this.ancestorTxs = new AncestorTransactions(ancTxsOptions);
         }
 
@@ -168,15 +206,18 @@ export function CCFundSource(ccAssetId, addresses, options) {
             this.excludedUtxos = new Set(options.excludeUtxos);
         }
 
-        if (options.selectUnconfUtxos !== undefined) {
-            this.selectUnconfUtxos = new Set(options.selectUnconfUtxos);
-        }
-
         // Note: it is important that this be the last options processed so it is done as close to
         //  the loading of UTXOs as possible
-        if (options.addUtxoTxInputs !== undefined) {
+        if (options.addUtxoTxInputs) {
             // Compute list of additional UTXOs to consider
-            this.additionalUtxos = computeAdditionalUtxos(options.addUtxoTxInputs);
+            const result = computeAdditionalUtxos(options.addUtxoTxInputs);
+
+            this.additionalUtxos = result.utxos;
+
+            if (!this.useUnconfirmedUtxo && !this.selectUnconfUtxos && !result.hasUnconfirmedUtxo) {
+                // No unconfirmed UTXOs in use, so unset ancestor transactions
+                this.ancestorTxs = undefined;
+            }
         }
     }
 
@@ -412,8 +453,10 @@ CCFundSource.prototype.clearAllocatedUtxos = function () {
         docAllocatedUtxos.forEach((docUtxo) => {
             docUtxo.allocated = false;
 
-            // Remove included ancestor transaction
-            this.ancestorTxs.removeUtxo(docUtxo);
+            if (this.ancestorTxs) {
+                // Remove included ancestor transaction
+                this.ancestorTxs.removeUtxo(docUtxo);
+            }
         });
 
         this.collUtxo.update(docAllocatedUtxos);
@@ -493,7 +536,7 @@ function insertUtxo(utxo, assetUtxoInfo, unconfTxids) {
 
 function loadUtxos() {
     // Retrieve UTXOs associated with given addresses, including unconfirmed ones if requested
-    const utxos = Catenis.c3NodeClient.getAddressesUtxos(this.addresses, this.useUnconfirmedUtxo || this.selectUnconfUtxos !== undefined ? 0 : 1);
+    const utxos = Catenis.c3NodeClient.getAddressesUtxos(this.addresses, this.useUnconfirmedUtxo || this.selectUnconfUtxos ? 0 : 1);
 
     // Store retrieved UTXOs onto local DB making sure that only UTXOs associated with
     //  the specified asset are included, and that any excluded UTXOs are not included,
@@ -641,8 +684,12 @@ function allocateUtxos(amount, utxoResultSets, numWorkUtxos, work) {
             continue;
         }
 
-        // Save current ancestor transactions state
-        let tempAncestorTxs = this.ancestorTxs.clone();
+        let tempAncestorTxs;
+
+        if (this.ancestorTxs) {
+            // Save current ancestor transactions state
+            tempAncestorTxs = this.ancestorTxs.clone();
+        }
 
         // Initialize reference to working UTXOs. Start working with
         //  first UTXOs from result set
@@ -653,7 +700,7 @@ function allocateUtxos(amount, utxoResultSets, numWorkUtxos, work) {
             const docUtxo = docUtxos[utxoIdx];
 
             // Make sure that UTXO does not exceed ancestor transactions limits
-            if (tempAncestorTxs.checkAddUtxo(docUtxo)) {
+            if (!tempAncestorTxs || tempAncestorTxs.checkAddUtxo(docUtxo)) {
                 workUtxos.push({
                     utxoIdx: utxoIdx,
                     assetAmount: docUtxo.assetAmount
@@ -665,6 +712,7 @@ function allocateUtxos(amount, utxoResultSets, numWorkUtxos, work) {
         if (workUtxos.length < numWorkUtxos) {
             // Unable to find enough acceptable UTXOs (ancestor txs limits not exceeded).
             //  Remove included ancestor txs...
+            //  NOTE: if this condition is met, it is guaranteed that `tempAncestorTxs` !== undefined
             workUtxos.forEach((workUtxo) => {
                 tempAncestorTxs.removeUtxo(docUtxos[workUtxo.utxoIdx]);
             });
@@ -691,8 +739,12 @@ function allocateUtxos(amount, utxoResultSets, numWorkUtxos, work) {
 
             exactAmountAllocated = false;
 
-            // Save current ancestor transactions state
-            let tempAncestorTxs2 = tempAncestorTxs.clone();
+            let tempAncestorTxs2;
+
+            if (tempAncestorTxs) {
+                // Save current ancestor transactions state
+                tempAncestorTxs2 = tempAncestorTxs.clone();
+            }
 
             do {
                 prevEntriesAdjusted = false;
@@ -704,8 +756,10 @@ function allocateUtxos(amount, utxoResultSets, numWorkUtxos, work) {
                         return docUtxos[workUtxo.utxoIdx];
                     });
 
-                    // Update ancestor transactions state
-                    tempAncestorTxs = tempAncestorTxs2;
+                    if (tempAncestorTxs2) {
+                        // Update ancestor transactions state
+                        tempAncestorTxs = tempAncestorTxs2;
+                    }
 
                     exactAmountAllocated = true;
                 }
@@ -718,9 +772,11 @@ function allocateUtxos(amount, utxoResultSets, numWorkUtxos, work) {
                             return docUtxos[workUtxo.utxoIdx];
                         });
 
-                        // Update ancestor transactions state
-                        tempAncestorTxs = tempAncestorTxs2;
-                        tempAncestorTxs2 = tempAncestorTxs.clone();
+                        if (tempAncestorTxs2) {
+                            // Update ancestor transactions state
+                            tempAncestorTxs = tempAncestorTxs2;
+                            tempAncestorTxs2 = tempAncestorTxs.clone();
+                        }
                     }
 
                     // ...proceed to try if exact amount can be allocated
@@ -731,13 +787,17 @@ function allocateUtxos(amount, utxoResultSets, numWorkUtxos, work) {
                     for (let utxoIdx = workUtxos[lastWorkIdx].utxoIdx + 1; utxoIdx < numUtxos; utxoIdx++) {
                         const docUtxo = docUtxos[utxoIdx];
 
-                        // Save current ancestor transactions state, and remove ancestor txs of
-                        //  (last work entry) UTXO that will eventually be replaced
-                        const tempAncestorTxs3 = tempAncestorTxs2.clone();
-                        tempAncestorTxs3.removeUtxo(docUtxos[workUtxos[lastWorkIdx].utxoIdx]);
+                        let tempAncestorTxs3;
+
+                        if (tempAncestorTxs2) {
+                            // Save current ancestor transactions state, and remove ancestor txs of
+                            //  (last work entry) UTXO that will eventually be replaced
+                            tempAncestorTxs3 = tempAncestorTxs2.clone();
+                            tempAncestorTxs3.removeUtxo(docUtxos[workUtxos[lastWorkIdx].utxoIdx]);
+                        }
 
                         // Make sure that UTXO does not exceed ancestor transactions limits
-                        if (tempAncestorTxs3.checkAddUtxo(docUtxo)) {
+                        if (!tempAncestorTxs3 || tempAncestorTxs3.checkAddUtxo(docUtxo)) {
                             const currentWorkAmount = prevEntriesAmount + docUtxo.assetAmount;
 
                             if (currentWorkAmount === amount) {
@@ -751,8 +811,10 @@ function allocateUtxos(amount, utxoResultSets, numWorkUtxos, work) {
                                     return docUtxos[workUtxo.utxoIdx];
                                 });
 
-                                // Update ancestor transactions state
-                                tempAncestorTxs = tempAncestorTxs3;
+                                if (tempAncestorTxs3) {
+                                    // Update ancestor transactions state
+                                    tempAncestorTxs = tempAncestorTxs3;
+                                }
 
                                 exactAmountAllocated = true;
 
@@ -773,9 +835,11 @@ function allocateUtxos(amount, utxoResultSets, numWorkUtxos, work) {
                                     return docUtxos[workUtxo.utxoIdx];
                                 });
 
-                                // Update ancestor transactions state
-                                tempAncestorTxs = tempAncestorTxs3;
-                                tempAncestorTxs2 = tempAncestorTxs.clone();
+                                if (tempAncestorTxs3) {
+                                    // Update ancestor transactions state
+                                    tempAncestorTxs = tempAncestorTxs3;
+                                    tempAncestorTxs2 = tempAncestorTxs.clone();
+                                }
                             }
                         }
                     }
@@ -790,20 +854,28 @@ function allocateUtxos(amount, utxoResultSets, numWorkUtxos, work) {
                         for (let workIdx = lastWorkIdx - 1; workIdx >= 0; workIdx--) {
                             let currentEntryAmount = workUtxos[workIdx].assetAmount;
 
-                            // Save current ancestor transactions state, and remove ancestor txs of
-                            //  first UTXO that will eventually be replaced
-                            let tempAncestorTxs3 = tempAncestorTxs2.clone();
-                            tempAncestorTxs3.removeUtxo(docUtxos[workUtxos[workIdx].utxoIdx]);
+                            let tempAncestorTxs3;
+
+                            if (tempAncestorTxs2) {
+                                // Save current ancestor transactions state, and remove ancestor txs of
+                                //  first UTXO that will eventually be replaced
+                                tempAncestorTxs3 = tempAncestorTxs2.clone();
+                                tempAncestorTxs3.removeUtxo(docUtxos[workUtxos[workIdx].utxoIdx]);
+                            }
 
                             // Search for a UTXO with an amount lower than the amount of the current entry
                             for (let utxoIdx = workUtxos[workIdx].utxoIdx + 1, limit = numUtxos - (numWorkUtxos - (workIdx + 1)); utxoIdx < limit; utxoIdx++) {
                                 const docUtxo = docUtxos[utxoIdx];
 
-                                // Save current ancestor transactions state
-                                let tempAncestorTxs4 = tempAncestorTxs3.clone();
+                                let tempAncestorTxs4;
+
+                                if (tempAncestorTxs3) {
+                                    // Save current ancestor transactions state
+                                    tempAncestorTxs4 = tempAncestorTxs3.clone();
+                                }
 
                                 // And make sure that UTXO does not exceed ancestor transactions limits
-                                if (docUtxo.assetAmount < currentEntryAmount && tempAncestorTxs4.checkAddUtxo(docUtxo)) {
+                                if (docUtxo.assetAmount < currentEntryAmount && (!tempAncestorTxs4 || tempAncestorTxs4.checkAddUtxo(docUtxo))) {
                                     // UTXO found. Try to adjust working UTXO entries
                                     const newWorkUtxos = Util.cloneObjArray(workUtxos);
                                     let newTotalWorkAmount = 0;
@@ -819,26 +891,28 @@ function allocateUtxos(amount, utxoResultSets, numWorkUtxos, work) {
                                             let entryUtxoIdx = utxoIdx + (replaceIdx - workIdx);
                                             const docUtxo2 = docUtxos[entryUtxoIdx];
 
-                                            // NOTE: we only care to check if UTXO does not exceed ancestor transactions
-                                            //      limits for indices > workIdx because the replacing entry for index
-                                            //      workIdx has already been checked (`if` just before `for` loop)
-                                            if (newWorkIdx !== workIdx) {  // newWorkIdx > workIdx
-                                                // A UTXO beyond the first one is to be replaced
+                                            if (tempAncestorTxs4) {
+                                                // NOTE: we only care to check if UTXO does not exceed ancestor transactions
+                                                //      limits for indices > workIdx because the replacing entry for index
+                                                //      workIdx has already been checked (`if` just before `for` loop)
+                                                if (newWorkIdx !== workIdx) {  // newWorkIdx > workIdx
+                                                    // A UTXO beyond the first one is to be replaced
 
-                                                // Save current ancestor transactions state, and remove ancestor txs of
-                                                //  UTXO that will eventually be replaced...
-                                                const tempAncestorTxs5 = tempAncestorTxs4.clone();
-                                                tempAncestorTxs5.removeUtxo(docUtxos[newWorkUtxos[newWorkIdx].utxoIdx]);
+                                                    // Save current ancestor transactions state, and remove ancestor txs of
+                                                    //  UTXO that will eventually be replaced...
+                                                    const tempAncestorTxs5 = tempAncestorTxs4.clone();
+                                                    tempAncestorTxs5.removeUtxo(docUtxos[newWorkUtxos[newWorkIdx].utxoIdx]);
 
-                                                // ... and make sure that UTXO that should be used as replacement
-                                                //  does not exceed ancestor transactions limits
-                                                if (!tempAncestorTxs5.checkAddUtxo(docUtxo2)) {
-                                                    // UTXO cannot be accepted. Look for another one
-                                                    continue;
-                                                }
-                                                else {
-                                                    // Update ancestor transactions state
-                                                    tempAncestorTxs4 = tempAncestorTxs5;
+                                                    // ... and make sure that UTXO that should be used as replacement
+                                                    //  does not exceed ancestor transactions limits
+                                                    if (!tempAncestorTxs5.checkAddUtxo(docUtxo2)) {
+                                                        // UTXO cannot be accepted. Look for another one
+                                                        continue;
+                                                    }
+                                                    else {
+                                                        // Update ancestor transactions state
+                                                        tempAncestorTxs4 = tempAncestorTxs5;
+                                                    }
                                                 }
                                             }
 
@@ -864,8 +938,10 @@ function allocateUtxos(amount, utxoResultSets, numWorkUtxos, work) {
                                         workUtxos = newWorkUtxos;
                                         totalWorkAmount = newTotalWorkAmount;
 
-                                        // Update ancestor transactions state
-                                        tempAncestorTxs3 = tempAncestorTxs4;
+                                        if (tempAncestorTxs4) {
+                                            // Update ancestor transactions state
+                                            tempAncestorTxs3 = tempAncestorTxs4;
+                                        }
 
                                         // Indicate that previous entries have been adjusted
                                         prevEntriesAdjusted = true;
@@ -875,8 +951,10 @@ function allocateUtxos(amount, utxoResultSets, numWorkUtxos, work) {
                             }
 
                             if (prevEntriesAdjusted) {
-                                // Update ancestor transactions state
-                                tempAncestorTxs2 = tempAncestorTxs3;
+                                if (tempAncestorTxs3) {
+                                    // Update ancestor transactions state
+                                    tempAncestorTxs2 = tempAncestorTxs3;
+                                }
 
                                 break;
                             }
@@ -888,14 +966,19 @@ function allocateUtxos(amount, utxoResultSets, numWorkUtxos, work) {
         }
 
         if (docAllocatedUtxos !== undefined) {
-            // UTXOs have been allocated. Update ancestor transactions state and stop processing
-            this.ancestorTxs = tempAncestorTxs;
+            // UTXOs have been allocated
+
+            if (tempAncestorTxs) {
+                // Update ancestor transactions state
+                this.ancestorTxs = tempAncestorTxs;
+            }
 
             if (work !== undefined) {
                 // Make sure that work info only returned in case of failure
                 delete work.largestTriedDeltaAmount;
             }
 
+            // Stop processing
             break;
         }
         else if (work !== undefined) {
@@ -982,6 +1065,7 @@ function computeAdditionalUtxos(addUtxoTxInputs) {
     });
 
     const txidRawTransaction = new Map();
+    let hasUnconfirmedUtxo = false;
 
     for (let [txid, utxos] of txidUtxos) {
         // Retrieve transaction info to get number of confirmations for its related UTXOs
@@ -990,6 +1074,10 @@ function computeAdditionalUtxos(addUtxoTxInputs) {
         utxos.forEach((utxo) => {
             utxo.confirmations = txInfo.confirmations;
         });
+
+        if (txInfo.confirmations === 0) {
+            hasUnconfirmedUtxo = true;
+        }
 
         if (txidNoScriptPubKeyUtxos.has(txid)) {
             txidRawTransaction.set(txid, txInfo.hex);
@@ -1007,9 +1095,12 @@ function computeAdditionalUtxos(addUtxoTxInputs) {
         }
     }
 
-    return Array.from(txidUtxos.values()).reduce((list, utxos) => {
-        return list.concat(utxos);
-    }, []);
+    return {
+        utxos: Array.from(txidUtxos.values()).reduce((list, utxos) => {
+            return list.concat(utxos);
+        }, []),
+        hasUnconfirmedUtxo: hasUnconfirmedUtxo
+    };
 }
 
 

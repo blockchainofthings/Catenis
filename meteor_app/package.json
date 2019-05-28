@@ -4,9 +4,8 @@
   "description": "Catenis Enterprise application",
   "main": "server/main.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "test-fundSource": "TEST_CLIENT=0 MOCHA_GREP=\"FundSource module\" NODE_APP_INSTANCE=claudio meteor test --once --driver-package meteortesting:mocha",
-    "test-ccFundSource": "TEST_CLIENT=0 MOCHA_GREP=\"CCFundSource module\" NODE_APP_INSTANCE=claudio meteor test --once --driver-package meteortesting:mocha",
+    "test-fundSource": "TEST_CLIENT=0 MOCHA_GREP=\"^FundSource module\" NODE_APP_INSTANCE=claudio meteor test --once --driver-package meteortesting:mocha",
+    "test-ccFundSource": "TEST_CLIENT=0 MOCHA_GREP=\"^CCFundSource module\" NODE_APP_INSTANCE=claudio meteor test --once --driver-package meteortesting:mocha",
     "build_dev": "./bin/build_dev.sh",
     "build": "./bin/build.sh"
   },

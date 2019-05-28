@@ -122,6 +122,7 @@ SendMessageTransaction.prototype.buildTransaction = function () {
 
         // Prepare to add origin device main address input
         const origDevMainAddrFundSource = new FundSource(this.originDevice.mainAddr.listAddressesInUse(), {
+            useUnconfirmedUtxo: true,
             unconfUtxoInfo: {
                 initTxInputs: this.transact.inputs
             }
@@ -205,6 +206,7 @@ SendMessageTransaction.prototype.buildTransaction = function () {
 
         // Now, allocate UTXOs to pay for tx expense
         const payTxFundSource = new FundSource(Catenis.ctnHubNode.payTxExpenseAddr.listAddressesInUse(), {
+            useUnconfirmedUtxo: true,
             unconfUtxoInfo: {
                 initTxInputs: this.transact.inputs
             },

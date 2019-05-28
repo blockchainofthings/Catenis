@@ -173,7 +173,7 @@ CatenisNode.prototype.startNode = function () {
         if (devMainAddresses.length > 0) {
             // System device main addresses already exist. Check if
             //  balance is as expected
-            devMainAddrBalance = new FundSource(devMainAddresses, {unconfUtxoInfo: {}}).getBalance(true);
+            devMainAddrBalance = new FundSource(devMainAddresses, {useUnconfirmedUtxo: true}).getBalance(true);
         }
 
         if (devMainAddrBalance !== undefined && devMainAddrBalance > 0) {

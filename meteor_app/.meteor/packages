@@ -36,3 +36,4 @@ useraccounts:flow-routing@1.14.2
 underscore@1.0.10
 tsega:bootstrap3-datetimepicker
 meteortesting:mocha
+meteortesting:mocha-core@6.1.2

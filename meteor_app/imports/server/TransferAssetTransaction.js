@@ -160,6 +160,7 @@ TransferAssetTransaction.prototype.buildTransaction = function () {
 
         // Try to allocate (Colored Coins) asset amount to transfer
         const devAssetAddrFundSource = new CCFundSource(this.asset.ccAssetId, this.sendingDevice.assetAddr.listAddressesInUse(), {
+            useUnconfirmedUtxo: true,
             unconfUtxoInfo: {
                 initTxInputs: this.ccTransact.inputs
             },
@@ -214,6 +215,7 @@ TransferAssetTransaction.prototype.buildTransaction = function () {
 
         // Allocate UTXOs to pay for tx expense
         const payTxFundSource = new FundSource(this.sendingDevice.client.ctnNode.payTxExpenseAddr.listAddressesInUse(), {
+            useUnconfirmedUtxo: true,
             unconfUtxoInfo: {
                 initTxInputs: this.ccTransact.inputs
             },

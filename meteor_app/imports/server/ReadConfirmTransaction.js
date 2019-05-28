@@ -838,9 +838,10 @@ ReadConfirmTransaction.prototype.fundTransaction = function () {
                             //      and we would be replacing a previous tx). However, we are keeping both conditions
                             //      just as an additional precaution
                             readConfirmPayTxExpenseFundSource = new FundSource(Catenis.ctnHubNode.readConfirmPayTxExpenseAddr.listAddressesInUse(), {
-                                unconfUtxoInfo: this.lastTxid !== undefined ? undefined : {
+                                useUnconfirmedUtxo: this.lastTxid === undefined,
+                                unconfUtxoInfo: this.lastTxid === undefined ? {
                                     initTxInputs: this.transact.inputs
-                                },
+                                } : undefined,
                                 higherAmountUtxos: true,
                                 excludeUtxos: this.lastTxChangeOutputPos >= 0 ? Util.txoutToString({
                                     txid: this.lastTxid,

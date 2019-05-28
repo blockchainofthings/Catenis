@@ -224,6 +224,7 @@ IssueAssetTransaction.prototype.buildTransaction = function () {
 
         // Prepare to add Colored Coins asset issuing input
         const devAssetIssueAddrFundSource = new FundSource(devAssetIssueAddr, {
+            useUnconfirmedUtxo: true,
             unconfUtxoInfo: {
                 initTxInputs: this.ccTransact.inputs
             }
@@ -318,6 +319,7 @@ IssueAssetTransaction.prototype.buildTransaction = function () {
 
         // Now, allocate UTXOs to pay for tx expense
         const payTxFundSource = new FundSource(this.issuingDevice.client.ctnNode.payTxExpenseAddr.listAddressesInUse(), {
+            useUnconfirmedUtxo: true,
             unconfUtxoInfo: {
                 initTxInputs: this.ccTransact.inputs
             },

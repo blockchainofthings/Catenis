@@ -353,10 +353,13 @@ SpendServiceCreditTransaction.prototype.payForService = function (client, servic
             //  Note: recall that txs that are to replace a previous tx as per RBF must NOT spend any new unconfirmed UTXOs
             Catenis.logger.DEBUG('>>>>>> About to allocate funds for client service account credit line address inputs', {
                 ccFundSourceOptions: {
-                    unconfUtxoInfo: undefined,
+                    useUnconfirmedUtxo: false,
+                    selectUnconfUtxos: this.lastSentCcTransact === undefined ? CreditServiceAccTransaction.clientServAccCredLineAddrsUnconfUtxos(client.clientId) : undefined,
+                    unconfUtxoInfo: this.lastSentCcTransact === undefined || addUtxoTxInputs ? {
+                        initTxInputs: newCcTransact.inputs
+                    } : undefined,
                     higherAmountUtxos: true,
                     excludeUtxos: excludeUtxos,
-                    selectUnconfUtxos: this.lastSentCcTransact === undefined ? CreditServiceAccTransaction.clientServAccCredLineAddrsUnconfUtxos(client.clientId) : undefined,
                     addUtxoTxInputs: addUtxoTxInputs
                 },
                 servCredAmountToAllocate: servCredAmountToAllocate,
@@ -368,10 +371,13 @@ SpendServiceCreditTransaction.prototype.payForService = function (client, servic
                 }
             });
             const servAccCredFundSource = new CCFundSource(client.ctnNode.getServiceCreditAsset().ccAssetId, client.servAccCreditLineAddr.listAddressesInUse(), {
-                unconfUtxoInfo: undefined,
+                useUnconfirmedUtxo: false,
+                selectUnconfUtxos: this.lastSentCcTransact === undefined ? CreditServiceAccTransaction.clientServAccCredLineAddrsUnconfUtxos(client.clientId) : undefined,
+                unconfUtxoInfo: this.lastSentCcTransact === undefined || addUtxoTxInputs ? {
+                    initTxInputs: newCcTransact.inputs
+                } : undefined,
                 higherAmountUtxos: true,
                 excludeUtxos: excludeUtxos,
-                selectUnconfUtxos: this.lastSentCcTransact === undefined ? CreditServiceAccTransaction.clientServAccCredLineAddrsUnconfUtxos(client.clientId) : undefined,
                 addUtxoTxInputs: addUtxoTxInputs
             });
             const servAccCredAllocResult = servAccCredFundSource.allocateFund(servCredAmountToAllocate);
@@ -739,22 +745,24 @@ SpendServiceCreditTransaction.prototype.fundTransaction = function () {
                     if (payTxExpFundSource === undefined) {
                         Catenis.logger.DEBUG('>>>>>> Prepare to allocate funds to pay for spend service credit transaction expense', {
                             fundSourceOptions: {
-                                unconfUtxoInfo: this.lastSentCcTransact === undefined && this.spendServCredCtrl.numUnconfirmedSpendServCredTxs === 0 ? {
+                                useUnconfirmedUtxo: this.lastSentCcTransact === undefined && this.spendServCredCtrl.numUnconfirmedSpendServCredTxs === 0,
+                                selectUnconfUtxos: this.lastSentCcTransact === undefined ? this.spendServCredCtrl.terminalSpendServCredTxsChangeTxouts : undefined,
+                                unconfUtxoInfo: this.lastSentCcTransact === undefined || addUtxoTxInputs ? {
                                     initTxInputs: this.ccTransact.inputs
                                 } : undefined,
                                 higherAmountUtxos: true,
                                 excludeUtxos: excludeUtxos,
-                                selectUnconfUtxos: this.lastSentCcTransact === undefined ? this.spendServCredCtrl.terminalSpendServCredTxsChangeTxouts : undefined,
                                 addUtxoTxInputs: addUtxoTxInputs
                             }
                         });
                         payTxExpFundSource = new FundSource(Catenis.ctnHubNode.servPymtPayTxExpenseAddr.listAddressesInUse(), {
-                            unconfUtxoInfo: this.lastSentCcTransact === undefined && this.spendServCredCtrl.numUnconfirmedSpendServCredTxs === 0 ? {
+                            useUnconfirmedUtxo: this.lastSentCcTransact === undefined && this.spendServCredCtrl.numUnconfirmedSpendServCredTxs === 0,
+                            selectUnconfUtxos: this.lastSentCcTransact === undefined ? this.spendServCredCtrl.terminalSpendServCredTxsChangeTxouts : undefined,
+                            unconfUtxoInfo: this.lastSentCcTransact === undefined || addUtxoTxInputs ? {
                                 initTxInputs: this.ccTransact.inputs
                             } : undefined,
                             higherAmountUtxos: true,
                             excludeUtxos: excludeUtxos,
-                            selectUnconfUtxos: this.lastSentCcTransact === undefined ? this.spendServCredCtrl.terminalSpendServCredTxsChangeTxouts : undefined,
                             addUtxoTxInputs: addUtxoTxInputs
                         });
                     }

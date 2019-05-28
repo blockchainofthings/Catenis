@@ -474,13 +474,13 @@ Client.prototype.serviceAccountBalance = function (credFundSource, debtFundSourc
 
     if (servCredAsset !== undefined) {
         if (credFundSource === undefined) {
-            credFundSource = new CCFundSource(servCredAsset.ccAssetId, this.servAccCreditLineAddr.listAddressesInUse(), {unconfUtxoInfo: {}});
+            credFundSource = new CCFundSource(servCredAsset.ccAssetId, this.servAccCreditLineAddr.listAddressesInUse(), {useUnconfirmedUtxo: true});
         }
 
         balance = credFundSource.getBalance();
 
         if (debtFundSource === undefined) {
-            debtFundSource = new CCFundSource(servCredAsset.ccAssetId, this.servAccDebitLineAddr.listAddressesInUse(), {unconfUtxoInfo: {}})
+            debtFundSource = new CCFundSource(servCredAsset.ccAssetId, this.servAccDebitLineAddr.listAddressesInUse(), {useUnconfirmedUtxo: true})
         }
 
         balance -= debtFundSource.getBalance();
@@ -1403,7 +1403,7 @@ Client.allPrePaidClientsServiceAccountCreditLineBalance = function () {
     const servCredAsset = Catenis.ctnHubNode.getServiceCreditAsset();
 
     if (servCredAsset !== undefined) {
-        balance = new CCFundSource(servCredAsset.ccAssetId, Catenis.keyStore.listAllClientServiceAccountCreditLineAddressesInUse(Client.allActivePrePaidClientIndices()), {unconfUtxoInfo: {}}).getBalance();
+        balance = new CCFundSource(servCredAsset.ccAssetId, Catenis.keyStore.listAllClientServiceAccountCreditLineAddressesInUse(Client.allActivePrePaidClientIndices()), {useUnconfirmedUtxo: true}).getBalance();
     }
 
     return balance;

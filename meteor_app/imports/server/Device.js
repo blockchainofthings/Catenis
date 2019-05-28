@@ -282,7 +282,7 @@ Device.prototype.fundAddresses = function () {
 
         // If device main addresses already exist, check if their
         //  balance is as expected
-        const devMainAddrBalance = devMainAddresses.length > 0 ? new FundSource(devMainAddresses, {unconfUtxoInfo: {}}).getBalance(true) : undefined;
+        const devMainAddrBalance = devMainAddresses.length > 0 ? new FundSource(devMainAddresses, {useUnconfirmedUtxo: true}).getBalance(true) : undefined;
 
         if (devMainAddrBalance !== undefined && devMainAddrBalance > 0 && devMainAddrBalance !== devMainAddrDistribFund.totalAmount) {
             // Amount funded to device main addresses different than expected.
@@ -295,7 +295,7 @@ Device.prototype.fundAddresses = function () {
 
         // If device asset issuance addresses already exist, check if their
         //  balance is as expected
-        const assetIssuanceAddrBalance = assetIssuanceAddresses.length > 0 ? new FundSource(assetIssuanceAddresses, {unconfUtxoInfo: {}}).getBalance(true) : undefined;
+        const assetIssuanceAddrBalance = assetIssuanceAddresses.length > 0 ? new FundSource(assetIssuanceAddresses, {useUnconfirmedUtxo: true}).getBalance(true) : undefined;
 
         if (assetIssuanceAddrBalance !== undefined && assetIssuanceAddrBalance > 0 && assetIssuanceAddrBalance !== assetIssuanceAddrDistribFund.totalAmount) {
             // Amount funded to device asset issuance addresses different than expected.
@@ -357,7 +357,7 @@ Device.prototype.fixFundAddresses = function () {
             devMainAddrDistribFund = Service.distributeDeviceMainAddressFund();
 
         // If device main addresses already exist, check if their balance is as expected
-        const devMainAddrBalance = devMainAddresses.length > 0 ? new FundSource(devMainAddresses, {unconfUtxoInfo: {}}).getBalance(true) : undefined;
+        const devMainAddrBalance = devMainAddresses.length > 0 ? new FundSource(devMainAddresses, {useUnconfirmedUtxo: true}).getBalance(true) : undefined;
 
         if (devMainAddrBalance !== undefined && devMainAddrBalance > 0 && devMainAddrBalance !== devMainAddrDistribFund.totalAmount) {
             // Amount funded to device main addresses different than expected
@@ -396,7 +396,7 @@ Device.prototype.fixFundAddresses = function () {
         let devUnlockedAssetIssueAddrAmount = {};
 
         if (devUnlockedAssetIssueAddrs.length > 0) {
-            const addressBalance = new FundSource(devUnlockedAssetIssueAddrs, {unconfUtxoInfo: {}}).getBalancePerAddress(true);
+            const addressBalance = new FundSource(devUnlockedAssetIssueAddrs, {useUnconfirmedUtxo: true}).getBalancePerAddress(true);
 
             const expectAddrBalance = Service.deviceAssetProvisionCost;
 
@@ -445,7 +445,7 @@ Device.prototype.fixFundAddresses = function () {
             devAssetIssueAddrDistribFund = Service.distributeDeviceAssetIssuanceAddressFund();
 
         // If device asset issuance addresses already exist, check if their balance is as expected
-        const devAssetIssueAddrBalance = devAssetIssueAddrs.length > 0 ? new FundSource(devAssetIssueAddrs, {unconfUtxoInfo: {}}).getBalance(true) : undefined;
+        const devAssetIssueAddrBalance = devAssetIssueAddrs.length > 0 ? new FundSource(devAssetIssueAddrs, {useUnconfirmedUtxo: true}).getBalance(true) : undefined;
 
         if (devAssetIssueAddrBalance !== undefined && devAssetIssueAddrBalance > 0 && devAssetIssueAddrBalance !== devAssetIssueAddrDistribFund.totalAmount) {
             // Amount funded to device asset issuance addresses different than expected

@@ -110,6 +110,7 @@ FundTransaction.prototype.addPayingSource = function () {
 
     if (!this.fundsAllocated) {
         const fundSrc = new FundSource(Catenis.ctnHubNode.listFundingAddressesInUse(), {
+            useUnconfirmedUtxo: true,
             unconfUtxoInfo: {
                 initTxInputs: this.transact.inputs
             },

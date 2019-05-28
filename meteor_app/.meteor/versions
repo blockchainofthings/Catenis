@@ -53,7 +53,7 @@ meteor-base@1.4.0
 meteorhacks:picker@1.0.3
 meteortesting:browser-tests@1.0.0
 meteortesting:mocha@1.1.2
-meteortesting:mocha-core@1.0.1
+meteortesting:mocha-core@6.1.2
 meteortoys:allthings@4.0.0
 meteortoys:authenticate@4.0.0
 meteortoys:autopub@4.0.0

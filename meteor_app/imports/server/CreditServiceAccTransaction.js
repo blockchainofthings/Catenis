@@ -170,6 +170,7 @@ CreditServiceAccTransaction.prototype.buildTransaction = function () {
 
             // Prepare to add Colored Coins asset issuing input
             const servCredIssueAddrFundSource = new FundSource(servCredIssueAddr, {
+                useUnconfirmedUtxo: true,
                 unconfUtxoInfo: {
                     initTxInputs: this.ccTransact.inputs
                 }
@@ -259,6 +260,7 @@ CreditServiceAccTransaction.prototype.buildTransaction = function () {
 
             // Now, allocate UTXOs to pay for tx expense
             const payTxFundSource = new FundSource(this.client.ctnNode.listFundingAddressesInUse(), {
+                useUnconfirmedUtxo: true,
                 unconfUtxoInfo: {
                     initTxInputs: this.ccTransact.inputs
                 },

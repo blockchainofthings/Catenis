@@ -102,6 +102,7 @@ RedeemBcotTransaction.prototype.buildTransaction = function () {
         // Prepare to add system BCOT token sale stock address input
         const bcotSaleStockAddr = Catenis.ctnHubNode.getBcotSaleStockAddress();
         const bcotSaleStockAddrFundSource = new FundSource(bcotSaleStockAddr, {
+            useUnconfirmedUtxo: true,
             unconfUtxoInfo: {
                 initTxInputs: this.omniTransact.inputs
             }
@@ -149,6 +150,7 @@ RedeemBcotTransaction.prototype.buildTransaction = function () {
 
         // Now, allocate UTXOs to pay for tx expense
         const payTxFundSource = new FundSource(Catenis.ctnHubNode.listFundingAddressesInUse(), {
+            useUnconfirmedUtxo: true,
             unconfUtxoInfo: {
                 initTxInputs: this.omniTransact.inputs
             },

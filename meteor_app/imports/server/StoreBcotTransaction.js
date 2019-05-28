@@ -82,6 +82,7 @@ StoreBcotTransaction.prototype.buildTransaction = function () {
 
         // Prepare to add client BCOT payment address input
         const clientBcotPayAddFundSource = new FundSource(this.sendingAddress, {
+            useUnconfirmedUtxo: true,
             unconfUtxoInfo: {
                 initTxInputs: this.omniTransact.inputs
             }
@@ -119,6 +120,7 @@ StoreBcotTransaction.prototype.buildTransaction = function () {
 
         // Now, allocate UTXOs to pay for tx expense
         const payTxFundSource = new FundSource(this.client.ctnNode.listFundingAddressesInUse(), {
+            useUnconfirmedUtxo: true,
             unconfUtxoInfo: {
                 initTxInputs: this.omniTransact.inputs
             },
