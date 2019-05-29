@@ -44,7 +44,9 @@ const cfgSettings = {
     initVersion: wsNotifyMsgDispatcherConfig.get('initVersion'),
     availableVersions: wsNotifyMsgDispatcherConfig.get('availableVersions'),
     heartbeatInterval: wsNotifyMsgDispatcherConfig.get('heartbeatInterval'),
-    authMsgTimeout: wsNotifyMsgDispatcherConfig.get('authMsgTimeout')
+    authMsgTimeout: wsNotifyMsgDispatcherConfig.get('authMsgTimeout'),
+    notifyChannelOpenMsg: wsNotifyMsgDispatcherConfig.get('notifyChannelOpenMsg'),
+    ntfyChnOpnMsgMinVer: wsNotifyMsgDispatcherConfig.get('ntfyChnOpnMsgMinVer')
 };
 
 
@@ -307,7 +309,7 @@ function processIncomingMessage(ws, message) {
 
         let error;
 
-        // Make sure that this is a authentication message
+        // Make sure that this is an authentication message
         if (typeof message.data === 'string') {
             let parsedData;
 
@@ -334,6 +336,10 @@ function processIncomingMessage(ws, message) {
                     ws.ctnNotify.deviceId = authResult.device.deviceId;
                     Catenis.logger.TRACE('WebSocket notification message dispatcher - Client successfully authenticated', ws.ctnNotify);
                     saveAuthenticatedClientConnection.call(this, ws);
+
+                    if (this.dispatcherVer.gte(cfgSettings.ntfyChnOpnMsgMinVer)) {
+                        sendNotificationChannelOpenMessage(ws);
+                    }
 
                     return;
                 }
@@ -383,6 +389,30 @@ function saveAuthenticatedClientConnection(ws) {
     }
 }
 
+function sendNotificationChannelOpenMessage(ws) {
+    // Make sure the client connection is open
+    if (ws.readyState === WebSocket.OPEN) {
+        // Send message to client
+        ws.send(cfgSettings.notifyChannelOpenMsg, {
+            compress: false,
+            binary: false,
+            fin: true
+        }, () => {
+            Catenis.logger.TRACE('WebSocket notification message dispatcher - Notification channel open message has been sent to client', {
+                deviceId: ws.ctnNotify.deviceId,
+                eventName: ws.ctnNotify.eventName
+            });
+        });
+    }
+    else {
+        // Client connection not yet open; notification channel open message cannot be sent
+        Catenis.logger.DEBUG('WebSocket notification message dispatcher - Client connection not yet open; notification channel open message cannot be sent', {
+            deviceId: ws.ctnNotify.deviceId,
+            eventName: ws.ctnNotify.eventName
+        });
+    }
+}
+
 function clearClientConnection(ws) {
     // Make sure that client has already been authenticated
     if (ws.ctnNotify.deviceId !== undefined) {
@@ -420,6 +450,12 @@ function clearClientConnection(ws) {
             // Client connection being cleared not associated with any device
             Catenis.logger.DEBUG('WebSocket notification message dispatcher - client connection being cleared not associated with any device', ws.ctnNotify);
         }
+    }
+    else if (this.pendingAuthClientConnInfo.has(ws)) {
+        // Stop timeout and clear authentication pending indication
+        const connInfo = this.pendingAuthClientConnInfo.get(ws);
+        clearTimeout(connInfo.timeout);
+        this.pendingAuthClientConnInfo.delete(ws);
     }
 }
 

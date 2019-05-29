@@ -625,10 +625,14 @@
     "minNotifyServiceVer": "0.1",  // Minimum version of Catenis notification service that is supported by the WebSocket notification dispatcher
     "initVersion": "0.1",   // The initial version of the WebSocket notification message dispatcher
     "availableVersions": [    // List of all currently available versions of the WebSocket notification message dispatcher
-      "0.1"
+      "0.1",
+      "0.2"
     ],
     "heartbeatInterval": 30000,  // (30 sec.) Time interval, in milliseconds, for sending heartbeat ping package to client
-    "authMsgTimeout": 5000   // (5 sec.) Timeout, in milliseconds, for waiting on first message from client used to authenticate itself with the system
+    "authMsgTimeout": 5000,   // (5 sec.) Timeout, in milliseconds, for waiting on first message from client used to authenticate itself with the system
+    "notifyChannelOpenMsg": "NOTIFICATION_CHANNEL_OPEN",  // Contents of message sent to client as a response to a valid initial authentication message to indicate that the notification channel is successfully open and is ready to send notifications
+                                                          //  NOTE: this message is NOT sent by earlier versions of the WebSocket notification message dispatcher (see 'ntfyChnOpnMsgMinVer' config param below)
+    "ntfyChnOpnMsgMinVer": "0.2"  // Minimal version of the WebSocket notification message dispatcher that will send the "notification channel open" response message
   },
   // Parameters pertaining to C3NodeClient module
   "c3NodeClient": {
