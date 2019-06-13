@@ -26,6 +26,8 @@ const btcTickerConfig = config.get('bitcoinTicker');
 const cfgSettings = {
     apiUrl: btcTickerConfig.get('apiUrl'),
     bitcoinTickerEndPoint: btcTickerConfig.get('bitcoinTickerEndPoint'),
+    apiKey: btcTickerConfig.get('apiKey'),
+    localAddress: btcTickerConfig.get('localAddress'),
     timeout: btcTickerConfig.get('timeout')
 };
 
@@ -34,13 +36,27 @@ const cfgSettings = {
 //
 
 // BitcoinTicker function class
-export function BitcoinTicker(timeout) {
+export function BitcoinTicker(apiKey, localAddress, timeout) {
     // Prepare for request
     this.baseApiUrl = cfgSettings.apiUrl;
     this.btcTickerEndPointUrl = this.baseApiUrl + cfgSettings.bitcoinTickerEndPoint;
-    this.callOptions = {
-        timeout: timeout !== undefined ? timeout : cfgSettings.timeout
-    };
+    this.callOptions = {};
+
+    if (apiKey) {
+        this.callOptions.headers = {
+            'X-ba-key': apiKey
+        }
+    }
+
+    if (localAddress) {
+        this.callOptions.npmRequestOptions = {
+            localAddress: localAddress
+        };
+    }
+
+    if (timeout) {
+        this.callOptions.timeout = timeout;
+    }
 }
 
 
@@ -90,7 +106,7 @@ BitcoinTicker.prototype.getTicker = function () {
 
 BitcoinTicker.initialize = function () {
     Catenis.logger.TRACE('BitcoinTicker initialization');
-    Catenis.btcTicker = new BitcoinTicker();
+    Catenis.btcTicker = new BitcoinTicker(cfgSettings.apiKey, cfgSettings.localAddress, cfgSettings.timeout);
 };
 
 
