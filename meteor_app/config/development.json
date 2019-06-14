@@ -52,7 +52,7 @@
   },
   // Parameters pertaining to ParseRequestBody module
   "parseRequestBody": {
-    "reqBodySizeLimit": 1  // Maximum size, in MB, of data that can be received as the body of requests to the Catenis API methods
+    "reqBodySizeLimit": 15  // Maximum size, in MB, of data that can be received as the body of requests to the Catenis API methods
   },
   // Parameters pertaining to BitcoinFees module
   "bitcoinFees": {
@@ -114,8 +114,10 @@
   // Parameters pertaining to Message module
   "message": {
     "minSizeReadDataChunk": 10,  // (10 bytes) Mininum size, in bytes, of data chunks that should be used when reading message in chunks
-    "maxSizeReadDataChunk": 7864320  // (7.5 MB) Maximum size, in bytes, of data chunks that should be used when reading message in chunks
-                                     //  Note: this must be below 8 MB (for the development environment) due to MongoDB's oplog size of 8 MB set for Meteor's development environment
+    "maxSizeReadDataChunk": 15728640  // (15 MB) Maximum size, in bytes, of data chunks that should be used when reading message in chunks
+                                      //  Note: the size of the oplog (oplog.rs collection) of Meteor's development environment mongo DB must
+                                      //   be resized to support the default value of this setting (15 MB) since its default size is 8 MB.
+                                      //   Refer to the README file to do so
   },
   // Parameters pertaining to C3NodeClient module
   "c3NodeClient": {
