@@ -100,7 +100,7 @@ function processReceivedMessage(data) {
         }
 
         // Get send message transaction and received message onto local database
-        const sendMsgTransact = SendMessageTransaction.checkTransaction(Transaction.fromTxid(data.txid));
+        const sendMsgTransact = SendMessageTransaction.checkTransaction(Transaction.fromTxid(data.txid), null);
         const message = saveReceivedMessage(sendMsgTransact, blockMessage);
 
         if (blockMessage) {

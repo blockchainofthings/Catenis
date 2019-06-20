@@ -3616,7 +3616,7 @@ Device.getMessageProofOfOrigin = function (txid, deviceId, textToSign) {
     }
 
     // First, check if this is a send message transaction
-    const sendMsgTransact = SendMessageTransaction.checkTransaction(transact);
+    const sendMsgTransact = SendMessageTransaction.checkTransaction(transact, null);
     let result = undefined;
 
     if (sendMsgTransact !== undefined) {
@@ -3650,7 +3650,7 @@ Device.getMessageProofOfOrigin = function (txid, deviceId, textToSign) {
     }
     else {
         // If not, then check if this is a log message transaction
-        const logMsgTransact = LogMessageTransaction.checkTransaction(transact);
+        const logMsgTransact = LogMessageTransaction.checkTransaction(transact, null);
 
         if (logMsgTransact === undefined) {
             // Throw exception indicating generic error condition (no Catenis tx ou device mismatch)

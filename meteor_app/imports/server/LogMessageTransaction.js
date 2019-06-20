@@ -270,7 +270,8 @@ LogMessageTransaction.prototype.revertOutputAddresses = function () {
 //
 //  Arguments:
 //    transact: [Object] - Object of type Transaction identifying the transaction to be checked
-//    messageDuplex: [Object(MessageDuplex)] - (optional) Stream used to write retrieve message's contents
+//    messageDuplex: [Object(MessageDuplex)] - (optional) Stream used to write retrieve message's contents. Set it
+//                                              to NULL to avoid that the message's contents be retrieved
 //
 //  Return:
 //    - If transaction is not valid: undefined
@@ -306,18 +307,20 @@ LogMessageTransaction.checkTransaction = function (transact, messageDuplex) {
 
         if ((devMainRefundChangeAddr1 === undefined || (devMainRefundChangeAddr1.address !== devMainAddr.address && areAddressesFromSameDevice(devMainRefundChangeAddr1.addrInfo, devMainAddr.addrInfo))) &&
                 (devMainRefundChangeAddr2 === undefined || (devMainRefundChangeAddr2.address !== devMainAddr.address && areAddressesFromSameDevice(devMainRefundChangeAddr2.addrInfo, devMainAddr.addrInfo)))) {
-            // Prepare to retrieve message's contents
+            // Prepare to retrieve message
 
-            // If no message stream passed, create a new one to write the retrieved message's contents to a buffer
-            messageDuplex = messageDuplex ? messageDuplex : new BufferMessageDuplex();
+            if (messageDuplex !== null) {
+                // If no message stream passed, create a new one to write the retrieved message's contents to a buffer
+                messageDuplex = messageDuplex ? messageDuplex : new BufferMessageDuplex();
 
-            // Note: if for some reason the message is actually encrypted but no private keys are available,
-            //      possibly because the (origin) device belongs to a different Catenis node, the message
-            //      shall be retrieved in its encrypted form
-            if (devMainAddr.addrInfo.cryptoKeys.hasPrivateKey()) {
-                // Assume that message needs to be decrypted. Note: it shall be unset when the message
-                //  data is parsed and the message is actually not encrypted
-                messageDuplex.setDecryption(devMainAddr.addrInfo.cryptoKeys);
+                // Note: if for some reason the message is actually encrypted but no private keys are available,
+                //      possibly because the (origin) device belongs to a different Catenis node, the message
+                //      shall be retrieved in its encrypted form
+                if (devMainAddr.addrInfo.cryptoKeys.hasPrivateKey()) {
+                    // Assume that message needs to be decrypted. Note: it shall be unset when the message
+                    //  data is parsed and the message is actually not encrypted
+                    messageDuplex.setDecryption(devMainAddr.addrInfo.cryptoKeys);
+                }
             }
 
             // Parse the message data from the null data output
