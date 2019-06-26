@@ -1458,14 +1458,14 @@ BaseBlockchainAddress.getAddressOfIssuedBlockchainAddress = function (docIssuedA
 // Place obsolete address back onto local key storage
 BaseBlockchainAddress.retrieveObsoleteAddress = function (addr, checkAddressInUse = false) {
     // Try to retrieve obsolete address from database
-    const docIssuedAddrs = Catenis.db.collection.IssuedBlockchainAddress.find({addrHash: hashAddress(addr), status: 'obsolete'}, {fields: {type: 1, path: 1, addrIndex: 1}}).fetch();
+    let docIssuedAddrs = Catenis.db.collection.IssuedBlockchainAddress.find({addrHash: hashAddress(addr), status: 'obsolete'}, {fields: {type: 1, path: 1, addrIndex: 1}}).fetch();
     let result = false;
 
     if (docIssuedAddrs.length > 0) {
         if (docIssuedAddrs.length === 1) {
             // Only one doc/rec returned
-            let docIssuedAddr = docIssuedAddrs[0],
-                addrKeys = Catenis.keyStore.getCryptoKeysByPath(docIssuedAddr.path);
+            const docIssuedAddr = docIssuedAddrs[0];
+            let addrKeys = Catenis.keyStore.getCryptoKeysByPath(docIssuedAddr.path);
 
             // Make sure that address is not yet in local key storage
             if (addrKeys === null) {
@@ -1495,18 +1495,37 @@ BaseBlockchainAddress.retrieveObsoleteAddress = function (addr, checkAddressInUs
                     }
                 }
             }
+            else {
+                // Address is already in local key storage. Proceed as if address has been retrieved
+
+                // Make sure that this is the correct address (though unlikely, not impossible
+                //  since there could be one or more addresses with the same hash)
+                if (addrKeys.getAddress() === addr) {
+                    result = true;
+
+                    // Check if address is in use
+                    if (checkAddressInUse && BaseBlockchainAddress.isAddressWithBalance(addr)) {
+                        // If so, reset address status back to expired
+                        let classInstance = BaseBlockchainAddress.getInstance({type: docIssuedAddr.type, pathParts: KeyStore.getPathParts(docIssuedAddr)});
+
+                        if (classInstance) {
+                            resetObsoleteAddress.call(classInstance, addr, docIssuedAddr);
+                        }
+                    }
+                }
+            }
         }
         else {
             // More than one doc/rec returned (though unlikely, not impossible since there could
             //  be one or more addresses with the same hash).
             //  Find the one that has the correct address
             if (docIssuedAddrs.find((docIssuedAddr) => {
-                let addrKeys = Catenis.keyStore.getCryptoKeysByPath(docIssuedAddr.path);
+                let addrKeys = Catenis.keyStore.getCryptoKeysByPath(docIssuedAddr.path),
+                    found = false;
 
                 // Make sure that address is not yet in local key storage
                 if (addrKeys === null) {
-                    let classInstance = BaseBlockchainAddress.getInstance({type: docIssuedAddr.type, pathParts: KeyStore.getPathParts(docIssuedAddr)}),
-                        found = false;
+                    let classInstance = BaseBlockchainAddress.getInstance({type: docIssuedAddr.type, pathParts: KeyStore.getPathParts(docIssuedAddr)});
 
                     if (classInstance !== null) {
                         // Store address in local key storage making sure that it is set as obsolete,
@@ -1531,11 +1550,71 @@ BaseBlockchainAddress.retrieveObsoleteAddress = function (addr, checkAddressInUs
                             }
                         }
                     }
-
-                    return found;
                 }
+                else {
+                    // Address is already in local key storage. Proceed as if address has been retrieved
+
+                    // Make sure that this is the correct address (though unlikely, not impossible
+                    //  since there could be one or more addresses with the same hash)
+                    if (addrKeys.getAddress() === addr) {
+                        found = true;
+
+                        // Check if address is in use
+                        if (checkAddressInUse && BaseBlockchainAddress.isAddressWithBalance(addr)) {
+                            // If so, reset address status back to expired
+                            let classInstance = BaseBlockchainAddress.getInstance({type: docIssuedAddr.type, pathParts: KeyStore.getPathParts(docIssuedAddr)});
+
+                            if (classInstance) {
+                                resetObsoleteAddress.call(classInstance, addr, docIssuedAddr);
+                            }
+                        }
+                    }
+                }
+
+                return found;
             }) !== undefined) {
                 result = true;
+            }
+        }
+    }
+    else {
+        // No obsolete address entry found for the given address. Check if address status has
+        //  possibly been reset to 'expired' in the mean time
+        docIssuedAddrs = Catenis.db.collection.IssuedBlockchainAddress.find({
+            addrHash: hashAddress(addr),
+            status: 'expired'
+        }, {
+            fields: {
+                path: 1
+            }
+        }).fetch();
+
+        if (docIssuedAddrs.length > 0) {
+            if (docIssuedAddrs.length === 1) {
+                // Only one doc/rec returned
+                const docIssuedAddr = docIssuedAddrs[0];
+                let addrKeys;
+
+                if ((addrKeys = Catenis.keyStore.getCryptoKeysByPath(docIssuedAddr.path)) !== null
+                        && addrKeys.getAddress() === addr) {
+                    // Address is already in local key storage. Indicate as if address has been retrieved
+                    result = true;
+                }
+            }
+            else {
+                // More than one doc/rec returned (though unlikely, not impossible since there could
+                //  be one or more addresses with the same hash).
+                //  Find the one that has the correct address
+                if (docIssuedAddrs.find((docIssuedAddr) => {
+                    // Check if address is already in local key storage, and return indicating
+                    //  as if address has been retrieved if so
+                    let addrKeys;
+
+                    return (addrKeys = Catenis.keyStore.getCryptoKeysByPath(docIssuedAddr.path)) !== null
+                        && addrKeys.getAddress() === addr;
+                }) !== undefined) {
+                    result = true;
+                }
             }
         }
     }
@@ -1548,7 +1627,7 @@ BaseBlockchainAddress.retrieveObsoleteAddressByPath = function (addrPath, checkA
     let result = false;
 
     // Try to retrieve obsolete address from database
-    const docIssuedAddr = Catenis.db.collection.IssuedBlockchainAddress.findOne({
+    let docIssuedAddr = Catenis.db.collection.IssuedBlockchainAddress.findOne({
         path: addrPath,
         status: 'obsolete'
     }, {
@@ -1560,7 +1639,6 @@ BaseBlockchainAddress.retrieveObsoleteAddressByPath = function (addrPath, checkA
     });
 
     if (docIssuedAddr) {
-        // Only one doc/rec returned
         const addrKeys = Catenis.keyStore.getCryptoKeysByPath(addrPath);
 
         // Make sure that address is not yet in local key storage
@@ -1586,6 +1664,37 @@ BaseBlockchainAddress.retrieveObsoleteAddressByPath = function (addrPath, checkA
                     }
                 }
             }
+        }
+        else {
+            // Address is already in local key storage. Proceed as if address has been retrieved
+            result = true;
+
+            if (checkAddressInUse) {
+                const addr = addrKeys.getAddress();
+
+                // Check if address is in use
+                if (BaseBlockchainAddress.isAddressWithBalance(addr)) {
+                    // If so, reset address status back to expired
+                    let classInstance = BaseBlockchainAddress.getInstance({type: docIssuedAddr.type, pathParts: KeyStore.getPathParts(docIssuedAddr)});
+
+                    if (classInstance) {
+                        resetObsoleteAddress.call(classInstance, addr, docIssuedAddr);
+                    }
+                }
+            }
+        }
+    }
+    else {
+        // No obsolete address entry found for the given address. Check if address status has
+        //  possibly been reset to 'expired' in the mean time
+        docIssuedAddr = Catenis.db.collection.IssuedBlockchainAddress.findOne({
+            path: addrPath,
+            status: 'expired'
+        });
+
+        if (docIssuedAddr && Catenis.keyStore.getCryptoKeysByPath(addrPath) !== null) {
+            // Address is already in local key storage. Indicate as if address has been retrieved
+            result = true;
         }
     }
 
