@@ -268,7 +268,7 @@ CryptoKeys.prototype.signText = function (textToSign) {
         throw new Meteor.Error('ctn_crypto_no_priv_key', 'Cannot sign message; missing private key');
     }
 
-    return bitcoinMessage.sign(textToSign, Catenis.application.cryptoNetwork.messagePrefix, this.getPrivateKey(), this.keyPair.compressed);
+    return bitcoinMessage.sign(textToSign, this.getPrivateKey(), this.keyPair.compressed);
 };
 
 
