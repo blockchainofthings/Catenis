@@ -76,6 +76,14 @@ FlowRouter.route('/clientaccount', {
     }
 });
 
+FlowRouter.route('/clientaccount/2fa', {
+    action: function () {
+        BlazeLayout.render('clientLayout',{
+            page: 'clientTwoFactorAuthentication'
+        });
+    }
+});
+
 FlowRouter.route('/licenses/', {
     action: function (params, queryParams) {
         BlazeLayout.render('clientLayout', {
@@ -219,6 +227,14 @@ FlowRouter.route('/admin/useraccount', {
     action: function () {
         BlazeLayout.render('adminLayout',{
             page: 'userAccount'
+        });
+    }
+});
+
+FlowRouter.route('/admin/useraccount/2fa', {
+    action: function () {
+        BlazeLayout.render('adminLayout',{
+            page: 'twoFactorAuthentication'
         });
     }
 });

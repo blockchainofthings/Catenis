@@ -879,5 +879,13 @@
   // Parameters pertaining to BufferMessageDuplex module
   "bufferMessageDuplex": {
     "highWaterMark": 1048576  // (1 MB) The maximum number of bytes to store in the internal buffer of stream before ceasing to read from the underlying resource
+  },
+  // Parameters pertaining to TwoFactorAuthentication module
+  "twoFactorAuthentication": {
+    "tokenValidationWindow": {
+      "previous": 0,  // Number of previous time steps the tokens of which should still be considered valid
+      "future": 0    // Number of future time steps the tokens of which should still be considered valid
+    },
+    "userVerificationInterval": 3600  // (1 hour) Time, in seconds, within which it is expected that the user verifies a newly issued secret key
   }
 }

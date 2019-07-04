@@ -82,6 +82,9 @@ import { BcotSaleAllocationUI } from './adminUI/BcotSaleAllocationUI';
 import { BcotSaleStockUI } from './adminUI/BcotSaleStockUI';
 import { ProvisionalMessage } from './ProvisionalMessage';
 import { CachedMessage } from './CachedMessage';
+import { TwoFactorAuthEventEmitter } from './TwoFactorAuthEventEmitter';
+import { TwoFactorAuthenticationUI } from './adminUI/TwoFactorAuthenticationUI';
+import { ClientTwoFactorAuthenticationUI } from './clientUI/ClientTwoFactorAuthenticationUI';
 // TEST - begin
 //import { TestCatenisColoredCoins } from './test/TestCatenisColoredCoins';
 // TEST - end
@@ -174,6 +177,8 @@ Meteor.startup(function () {
             ReceiveAsset.initialize();
             SpendServiceCredit.initialize();
             TransactionMonitor.initialize();
+            TwoFactorAuthEventEmitter.initialize();
+            ClientTwoFactorAuthenticationUI.initialize();
 
             // Initialize all notification message dispatchers first
             WebSocketNotifyMsgDispatcher.initialize();
@@ -203,6 +208,7 @@ Meteor.startup(function () {
             ClientsUI.initialize();
             ServiceBillingUI.initialize();
             DevicesUI.initialize();
+            TwoFactorAuthenticationUI.initialize();
 
             ClientUI.initialize();
             ClientLicensesUI.initialize();

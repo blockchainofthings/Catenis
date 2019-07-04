@@ -43,6 +43,7 @@ Catenis.db = {
         BcotProduct: new Mongo.Collection('BcotProduct'),
         BcotSaleAllocation: new Mongo.Collection('BcotSaleAllocation'),
         BcotSaleStockInfo: new Mongo.Collection('BcotSaleStockInfo'),
-        BcotSaleStockReplenishedAmount: new Mongo.Collection('BcotSaleStockReplenishedAmount')
+        BcotSaleStockReplenishedAmount: new Mongo.Collection('BcotSaleStockReplenishedAmount'),
+        TwoFactorAuthInfo: new Mongo.Collection('TwoFactorAuthInfo')
     }
 };

@@ -7,7 +7,7 @@
                         {{#unless Template.subscriptionsReady}}
                             <p style="color:lightgray; margin-top:1em">Loading...</p>
                         {{else}}
-                            <h2>User Account</h2>
+                            <h2>USER ACCOUNT</h2>
                             <div class="row" style="padding-top:1em">
                                 <div class="col-lg-12">
                                     <table class="table table-striped text-left">
@@ -22,6 +22,13 @@
                                         </tr>
                                         </tbody>
                                     </table>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-3">
+                                </div>
+                                <div class="col-md-6">
+                                    <a id="lnkManageLicenses" href="/admin/useraccount/2fa" role="button" class="btn-login btn paddedBtn fullWidth">Two-Factor Authentication</a>
                                 </div>
                             </div>
                         {{/unless}}

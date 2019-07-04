@@ -47,9 +47,22 @@ AccountsTemplates.addFields([{
     displayName: 'Username',
     required: true,
     minLength: 5,
-}, pwd]);
+}, pwd, {
+    _id: 'verify_code',
+    type: 'text',
+    displayName: 'Verification code',
+    placeholder: 'Verification code',
+    required: false,
+    minLength: 6,
+    maxLength: 6,
+    re: /\d{0,6}/,
+    continuousValidation: true,
+    visible: ['signIn']
+}]);
 
 AccountsTemplates.configure({
+    loginFunc: twoFactorAuthLogin,
+
     defaultLayout: 'loginLayout',
     defaultLayoutRegions: {},
     defaultContentRegion: 'page',
@@ -108,6 +121,60 @@ AccountsTemplates.configureRoute('enrollAccount', {
         redirectHome();
     }
 });
+
+function twoFactorAuthLogin(user, password, formData, state) {
+    return Meteor.loginWithPassword(user, password, function (error) {
+        if (error && (error instanceof Meteor.Error) && error.error === 'verify-code-required') {
+            // Error indicating that a verification code should be provided for
+            //  two-factor authentication
+            if (!formData.verify_code) {
+                // Hide username and password input fields, and show verification code input field
+                $('#at-field-username_and_email')[0].style.display = 'none';
+                $('#at-field-password')[0].style.display = 'none';
+
+                // Change title and button label
+                $('h2 ~ div.at-form').prev('h2').text('TWO-FACTOR VERIFICATION');
+                $('button#login-submit').text('VERIFY');
+
+                const verifyCodeField = $('#at-field-verify_code')[0];
+
+                verifyCodeField.style.display = 'inline';
+                verifyCodeField.focus();
+            }
+            else {
+                // Verification code has been provided. Call custom two-factor authentication
+                //  login method
+                if (typeof user === 'string') {
+                    user = !user.includes('@') ? {username: user} : {email: user};
+                }
+
+                Accounts.callLoginMethod({
+                    methodArguments: [{
+                        user: user,
+                        twoFactorAuthPassword: Accounts._hashPassword(password),
+                        verifyCode: formData.verify_code
+                    }],
+                    userCallback: (error) => {
+                        if (error && (error instanceof Meteor.Error) && error.error === 403
+                                && typeof error.reason === 'string' && /^Invalid code\. .*/.test(error.reason)) {
+                            // Clear verification code input field
+                            const verifyCodeField = $('#at-field-verify_code')[0];
+
+                            verifyCodeField.value = '';
+                            verifyCodeField.focus();
+                        }
+
+                        AccountsTemplates.submitCallback(error, state);
+                    }
+                });
+            }
+
+            return;
+        }
+
+        AccountsTemplates.submitCallback(error, state);
+    });
+}
 
 // Method called after accounts template form is submitted
 //

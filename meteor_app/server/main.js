@@ -8,4 +8,5 @@ import '/imports/server/ConfigEmail';
 import { Logger } from '../imports/server/Logger';
 Logger.initialize();
 import '/imports/both/ConfigAccounts';
+import '/imports/server/ConfigAccountsServer';
 import '/imports/server/Startup';

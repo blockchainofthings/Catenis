@@ -26,6 +26,7 @@ import { ClientUtil } from '../ClientUtil';
 import './ClientAccountTemplate.html';
 
 // Import dependent templates
+import './ClientTwoFactorAuthenticationTemplate.js';
 
 
 // Definition of module (private) functions

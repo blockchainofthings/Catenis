@@ -803,3 +803,7 @@ div#fixWrapper {
     border: none;
     padding: 4px;
 }
+
+input#at-field-verify_code {
+    display:none
+}

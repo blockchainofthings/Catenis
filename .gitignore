@@ -4,6 +4,7 @@
 /meteor_app/config/development-*.json
 /meteor_app/config/local-*.json
 /meteor_app/seed*.dat
+/meteor_app/packages/
 /mongodb_dump/
 /build/
 Debug.js

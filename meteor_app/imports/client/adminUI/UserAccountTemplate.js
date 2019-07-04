@@ -24,6 +24,7 @@ import { Template } from 'meteor/templating';
 import './UserAccountTemplate.html';
 
 // Import dependent templates
+import './TwoFactorAuthenticationTemplate.js';
 
 
 // Definition of module (private) functions
