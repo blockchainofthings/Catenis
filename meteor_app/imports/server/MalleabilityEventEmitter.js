@@ -35,7 +35,7 @@ export class MalleabilityEventEmitter extends events.EventEmitter {
 //
 
 MalleabilityEventEmitter.prototype.notifyTxidChanged = function (originalTxid, modifiedTxid) {
-    this.emit(MalleabilityEventEmitter.notifyEvent.name, {
+    this.emit(MalleabilityEventEmitter.notifyEvent.txid_changed.name, {
         originalTxid: originalTxid,
         modifiedTxid: modifiedTxid
     });
