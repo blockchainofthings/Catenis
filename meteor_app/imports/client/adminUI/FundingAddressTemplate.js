@@ -27,6 +27,20 @@ import qrcodelib from '../thirdParty/qrcode.min';
 import './FundingAddressTemplate.html';
 
 
+// Definition of module (private) functions
+//
+
+function generateQRCode(template) {
+    const cnvCtrl = document.getElementById('cnvQRCode');
+
+    qrcodelib.toCanvas(cnvCtrl, template.data.fundAddress, function (error) {
+        if (error) {
+            console.error('Error generating QRcode: ' + error);
+        }
+    });
+}
+
+
 // Module code
 //
 
@@ -36,13 +50,8 @@ Template.fundingAddress.onCreated(function () {
 });
 
 Template.fundingAddress.onRendered(function () {
-    const cnvCtrl = document.getElementById('cnvQRCode');
-
-    qrcodelib.toCanvas(cnvCtrl, 'bitcoin:' + this.data.fundAddress, function (error) {
-        if (error) {
-            console.log('Error generating QRcode: ' + error);
-        }
-    });
+    generateQRCode(this);
+    this.rendered = true;
 });
 
 Template.fundingAddress.onDestroyed(function () {
@@ -52,6 +61,15 @@ Template.fundingAddress.onDestroyed(function () {
 });
 
 Template.fundingAddress.helpers({
+    _fundAddress() {
+        const template = Template.instance();
+
+        if (template.rendered) {
+            generateQRCode(template);
+        }
+
+        return template.data.fundAddress;
+    },
     receivedAmount() {
         return Catenis.db.collection.ReceivedAmount.findOne(1);
     }

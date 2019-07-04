@@ -27,6 +27,20 @@ import qrcodelib from '../thirdParty/qrcode.min';
 import './BcotPaymentAddressTemplate.html';
 
 
+// Definition of module (private) functions
+//
+
+function generateQRCode(template) {
+    const cnvCtrl = document.getElementById('cnvQRCode');
+
+    qrcodelib.toCanvas(cnvCtrl, template.data.bcotPayAddress, function (error) {
+        if (error) {
+            console.error('Error generating QRcode: ' + error);
+        }
+    });
+}
+
+
 // Module code
 //
 
@@ -36,13 +50,8 @@ Template.bcotPaymentAddress.onCreated(function () {
 });
 
 Template.bcotPaymentAddress.onRendered(function () {
-    const cnvCtrl = document.getElementById('cnvQRCode');
-
-    qrcodelib.toCanvas(cnvCtrl, 'bitcoin:' + this.data.bcotPayAddress, function (error) {
-        if (error) {
-            console.log('Error generating QRcode: ' + error);
-        }
-    });
+    generateQRCode(this);
+    this.rendered = true;
 });
 
 Template.bcotPaymentAddress.onDestroyed(function () {
@@ -52,6 +61,15 @@ Template.bcotPaymentAddress.onDestroyed(function () {
 });
 
 Template.bcotPaymentAddress.helpers({
+    _bcotPayAddress() {
+        const template = Template.instance();
+
+        if (template.rendered) {
+            generateQRCode(template);
+        }
+
+        return template.data.bcotPayAddress;
+    },
     receivedBcotAmount() {
         return Catenis.db.collection.ReceivedBcotAmount.findOne(1);
     }

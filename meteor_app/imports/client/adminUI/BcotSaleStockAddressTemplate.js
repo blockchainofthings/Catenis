@@ -27,6 +27,20 @@ import qrcodelib from '../thirdParty/qrcode.min';
 import './BcotSaleStockAddressTemplate.html';
 
 
+// Definition of module (private) functions
+//
+
+function generateQRCode(template) {
+    const cnvCtrl = document.getElementById('cnvQRCode');
+
+    qrcodelib.toCanvas(cnvCtrl, template.data.saleStockAddress, function (error) {
+        if (error) {
+            console.error('Error generating QRcode: ' + error);
+        }
+    });
+}
+
+
 // Module code
 //
 
@@ -36,13 +50,8 @@ Template.bcotSaleStockAddress.onCreated(function () {
 });
 
 Template.bcotSaleStockAddress.onRendered(function () {
-    const cnvCtrl = document.getElementById('cnvQRCode');
-
-    qrcodelib.toCanvas(cnvCtrl, 'bitcoin:' + this.data.saleStockAddress, function (error) {
-        if (error) {
-            console.log('Error generating QRcode: ' + error);
-        }
-    });
+    generateQRCode(this);
+    this.rendered = true;
 });
 
 Template.bcotSaleStockAddress.onDestroyed(function () {
@@ -52,6 +61,15 @@ Template.bcotSaleStockAddress.onDestroyed(function () {
 });
 
 Template.bcotSaleStockAddress.helpers({
+    _saleStockAddress() {
+        const template = Template.instance();
+
+        if (template.rendered) {
+            generateQRCode(template);
+        }
+
+        return template.data.saleStockAddress;
+    },
     replenishedAmount() {
         return Catenis.db.collection.BcotSaleStockReplenishedAmount.findOne(1);
     }

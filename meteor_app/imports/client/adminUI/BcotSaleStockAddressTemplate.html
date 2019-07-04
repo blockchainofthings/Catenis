@@ -1,7 +1,7 @@
 <template name="bcotSaleStockAddress">
     <p>Send BCOT tokens to the address shown below to replenish the stock of BCOT tokens for Catenis credit sale.</p>
     <canvas id="cnvQRCode"></canvas>
-    <p style="font-size:14pt; font-weight:300; margin-top:0.5em">{{saleStockAddress}}</p>
+    <p style="font-size:14pt; font-weight:300; margin-top:0.5em">{{_saleStockAddress}}</p>
     <p style="margin-top: 1em; margin-bottom:0.5em">Monitoring of incoming BCOT tokens:</p>
     {{#unless Template.subscriptionsReady}}
         <p style="color:lightgray; margin-top:1em">Loading...</p>
