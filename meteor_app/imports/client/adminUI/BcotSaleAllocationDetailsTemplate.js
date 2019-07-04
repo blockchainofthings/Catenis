@@ -79,16 +79,16 @@ Template.bcotSaleAllocationDetails.onDestroyed(function () {
 });
 
 Template.bcotSaleAllocationDetails.events({
-    'click #btnDismissInfo'(events, template) {
+    'click #btnDismissInfo'(event, template) {
         // Clear info message
         template.state.set('infoMsg', undefined);
         template.state.set('infoMsgType', 'info');
     },
-    'click #btnDismissError'(events, template) {
+    'click #btnDismissError'(event, template) {
         // Clear error message
         template.state.set('errMsgs', []);
     },
-    'click #btnGenReport'(events, template) {
+    'click #btnGenReport'(event, template) {
         event.preventDefault();
 
         // Clear alerts
@@ -132,7 +132,7 @@ Template.bcotSaleAllocationDetails.events({
             }
         });
     },
-    'click #lnkDownload'(events, template) {
+    'click #lnkDownload'(event, template) {
         // Show reminder to set BCOT allocation in use
         alert('REMINDER: please do not forget to set the BCOT sale allocation IN USE after the report is successfully downloaded.');
 
@@ -144,7 +144,7 @@ Template.bcotSaleAllocationDetails.events({
         // Indicate that report has been downloaded
         template.state.set('reportDownloaded', true);
     },
-    'click #btnSetAllocationInUse'(events, template) {
+    'click #btnSetAllocationInUse'(event, template) {
         event.preventDefault();
 
         // Reset alert messages
@@ -156,7 +156,7 @@ Template.bcotSaleAllocationDetails.events({
         $('#itxSetAllocationInUseConfirmation')[0].value = '';
         template.state.set('displaySetAllocationInUseSubmitButton', 'none');
     },
-    'hidden.bs.modal #divSetAllocationInUse'(events, template) {
+    'hidden.bs.modal #divSetAllocationInUse'(event, template) {
         // Modal panel has been closed. Make sure that button used to
         //  activate modal panel is not selected
         $('#btnSetAllocationInUse').blur();

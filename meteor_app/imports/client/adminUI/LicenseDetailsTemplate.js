@@ -62,16 +62,16 @@ Template.licenseDetails.onDestroyed(function () {
 });
 
 Template.licenseDetails.events({
-    'click #btnDismissInfo'(events, template) {
+    'click #btnDismissInfo'(event, template) {
         // Clear info message
         template.state.set('infoMsg', undefined);
         template.state.set('infoMsgType', 'info');
     },
-    'click #btnDismissError'(events, template) {
+    'click #btnDismissError'(event, template) {
         // Clear error message
         template.state.set('errMsgs', []);
     },
-    'click #btnActivateLicense'(events, template) {
+    'click #btnActivateLicense'(event, template) {
         event.preventDefault();
 
         // Reset alert messages
@@ -83,7 +83,7 @@ Template.licenseDetails.events({
         $('#itxActivateLicenseConfirmation')[0].value = '';
         template.state.set('displayActivateLicenseSubmitButton', 'none');
     },
-    'hidden.bs.modal #divActivateLicense'(events, template) {
+    'hidden.bs.modal #divActivateLicense'(event, template) {
         // Modal panel has been closed. Make sure that button used to
         //  activate modal panel is not selected
         $('#btnActivateLicense').blur();
@@ -140,7 +140,7 @@ Template.licenseDetails.events({
             $('#divActivateLicense').modal('hide');
         }
     },
-    'click #btnDeactivateLicense'(events, template) {
+    'click #btnDeactivateLicense'(event, template) {
         event.preventDefault();
 
         // Reset alert messages
@@ -152,7 +152,7 @@ Template.licenseDetails.events({
         $('#itxDeactivateLicenseConfirmation')[0].value = '';
         template.state.set('displayDeactivateLicenseSubmitButton', 'none');
     },
-    'hidden.bs.modal #divDeactivateLicense'(events, template) {
+    'hidden.bs.modal #divDeactivateLicense'(event, template) {
         // Modal panel has been closed. Make sure that button used to
         //  activate modal panel is not selected
         $('#btnDeactivateLicense').blur();

@@ -89,24 +89,24 @@ Template.editDevice.onDestroyed(function () {
 });
 
 Template.editDevice.events({
-    'click #btnDismissInfo'(events, template) {
+    'click #btnDismissInfo'(event, template) {
         // Clear info message
         template.state.set('infoMsg', undefined);
         template.state.set('infoMsgType', 'info');
     },
-    'click #btnDismissError'(events, template) {
+    'click #btnDismissError'(event, template) {
         // Clear error message
         template.state.set('errMsgs', []);
     },
-    'change #txtDeviceName'(events, template) {
+    'change #txtDeviceName'(event, template) {
         // Indicate that form field has changed
         template.state.set('fieldsChanged', true);
     },
-    'change #txtProdUniqueId'(events, template) {
+    'change #txtProdUniqueId'(event, template) {
         // Indicate that form field has changed
         template.state.set('fieldsChanged', true);
     },
-    'change #cbxPublic'(events, template) {
+    'change #cbxPublic'(event, template) {
         // Indicate that form field has changed
         template.state.set('fieldsChanged', true);
     },

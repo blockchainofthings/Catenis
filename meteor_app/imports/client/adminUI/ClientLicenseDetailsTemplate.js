@@ -111,20 +111,20 @@ Template.clientLicenseDetails.onDestroyed(function () {
 });
 
 Template.clientLicenseDetails.events({
-    'click #btnDismissInfo'(events, template) {
+    'click #btnDismissInfo'(event, template) {
         // Clear info message
         template.state.set('infoMsg', undefined);
         template.state.set('infoMsgType', 'info');
     },
-    'click #btnDismissError'(events, template) {
+    'click #btnDismissError'(event, template) {
         // Clear error message
         template.state.set('errMsgs', []);
     },
-    'click #btnDismissNewLicenseError'(events, template) {
+    'click #btnDismissNewLicenseError'(event, template) {
         // Clear error message
         template.state.set('newLicenseErrMsgs', []);
     },
-    'click #btnRenewLicense'(events, template) {
+    'click #btnRenewLicense'(event, template) {
         event.preventDefault();
 
         // Reset alert messages
@@ -150,7 +150,7 @@ Template.clientLicenseDetails.events({
         template.state.set('displayRenewLicenseConfirm', 'none');
         template.state.set('displayRenewLicenseSubmitButton', 'none');
     },
-    'click #btnUpgradeLicense'(events, template) {
+    'click #btnUpgradeLicense'(event, template) {
         event.preventDefault();
 
         // Reset alert messages
@@ -180,7 +180,7 @@ Template.clientLicenseDetails.events({
             template.state.set('newLicenseErrMsgs', ['No licenses available for doing upgrade']);
         }
     },
-    'click #btnExpireLicense'(events, template) {
+    'click #btnExpireLicense'(event, template) {
         event.preventDefault();
 
         // Reset alert messages
@@ -193,7 +193,7 @@ Template.clientLicenseDetails.events({
         $('#itxExpireConfirmation')[0].value = '';
         template.state.set('displayExpireLicenseSubmitButton', 'none');
     },
-    'hidden.bs.modal #divRenewClientLicense'(events, template) {
+    'hidden.bs.modal #divRenewClientLicense'(event, template) {
         // Modal panel has been closed. Make sure that button used to
         //  activate modal panel is not selected
         $('#btnRenewLicense').blur();
@@ -217,7 +217,7 @@ Template.clientLicenseDetails.events({
             template.state.set('displayRenewLicenseSubmitButton', 'none');
         }
     },
-    'hidden.bs.modal #divUpgradeClientLicense'(events, template) {
+    'hidden.bs.modal #divUpgradeClientLicense'(event, template) {
         // Modal panel has been closed. Make sure that button used to
         //  activate modal panel is not selected
         $('#btnUpgradeLicense').blur();
@@ -241,7 +241,7 @@ Template.clientLicenseDetails.events({
             template.state.set('displayUpgradeLicenseSubmitButton', 'none');
         }
     },
-    'hidden.bs.modal #divExpireClientLicense'(events, template) {
+    'hidden.bs.modal #divExpireClientLicense'(event, template) {
         // Modal panel has been closed. Make sure that button used to
         //  activate modal panel is not selected
         $('#btnExpireLicense').blur();

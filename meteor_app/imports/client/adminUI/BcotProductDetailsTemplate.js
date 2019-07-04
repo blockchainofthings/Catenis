@@ -61,16 +61,16 @@ Template.bcotProductDetails.onDestroyed(function () {
 });
 
 Template.bcotProductDetails.events({
-    'click #btnDismissInfo'(events, template) {
+    'click #btnDismissInfo'(event, template) {
         // Clear info message
         template.state.set('infoMsg', undefined);
         template.state.set('infoMsgType', 'info');
     },
-    'click #btnDismissError'(events, template) {
+    'click #btnDismissError'(event, template) {
         // Clear error message
         template.state.set('errMsgs', []);
     },
-    'click #btnDeactivateProduct'(events, template) {
+    'click #btnDeactivateProduct'(event, template) {
         event.preventDefault();
 
         // Reset alert messages
@@ -82,7 +82,7 @@ Template.bcotProductDetails.events({
         $('#itxDeactivateProductConfirmation')[0].value = '';
         template.state.set('displayDeactivateProductSubmitButton', 'none');
     },
-    'hidden.bs.modal #divDeactivateProduct'(events, template) {
+    'hidden.bs.modal #divDeactivateProduct'(event, template) {
         // Modal panel has been closed. Make sure that button used to
         //  activate modal panel is not selected
         $('#btnDeactivateProduct').blur();

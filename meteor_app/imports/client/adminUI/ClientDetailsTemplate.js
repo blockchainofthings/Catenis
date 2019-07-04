@@ -91,16 +91,16 @@ Template.clientDetails.onDestroyed(function () {
 });
 
 Template.clientDetails.events({
-    'click #btnDismissInfo'(events, template) {
+    'click #btnDismissInfo'(event, template) {
         // Clear info message
         template.state.set('infoMsg', undefined);
         template.state.set('infoMsgType', 'info');
     },
-    'click #btnDismissError'(events, template) {
+    'click #btnDismissError'(event, template) {
         // Clear error message
         template.state.set('errMsgs', []);
     },
-    'click #btnResendEnrollment'(events, template) {
+    'click #btnResendEnrollment'(event, template) {
         event.preventDefault();
 
         // Reset alert messages
@@ -112,7 +112,7 @@ Template.clientDetails.events({
         $('#itxResendEnrollmentConfirmation')[0].value = '';
         template.state.set('displayResendEnrollmentSubmitButton', 'none');
     },
-    'hidden.bs.modal #divResendEnrollment'(events, template) {
+    'hidden.bs.modal #divResendEnrollment'(event, template) {
         // Modal panel has been closed. Make sure that button used to
         //  activate modal panel is not selected
         $('#btnResendEnrollment').blur();
@@ -171,7 +171,7 @@ Template.clientDetails.events({
             $('#divResendEnrollment').modal('hide');
         }
     },
-    'click #btnResetPassword'(events, template) {
+    'click #btnResetPassword'(event, template) {
         event.preventDefault();
 
         // Reset alert messages
@@ -183,7 +183,7 @@ Template.clientDetails.events({
         $('#itxResetPasswordConfirmation')[0].value = '';
         template.state.set('displayResetPasswordSubmitButton', 'none');
     },
-    'hidden.bs.modal #divResetPassword'(events, template) {
+    'hidden.bs.modal #divResetPassword'(event, template) {
         // Modal panel has been closed. Make sure that button used to
         //  activate modal panel is not selected
         $('#btnResetPassword').blur();
@@ -242,7 +242,7 @@ Template.clientDetails.events({
             $('#divResetPassword').modal('hide');
         }
     },
-    'click #btnApiAccessSecret'(events, template) {
+    'click #btnApiAccessSecret'(event, template) {
         new ClipboardJS('#btnCopyClipboard', {
             container: document.getElementById('divClientAPIAccessSecret')
         });
@@ -272,14 +272,14 @@ Template.clientDetails.events({
             }
         });
     },
-    'hidden.bs.modal #divClientAPIAccessSecret'(events, template) {
+    'hidden.bs.modal #divClientAPIAccessSecret'(event, template) {
         // Modal panel has been closed. Delete local copy of API access secret
         template.state.set('apiAccessSecret', undefined);
 
         // Make sure that button used to activate modal panel is not selected
         $('#btnApiAccessSecret').blur();
     },
-    'click #btnResetApiAccessSecret'(events, template) {
+    'click #btnResetApiAccessSecret'(event, template) {
         // Reset reset all devices too option
         $('#cbxResetAllDevices')[0].checked = false;
 
@@ -292,7 +292,7 @@ Template.clientDetails.events({
 
         return false;
     },
-    'click #btnCancelResetApiAccessSecret'(events, template) {
+    'click #btnCancelResetApiAccessSecret'(event, template) {
         // Hide form to reset API access secret
         template.state.set('displayResetApiAccessSecretForm', 'none');
 
@@ -355,7 +355,7 @@ Template.clientDetails.events({
             $('#btnCancelResetApiAccessSecret').click();
         }
     },
-    'click #btnDeleteClient'(events, template) {
+    'click #btnDeleteClient'(event, template) {
         event.preventDefault();
 
         // Reset alert messages
@@ -367,7 +367,7 @@ Template.clientDetails.events({
         $('#itxDeleteClientConfirmation')[0].value = '';
         template.state.set('displayDeleteClientSubmitButton', 'none');
     },
-    'hidden.bs.modal #divDeleteClient'(events, template) {
+    'hidden.bs.modal #divDeleteClient'(event, template) {
         // Modal panel has been closed. Make sure that button used to
         //  activate modal panel is not selected
         $('#btnDeleteClient').blur();

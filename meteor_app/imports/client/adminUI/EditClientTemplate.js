@@ -147,32 +147,32 @@ Template.editClient.onDestroyed(function () {
 });
 
 Template.editClient.events({
-    'click #btnDismissInfo'(events, template) {
+    'click #btnDismissInfo'(event, template) {
         // Clear info message
         template.state.set('infoMsg', undefined);
         template.state.set('infoMsgType', 'info');
     },
-    'click #btnDismissError'(events, template) {
+    'click #btnDismissError'(event, template) {
         // Clear error message
         template.state.set('errMsgs', []);
     },
-    'change #txtClientName'(events, template) {
+    'change #txtClientName'(event, template) {
         // Indicate that form field has changed
         template.state.set('fieldsChanged', true);
     },
-    'change #txtFirstName'(events, template) {
+    'change #txtFirstName'(event, template) {
         // Indicate that form field has changed
         template.state.set('fieldsChanged', true);
     },
-    'change #txtLastName'(events, template) {
+    'change #txtLastName'(event, template) {
         // Indicate that form field has changed
         template.state.set('fieldsChanged', true);
     },
-    'change #selTimeZone'(events, template) {
+    'change #selTimeZone'(event, template) {
         // Indicate that form field has changed
         template.state.set('fieldsChanged', true);
     },
-    'change #txtEmail'(events, template) {
+    'change #txtEmail'(event, template) {
         // Indicate that form field has changed
         template.state.set('fieldsChanged', true);
 
@@ -180,20 +180,20 @@ Template.editClient.events({
         template.state.set('needsConfirmEmail', true);
         template.state.set('emailConfirmed', false);
     },
-    'change #txtCompanyName'(events, template) {
+    'change #txtCompanyName'(event, template) {
         // Indicate that form field has changed
         template.state.set('fieldsChanged', true);
     },
-    'click #btnDismissErrorConfirmEmail'(events, template) {
+    'click #btnDismissErrorConfirmEmail'(event, template) {
         template.state.set('emailMismatch', false);
     },
-    'click #btnConfirmEmail'(events, template) {
+    'click #btnConfirmEmail'(event, template) {
         // Prepare for e-mail confirmation
-        events.target.form.confirmEmail.value = '';
+        event.target.form.confirmEmail.value = '';
 
         template.state.set('emailMismatch', false);
     },
-    'hidden.bs.modal #divConfirmEmail'(events, template) {
+    'hidden.bs.modal #divConfirmEmail'(event, template) {
         // Modal panel has been closed. Clear confirm email form
         template.find('#frmEditClient').confirmEmail.value = '';
 

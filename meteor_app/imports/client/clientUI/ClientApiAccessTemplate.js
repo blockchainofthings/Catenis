@@ -56,16 +56,16 @@ Template.clientApiAccess.onDestroyed(function () {
 });
 
 Template.clientApiAccess.events({
-    'click #btnDismissInfo'(events, template) {
+    'click #btnDismissInfo'(event, template) {
         // Clear info message
         template.state.set('infoMsg', undefined);
         template.state.set('infoMsgType', 'info');
     },
-    'click #btnDismissError'(events, template) {
+    'click #btnDismissError'(event, template) {
         // Clear error message
         template.state.set('errMsgs', []);
     },
-    'click #btnDefaultApiAccessSecret'(events, template) {
+    'click #btnDefaultApiAccessSecret'(event, template) {
         new ClipboardJS('#btnCopyClipboard', {
             container: document.getElementById('divClientAPIAccessSecret')
         });
@@ -95,14 +95,14 @@ Template.clientApiAccess.events({
             }
         });
     },
-    'hidden.bs.modal #divClientAPIAccessSecret'(events, template) {
+    'hidden.bs.modal #divClientAPIAccessSecret'(event, template) {
         // Modal panel has been closed. Delete local copy of API access secret
         template.state.set('apiAccessSecret', undefined);
 
         // Make sure that button used to activate modal panel is not selected
         $('#btnDefaultApiAccessSecret').blur();
     },
-    'click #btnResetApiAccessSecret'(events, template) {
+    'click #btnResetApiAccessSecret'(event, template) {
         // Reset reset all devices too option
         $('#cbxResetAllDevices')[0].checked = false;
 
@@ -115,7 +115,7 @@ Template.clientApiAccess.events({
 
         return false;
     },
-    'click #btnCancelResetApiAccessSecret'(events, template) {
+    'click #btnCancelResetApiAccessSecret'(event, template) {
         // Hide form to reset API access secret
         template.state.set('displayResetApiAccessSecretForm', 'none');
 

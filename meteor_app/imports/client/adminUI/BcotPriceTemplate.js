@@ -99,16 +99,16 @@ Template.bcotPrice.onDestroyed(function () {
 });
 
 Template.bcotPrice.events({
-    'click #btnDismissInfo'(events, template) {
+    'click #btnDismissInfo'(event, template) {
         // Clear info message
         template.state.set('infoMsg', undefined);
         template.state.set('infoMsgType', 'info');
     },
-    'click #btnDismissError'(events, template) {
+    'click #btnDismissError'(event, template) {
         // Clear error message
         template.state.set('errMsgs', []);
     },
-    'click #btnDismissNewPriceError'(events, template) {
+    'click #btnDismissNewPriceError'(event, template) {
         // Clear error message
         template.state.set('newPriceErrMsgs', []);
     },
@@ -148,7 +148,7 @@ Template.bcotPrice.events({
         template.state.set('displayUpdatePriceConfirm', 'none');
         template.state.set('displayUpdatePriceSubmitButton', 'none');
     },
-    'hidden.bs.modal #divUpdatePrice'(events, template) {
+    'hidden.bs.modal #divUpdatePrice'(event, template) {
         // Modal panel has been closed. Make sure that button used to
         //  activate modal panel is not selected
         $('#btnUpdatePrice').blur();

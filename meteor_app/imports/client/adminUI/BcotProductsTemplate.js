@@ -175,7 +175,7 @@ Template.bcotProducts.events({
         template.state.set('displayCreateProductConfirm', 'none');
         template.state.set('displayCreateProductSubmitButton', 'none');
     },
-    'hidden.bs.modal #divCreateProduct'(events, template) {
+    'hidden.bs.modal #divCreateProduct'(event, template) {
         // Modal panel has been closed. Make sure that button used to
         //  activate modal panel is not selected
         $('#btnCreateProduct').blur();
@@ -217,10 +217,10 @@ Template.bcotProducts.events({
         // Show do action button
         template.state.set('displayDoCreateProductButton', 'inline');
     },
-    'change #cbxCustomSku'(events, template) {
-        events.stopPropagation();
+    'change #cbxCustomSku'(event, template) {
+        event.stopPropagation();
 
-        if (events.target.checked) {
+        if (event.target.checked) {
             // Show SKU field
             template.state.set('showSku', true);
         }
@@ -229,7 +229,7 @@ Template.bcotProducts.events({
             template.state.set('showSku', false);
         }
     },
-    'click #btnDismissInfo'(events, template) {
+    'click #btnDismissInfo'(event, template) {
         // Clear info message
         template.state.set('infoMsg', undefined);
         template.state.set('infoMsgType', 'info');
@@ -237,11 +237,11 @@ Template.bcotProducts.events({
         // Clear action success product row
         template.state.set('actionSuccessProduct', undefined);
     },
-    'click #btnDismissError'(events, template) {
+    'click #btnDismissError'(event, template) {
         // Clear error message
         template.state.set('errMsgs', []);
     },
-    'click #btnDismissCreateProductError'(events, template) {
+    'click #btnDismissCreateProductError'(event, template) {
         // Clear error message
         template.state.set('createProductErrMsgs', []);
     },

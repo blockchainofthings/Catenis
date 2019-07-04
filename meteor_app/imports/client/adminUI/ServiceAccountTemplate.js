@@ -98,16 +98,16 @@ Template.serviceAccount.onDestroyed(function () {
 });
 
 Template.serviceAccount.events({
-    'click #btnDismissInfo'(events, template) {
+    'click #btnDismissInfo'(event, template) {
         // Clear info message
         template.state.set('infoMsg', undefined);
         template.state.set('infoMsgType', 'info');
     },
-    'click #btnDismissError'(events, template) {
+    'click #btnDismissError'(event, template) {
         // Clear error message
         template.state.set('errMsgs', []);
     },
-    'click #btnAddCredit'(events, template) {
+    'click #btnAddCredit'(event, template) {
         // Reset alert messages
         template.state.set('errMsgs', []);
         template.state.set('infoMsg', undefined);
@@ -164,7 +164,7 @@ Template.serviceAccount.events({
         template.state.set('displayRedeemBcotConfirm', 'none');
         template.state.set('displayRedeemBcotSubmitButton', 'none');
     },
-    'hidden.bs.modal #divRedeemBcot'(events, template) {
+    'hidden.bs.modal #divRedeemBcot'(event, template) {
         // Modal panel has been closed. Make sure that button used to
         //  activate modal panel is not selected
         $('#btnRedeemBcot').blur();
@@ -204,7 +204,7 @@ Template.serviceAccount.events({
         // Show do action button
         template.state.set('displayDoRedeemBcotButton', 'inline');
     },
-    'click #btnDismissRedeemBcotError'(events, template) {
+    'click #btnDismissRedeemBcotError'(event, template) {
         // Clear error message
         template.state.set('redeemBcotErrMsgs', []);
     },

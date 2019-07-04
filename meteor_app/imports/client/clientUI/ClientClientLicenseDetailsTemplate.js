@@ -83,7 +83,7 @@ Template.clientClientLicenseDetails.onDestroyed(function () {
 });
 
 Template.clientClientLicenseDetails.events({
-    'click #btnDismissInfo'(events, template) {
+    'click #btnDismissInfo'(event, template) {
         // Clear info message
         template.state.set('infoMsg', undefined);
         template.state.set('infoMsgType', 'info');

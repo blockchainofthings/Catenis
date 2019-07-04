@@ -98,11 +98,11 @@ Template.newClient.onDestroyed(function () {
 });
 
 Template.newClient.events({
-    'click #btnDismissError'(events, template) {
+    'click #btnDismissError'(event, template) {
         // Clear error message
         template.state.set('errMsgs', []);
     },
-    'click #btnDismissInfo'(events, template) {
+    'click #btnDismissInfo'(event, template) {
         // Clear info message
         template.state.set('infoMsg', undefined);
         template.state.set('infoMsgType', 'info');
@@ -115,7 +115,7 @@ Template.newClient.events({
             usernameCtrl.value = clientName.replace(/(\s|[^\w])+/g,'_');
         }
     },
-    'change #txtEmail'(events, template) {
+    'change #txtEmail'(event, template) {
         // Indicate that form field has changed
         template.state.set('fieldsChanged', true);
 
@@ -123,16 +123,16 @@ Template.newClient.events({
         template.state.set('needsConfirmEmail', true);
         template.state.set('emailConfirmed', false);
     },
-    'click #btnDismissErrorConfirmEmail'(events, template) {
+    'click #btnDismissErrorConfirmEmail'(event, template) {
         template.state.set('emailMismatch', false);
     },
-    'click #btnConfirmEmail'(events, template) {
+    'click #btnConfirmEmail'(event, template) {
         // Prepare for e-mail confirmation
-        events.target.form.confirmEmail.value = '';
+        event.target.form.confirmEmail.value = '';
 
         template.state.set('emailMismatch', false);
     },
-    'hidden.bs.modal #divConfirmEmail'(events, template) {
+    'hidden.bs.modal #divConfirmEmail'(event, template) {
         // Modal panel has been closed. Clear confirm email form
         template.find('#frmNewClient').confirmEmail.value = '';
 

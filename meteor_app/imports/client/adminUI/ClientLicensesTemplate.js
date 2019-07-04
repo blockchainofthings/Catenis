@@ -209,7 +209,7 @@ Template.clientLicenses.events({
         template.state.set('displayAddLicenseConfirm', 'none');
         template.state.set('displayAddLicenseSubmitButton', 'none');
     },
-    'hidden.bs.modal #divAddClientLicense'(events, template) {
+    'hidden.bs.modal #divAddClientLicense'(event, template) {
         // Modal panel has been closed. Make sure that button used to
         //  activate modal panel is not selected
         $('#btnAddClientLicense').blur();
@@ -272,10 +272,10 @@ Template.clientLicenses.events({
 
         template.state.set('addMoreRestrictiveLicense', moreRestrictiveLicense);
     },
-    'change #cbxOverrideValidity'(events, template) {
-        events.stopPropagation();
+    'change #cbxOverrideValidity'(event, template) {
+        event.stopPropagation();
 
-        if (events.target.checked) {
+        if (event.target.checked) {
             // Show end date field
             template.state.set('showAddLicenseEndDate', true);
         }
@@ -284,7 +284,7 @@ Template.clientLicenses.events({
             template.state.set('showAddLicenseEndDate', false);
         }
     },
-    'click #btnDismissInfo'(events, template) {
+    'click #btnDismissInfo'(event, template) {
         // Clear info message
         template.state.set('infoMsg', undefined);
         template.state.set('infoMsgType', 'info');
@@ -292,11 +292,11 @@ Template.clientLicenses.events({
         // Clear action success client license row
         template.state.set('actionSuccessClientLicense', undefined);
     },
-    'click #btnDismissError'(events, template) {
+    'click #btnDismissError'(event, template) {
         // Clear error message
         template.state.set('errMsgs', []);
     },
-    'click #btnDismissAddLicenseError'(events, template) {
+    'click #btnDismissAddLicenseError'(event, template) {
         // Clear error message
         template.state.set('addLicenseErrMsgs', []);
     },

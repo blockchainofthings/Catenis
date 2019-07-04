@@ -78,16 +78,16 @@ Template.deviceDetails.onDestroyed(function () {
 });
 
 Template.deviceDetails.events({
-    'click #btnDismissInfo'(events, template) {
+    'click #btnDismissInfo'(event, template) {
         // Clear info message
         template.state.set('infoMsg', undefined);
         template.state.set('infoMsgType', 'info');
     },
-    'click #btnDismissError'(events, template) {
+    'click #btnDismissError'(event, template) {
         // Clear error message
         template.state.set('errMsgs', []);
     },
-    'click #btnApiAccessSecret'(events, template) {
+    'click #btnApiAccessSecret'(event, template) {
         new ClipboardJS('#btnCopyClipboard', {
             container: document.getElementById('divDeviceAPIAccessSecret')
         });
@@ -112,14 +112,14 @@ Template.deviceDetails.events({
             }
         });
     },
-    'hidden.bs.modal #divDeviceAPIAccessSecret'(events, template) {
+    'hidden.bs.modal #divDeviceAPIAccessSecret'(event, template) {
         // Modal panel has been closed. Delete local copy of API access secret
         template.state.set('apiAccessSecret', undefined);
 
         // Make sure that button used to activate modal panel is not selected
         $('#btnApiAccessSecret').blur();
     },
-    'click #btnResetApiAccessSecret'(events, template) {
+    'click #btnResetApiAccessSecret'(event, template) {
         // Reset reset to client default API access secret option
         $('#cbxResetToClientDefault')[0].checked = false;
 
@@ -132,7 +132,7 @@ Template.deviceDetails.events({
 
         return false;
     },
-    'click #btnCancelResetApiAccessSecret'(events, template) {
+    'click #btnCancelResetApiAccessSecret'(event, template) {
         // Hide form to reset API access secret
         template.state.set('displayResetApiAccessSecretForm', 'none');
 
@@ -189,7 +189,7 @@ Template.deviceDetails.events({
             $('#btnCancelResetApiAccessSecret').click();
         }
     },
-    'click #btnDeactivateDevice'(events, template) {
+    'click #btnDeactivateDevice'(event, template) {
         event.preventDefault();
 
         // Reset alert messages
@@ -201,7 +201,7 @@ Template.deviceDetails.events({
         $('#itxDeactivateDeviceConfirmation')[0].value = '';
         template.state.set('displayDeactivateDeviceSubmitButton', 'none');
     },
-    'hidden.bs.modal #divDeactivateDevice'(events, template) {
+    'hidden.bs.modal #divDeactivateDevice'(event, template) {
         // Modal panel has been closed. Make sure that button used to
         //  activate modal panel is not selected
         $('#btnDeactivateDevice').blur();
@@ -249,7 +249,7 @@ Template.deviceDetails.events({
             }
         });
     },
-    'click #btnActivateDevice'(events, template) {
+    'click #btnActivateDevice'(event, template) {
         event.preventDefault();
 
         // Reset alert messages
@@ -261,7 +261,7 @@ Template.deviceDetails.events({
         $('#itxActivateDeviceConfirmation')[0].value = '';
         template.state.set('displayActivateDeviceSubmitButton', 'none');
     },
-    'hidden.bs.modal #divActivateDevice'(events, template) {
+    'hidden.bs.modal #divActivateDevice'(event, template) {
         // Modal panel has been closed. Make sure that button used to
         //  activate modal panel is not selected
         $('#btnActivateDevice').blur();
@@ -309,7 +309,7 @@ Template.deviceDetails.events({
             }
         });
     },
-    'click #btnDeleteDevice'(events, template) {
+    'click #btnDeleteDevice'(event, template) {
         event.preventDefault();
 
         // Reset alert messages
@@ -321,7 +321,7 @@ Template.deviceDetails.events({
         $('#itxDeleteDeviceConfirmation')[0].value = '';
         template.state.set('displayDeleteDeviceSubmitButton', 'none');
     },
-    'hidden.bs.modal #divDeleteDevice'(events, template) {
+    'hidden.bs.modal #divDeleteDevice'(event, template) {
         // Modal panel has been closed. Make sure that button used to
         //  activate modal panel is not selected
         $('#btnDeleteDevice').blur();

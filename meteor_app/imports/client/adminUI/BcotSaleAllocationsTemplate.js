@@ -195,7 +195,7 @@ Template.bcotSaleAllocations.events({
         template.state.set('displayCreateAllocationConfirm', 'none');
         template.state.set('displayCreateAllocationSubmitButton', 'none');
     },
-    'hidden.bs.modal #divCreateAllocation'(events, template) {
+    'hidden.bs.modal #divCreateAllocation'(event, template) {
         // Modal panel has been closed. Make sure that button used to
         //  activate modal panel is not selected
         $('#btnCreateAllocation').blur();
@@ -240,7 +240,7 @@ Template.bcotSaleAllocations.events({
         // Show do action button
         template.state.set('displayDoCreateAllocationButton', 'inline');
     },
-    'click #btnDismissInfo'(events, template) {
+    'click #btnDismissInfo'(event, template) {
         // Clear info message
         template.state.set('infoMsg', undefined);
         template.state.set('infoMsgType', 'info');
@@ -248,11 +248,11 @@ Template.bcotSaleAllocations.events({
         // Clear action success allocation row
         template.state.set('actionSuccessAllocation', undefined);
     },
-    'click #btnDismissError'(events, template) {
+    'click #btnDismissError'(event, template) {
         // Clear error message
         template.state.set('errMsgs', []);
     },
-    'click #btnDismissCreateAllocationError'(events, template) {
+    'click #btnDismissCreateAllocationError'(event, template) {
         // Clear error message
         template.state.set('createAllocationErrMsgs', []);
     },

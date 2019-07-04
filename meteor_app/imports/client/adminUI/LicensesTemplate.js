@@ -293,7 +293,7 @@ Template.licenses.events({
         template.state.set('displayCreateLicenseConfirm', 'none');
         template.state.set('displayCreateLicenseSubmitButton', 'none');
     },
-    'hidden.bs.modal #divCreateLicense'(events, template) {
+    'hidden.bs.modal #divCreateLicense'(event, template) {
         // Modal panel has been closed. Make sure that button used to
         //  activate modal panel is not selected
         $('#btnCreateLicense').blur();
@@ -339,10 +339,10 @@ Template.licenses.events({
         // Show do action button
         template.state.set('displayDoCreateLicenseButton', 'inline');
     },
-    'change #cbxSupportProvisionalRenewal'(events, template) {
-        events.stopPropagation();
+    'change #cbxSupportProvisionalRenewal'(event, template) {
+        event.stopPropagation();
 
-        if (events.target.checked) {
+        if (event.target.checked) {
             // Show provisional renewal in days field
             template.state.set('showProvisionalRenewalDays', true);
         }
@@ -351,7 +351,7 @@ Template.licenses.events({
             template.state.set('showProvisionalRenewalDays', false);
         }
     },
-    'click #btnDismissInfo'(events, template) {
+    'click #btnDismissInfo'(event, template) {
         // Clear info message
         template.state.set('infoMsg', undefined);
         template.state.set('infoMsgType', 'info');
@@ -359,11 +359,11 @@ Template.licenses.events({
         // Clear action success license row
         template.state.set('actionSuccessLicense', undefined);
     },
-    'click #btnDismissError'(events, template) {
+    'click #btnDismissError'(event, template) {
         // Clear error message
         template.state.set('errMsgs', []);
     },
-    'click #btnDismissCreateLicenseError'(events, template) {
+    'click #btnDismissCreateLicenseError'(event, template) {
         // Clear error message
         template.state.set('createLicenseErrMsgs', []);
     },
