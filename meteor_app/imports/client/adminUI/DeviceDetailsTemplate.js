@@ -75,6 +75,10 @@ Template.deviceDetails.onDestroyed(function () {
     if (this.clientDevicesInfoSubs) {
         this.clientDevicesInfoSubs.stop();
     }
+
+    if (this.clipboard) {
+        this.clipboard.destroy();
+    }
 });
 
 Template.deviceDetails.events({
@@ -88,7 +92,7 @@ Template.deviceDetails.events({
         template.state.set('errMsgs', []);
     },
     'click #btnApiAccessSecret'(event, template) {
-        new ClipboardJS('#btnCopyClipboard', {
+        template.clipboard = new ClipboardJS('#btnCopyClipboard', {
             container: document.getElementById('divDeviceAPIAccessSecret')
         });
 
@@ -111,6 +115,18 @@ Template.deviceDetails.events({
                 template.state.set('apiAccessSecret', apiAccessSecret);
             }
         });
+    },
+    'click #btnCopyClipboard'(event, template) {
+        const $button = $(event.currentTarget);
+
+        $button.addClass('tooltipped tooltipped-s');
+        $button.attr('aria-label', 'Copied!');
+    },
+    'mouseleave #btnCopyClipboard'(event, template) {
+        const $button = $(event.currentTarget);
+
+        $button.removeAttr('aria-label');
+        $button.removeClass('tooltipped tooltipped-s');
     },
     'hidden.bs.modal #divDeviceAPIAccessSecret'(event, template) {
         // Modal panel has been closed. Delete local copy of API access secret
