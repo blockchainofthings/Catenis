@@ -12,7 +12,8 @@
 // Internal node modules
 //import util from 'util';
 // Third-party node modules
-//import config from 'config';
+import ClipboardJS from 'clipboard';
+import moment from 'moment';
 // Meteor packages
 import { Meteor } from 'meteor/meteor';
 import { Template } from 'meteor/templating';
@@ -51,6 +52,20 @@ function validateFormData(form, errMsgs) {
     return !hasError ? token : undefined;
 }
 
+function checkRecoveryCodesAvailable() {
+    const recoveryCodes = Catenis.db.collection.TwoFactorAuthInfo.findOne(1).recoveryCodes;
+
+    return recoveryCodes !== undefined && recoveryCodes.length > 0;
+}
+
+function generateRecoveryCodesDoc(recoveryCodes) {
+    const header = 'Catenis Two-factor Authentication Recovery Codes\n(Generated on ' + moment().format('lll') + ')\n\n';
+
+    return recoveryCodes.reduce((text, code) => {
+        return text + '[  ] ' + code + '\n';
+    }, header);
+}
+
 
 // Module code
 //
@@ -65,6 +80,7 @@ Template.clientTwoFactorAuthentication.onCreated(function () {
     this.state.set('authUri', undefined);
 
     this.state.set('displayDisable2FASubmitButton', 'none');
+    this.state.set('displayGenerateRecoveryCodesSubmitButton', 'none');
 
     // Subscribe to receive database docs/recs updates
     this.clientTwoFactorAuthenticationSubs = this.subscribe('clientTwoFactorAuthentication');
@@ -73,6 +89,10 @@ Template.clientTwoFactorAuthentication.onCreated(function () {
 Template.clientTwoFactorAuthentication.onDestroyed(function () {
     if (this.clientTwoFactorAuthenticationSubs) {
         this.clientTwoFactorAuthenticationSubs.stop();
+    }
+
+    if (this.clipboard) {
+        this.clipboard.destroy();
     }
 });
 
@@ -200,6 +220,94 @@ Template.clientTwoFactorAuthentication.events({
                 template.state.set('errMsgs', [error.toString()]);
             }
         });
+    },
+    'click #btnGenerateRecoveryCodes'(event, template) {
+        event.preventDefault();
+
+        // Clear error messages
+        template.state.set('errMsgs', []);
+
+        // Reset action confirmation
+        $('#itxGenerateRecoveryCodesConfirmation')[0].value = '';
+        template.state.set('displayGenerateRecoveryCodesSubmitButton', 'none');
+    },
+    'click #lnkGenerateRecoveryCodes'(event, template) {
+        event.preventDefault();
+
+        // Clear error messages
+        template.state.set('errMsgs', []);
+
+        // Reset action confirmation
+        $('#itxGenerateRecoveryCodesConfirmation')[0].value = '';
+        template.state.set('displayGenerateRecoveryCodesSubmitButton', 'none');
+    },
+    'hidden.bs.modal #divGenerateRecoveryCodes'(event, template) {
+        // Modal panel has been closed. Make sure that button used to
+        //  activate modal panel is not selected
+        $('#btnGenerateRecoveryCodes').blur();
+    },
+    'input #itxGenerateRecoveryCodesConfirmation'(event, template) {
+        // Suppress spaces from beginning of input
+        let inputValue = event.target.value = event.target.value.replace(/^\s+/, '');
+
+        if (inputValue.length > confirmPhrase.length) {
+            // Limit length of input
+            inputValue = event.target.value = inputValue.substring(0, confirmPhrase.length);
+        }
+
+        // Check if input matches confirmation phrase
+        if (inputValue.toLowerCase() === confirmPhrase) {
+            // Show button to confirm action
+            template.state.set('displayGenerateRecoveryCodesSubmitButton', 'inline');
+        }
+        else {
+            // Hide button to confirm action
+            template.state.set('displayGenerateRecoveryCodesSubmitButton', 'none');
+        }
+    },
+    'submit #frmGenerateRecoveryCodes'(event, template) {
+        event.preventDefault();
+        event.stopPropagation();
+
+        const confirmed = checkRecoveryCodesAvailable()
+            ? confirm('LAST CHANCE!\n\nIf you proceed, any previously generated recovery codes will be invalidated.\n\nPLEASE NOTE THAT THIS ACTION CANNOT BE UNDONE.')
+            : true;
+
+        if (confirmed) {
+            // Close modal panel
+            $('#divGenerateRecoveryCodes').modal('hide');
+
+            // Reset error messages
+            template.state.set('errMsgs', []);
+
+            Meteor.call('generateRecoveryCodesClient', (error) => {
+                if (error) {
+                    template.state.set('errMsgs', [error.toString()]);
+                }
+            });
+        }
+    },
+    'click #btnShowRecoveryCodes'(event, template) {
+        template.clipboard = new ClipboardJS('#btnCopyClipboard', {
+            container: document.getElementById('divShowRecoveryCodes')
+        });
+    },
+    'click #btnCopyClipboard'(event, template) {
+        const $button = $(event.currentTarget);
+
+        $button.addClass('tooltipped tooltipped-s');
+        $button.attr('aria-label', 'Copied!');
+    },
+    'mouseleave #btnCopyClipboard'(event, template) {
+        const $button = $(event.currentTarget);
+
+        $button.removeAttr('aria-label');
+        $button.removeClass('tooltipped tooltipped-s');
+    },
+    'hidden.bs.modal #divShowRecoveryCodes'(event, template) {
+        // Modal panel has been closed. Make sure that button used to
+        //  activate modal panel is not selected
+        $('#btnShowRecoveryCodes').blur();
     }
 });
 
@@ -240,5 +348,21 @@ Template.clientTwoFactorAuthentication.helpers({
     },
     displayDisable2FASubmitButton() {
         return Template.instance().state.get('displayDisable2FASubmitButton');
+    },
+    displayGenerateRecoveryCodesSubmitButton() {
+        return Template.instance().state.get('displayGenerateRecoveryCodesSubmitButton');
+    },
+    areRecoveryCodesAvailable() {
+        return checkRecoveryCodesAvailable();
+    },
+    copyRecoveryCodes() {
+        const recoveryCodes = Catenis.db.collection.TwoFactorAuthInfo.findOne(1).recoveryCodes;
+
+        return generateRecoveryCodesDoc(recoveryCodes);
+    },
+    downloadRecoveryCodes() {
+        const recoveryCodes = Catenis.db.collection.TwoFactorAuthInfo.findOne(1).recoveryCodes;
+
+        return encodeURIComponent(generateRecoveryCodesDoc(recoveryCodes));
     }
 });

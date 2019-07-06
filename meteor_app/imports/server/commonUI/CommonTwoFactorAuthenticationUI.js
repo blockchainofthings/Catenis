@@ -84,6 +84,16 @@ CommonTwoFactorAuthenticationUI.validate2FAToken = function (token) {
     return _2fa.validateToken(token);
 };
 
+// Remote method auxiliary method
+//
+//  NOTE: this method should be called via the predefined function method .call() passing the context (this)
+//      of the caller remote method function (i.e. method.call(this, ...))
+CommonTwoFactorAuthenticationUI.generateRecoveryCodes = function () {
+    const _2fa = new TwoFactorAuthentication(this.userId);
+
+    return _2fa.generateRecoveryCodes();
+};
+
 // Publication auxiliary method
 //
 //  NOTE: this method should be called via the predefined function method .call() passing the context (this)
@@ -102,15 +112,32 @@ CommonTwoFactorAuthenticationUI.twoFactorAuthentication = function () {
     // Prepare to receive notification of two-factor authentication enable state change
     Catenis.twoFactorAuthEventEmitter.on(TwoFactorAuthEventEmitter.notifyEvent.enable_state_changed.name, processEnableStateChanged);
 
+    const processRecoveryCodesChanged = (data) => {
+        // Make sure that it refers to the current user
+        if (data.user_id === this.userId) {
+            // Update two-factor authentication recovery codes
+            this.changed('TwoFactorAuthInfo', 1, {
+                recoveryCodes: data.recoveryCodes
+            });
+        }
+    };
+
+    // Prepare to receive notification of two-factor authentication recovery codes change
+    Catenis.twoFactorAuthEventEmitter.on(TwoFactorAuthEventEmitter.notifyEvent.recovery_codes_changed.name, processRecoveryCodesChanged);
+
     // Get and pass current two-factor authentication info
     const _2fa = new TwoFactorAuthentication(this.userId);
 
     this.added('TwoFactorAuthInfo', 1, {
-        isEnabled: _2fa.isEnabled()
+        isEnabled: _2fa.isEnabled(),
+        recoveryCodes: _2fa.getRecoveryCodes()
     });
     this.ready();
 
-    this.onStop(() => Catenis.twoFactorAuthEventEmitter.removeListener(TwoFactorAuthEventEmitter.notifyEvent.enable_state_changed.name, processEnableStateChanged));
+    this.onStop(() => {
+        Catenis.twoFactorAuthEventEmitter.removeListener(TwoFactorAuthEventEmitter.notifyEvent.enable_state_changed.name, processEnableStateChanged);
+        Catenis.twoFactorAuthEventEmitter.removeListener(TwoFactorAuthEventEmitter.notifyEvent.recovery_codes_changed.name, processRecoveryCodesChanged);
+    });
 };
 
 

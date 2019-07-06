@@ -11,6 +11,7 @@
 //
 // Internal node modules
 import crypto from 'crypto';
+import util from 'util';
 // Third-party node modules
 import config from 'config';
 import otplib from 'otplib';
@@ -26,6 +27,8 @@ import { Catenis } from './Catenis';
 // Config entries
 const twoFactAuthConfig = config.get('twoFactorAuthentication');
 const twoFactAuthTokValWinConfig = twoFactAuthConfig.get('tokenValidationWindow');
+const twoFactAuthRecovCodeConfig = twoFactAuthConfig.get('recoveryCode');
+const twoFactAuthRecovCodeFrmtConfig = twoFactAuthRecovCodeConfig.get('format');
 
 // Configuration settings
 const cfgSettings = {
@@ -33,7 +36,15 @@ const cfgSettings = {
         previous: twoFactAuthTokValWinConfig.get('previous'),
         future: twoFactAuthTokValWinConfig.get('future')
     },
-    userVerificationInterval: twoFactAuthConfig.get('userVerificationInterval')
+    userVerificationInterval: twoFactAuthConfig.get('userVerificationInterval'),
+    recoveryCode: {
+        codesToGenerate: twoFactAuthRecovCodeConfig.get('codesToGenerate'),
+        length: twoFactAuthRecovCodeConfig.get('length'),
+        format: {
+            regexPattern: twoFactAuthRecovCodeFrmtConfig.get('regexPattern'),
+            replaceStr: twoFactAuthRecovCodeFrmtConfig.get('replaceStr')
+        }
+    }
 };
 
 const secretLength = 20;
@@ -70,6 +81,12 @@ export class TwoFactorAuthentication {
             this.secretGenKey = docUser.services.twoFactorAuthentication.secretGenKey;
             this.userVerified = docUser.services.twoFactorAuthentication.userVerified;
             this.issuedDate = docUser.services.twoFactorAuthentication.issuedDate;
+
+            if (docUser.services.twoFactorAuthentication.recoveryCode) {
+                this.recoveryCodeGenKey = docUser.services.twoFactorAuthentication.recoveryCode.genKey;
+                this.recoveryCodesCount = docUser.services.twoFactorAuthentication.recoveryCode.count;
+                this.usedRecoveryCodeIndices = docUser.services.twoFactorAuthentication.recoveryCode.usedIndices;
+            }
         }
     }
 
@@ -103,14 +120,37 @@ export class TwoFactorAuthentication {
         }
     }
 
+    get recoveryCodes() {
+        if (this.recoveryCodesCount) {
+            const usedIndices = new Set(this.usedRecoveryCodeIndices);
+            const codes = new Map();
+
+            for (let index = 0; index < this.recoveryCodesCount; index ++) {
+                if (!usedIndices.has(index)) {
+                    codes.set(getRecoveryCode.call(this, index), index);
+                }
+            }
+
+            return codes;
+        }
+    }
+
     isEnabled() {
         return !!this.userVerified;
     };
 
-    enable() {
+    isEnabledOrPending() {
+        return !!(this.userVerified || getSecretGenKey.call(this));
+    };
+
+    enable(generateRecoveryCodes = true, recoveryCodesCount) {
         // Make sure that two-factor authentication is not yet enabled
         if (!this.isEnabled()) {
             setSecretGenKey.call(this);
+
+            if (generateRecoveryCodes) {
+                this.generateRecoveryCodes(recoveryCodesCount);
+            }
 
             const secret = this.secret;
 
@@ -138,15 +178,20 @@ export class TwoFactorAuthentication {
         }
     };
 
-    validateToken(token) {
+    validateToken(token, checkRecoveryCode = true) {
         const secret = this.secret;
 
         if (secret) {
             try {
-                const isTokenValid = this.authenticator.check(token, secret);
+                let isTokenValid = this.authenticator.check(token, secret);
 
-                if (isTokenValid && !this.userVerified) {
-                    setSecretVerified.call(this);
+                if (isTokenValid) {
+                    if (!this.userVerified) {
+                        setSecretVerified.call(this);
+                    }
+                }
+                else if(checkRecoveryCode) {
+                    isTokenValid = this.validateRecoveryCode(token);
                 }
 
                 return isTokenValid;
@@ -162,6 +207,68 @@ export class TwoFactorAuthentication {
             throw new Meteor.Error('2fa_no_secret', 'Cannot validate two-factor authentication token; secret not yet defined for user');
         }
     };
+
+    areRecoveryCodesGenerated() {
+        return !!this.recoveryCodeGenKey;
+    }
+
+    generateRecoveryCodes(count) {
+        // Make sure that two-factor authentication is has been enabled
+        if (this.isEnabledOrPending()) {
+            setRecoveryCodes.call(this, count);
+        }
+        else {
+            // Error: two-factor authentication has not been enabled
+            Catenis.logger.ERROR('Cannot generate recovery codes for user (user_id: %s); two-factor authentication has not been enabled', this.user_id);
+            throw new Meteor.Error('2fa_not_been_enabled', 'Cannot generate recovery codes for user; two-factor authentication has not been enabled');
+        }
+    }
+
+    clearRecoveryCodes() {
+        // Make sure that recovery codes are currently generated
+        if (this.areRecoveryCodesGenerated()) {
+            unsetRecoveryCodes.call(this);
+        }
+        else {
+            // Error: two-factor authentication recovery codes not currently generated
+            Catenis.logger.ERROR('Cannot clear two-factor authentication recovery codes for user (user_id: %s); not currently generated', this.user_id);
+            throw new Meteor.Error('2fa_recov_code_not_generated', 'Cannot clear two-factor authentication recovery codes for user; not currently generated');
+        }
+    }
+
+    getRecoveryCodes() {
+        const recoveryCodes = this.recoveryCodes;
+        let unusedCodes;
+
+        if (recoveryCodes && recoveryCodes.size > 0) {
+            unusedCodes = Array.from(recoveryCodes.keys());
+        }
+
+        return unusedCodes;
+    }
+
+    validateRecoveryCode(code) {
+        try {
+            const recoveryCodes = this.recoveryCodes;
+            let result = false;
+
+            if (recoveryCodes) {
+                const index = recoveryCodes.get(code);
+
+                if (index !== undefined) {
+                    setUsedRecoveryCode.call(this, index);
+
+                    result = true;
+                }
+            }
+
+            return result;
+        }
+        catch (error) {
+            Catenis.logger.ERROR('Error validating two-factor authentication recovery code (%s) for user (user_id: %s).', code, this.user_id, error);
+            throw new Meteor.Error('2fa_recov_code_validate_error', 'Error validating two-factor authentication recovery code for user');
+        }
+    }
 }
 
 
@@ -176,6 +283,17 @@ function getSecretGenKey() {
     //  still within the acceptable bounds
     return this.secretGenKey && (this.userVerified || moment().diff(this.issuedDate, 'seconds')
         <= cfgSettings.userVerificationInterval) ? this.secretGenKey : undefined;
+}
+
+function getRecoveryCode(index) {
+    return this.recoveryCodeGenKey ? crypto.createHmac('sha512', this.recoveryCodeGenKey)
+        .update(util.format('And here it is: the recovery code #%d for user %s', index + 1, this.username))
+        .digest()
+        .slice(0, Math.ceil(cfgSettings.recoveryCode.length / 2))
+        .toString('hex')
+        .substr(0, cfgSettings.recoveryCode.length)
+        .replace(new RegExp(cfgSettings.recoveryCode.format.regexPattern), cfgSettings.recoveryCode.format.replaceStr)
+        : undefined;
 }
 
 function setSecretGenKey() {
@@ -208,6 +326,9 @@ function setSecretGenKey() {
     this.secretGenKey = twoFactorAuthentication.secretGenKey;
     this.userVerified = twoFactorAuthentication.userVerified;
     this.issuedDate = twoFactorAuthentication.issuedDate;
+    this.recoveryCodeGenKey = undefined;
+    this.recoveryCodesCount = undefined;
+    this.usedRecoveryCodeIndices = undefined;
 }
 
 function unsetSecretGenKey() {
@@ -234,6 +355,9 @@ function unsetSecretGenKey() {
     this.secretGenKey = undefined;
     this.userVerified = undefined;
     this.issuedDate = undefined;
+    this.recoveryCodeGenKey = undefined;
+    this.recoveryCodesCount = undefined;
+    this.usedRecoveryCodeIndices = undefined;
 
     // Emit event notifying that enable state has changed
     Catenis.twoFactorAuthEventEmitter.notifyEnableStateChanged(this.user_id, this.isEnabled());
@@ -266,6 +390,99 @@ function setSecretVerified() {
     Catenis.twoFactorAuthEventEmitter.notifyEnableStateChanged(this.user_id, this.isEnabled());
 }
 
+function setRecoveryCodes(count) {
+    if (!this.secretGenKey) {
+        // Error: No two-factor authentication secret to set recovery codes');
+        throw new Error('No two-factor authentication secret to set recovery codes');
+    }
+
+    const recoveryCode = {
+        genKey: newRecoveryCodeGenKey(),
+        count: count || cfgSettings.recoveryCode.codesToGenerate,
+        usedIndices: []
+    };
+
+    try {
+        Meteor.users.update({
+            _id: this.user_id
+        }, {
+            $set: {
+                'services.twoFactorAuthentication.recoveryCode': recoveryCode
+            }
+        });
+    }
+    catch (err) {
+        Catenis.logger.ERROR('Error setting two-factor authentication recovery codes for user (user_id: %s).', this.user_id, err);
+        throw new Error('Error setting two-factor authentication recovery codes for user');
+    }
+
+    // Update info locally
+    this.recoveryCodeGenKey = recoveryCode.genKey;
+    this.recoveryCodesCount = recoveryCode.count;
+    this.usedRecoveryCodeIndices = recoveryCode.usedIndices;
+
+    // Emit event notifying that recovery codes have changed
+    Catenis.twoFactorAuthEventEmitter.notifyRecoveryCodesChanged(this.user_id, this.getRecoveryCodes());
+}
+
+function unsetRecoveryCodes() {
+    if (!this.recoveryCodeGenKey) {
+        // Error: No recovery codes to the unset');
+        throw new Error('No recovery codes to be unset');
+    }
+
+    try {
+        Meteor.users.update({
+            _id: this.user_id
+        }, {
+            $unset: {
+                'services.twoFactorAuthentication.recoveryCode': true
+            }
+        });
+    }
+    catch (err) {
+        Catenis.logger.ERROR('Error unsetting two-factor authentication recovery codes for user (user_id: %s).', this.user_id, err);
+        throw new Error('Error unsetting two-factor authentication recovery codes for user');
+    }
+
+    // Update info locally
+    this.recoveryCodeGenKey = undefined;
+    this.recoveryCodesCount = undefined;
+    this.usedRecoveryCodeIndices = undefined;
+
+    // Emit event notifying that recovery codes have changed
+    Catenis.twoFactorAuthEventEmitter.notifyRecoveryCodesChanged(this.user_id, this.getRecoveryCodes());
+}
+
+function setUsedRecoveryCode(index) {
+    if (!this.recoveryCodesCount) {
+        // Error: no recovery code to be set as used
+        throw new Error('No recovery code to be set as used');
+    }
+
+    const usedIndices = Array.from(this.usedRecoveryCodeIndices);
+    usedIndices.push(index);
+
+    try {
+        Meteor.users.update({
+            _id: this.user_id
+        }, {
+            $set: {
+                'services.twoFactorAuthentication.recoveryCode.usedIndices': usedIndices
+            }
+        });
+    }
+    catch (err) {
+        Catenis.logger.ERROR('Error setting two-factor authentication recovery code (index: %d) for user (user_id: %s) as used.', index, this.user_id, err);
+        throw new Error('Error setting two-factor authentication recovery code for user as used');
+    }
+
+    // Update info locally
+    this.usedRecoveryCodeIndices = usedIndices;
+
+    // Emit event notifying that recovery codes have changed
+    Catenis.twoFactorAuthEventEmitter.notifyRecoveryCodesChanged(this.user_id, this.getRecoveryCodes());
+}
 
 // TwoFactorAuthentication class (public) methods
 //
@@ -284,6 +501,10 @@ function setSecretVerified() {
 //
 
 function newSecretGenKey() {
+    return Random.secret();
+}
+
+function newRecoveryCodeGenKey() {
     return Random.secret();
 }
 

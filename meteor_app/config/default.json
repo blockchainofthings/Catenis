@@ -886,6 +886,14 @@
       "previous": 0,  // Number of previous time steps the tokens of which should still be considered valid
       "future": 0    // Number of future time steps the tokens of which should still be considered valid
     },
-    "userVerificationInterval": 3600  // (1 hour) Time, in seconds, within which it is expected that the user verifies a newly issued secret key
+    "userVerificationInterval": 3600,  // (1 hour) Time, in seconds, within which it is expected that the user verifies a newly issued secret key
+    "recoveryCode": {
+      "codesToGenerate": 6,  // Number of recovery codes that should be generated at one time
+      "length": 10,  // Length, in number of characters, that a recovery code should have
+      "format": {
+        "regexPattern": "([\\da-f]{5})([\\da-f]{5})",  // Regular expression pattern used to format the recovery codes
+        "replaceStr": "$1-$2"  // The replacement string used to format the recovery codes
+      }
+    }
   }
 }

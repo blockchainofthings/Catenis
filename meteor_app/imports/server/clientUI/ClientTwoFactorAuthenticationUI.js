@@ -104,6 +104,23 @@ ClientTwoFactorAuthenticationUI.initialize = function () {
                 //  Throw exception
                 throw new Meteor.Error('ctn_client_no_permission', 'No permission; must be logged in as a Catenis client to perform this task');
             }
+        },
+        generateRecoveryCodesClient: function () {
+            if (Roles.userIsInRole(this.userId, 'ctn-client')) {
+                try {
+                    return CommonTwoFactorAuthenticationUI.generateRecoveryCodes.call(this);
+                }
+                catch (err) {
+                    // Error trying to generate two-factor authentication recovery codes. Log error and throw exception
+                    Catenis.logger.ERROR('Failure trying to generate two-factor authentication recovery codes.', err);
+                    throw new Meteor.Error('2fa.gen.recov.codes.failure', 'Failure trying to generate two-factor authentication recovery codes');
+                }
+            }
+            else {
+                // User not logged in or not a Catenis client.
+                //  Throw exception
+                throw new Meteor.Error('ctn_client_no_permission', 'No permission; must be logged in as a Catenis client to perform this task');
+            }
         }
     });
 

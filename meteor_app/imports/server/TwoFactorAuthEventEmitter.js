@@ -35,6 +35,13 @@ export class TwoFactorAuthEventEmitter extends events.EventEmitter {
             isEnabled: isEnabled
         });
     }
+
+    notifyRecoveryCodesChanged(user_id, recoveryCodes) {
+        this.emit(TwoFactorAuthEventEmitter.notifyEvent.recovery_codes_changed.name, {
+            user_id: user_id,
+            recoveryCodes: recoveryCodes
+        });
+    }
 }
 
 
@@ -64,6 +71,10 @@ TwoFactorAuthEventEmitter.notifyEvent = Object.freeze({
     enable_state_changed: Object.freeze({
         name: 'enable_state_changed',
         description: 'Two-factor authentication enable state has changed for a user'
+    }),
+    recovery_codes_changed: Object.freeze({
+        name: 'recovery_codes_changed',
+        description: 'Two-factor authentication recovery codes for a user have changed'
     })
 });
 

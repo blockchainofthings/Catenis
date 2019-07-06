@@ -43,6 +43,22 @@
                                     {{/if}}
                                 </div>
                             </div>
+                            {{#if _2fa.isEnabled}}
+                                <div class="row">
+                                    <div class="center">
+                                        <p style="font-size:125%; font-weight:300">Recovery Codes</p>
+                                        <p>Recovery codes can be used to access your account in the event that your 2FA app is not available.</p>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    {{#if areRecoveryCodesAvailable}}
+                                        <button type="button" id="btnShowRecoveryCodes" class="btn-login btn paddedBtn" data-toggle="modal" data-target="#divShowRecoveryCodes">Show Recovery Codes</button>
+                                        &nbsp;&nbsp;<a id="lnkGenerateRecoveryCodes" href="" role="button" data-toggle="modal" data-target="#divGenerateRecoveryCodes">Regenerate recovery codes</a>
+                                    {{else}}
+                                        <button type="button" id="btnGenerateRecoveryCodes" class="btn-login btn paddedBtn" data-toggle="modal" data-target="#divGenerateRecoveryCodes">Generate Recovery Codes</button>
+                                    {{/if}}
+                                </div>
+                            {{/if}}
                             {{!Modal panel containing form used to enable two-factor authentication}}
                             <div id="divEnable2FA" class="modal fade" data-backdrop="static" tabindex="-1" role="dialog">
                                 <div class="modal-dialog" role="document">
@@ -107,6 +123,65 @@
                                         </div>
                                         <div class="modal-footer">
                                             <button id="btnCloseDisable2FA2" type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {{!Modal panel containing form used to generate recovery codes}}
+                            <div id="divGenerateRecoveryCodes" class="modal fade" tabindex="-1" role="dialog">
+                                <div class="modal-dialog" role="document">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <button id="btnCloseGenerateRecoveryCodes1" type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                                            <h4 class="modal-title">Generate Recovery Codes</h4>
+                                        </div>
+                                        <div class="modal-body">
+                                            {{#if areRecoveryCodesAvailable}}
+                                                <div class="alert alert-warning" role="alert">
+                                                    <b>Warning!</b>&nbsp;Any previously generated recovery codes will be <b>invalidated</b>.
+                                                </div>
+                                            {{/if}}
+                                            <form id="frmGenerateRecoveryCodes" autocomplete="off">
+                                                <div id="divGenerateRecoveryCodesConfirm" class="panel panel-default" style="padding:1em">
+                                                    <div style="margin-top:1em; margin-bottom:1em">
+                                                        <label>To confirm your action, please type the following text below: <b>yes, I do confirm it</b>
+                                                            <br><input id="itxGenerateRecoveryCodesConfirmation" type="text" size="20" maxlength="20" placeholder="confirmation" autocomplete="off"></label>
+                                                    </div>
+                                                    <div style="margin-top:1em">
+                                                        <button type="submit" class="btn btn-primary" style="display:{{displayGenerateRecoveryCodesSubmitButton}}">Confirm</button>
+                                                    </div>
+                                                </div>
+                                            </form>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button id="btnCloseGenerateRecoveryCodes2" type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {{!Modal panel containing form used to show recovery codes}}
+                            <div id="divShowRecoveryCodes" class="modal fade" tabindex="-1" role="dialog">
+                                <div class="modal-dialog" role="document">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <button id="btnCloseShowRecoveryCodes1" type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                                            <h4 class="modal-title">Recovery Codes</h4>
+                                        </div>
+                                        <div class="modal-body">
+                                            <label>Currently available recovery codes:</label>
+                                            <ul class="recoveyCode">
+                                                {{#each code in _2fa.recoveryCodes}}
+                                                    <li>{{code}}</li>
+                                                {{/each}}
+                                            </ul>
+                                            <p>Keep these in a secure place. When needed, just enter a recovery code in place of a two-factor verification code. Each recovery code can be used only once.</p>
+                                        </div>
+                                        <div style="margin-bottom:1em">
+                                            <a id="lnkDownload" href="data:text/plain,{{downloadRecoveryCodes}}" download="Catenis_recovery_codes.txt" role="button" class="btn btn-primary"><span class="glyphicon glyphicon-download" aria-hidden="true"></span> Download Recovery Codes</a>
+                                            &nbsp;&nbsp;<button id="btnCopyClipboard" type="button" class="btn btn-primary" data-clipboard-action="copy" data-clipboard-text="{{copyRecoveryCodes}}"><span class="glyphicon glyphicon-copy" aria-hidden="true"></span> Copy to Clipboard</button>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button id="btnCloseShowRecoveryCodes2" type="button" class="btn btn-default" data-dismiss="modal">Close</button>
                                         </div>
                                     </div>
                                 </div>
