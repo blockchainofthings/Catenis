@@ -156,7 +156,7 @@ export class TwoFactorAuthentication {
 
             return {
                 secret: secret,
-                authUri: this.authenticator.keyuri(this.username, serviceName, secret)
+                authUri: this.authenticator.keyuri(this.username, getServiceName(), secret)
             };
         }
         else {
@@ -508,6 +508,26 @@ function newRecoveryCodeGenKey() {
     return Random.secret();
 }
 
+function getServiceName() {
+    let suffix;
+
+    switch (Catenis.application.environment) {
+        case 'sandbox':
+            suffix = '_sandbox';
+            break;
+
+        case 'development':
+            suffix = '_dev';
+            break;
+
+        case 'production':
+        default:
+            suffix = '';
+            break;
+    }
+
+    return serviceName + suffix;
+}
 
 // Module code
 //
