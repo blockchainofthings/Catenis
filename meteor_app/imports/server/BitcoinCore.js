@@ -64,6 +64,7 @@ export function BitcoinCore(network, host, username, password, timeout) {
         //  - 'getblockheader'
         //  - 'abandontransaction'
         //  - 'getmempoolancestors'
+        //  - 'getaddressesbylabel'     // USE IT AS JUST GET_ADDRESSES (ACCOUNT = "")
         command: Meteor.wrapAsync(this.btcClient.cmd, this.btcClient),
         getnetworkinfo: Meteor.wrapAsync(this.btcClient.getNetworkInfo, this.btcClient),
         getblockchaininfo: Meteor.wrapAsync(this.btcClient.getBlockchainInfo, this.btcClient),
@@ -84,7 +85,6 @@ export function BitcoinCore(network, host, username, password, timeout) {
         getrawtransaction: Meteor.wrapAsync(this.btcClient.getRawTransaction, this.btcClient), // TWO VARIANTS: VERBOSE SET AND NOT
         decoderawtransaction: Meteor.wrapAsync(this.btcClient.decodeRawTransaction, this.btcClient),
         decodescript: Meteor.wrapAsync(this.btcClient.decodeScript, this.btcClient),
-        getaddressesbyaccount: Meteor.wrapAsync(this.btcClient.getAddressesByAccount, this.btcClient),  // USE IT AS JUST GET_ADDRESSES (ACCOUNT = "")
         getwalletinfo: Meteor.wrapAsync(this.btcClient.getWalletInfo, this.btcClient),
         listtransactions: Meteor.wrapAsync(this.btcClient.listTransactions, this.btcClient),
         listsinceblock: Meteor.wrapAsync(this.btcClient.listSinceBlock, this.btcClient)
@@ -479,10 +479,15 @@ BitcoinCore.prototype.decodeScript = function (hexScript) {
 
 BitcoinCore.prototype.getAddresses = function () {
     try {
-        return this.rpcApi.getaddressesbyaccount('');
+        return Object.keys(this.rpcApi.command('getaddressesbylabel', ''));
     }
     catch (err) {
-        handleError('getaddressesbyaccount', err);
+        if (err.code === BitcoinCore.rpcErrorCode.RPC_WALLET_INVALID_ACCOUNT_NAME
+                && /^No addresses with label.*/.test(err.message)) {
+            return [];
+        }
+
+        handleError('getaddressesbylabel', err);
     }
 };
 

@@ -271,7 +271,6 @@ export class TransactionMonitor extends events.EventEmitter {
 
                     _.extend(detail, _.pick(tx, [
                         'involvesWatchonly',
-                        'account',
                         'address',
                         'category',
                         'amount',
@@ -302,7 +301,6 @@ export class TransactionMonitor extends events.EventEmitter {
 
                     _.extend(detail, _.pick(tx, [
                         'involvesWatchonly',
-                        'account',
                         'address',
                         'category',
                         'amount',
