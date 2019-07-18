@@ -33,6 +33,7 @@ import { Database } from './Database';
 import { Device } from './Device';
 import { KeyStore } from './KeyStore';
 import { TransactionMonitor } from './TransactionMonitor';
+import './CompressResponseBody';
 import './ParseRequestBody';
 import { RestApi } from './RestApi';
 import { BcotPriceUI } from './adminUI/BcotPriceUI';

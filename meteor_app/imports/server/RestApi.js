@@ -450,7 +450,7 @@ function optionsResponseHeaders() {
         'Access-Control-Allow-Credentials': 'true',
         'Access-Control-Allow-Origin': reqHdrOrigin !== undefined ? reqHdrOrigin : '*',
         'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-        'Access-Control-Allow-Headers': 'DNT, X-CustomHeader, Keep-Alive, User-Agent, X-Requested-With, If-Modified-Since, Cache-Control, Accept, Origin, Content-Type, X-Bcot-Timestamp, Authorization'
+        'Access-Control-Allow-Headers': 'DNT, X-CustomHeader, Keep-Alive, User-Agent, X-Requested-With, If-Modified-Since, Cache-Control, Accept, Origin, Content-Type, Content-Encoding, Accept-Encoding, X-Bcot-Timestamp, Authorization'
     };
 }
 
@@ -475,19 +475,27 @@ function addCorsResponseHeaders(respHeaders) {
     }
 
     respHeaders['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS';
-    respHeaders['Access-Control-Allow-Headers'] = 'DNT, X-CustomHeader, Keep-Alive, User-Agent, X-Requested-With, If-Modified-Since, Cache-Control, Accept, Origin, Content-Type, X-Bcot-Timestamp, Authorization';
+    respHeaders['Access-Control-Allow-Headers'] = 'DNT, X-CustomHeader, Keep-Alive, User-Agent, X-Requested-With, If-Modified-Since, Cache-Control, Accept, Origin, Content-Type, Content-Encoding, Accept-Encoding, X-Bcot-Timestamp, Authorization';
 }
 
 export function successResponse(data) {
+    // NOTE: we do the conversion of the body contents to JSON here, even though
+    //  the Restivus package will automatically convert it afterwards (since the
+    //  content type is set to application/json), so we can calculate the
+    //  resulting content length
+    const body = {
+        status: 'success',
+        data: data
+    };
+    const jsonBody = JSON.stringify(body, null, getRestApiInstance(this.request).api._config.prettyJson ? 2 : 0);
+
     const resp = {
         statusCode: 200,
         headers: {
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'Content-Length': Buffer.byteLength(jsonBody)
         },
-        body: {
-            status: 'success',
-            data: data
-        }
+        body: body
     };
 
     addCorsResponseHeaders.call(this, resp.headers);
@@ -496,15 +504,23 @@ export function successResponse(data) {
 }
 
 export function errorResponse(statusCode, errMessage) {
+    // NOTE: we do the conversion of the body contents to JSON here, even though
+    //  the Restivus package will automatically convert it afterwards (since the
+    //  content type is set to application/json), so we can calculate the
+    //  resulting content length
+    const body = {
+        status: 'error',
+        message: errMessage
+    };
+    const jsonBody = JSON.stringify(body, null, getRestApiInstance(this.request).api._config.prettyJson ? 2 : 0);
+
     const resp = {
         statusCode: statusCode,
         headers: {
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'Content-Length': Buffer.byteLength(jsonBody)
         },
-        body: {
-            status: 'error',
-            message: errMessage
-        }
+        body: body
     };
 
     // Properly set response headers required for CORS
@@ -513,14 +529,21 @@ export function errorResponse(statusCode, errMessage) {
     return resp;
 }
 
-export function getUrlApiVersion(url) {
+export function getUrlApiVersion(reqOrUrl) {
     const regExp = new RegExp(util.format("^/%s/([^/]+)/.*$", cfgSettings.rootPath));
     let match;
+
+    const url = typeof reqOrUrl === 'string' ? reqOrUrl : (reqOrUrl.originalUrl || reqOrUrl.url);
 
     if ((match = url.match(regExp))) {
         return match[1];
     }
 }
+
+function getRestApiInstance(req) {
+    return Catenis.restApi['ver' + getUrlApiVersion(req)];
+}
+
 
 // Module code
 //

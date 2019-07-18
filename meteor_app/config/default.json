@@ -92,6 +92,11 @@
   "parseRequestBody": {
     "reqBodySizeLimit": 15  // Maximum size, in MB, of data that can be received as the body of requests to the Catenis API methods
   },
+  // Parameters pertaining to RestApi module
+  "compressResponseBody": {
+    "useCompression": true,   // Indicate wheter response body should be compressed
+    "compressThreshold": 1024   // Mininum size, in bytes, of response body for it to be compressed
+  },
   // Parameters pertaining to BitcoinFees module
   "bitcoinFees": {
     "apiVer1Url": "https://bitcoinfees.earn.com/api/v1/fees/",  // URL of version 1 of BitcoinFees API provided by Earn.com (former 21.co)

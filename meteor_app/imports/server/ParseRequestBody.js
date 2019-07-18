@@ -10,7 +10,7 @@
 // References to external code
 //
 // Internal node modules
-//import util from 'util';
+import zlib from 'zlib';
 // Third-party node modules
 import config from 'config';
 import bodyParser from 'body-parser';
@@ -46,7 +46,23 @@ export function ParseRequestBody() {
 //  the request.
 ParseRequestBody.parser = function (req, res, next) {
     ParseRequestBody.rawBody.limit = ParseRequestBody.rawBody.limit || (cfgSettings.reqBodySizeLimit + 'mb');
-    ParseRequestBody.rawBody.parser = ParseRequestBody.rawBody.parser || bodyParser.raw({limit: ParseRequestBody.rawBody.limit, type: 'application/json'});
+
+    // NOTE: make sure that the 'body-parser' component does NOT decompress the request payload
+    //      should it have a content encoding different and 'identity'. So set the 'inflate' option
+    //      to false and reset the Content-Encoding header (otherwise an error is thrown)
+    const bodyParserOpts = {
+        limit: ParseRequestBody.rawBody.limit,
+        type: 'application/json'
+    };
+    let contentEncoding ;
+
+    if (req.headers['content-encoding'] !== undefined && (contentEncoding = req.headers['content-encoding'].toLowerCase()) !== 'identity') {
+        bodyParserOpts.inflate = false;
+
+        req.headers['content-encoding'] = 'identity';
+    }
+
+    ParseRequestBody.rawBody.parser = ParseRequestBody.rawBody.parser || bodyParser.raw(bodyParserOpts);
 
     // Get raw body
     ParseRequestBody.rawBody.parser(req, res, (err) => {
@@ -56,14 +72,40 @@ ParseRequestBody.parser = function (req, res, next) {
         }
         else {
             if (req._body) {
-                // Save raw body and reset parsed body
+                // Save raw body (non-decompressed) and reset parsed body
                 req.rawBody = req.body;
-                req.body = {};
 
-                if (req.rawBody.length > 0) {
+                // Check if body needs to be decompressed
+                if (contentEncoding && contentEncoding !== 'identity') {
+                    try {
+                        // Decompress body
+                        switch (contentEncoding) {
+                            case 'deflate':
+                                req.body = zlib.inflateSync(req.body);
+
+                                break;
+
+                            case 'gzip':
+                                req.body = zlib.gunzipSync(req.body);
+
+                                break;
+
+                            default:
+                                sendError(req, res, 'Unsupported content encoding', 415);
+                                return;
+                        }
+                    }
+                    catch (err) {
+                        Catenis.logger.ERROR('Error decoding request body.', err);
+                        sendError(req, res, 'Request body not properly encoded', 400);
+                        return;
+                    }
+                }
+
+                if (req.body.length > 0) {
                     // Parse raw body as JSON
                     try {
-                        req.body = JSON.parse(req.rawBody.toString());
+                        req.body = JSON.parse(req.body.toString());
                     }
                     catch (err) {
                         Catenis.logger.ERROR('Error parsing request body as JSON.', err);
@@ -73,8 +115,12 @@ ParseRequestBody.parser = function (req, res, next) {
                         else {
                             sendError(req, res, 'Internal server error');
                         }
+
                         return;
                     }
+                }
+                else {
+                    req.body = {};
                 }
             }
             else {
@@ -137,7 +183,7 @@ function addCorsResponseHeaders(req, res) {
     }
 
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'DNT, X-CustomHeader, Keep-Alive, User-Agent, X-Requested-With, If-Modified-Since, Cache-Control, Accept, Origin, Content-Type, X-Bcot-Timestamp, Authorization');
+    res.setHeader('Access-Control-Allow-Headers', 'DNT, X-CustomHeader, Keep-Alive, User-Agent, X-Requested-With, If-Modified-Since, Cache-Control, Accept, Origin, Content-Type, Content-Encoding, Accept-Encoding, X-Bcot-Timestamp, Authorization');
 }
 
 
@@ -145,10 +191,8 @@ function addCorsResponseHeaders(req, res) {
 //
 
 // Add this as first middleware handler
-WebApp.connectHandlers.stack.unshift({
-    route: '/' + restApiRootPath,
-    handle: ParseRequestBody.parser
-});
+WebApp.connectHandlers.use('/' + restApiRootPath, ParseRequestBody.parser);
+WebApp.connectHandlers.stack.unshift(WebApp.connectHandlers.stack.pop());
 
 // Lock function class
 Object.freeze(ParseRequestBody);
