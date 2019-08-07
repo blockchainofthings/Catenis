@@ -12,7 +12,7 @@
 // Internal node modules
 //import util from 'util';
 // Third-party node modules
-//import config from 'config';
+import Future from 'fibers/Future';
 // Meteor packages
 //import { Meteor } from 'meteor/meteor';
 import { Email } from 'meteor/email';
@@ -71,6 +71,12 @@ EmailNotify.prototype.send = function (toAddress, subjectVars, bodyVars) {
 
     Catenis.logger.DEBUG('Contents of e-mail message to send', emailOpts);
     Email.send(emailOpts);
+};
+
+EmailNotify.prototype.sendAsync = function (toAddress, subjectVars, bodyVars, callback) {
+    Future.task(() => {
+        this.send(toAddress, subjectVars, bodyVars);
+    }).resolve(callback);
 };
 
 

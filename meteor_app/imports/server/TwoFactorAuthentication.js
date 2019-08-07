@@ -19,16 +19,19 @@ import moment from 'moment';
 // Meteor packages
 import { Meteor } from 'meteor/meteor';
 import { Random } from 'meteor/random';
+import { Accounts } from 'meteor/accounts-base';
 
 // References code in other (Catenis) modules
 import { Catenis } from './Catenis';
-
+import { EmailNotify } from './EmailNotify';
+import { Util } from './Util';
 
 // Config entries
 const twoFactAuthConfig = config.get('twoFactorAuthentication');
 const twoFactAuthTokValWinConfig = twoFactAuthConfig.get('tokenValidationWindow');
 const twoFactAuthRecovCodeConfig = twoFactAuthConfig.get('recoveryCode');
 const twoFactAuthRecovCodeFrmtConfig = twoFactAuthRecovCodeConfig.get('format');
+const twoFactAuthRecovCodeEmailConfig = twoFactAuthRecovCodeConfig.get('usageNotifyEmail');
 
 // Configuration settings
 const cfgSettings = {
@@ -43,6 +46,10 @@ const cfgSettings = {
         format: {
             regexPattern: twoFactAuthRecovCodeFrmtConfig.get('regexPattern'),
             replaceStr: twoFactAuthRecovCodeFrmtConfig.get('replaceStr')
+        },
+        usageNotifyEmail: {
+            fromAddress: twoFactAuthRecovCodeEmailConfig.get('fromAddress'),
+            emailName: twoFactAuthRecovCodeEmailConfig.get('emailName')
         }
     }
 };
@@ -64,6 +71,7 @@ export class TwoFactorAuthentication {
             fields: {
                 _id: 1,
                 username: 1,
+                emails: 1,
                 'services.twoFactorAuthentication': 1
             }
         });
@@ -76,6 +84,7 @@ export class TwoFactorAuthentication {
         // Save user info
         this.user_id = user_id;
         this.username = docUser.username;
+        this.userEmails = docUser.emails;
 
         if (docUser.services && docUser.services.twoFactorAuthentication) {
             this.secretGenKey = docUser.services.twoFactorAuthentication.secretGenKey;
@@ -192,6 +201,10 @@ export class TwoFactorAuthentication {
                 }
                 else if(checkRecoveryCode) {
                     isTokenValid = this.validateRecoveryCode(token);
+
+                    if (isTokenValid) {
+                        this.sendRecoveryCodeUsedNotifyEmail();
+                    }
                 }
 
                 return isTokenValid;
@@ -267,6 +280,27 @@ export class TwoFactorAuthentication {
         catch (error) {
             Catenis.logger.ERROR('Error validating two-factor authentication recovery code (%s) for user (user_id: %s).', code, this.user_id, error);
             throw new Meteor.Error('2fa_recov_code_validate_error', 'Error validating two-factor authentication recovery code for user');
+        }
+    }
+
+    sendRecoveryCodeUsedNotifyEmail() {
+        try {
+            const email = new EmailNotify(cfgSettings.recoveryCode.usageNotifyEmail.emailName, cfgSettings.recoveryCode.usageNotifyEmail.fromAddress);
+            const userEmail = Util.getUserEmail({emails: this.userEmails});
+
+            const {token} = Accounts.generateResetToken(this.user_id, userEmail, 'resetPassword');
+            const url = Accounts.urls.resetPassword(token);
+
+            email.sendAsync(userEmail, null, {url: url}, (err) => {
+                if (err) {
+                    // Error sending notification e-mail. Just log error condition
+                    Catenis.logger.ERROR('Error sending two-factor recovery code used notification e-mail.', err);
+                }
+            });
+        }
+        catch (err) {
+            // Error preparing notification e-mail. Just log error condition
+            Catenis.logger.ERROR('Error preparing two-factor recovery code used notification e-mail.', err);
         }
     }
 }

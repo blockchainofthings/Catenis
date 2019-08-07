@@ -18,7 +18,7 @@ import BigNumber from 'bignumber.js';
 //import { Meteor } from 'meteor/meteor';
 
 // References code in other (Catenis) modules
-//import { Catenis } from './ClientCatenis';
+import { UtilShared } from '../both/UtilShared';
 
 
 // Definition of function classes
@@ -34,26 +34,6 @@ export function ClientUtil() {
 
 ClientUtil.capitalize = function (str) {
     return str.substr(0, 1).toUpperCase() + str.substr(1);
-};
-
-ClientUtil.getUserEmail = function (user) {
-    if (user && user.emails && user.emails.length > 0) {
-        let emailIdx = 0;
-
-        if (user.emails.length > 1) {
-            // Has more than one e-mail address associated with it.
-            //  Try to get first one that has already been verified
-            emailIdx = user.emails.findIndex((email) => {
-                return email.verified;
-            });
-
-            if (emailIdx < 0) {
-                emailIdx = 0;
-            }
-        }
-
-        return user.emails[emailIdx].address;
-    }
 };
 
 // Arguments:
@@ -107,6 +87,9 @@ ClientUtil.formatCatenisServiceCredits = function (amount) {
 
 // Module code
 //
+
+// Add shared properties
+_.extend(ClientUtil, UtilShared);
 
 // Lock function class
 Object.freeze(ClientUtil);

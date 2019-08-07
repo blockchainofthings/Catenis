@@ -23,6 +23,7 @@ import { Meteor } from 'meteor/meteor';
 // References code in other (Catenis) modules
 import { Catenis } from './Catenis';
 import { Transaction } from './Transaction';
+import { UtilShared } from '../both/UtilShared';
 
 
 // Definition of function classes
@@ -358,6 +359,9 @@ Util.processItemsAsync = function (itemsToProcess, procFunc, ...procArgs /* this
 
 // Module code
 //
+
+// Add shared properties
+_und.extend(Util, UtilShared);
 
 // Lock function class
 Object.freeze(Util);

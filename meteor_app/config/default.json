@@ -898,6 +898,10 @@
       "format": {
         "regexPattern": "([\\da-f]{5})([\\da-f]{5})",  // Regular expression pattern used to format the recovery codes
         "replaceStr": "$1-$2"  // The replacement string used to format the recovery codes
+      },
+      "usageNotifyEmail": {
+        "fromAddress": "Catenis Enterprise <catenisadmin@catenis.io>",  // E-mail address used to send recovery code used notification e-mail
+        "emailName": "TwoFactorAuthRecoveryCodeUsed",  // Name of e-mail contents used to notify of recovery code used
       }
     }
   }
