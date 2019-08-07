@@ -47,6 +47,14 @@ Template.login.events({
     'click #login-form-link'(event, template) {
         AccountsTemplates.setState('signIn');
     },
+    'click #cancel-2fa-link'(event, template) {
+        if (AccountsTemplates.getState() !== 'singIn') {
+            // Force state change to reset form
+            AccountsTemplates.setState('forgotPwd');
+        }
+        
+        AccountsTemplates.setState('signIn');
+    },
     'click #forgotPwd-form-link'(event, template){
         AccountsTemplates.setState('forgotPwd');
     }
@@ -54,8 +62,8 @@ Template.login.events({
 
 Template.login.helpers({
     atFormTitle() {
-        if (AccountsTemplates.getState() === 'signIn' ) {
-            return "SIGN IN";
+        if (AccountsTemplates.getState() === 'signIn') {
+            return AccountsTemplates.state.form.get("2faVerify") ? "TWO-FACTOR VERIFICATION" : "SIGN IN";
         }
         else if (AccountsTemplates.getState() === 'forgotPwd') {
             return "RESET PASSWORD";
@@ -64,7 +72,7 @@ Template.login.helpers({
             return "ENROLL ACCOUNT";
         }
         else if (AccountsTemplates.getState() === 'resetPwd') {
-            return "RESET PASSWORD NOW";
+            return AccountsTemplates.state.form.get("2faVerify") ? "TWO-FACTOR VERIFICATION" : "RESET PASSWORD NOW";
         }
         else {
             return "Something went wrong";

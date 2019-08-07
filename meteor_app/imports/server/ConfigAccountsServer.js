@@ -29,7 +29,7 @@ Accounts.validateLoginAttempt((attempt) => {
         if (_2fa.isEnabled()) {
             // Two-factor authentication is enabled. Indicate that verification
             //  code is required
-            throw new Meteor.Error('verify-code-required');
+            throw new Meteor.Error('verify-code-required', undefined, JSON.stringify(attempt.user));
         }
     }
 

@@ -19,6 +19,7 @@ import { Accounts } from 'meteor/accounts-base';
 import { AccountsTemplates } from 'meteor/useraccounts:core';
 import { FlowRouter } from 'meteor/kadira:flow-router';
 import { Roles } from 'meteor/alanning:roles';
+import { Tracker } from 'meteor/tracker';
 
 // Module code
 //
@@ -53,15 +54,20 @@ AccountsTemplates.addFields([{
     displayName: 'Verification code',
     placeholder: 'Verification code',
     required: false,
-    minLength: 6,
-    maxLength: 6,
-    re: /\d{0,6}/,
-    continuousValidation: true,
-    visible: ['signIn']
+    visible: ['signIn', 'resetPwd']
+}, {
+    _id: 'user_json',
+    type: 'hidden',
+    visible: ['signIn', 'resetPwd']
+}, {
+    _id: 'pwd_hash_json',
+    type: 'hidden',
+    visible: ['resetPwd']
 }]);
 
 AccountsTemplates.configure({
     loginFunc: twoFactorAuthLogin,
+    resetPasswordFunc: twoFactorAuthResetPassword,
 
     defaultLayout: 'loginLayout',
     defaultLayoutRegions: {},
@@ -122,58 +128,209 @@ AccountsTemplates.configureRoute('enrollAccount', {
     }
 });
 
-function twoFactorAuthLogin(user, password, formData, state) {
-    return Meteor.loginWithPassword(user, password, function (error) {
-        if (error && (error instanceof Meteor.Error) && error.error === 'verify-code-required') {
-            // Error indicating that a verification code should be provided for
-            //  two-factor authentication
-            if (!formData.verify_code) {
+let monitoringState = false;
+
+function monitorState() {
+    if (Meteor.isClient && !monitoringState) {
+        Tracker.autorun(() => {
+            const state = AccountsTemplates.state.form.get('state');
+
+            // Clear two-factor verification indication whenever state changes
+            AccountsTemplates.state.form.set("2faVerify", false);
+
+            if (state === 'signIn') {
+                // Reset form
+                const $usernameField = $('#at-field-username_and_email');
+                const $passwordField = $('#at-field-password');
+
+                //$usernameField.val('');
+                $usernameField.css('display', 'inline');
+                //$passwordField.val('');
+                $passwordField.css('display', 'inline');
+
+                const $verifyCodeField = $('#at-field-verify_code');
+                $verifyCodeField.val('');
+                $verifyCodeField.css('display', 'none');
+
+                $('#at-field-user_json').val('');
+            }
+        });
+
+        monitoringState = true;
+    }
+}
+
+function twoFactorAuthLogin(user, password, formData) {
+    monitorState();
+
+    if (!formData.user_json) {
+        return Meteor.loginWithPassword(user, password, function (error) {
+            if (error && (error instanceof Meteor.Error) && error.error === 'verify-code-required') {
+                // Error indicating that a verification code should be provided for
+                //  two-factor authentication
+
+                // Morph form to enter two-factor authentication verification code
+
                 // Hide username and password input fields, and show verification code input field
-                $('#at-field-username_and_email')[0].style.display = 'none';
-                $('#at-field-password')[0].style.display = 'none';
+                $('#at-field-username_and_email').css('display', 'none');
+                $('#at-field-password').css('display', 'none');
 
                 // Change title and button label
-                $('h2 ~ div.at-form').prev('h2').text('TWO-FACTOR VERIFICATION');
-                $('button#login-submit').text('VERIFY');
+                AccountsTemplates.state.form.set("2faVerify", true);
 
-                const verifyCodeField = $('#at-field-verify_code')[0];
+                // Display verification code field
+                const $verifyCodeField = $('#at-field-verify_code');
+                $verifyCodeField.css('display', 'inline');
+                $verifyCodeField.focus();
 
-                verifyCodeField.style.display = 'inline';
-                verifyCodeField.focus();
+                // Save user info
+                $('#at-field-user_json').val(error.details);
+
+                return;
             }
-            else {
-                // Verification code has been provided. Call custom two-factor authentication
-                //  login method
-                if (typeof user === 'string') {
-                    user = !user.includes('@') ? {username: user} : {email: user};
+
+            // Process return from regular sign-in (with no two-factory authentication)
+            AccountsTemplates.submitCallback(error, 'singIn');
+        });
+    }
+    else if (formData.verify_code) {
+        // Verification code has been provided. Call custom two-factor authentication
+        //  login method
+
+        // Note: we get the user from the error message so we do not need to check whether
+        //      the passed in user parameter is an object (with either a username or email)
+        //      or a string (being either a username or email too), and do the proper
+        //      conversion if the latter case
+        Accounts.callLoginMethod({
+            methodArguments: [{
+                user: JSON.parse(formData.user_json),
+                twoFactorAuthPassword: Accounts._hashPassword(password),
+                verifyCode: formData.verify_code
+            }],
+            userCallback: (error) => {
+                if (error) {
+                    if ((error instanceof Meteor.Error) && error.error === 403
+                        && typeof error.reason === 'string' && /^Invalid code\. .*/.test(error.reason)) {
+                        // Clear verification code input field
+                        const $verifyCodeField = $('#at-field-verify_code');
+                        $verifyCodeField.val('');
+                        $verifyCodeField.focus();
+                    }
+                }
+                else {
+                    // Code successfully verified. Clear verification code and saved fields
+                    $('#at-field-verify_code').val('');
+                    $('#at-field-user_json').val('');
+
+                    // Clear two-factor verification indication
+                    AccountsTemplates.state.form.set("2faVerify", false);
                 }
 
-                Accounts.callLoginMethod({
-                    methodArguments: [{
-                        user: user,
-                        twoFactorAuthPassword: Accounts._hashPassword(password),
-                        verifyCode: formData.verify_code
-                    }],
-                    userCallback: (error) => {
-                        if (error && (error instanceof Meteor.Error) && error.error === 403
-                                && typeof error.reason === 'string' && /^Invalid code\. .*/.test(error.reason)) {
-                            // Clear verification code input field
-                            const verifyCodeField = $('#at-field-verify_code')[0];
+                // Process return from login (with two-factor authentication)
+                AccountsTemplates.submitCallback(error, 'singIn');
+            }
+        });
+    }
+}
 
-                            verifyCodeField.value = '';
-                            verifyCodeField.focus();
-                        }
+function twoFactorAuthResetPassword(token, newPassword, formData) {
+    monitorState();
 
-                        AccountsTemplates.submitCallback(error, state);
-                    }
-                });
+    if (!formData.user_json) {
+        // First (original) call. Process password reset
+        return Accounts.resetPassword(token, newPassword, function (error) {
+            if (error && (error instanceof Meteor.Error) && error.error === 'verify-code-required') {
+                // Error indicating that a verification code should be provided for
+                //  two-factor authentication
+
+                // Indicate that password had been successfully reset
+                AccountsTemplates.state.form.set("result", AccountsTemplates.texts.info.pwdReset);
+
+                const $passwordField = $('#at-field-password');
+                const $passwordAgainField = $('#at-field-password_again');
+
+                $passwordField.val('');
+                $passwordField.prop('disabled', true);
+
+                $passwordAgainField.val('');
+                $passwordAgainField.prop('disabled', true);
+
+
+                setTimeout(() => {
+                    // Morph form to enter two-factor authentication verification code
+
+                    // Clear result (password reset) message
+                    AccountsTemplates.state.form.set("result", null);
+
+                    $passwordField.prop('disabled', false);
+                    $passwordAgainField.prop('disabled', false);
+
+                    // Hide password and password again input fields, and show verification code input field
+                    $passwordField.css('display', 'none');
+                    $passwordAgainField.css('display', 'none');
+
+                    // Change title and button label
+                    AccountsTemplates.state.form.set("2faVerify", true);
+
+                    // Display verification code field
+                    const $verifyCodeField = $('#at-field-verify_code');
+                    $verifyCodeField.css('display', 'inline');
+                    $verifyCodeField.focus();
+
+                    // Save user info and password hash
+                    $('#at-field-user_json').val(error.details);
+                    $('#at-field-pwd_hash_json').val(JSON.stringify(Accounts._hashPassword(newPassword)));
+                }, AccountsTemplates.options.redirectTimeout);
+
+                return;
             }
 
-            return;
-        }
+            // Process return from regular password reset (with no two-factory authentication)
+            AccountsTemplates.submitCallback(error, 'resetPwd', function(){
+                AccountsTemplates.state.form.set("result", AccountsTemplates.texts.info.pwdReset);
 
-        AccountsTemplates.submitCallback(error, state);
-    });
+                $("#at-field-password").val('');
+                $("#at-field-password_again").val('');
+            });
+        });
+    }
+    else if (formData.verify_code) {
+        // Verification code has been provided. Call custom two-factor authentication
+        //  login method
+        Accounts.callLoginMethod({
+            methodArguments: [{
+                user: JSON.parse(formData.user_json),
+                twoFactorAuthPassword: JSON.parse(formData.pwd_hash_json),
+                verifyCode: formData.verify_code
+            }],
+            userCallback: (error) => {
+                if (error) {
+                    if ((error instanceof Meteor.Error) && error.error === 403
+                            && typeof error.reason === 'string' && /^Invalid code\. .*/.test(error.reason)) {
+                        // Clear verification code input field
+                        const $verifyCodeField = $('#at-field-verify_code');
+                        $verifyCodeField.val('');
+                        $verifyCodeField.focus();
+                    }
+                }
+                else {
+                    // Code successfully verified. Clear verification code and saved fields
+                    $('#at-field-verify_code').val('');
+                    $('#at-field-user_json').val('');
+                    $('#at-field-pwd_hash_json').val('');
+
+                    // Clear two-factor verification indication
+                    AccountsTemplates.state.form.set("2faVerify", false);
+                }
+
+                // Process return from login (with two-factor authentication) after password reset
+                AccountsTemplates.submitCallback(error, 'resetPwd', () => {
+                    // Change state to sign-in so no timeout is used before effectively login the user in
+                    AccountsTemplates.setState('signIn');
+                });
+            }
+        });
+    }
 }
 
 // Method called after accounts template form is submitted

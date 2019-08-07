@@ -32,18 +32,19 @@
                                 <div class="col-xs-6 tabs">
                                     <a href="#" class="active" id="login-form-link"><div class="login">SIGN IN</div></a>
                                 </div>
-                                <div class="col-xs-6 tabs">
-                                    <a href="#" id="register-form-link"><div class="register">REGISTER</div></a>
-                                </div>
                             {{/if}}
 
-                            <!--4. enroll Account Page-->
+                            <!--3. Enroll Account Page-->
                             {{#if (equals atFormTitle "ENROLL ACCOUNT")}}
                                 <div class="col-xs-6 tabs">
                                     <a href="/admin" class="active" id="SIGN IN-form-link"><div class="login">SIGN IN</div></a>
                                 </div>
+                            {{/if}}
+
+                            <!--4. Two-factor Verification page-->
+                            {{#if (equals atFormTitle "TWO-FACTOR VERIFICATION")}}
                                 <div class="col-xs-6 tabs">
-                                    <a href="#" id="register-form-link"><div class="register">REGISTER</div></a>
+                                    <a href="#" class="active" id="cancel-2fa-link"><div class="login">CANCEL</div></a>
                                 </div>
                             {{/if}}
                             <!--here to add more pages-->

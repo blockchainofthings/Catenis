@@ -15,6 +15,7 @@
 //import config from 'config';
 // Meteor packages
 import { Template } from "meteor/templating";
+import { AccountsTemplates } from 'meteor/useraccounts:core';
 
 // Import template UI
 import './LoginBtn.html';
@@ -24,3 +25,11 @@ import './LoginBtn.html';
 //
 
 Template.loginBtn.replaces("atPwdFormBtn");
+
+Template.atPwdFormBtn.helpers({
+    buttonText() {
+        const caption = AccountsTemplates.texts.button[AccountsTemplates.getState()];
+
+        return AccountsTemplates.state.form.get("2faVerify") ? "VERIFY" : caption;
+    }
+});
