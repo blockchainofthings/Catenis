@@ -329,23 +329,24 @@ Message.getMessageByTxid = function (txid) {
 // Query for messages for a given device adhering to the specified filtering criteria
 //
 //  Arguments:
-//    issuerDeviceId: [String]  // Catenis device ID of device that is issuing the query request
+//    issuerDeviceId: [String] - Catenis device ID of device that is issuing the query request
 //    filter: {
-//      action: [String],   // The action originally performed on the message. One of the properties of the Message.action object
-//      direction: [String],  // Direction of the sent message in reference to the issuer device. One of the properties of the Message.direction object
-//      fromDeviceId: [String|Array(String)], // Single Catenis device ID or list of Catenis device IDs specifying the device(s) that have sent the messages to the issuer device
-//      toDeviceId: [Array(String)],  // Single Catenis device ID or list of Catenis device IDs specifying the device(s) to which the messages sent from the issuer device have been sent
-//      readState: [String],  // The read state (either read or unread) of the message. One of the properties of the Message.readState object
-//      startDate: [Date],  // Date and time specifying the lower bound of the time frame within which the message had been sent/received
-//      endDate: [Date]  // Date and time specifying the upper bound of the time frame within which the message had been sent/received
+//      action: [String],   - The action originally performed on the message. One of the properties of the Message.action object
+//      direction: [String],  - Direction of the sent message in reference to the issuer device. One of the properties of the Message.direction object
+//      fromDeviceId: [String|Array(String)], - Single Catenis device ID or list of Catenis device IDs specifying the device(s) that have sent the messages to the issuer device
+//      toDeviceId: [Array(String)],  - Single Catenis device ID or list of Catenis device IDs specifying the device(s) to which the messages sent from the issuer device have been sent
+//      readState: [String],  - The read state (either read or unread) of the message. One of the properties of the Message.readState object
+//      startDate: [Date],  - Date and time specifying the lower bound of the time frame within which the message had been sent/received
+//      endDate: [Date]  - Date and time specifying the upper bound of the time frame within which the message had been sent/received
 //    }
+//    limit: [Number] - (default: 'maxQueryCount') Maximum number of messages that should be returned
+//    skip: [Number] - (default: 0) Number of messages that should be skipped (from beginning of list of matching messages) and not returned
 //
 //  Result: {
-//    messages: [Array(Object)],  // List of Message objects that satisfied the query criteria
-//    countExceeded: [Boolean]    // Indicates whether the number of messages that satisfied the query criteria was greater than the maximum
-//                                //  number of messages that can be returned, and for that reason the returned list had been truncated
+//    messages: [Array(Object)], - List of Message objects that satisfied the query criteria
+//    hasMore: [Boolean] - Indicates whether there are more messages that satisfy the query criteria yet to be returned
 //  }
-Message.query = function (issuerDeviceId, filter) {
+Message.query = function (issuerDeviceId, filter, limit, skip) {
     const hasFilter = typeof filter === 'object' && filter !== null && Object.keys(filter).length > 0;
     let selector = undefined,
         logSelector = undefined,
@@ -623,29 +624,36 @@ Message.query = function (issuerDeviceId, filter) {
         };
     }
 
+    if (!Number.isInteger(limit) || limit <= 0 || limit > cfgSettings.maxQueryCount) {
+        limit = cfgSettings.maxQueryCount;
+    }
+
+    if (!Number.isInteger(skip) || skip < 0) {
+        skip = 0;
+    }
+
     Catenis.logger.DEBUG('Query selector computed for Message.query() method:', selector);
 
-    let countExceeded = false;
+    let hasMore = false;
 
     const messages = Catenis.db.collection.Message.find(selector, {
         sort: {createdDate: 1},
-        limit: cfgSettings.maxQueryCount + 1
+        skip: skip,
+        limit: limit + 1
     }).fetch().filter((doc, idx) => {
-        let returnDoc = true;
-
-        if (idx >= cfgSettings.maxQueryCount) {
-            countExceeded = true;
-            returnDoc = false;
+        if (idx >= limit) {
+            hasMore = true;
+            return false;
         }
 
-        return returnDoc;
+        return true;
     }).map((doc) => {
         return new Message(doc);
     });
 
     return {
         messages: messages,
-        countExceeded: countExceeded
+        hasMore: hasMore
     }
 };
 

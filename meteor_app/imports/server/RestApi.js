@@ -36,6 +36,7 @@ import { retrieveMessageContainer } from './ApiMessageContainer';
 import { retrieveMessageContainer2 } from './ApiMessageContainer2';
 import { listMessages } from './ApiListMessages';
 import { listMessages2 } from './ApiListMessages2';
+import { listMessages3 } from './ApiListMessages3';
 import { listPermissionEvents } from './ApiListPermissionEvents';
 import { retrievePermissionRights } from './ApiGetPermissionRights';
 import { setPermissionRights } from './ApiPostPermissionRights';
@@ -146,7 +147,7 @@ export function RestApi(apiVersion) {
             //
             //  Refer to the source file where the action function is defined for a detailed description of the endpoint
             get: {
-                action: this.apiVer.gt('0.4') ? listMessages2 : listMessages
+                action: this.apiVer.gt('0.4') ? (this.apiVer.gt('0.7') ? listMessages3 : listMessages2) : listMessages
             }
         });
     }

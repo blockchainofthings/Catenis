@@ -1776,24 +1776,25 @@ Device.prototype.retrieveMessageContainer2 = function (messageId, targetDeviceCa
 // Retrieve a list of messages logged/sent/received by device that adhere to the specified filtering criteria
 //
 //  Arguments:
-//    filter: [Object]  // Object containing properties that specify the filtering criteria. Please refer to Message.query method for details about those properties
+//    filter: [Object] - Object containing properties that specify the filtering criteria. Please refer to Message.query method for details about those properties
+//    limit: [Number] - Maximum number of messages that should be returned
+//    skip: [Number] - Number of messages that should be skipped (from beginning of list of matching messages) and not returned
 //
 //  Result:
 //    listResult: {
 //      msgEntries: [{
-//        messageId: [String],  // ID of message
-//        action: [String],     // Action originally performed on the message. Valid values: log|send
-//        direction: [String],  // (only returned for action = 'send') Direction of the sent message. Valid values: inbound|outbound
-//        fromDevice: [Object],  // Device that had sent the message. (only returned for messages sent to the current device)
-//        toDevice: [Object],     // Device to which message had been sent. (only returned for messages sent from the current device)
-//        read: [Boolean],  // Indicates whether the message had already been read
-//        date: [Date],     // Date and time when the message had been logged/sent/received
+//        messageId: [String],  - ID of message
+//        action: [String],     - Action originally performed on the message. Valid values: log|send
+//        direction: [String],  - (only returned for action = 'send') Direction of the sent message. Valid values: inbound|outbound
+//        fromDevice: [Object], - Device that had sent the message. (only returned for messages sent to the current device)
+//        toDevice: [Object],   - Device to which message had been sent. (only returned for messages sent from the current device)
+//        read: [Boolean],      - Indicates whether the message had already been read
+//        date: [Date],         - Date and time when the message had been logged/sent/received
 //      }],
-//      countExceeded: [Boolean]  // Indicates whether the number of messages that satisfied the query criteria was greater than the maximum
-//                                //  number of messages that can be returned, and for that reason the returned list had been truncated
+//      hasMore: [Boolean] - Indicates whether there are more messages that satisfy the search criteria yet to be returned
 //    }
 //
-Device.prototype.listMessages = function(filter) {
+Device.prototype.listMessages = function(filter, limit, skip) {
     // Make sure that device is not deleted
     if (this.status === Device.status.deleted.name) {
         // Cannot list messages for a deleted device. Log error and throw exception
@@ -1809,12 +1810,12 @@ Device.prototype.listMessages = function(filter) {
     }
 
     // Query messages for this device
-    const queryResult = Message.query(this.deviceId, filter);
+    const queryResult = Message.query(this.deviceId, filter, limit, skip);
 
     const listResult = {
         msgEntries: [],
         msgCount: queryResult.messages.length,
-        countExceeded: queryResult.countExceeded
+        hasMore: queryResult.hasMore
     };
 
     queryResult.messages.forEach((message) => {
@@ -3081,7 +3082,7 @@ Device.prototype.retrieveAssetIssuanceHistory = function (assetId, startDate, en
                 sentDate: 1
             },
             limit: assetCfgSetting.maxQueryIssuanceCount + 1
-        });
+        }).fetch();
 
         if (docSentAssetIssueTxs.length < assetIssuanceTxids.length) {
             // Not all asset issuance transactions could be retrieved from local database.

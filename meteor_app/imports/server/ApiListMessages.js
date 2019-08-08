@@ -277,7 +277,7 @@ export function listMessages() {
         // Prepare result
         const result = {
             messages: [],
-            countExceeded: listResult.countExceeded
+            countExceeded: listResult.hasMore
         };
 
         listResult.msgEntries.forEach((msgEntry) => {

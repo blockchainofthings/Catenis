@@ -1,8 +1,8 @@
 /**
- * Created by Claudio on 2017-10-20.
+ * Created by Claudio on 2019-08-08.
  */
 
-//console.log('[ApiListMessages2.js]: This code just ran.');
+//console.log('[ApiListMessages3.js]: This code just ran.');
 
 // Module variables
 //
@@ -21,6 +21,7 @@ import { Meteor } from 'meteor/meteor';
 // References code in other (Catenis) modules
 import { Catenis } from './Catenis';
 import { successResponse, errorResponse } from './RestApi';
+import { cfgSettings as messageCfgSetting } from './Message';
 
 // Config entries
 /*const config_entryConfig = config.get('config_entry');
@@ -69,6 +70,8 @@ const invalidDeviceId = '__invalid_deviceId__';
 //                            by the device that issued the request (action = 'log'); sent, in case of messages sent from the current
 //                            device (action = 'send' direction = 'outbound'); or received, in case of messages sent to
 //                            he device that issued the request (action = 'send' and direction = 'inbound')
+//    limit: [Number] - (default: 'maxQueryCount') Maximum number of messages that should be returned
+//    skip: [Number] - (default: 0) Number of messages that should be skipped (from beginning of list of matching messages) and not returned
 //
 //  Success data returned: {
 //    "messages": [{
@@ -97,10 +100,9 @@ const invalidDeviceId = '__invalid_deviceId__';
 //                              sent from a device to itself are returned as two separate entries: one with direction = 'outbound', and the
 //                              other with direction = 'inbound' (provided that the query criteria allows for both outbound and inbound messages
 //                              to be returned)
-//    "countExceeded": [Boolean]  - Indicates whether the number of messages that satisfied the query criteria was greater than the maximum
-//                                   number of messages that can be returned, and for that reason the returned list had been truncated
+//    "hasMore": [Boolean] - Indicates whether there are more messages that satisfy the search criteria yet to be returned
 //  }
-export function listMessages2() {
+export function listMessages3() {
     try {
         // Process request parameters
 
@@ -257,7 +259,7 @@ export function listMessages2() {
         // startDate param
         if (this.queryParams.startDate !== undefined) {
             const mt = moment(this.queryParams.startDate, moment.ISO_8601);
-            
+
             if (mt.isValid()) {
                 filter.startDate = mt.toDate();
             }
@@ -280,6 +282,22 @@ export function listMessages2() {
             }
         }
 
+        // limit param
+        let limit;
+
+        if (!(typeof this.queryParams.limit === 'undefined' || (!Number.isNaN(limit = Number.parseInt(this.queryParams.limit)) && isValidLimit(limit)))) {
+            Catenis.logger.DEBUG('Invalid \'limit\' parameter for GET \'messages\' API request', this.queryParams);
+            return errorResponse.call(this, 400, 'Invalid parameters');
+        }
+
+        // skip param
+        let skip;
+
+        if (!(typeof this.queryParams.skip === 'undefined' || (!Number.isNaN(skip = Number.parseInt(this.queryParams.skip)) && isValidSkip(skip)))) {
+            Catenis.logger.DEBUG('Invalid \'skip\' parameter for GET \'messages\' API request', this.queryParams);
+            return errorResponse.call(this, 400, 'Invalid parameters');
+        }
+
         // Make sure that system is running and accepting API calls
         if (!Catenis.application.isRunning()) {
             Catenis.logger.DEBUG('System currently not available for fulfilling GET \'messages\' API request', {applicationStatus: Catenis.application.status});
@@ -290,7 +308,7 @@ export function listMessages2() {
         let listResult;
 
         try {
-            listResult = this.user.device.listMessages(filter);
+            listResult = this.user.device.listMessages(filter, limit, skip);
         }
         catch (err) {
             let error;
@@ -322,7 +340,7 @@ export function listMessages2() {
         const result = {
             messages: [],
             msgCount: listResult.msgCount,
-            countExceeded: listResult.hasMore
+            hasMore: listResult.hasMore
         };
 
         listResult.msgEntries.forEach((msgEntry) => {
@@ -385,6 +403,14 @@ function isValidMsgDirection(val) {
 
 function isValidMsgReadState(val) {
     return val === 'read' || val === 'unread' || val === 'any';
+}
+
+function isValidLimit(num) {
+    return num > 0 && num <= messageCfgSetting.maxQueryCount;
+}
+
+function isValidSkip(num) {
+    return num >= 0;
 }
 
 
