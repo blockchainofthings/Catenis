@@ -788,7 +788,7 @@
   "asset": {
     "largestAssetAmount": 9007199254740991, // (2^53 - 1) Largest amount of assets (expressed in asset's smallest division) that can be issued
     "maxQueryIssuanceCount": 500,  // Maximum number of asset issuance entries that can be returned when retrieving asset issuance history
-    "maxRetListEntries": 500  // Maximum number of entries that should be returned from asset related API methods that returned a list of items (e.g. List Owned Assets, List Issued Assets, List Asset Holders)
+    "maxRetListEntries": 500  // Maximum number of entries that should be returned from asset related API methods that return a list of items (e.g. List Owned Assets, List Issued Assets, List Asset Holders)
   },
   // Parameters pertaining to EmailContents module
   "emailContents": {
