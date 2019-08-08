@@ -51,6 +51,7 @@ import { getAssetBalance } from './ApiAssetBalance';
 import { listOwnedAssets } from './ApiOwnedAssets';
 import { listIssuedAssets } from './ApiIssuedAssets';
 import { retrieveAssetIssuanceHistory } from './ApiAssetIssuance';
+import { retrieveAssetIssuanceHistory2 } from './ApiAssetIssuance2';
 import { listAssetHolders } from './ApiAssetHolders';
 import { retrieveMessageProgress } from './ApiMessageProgress';
 
@@ -287,7 +288,7 @@ export function RestApi(apiVersion) {
             //
             //  Refer to the source file where the action function is defined for a detailed description of the endpoint
             get: {
-                action: retrieveAssetIssuanceHistory
+                action: this.apiVer.gt('0.7') ? retrieveAssetIssuanceHistory2 : retrieveAssetIssuanceHistory
             }
         });
 

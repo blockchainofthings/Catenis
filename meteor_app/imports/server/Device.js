@@ -2990,6 +2990,8 @@ Device.prototype.listIssuedAssets = function (limit, skip) {
 //                        issuance events must have occurred not before that date/time
 //   endDate: [Date] - (optional) Date and time specifying the end of the filtering time frame. The returned
 //                        issuance events must have occurred not after that date/time
+//   limit: [Number] - (default: 'maxQueryIssuanceCount') Maximum number of asset issuance events that should be returned
+//   skip: [Number] - (default: 0) Number of asset issuance events that should be skipped (from beginning of list of matching events) and not returned
 //
 //  Return value:
 //   issuanceHistory: {
@@ -3004,8 +3006,9 @@ Device.prototype.listIssuedAssets = function (limit, skip) {
 //     }],
 //     countExceeded: [Boolean] - Indicates whether the number of asset issuance events that should have been returned
 //                                 is larger than maximum number of asset issuance events that can be returned
+//     hasMore: [Boolean] - Indicates whether there are more asset issuance events that satisfy the search criteria yet to be returned
 //   }
-Device.prototype.retrieveAssetIssuanceHistory = function (assetId, startDate, endDate) {
+Device.prototype.retrieveAssetIssuanceHistory = function (assetId, startDate, endDate, limit, skip) {
     // Make sure that device is not deleted
     if (this.status === Device.status.deleted.name) {
         // Cannot retrieve asset issuance history for deleted device. Log error and throw exception
@@ -3032,7 +3035,7 @@ Device.prototype.retrieveAssetIssuanceHistory = function (assetId, startDate, en
     const txidAssetIssuance = Catenis.c3NodeClient.getAssetIssuance(asset.ccAssetId, false);
 
     const issuanceEvents = [];
-    let countExceeded = false;
+    let hasMore = false;
 
     if (txidAssetIssuance !== undefined) {
         const assetIssuanceTxids = Object.keys(txidAssetIssuance);
@@ -3072,6 +3075,14 @@ Device.prototype.retrieveAssetIssuanceHistory = function (assetId, startDate, en
             }
         }
 
+        if (!Number.isInteger(limit) || limit <= 0 || limit > assetCfgSetting.maxQueryIssuanceCount) {
+            limit = assetCfgSetting.maxQueryIssuanceCount;
+        }
+
+        if (!Number.isInteger(skip) || skip < 0) {
+            skip = 0;
+        }
+
         const docSentAssetIssueTxs = Catenis.db.collection.SentTransaction.find(querySelector, {
             fields: {
                 txid: 1,
@@ -3081,21 +3092,10 @@ Device.prototype.retrieveAssetIssuanceHistory = function (assetId, startDate, en
             sort: {
                 sentDate: 1
             },
-            limit: assetCfgSetting.maxQueryIssuanceCount + 1
-        }).fetch();
-
-        if (docSentAssetIssueTxs.length < assetIssuanceTxids.length) {
-            // Not all asset issuance transactions could be retrieved from local database.
-            //  Log error condition
-            Catenis.logger.ERROR('Not all asset issuance transactions could be retrieved from local database', {
-                numAssetIssuanceTxs: assetIssuanceTxids.length,
-                numRetrievedAssetIssuanceTxs: docSentAssetIssueTxs.length,
-                missingTxids: assetIssuanceTxids.filter(txid => docSentAssetIssueTxs.findIndex(doc => doc.txid === txid) === -1)
-            });
-        }
-
-        docSentAssetIssueTxs.forEach((doc, idx) => {
-            if (idx < assetCfgSetting.maxQueryIssuanceCount) {
+            skip: skip,
+            limit: limit + 1
+        }).fetch().forEach((doc, idx) => {
+            if (idx < limit) {
                 const issuance = {
                     amount: asset.smallestDivisionAmountToAmount(doc.info.issueAsset.amount),
                     holdingDevice: {
@@ -3109,9 +3109,10 @@ Device.prototype.retrieveAssetIssuanceHistory = function (assetId, startDate, en
 
                 issuanceEvents.push(issuance);
             }
+            else {
+                hasMore = true;
+            }
         });
-
-        countExceeded = docSentAssetIssueTxs.length > assetCfgSetting.maxQueryIssuanceCount;
     }
     else {
         // Unable to retrieve Colored Coins asset issuance. Log error condition
@@ -3123,7 +3124,7 @@ Device.prototype.retrieveAssetIssuanceHistory = function (assetId, startDate, en
     // Return asset issuance history
     return {
         issuanceEvents: issuanceEvents,
-        countExceeded: countExceeded
+        hasMore: hasMore
     }
 };
 

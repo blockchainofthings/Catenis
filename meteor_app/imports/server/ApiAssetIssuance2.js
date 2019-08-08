@@ -1,8 +1,8 @@
 /**
- * Created by Claudio on 2018-03-29.
+ * Created by Claudio on 2019-08-08.
  */
 
-//console.log('[ApiAssetIssuance.js]: This code just ran.');
+//console.log('[ApiAssetIssuance2.js]: This code just ran.');
 
 // Module variables
 //
@@ -23,6 +23,7 @@ import {
     successResponse,
     errorResponse
 } from './RestApi';
+import { cfgSettings as assetCfgSetting } from './Asset';
 
 // Config entries
 /*const config_entryConfig = config.get('config_entry');
@@ -48,6 +49,8 @@ import {
 //   endDate: [String] - ISO 8601 formatted date and time specifying the upper boundary of the time frame
 //                        within which the issuance events intended to be retrieved have occurred. The returned
 //                        issuance events must have occurred not after that date/time
+//   limit: [Number] - (default: 'maxQueryIssuanceCount') Maximum number of asset issuance events that should be returned
+//   skip: [Number] - (default: 0) Number of asset issuance events that should be skipped (from beginning of list of matching events) and not returned
 //
 //  Success data returned: {
 //    "issuanceEvents": [{ - A list of issuance event objects
@@ -59,11 +62,9 @@ import {
 //      },
 //      "date": [String] - ISO 8601 formatted date end time when asset issuance took place
 //    }],
-//    "countExceeded": [Boolean] - Indicates whether the number of asset issuance events that should have been returned
-//                                  is greater than the maximum number of asset issuance events that can be returned, and
-//                                  for that reason the returned list had been truncated
+//    "hasMore": [Boolean] - Indicates whether there are more asset issuance events that satisfy the search criteria yet to be returned
 //  }
-export function retrieveAssetIssuanceHistory() {
+export function retrieveAssetIssuanceHistory2() {
     try {
         // Process request parameters
 
@@ -79,7 +80,7 @@ export function retrieveAssetIssuanceHistory() {
         //
         // startDate param
         let startDate;
-        
+
         if (this.queryParams.startDate !== undefined) {
             const mt = moment(this.queryParams.startDate, moment.ISO_8601);
 
@@ -107,6 +108,22 @@ export function retrieveAssetIssuanceHistory() {
             }
         }
 
+        // limit param
+        let limit;
+
+        if (!(typeof this.queryParams.limit === 'undefined' || (!Number.isNaN(limit = Number.parseInt(this.queryParams.limit)) && isValidLimit(limit)))) {
+            Catenis.logger.DEBUG('Invalid \'limit\' parameter for GET \'assets/:assetId/issuance\' API request', this.queryParams);
+            return errorResponse.call(this, 400, 'Invalid parameters');
+        }
+
+        // skip param
+        let skip;
+
+        if (!(typeof this.queryParams.skip === 'undefined' || (!Number.isNaN(skip = Number.parseInt(this.queryParams.skip)) && isValidSkip(skip)))) {
+            Catenis.logger.DEBUG('Invalid \'skip\' parameter for GET \'assets/:assetId/issuance\' API request', this.queryParams);
+            return errorResponse.call(this, 400, 'Invalid parameters');
+        }
+
         // Make sure that system is running and accepting API calls
         if (!Catenis.application.isRunning()) {
             Catenis.logger.DEBUG('System currently not available for fulfilling GET \'assets/:assetId/issuance\' API request', {applicationStatus: Catenis.application.status});
@@ -117,7 +134,7 @@ export function retrieveAssetIssuanceHistory() {
         let result;
 
         try {
-            result = this.user.device.retrieveAssetIssuanceHistory(this.urlParams.assetId, startDate, endDate);
+            result = this.user.device.retrieveAssetIssuanceHistory(this.urlParams.assetId, startDate, endDate, limit, skip);
         }
         catch (err) {
             let error;
@@ -152,13 +169,18 @@ export function retrieveAssetIssuanceHistory() {
         }
 
         // Return success
-        return successResponse.call(this, {
-            issuanceEvents: result.issuanceEvents,
-            countExceeded: result.hasMore
-        });
+        return successResponse.call(this, result);
     }
     catch (err) {
         Catenis.logger.ERROR('Error processing GET \'assets/:assetId/issuance\' API request.', err);
         return errorResponse.call(this, 500, 'Internal server error');
     }
+}
+
+function isValidLimit(num) {
+    return num > 0 && num <= assetCfgSetting.maxQueryIssuanceCount;
+}
+
+function isValidSkip(num) {
+    return num >= 0;
 }
