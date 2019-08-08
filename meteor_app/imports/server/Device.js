@@ -1692,7 +1692,7 @@ Device.prototype.getMessageProgress = function (ephemeralMessageId) {
 // Retrieve info about where a message previously sent/logged is recorded
 //
 //  Arguments:
-//    messageId: [String]  // ID of message to get container info
+//    messageId: [String] - ID of message to get container info
 //
 //  Return value:
 //    containerInfo: {
@@ -1708,6 +1708,29 @@ Device.prototype.getMessageProgress = function (ephemeralMessageId) {
 //    }
 //
 Device.prototype.retrieveMessageContainer = function (messageId) {
+    return this.retrieveMessageContainer2(messageId, false);
+};
+
+// Retrieve info about where a message previously sent/logged is recorded
+//
+//  Arguments:
+//    messageId: [String] - ID of message to get container info
+//    targetDeviceCanRetrieve: [Boolean] - Indicates whether target device can also retrieve the message container
+//
+//  Return value:
+//    containerInfo: {
+//      blockchain: {
+//        txid: [String],         // ID of blockchain transaction where message is recorded
+//                                //  NOTE: due to malleability, the ID of the transaction might change
+//                                //    until the it is finally confirmed
+//        isConfirmed: [Boolean]  // Indicates whether the returned txid is confirmed
+//      },
+//      externalStorage: {     // Note: only returned if message is stored in an external storage
+//        <storage_provider_name>: [String]  // Key: storage provider name. Value: reference to message in external storage
+//      }
+//    }
+//
+Device.prototype.retrieveMessageContainer2 = function (messageId, targetDeviceCanRetrieve = true) {
     // Make sure that device is not deleted
     if (this.status === Device.status.deleted.name) {
         // Cannot retrieve message container for a deleted device. Log error and throw exception
@@ -1725,9 +1748,10 @@ Device.prototype.retrieveMessageContainer = function (messageId) {
     // Get message
     const message = Message.getMessageByMessageId(messageId, this.deviceId);
 
-    // Make sure that device can read the message. Only the device that logged/sent
-    //  the message can retrieve its container
-    if (message.originDeviceId !== this.deviceId) {
+    // Make sure that device can retrieve the message container. The device that logged/sent
+    //  the message (origin device) and the device to which the message is sent (the target
+    //  device) can retrieve the message container
+    if (!(message.originDeviceId === this.deviceId || (targetDeviceCanRetrieve && message.targetDeviceId === this.deviceId))) {
         // Throw exception indicating that message container cannot be retrieved by this device
         throw new Meteor.Error('ctn_device_msg_no_access', 'Device has no access rights to retrieve message container');
     }

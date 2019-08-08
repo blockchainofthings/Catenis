@@ -33,6 +33,7 @@ import { readMessage } from './ApiReadMessage';
 import { readMessage2 } from './ApiReadMessage2';
 import { readMessage3 } from './ApiReadMessage3';
 import { retrieveMessageContainer } from './ApiMessageContainer';
+import { retrieveMessageContainer2 } from './ApiMessageContainer2';
 import { listMessages } from './ApiListMessages';
 import { listMessages2 } from './ApiListMessages2';
 import { listPermissionEvents } from './ApiListPermissionEvents';
@@ -133,7 +134,7 @@ export function RestApi(apiVersion) {
             //
             //  Refer to the source file where the action function is defined for a detailed description of the endpoint
             get: {
-                action: retrieveMessageContainer
+                action: this.apiVer.gt('0.7') ? retrieveMessageContainer2 : retrieveMessageContainer
             }
         });
     }
