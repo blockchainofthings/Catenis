@@ -29,7 +29,7 @@
     "bitcoinjs-lib": "^3.3.2",
     "bitcoinjs-message": "^2.1.0",
     "body-parser": "^1.19.0",
-    "catenis-colored-coins": "git+ssh://git@bitbucket.org/blockchainofthings/cateniscoloredcoins.git#semver:^0.2.1",
+    "catenis-colored-coins": "git+ssh://git@bitbucket.org/blockchainofthings/cateniscoloredcoins.git#semver:^0.2.2",
     "cids": "^0.7.1",
     "clipboard": "^2.0.1",
     "compression": "^1.7.4",
