@@ -121,7 +121,7 @@ Client {
                               //  Format: E-00000000, where E is 'S' for sandbox, and 'P' for production
     lastModifiedDate: [date/time]  // Date and time when one of the client's properties had been last modified
   },
-  apiAccessGenKey: [string],  // Key used to generate default secret key used for client's devices to access the Catenis API
+  apiAccessGenKey: [string],  // Key used to generate shared secret key used for client's devices to access the Catenis API
   timeZone: [string],  // The name of time zone (as defined by IANA, https://www.iana.org/time-zones) attributed to this client. This time zone is used amongst other things to determine the start and end date of licenses assigned to clients
   billingMode: [string],  // Identifies the billing mode used for this client. Valid values (from Client.billingMode): 'pre-paid', 'post-paid'
   status: [string],  // Valid values: 'new' (newly created client awaiting activation); 'active' (client is in normal use mode); 'deleted' (client has been logically deleted)

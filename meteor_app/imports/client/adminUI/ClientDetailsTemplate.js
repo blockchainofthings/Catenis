@@ -261,7 +261,7 @@ Template.clientDetails.events({
         // Make sure that form to reset API access secret is not displayed
         template.state.set('displayResetApiAccessSecretForm', 'none');
 
-        // About to show client's default API key modal window
+        // About to show client's shared API key modal window
         Meteor.call('getClientApiAccessSecret', template.data.client_id, (error, apiAccessSecret) => {
             if (error) {
                 const errMsgs = template.state.get('errMsgs');
@@ -303,7 +303,7 @@ Template.clientDetails.events({
         $('#itxActionConfirmation')[0].value = '';
         template.state.set('displayResetApiAccessSecretButton', 'none');
 
-        // Display form to reset client's default API access secret
+        // Display form to reset client's shared API access secret
         template.state.set('displayResetApiAccessSecretForm', 'block');
 
         return false;
@@ -338,7 +338,7 @@ Template.clientDetails.events({
         event.stopPropagation();
 
         const form = event.target;
-        let confirmMsg = 'LAST CHANCE!\n\nIf you proceed, the client\'s default API access secret will be reset';
+        let confirmMsg = 'LAST CHANCE!\n\nIf you proceed, the shared API access secret will be reset';
 
         if (form.resetAllDevices.checked) {
             confirmMsg += ', ALONG WITH the API access secret FOR ALL DEVICES of this client'
@@ -355,11 +355,11 @@ Template.clientDetails.events({
             Meteor.call('resetClientApiAccessSecret', Template.instance().data.client_id , form.resetAllDevices.checked, (error, key) => {
                 if (error) {
                     const errMsgs = template.state.get('errMsgs');
-                    errMsgs.push('Error resetting client\'s default API access secret: ' + error.toString());
+                    errMsgs.push('Error resetting shared API access secret: ' + error.toString());
                     template.state.set('errMsgs', errMsgs);
                 }
                 else {
-                    template.state.set('infoMsg', 'Successfully reset client\'s default API access secret');
+                    template.state.set('infoMsg', 'Successfully reset shared API access secret');
                     template.state.set('infoMsgType', 'success');
                 }
             });

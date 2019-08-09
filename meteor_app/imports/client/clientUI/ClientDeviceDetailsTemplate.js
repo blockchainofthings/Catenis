@@ -115,14 +115,14 @@ Template.clientDeviceDetails.events({
         $('#btnApiAccessSecret').blur();
     },
     'click #btnResetApiAccessSecret'(event, template) {
-        // Reset reset to client default API access secret option
+        // Reset to client shared API access secret option
         $('#cbxResetToClientDefault')[0].checked = false;
 
         // Reset confirmation
         $('#itxResetApitAccessSecretConfirmation')[0].value = '';
         template.state.set('displayResetApiAccessSecretButton', 'none');
 
-        // Display form to reset device's default API access secret
+        // Display form to reset device's API access secret
         template.state.set('displayResetApiAccessSecretForm', 'block');
 
         return false;
@@ -168,11 +168,11 @@ Template.clientDeviceDetails.events({
             Meteor.call('resetCurrentClientDeviceApiAccessSecret', Template.instance().data.deviceIndex , form.resetToClientDefault.checked, (error, key) => {
                 if (error) {
                     const errMsgs = template.state.get('errMsgs');
-                    errMsgs.push('Error resetting device\'s default API access secret: ' + error.toString());
+                    errMsgs.push('Error resetting device\'s API access secret: ' + error.toString());
                     template.state.set('errMsgs', errMsgs);
                 }
                 else {
-                    template.state.set('infoMsg', 'Successfully reset device\'s default API access secret');
+                    template.state.set('infoMsg', 'Successfully reset device\'s API access secret');
                     template.state.set('infoMsgType', 'success');
                 }
             });

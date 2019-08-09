@@ -345,9 +345,9 @@ Client.prototype.renewApiAccessGenKey = function (resetAllDevicesToClientDefault
     }
 
     if (this.status === Client.status.deleted.name) {
-        // Cannot renew default API access generator key for deleted client. Log error and throw exception
-        Catenis.logger.ERROR('Cannot renew default API access generator key for deleted client', {clientId: this.clientId});
-        throw new Meteor.Error('ctn_client_deleted', util.format('Cannot renew default API access generator key for deleted client (clientId: %s)', this.clientId));
+        // Cannot renew shared API access generator key for deleted client. Log error and throw exception
+        Catenis.logger.ERROR('Cannot renew shared API access generator key for deleted client', {clientId: this.clientId});
+        throw new Meteor.Error('ctn_client_deleted', util.format('Cannot renew shared API access generator key for deleted client (clientId: %s)', this.clientId));
     }
 
     // Generate new key
@@ -358,8 +358,8 @@ Client.prototype.renewApiAccessGenKey = function (resetAllDevicesToClientDefault
         Catenis.db.collection.Client.update({_id: this.doc_id}, {$set: {apiAccessGenKey: key, lastApiAccessGenKeyModifiedDate: now}});
     }
     catch (err) {
-        Catenis.logger.ERROR('Error updating client default API access generator key', err);
-        throw new Meteor.Error('ctn_client_update_error', 'Error updating client default API access generator key', err.stack);
+        Catenis.logger.ERROR('Error updating client shared API access generator key', err);
+        throw new Meteor.Error('ctn_client_update_error', 'Error updating client shared API access generator key', err.stack);
     }
 
     if (resetAllDevicesToClientDefaultKey) {
@@ -376,8 +376,8 @@ Client.prototype.renewApiAccessGenKey = function (resetAllDevicesToClientDefault
             }, {multi: true});
         }
         catch (err) {
-            Catenis.logger.ERROR('Error resetting client\'s devices to use client default API access generator key', err);
-            throw new Meteor.Error('ctn_device_update_error', 'Error resetting client\'s devices to use client default API access generator key', err.stack);
+            Catenis.logger.ERROR('Error resetting client\'s devices to use client shared API access generator key', err);
+            throw new Meteor.Error('ctn_device_update_error', 'Error resetting client\'s devices to use client shared API access generator key', err.stack);
         }
     }
 

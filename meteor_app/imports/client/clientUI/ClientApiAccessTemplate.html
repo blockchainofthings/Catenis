@@ -27,23 +27,23 @@
                             <div class="row center" style="width:80%; margin-bottom:2em">
                                 <p>To access the Catenis API, an <b>API Access Secret</b> is required.</p>
                                 <p>Each Catenis virtual device is assigned an individual API Access Secret.</p>
-                                <p>To help manage this process, the <b>Default API Access Secret</b> can be used so devices can be assigned the same API Access Secret.</p>
+                                <p>To help manage this process, the <b>Shared API Access Secret</b> can be used so devices can be assigned the same API Access Secret.</p>
                             </div>
                             <div class="row">
                                 <div class="col-md-6">
-                                    <button type="button" id="btnDefaultApiAccessSecret" class="btn-login btn paddedBtn fullWidth" data-toggle="modal" data-target="#divClientAPIAccessSecret">Default API Access Secret</button>
+                                    <button type="button" id="btnDefaultApiAccessSecret" class="btn-login btn paddedBtn fullWidth" data-toggle="modal" data-target="#divClientAPIAccessSecret">Shared API Access Secret</button>
                                 </div>
                                 <div class="col-md-6">
                                     <a href="/devices" role="button" class="btn-login btn paddedBtn fullWidth">Manage Virtual Devices</a>
                                 </div>
                             </div>
-                            {{!Modal panel used to show and reset client's default API access secret}}
+                            {{!Modal panel used to show and reset client's shared API access secret}}
                             <div id="divClientAPIAccessSecret" class="modal fade" tabindex="-1" role="dialog">
                                 <div class="modal-dialog" role="document">
                                     <div class="modal-content">
                                         <div class="modal-header">
                                             <button id="btnCloseClientAPIAccessSecret1" type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-                                            <h4 class="modal-title">Default API Access Secret</h4>
+                                            <h4 class="modal-title">Shared API Access Secret</h4>
                                         </div>
                                         <div class="modal-body">
                                             <div>
@@ -60,7 +60,7 @@
                                                     <table class="text-left" style="margin-left:auto; margin-right:auto">
                                                         <tr>
                                                             <td class="text-right" style="vertical-align:text-top; padding-right:10px"><input id="cbxResetAllDevices" type="checkbox" name="resetAllDevices"></td>
-                                                            <td><label for="cbxResetAllDevices">Use new default API access secret to reset<br> the API access secret for all devices</label></td>
+                                                            <td><label for="cbxResetAllDevices">Use new shared API access secret to reset<br> the API access secret for all devices</label></td>
                                                         </tr>
                                                     </table>
                                                     <div style="margin-top:1em; margin-bottom:1em">
