@@ -30,8 +30,12 @@ import {
     authHeader
 } from './Authentication';
 import { Device } from './Device';
-import { ApiVersion } from './ApiVersion';
+import {
+    ApiVersion,
+    ApiVersionRange
+} from './ApiVersion';
 import { Util } from './Util';
+import { restApiRootPath } from './RestApi';
 
 // Config entries
 const wsNotifyMsgDispatcherConfig = config.get('webSocketNotifyMsgDispatcher');
@@ -40,7 +44,6 @@ const wsNotifyMsgDispatcherConfig = config.get('webSocketNotifyMsgDispatcher');
 const cfgSettings = {
     wsNotifyRootPath: wsNotifyMsgDispatcherConfig.get('wsNotifyRootPath'),
     notifyWsSubprotocol: wsNotifyMsgDispatcherConfig.get('notifyWsSubprotocol'),
-    minNotifyServiceVer: wsNotifyMsgDispatcherConfig.get('minNotifyServiceVer'),
     initVersion: wsNotifyMsgDispatcherConfig.get('initVersion'),
     availableVersions: wsNotifyMsgDispatcherConfig.get('availableVersions'),
     heartbeatInterval: wsNotifyMsgDispatcherConfig.get('heartbeatInterval'),
@@ -62,9 +65,16 @@ export class WebSocketNotifyMsgDispatcher extends NotifyMsgDispatcher {
         this.dispatcherVer = ApiVersion.checkVersion(dispatcherVer);
 
         // Assemble regular expression used to identify endpoint URI path handled by WebSocket notification
-        //  message dispatcher -
-        //  <qualifiedNotifyRooPath>[/<notifyServiceVer>][/wsNotifyRootPath][/<dispatcherVer>]/<notifyEventName>
-        this.endpointUriPathRegExp = new RegExp(util.format('^%s(?:/%s)%s%s%s(?:/%s)%s/([^/]+)$',
+        //  message dispatcher:
+        //   - new URI pattern: <restApiRootPath>/<apiVer>/<notifyRootPath>[/wsNotifyRootPath]/<notifyEventName>
+        //   - legacy URI pattern: <qualifiedNotifyRooPath>[/<notifyServiceVer>][/wsNotifyRootPath][/<dispatcherVer>]/<notifyEventName>
+        this.endpointUriPathRegExp = new RegExp(util.format('^(?:(?:/%s/(\\d+\\.\\d+)/%s%s%s/([^/]+))|(%s(?:/%s)%s%s%s(?:/%s)%s/([^/]+)))$',
+            // New pattern params
+            restApiRootPath,
+            Notification.notifyRootPath,
+            cfgSettings.wsNotifyRootPath.length > 0 ? '/' : '',
+            cfgSettings.wsNotifyRootPath,
+            // Legacy pattern params
             Notification.qualifiedNotifyRooPath,
             Util.escapeRegExp(this.notifyServiceVer.toString()),
             this.notifyServiceVer.eq(initNotifyServiceVer) ? '?' : '',
@@ -193,7 +203,50 @@ export class WebSocketNotifyMsgDispatcher extends NotifyMsgDispatcher {
     static initialize() {
         Catenis.logger.TRACE('WebSocketNotifyMsgDispatcher initialization');
         // Register all available versions of the dispatcher
-        cfgSettings.availableVersions.forEach(dispatcherVer => autoRegistration(dispatcherVer));
+        cfgSettings.availableVersions.forEach(dispatcherVerInfo => autoRegistration(dispatcherVerInfo.ver));
+    }
+
+    static dispatcherVersionByApiVersion(apiVer) {
+        apiVer = ApiVersion.checkVersion(apiVer, false);
+
+        if (apiVer) {
+            let dispatcherVer;
+
+            for (let idx = 0, limit = cfgSettings.availableVersions.length; idx < limit; idx++) {
+                const dispatcherVerInfo = cfgSettings.availableVersions[idx];
+
+                if (apiVer.gte(dispatcherVerInfo.apiVer)) {
+                    dispatcherVer = dispatcherVerInfo.ver;
+                }
+            }
+
+            return dispatcherVer;
+        }
+    }
+
+    static apiVersionRangeByDispatcherVersion(dispatcherVer) {
+        dispatcherVer = ApiVersion.checkVersion(dispatcherVer, false);
+
+        if (dispatcherVer) {
+            let lowBoundary;
+            let highBoundary;
+
+            for (let idx = 0, limit = cfgSettings.availableVersions.length; idx < limit; idx++) {
+                const dispatcherVerInfo = cfgSettings.availableVersions[idx];
+
+                if (!lowBoundary) {
+                    if (dispatcherVer.eq(dispatcherVerInfo.ver)) {
+                        lowBoundary = dispatcherVerInfo.apiVer;
+                    }
+                }
+                else {
+                    highBoundary = new ApiVersion(dispatcherVerInfo.apiVer).previous();
+                    break;
+                }
+            }
+
+            return lowBoundary ? new ApiVersionRange(lowBoundary, highBoundary) : undefined;
+        }
     }
 }
 
@@ -205,7 +258,29 @@ export class WebSocketNotifyMsgDispatcher extends NotifyMsgDispatcher {
 //
 
 function isValidEndpointUriPath(path) {
-    return this.endpointUriPathRegExp.test(path);
+    const matchResult = path.match(this.endpointUriPathRegExp);
+
+    if (matchResult) {
+        if (matchResult[3]) {
+            // Legacy pattern
+            return true;
+        }
+
+        // New pattern. Get REST API version
+        const apiVer = ApiVersion.checkVersion(matchResult[1], false);
+
+        if (apiVer) {
+            const notifyServiceVer = Notification.notifyServiceVersionByApiVersion(apiVer);
+
+            if (notifyServiceVer && this.notifyServiceVer.eq(notifyServiceVer)) {
+                const dispatcherVer = WebSocketNotifyMsgDispatcher.dispatcherVersionByApiVersion(apiVer);
+
+                return dispatcherVer && this.dispatcherVer.eq(dispatcherVer);
+            }
+        }
+    }
+
+    return false;
 }
 
 // Parse endpoint URI path to retrieve and validated notification event from it
@@ -218,7 +293,13 @@ function isValidEndpointUriPath(path) {
 function parseEndpointUriPath(path) {
     const matchResult = path.match(this.endpointUriPathRegExp);
 
-    return matchResult !== null && Notification.isValidEventName(matchResult[1], this.notifyServiceVer) ? matchResult[1] : undefined;
+    if (matchResult) {
+        const eventName = matchResult[3] ? matchResult[4] : matchResult[2];
+
+        if (Notification.isValidEventName(eventName, this.notifyServiceVer)) {
+            return eventName;
+        }
+    }
 }
 
 function connectionHandler(ws, req) {
@@ -506,10 +587,14 @@ function autoRegistration(dispatcherVer) {
         description: 'Dispatcher that uses the WebSocket protocol, with a proprietary \'notification.catenis.io\' subprotocol, to send notification messages',
         version: dispatcherVer,
         factory: function (notifyServiceVer) {
-            notifyServiceVer = ApiVersion.checkVersion(notifyServiceVer);
+            const notifyApiVerRange = Notification.apiVersionRangeByNotifyServiceVersion(notifyServiceVer);
 
-            if (notifyServiceVer.gte(cfgSettings.minNotifyServiceVer)) {
-                return new WebSocketNotifyMsgDispatcher(notifyServiceVer, dispatcherVer);
+            if (notifyApiVerRange) {
+                const dispatcherApiVerRange = WebSocketNotifyMsgDispatcher.apiVersionRangeByDispatcherVersion(dispatcherVer);
+
+                if (dispatcherApiVerRange && notifyApiVerRange.intersection(dispatcherApiVerRange)) {
+                    return new WebSocketNotifyMsgDispatcher(notifyServiceVer, dispatcherVer);
+                }
             }
         }
     })

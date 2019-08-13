@@ -21,7 +21,10 @@ import { WebApp } from 'meteor/webapp';
 // References code in other (Catenis) modules
 import { Catenis } from './Catenis';
 import { restApiRootPath } from './RestApi';
-import { ApiVersion } from './ApiVersion';
+import {
+    ApiVersion,
+    ApiVersionRange
+} from './ApiVersion';
 
 // Config entries
 const notificationConfig = config.get('notification');
@@ -44,16 +47,16 @@ export function Notification(notifyMsgDispatcherInfos) {
     // Try to instantiate all dispatchers for all currently available version of notification service
     this.notifyMsgDispatchers = [];
 
-    cfgSettings.availableVersions.forEach((notifyServiceVer) => {
+    cfgSettings.availableVersions.forEach((notifyServiceVerInfo) => {
         notifyMsgDispatcherInfos.forEach((info) => {
-            const dispatcherInstance = info.factory(notifyServiceVer);
+            const dispatcherInstance = info.factory(notifyServiceVerInfo.ver);
 
             // Make sure that dispatcher supports this version of the notification service
             if (dispatcherInstance) {
                 this.notifyMsgDispatchers.push({
                     name: info.name,
                     dispatcherVer: info.version,
-                    notifyServiceVer: notifyServiceVer,
+                    notifyServiceVer: notifyServiceVerInfo.ver,
                     instance: dispatcherInstance
                 });
             }
@@ -129,14 +132,16 @@ Notification.registerNotifyMsgDispatcher = function (info) {
 // Return an object the properties of which are the event names and their values the corresponding
 //  event description
 Notification.listEvents = function (apiVer) {
-    apiVer = ApiVersion.checkVersion(apiVer, false);
     const events = {};
+    let notifyServiceVer = Notification.notifyServiceVersionByApiVersion(apiVer);
 
-    Object.keys(Notification.event).forEach((key) => {
-        if (!apiVer || apiVer.gte(Notification.event[key].minApiVer)) {
-            events[Notification.event[key].name] = Notification.event[key].description;
-        }
-    });
+    if (notifyServiceVer && (notifyServiceVer = ApiVersion.checkVersion(notifyServiceVer, false))) {
+        Object.keys(Notification.event).forEach((key) => {
+            if (notifyServiceVer.gte(Notification.event[key].minNotifyServiceVer)) {
+                events[Notification.event[key].name] = Notification.event[key].description;
+            }
+        });
+    }
 
     return events;
 };
@@ -145,6 +150,49 @@ Notification.isValidEventName = function (eventName, notifyServiceVer) {
     notifyServiceVer = ApiVersion.checkVersion(notifyServiceVer, false);
 
     return Object.values(Notification.event).some((event) => (!notifyServiceVer || notifyServiceVer.gte(event.minNotifyServiceVer)) && event.name === eventName);
+};
+
+Notification.notifyServiceVersionByApiVersion = function (apiVer) {
+    apiVer = ApiVersion.checkVersion(apiVer, false);
+
+    if (apiVer) {
+        let notifyServiceVer;
+
+        for (let idx = 0, limit = cfgSettings.availableVersions.length; idx < limit; idx++) {
+            const notifyServiceVerInfo = cfgSettings.availableVersions[idx];
+
+            if (apiVer.gte(notifyServiceVerInfo.apiVer)) {
+                notifyServiceVer = notifyServiceVerInfo.ver;
+            }
+        }
+
+        return notifyServiceVer;
+    }
+};
+
+Notification.apiVersionRangeByNotifyServiceVersion = function (notifyServiceVer) {
+    notifyServiceVer = ApiVersion.checkVersion(notifyServiceVer, false);
+
+    if (notifyServiceVer) {
+        let lowBoundary;
+        let highBoundary;
+
+        for (let idx = 0, limit = cfgSettings.availableVersions.length; idx < limit; idx++) {
+            const notifyServiceVerInfo = cfgSettings.availableVersions[idx];
+
+            if (!lowBoundary) {
+                if (notifyServiceVer.eq(notifyServiceVerInfo.ver)) {
+                    lowBoundary = notifyServiceVerInfo.apiVer;
+                }
+            }
+            else {
+                highBoundary = new ApiVersion(notifyServiceVerInfo.apiVer).previous();
+                break;
+            }
+        }
+
+        return lowBoundary ? new ApiVersionRange(lowBoundary, highBoundary) : undefined;
+    }
 };
 
 
@@ -157,32 +205,27 @@ Notification.event = Object.freeze({
     new_msg_received: Object.freeze({
         name: 'new-msg-received',
         description: 'A new message has been received',
-        minNotifyServiceVer: '0.1',
-        minApiVer: '0.4'
+        minNotifyServiceVer: '0.1'
     }),
     sent_msg_read: Object.freeze({
         name: 'sent-msg-read',
         description: 'Previously sent message has been read by intended receiver (target device)',
-        minNotifyServiceVer: '0.1',
-        minApiVer: '0.4'
+        minNotifyServiceVer: '0.1'
     }),
     asset_received: Object.freeze({
         name: 'asset-received',
         description: 'An amount of an asset has been received',
-        minNotifyServiceVer: '0.2',
-        minApiVer: '0.6'
+        minNotifyServiceVer: '0.2'
     }),
     asset_confirmed: Object.freeze({
         name: 'asset-confirmed',
         description: 'An amount of an asset that was pending due to an asset transfer has been confirmed',
-        minNotifyServiceVer: '0.2',
-        minApiVer: '0.6'
+        minNotifyServiceVer: '0.2'
     }),
     final_msg_progress: Object.freeze({
         name: 'final-msg-progress',
         description: 'Progress of asynchronous message processing has come to an end',
-        minNotifyServiceVer: '0.3',
-        minApiVer: '0.7'
+        minNotifyServiceVer: '0.3'
     })
 });
 
@@ -199,6 +242,15 @@ Notification.event = Object.freeze({
 
 // Definition of properties
 Object.defineProperties(Notification, {
+    notifyRootPath: {
+        get: function () {
+            return cfgSettings.notifyRootPath;
+        },
+        enumerable: true
+    },
+    // Qualified root path used by legacy notification endpoint URIs. For new notification endpoint URIs,
+    //  the qualified root path also include the API version (<restApiRootPath>/<apiVer>/<notifyRootPath>)
+    //  and thus cannot be expressed as a constant value
     qualifiedNotifyRooPath: {
         get: function () {
             return util.format('/%s/%s', restApiRootPath, cfgSettings.notifyRootPath);
