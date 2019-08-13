@@ -902,7 +902,7 @@
       },
       "usageNotifyEmail": {
         "fromAddress": "Catenis Enterprise <catenisadmin@catenis.io>",  // E-mail address used to send recovery code used notification e-mail
-        "emailName": "TwoFactorAuthRecoveryCodeUsed",  // Name of e-mail contents used to notify of recovery code used
+        "emailName": "TwoFactorAuthRecoveryCodeUsed"  // Name of e-mail contents used to notify of recovery code used
       }
     }
   }
