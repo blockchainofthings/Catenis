@@ -96,6 +96,16 @@ function selectSidebarNavEntry(navEntry, clearNavEntries) {
     }
 }
 
+// Hide modal windows' shaded background and re-enable scrolling
+function disableModal() {
+    const $modalBackdrop = $('.modal-backdrop');
+
+    if ($modalBackdrop.length > 0) {
+        $modalBackdrop.remove();
+        $('body').removeClass('modal-open');
+    }
+}
+
 
 // Module code
 //
@@ -103,6 +113,12 @@ function selectSidebarNavEntry(navEntry, clearNavEntries) {
 const throttledOnWindowResize = _.throttle(onWindowResize, 200, {
     leading: false
 });
+
+// Solution to disable any side effect caused by navigating backwards
+//  (clicking the browser's back button) when a modal window is open.
+//  The modal window itself is automatically hidden but the shaded
+//  background still remains visible
+window.onpopstate = disableModal;
 
 Template.clientLayout.onCreated(function () {
     this.state = new ReactiveDict();
