@@ -854,7 +854,7 @@
       "fileExtension": "csv",  // File extension to be used in the report filename
       "headers": [  // List of names to be used as headers for the columns of the usage report
         "sku",
-        "purchase_code"
+        "voucher_id"
       ]
     }
   },

@@ -529,7 +529,7 @@ BcotSaleAllocationItem {
   _id: [string],  // MongoDB internal document ID provided by Meteor
   bcotSaleAllocation_id: [string],  // MongoDB internal ID of BcotSaleAllocation doc/rec to which this allocation item belongs
   sku: [string],  // SKU identifying the BCOT product that had been allocated for sale
-  purchaseCode: [string],  // Code to be used to redeem the (purchased) BCOT tokens for Catenis service credits
+  purchaseCode: [string],  // Code to be used to redeem the (purchased) BCOT tokens for Catenis service credits (referred in the UI as `voucher ID`)
   redemption: {
     redeemed: [boolean],  // Indicates whether the purchased BCOT tokens have already been redeemed
     client_id: [string],  // MongoDB internal ID of Client doc/rec that redeemed the purchased BCOT tokens

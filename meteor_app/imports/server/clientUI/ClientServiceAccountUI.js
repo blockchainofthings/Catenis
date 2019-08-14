@@ -117,7 +117,7 @@ ClientServiceAccountUI.initialize = function () {
                         }
                         else {
                             // Otherwise, throw generic exception
-                            throw new Meteor.Error('client-srv-account.redeemBcotCurrentClient.failure', 'Failure redeeming purchased Catenis credits');
+                            throw new Meteor.Error('client-srv-account.redeemBcotCurrentClient.failure', 'Failure redeeming Catenis vouchers');
                         }
                     }
                 }

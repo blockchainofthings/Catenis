@@ -1154,7 +1154,7 @@ Client.prototype.redeemBcot = function (purchaseCodes) {
                 Catenis.logger.ERROR('Catenis credits cannot be redeemed: one or more of the purchase codes are invalid or have already been redeemed', {
                     purchaseCodes: purchaseCodes
                 });
-                throw new Meteor.Error('client_bcot_redeem_invalid_codes', 'Catenis credits cannot be redeemed: one or more of the purchase codes are invalid or have already been redeemed');
+                throw new Meteor.Error('client_bcot_redeem_invalid_codes', 'Catenis vouchers cannot be redeemed: one or more of the voucher IDs are invalid or have already been redeemed');
             }
 
             // Execute code in critical section to avoid UTXOs concurrency

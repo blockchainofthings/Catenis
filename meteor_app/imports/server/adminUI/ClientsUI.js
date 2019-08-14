@@ -356,7 +356,7 @@ ClientsUI.initialize = function () {
                 catch (err) {
                     // Error trying to redeem purchased BCOT tokens. Log error and throw exception
                     Catenis.logger.ERROR('Failure redeeming purchased Catenis credits (purchase codes: %s).', purchaseCodes, err);
-                    throw new Meteor.Error('client.redeemBcot.failure', 'Failure redeeming purchased Catenis credits: ' + err.toString());
+                    throw new Meteor.Error('client.redeemBcot.failure', 'Failure redeeming Catenis vouchers: ' + err.toString());
                 }
             }
             else {

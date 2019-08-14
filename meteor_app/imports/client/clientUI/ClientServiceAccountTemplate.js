@@ -56,7 +56,7 @@ function validateRedeemBcotFormData(form, errMsgs) {
 
     if (enteredPurchaseCodes.length === 0) {
         // Purchase codes not supplied. Report error
-        errMsgs.push('Please enter at least one purchase code');
+        errMsgs.push('Please enter at least one Catenis voucher ID');
         hasError = true;
 
         form.purchaseCodes.focus();
@@ -258,7 +258,7 @@ Template.clientServiceAccount.events({
                 ]);
             }
             else {
-                template.state.set('infoMsg', 'Purchased Catenis credits successfully redeemed');
+                template.state.set('infoMsg', 'Catenis vouchers successfully redeemed');
                 template.state.set('infoMsgType', 'success');
 
                 // Close modal panel

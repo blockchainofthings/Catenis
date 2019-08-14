@@ -397,6 +397,8 @@ function formatPurchaseCode(code) {
     return util.format('%s-%s-%s-%s', code.substring(0, 5), code.substring(5, 10), code.substring(10, 15), code.substring(15));
 }
 
+// Note: the term "purchase code" is only used internally. On the UI, the term
+//  "Catenis voucher ID" is used instead
 function newPurchaseCode(checkExistence = true) {
     let code = environmentPrefix() + Random.id(19);
 
