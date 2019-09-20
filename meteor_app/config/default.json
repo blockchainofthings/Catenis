@@ -46,7 +46,7 @@
       "active": true,
       "logLevel": "WARN", // Valid options: ALL, TRACE, DEBUG, INFO, WARN, ACTION, ERROR, FATAL
       "toAddresses": "andre@blockchainofthings.com", // Can be set to a comma separated list of e-mail addresses
-      "fromAddress": "Catenis <noreply@catenis.com>",
+      "fromAddress": "Catenis <noreply@blockchainofthings.com>",
       "subject": "{{level}} - {{msg}}"
     }
   },
@@ -806,7 +806,7 @@
   },
   // Parameters pertaining to AccountsEmail module
   "accountsEmail": {
-    "fromAddress": "Catenis Enterprise <catenisadmin@catenis.io>",  // E-mail address used to send accounts related e-mail messages
+    "fromAddress": "Catenis Enterprise <noreply@blockchainofthings.com>",  // E-mail address used to send accounts related e-mail messages
     "resetPasswordContents": "PasswordReset",  // Name of e-mail contents used for password reset
     "enrollAccountContents": "AccountEnrollment"  // Name of e-mail contents used for account enrollment
   },
@@ -822,26 +822,26 @@
   // Parameters pertaining to LicenseExpireEmailNotify module
   "licenseExpireEmailNotify": {
     "emailName": "LicenseExpiration",  // Reference name of e-mail contents to be used for this notification
-    "fromAddress": "Catenis Enterprise <catenisadmin@catenis.io>",  // E-mail address of sender of e-mail notification message
-    "replyAddress": "donotreply@catenis.io"  // (optional) E-mail address to be used as the address to be used when replying to notification e-mail message
+    "fromAddress": "Catenis Enterprise <noreply@blockchainofthings.com>",  // E-mail address of sender of e-mail notification message
+    "replyAddress": "donotreply@blockchainofthings.com"  // (optional) E-mail address to be used as the address to be used when replying to notification e-mail message
   },
   // Parameters pertaining to LicenseOverdueEmailNotify module
   "licenseOverdueEmailNotify": {
     "emailName": "LicenseOverdue",  // Reference name of e-mail contents to be used for this notification
-    "fromAddress": "Catenis Enterprise <catenisadmin@catenis.io>",  // E-mail address of sender of e-mail notification message
-    "replyAddress": "donotreply@catenis.io"  // (optional) E-mail address to be used as the address to be used when replying to notification e-mail message
+    "fromAddress": "Catenis Enterprise <noreply@blockchainofthings.com>",  // E-mail address of sender of e-mail notification message
+    "replyAddress": "donotreply@blockchainofthings.com"  // (optional) E-mail address to be used as the address to be used when replying to notification e-mail message
   },
   // Parameters pertaining to LicenseExpireRemindEmailNotify module
   "licenseExpireRemindEmailNotify": {
     "emailName": "LicenseExpirationReminder",  // Reference name of e-mail contents to be used for this notification
-    "fromAddress": "Catenis Enterprise <catenisadmin@catenis.io>",  // E-mail address of sender of e-mail notification message
-    "replyAddress": "donotreply@catenis.io"  // (optional) E-mail address to be used as the address to be used when replying to notification e-mail message
+    "fromAddress": "Catenis Enterprise <noreply@blockchainofthings.com>",  // E-mail address of sender of e-mail notification message
+    "replyAddress": "donotreply@blockchainofthings.com"  // (optional) E-mail address to be used as the address to be used when replying to notification e-mail message
   },
   // Parameters pertaining to DevicesDisableEmailNotify module
   "devicesDisabledEmailNotify": {
     "emailName": "DevicesDisabled",  // Reference name of e-mail contents to be used for this notification
-    "fromAddress": "Catenis Enterprise <catenisadmin@catenis.io>",  // E-mail address of sender of e-mail notification message
-    "replyAddress": "donotreply@catenis.io"  // (optional) E-mail address to be used as the address to be used when replying to notification e-mail message
+    "fromAddress": "Catenis Enterprise <noreply@blockchainofthings.com>",  // E-mail address of sender of e-mail notification message
+    "replyAddress": "donotreply@blockchainofthings.com"  // (optional) E-mail address to be used as the address to be used when replying to notification e-mail message
   },
   // Parameters pertaining to BcotProduct module
   "bcotProduct": {
@@ -908,7 +908,7 @@
         "replaceStr": "$1-$2"  // The replacement string used to format the recovery codes
       },
       "usageNotifyEmail": {
-        "fromAddress": "Catenis Enterprise <catenisadmin@catenis.io>",  // E-mail address used to send recovery code used notification e-mail
+        "fromAddress": "Catenis Enterprise <noreply@blockchainofthings.com>",  // E-mail address used to send recovery code used notification e-mail
         "emailName": "TwoFactorAuthRecoveryCodeUsed"  // Name of e-mail contents used to notify of recovery code used
       }
     }
