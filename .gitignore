@@ -1,8 +1,8 @@
 /.idea/
 /meteor_app/log
 /meteor_app/node_modules
-/meteor_app/config/development-*.json
-/meteor_app/config/local-*.json
+/meteor_app/config/development-*.json5
+/meteor_app/config/local-*.json5
 /meteor_app/seed*.dat
 /meteor_app/packages/
 /mongodb_dump/
