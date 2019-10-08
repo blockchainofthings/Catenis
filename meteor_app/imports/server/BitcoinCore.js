@@ -64,7 +64,7 @@ export function BitcoinCore(network, host, username, password, timeout) {
         //  - 'getblockheader'
         //  - 'abandontransaction'
         //  - 'getmempoolancestors'
-        //  - 'getaddressesbylabel'     // USE IT AS JUST GET_ADDRESSES (ACCOUNT = "")
+        //  - 'getaddressesbylabel'     // USE IT AS JUST GET_ADDRESSES (LABEL = "")
         command: Meteor.wrapAsync(this.btcClient.cmd, this.btcClient),
         getnetworkinfo: Meteor.wrapAsync(this.btcClient.getNetworkInfo, this.btcClient),
         getblockchaininfo: Meteor.wrapAsync(this.btcClient.getBlockchainInfo, this.btcClient),
