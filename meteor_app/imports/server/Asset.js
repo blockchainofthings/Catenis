@@ -244,7 +244,7 @@ Asset.getAssetByIssuanceAddressPath = function (addrPath) {
 
     if (docAsset === undefined) {
         // No asset available with the given issuing address path. Log error and throw exception
-        Catenis.logger.ERROR('Could not find asset with given issuing address path', {issuingAddrPath: addrPath});
+        Catenis.logger.DEBUG('Could not find asset with given issuing address path', {issuingAddrPath: addrPath});
         throw new Meteor.Error('ctn_asset_not_found', util.format('Could not find asset with given issuing address path (%s)', addrPath));
     }
 
