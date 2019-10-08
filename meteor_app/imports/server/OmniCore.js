@@ -62,13 +62,13 @@ export function OmniCore(network, host, username, password, timeout) {
         //  The following Omni Core JSON RPC methods are being called through this
         //  mechanism:
         //  - 'importpubkey'
+        //  - 'getaddressesbylabel'     // USE IT AS JUST GET_ADDRESSES (LABEL = "")
         //  - 'omni_getbalance'
         //  - 'omni_getinfo'
         //  - 'omni_gettransaction'
         //  - 'omni_createpayload_simplesend'
         //  - 'omni_getpropertyid'
-        command: Meteor.wrapAsync(this.btcClient.cmd, this.btcClient),
-        getaddressesbyaccount: Meteor.wrapAsync(this.btcClient.getAddressesByAccount, this.btcClient)  // USE IT AS JUST GET_ADDRESSES (ACCOUNT = "")
+        command: Meteor.wrapAsync(this.btcClient.cmd, this.btcClient)
     };
 }
 
@@ -216,10 +216,15 @@ OmniCore.prototype.importPublicKey = function (pubKeyHex, rescan, callback) {
 
 OmniCore.prototype.getAddresses = function () {
     try {
-        return this.rpcApi.getaddressesbyaccount('');
+        return Object.keys(this.rpcApi.command('getaddressesbylabel', ''));
     }
     catch (err) {
-        handleError('getaddressesbyaccount', err);
+        if (err.code === OmniCore.rpcErrorCode.RPC_WALLET_INVALID_ACCOUNT_NAME
+                && /^No addresses with label.*/.test(err.message)) {
+            return [];
+        }
+
+        handleError('getaddressesbylabel', err);
     }
 };
 
