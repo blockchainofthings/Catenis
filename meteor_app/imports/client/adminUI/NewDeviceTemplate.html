@@ -48,7 +48,40 @@
                                         </div>
                                     {{/if}}
                                 </div>
+                                <button type="button" id="btnConfirmNewDevice" style="display:none" data-toggle="modal" data-target="#divConfirmNewDevice"></button>
                             </form>
+                            {{#if validatedDeviceInfo}}
+                                <script type="text/javascript">
+                                    $('#btnConfirmNewDevice')[0].click();
+                                </script>
+                            {{/if}}
+                            {{!Modal panel containing form used to confirm creation of new device}}
+                            <div id="divConfirmNewDevice" class="modal fade" tabindex="-1" role="dialog">
+                                <div class="modal-dialog" role="document">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <button id="btnCloseConfirmNewDevice1" type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                                            <h4 class="modal-title">Create New Device</h4>
+                                        </div>
+                                        <div class="modal-body">
+                                            <form id="frmConfirmNewDevice" autocomplete="off">
+                                                <div class="panel panel-default" style="padding:1em">
+                                                    <div style="margin-top:1em; margin-bottom:1em">
+                                                        <label>To confirm your action, please type the following text below: <b>yes, I do confirm it</b>
+                                                            <br><input id="itxNewDeviceConfirmation" type="text" size="20" maxlength="20" placeholder="confirmation" autocomplete="off"></label>
+                                                    </div>
+                                                    <div style="margin-top:1em">
+                                                        <button type="submit" class="btn btn-primary" style="display:{{displayConfirmNewDeviceSubmitButton}}">Confirm</button>
+                                                    </div>
+                                                </div>
+                                            </form>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button id="btnCloseConfirmNewDevice2" type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         {{/unless}}
                     </div>
                 </div>
