@@ -72,14 +72,6 @@ Template.newDevice.events({
         template.state.set('infoMsg', undefined);
         template.state.set('infoMsgType', 'info');
     },
-    'change #txtDeviceName'(event, template) {
-        const deviceName = event.target.value;
-        const usernameCtrl = template.$('#txtUsername')[0];
-
-        if (!usernameCtrl.value || usernameCtrl.value.length === 0) {
-            usernameCtrl.value = deviceName.replace(/(\s|[^\w])+/g,'_');
-        }
-    },
     'click #btnCancel'(event, template) {
         // Note: we resource to this unconventional solution so we can disable the Cancel button and,
         //      at the same time, make it behave the same way as when a link is clicked (which we
