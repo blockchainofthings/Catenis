@@ -23,6 +23,9 @@ import { Catenis } from '../ClientCatenis';
 
 // Import template UI
 import './NewClientTemplate.html';
+import { LicenseShared } from '../../both/LicenseShared';
+import { ClientUtil } from '../ClientUtil';
+import { minValidityDays } from './ClientLicensesTemplate';
 
 // Definition of module (private) functions
 
@@ -73,6 +76,35 @@ function validateFormData(form, errMsgs, template) {
 
     clientInfo.timeZone = form.timeZone.value;
 
+    clientInfo.licenseInfo = {
+        license_id: form.license.value
+    };
+
+    if (clientInfo.licenseInfo.license_id.length === 0) {
+        // No license selected. Report error
+        errMsgs.push('Please select a license.');
+        hasError = true;
+    }
+
+    const startDate = $(form.licenseStartDate).data('DateTimePicker').date();
+
+    if (startDate) {
+        clientInfo.licenseInfo.startDate = startDate.format('YYYY-MM-DD');
+    }
+
+    if (form.overrideValidity.checked) {
+        const endDate = $(form.licenseEndDate).data('DateTimePicker').date();
+
+        if (!endDate) {
+            // No license end date to override validity. Report error
+            errMsgs.push('Please enter a license end date.');
+            hasError = true;
+        }
+        else {
+            clientInfo.licenseInfo.endDate = endDate.format('YYYY-MM-DD');
+        }
+    }
+    
     return !hasError ? clientInfo : undefined;
 }
 
@@ -87,17 +119,66 @@ Template.newClient.onCreated(function () {
     this.state.set('infoMsg', undefined);
     this.state.set('infoMsgType', 'info');
 
+    this.state.set('isInitializing', true);
+    this.state.set('showAddLicenseEndDate', false);
     this.state.set('clientCreated', false);
 
     this.state.set('needsConfirmEmail', false);
     this.state.set('emailConfirmed', false);
     this.state.set('emailMismatch', false);
+
+    // Subscribe to receive database docs/recs updates
+    this.allLicensesSubs = this.subscribe('allLicenses');
 });
 
 Template.newClient.onDestroyed(function () {
+    if (this.allLicensesSubs) {
+        this.allLicensesSubs.stop();
+    }
 });
 
 Template.newClient.events({
+    'click #frmNewClient'(event, template) {
+        if (template.state.get('isInitializing')) {
+            // Activate date/time picker control
+            const dtPicker = $('#dtpkrLicenseStartDate');
+            dtPicker.datetimepicker({
+                minDate: moment().startOf('day'),
+                format: 'YYYY-MM-DD'
+            });
+            const dtPicker2 = $('#dtpkrLicenseEndDate');
+            dtPicker2.datetimepicker({
+                useCurrent: false,
+                minDate: moment().startOf('day').add(minValidityDays, 'd'),
+                format: 'YYYY-MM-DD'
+            });
+
+            // Set handler to adjust minimum end date based on currently
+            //  selected start date
+            dtPicker.on("dp.change", function (e) {
+                // Get start date (moment obj)
+                let startDate = e.date;
+
+                if (!startDate) {
+                    startDate = moment().startOf('day');
+                }
+
+                // Adjust limit for end date
+                const minDate = startDate.clone();
+                minDate.add(minValidityDays, 'd');
+
+                const dataDtPicker2 = dtPicker2.data("DateTimePicker");
+
+                if (dataDtPicker2.date() && dataDtPicker2.date().valueOf() < minDate.valueOf()) {
+                    dataDtPicker2.clear();
+                }
+
+                dataDtPicker2.minDate(minDate);
+            });
+
+            template.state.set('isInitializing', false);
+        }
+    },
     'click #btnDismissError'(event, template) {
         // Clear error message
         template.state.set('errMsgs', []);
@@ -158,6 +239,18 @@ Template.newClient.events({
             form.confirmEmail.focus();
         }
     },
+    'change #cbxOverrideValidity'(event, template) {
+        event.stopPropagation();
+
+        if (event.target.checked) {
+            // Show end date field
+            template.state.set('showAddLicenseEndDate', true);
+        }
+        else {
+            // Hide end date field
+            template.state.set('showAddLicenseEndDate', false);
+        }
+    },
     'click #btnCancel'(event, template) {
         // Note: we resource to this unconventional solution so we can disable the Cancel button and,
         //      at the same time, make it behave the same way as when a link is clicked (which we
@@ -193,7 +286,7 @@ Template.newClient.events({
                 btnCancel.disabled = false;
                 btnCreate.disabled = false;
 
-                if (error) {
+                if (error && error.error !== 'client.create.addLicense.failure') {
                     // Clear info alert message, and display error message
                     template.state.set('infoMsg', undefined);
 
@@ -202,6 +295,16 @@ Template.newClient.events({
                     ]);
                 }
                 else {
+                    // Check if there was an error adding a license to the newly created client, and
+                    //  display it if so
+                    if (error) {
+                        template.state.set('errMsgs', [
+                            error.toString()
+                        ]);
+
+                        clientId = error.details.clientId;
+                    }
+
                     // Indicate that client has been successfully created
                     template.state.set('clientCreated', true);
                     template.state.set('infoMsg', util.format('New client (client ID: %s) successfully created.', clientId));
@@ -216,6 +319,28 @@ Template.newClient.events({
 });
 
 Template.newClient.helpers({
+    activeLicenses() {
+        return Catenis.db.collection.License.find({
+            status: LicenseShared.status.active.name
+        }, {
+            sort: {
+                order: 1,
+                level: 1,
+                type: 1
+            }
+        }).map((doc) => {
+            let licName = ClientUtil.capitalize(doc.level);
+
+            if (doc.type) {
+                licName += ' (' + doc.type + ')';
+            }
+
+            return {
+                _id: doc._id,
+                name: licName
+            };
+        });
+    },
     hasErrorMessage() {
         return Template.instance().state.get('errMsgs').length > 0;
     },
@@ -254,6 +379,9 @@ Template.newClient.helpers({
                 selected: tzName === localTZ ? 'selected' : ''
             };
         }).sort((tz1, tz2) => tz1.offset === tz2.offset ? (tz1.name < tz2.name ? -1 : (tz1.name > tz2.name ? 1 : 0)) : tz1.offset - tz2.offset);
+    },
+    displayAddLicenseEndDate() {
+        return Template.instance().state.get('showAddLicenseEndDate') ? 'block' : 'none';
     },
     showCreateButton() {
         return !Template.instance().state.get('clientCreated');

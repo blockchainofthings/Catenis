@@ -98,6 +98,24 @@ ClientsUI.initialize = function () {
                     throw new Meteor.Error('client.create.failure', 'Failure trying to create new Catenis client: ' + err.toString());
                 }
 
+                // Add license to newly created client
+                try {
+                    const client = Client.getClientByClientId(clientId);
+
+                    if (!clientInfo.licenseInfo.startDate) {
+                        clientInfo.licenseInfo.startDate = new Date();
+                    }
+
+                    client.addLicense(clientInfo.licenseInfo.license_id, clientInfo.licenseInfo.startDate, clientInfo.licenseInfo.endDate);
+                }
+                catch (err) {
+                    // Error trying to add license to newly created client. Log error and throw exception
+                    Catenis.logger.ERROR('Failure trying to add license to newly created client (clientId: %s).', clientId, util.inspect({clientLicenseInfo: clientInfo.licenseInfo}), err);
+                    throw new Meteor.Error('client.create.addLicense.failure', util.format('Failure trying to add license to newly created client (clientId: %s): %s', clientId, err.toString()), {
+                        clientId: clientId
+                    });
+                }
+
                 return clientId;
             }
             else {
@@ -444,6 +462,20 @@ ClientsUI.initialize = function () {
                     username: 1,
                     emails: 1
                 }
+            });
+        }
+        else {
+            // User not logged in or not a system administrator
+            //  Make sure that publication is not started and throw exception
+            this.stop();
+            throw new Meteor.Error('ctn_admin_no_permission', 'No permission; must be logged in as a system administrator to perform this task');
+        }
+    });
+
+    Meteor.publish('allLicenses', function() {
+        if (Roles.userIsInRole(this.userId, 'sys-admin')) {
+            return Catenis.db.collection.License.find({
+                status: License.status.active.name
             });
         }
         else {

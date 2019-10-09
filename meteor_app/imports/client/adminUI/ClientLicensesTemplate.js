@@ -31,7 +31,7 @@ import './ClientLicensesTemplate.html';
 import './ClientLicenseDetailsTemplate.js';
 
 // Module variables
-const minValidityDays = 7;
+export const minValidityDays = 7;
 const confirmPhrase = 'yes, i do confirm it';
 
 

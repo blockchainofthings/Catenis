@@ -100,6 +100,32 @@
                                         {{/each}}
                                     </select>
                                 </div>
+                                <div class="form-group text-left">
+                                    <label for="selLicense" class="input">License</label><br>
+                                    <select id="selLicense" name="license" class="input">
+                                        <option value="">-- select --</option>
+                                        {{#each license in activeLicenses}}
+                                            <option value="{{license._id}}">{{license.name}}</option>
+                                        {{/each}}
+                                    </select>
+                                </div>
+                                <div class="form-group" style="position:relative">
+                                    <input id="dtpkrLicenseStartDate" name="licenseStartDate" type='text' placeholder="Start Date (*) (YYYY-MM-DD)" autocomplete="off" />
+                                </div>
+                                <div class="form-group text-left">
+                                    <table style="margin-top:30px">
+                                        <tr>
+                                            <td class="text-right" style="vertical-align:text-top; padding-right:10px"><input id='cbxOverrideValidity' name="overrideValidity" type='checkbox' /></td>
+                                            <td><label for="cbxOverrideValidity" class="input">Override Validity</label></td>
+                                        </tr>
+                                    </table>
+                                </div>
+                                <div class="form-group" style="position:relative; display:{{displayAddLicenseEndDate}}">
+                                    <input id='dtpkrLicenseEndDate' name="licenseEndDate" type='text' placeholder="End Date (*) (YYYY-MM-DD)" autocomplete="off" />
+                                </div>
+                                <div class="text-left" style="font-size:10pt; margin-bottom:20px; color:gray">
+                                    (*) Date/time in reference to client's time zone
+                                </div>
                                 <div class="form-group">
                                     <input type="hidden" id="emailConfirmation" name="emailConfirmation" value="notConfirmed">
                                 </div>
@@ -115,6 +141,9 @@
                                     {{/if}}
                                 </div>
                             </form>
+                            <script type="text/javascript">
+                                $('#frmNewClient')[0].click();
+                            </script>
                         {{/unless}}
                     </div>
                 </div>
