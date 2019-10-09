@@ -140,10 +140,43 @@
                                         </div>
                                     {{/if}}
                                 </div>
+                                <button type="button" id="btnConfirmNewClient" style="display:none" data-toggle="modal" data-target="#divConfirmNewClient"></button>
                             </form>
+                            {{#if validatedClientInfo}}
+                                <script type="text/javascript">
+                                    $('#btnConfirmNewClient')[0].click();
+                                </script>
+                            {{/if}}
                             <script type="text/javascript">
                                 $('#frmNewClient')[0].click();
                             </script>
+                            {{!Modal panel containing form used to confirm creation of new client}}
+                            <div id="divConfirmNewClient" class="modal fade" tabindex="-1" role="dialog">
+                                <div class="modal-dialog" role="document">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <button id="btnCloseConfirmNewClient1" type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                                            <h4 class="modal-title">Create New Client</h4>
+                                        </div>
+                                        <div class="modal-body">
+                                            <form id="frmConfirmNewClient" autocomplete="off">
+                                                <div class="panel panel-default" style="padding:1em">
+                                                    <div style="margin-top:1em; margin-bottom:1em">
+                                                        <label>To confirm your action, please type the following text below: <b>yes, I do confirm it</b>
+                                                            <br><input id="itxNewClientConfirmation" type="text" size="20" maxlength="20" placeholder="confirmation" autocomplete="off"></label>
+                                                    </div>
+                                                    <div style="margin-top:1em">
+                                                        <button type="submit" class="btn btn-primary" style="display:{{displayConfirmNewClientSubmitButton}}">Confirm</button>
+                                                    </div>
+                                                </div>
+                                            </form>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button id="btnCloseConfirmNewClient2" type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         {{/unless}}
                     </div>
                 </div>

@@ -27,6 +27,10 @@ import { LicenseShared } from '../../both/LicenseShared';
 import { ClientUtil } from '../ClientUtil';
 import { minValidityDays } from './ClientLicensesTemplate';
 
+// Module variables
+const confirmPhrase = 'yes, i do confirm it';
+
+
 // Definition of module (private) functions
 
 function validateFormData(form, errMsgs, template) {
@@ -119,8 +123,10 @@ Template.newClient.onCreated(function () {
     this.state.set('infoMsg', undefined);
     this.state.set('infoMsgType', 'info');
 
+    this.state.set('displayConfirmNewClientSubmitButton', 'none');
     this.state.set('isInitializing', true);
     this.state.set('showAddLicenseEndDate', false);
+    this.state.set('validatedClientInfo', undefined);
     this.state.set('clientCreated', false);
 
     this.state.set('needsConfirmEmail', false);
@@ -258,6 +264,87 @@ Template.newClient.events({
         //      both solutions cause a page reload, whilst clicking on th link does not)
         template.find('#lnkCancel').click();
     },
+    'click #btnConfirmNewClient'(event, template) {
+        event.preventDefault();
+
+        // Reset action confirmation
+        $('#itxNewClientConfirmation')[0].value = '';
+        template.state.set('displayConfirmNewClientSubmitButton', 'none');
+    },
+    'hidden.bs.modal #divConfirmNewClient'(event, template) {
+        // Modal panel has been closed. Make sure that button used to
+        //  activate modal panel is not selected
+        $('#btnCreate').blur();
+
+        template.state.set('validatedClientInfo', undefined);
+    },
+    'input #itxNewClientConfirmation'(event, template) {
+        // Suppress spaces from beginning of input
+        let inputValue = event.target.value = event.target.value.replace(/^\s+/, '');
+
+        if (inputValue.length > confirmPhrase.length) {
+            // Limit length of input
+            inputValue = event.target.value = inputValue.substring(0, confirmPhrase.length);
+        }
+
+        // Check if input matches confirmation phrase
+        if (inputValue.toLowerCase() === confirmPhrase) {
+            // Show button to confirm action
+            template.state.set('displayConfirmNewClientSubmitButton', 'inline');
+        }
+        else {
+            // Hide button to confirm action
+            template.state.set('displayConfirmNewClientSubmitButton', 'none');
+        }
+    },
+    'submit #frmConfirmNewClient'(event, template) {
+        event.preventDefault();
+        event.stopPropagation();
+
+        // Close modal panel
+        $('#divConfirmNewClient').modal('hide');
+
+        // Disable buttons
+        const btnCancel = template.find('#btnCancel');
+        const btnCreate = template.find('#btnCreate');
+        btnCancel.disabled = true;
+        btnCreate.disabled = true;
+
+        // Display alert message indicating that request is being processed
+        template.state.set('infoMsg', 'Your request is being processed. Please wait.');
+
+        // Call remote method to create new client
+        Meteor.call('createNewClient', Catenis.ctnHubNodeIndex, template.state.get('validatedClientInfo'), (error, clientId) => {
+            // Reenable buttons
+            btnCancel.disabled = false;
+            btnCreate.disabled = false;
+
+            if (error && error.error !== 'client.create.addLicense.failure') {
+                // Clear info alert message, and display error message
+                template.state.set('infoMsg', undefined);
+
+                template.state.set('errMsgs', [
+                    error.toString()
+                ]);
+            }
+            else {
+                // Check if there was an error adding a license to the newly created client, and
+                //  display it if so
+                if (error) {
+                    template.state.set('errMsgs', [
+                        error.toString()
+                    ]);
+
+                    clientId = error.details.clientId;
+                }
+
+                // Indicate that client has been successfully created
+                template.state.set('clientCreated', true);
+                template.state.set('infoMsg', util.format('New client (client ID: %s) successfully created.', clientId));
+                template.state.set('infoMsgType', 'success');
+            }
+        });
+    },
     'submit #frmNewClient'(event, template) {
         event.preventDefault();
 
@@ -271,46 +358,7 @@ Template.newClient.events({
         let clientInfo;
 
         if ((clientInfo = validateFormData(form, errMsgs, template))) {
-            // Disable buttons
-            const btnCancel = template.find('#btnCancel');
-            const btnCreate = template.find('#btnCreate');
-            btnCancel.disabled = true;
-            btnCreate.disabled = true;
-
-            // Display alert message indicating that request is being processed
-            template.state.set('infoMsg', 'Your request is being processed. Please wait.');
-
-            // Call remote method to create new client
-            Meteor.call('createNewClient', Catenis.ctnHubNodeIndex, clientInfo, (error, clientId) => {
-                // Reenable buttons
-                btnCancel.disabled = false;
-                btnCreate.disabled = false;
-
-                if (error && error.error !== 'client.create.addLicense.failure') {
-                    // Clear info alert message, and display error message
-                    template.state.set('infoMsg', undefined);
-
-                    template.state.set('errMsgs', [
-                        error.toString()
-                    ]);
-                }
-                else {
-                    // Check if there was an error adding a license to the newly created client, and
-                    //  display it if so
-                    if (error) {
-                        template.state.set('errMsgs', [
-                            error.toString()
-                        ]);
-
-                        clientId = error.details.clientId;
-                    }
-
-                    // Indicate that client has been successfully created
-                    template.state.set('clientCreated', true);
-                    template.state.set('infoMsg', util.format('New client (client ID: %s) successfully created.', clientId));
-                    template.state.set('infoMsgType', 'success');
-                }
-            });
+            template.state.set('validatedClientInfo', clientInfo);
         }
         else {
             template.state.set('errMsgs', errMsgs);
@@ -393,5 +441,11 @@ Template.newClient.helpers({
     },
     emailsDoNotMatch() {
         return Template.instance().state.get('emailMismatch');
+    },
+    displayConfirmNewClientSubmitButton() {
+        return Template.instance().state.get('displayConfirmNewClientSubmitButton');
+    },
+    validatedClientInfo() {
+        return Template.instance().state.get('validatedClientInfo');
     }
 });
