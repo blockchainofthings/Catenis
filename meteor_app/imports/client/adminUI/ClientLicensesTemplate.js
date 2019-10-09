@@ -10,7 +10,7 @@
 // References to external code
 //
 // Internal node modules
-//import util from 'util';
+import querystring from "querystring";
 // Third-party node modules
 import moment from 'moment-timezone';
 // Meteor packages
@@ -29,7 +29,6 @@ import './ClientLicensesTemplate.html';
 
 // Import dependent templates
 import './ClientLicenseDetailsTemplate.js';
-import querystring from "querystring";
 
 // Module variables
 const minValidityDays = 7;
