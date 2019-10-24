@@ -9,7 +9,7 @@
     "shutdownTimeout": 30000,   // (30 sec.) Time, in milliseconds, that the application should wait after it receives a terminate request before it actually terminates
     "adminRole": "sys-admin",  // User role for application administration
     "defaultAdminUser": null,  // (optional) Username of application default admin user
-    "defaultAdminPsw": null  // (optional) Chiphered, base64 encoded password for application default admin user
+    "defaultAdminPsw": null  // (optional) Ciphered, base64 encoded password for application default admin user
   },
   // Parameters pertaining to the Startup module
   "startup": {
@@ -94,8 +94,8 @@
   },
   // Parameters pertaining to RestApi module
   "compressResponseBody": {
-    "useCompression": true,   // Indicate wheter response body should be compressed
-    "compressThreshold": 1024   // Mininum size, in bytes, of response body for it to be compressed
+    "useCompression": true,   // Indicate whether response body should be compressed
+    "compressThreshold": 1024   // Minimum size, in bytes, of response body for it to be compressed
   },
   // Parameters pertaining to BitcoinFees module
   "bitcoinFees": {
@@ -559,7 +559,7 @@
   "ipfsClusterClient": {
     "apiUrl": "http://catenis-ipfs:9094/",  // URL of IPFS Cluster REST API
     "localAddress": null,  // (optional, can be set to null) IP address of local network interface to use to connect to the IPFS Cluster RESP API. If not specified, the default network interface is used
-    "timeout": 20000  // (20 sec.) (optinal, can be set to null) Timeout, in milliseconds, for connection/request with API server
+    "timeout": 20000  // (20 sec.) (optional, can be set to null) Timeout, in milliseconds, for connection/request with API server
   },
   // Parameters pertaining to IpfsServerMonitor module
   "ipfsServerMonitor": {
@@ -573,7 +573,7 @@
   // Parameters pertaining to Message module
   "message": {
     "maxQueryCount": 500,  // Maximum number of messages entries that can be returned when querying for messages
-    "minSizeReadDataChunk": 1024,  // (1 KB) Mininum size, in bytes, of data chunks that should be used when reading message in chunks
+    "minSizeReadDataChunk": 1024,  // (1 KB) Minimum size, in bytes, of data chunks that should be used when reading message in chunks
     "maxSizeReadDataChunk": 15728640  // (15 MB) Maximum size, in bytes, of data chunks that should be used when reading message in chunks
                                       //  Note: this must be below 16 MB, which is the maximum size of a MongoDB doc/rec, since the whole data chunk is stored in a single database doc/rec (of the MessageChunk collection)
   },
@@ -725,7 +725,7 @@
   },
   // Parameters pertaining to StoreBcotTransaction module
   "storeBcotTransaction": {
-    "bcotStoreAddrAmount": 600,  // Amount, in satohis, to be paid to BCOT store address output
+    "bcotStoreAddrAmount": 600,  // Amount, in satoshis, to be paid to BCOT store address output
     "timeToConfirm": 300  // (5 hours) Time, in minutes, that is expected the store BCOT transaction to be confirmed
   },
   // Parameters pertaining to SpendServiceCreditTransaction module

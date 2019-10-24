@@ -56,8 +56,8 @@
   },
   // Parameters pertaining to RestApi module
   "compressResponseBody": {
-    "useCompression": true,   // Indicate wheter response body should be compressed
-    "compressThreshold": 1024   // Mininum size, in bytes, of response body for it to be compressed
+    "useCompression": true,   // Indicate whether response body should be compressed
+    "compressThreshold": 1024   // Minimum size, in bytes, of response body for it to be compressed
   },
   // Parameters pertaining to BitcoinFees module
   "bitcoinFees": {
@@ -105,7 +105,7 @@
   "ipfsClusterClient": {
     "apiUrl": "http://catenis-local-1:9094/",  // URL of IPFS Cluster REST API
     "localAddress": null,  // (optional, can be set to null) IP address of local network interface to use to connect to the IPFS Cluster RESP API. If not specified, the default network interface is used
-    "timeout": 20000  // (20 sec.) (optinal, can be set to null) Timeout, in milliseconds, for connection/request with API server
+    "timeout": 20000  // (20 sec.) (optional, can be set to null) Timeout, in milliseconds, for connection/request with API server
   },
   // Parameters pertaining to IpfsServerMonitor module
   "ipfsServerMonitor": {
@@ -118,7 +118,7 @@
   },
   // Parameters pertaining to Message module
   "message": {
-    "minSizeReadDataChunk": 10,  // (10 bytes) Mininum size, in bytes, of data chunks that should be used when reading message in chunks
+    "minSizeReadDataChunk": 10,  // (10 bytes) Minimum size, in bytes, of data chunks that should be used when reading message in chunks
     "maxSizeReadDataChunk": 15728640  // (15 MB) Maximum size, in bytes, of data chunks that should be used when reading message in chunks
                                       //  Note: the size of the oplog (oplog.rs collection) of Meteor's development environment mongo DB must
                                       //   be resized to support the default value of this setting (15 MB) since its default size is 8 MB.

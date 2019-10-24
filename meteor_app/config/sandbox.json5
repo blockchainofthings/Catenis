@@ -104,7 +104,7 @@
   "ipfsClusterClient": {
     "apiUrl": "http://localhost:9094/",  // URL of IPFS Cluster REST API
     "localAddress": null,  // (optional, can be set to null) IP address of local network interface to use to connect to the IPFS Cluster RESP API. If not specified, the default network interface is used
-    "timeout": 20000  // (20 sec.) (optinal, can be set to null) Timeout, in milliseconds, for connection/request with API server
+    "timeout": 20000  // (20 sec.) (optional, can be set to null) Timeout, in milliseconds, for connection/request with API server
   },
   // Parameters pertaining to IpfsServerMonitor module
   "ipfsServerMonitor": {
