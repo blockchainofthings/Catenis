@@ -58,7 +58,7 @@ const cfgSettings = {
 // C3NodeClient function class
 export function C3NodeClient(network, host, inetAddr, username, password, timeout) {
     this.host = host;
-    this.port = network === 'testnet' ? cfgSettings.testnetTcpPort : cfgSettings.mainTcpPort;
+    this.port = network === 'testnet' || network === 'regtest' ? cfgSettings.testnetTcpPort : cfgSettings.mainTcpPort;
     this.timeout = timeout;
 
     if (inetAddr.length > 0) {

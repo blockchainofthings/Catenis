@@ -16,6 +16,7 @@
 // Third-party node modules
 import secp256k1 from 'secp256k1';
 import bitcoinMessage from 'bitcoinjs-message';
+import bitcoinLib from 'bitcoinjs-lib';
 // Meteor packages
 import { Meteor } from 'meteor/meteor';
 
@@ -29,8 +30,18 @@ import { ECDecipher } from './ECDecipher';
 //
 
 // CryptoKeys function class
+//
+// Constructor
+//  keyPair [Object] - Object representing a ECDSA key pair. Should be either an ECPair or a BIP32 class instance
+//                      gotten from bitcoinjs-lib's ECPair.fromXXX() or bip32.fromXXX() methods
 export function CryptoKeys(keyPair) {
     this.keyPair = keyPair;
+
+    // Make sure that `compressed` property is defined.
+    //  Rationale: BIP32 instances only handle compressed keys even though they do not define a `compressed` property
+    if (this.keyPair.compressed === undefined) {
+        this.keyPair.compressed = true;
+    }
 }
 
 
@@ -38,7 +49,7 @@ export function CryptoKeys(keyPair) {
 //
 
 CryptoKeys.prototype.hasPrivateKey = function () {
-    return this.keyPair.d ? true : false;
+    return !!this.keyPair.privateKey;
 };
 
 CryptoKeys.prototype.getPrivateKey = function () {
@@ -46,7 +57,7 @@ CryptoKeys.prototype.getPrivateKey = function () {
         throw new Meteor.Error('ctn_crypto_no_priv_key', 'Missing private key');
     }
 
-    return this.keyPair.d.toBuffer(32);
+    return this.keyPair.privateKey;
 };
 
 CryptoKeys.prototype.exportPrivateKey = function () {
@@ -62,19 +73,19 @@ CryptoKeys.prototype.exportPublicKey = function () {
 };
 
 CryptoKeys.prototype.getCompressedPublicKey = function () {
-    const pubKey = this.keyPair.getPublicKeyBuffer();
+    const pubKey = this.keyPair.publicKey;
 
     return this.keyPair.compressed ? pubKey : secp256k1.publicKeyConvert(pubKey, true);
 };
 
 CryptoKeys.prototype.getUncompressedPublicKey = function () {
-    const pubKey = this.keyPair.getPublicKeyBuffer();
+    const pubKey = this.keyPair.publicKey;
 
     return this.keyPair.compressed ? secp256k1.publicKeyConvert(pubKey, false) : pubKey;
 };
 
 CryptoKeys.prototype.getAddress = function () {
-    return this.keyPair.getAddress();
+    return bitcoinLib.payments.p2pkh({pubkey: this.keyPair.publicKey, network: this.keyPair.network}).address;
 };
 
 // NOTE: the length of the encrypted data will have a length that is a multiple of 16.

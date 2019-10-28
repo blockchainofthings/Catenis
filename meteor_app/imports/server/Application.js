@@ -261,7 +261,7 @@ Application.prototype.isOmniCoreRescanning = function () {
 };
 
 Application.prototype.cipherData = function (data, decipher = false) {
-    const masterKeys = new CryptoKeys(Catenis.keyStore.masterHDNode.keyPair);
+    const masterKeys = new CryptoKeys(Catenis.keyStore.masterHDNode);
 
     if (decipher) {
         if (!Buffer.isBuffer(data)) {

@@ -225,7 +225,7 @@ let purgeUnusedExtKeyIntervalHandle;
 //  }
 export function KeyStore(ctnHubNodeIndex, seed, cryptoNetwork, masterOnly = false) {
     // Create master HD extended key
-    this.masterHDNode = bitcoinLib.HDNode.fromSeedBuffer(seed, cryptoNetwork);
+    this.masterHDNode = bitcoinLib.bip32.fromSeed(seed, cryptoNetwork);
 
     if (!masterOnly) {
         this.ctnHubNodeIndex = ctnHubNodeIndex;
@@ -265,13 +265,13 @@ KeyStore.prototype.removeExtKeysByParentPath = function (parentPath) {
 KeyStore.prototype.getCryptoKeysByPath = function (path) {
     const docExtKey = this.collExtKey.by('path', path);
 
-    return docExtKey !== undefined ? new CryptoKeys(bitcoinLib.HDNode.fromBase58(docExtKey.strHDNode, this.cryptoNetwork).keyPair) : null;
+    return docExtKey !== undefined ? new CryptoKeys(bitcoinLib.bip32.fromBase58(docExtKey.strHDNode, this.cryptoNetwork)) : null;
 };
 
 KeyStore.prototype.getCryptoKeysByAddress = function (addr) {
     const docExtKey = this.collExtKey.by('address', addr);
 
-    return docExtKey !== undefined ? new CryptoKeys(bitcoinLib.HDNode.fromBase58(docExtKey.strHDNode, this.cryptoNetwork).keyPair) : null;
+    return docExtKey !== undefined ? new CryptoKeys(bitcoinLib.bip32.fromBase58(docExtKey.strHDNode, this.cryptoNetwork)) : null;
 };
 
 KeyStore.prototype.getTypeAndPathByAddress = function (addr) {
@@ -300,7 +300,7 @@ KeyStore.prototype.getAddressInfo = function (addr, retrieveObsolete = false, ch
             }
 
             addrInfo = {
-                cryptoKeys: new CryptoKeys(bitcoinLib.HDNode.fromBase58(docExtKey.strHDNode, this.cryptoNetwork).keyPair),
+                cryptoKeys: new CryptoKeys(bitcoinLib.bip32.fromBase58(docExtKey.strHDNode, this.cryptoNetwork)),
                 type: docExtKey.type,
                 path: docExtKey.path,
                 parentPath: docExtKey.parentPath,
@@ -343,7 +343,7 @@ KeyStore.prototype.getAddressInfoByPath = function (path, retrieveObsolete = fal
             }
 
             addrInfo = {
-                cryptoKeys: new CryptoKeys(bitcoinLib.HDNode.fromBase58(docExtKey.strHDNode, this.cryptoNetwork).keyPair),
+                cryptoKeys: new CryptoKeys(bitcoinLib.bip32.fromBase58(docExtKey.strHDNode, this.cryptoNetwork)),
                 type: docExtKey.type,
                 path: path,
                 parentPath: docExtKey.parentPath,
@@ -776,7 +776,7 @@ KeyStore.prototype.getSystemFundingPaymentAddressKeys = function (ctnNodeIndex, 
     }
 
     if (sysFundingPaymentAddrHDNode !== null) {
-        sysFundingPaymentAddrKeys = new CryptoKeys(sysFundingPaymentAddrHDNode.keyPair);
+        sysFundingPaymentAddrKeys = new CryptoKeys(sysFundingPaymentAddrHDNode);
     }
 
     return sysFundingPaymentAddrKeys;
@@ -901,7 +901,7 @@ KeyStore.prototype.getSystemFundingChangeAddressKeys = function (ctnNodeIndex, a
     }
 
     if (sysFundingChangeAddrHDNode !== null) {
-        sysFundingChangeAddrKeys = new CryptoKeys(sysFundingChangeAddrHDNode.keyPair);
+        sysFundingChangeAddrKeys = new CryptoKeys(sysFundingChangeAddrHDNode);
     }
 
     return sysFundingChangeAddrKeys;
@@ -1026,7 +1026,7 @@ KeyStore.prototype.getSystemPayTxExpenseAddressKeys = function (ctnNodeIndex, ad
     }
 
     if (sysPayTxExpenseAddrHDNode !== null) {
-        sysPayTxExpenseAddrKeys = new CryptoKeys(sysPayTxExpenseAddrHDNode.keyPair);
+        sysPayTxExpenseAddrKeys = new CryptoKeys(sysPayTxExpenseAddrHDNode);
     }
 
     return sysPayTxExpenseAddrKeys;
@@ -1151,7 +1151,7 @@ KeyStore.prototype.getSystemReadConfirmSpendNotifyAddressKeys = function (ctnNod
     }
 
     if (sysReadConfSpendNotifyAddrHDNode !== null) {
-        sysReadConfSpendNotifyAddrKeys = new CryptoKeys(sysReadConfSpendNotifyAddrHDNode.keyPair);
+        sysReadConfSpendNotifyAddrKeys = new CryptoKeys(sysReadConfSpendNotifyAddrHDNode);
     }
 
     return sysReadConfSpendNotifyAddrKeys;
@@ -1276,7 +1276,7 @@ KeyStore.prototype.getSystemReadConfirmSpendOnlyAddressKeys = function (ctnNodeI
     }
 
     if (sysReadConfSpendOnlyAddrHDNode !== null) {
-        sysReadConfSpendOnlyAddrKeys = new CryptoKeys(sysReadConfSpendOnlyAddrHDNode.keyPair);
+        sysReadConfSpendOnlyAddrKeys = new CryptoKeys(sysReadConfSpendOnlyAddrHDNode);
     }
 
     return sysReadConfSpendOnlyAddrKeys;
@@ -1401,7 +1401,7 @@ KeyStore.prototype.getSystemReadConfirmSpendNullAddressKeys = function (ctnNodeI
     }
 
     if (sysReadConfSpendNullAddrHDNode !== null) {
-        sysReadConfSpendNullAddrKeys = new CryptoKeys(sysReadConfSpendNullAddrHDNode.keyPair);
+        sysReadConfSpendNullAddrKeys = new CryptoKeys(sysReadConfSpendNullAddrHDNode);
     }
 
     return sysReadConfSpendNullAddrKeys;
@@ -1526,7 +1526,7 @@ KeyStore.prototype.getSystemReadConfirmPayTxExpenseAddressKeys = function (ctnNo
     }
 
     if (sysReadConfPayTxExpenseAddrHDNode !== null) {
-        sysReadConfPayTxExpenseAddrKeys = new CryptoKeys(sysReadConfPayTxExpenseAddrHDNode.keyPair);
+        sysReadConfPayTxExpenseAddrKeys = new CryptoKeys(sysReadConfPayTxExpenseAddrHDNode);
     }
 
     return sysReadConfPayTxExpenseAddrKeys;
@@ -1651,7 +1651,7 @@ KeyStore.prototype.getSystemServiceCreditIssuingAddressKeys = function (ctnNodeI
     }
 
     if (sysServCredIssueAddrHDNode !== null) {
-        sysServCredIssueAddrKeys = new CryptoKeys(sysServCredIssueAddrHDNode.keyPair);
+        sysServCredIssueAddrKeys = new CryptoKeys(sysServCredIssueAddrHDNode);
     }
 
     return sysServCredIssueAddrKeys;
@@ -1776,7 +1776,7 @@ KeyStore.prototype.getSystemServicePaymentPayTxExpenseAddressKeys = function (ct
     }
 
     if (sysServPymtPayTxExpenseAddrHDNode !== null) {
-        sysServPymtPayTxExpenseAddrKeys = new CryptoKeys(sysServPymtPayTxExpenseAddrHDNode.keyPair);
+        sysServPymtPayTxExpenseAddrKeys = new CryptoKeys(sysServPymtPayTxExpenseAddrHDNode);
     }
 
     return sysServPymtPayTxExpenseAddrKeys;
@@ -1901,7 +1901,7 @@ KeyStore.prototype.getSystemMultiSigSigneeAddressKeys = function (ctnNodeIndex, 
     }
 
     if (sysMultiSigSigneeAddrHDNode !== null) {
-        sysMultiSigSigneeAddrKeys = new CryptoKeys(sysMultiSigSigneeAddrHDNode.keyPair);
+        sysMultiSigSigneeAddrKeys = new CryptoKeys(sysMultiSigSigneeAddrHDNode);
     }
 
     return sysMultiSigSigneeAddrKeys;
@@ -2027,7 +2027,7 @@ KeyStore.prototype.getSystemBcotSaleStockAddressKeys = function (ctnNodeIndex, a
     }
 
     if (sysBcotSaleStockAddrHDNode !== null) {
-        sysBcotSaleStockAddrKeys = new CryptoKeys(sysBcotSaleStockAddrHDNode.keyPair);
+        sysBcotSaleStockAddrKeys = new CryptoKeys(sysBcotSaleStockAddrHDNode);
     }
 
     return sysBcotSaleStockAddrKeys;
@@ -2158,7 +2158,7 @@ KeyStore.prototype.getSystemDeviceAddressKeys = function (ctnNodeIndex, addrRoot
     }
 
     if (sysDeviceAddrHDNode !== null) {
-        sysDeviceAddrKeys = new CryptoKeys(sysDeviceAddrHDNode.keyPair);
+        sysDeviceAddrKeys = new CryptoKeys(sysDeviceAddrHDNode);
     }
 
     return sysDeviceAddrKeys;
@@ -2450,7 +2450,7 @@ KeyStore.prototype.getClientServiceCreditAddressKeys = function (ctnNodeIndex, c
     }
 
     if (clientSrvCreditAddrHDNode !== null) {
-        clientSrvCreditAddrKeys = new CryptoKeys(clientSrvCreditAddrHDNode.keyPair);
+        clientSrvCreditAddrKeys = new CryptoKeys(clientSrvCreditAddrHDNode);
     }
 
     return clientSrvCreditAddrKeys;
@@ -2808,7 +2808,7 @@ KeyStore.prototype.getDeviceInternalAddressKeys = function (ctnNodeIndex, client
     }
 
     if (deviceIntAddrHDNode !== null) {
-        deviceIntAddrKeys = new CryptoKeys(deviceIntAddrHDNode.keyPair);
+        deviceIntAddrKeys = new CryptoKeys(deviceIntAddrHDNode);
     }
 
     return deviceIntAddrKeys;
@@ -2957,7 +2957,7 @@ KeyStore.prototype.getDevicePublicAddressKeys = function (ctnNodeIndex, clientIn
     }
 
     if (devicePubAddrHDNode !== null) {
-        devicePubAddrKeys = new CryptoKeys(devicePubAddrHDNode.keyPair);
+        devicePubAddrKeys = new CryptoKeys(devicePubAddrHDNode);
     }
 
     return devicePubAddrKeys;
@@ -3177,7 +3177,7 @@ function storeHDNode(type, path, hdNode, isLeaf, isReserved, isObsolete) {
         isObsolete = false;
     }
 
-    const docExtKey = {type: type, path: path, parentPath: parentPath(path), depth: hdNode.depth, index: hdNode.index, strHDNode: hdNode.toBase58(), address: (new CryptoKeys(hdNode.keyPair)).getAddress(), isLeaf: isLeaf, isReserved: isReserved, isObsolete: isObsolete};
+    const docExtKey = {type: type, path: path, parentPath: parentPath(path), depth: hdNode.depth, index: hdNode.index, strHDNode: hdNode.toBase58(), address: (new CryptoKeys(hdNode)).getAddress(), isLeaf: isLeaf, isReserved: isReserved, isObsolete: isObsolete};
 
     this.collExtKey.insert(docExtKey);
 }
@@ -3185,7 +3185,7 @@ function storeHDNode(type, path, hdNode, isLeaf, isReserved, isObsolete) {
 function retrieveHDNode(path) {
     const docExtKey = this.collExtKey.by('path', path);
 
-    return docExtKey !== undefined ? bitcoinLib.HDNode.fromBase58(docExtKey.strHDNode, this.cryptoNetwork) : null;
+    return docExtKey !== undefined ? bitcoinLib.bip32.fromBase58(docExtKey.strHDNode, this.cryptoNetwork) : null;
 }
 
 

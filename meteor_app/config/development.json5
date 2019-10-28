@@ -4,7 +4,7 @@
   "application": {
     "environment": "development",
     "seedFilename": "seed.test2.dat",
-    "cryptoNetwork": "testnet",  // Available values: 'bitcoin' (for Bitcoin's production blockchain), 'testnet' (for Bitcoin's test blockchain)
+    "cryptoNetwork": "regtest",  // Available values: 'bitcoin' (for Bitcoin's production blockchain), 'testnet' (for Bitcoin's test blockchain)
     "shutdownTimeout": 30000   // (30 sec.) Time, in milliseconds, that the application should wait after it receives a terminate request before it actually terminates
   },
   // Parameters pertaining to the Startup module
