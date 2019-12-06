@@ -49,7 +49,7 @@
     "winston": "^3.2.1",
     "winston-daily-rotate-file": "^3.7.0",
     "winston-mail": "^2.0.0",
-    "ws": "^3.3.3"
+    "ws": "^7.2.0"
   },
   "repository": "git@bitbucket.org:blockchainofthings/catenis.git",
   "devDependencies": {

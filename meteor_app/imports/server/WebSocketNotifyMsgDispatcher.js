@@ -375,7 +375,7 @@ function heartbeatPing() {
         }
 
         ws.isAlive = false;
-        ws.ping('', false, true);
+        ws.ping();
     });
 }
 
