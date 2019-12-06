@@ -88,6 +88,20 @@ CryptoKeys.prototype.getAddress = function () {
     return bitcoinLib.payments.p2pkh({pubkey: this.keyPair.publicKey, network: this.keyPair.network}).address;
 };
 
+CryptoKeys.prototype.getPubKeyHash = function () {
+    return bitcoinLib.crypto.hash160(this.keyPair.publicKey);
+};
+
+CryptoKeys.prototype.getAddressAndPubKeyHash = function () {
+    const p2pkh = bitcoinLib.payments.p2pkh({pubkey: this.keyPair.publicKey, network: this.keyPair.network});
+
+    return {
+        address: p2pkh.address,
+        pubKeyHash: p2pkh.hash
+    };
+};
+
+
 // NOTE: the length of the encrypted data will have a length that is a multiple of 16.
 //  One can use the following formula to calculate the size of the encrypted data
 //  from the size of the original data:

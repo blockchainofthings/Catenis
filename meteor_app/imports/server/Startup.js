@@ -27,6 +27,7 @@ import { IpfsClusterClient } from './IpfsClusterClient';
 import { IpfsServerMonitor } from './IpfsServerMonitor';
 import { BitcoinFees } from './BitcoinFees';
 import { BaseBlockchainAddress } from './BaseBlockchainAddress';
+import { BaseOffChainAddress } from './BaseOffChainAddress';
 import { CatenisNode } from './CatenisNode';
 import { Client } from './Client';
 import { Database } from './Database';
@@ -159,6 +160,7 @@ Meteor.startup(function () {
             CheckImportAddresses(cfgSettings.fixMissingAddresses);
 
             BaseBlockchainAddress.initialize();
+            BaseOffChainAddress.initialize();
             Client.initialize();
             Device.initialize();
 

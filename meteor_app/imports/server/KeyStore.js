@@ -28,6 +28,8 @@
 //
 //      m/k/0/5 -> System BCOT token sale root HD extended key (NOTE: this entry should only exist for the Catenis Hub node (k = 0))
 //
+//      m/k/0/6 -> System off-chain messages settlement root HD extended Key
+//
 //      m/k/0/0/0 -> System device main addresses root HD extended key
 //      m/k/0/0/1 -> System device (reserved) addresses #2 root HD extended key
 //      m/k/0/0/2 -> System device (reserved) addresses #3 root HD extended key
@@ -87,6 +89,10 @@
 //
 //      m/k/0/5/0/* -> System BCOT token sale stock addresses HD extended key (NOTE: there should be only a single address generated)
 //
+//      m/k/0/6/0 -> System off-chain messages settlement pay tx expense root HD extended key
+//
+//      m/k/0/6/0/* -> System off-chain messages settlement pay tx expense addresses HD extended key
+//
 //      m/k/i (i>=1) -> client #i root HD extended key
 //
 //      m/k/i/0 (i>=1) -> client #i internal hierarchy root HD extended key
@@ -134,7 +140,7 @@
 //      m/k/i/1/j/0 (i,j>=1) -> device #j of client #i main addresses root HD extended key
 //      m/k/i/1/j/1 (i,j>=1) -> device #j of client #i asset addresses root HD extended key
 //      m/k/i/1/j/2 (i,j>=1) -> device #j of client #i asset issuance addresses root HD extended key
-//      m/k/i/1/j/3 (i,j>=1) -> device #j of client #i public (reserved) addresses #4 root HD extended key
+//      m/k/i/1/j/3 (i,j>=1) -> device #j of client #i off-chain addresses root HD extended key
 //      m/k/i/1/j/4 (i,j>=1) -> device #j of client #i public (reserved) addresses #5 root HD extended key
 //      m/k/i/1/j/5 (i,j>=1) -> device #j of client #i public (reserved) addresses #6 root HD extended key
 //      m/k/i/1/j/6 (i,j>=1) -> device #j of client #i public (reserved) addresses #7 root HD extended key
@@ -145,6 +151,7 @@
 //      m/k/i/1/j/0/* (i,j>=1) -> device #j of client #i main addresses HD extended key
 //      m/k/i/1/j/1/* (i,j>=1) -> device #j of client #i asset addresses HD extended key
 //      m/k/i/1/j/2/* (i,j>=1) -> device #j of client #i asset issuance addresses HD extended key
+//      m/k/i/1/j/3/* (i,j>=1) -> device #j of client #i of-chain addresses HD extended key
 //
 //  Please refer to BIP-32 (https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki) for more information.
 //
@@ -202,7 +209,7 @@ const numClientServCredAddrRoots = 10,
     numUsedSysDeviceAddrRoots = 1,
     numUsedClientServCredAddrRoots = clientServCredAddrRootTypes.length,
     numUsedDeviceIntAddrRoots = 1,
-    numUsedDevicePubAddrRoots = 3;
+    numUsedDevicePubAddrRoots = 4;
 
 let purgeUnusedExtKeyIntervalHandle;
 
@@ -219,9 +226,11 @@ let purgeUnusedExtKeyIntervalHandle;
 //      index: [integer],
 //      strHDNode: [string],
 //      address: [string],
+//      pubKeyHash: [string],
 //      isLeaf: [boolean],
 //      isReserved: [boolean],
-//      isObsolete: [boolean]
+//      isObsolete: [boolean],
+//      isOffChainAddr: [boolean]
 //  }
 export function KeyStore(ctnHubNodeIndex, seed, cryptoNetwork, masterOnly = false) {
     // Create master HD extended key
@@ -238,6 +247,7 @@ export function KeyStore(ctnHubNodeIndex, seed, cryptoNetwork, masterOnly = fals
 
         this.collExtKey.ensureUniqueIndex('path');
         this.collExtKey.ensureUniqueIndex('address');
+        this.collExtKey.ensureUniqueIndex('pubKeyHash');
 
         // Store master HD extended key
         storeHDNode.call(this, 'mstr', 'm', this.masterHDNode);
@@ -256,6 +266,14 @@ export function KeyStore(ctnHubNodeIndex, seed, cryptoNetwork, masterOnly = fals
 
 KeyStore.prototype.removeExtKeyByAddress = function (addr) {
     this.collExtKey.findAndRemove({address: addr});
+};
+
+KeyStore.prototype.removeExtKeyByOffChainAddress = function (pubKeyHash) {
+    if (Buffer.isBuffer(pubKeyHash)) {
+        pubKeyHash = pubKeyHash.toString('base64');
+    }
+
+    this.collExtKey.findAndRemove({pubKeyHash: pubKeyHash, isOffChainAddr: true});
 };
 
 KeyStore.prototype.removeExtKeysByParentPath = function (parentPath) {
@@ -278,6 +296,16 @@ KeyStore.prototype.getTypeAndPathByAddress = function (addr) {
     const docExtKey = this.collExtKey.by('address', addr);
 
     return docExtKey !== undefined ? {type: docExtKey.type, path: docExtKey.path} : null;
+};
+
+KeyStore.prototype.getTypeAndPathByOffChainAddress = function (pubKeyHash) {
+    if (Buffer.isBuffer(pubKeyHash)) {
+        pubKeyHash = pubKeyHash.toString('base64');
+    }
+
+    const docExtKey = this.collExtKey.by('pubKeyHash', pubKeyHash);
+
+    return docExtKey !== undefined && docExtKey.isOffChainAddr ? {type: docExtKey.type, path: docExtKey.path} : null;
 };
 
 KeyStore.prototype.getAddressInfo = function (addr, retrieveObsolete = false, checkAddressInUse = true) {
@@ -358,6 +386,51 @@ KeyStore.prototype.getAddressInfoByPath = function (path, retrieveObsolete = fal
         }
         else if (retrieveObsolete && BaseBlockchainAddress.retrieveObsoleteAddressByPath(path, checkAddressInUse)) {
             obsoleteAddressRetrieved = true;
+            tryAgain = true;
+        }
+    }
+    while (tryAgain);
+
+    return addrInfo;
+};
+
+KeyStore.prototype.getOffChainAddressInfo = function (pubKeyHash) {
+    if (Buffer.isBuffer(pubKeyHash)) {
+        pubKeyHash = pubKeyHash.toString('base64');
+    }
+
+    let addrInfo = null,
+        tryAgain;
+
+    do {
+        tryAgain = false;
+
+        const docExtKey = this.collExtKey.by('pubKeyHash', pubKeyHash);
+
+        if (docExtKey !== undefined) {
+            // Make sure that this HD extended key is for an off-chain address
+            if (docExtKey.isOffChainAddr) {
+                addrInfo = {
+                    cryptoKeys: new CryptoKeys(bitcoinLib.bip32.fromBase58(docExtKey.strHDNode, this.cryptoNetwork)),
+                    type: docExtKey.type,
+                    path: docExtKey.path,
+                    parentPath: docExtKey.parentPath
+                };
+
+                const pathParts = KeyStore.getPathParts(docExtKey);
+
+                if (pathParts !== null) {
+                    addrInfo.pathParts = pathParts;
+                }
+            }
+            else {
+                Catenis.logger.DEBUG('Trying to get off-chain address info for a non-off-chain address', {
+                    pubKeyHash: pubKeyHash,
+                    docExtKey: docExtKey
+                })
+            }
+        }
+        else if (BaseOffChainAddress.reloadAddress(pubKeyHash)) {
             tryAgain = true;
         }
     }
@@ -521,6 +594,18 @@ KeyStore.prototype.initCatenisNodeHDNodes = function (ctnNodeIndex) {
         // Save newly created HD extended key to store it later
         hdNodesToStore.push({type: 'sys_asset_root', path: path, hdNode: sysAssetRootHDNode, isLeaf: false, isReserved: false});
 
+        // Create system off-chain messages settlement root HD extended key
+        path = sysRootPath + '/6';
+        const sysOCMsgSettleRootHDNode = sysRootHDNode.derive(6);
+
+        if (sysOCMsgSettleRootHDNode.index !== 6) {
+            Catenis.logger.WARN(util.format('System off-chain messages settlement root HD extended key (%s) derived with an unexpected index', path), {expectedIndex: 6, returnedIndex: sysOCMsgSettleRootHDNode.index});
+            return false;
+        }
+
+        // Save newly created HD extended key to store it later
+        hdNodesToStore.push({type: 'sys_oc_msg_setlmt_root', path: path, hdNode: sysOCMsgSettleRootHDNode, isLeaf: false, isReserved: false});
+
         // Create all predefined and reserved system device addresses root HD extended keys
         for (let idx = 0; idx < numDeviceAddrRoots; idx++) {
             path = util.format('%s/0/%d', sysRootPath, idx);
@@ -595,7 +680,7 @@ KeyStore.prototype.initCatenisNodeHDNodes = function (ctnNodeIndex) {
         const sysReadConfSpendNotifyRootHDNode = sysReadConfSpendRootHDNode.derive(0);
 
         if (sysReadConfSpendNotifyRootHDNode.index !== 0) {
-            Catenis.logger.WARN(util.format('System read confirmation spend notify root HD extended key (%s) derived with an unexpected index', path), {expectedIndex: 1, returnedIndex: sysReadConfSpendNotifyRootHDNode.index});
+            Catenis.logger.WARN(util.format('System read confirmation spend notify root HD extended key (%s) derived with an unexpected index', path), {expectedIndex: 0, returnedIndex: sysReadConfSpendNotifyRootHDNode.index});
             return false;
         }
 
@@ -619,7 +704,7 @@ KeyStore.prototype.initCatenisNodeHDNodes = function (ctnNodeIndex) {
         const sysReadConfSpendNullRootHDNode = sysReadConfSpendRootHDNode.derive(2);
 
         if (sysReadConfSpendNullRootHDNode.index !== 2) {
-            Catenis.logger.WARN(util.format('System read confirmation spend null root HD extended key (%s) derived with an unexpected index', path), {expectedIndex: 1, returnedIndex: sysReadConfSpendNullRootHDNode.index});
+            Catenis.logger.WARN(util.format('System read confirmation spend null root HD extended key (%s) derived with an unexpected index', path), {expectedIndex: 2, returnedIndex: sysReadConfSpendNullRootHDNode.index});
             return false;
         }
 
@@ -674,6 +759,18 @@ KeyStore.prototype.initCatenisNodeHDNodes = function (ctnNodeIndex) {
         // Save newly created HD extended key to store it later
         hdNodesToStore.push({type: 'sys_serv_pymt_pay_tx_exp_root', path: path, hdNode: sysServPymtPayTxExpRootHDNode, isLeaf: false, isReserved: false});
 
+        // Create system off-chain messages settlement pay tx expense root HD extended key
+        path = sysRootPath + '/6/0';
+        const sysOCMsgSetlmtPayTxExpRootHDNode = sysOCMsgSettleRootHDNode.derive(0);
+
+        if (sysOCMsgSetlmtPayTxExpRootHDNode.index !== 0) {
+            Catenis.logger.WARN(util.format('System off-chain messages settlement pay tx expense root HD extended key (%s) derived with an unexpected index', path), {expectedIndex: 0, returnedIndex: sysOCMsgSetlmtPayTxExpRootHDNode.index});
+            return false;
+        }
+
+        // Save newly created HD extended key to store it later
+        hdNodesToStore.push({type: 'sys_oc_msg_setlmt_pay_tx_exp_root', path: path, hdNode: sysOCMsgSetlmtPayTxExpRootHDNode, isLeaf: false, isReserved: false});
+
         // Make sure that the following entries are only created for Catenis Hub node
         if (ctnNodeIndex === 0) {
             // Create system BCOT token sale root HD extended key
@@ -681,7 +778,7 @@ KeyStore.prototype.initCatenisNodeHDNodes = function (ctnNodeIndex) {
             const sysBcotSaleRootHDNode = sysRootHDNode.derive(5);
 
             if (sysBcotSaleRootHDNode.index !== 5) {
-                Catenis.logger.WARN(util.format('System BCOT token sale root HD extended key (%s) derived with an unexpected index', path), {expectedIndex: 0, returnedIndex: sysBcotSaleRootHDNode.index});
+                Catenis.logger.WARN(util.format('System BCOT token sale root HD extended key (%s) derived with an unexpected index', path), {expectedIndex: 5, returnedIndex: sysBcotSaleRootHDNode.index});
                 return false;
             }
 
@@ -694,7 +791,7 @@ KeyStore.prototype.initCatenisNodeHDNodes = function (ctnNodeIndex) {
 
             if (sysBcotSaleStockRootHDNode.index !== 0) {
                 Catenis.logger.WARN(util.format('System BCOT token sale stock root HD extended key (%s) derived with an unexpected index', path), {
-                    expectedIndex: 1,
+                    expectedIndex: 0,
                     returnedIndex: sysBcotSaleStockRootHDNode.index
                 });
                 return false;
@@ -2092,6 +2189,131 @@ KeyStore.prototype.listSystemBcotSaleStockAddressesInUse = function (ctnNodeInde
     return this.listSystemBcotSaleStockAddresses(ctnNodeIndex, fromAddrIndex, toAddrIndex);
 };
 
+KeyStore.prototype.getSystemOCMsgSettlementPayTxExpenseAddressKeys = function (ctnNodeIndex, addrIndex, isObsolete = false) {
+    // Validate arguments
+    const errArg = {};
+
+    if (!isValidCatenisNodeIndex(ctnNodeIndex)) {
+        errArg.ctnNodeIndex = ctnNodeIndex;
+    }
+
+    if (!isValidAddressIndex(addrIndex)) {
+        errArg.addrIndex = addrIndex;
+    }
+
+    if (Object.keys(errArg).length > 0) {
+        const errArgs = Object.keys(errArg);
+
+        Catenis.logger.ERROR(util.format('KeyStore.getSystemOCMsgSettlementPayTxExpenseAddressKeys method called with invalid argument%s', errArgs.length > 1 ? 's' : ''), errArg);
+        throw Error(util.format('Invalid %s argument%s', errArgs.join(', '), errArgs.length > 1 ? 's' : ''));
+    }
+
+    // Try to retrieve system off-chain messages settlement pay tx expense address HD extended key for given Catenis node with the given index
+    const sysOCMsgSetlmtPayTxExpenseAddrPath = util.format('m/%d/0/6/0/%d', ctnNodeIndex, addrIndex);
+    let sysOCMsgSetlmtPayTxExpenseAddrHDNode = retrieveHDNode.call(this, sysOCMsgSetlmtPayTxExpenseAddrPath),
+        sysOCMsgSetlmtPayTxExpenseAddrKeys = null;
+
+    if (sysOCMsgSetlmtPayTxExpenseAddrHDNode === null) {
+        // System off-chain messages settlement pay tx expense address HD extended key does not exist yet.
+        //  Retrieve parent root HD extended key to create it
+        const path = parentPath(sysOCMsgSetlmtPayTxExpenseAddrPath);
+        let sysOCMsgSetlmtPayTxExpenseRootHDNode = retrieveHDNode.call(this, path);
+
+        if (sysOCMsgSetlmtPayTxExpenseRootHDNode === null) {
+            // System off-chain messages settlement pay tx expense root HD extended key does not exist yet.
+            //  Try to initialize Catenis node HD extended keys
+            if (! this.initCatenisNodeHDNodes(ctnNodeIndex)) {
+                Catenis.logger.ERROR(util.format('HD extended keys for Catenis node with index %d could not be initialized', ctnNodeIndex));
+            }
+            else {
+                // Catenis node HD extended keys successfully initialized.
+                //  Try to retrieve system off-chain messages settlement pay tx expense root HD extended key again
+                sysOCMsgSetlmtPayTxExpenseRootHDNode = retrieveHDNode.call(this, path);
+            }
+        }
+
+        if (sysOCMsgSetlmtPayTxExpenseRootHDNode === null) {
+            Catenis.logger.ERROR(util.format('System off-chain messages settlement pay tx expense root HD extended key (%s) for Catenis node with index %d not found', path, ctnNodeIndex));
+        }
+        else {
+            // Try to create system off-chain messages settlement pay tx expense address HD extended key now
+            sysOCMsgSetlmtPayTxExpenseAddrHDNode = sysOCMsgSetlmtPayTxExpenseRootHDNode.derive(addrIndex);
+
+            if (sysOCMsgSetlmtPayTxExpenseAddrHDNode.index !== addrIndex) {
+                Catenis.logger.WARN(util.format('System off-chain messages settlement pay tx expense address HD extended key (%s) derived with an unexpected index', sysOCMsgSetlmtPayTxExpenseAddrPath), {expectedIndex: addrIndex, returnedIndex: sysOCMsgSetlmtPayTxExpenseAddrHDNode.index});
+                sysOCMsgSetlmtPayTxExpenseAddrHDNode = null;
+            }
+            else {
+                // Store created HD extended key
+                storeHDNode.call(this, 'sys_oc_msg_setlmt_pay_tx_exp_addr', sysOCMsgSetlmtPayTxExpenseAddrPath, sysOCMsgSetlmtPayTxExpenseAddrHDNode, true, false, isObsolete);
+            }
+        }
+    }
+
+    if (sysOCMsgSetlmtPayTxExpenseAddrHDNode !== null) {
+        sysOCMsgSetlmtPayTxExpenseAddrKeys = new CryptoKeys(sysOCMsgSetlmtPayTxExpenseAddrHDNode);
+    }
+
+    return sysOCMsgSetlmtPayTxExpenseAddrKeys;
+};
+
+KeyStore.prototype.listSystemOCMsgSettlementPayTxExpenseAddresses = function (ctnNodeIndex, fromAddrIndex, toAddrIndex, onlyInUse) {
+    // Validate arguments
+    const errArg = {},
+        queryTerms = [{parentPath: util.format('m/%d/0/6/0', ctnNodeIndex)}];
+
+    if (!isValidCatenisNodeIndex(ctnNodeIndex)) {
+        errArg.ctnNodeIndex = ctnNodeIndex;
+    }
+
+    if (fromAddrIndex !== undefined) {
+        if (!isValidAddressIndex(fromAddrIndex)) {
+            errArg.fromAddrIndex = fromAddrIndex;
+        }
+        else {
+            queryTerms.push({index: {$gte: fromAddrIndex}});
+        }
+    }
+
+    if (toAddrIndex !== undefined) {
+        if (!isValidAddressIndex(toAddrIndex) || (fromAddrIndex !== undefined && toAddrIndex < fromAddrIndex)) {
+            errArg.toAddrIndex = toAddrIndex;
+        }
+        else {
+            queryTerms.push({index: {$lte: toAddrIndex}});
+        }
+    }
+
+    if (Object.keys(errArg).length > 0) {
+        const errArgs = Object.keys(errArg);
+
+        Catenis.logger.ERROR(util.format('KeyStore.listSystemOCMsgSettlementPayTxExpenseAddresses method called with invalid argument%s', errArgs.length > 1 ? 's' : ''), errArg);
+        throw Error(util.format('Invalid %s argument%s', errArgs.join(', '), errArgs.length > 1 ? 's' : ''));
+    }
+
+    if (onlyInUse) {
+        queryTerms.push({isObsolete: false});
+    }
+
+    // Return existing system off-chain messages settlement pay tx expense addresses within the specified range
+    let query;
+
+    if (queryTerms.length > 1) {
+        query = {$and: queryTerms};
+    }
+    else {
+        query = queryTerms[0];
+    }
+
+    return this.collExtKey.chain().find(query).simplesort('index').data().map((docExtKey) => {
+        return docExtKey.address;
+    });
+};
+
+KeyStore.prototype.listSystemOCMsgSettlementPayTxExpenseAddressesInUse = function (ctnNodeIndex, fromAddrIndex, toAddrIndex) {
+    return this.listSystemOCMsgSettlementPayTxExpenseAddresses(ctnNodeIndex, fromAddrIndex, toAddrIndex);
+};
+
 KeyStore.prototype.getSystemDeviceAddressKeys = function (ctnNodeIndex, addrRootIndex, addrIndex, isObsolete = false) {
     // Validate arguments
     const errArg = {};
@@ -2707,7 +2929,42 @@ KeyStore.prototype.initDeviceHDNodes = function (ctnNodeIndex, clientIndex, devi
                                 }
                                 else {
                                     // Save newly created HD extended key to store it later
-                                    hdNodesToStore.push({type: idx === 0 ? 'dev_main_addr_root' : (idx === 1 ? 'dev_asst_addr_root' : (idx === 2 ? 'dev_asst_issu_addr_root' : 'dev_pub_rsrv_addr_root')), path: devicePubAddrRootPath, hdNode: devicePubAddrRootHDNode, isLeaf: false, isReserved: idx >= numUsedDevicePubAddrRoots});
+                                    const hdNodeInfo = {
+                                        path: devicePubAddrRootPath,
+                                        hdNode: devicePubAddrRootHDNode,
+                                        isLeaf: false,
+                                        isReserved: false
+                                    };
+
+                                    switch (idx) {
+                                        case 0:
+                                            // Device main addresses root
+                                            hdNodeInfo.type = 'dev_main_addr_root';
+                                            break;
+
+                                        case 1:
+                                            // Device asset addresses root
+                                            hdNodeInfo.type = 'dev_asst_addr_root';
+                                            break;
+
+                                        case 2:
+                                            // Device asset issuance addresses root
+                                            hdNodeInfo.type = 'dev_asst_issu_addr_root';
+                                            break;
+
+                                        case 3:
+                                            // Device off-chain addresses root
+                                            hdNodeInfo.type = 'dev_off_chain_addr_root';
+                                            break;
+
+                                        default:
+                                            // Reserved
+                                            hdNodeInfo.type = 'dev_pub_rsrv_addr_root';
+                                            hdNodeInfo.isReserved = true;
+                                            break;
+                                    }
+
+                                    hdNodesToStore.push(hdNodeInfo);
                                 }
                             }
 
@@ -2951,7 +3208,45 @@ KeyStore.prototype.getDevicePublicAddressKeys = function (ctnNodeIndex, clientIn
             }
             else {
                 // Store created HD extended key
-                storeHDNode.call(this, addrRootIndex === 0 ? 'dev_main_addr' : (addrRootIndex === 1 ? 'dev_asst_addr' : (addrRootIndex === 2 ? 'dev_asst_issu_addr' : 'dev_pub_rsrv_addr')), devicePubAddrPath, devicePubAddrHDNode, true, addrRootIndex >= numUsedDevicePubAddrRoots, isObsolete);
+                const hdNodeInfo = {
+                    path: devicePubAddrPath,
+                    hdNode: devicePubAddrHDNode,
+                    isLeaf: true,
+                    isReserved: false,
+                    isObsolete: isObsolete,
+                    isOffChainAddr: false
+                };
+
+                switch (addrRootIndex) {
+                    case 0:
+                        // Device main address
+                        hdNodeInfo.type = 'dev_main_addr';
+                        break;
+
+                    case 1:
+                        // Device asset address
+                        hdNodeInfo.type = 'dev_asst_addr';
+                        break;
+
+                    case 2:
+                        // Device asset issuance address
+                        hdNodeInfo.type = 'dev_asst_issu_addr';
+                        break;
+
+                    case 3:
+                        // Device off-chain address
+                        hdNodeInfo.type = 'dev_off_chain_addr';
+                        hdNodeInfo.isOffChainAddr = true;
+                        break;
+
+                    default:
+                        // Reserved
+                        hdNodeInfo.type = 'dev_pub_rsrv_addr';
+                        hdNodeInfo.isReserved = true;
+                        break;
+                }
+
+                storeHDNode.call(this, hdNodeInfo.type, hdNodeInfo.path, hdNodeInfo.hdNode, hdNodeInfo.isLeaf, hdNodeInfo.isReserved, hdNodeInfo.isObsolete, hdNodeInfo.isOffChainAddr);
             }
         }
     }
@@ -3143,6 +3438,10 @@ KeyStore.prototype.latestDeviceAssetIssuanceAddressInUse = function (ctnNodeInde
     return this.latestDevicePublicAddress(ctnNodeIndex, clientIndex,  deviceIndex, 2, true);
 };
 
+KeyStore.prototype.getDeviceOffChainAddressKeys = function (ctnNodeIndex, clientIndex,  deviceIndex, addrIndex) {
+    return this.getDevicePublicAddressKeys(ctnNodeIndex, clientIndex,  deviceIndex, 3, addrIndex, true);
+};
+
 
 // Module functions used to simulate private KeyStore object methods
 //  NOTE: these functions need to be bound to a KeyStore object reference (this) before
@@ -3164,7 +3463,7 @@ function purgeUnusedExtendedKeys() {
             {$and: [{isObsolete: true}, {'meta.revision': {$gt: 0}}, {'meta.updated': {$lt: obsoleteEarliestTimestamp}}]}]});
 }
 
-function storeHDNode(type, path, hdNode, isLeaf, isReserved, isObsolete) {
+function storeHDNode(type, path, hdNode, isLeaf, isReserved, isObsolete, isOffChainAddr) {
     if (isLeaf === undefined) {
         isLeaf = false;
     }
@@ -3177,7 +3476,30 @@ function storeHDNode(type, path, hdNode, isLeaf, isReserved, isObsolete) {
         isObsolete = false;
     }
 
-    const docExtKey = {type: type, path: path, parentPath: parentPath(path), depth: hdNode.depth, index: hdNode.index, strHDNode: hdNode.toBase58(), address: (new CryptoKeys(hdNode)).getAddress(), isLeaf: isLeaf, isReserved: isReserved, isObsolete: isObsolete};
+    if (!isLeaf || isOffChainAddr === undefined) {
+        isOffChainAddr = false;
+    }
+
+    // Make sure that off-chain address is always set as obsolete (so it can be purged at any time)
+    if (isOffChainAddr && !isObsolete) {
+        isObsolete = true;
+    }
+
+    const addrAndPubKeyHash = new CryptoKeys(hdNode).getAddressAndPubKeyHash();
+    const docExtKey = {
+        type: type,
+        path: path,
+        parentPath: parentPath(path),
+        depth: hdNode.depth,
+        index: hdNode.index,
+        strHDNode: hdNode.toBase58(),
+        address: addrAndPubKeyHash.address,
+        pubKeyHash: addrAndPubKeyHash.pubKeyHash.toString('base64'),
+        isLeaf: isLeaf,
+        isReserved: isReserved,
+        isObsolete: isObsolete,
+        isOffChainAddr: isOffChainAddr
+    };
 
     this.collExtKey.insert(docExtKey);
 }
@@ -3318,6 +3640,16 @@ KeyStore.systemBcotSaleStockRootPath = function (ctnNodeIndex) {
     }
 
     return util.format('m/%d/0/5/0', ctnNodeIndex);
+};
+
+KeyStore.systemOCMsgSetlmtPayTxExpenseRootPath = function (ctnNodeIndex) {
+    // Validate Catenis node index
+    if (!isValidCatenisNodeIndex(ctnNodeIndex)) {
+        Catenis.logger.ERROR('KeyStore.systemOCMsgSetlmtPayTxExpenseRootPath method called with invalid argument', {ctnNodeIndex: ctnNodeIndex});
+        throw Error('Invalid ctnNodeIndex argument');
+    }
+
+    return util.format('m/%d/0/6/0', ctnNodeIndex);
 };
 
 KeyStore.systemDeviceMainAddressRootPath = function (ctnNodeIndex) {
@@ -3500,6 +3832,32 @@ KeyStore.deviceAssetIssuanceAddressRootPath = function (ctnNodeIndex, clientInde
     return util.format('m/%d/%d/1/%d/2', ctnNodeIndex, clientIndex, deviceIndex);
 };
 
+KeyStore.deviceOffChainAddressRootPath = function (ctnNodeIndex, clientIndex, deviceIndex) {
+    // Validate arguments
+    const errArg = {};
+
+    if (!isValidCatenisNodeIndex(ctnNodeIndex)) {
+        errArg.ctnNodeIndex = ctnNodeIndex;
+    }
+
+    if (!isValidClientIndex(clientIndex)) {
+        errArg.clientIndex = clientIndex;
+    }
+
+    if (!isValidDeviceIndex(deviceIndex)) {
+        errArg.deviceIndex = deviceIndex;
+    }
+
+    if (Object.keys(errArg).length > 0) {
+        const errArgs = Object.keys(errArg);
+
+        Catenis.logger.ERROR(util.format('KeyStore.deviceOffChainAddressRootPath method called with invalid argument%s', errArgs.length > 1 ? 's' : ''), errArg);
+        throw Error(util.format('Invalid %s argument%s', errArgs.join(', '), errArgs.length > 1 ? 's' : ''));
+    }
+
+    return util.format('m/%d/%d/1/%d/3', ctnNodeIndex, clientIndex, deviceIndex);
+};
+
 KeyStore.getPathParts = function (docExtKey) {
     const pathParts = {};
     let hasParts = false,
@@ -3590,6 +3948,14 @@ KeyStore.extKeyType = Object.freeze({
         name: 'sys_bcot_sale_root',
         description: 'system BCOT token sale root',
         pathRegEx: /^m\/(\d+)\/0\/5$/,
+        pathParts: {
+            1: 'ctnNodeIndex'
+        }
+    }),
+    sys_oc_msg_setlmt_root: Object.freeze({
+        name: 'sys_oc_msg_setlmt_root',
+        description: 'system off-chain messages settlement root',
+        pathRegEx: /^m\/(\d+)\/0\/6$/,
         pathParts: {
             1: 'ctnNodeIndex'
         }
@@ -3820,6 +4186,23 @@ KeyStore.extKeyType = Object.freeze({
         name: 'sys_bcot_sale_stck_addr',
         description: 'system BCOT token sale stock address',
         pathRegEx: /^m\/(\d+)\/0\/5\/0\/(\d+)$/,
+        pathParts: {
+            1: 'ctnNodeIndex',
+            2: 'addrIndex'
+        }
+    }),
+    sys_oc_msg_setlmt_pay_tx_exp_root: Object.freeze({
+        name: 'sys_oc_msg_setlmt_pay_tx_exp_root',
+        description: 'system off-chain messages settlement pay tx expense root',
+        pathRegEx: /^m\/(\d+)\/0\/6\/0$/,
+        pathParts: {
+            1: 'ctnNodeIndex'
+        }
+    }),
+    sys_oc_msg_setlmt_pay_tx_exp_addr: Object.freeze({
+        name: 'sys_oc_msg_setlmt_pay_tx_exp_addr',
+        description: 'system off-chain messages settlement pay tx expense address',
+        pathRegEx: /^m\/(\d+)\/0\/6\/0\/(\d+)$/,
         pathParts: {
             1: 'ctnNodeIndex',
             2: 'addrIndex'
@@ -4080,6 +4463,16 @@ KeyStore.extKeyType = Object.freeze({
             3: 'deviceIndex'
         }
     }),
+    dev_off_chain_addr_root: Object.freeze({
+        name: 'dev_off_chain_addr_root',
+        description: 'device off-chain addresses root',
+        pathRegEx: /^m\/(\d+)\/(\d+)\/1\/(\d+)\/3$/,
+        pathParts: {
+            1: 'ctnNodeIndex',
+            2: 'clientIndex',
+            3: 'deviceIndex'
+        }
+    }),
     dev_pub_rsrv_addr_root: Object.freeze({
         name: 'dev_pub_rsrv_addr_root',
         description: 'device public reserved addresses root',
@@ -4117,6 +4510,17 @@ KeyStore.extKeyType = Object.freeze({
         name: 'dev_asst_issu_addr',
         description: 'device asset issuance address',
         pathRegEx: /^m\/(\d+)\/(\d+)\/1\/(\d+)\/2\/(\d+)$/,
+        pathParts: {
+            1: 'ctnNodeIndex',
+            2: 'clientIndex',
+            3: 'deviceIndex',
+            4: 'addrIndex'
+        }
+    }),
+    dev_off_chain_addr: Object.freeze({
+        name: 'dev_off_chain_addr',
+        description: 'device off-chain address',
+        pathRegEx: /^m\/(\d+)\/(\d+)\/1\/(\d+)\/3\/(\d+)$/,
         pathParts: {
             1: 'ctnNodeIndex',
             2: 'clientIndex',

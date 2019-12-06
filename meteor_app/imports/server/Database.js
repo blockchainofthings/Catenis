@@ -271,6 +271,77 @@ Database.initialize = function() {
                 }
             }]
         },
+        IssuedOffChainAddress: {
+            indices: [{
+                fields: {
+                    type: 1
+                },
+                opts: {
+                    background: true,
+                    w: 1
+                }
+            }, {
+                fields: {
+                    parentPath: 1,
+                    addrIndex: 1
+                },
+                opts: {
+                    unique: true,
+                    background: true,
+                    w: 1
+                }
+            }, {
+                fields: {
+                    parentPath: 1
+                },
+                opts: {
+                    background: true,
+                    w: 1
+                }
+            }, {
+                fields: {
+                    path: 1
+                },
+                opts: {
+                    unique: true,
+                    background: true,
+                    w: 1
+                }
+            }, {
+                fields: {
+                    addrIndex: 1
+                },
+                opts: {
+                    background: true,
+                    w: 1
+                }
+            }, {
+                fields: {
+                    pubKeyHash: 1
+                },
+                opts: {
+                    sparse: true,
+                    background: true,
+                    w: 1
+                }
+            }, {
+                fields: {
+                    issuedDate: 1
+                },
+                opts: {
+                    background: true,
+                    w: 1
+                }
+            }, {
+                fields: {
+                    isNonExistent: 1
+                },
+                opts: {
+                    background: true,
+                    w: 1
+                }
+            }]
+        },
         License: {
             initFunc: initLicense,
             indices: [{

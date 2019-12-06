@@ -176,6 +176,11 @@
     "inactiveObjectTime": 345600,  // (4 days) Time, in seconds, from the time when instantiated object has been last accessed before it is considered inactive
     "deleteInactiveObjectsInterval": 43200000 // (12 hours) Time interval, in milliseconds, for executing method to delete inactive objects
   },
+  // Parameters pertaining to BaseOffChainAddress module
+  "baseOffChainAddress": {
+    "inactiveObjectTime": 345600,  // (4 days) Time, in seconds, from the time when instantiated object has been last accessed before it is considered inactive
+    "deleteInactiveObjectsInterval": 43200000 // (12 hours) Time interval, in milliseconds, for executing method to delete inactive objects
+  },
   // Parameters pertaining to FundSource module
   "fundSource": {
     "maxAncestorsCount": 25, // Maximum count of (unconfirmed) ancestor txs for tx to be accepted into mempool (to be relayed)

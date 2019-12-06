@@ -54,6 +54,17 @@ IssuedBlockchainAddress {
   lastStatusChangedDate: [date/time]  // Date and time when status has been last modified
 }
 
+IssuedOffChainAddress {
+  _id: [string], // MongoDB internal document ID provided by Meteor
+  type: [string],  // Name of address type (HD node extended key type)
+  parentPath: [string],  // Path of the HD node from which this address is derived
+  path: [string],  // The HD node path which identifies this address
+  addrIndex: [integer],  // The position occupied by this address within the range of addresses of that type
+  pubKeyHash: [string],  // Base-64 formatted HASH160 hash of the ECDSA public key that represents the off-chain address
+  issuedDate: [date/time],  // Date and time when address has been issued (doc/rec created)
+  isNonExistent: [boolean]  // Indicates that the address for the given index does not exist
+}
+
 License {
   _id: [string],  // MongoDB internal document ID provided by Meteor
   level: [string],  // Name used to identify the license level

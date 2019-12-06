@@ -34,6 +34,7 @@ import {
     DeviceAssetAddress,
     DeviceAssetIssuanceAddress
 } from './BlockchainAddress';
+import { DeviceOffChainAddress } from './OffChainAddress';
 import { CatenisNode } from './CatenisNode';
 import { FundSource } from './FundSource';
 import { FundTransaction } from './FundTransaction';
@@ -144,6 +145,7 @@ export function Device(docDevice, client) {
     this.readConfirmAddr = new DeviceReadConfirmAddress(this.client.ctnNode.ctnNodeIndex, this.client.clientIndex, this.deviceIndex);
     this.assetAddr = new DeviceAssetAddress(this.client.ctnNode.ctnNodeIndex, this.client.clientIndex, this.deviceIndex);
     this.assetIssuanceAddr = new DeviceAssetIssuanceAddress(this.client.ctnNode.ctnNodeIndex, this.client.clientIndex, this.deviceIndex);
+    this.offChainAddr = new DeviceOffChainAddress(this.client.ctnNode.ctnNodeIndex, this.client.clientIndex, this.deviceIndex);
 
     // Critical section object to avoid concurrent access to database at the
     //  device object level (when updating device status basically)
