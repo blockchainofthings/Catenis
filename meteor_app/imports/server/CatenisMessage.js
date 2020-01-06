@@ -77,15 +77,30 @@ export function CatenisMessage(messageReadable, funcByte, options) {
 
         this.options.encrypted = options.encrypted;
 
+        // Monitor errors while reading message's contents
+        const messageReadableErrorHandler = (err) => {
+            // Error reading message's contents. Abort processing and throw exception
+            Catenis.logger.ERROR('Error reading message\'s contents while composing Catenis message.', err);
+
+            messageReadable.destroy();
+        };
+
+        messageReadable.once('error', messageReadableErrorHandler);
+
         this.msgPayload = undefined;
 
         // noinspection CommaExpressionJS
-        if (options.storageScheme === CatenisMessage.storageScheme.embedded || (options.storageScheme === CatenisMessage.storageScheme.auto && (this.msgPayload = messageReadable.read(cfgSettings.nullDataMaxSize - bytesWritten), this.msgPayload.length) <= cfgSettings.nullDataMaxSize - bytesWritten - 1)) {
+        if (options.storageScheme === CatenisMessage.storageScheme.embedded || (options.storageScheme === CatenisMessage.storageScheme.auto && (this.msgPayload = messageReadable.read(cfgSettings.nullDataMaxSize - bytesWritten)) !== null && this.msgPayload.length <= cfgSettings.nullDataMaxSize - bytesWritten - 1)) {
             // Message should be embedded
             optsByte += CatenisMessage.optionBit.embedding;
             this.options.embedded = true;
         }
         else {
+            if (this.msgPayload === null) {
+                // Error reading message stream. Log error
+                throw new Meteor.Error('ctn_msg_read_error', 'Error reading message\'s contents while composing Catenis message');
+            }
+
             this.options.embedded = false;
         }
 
@@ -94,22 +109,15 @@ export function CatenisMessage(messageReadable, funcByte, options) {
 
         // Prepare to write message payload
 
-        // Monitor errors while reading message's contents
-        const messageReadableErrorHandler = (err) => {
-            // Error reading message's contents. Abort processing and throw exception
-            Catenis.logger.ERROR('Error reading message\'s contents while composing Catenis message.', err);
-
-            messageReadable.destroy();
-
-            throw new Meteor.Error('ctn_msg_read_error', 'Error reading message\'s contents while composing Catenis message');
-        };
-
-        messageReadable.once('error', messageReadableErrorHandler);
-
         if (this.options.embedded) {
             if (!this.msgPayload) {
                 // Read message's contents up to 1 byte above the available space to make sure that it will fit
                 this.msgPayload = messageReadable.read(cfgSettings.nullDataMaxSize - (bytesWritten - 1));
+
+                if (this.msgPayload === null) {
+                    // Error reading message stream. Log error
+                    throw new Meteor.Error('ctn_msg_read_error', 'Error reading message\'s contents while composing Catenis message');
+                }
             }
         }
         else {
@@ -136,7 +144,9 @@ export function CatenisMessage(messageReadable, funcByte, options) {
                     //      b) lastly, even if we tried to read beyond the end of the message, the 'readable' state
                     //      is only changed in the next process tick, and while that state does not change the read
                     //      contents can still be put back.
+                    messageReadable.removeListener('error', messageReadableErrorHandler);
                     messageReadable = new BufferMessageReadable(this.msgPayload);
+                    messageReadable.once('error', messageReadableErrorHandler);
                 }
             }
 
