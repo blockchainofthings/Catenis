@@ -17,6 +17,7 @@ import BigNumber from 'bignumber.js';
 import bitcoinLib from 'bitcoinjs-lib';
 import _und from 'underscore';
 import moment from 'moment-timezone';
+import CID from 'cids';
 // Meteor packages
 import { Meteor } from 'meteor/meteor';
 
@@ -283,6 +284,33 @@ Util.dayTimeZoneToDate = function (day, timeZone, returnMoment = false) {
     return returnMoment ? mt : mt.toDate();
 };
 
+// Returns the date that corresponds to the given time in reference to a reference time zone
+//
+//  Arguments:
+//   time [String] - Time, formatted as HH[:mm[:ss[.SSS]]], in reference to the reference time zone
+//   date [Date|Object(moment)] - (optional) The date, in reference to the local time zone, that should be used
+//                                  as the date component of the returned date/time. If not set, the present
+//                                  (local) date is used
+//   timeZone [String] - Reference time zone expressed as a time difference from UTC (in the UTC+/-HH:mm format)
+//   retMoment [Boolean] - Indicates whether a moment Object should be returned instead of a Date object
+Util.timeReferenceTimeZone = function (time, date, timeZone, returnMoment = false) {
+    const mt = moment(moment(date).format('YYYY-MM-DD') + 'T' + time).utcOffset(timeZone, true);
+
+    return returnMoment ? mt : mt.toDate();
+};
+
+// Returns the given date in reference to a reference time zone
+//
+//  Arguments:
+//   date [Date|Object(moment)] - The date, in reference to the local time zone, to convert
+//   timeZone [String] - Reference time zone expressed as a time difference from UTC (in the UTC+/-HH:mm format)
+//   retMoment [Boolean] - Indicates whether a moment Object should be returned instead of a Date object
+Util.dateReferenceTimeZone = function (time, date, timeZone, returnMoment = false) {
+    const mt = moment(date).utcOffset(timeZone, true);
+
+    return returnMoment ? mt : mt.toDate();
+};
+
 Util.capitalize = function (str) {
     return str.substr(0, 1).toUpperCase() + str.substr(1);
 };
@@ -343,6 +371,31 @@ Util.processItemsAsync = function (itemsToProcess, procFunc, ...procArgs /* this
     else if (callbackFunc) {
         Meteor.defer(callbackFunc);
     }
+};
+
+Util.kebabToCamelCase = function (name) {
+    return name.split('-').reduce((convName, part, idx) => {
+        if (idx > 0) {
+            part = Util.capitalize(part);
+        }
+
+        convName += part;
+
+        return convName;
+    }, '');
+};
+
+Util.isValidCid = function (cid) {
+    let isValid = true;
+
+    try {
+        new CID(cid);
+    }
+    catch (err) {
+        isValid = false;
+    }
+
+    return isValid;
 };
 
 

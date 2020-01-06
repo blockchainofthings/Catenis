@@ -26,14 +26,18 @@ import { ApiVersion } from './ApiVersion';
 import { Authentication } from './Authentication';
 import { logMessage } from './ApiLogMessage';
 import { logMessage2 } from './ApiLogMessage2';
+import { logMessage3 } from './ApiLogMessage3';
 import { sendMessage } from './ApiSendMessage';
 import { sendMessage2 } from './ApiSendMessage2';
 import { sendMessage3 } from './ApiSendMessage3';
+import { sendMessage4 } from './ApiSendMessage4';
 import { readMessage } from './ApiReadMessage';
 import { readMessage2 } from './ApiReadMessage2';
 import { readMessage3 } from './ApiReadMessage3';
+import { readMessage4 } from './ApiReadMessage4';
 import { retrieveMessageContainer } from './ApiMessageContainer';
 import { retrieveMessageContainer2 } from './ApiMessageContainer2';
+import { retrieveMessageContainer3 } from './ApiMessageContainer3';
 import { listMessages } from './ApiListMessages';
 import { listMessages2 } from './ApiListMessages2';
 import { listMessages3 } from './ApiListMessages3';
@@ -105,7 +109,7 @@ export function RestApi(apiVersion) {
             //
             //  Refer to the source file where the action function is defined for a detailed description of the endpoint
             post: {
-                action: this.apiVer.gt('0.6') ? logMessage2 : logMessage
+                action: this.apiVer.gt('0.6') ? (this.apiVer.gt('0.8') ? logMessage3 : logMessage2) : logMessage
             }
         });
 
@@ -115,7 +119,7 @@ export function RestApi(apiVersion) {
             //
             //  Refer to the source file where the action function is defined for a detailed description of the endpoint
             post: {
-                action: this.apiVer.gt('0.4') ? (this.apiVer.gt('0.6') ? sendMessage3 : sendMessage2) : sendMessage
+                action: this.apiVer.gt('0.4') ? (this.apiVer.gt('0.6') ? (this.apiVer.gt('0.8') ? sendMessage4 : sendMessage3) : sendMessage2) : sendMessage
             }
         });
 
@@ -126,7 +130,7 @@ export function RestApi(apiVersion) {
             //  Refer to the source file where the action function is defined for a detailed description of the endpoint
             get: {
                 // Different implementations depending on the version of the API
-                action: this.apiVer.gt('0.2') ? (this.apiVer.gt('0.6') ? readMessage3: readMessage2) : readMessage
+                action: this.apiVer.gt('0.2') ? (this.apiVer.gt('0.6') ? (this.apiVer.gt('0.8') ? readMessage4 : readMessage3): readMessage2) : readMessage
             }
         });
 
@@ -136,7 +140,7 @@ export function RestApi(apiVersion) {
             //
             //  Refer to the source file where the action function is defined for a detailed description of the endpoint
             get: {
-                action: this.apiVer.gt('0.7') ? retrieveMessageContainer2 : retrieveMessageContainer
+                action: this.apiVer.gt('0.7') ? (this.apiVer.gt('0.8') ? retrieveMessageContainer3 : retrieveMessageContainer2) : retrieveMessageContainer
             }
         });
     }

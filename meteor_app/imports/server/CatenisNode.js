@@ -37,7 +37,8 @@ import {
     SystemServiceCreditIssuingAddress,
     SystemServicePaymentPayTxExpenseAddress,
     SystemMultiSigSigneeAddress,
-    SystemBcotSaleStockAddress
+    SystemBcotSaleStockAddress,
+    SystemOCMsgsSetlmtPayTxExpenseAddress
 } from './BlockchainAddress';
 import {
     Client,
@@ -63,6 +64,7 @@ const ctnNodeSrvCredAsstIssueOptsConfig = ctnNodeServCreditAssetConfig.get('issu
 
 // Configuration settings
 const cfgSettings = {
+    idPrefix: ctnNodeConfig.get('idPrefix'),
     serviceCreditAsset: {
         nameFormat: ctnNodeServCreditAssetConfig.get('nameFormat'),
         descriptionFormat: ctnNodeServCreditAssetConfig.get('descriptionFormat'),
@@ -121,6 +123,7 @@ export class CatenisNode extends events.EventEmitter {
         this.servCredIssueAddr = new SystemServiceCreditIssuingAddress(this.ctnNodeIndex);
         this.servPymtPayTxExpenseAddr = new SystemServicePaymentPayTxExpenseAddress(this.ctnNodeIndex);
         this.multiSigSigneeAddr = new SystemMultiSigSigneeAddress(this.ctnNodeIndex);
+        this.ocMsgsSetlmtPayTxExpenseAddr = new SystemOCMsgsSetlmtPayTxExpenseAddress(this.ctnNodeIndex);
 
         // Note: the BCOT sale stock address should only exist in the Catenis Hub Node
         if (this.type === CatenisNode.nodeType.hub.name) {
@@ -228,6 +231,9 @@ CatenisNode.prototype.startNode = function () {
 
         // Make sure that system read confirmation pay tx expense addresses are properly funded
         this.checkReadConfirmPayTxExpenseFundingBalance();
+
+        // Make sure that system off-chain messages settlement pay tx expense addresses are properly funded
+        this.checkOCMessagesSettlementPayTxExpenseFundingBalance();
     });
 
     // Prepare to receive notification that bitcoin fee rates changed
@@ -393,6 +399,26 @@ CatenisNode.prototype.checkReadConfirmPayTxExpenseFundingBalance = function () {
     }
 
     return readConfirmPayTxBalanceInfo.hasLowBalance();
+};
+
+// NOTE: make sure that this method is called from code executed from the FundSource.utxoCS
+//  critical section object
+CatenisNode.prototype.checkOCMessagesSettlementPayTxExpenseFundingBalance = function () {
+    const payTxBalanceInfo = new BalanceInfo(Service.getMinimumOCMsgsSetlmtPayTxExpenseBalance(), this.ocMsgsSetlmtPayTxExpenseAddr.listAddressesInUse(), {
+        safetyFactor: Service.ocMsgsSetlmtPayTxExpBalanceSafetyFactor
+    });
+
+    if (payTxBalanceInfo.hasLowBalance()) {
+        // Prepare to refund system off-chain messages settlement pay tx expense addresses
+
+        // Distribute funds to be allocated
+        const distribFund = Service.distributeOCMsgsSetlmtPayTxExpenseFund(payTxBalanceInfo.getBalanceDifference());
+
+        // And try to fund system off-chain messages settlement pay tx expense addresses
+        this.fundOCMessagesSettlementPayTxExpenseAddresses(distribFund.amountPerAddress);
+    }
+
+    return payTxBalanceInfo.hasLowBalance();
 };
 
 CatenisNode.prototype.getClientByIndex = function (clientIndex, includeDeleted = true) {
@@ -933,6 +959,43 @@ CatenisNode.prototype.fundReadConfirmPayTxExpenseAddresses = function (amountPer
     }
 };
 
+// NOTE: make sure that this method is called from code executed from the FundSource.utxoCS
+//  critical section object
+CatenisNode.prototype.fundOCMessagesSettlementPayTxExpenseAddresses = function (amountPerAddress) {
+    let fundTransact = undefined;
+
+    try {
+        // Prepare transaction to fund system off-chain messages settlement pay tx expense addresses
+        fundTransact = new FundTransaction(FundTransaction.fundingEvent.add_extra_settle_oc_msgs_tx_pay_funds);
+
+        fundTransact.addPayees(this.ocMsgsSetlmtPayTxExpenseAddr, amountPerAddress);
+
+        if (fundTransact.addPayingSource()) {
+            // Now, issue (create and send) the transaction
+            fundTransact.sendTransaction();
+        }
+        else {
+            // Could not allocated UTXOs to pay for transaction fee.
+            //  Throw exception
+            //noinspection ExceptionCaughtLocallyJS
+            throw new Meteor.Error('ctn_sys_no_fund', 'Could not allocate UTXOs from system funding addresses to pay for tx expense');
+        }
+    }
+    catch (err) {
+        // Error funding system off-chain messages settlement pay tx expense addresses.
+        //  Log error condition
+        Catenis.logger.ERROR('Error funding system off-chain messages settlement pay tx expense addresses.', err);
+
+        if (fundTransact !== undefined) {
+            // Revert addresses of payees added to transaction
+            fundTransact.revertPayeeAddresses();
+        }
+
+        // Rethrows exception
+        throw err;
+    }
+};
+
 
 // Module functions used to simulate private CatenisNode object methods
 //  NOTE: these functions need to be bound to a CatenisNode object reference (this) before
@@ -1351,6 +1414,10 @@ function creditServAccTxConfirmed(data) {
         //  Just log error condition
         Catenis.logger.ERROR('Error while processing notification of confirmed credit service account transaction.', err);
     }
+}
+
+export function makeCtnNodeId(idx) {
+    return cfgSettings.idPrefix + idx;
 }
 
 

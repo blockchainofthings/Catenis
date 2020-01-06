@@ -42,10 +42,21 @@
                                             <th><label class="noMargin">Service Date:</label></th>
                                             <td>{{billing.serviceDate}}</td>
                                         </tr>
-                                        <tr>
-                                            <th><label class="noMargin">Service Txid:</label></th>
-                                            <td>{{billing.serviceTx.txid}}</td>
-                                        </tr>
+                                        {{#if isOffChainMsgServiceBilling billing}}
+                                            <tr>
+                                                <th><label class="noMargin">Off-Chain Msg Service CID:</label></th>
+                                                <td>{{billing.offChainMsgServiceData.msgEnvelope.cid}}</td>
+                                            </tr>
+                                            <tr>
+                                                <th><label class="noMargin">Off-Chain Settlement Txid:</label></th>
+                                                <td>{{billing.offChainMsgServiceData.msgEnvelope.settlementTx.txid}}</td>
+                                            </tr>
+                                        {{else}}
+                                            <tr>
+                                                <th><label class="noMargin">Service Txid:</label></th>
+                                                <td>{{billing.serviceTx.txid}}</td>
+                                            </tr>
+                                        {{/if}}
                                         <tr>
                                             <th><label class="noMargin">Service Cost:</label></th>
                                             <td>BTC {{formatCoins billing.estimatedServiceCost}}</td>
@@ -58,6 +69,12 @@
                                             <th><label class="noMargin">Service Price (Bitcoin):</label></th>
                                             <td>BTC {{formatCoins billing.btcServicePrice}}</td>
                                         </tr>
+                                        {{#let actualCost=(actualServiceCost billing)}}
+                                            <tr>
+                                                <th><label class="noMargin">Actual Cost (*):</label></th>
+                                                <td>{{#if actualCost}}BTC {{formatCoins actualCost}}{{/if}}</td>
+                                            </tr>
+                                        {{/let}}
                                         <tr>
                                             <th><label class="noMargin">Bitcoin Price:</label></th>
                                             <td>USD {{formatCurrency billing.bitcoinPrice}}</td>
@@ -88,6 +105,11 @@
                                         </tr>
                                         </tbody>
                                     </table>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-12 text-left">
+                                    <p style="margin-left:2em">(*) Includes cost of service payment transaction (after its confirmation).</p>
                                 </div>
                             </div>
                         {{/unless}}

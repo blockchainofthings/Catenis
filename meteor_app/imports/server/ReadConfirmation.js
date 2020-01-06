@@ -29,6 +29,7 @@ import { BitcoinCore } from './BitcoinCore';
 import { Message } from './Message';
 import { Device } from './Device';
 import { Billing } from './Billing';
+import { CatenisOffChainMonitor } from './CatenisOffChainMonitor';
 
 // Config entries
 const readConfirmConfig = config.get('readConfirmation');
@@ -108,8 +109,10 @@ export function ReadConfirmation() {
 
     // Set up handler to process event indicating that read confirmation tx has been confirmed
     TransactionMonitor.addEventHandler(TransactionMonitor.notifyEvent.read_confirmation_tx_conf.name, readConfirmTxConfirmed.bind(this));
-}
 
+    // Set up handler to process event indicating that Catenis off-chain message receipt has been retrieved
+    CatenisOffChainMonitor.addEventHandler(CatenisOffChainMonitor.notifyEvent.ocMsgReceiptRetrieved.name, offChainMsgReceiptRetrieved);
+}
 
 // Public ReadConfirmation object methods
 //
@@ -861,6 +864,71 @@ function addDiffOutput(outputsToAdd, output) {
         
         // Add output to end of list
         outputsToAdd.outputs.push(output);
+    }
+}
+
+function offChainMsgReceiptRetrieved(ocMsgReceipt) {
+    Catenis.logger.TRACE('Received notification of newly retrieved Catenis off-chain message receipt', {ocMsgReceipt});
+    try {
+        // Record Catenis off-chain message receipt for billing purpose
+        Billing.recordOffChainMsgReceipt(ocMsgReceipt);
+
+        // Get database record for off-chain message the receipt of which was retrieved
+        const docMessage = Catenis.db.collection.Message.findOne({
+            action: Message.action.send,
+            source: Message.source.local,
+            readConfirmationEnabled: true,
+            'offChain.msgEnvCid': ocMsgReceipt.msgData.msgEnvCid.toString(),
+            readConfirmed: {
+                $exists: false
+            }
+        }, {
+            fields: {
+                _id: 1,
+                messageId: 1,
+                originDeviceId: 1,
+                targetDeviceId: 1,
+                firstReadDate: 1
+            }
+        });
+        
+        if (docMessage) {
+            // Update Message collection docs to mark them as read confirmed
+            const fieldsToUpdate = {
+                readConfirmed: true
+            };
+
+            if (!docMessage.firstReadDate) {
+                fieldsToUpdate.firstReadDate = ocMsgReceipt.msgData.savedDate;
+            }
+
+            Catenis.db.collection.Message.update({
+                _id: docMessage._id
+            }, {
+                $set: fieldsToUpdate
+            });
+
+            // Check if origin device should be notified
+            const originDevice = Device.getDeviceByDeviceId(docMessage.originDeviceId);
+            const targetDevice = Device.getDeviceByDeviceId(docMessage.targetDeviceId);
+
+            if (originDevice.status === Device.status.active.name && originDevice.shouldBeNotifiedOfMessageReadBy(targetDevice)) {
+                // Notify origin device that previously sent message has been read
+                const message = Message.getMessageByMessageId(docMessage.messageId);
+
+                originDevice.notifyMessageRead(message, targetDevice);
+            }
+        }
+        else {
+            // No message record found for retrieved Catenis off-chain message receipt.
+            //  Log warning condition
+            Catenis.logger.WARN('No message record found for retrieved Catenis off-chain message receipt', {ocMsgReceipt});
+        }
+    }
+    catch (err) {
+        // Error while processing notification of newly retrieved Catenis off-chain message receipt.
+        //  Just log error condition
+        Catenis.logger.ERROR('Error while processing notification of newly retrieved Catenis off-chain message receipt.', err);
     }
 }
 

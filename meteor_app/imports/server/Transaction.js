@@ -1740,6 +1740,12 @@ Transaction.fixMalleability = function (source, originalTxid, modifiedTxid) {
                         })
                     });
 
+                    Catenis.db.collection.SavedOffChainMsgData.update({'settlement.settleOffChainMsgsTxid': originalTxid}, {
+                        $set: {
+                            'settlement.settleOffChainMsgsTxid': modifiedTxid
+                        }
+                    });
+
                     Catenis.db.collection.Billing.update({'serviceTx.txid': originalTxid}, {
                         $set: {
                             'serviceTx.txid': modifiedTxid
@@ -1772,6 +1778,24 @@ Transaction.fixMalleability = function (source, originalTxid, modifiedTxid) {
                 Catenis.db.collection.ReceivedTransaction.update({'info.readConfirmation.spentReadConfirmTxOuts.txid': originalTxid}, {
                     $set: {
                         'info.readConfirmation.spentReadConfirmTxOuts.$.txid': modifiedTxid
+                    }
+                });
+
+                Catenis.db.collection.Billing.update({'serviceTx.complementaryTx.txid': originalTxid}, {
+                    $set: {
+                        'serviceTx.complementaryTx.txid': modifiedTxid
+                    }
+                });
+
+                Catenis.db.collection.Billing.update({'offChainMsgServiceData.msgEnvelope.settlementTx.txid': originalTxid}, {
+                    $set: {
+                        'offChainMsgServiceData.msgEnvelope.settlementTx.txid': modifiedTxid
+                    }
+                });
+
+                Catenis.db.collection.Billing.update({'offChainMsgServiceData.msgReceipt.settlementTx.txid': originalTxid}, {
+                    $set: {
+                        'offChainMsgServiceData.msgReceipt.settlementTx.txid': modifiedTxid
                     }
                 });
 
@@ -1868,6 +1892,11 @@ Transaction.type = Object.freeze({
         name: 'transfer_asset',
         description: 'Transaction used to transfer an amount of Catenis asset owned by a device to another device',
         dbInfoEntryName: 'transferAsset'
+    }),
+    settle_off_chain_messages: Object.freeze({
+        name: 'settle_off_chain_messages',
+        description: 'Transaction used to settle Catenis off-chain messages to the blockchain',
+        dbInfoEntryName: 'settleOffChainMessages'
     })
 });
 
@@ -1932,11 +1961,6 @@ Transaction.ioToken = Object.freeze({
         token: '<p2_sys_read_conf_pay_tx_exp_addr>',
         description: 'Output (or input spending such output) paying to a system read confirmation pay tx expense address'
     }),
-    p2_sys_serv_pymt_pay_tx_exp_root: Object.freeze({
-        name: 'p2_sys_serv_pymt_pay_tx_exp_root',
-        token: '<p2_sys_serv_pymt_pay_tx_exp_root>',
-        description: 'Output (or input spending such output) paying to a system service payment pay tx expense address'
-    }),
     p2_sys_serv_cred_issu_addr: Object.freeze({
         name: 'p2_sys_serv_cred_issu_addr',
         token: '<p2_sys_serv_cred_issu_addr>',
@@ -1956,6 +1980,11 @@ Transaction.ioToken = Object.freeze({
         name: 'p2_sys_bcot_sale_stck_addr',
         token: '<p2_sys_bcot_sale_stck_addr>',
         description: 'Output (or input spending such output) paying to a system BCOT token sale stock address'
+    }),
+    p2_sys_oc_msgs_setlmt_pay_tx_exp_addr: Object.freeze({
+        name: 'p2_sys_oc_msgs_setlmt_pay_tx_exp_addr',
+        token: '<p2_sys_oc_msgs_setlmt_pay_tx_exp_addr>',
+        description: 'Output (or input spending such output) paying to a system off-chain messages settlement pay tx expense address'
     }),
     p2_cln_srv_acc_cred_ln_addr: Object.freeze({
         name: 'p2_cln_srv_acc_cred_ln_addr',
@@ -2070,10 +2099,10 @@ export function fixClone(clone) {
 
 function encodeMultiSigOutput (m, pubKeys) {
     if (typeof m !== 'number' || !Array.isArray(pubKeys)) {
-        throw new Error('encodeMultiSigOutput(): method called with invalid parameters: %s', util.inspect({
+        throw new Error(util.format('encodeMultiSigOutput(): method called with invalid parameters: %s', util.inspect({
             m: m,
             pubKeys: pubKeys
-        }));
+        })));
     }
 
     const n = pubKeys.length;

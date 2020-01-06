@@ -223,6 +223,10 @@ CatenisMessage.prototype.isLogMessage = function () {
     return this.funcByte === CatenisMessage.functionByte.logMessage;
 };
 
+CatenisMessage.prototype.isSettleOffChainMessages = function () {
+    return this.funcByte === CatenisMessage.functionByte.settleOffChaiMessages;
+};
+
 
 // Module functions used to simulate private CatenisMessage object methods
 //  NOTE: these functions need to be bound to a CatenisMessage object reference (this) before
@@ -546,7 +550,8 @@ CatenisMessage.fromData = function (data, messageDuplex, logError = true) {
 CatenisMessage.functionByte = Object.freeze({
     sendSystemMessage: 0x00,
     sendMessage: 0x01,
-    logMessage: 0x02
+    logMessage: 0x02,
+    settleOffChaiMessages: 0x03
 });
 
 CatenisMessage.optionBit = Object.freeze({

@@ -16,7 +16,6 @@
 // Meteor packages
 //import { Meteor } from 'meteor/meteor';
 import { Template } from 'meteor/templating';
-import { FlowRouter } from 'meteor/kadira:flow-router';
 
 // References code in other (Catenis) modules on the client
 import { Catenis } from '../ClientCatenis';
@@ -78,6 +77,47 @@ Template.billingEntry.helpers({
     },
     billing() {
         return Catenis.db.collection.Billing.findOne({_id: Template.instance().data.billing_id});
+    },
+    isOffChainMsgServiceBilling(billing) {
+        return !!billing.offChainMsgServiceData;
+    },
+    actualServiceCost(billing) {
+        let fee;
+
+        if (billing.serviceTx) {
+            fee = billing.serviceTx.fee;
+
+            if (billing.serviceTx.complementaryTx) {
+                fee += billing.serviceTx.complementaryTx.feeShare;
+            }
+        }
+        else if (billing.offChainMsgServiceData) {
+            if (billing.offChainMsgServiceData.msgEnvelope && billing.offChainMsgServiceData.msgEnvelope.settlementTx) {
+                if (fee === undefined) {
+                    fee = 0;
+                }
+
+                fee += billing.offChainMsgServiceData.msgEnvelope.settlementTx.feeShare;
+            }
+
+            if (billing.offChainMsgServiceData.msgReceipt && billing.offChainMsgServiceData.msgReceipt.settlementTx) {
+                if (fee === undefined) {
+                    fee = 0;
+                }
+
+                fee += billing.offChainMsgServiceData.msgReceipt.settlementTx.feeShare;
+            }
+        }
+
+        if (billing.servicePaymentTx && billing.servicePaymentTx.confirmed) {
+            if (fee === undefined) {
+                fee = 0;
+            }
+
+            fee += billing.servicePaymentTx.feeShare;
+        }
+
+        return fee;
     },
     deviceName(deviceId) {
         const docDevice = Catenis.db.collection.Device.findOne({deviceId: deviceId});

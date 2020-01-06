@@ -91,7 +91,8 @@
 //
 //      m/k/0/6/0 -> System off-chain messages settlement pay tx expense root HD extended key
 //
-//      m/k/0/6/0/* -> System off-chain messages settlement pay tx expense addresses HD extended key
+//      m/k/0/6/0/* -> System off-chain messages settlement pay tx expense addresses HD extended key.
+//                      NOTE: these addresses need to be shared with all other Catenis nodes so settle off-chain messages tx can be received by any Catenis node
 //
 //      m/k/i (i>=1) -> client #i root HD extended key
 //
@@ -176,6 +177,7 @@ import { Meteor } from 'meteor/meteor';
 import { Catenis } from './Catenis';
 import { BaseBlockchainAddress } from './BaseBlockchainAddress';
 import { CryptoKeys } from './CryptoKeys';
+import { BaseOffChainAddress } from './BaseOffChainAddress';
 
 // Config entries
 const configKeyStore = config.get('keyStore');
@@ -208,8 +210,7 @@ const numClientServCredAddrRoots = 10,
     numDeviceAddrRoots = 10,
     numUsedSysDeviceAddrRoots = 1,
     numUsedClientServCredAddrRoots = clientServCredAddrRootTypes.length,
-    numUsedDeviceIntAddrRoots = 1,
-    numUsedDevicePubAddrRoots = 4;
+    numUsedDeviceIntAddrRoots = 1;
 
 let purgeUnusedExtKeyIntervalHandle;
 
@@ -596,15 +597,15 @@ KeyStore.prototype.initCatenisNodeHDNodes = function (ctnNodeIndex) {
 
         // Create system off-chain messages settlement root HD extended key
         path = sysRootPath + '/6';
-        const sysOCMsgSettleRootHDNode = sysRootHDNode.derive(6);
+        const sysOCMsgsSettleRootHDNode = sysRootHDNode.derive(6);
 
-        if (sysOCMsgSettleRootHDNode.index !== 6) {
-            Catenis.logger.WARN(util.format('System off-chain messages settlement root HD extended key (%s) derived with an unexpected index', path), {expectedIndex: 6, returnedIndex: sysOCMsgSettleRootHDNode.index});
+        if (sysOCMsgsSettleRootHDNode.index !== 6) {
+            Catenis.logger.WARN(util.format('System off-chain messages settlement root HD extended key (%s) derived with an unexpected index', path), {expectedIndex: 6, returnedIndex: sysOCMsgsSettleRootHDNode.index});
             return false;
         }
 
         // Save newly created HD extended key to store it later
-        hdNodesToStore.push({type: 'sys_oc_msg_setlmt_root', path: path, hdNode: sysOCMsgSettleRootHDNode, isLeaf: false, isReserved: false});
+        hdNodesToStore.push({type: 'sys_oc_msg_setlmt_root', path: path, hdNode: sysOCMsgsSettleRootHDNode, isLeaf: false, isReserved: false});
 
         // Create all predefined and reserved system device addresses root HD extended keys
         for (let idx = 0; idx < numDeviceAddrRoots; idx++) {
@@ -761,15 +762,15 @@ KeyStore.prototype.initCatenisNodeHDNodes = function (ctnNodeIndex) {
 
         // Create system off-chain messages settlement pay tx expense root HD extended key
         path = sysRootPath + '/6/0';
-        const sysOCMsgSetlmtPayTxExpRootHDNode = sysOCMsgSettleRootHDNode.derive(0);
+        const sysOCMsgsSetlmtPayTxExpRootHDNode = sysOCMsgsSettleRootHDNode.derive(0);
 
-        if (sysOCMsgSetlmtPayTxExpRootHDNode.index !== 0) {
-            Catenis.logger.WARN(util.format('System off-chain messages settlement pay tx expense root HD extended key (%s) derived with an unexpected index', path), {expectedIndex: 0, returnedIndex: sysOCMsgSetlmtPayTxExpRootHDNode.index});
+        if (sysOCMsgsSetlmtPayTxExpRootHDNode.index !== 0) {
+            Catenis.logger.WARN(util.format('System off-chain messages settlement pay tx expense root HD extended key (%s) derived with an unexpected index', path), {expectedIndex: 0, returnedIndex: sysOCMsgsSetlmtPayTxExpRootHDNode.index});
             return false;
         }
 
         // Save newly created HD extended key to store it later
-        hdNodesToStore.push({type: 'sys_oc_msg_setlmt_pay_tx_exp_root', path: path, hdNode: sysOCMsgSetlmtPayTxExpRootHDNode, isLeaf: false, isReserved: false});
+        hdNodesToStore.push({type: 'sys_oc_msg_setlmt_pay_tx_exp_root', path: path, hdNode: sysOCMsgsSetlmtPayTxExpRootHDNode, isLeaf: false, isReserved: false});
 
         // Make sure that the following entries are only created for Catenis Hub node
         if (ctnNodeIndex === 0) {
@@ -2189,7 +2190,7 @@ KeyStore.prototype.listSystemBcotSaleStockAddressesInUse = function (ctnNodeInde
     return this.listSystemBcotSaleStockAddresses(ctnNodeIndex, fromAddrIndex, toAddrIndex);
 };
 
-KeyStore.prototype.getSystemOCMsgSettlementPayTxExpenseAddressKeys = function (ctnNodeIndex, addrIndex, isObsolete = false) {
+KeyStore.prototype.getSystemOCMsgsSettlementPayTxExpenseAddressKeys = function (ctnNodeIndex, addrIndex, isObsolete = false) {
     // Validate arguments
     const errArg = {};
 
@@ -2204,22 +2205,22 @@ KeyStore.prototype.getSystemOCMsgSettlementPayTxExpenseAddressKeys = function (c
     if (Object.keys(errArg).length > 0) {
         const errArgs = Object.keys(errArg);
 
-        Catenis.logger.ERROR(util.format('KeyStore.getSystemOCMsgSettlementPayTxExpenseAddressKeys method called with invalid argument%s', errArgs.length > 1 ? 's' : ''), errArg);
+        Catenis.logger.ERROR(util.format('KeyStore.getSystemOCMsgsSettlementPayTxExpenseAddressKeys method called with invalid argument%s', errArgs.length > 1 ? 's' : ''), errArg);
         throw Error(util.format('Invalid %s argument%s', errArgs.join(', '), errArgs.length > 1 ? 's' : ''));
     }
 
     // Try to retrieve system off-chain messages settlement pay tx expense address HD extended key for given Catenis node with the given index
-    const sysOCMsgSetlmtPayTxExpenseAddrPath = util.format('m/%d/0/6/0/%d', ctnNodeIndex, addrIndex);
-    let sysOCMsgSetlmtPayTxExpenseAddrHDNode = retrieveHDNode.call(this, sysOCMsgSetlmtPayTxExpenseAddrPath),
-        sysOCMsgSetlmtPayTxExpenseAddrKeys = null;
+    const sysOCMsgsSetlmtPayTxExpenseAddrPath = util.format('m/%d/0/6/0/%d', ctnNodeIndex, addrIndex);
+    let sysOCMsgsSetlmtPayTxExpenseAddrHDNode = retrieveHDNode.call(this, sysOCMsgsSetlmtPayTxExpenseAddrPath),
+        sysOCMsgsSetlmtPayTxExpenseAddrKeys = null;
 
-    if (sysOCMsgSetlmtPayTxExpenseAddrHDNode === null) {
+    if (sysOCMsgsSetlmtPayTxExpenseAddrHDNode === null) {
         // System off-chain messages settlement pay tx expense address HD extended key does not exist yet.
         //  Retrieve parent root HD extended key to create it
-        const path = parentPath(sysOCMsgSetlmtPayTxExpenseAddrPath);
-        let sysOCMsgSetlmtPayTxExpenseRootHDNode = retrieveHDNode.call(this, path);
+        const path = parentPath(sysOCMsgsSetlmtPayTxExpenseAddrPath);
+        let sysOCMsgsSetlmtPayTxExpenseRootHDNode = retrieveHDNode.call(this, path);
 
-        if (sysOCMsgSetlmtPayTxExpenseRootHDNode === null) {
+        if (sysOCMsgsSetlmtPayTxExpenseRootHDNode === null) {
             // System off-chain messages settlement pay tx expense root HD extended key does not exist yet.
             //  Try to initialize Catenis node HD extended keys
             if (! this.initCatenisNodeHDNodes(ctnNodeIndex)) {
@@ -2228,36 +2229,36 @@ KeyStore.prototype.getSystemOCMsgSettlementPayTxExpenseAddressKeys = function (c
             else {
                 // Catenis node HD extended keys successfully initialized.
                 //  Try to retrieve system off-chain messages settlement pay tx expense root HD extended key again
-                sysOCMsgSetlmtPayTxExpenseRootHDNode = retrieveHDNode.call(this, path);
+                sysOCMsgsSetlmtPayTxExpenseRootHDNode = retrieveHDNode.call(this, path);
             }
         }
 
-        if (sysOCMsgSetlmtPayTxExpenseRootHDNode === null) {
+        if (sysOCMsgsSetlmtPayTxExpenseRootHDNode === null) {
             Catenis.logger.ERROR(util.format('System off-chain messages settlement pay tx expense root HD extended key (%s) for Catenis node with index %d not found', path, ctnNodeIndex));
         }
         else {
             // Try to create system off-chain messages settlement pay tx expense address HD extended key now
-            sysOCMsgSetlmtPayTxExpenseAddrHDNode = sysOCMsgSetlmtPayTxExpenseRootHDNode.derive(addrIndex);
+            sysOCMsgsSetlmtPayTxExpenseAddrHDNode = sysOCMsgsSetlmtPayTxExpenseRootHDNode.derive(addrIndex);
 
-            if (sysOCMsgSetlmtPayTxExpenseAddrHDNode.index !== addrIndex) {
-                Catenis.logger.WARN(util.format('System off-chain messages settlement pay tx expense address HD extended key (%s) derived with an unexpected index', sysOCMsgSetlmtPayTxExpenseAddrPath), {expectedIndex: addrIndex, returnedIndex: sysOCMsgSetlmtPayTxExpenseAddrHDNode.index});
-                sysOCMsgSetlmtPayTxExpenseAddrHDNode = null;
+            if (sysOCMsgsSetlmtPayTxExpenseAddrHDNode.index !== addrIndex) {
+                Catenis.logger.WARN(util.format('System off-chain messages settlement pay tx expense address HD extended key (%s) derived with an unexpected index', sysOCMsgsSetlmtPayTxExpenseAddrPath), {expectedIndex: addrIndex, returnedIndex: sysOCMsgsSetlmtPayTxExpenseAddrHDNode.index});
+                sysOCMsgsSetlmtPayTxExpenseAddrHDNode = null;
             }
             else {
                 // Store created HD extended key
-                storeHDNode.call(this, 'sys_oc_msg_setlmt_pay_tx_exp_addr', sysOCMsgSetlmtPayTxExpenseAddrPath, sysOCMsgSetlmtPayTxExpenseAddrHDNode, true, false, isObsolete);
+                storeHDNode.call(this, 'sys_oc_msgs_setlmt_pay_tx_exp_addr', sysOCMsgsSetlmtPayTxExpenseAddrPath, sysOCMsgsSetlmtPayTxExpenseAddrHDNode, true, false, isObsolete);
             }
         }
     }
 
-    if (sysOCMsgSetlmtPayTxExpenseAddrHDNode !== null) {
-        sysOCMsgSetlmtPayTxExpenseAddrKeys = new CryptoKeys(sysOCMsgSetlmtPayTxExpenseAddrHDNode);
+    if (sysOCMsgsSetlmtPayTxExpenseAddrHDNode !== null) {
+        sysOCMsgsSetlmtPayTxExpenseAddrKeys = new CryptoKeys(sysOCMsgsSetlmtPayTxExpenseAddrHDNode);
     }
 
-    return sysOCMsgSetlmtPayTxExpenseAddrKeys;
+    return sysOCMsgsSetlmtPayTxExpenseAddrKeys;
 };
 
-KeyStore.prototype.listSystemOCMsgSettlementPayTxExpenseAddresses = function (ctnNodeIndex, fromAddrIndex, toAddrIndex, onlyInUse) {
+KeyStore.prototype.listSystemOCMsgsSettlementPayTxExpenseAddresses = function (ctnNodeIndex, fromAddrIndex, toAddrIndex, onlyInUse) {
     // Validate arguments
     const errArg = {},
         queryTerms = [{parentPath: util.format('m/%d/0/6/0', ctnNodeIndex)}];
@@ -2287,7 +2288,7 @@ KeyStore.prototype.listSystemOCMsgSettlementPayTxExpenseAddresses = function (ct
     if (Object.keys(errArg).length > 0) {
         const errArgs = Object.keys(errArg);
 
-        Catenis.logger.ERROR(util.format('KeyStore.listSystemOCMsgSettlementPayTxExpenseAddresses method called with invalid argument%s', errArgs.length > 1 ? 's' : ''), errArg);
+        Catenis.logger.ERROR(util.format('KeyStore.listSystemOCMsgsSettlementPayTxExpenseAddresses method called with invalid argument%s', errArgs.length > 1 ? 's' : ''), errArg);
         throw Error(util.format('Invalid %s argument%s', errArgs.join(', '), errArgs.length > 1 ? 's' : ''));
     }
 
@@ -2310,8 +2311,8 @@ KeyStore.prototype.listSystemOCMsgSettlementPayTxExpenseAddresses = function (ct
     });
 };
 
-KeyStore.prototype.listSystemOCMsgSettlementPayTxExpenseAddressesInUse = function (ctnNodeIndex, fromAddrIndex, toAddrIndex) {
-    return this.listSystemOCMsgSettlementPayTxExpenseAddresses(ctnNodeIndex, fromAddrIndex, toAddrIndex);
+KeyStore.prototype.listSystemOCMsgsSettlementPayTxExpenseAddressesInUse = function (ctnNodeIndex, fromAddrIndex, toAddrIndex) {
+    return this.listSystemOCMsgsSettlementPayTxExpenseAddresses(ctnNodeIndex, fromAddrIndex, toAddrIndex);
 };
 
 KeyStore.prototype.getSystemDeviceAddressKeys = function (ctnNodeIndex, addrRootIndex, addrIndex, isObsolete = false) {
@@ -3642,10 +3643,10 @@ KeyStore.systemBcotSaleStockRootPath = function (ctnNodeIndex) {
     return util.format('m/%d/0/5/0', ctnNodeIndex);
 };
 
-KeyStore.systemOCMsgSetlmtPayTxExpenseRootPath = function (ctnNodeIndex) {
+KeyStore.systemOCMsgsSetlmtPayTxExpenseRootPath = function (ctnNodeIndex) {
     // Validate Catenis node index
     if (!isValidCatenisNodeIndex(ctnNodeIndex)) {
-        Catenis.logger.ERROR('KeyStore.systemOCMsgSetlmtPayTxExpenseRootPath method called with invalid argument', {ctnNodeIndex: ctnNodeIndex});
+        Catenis.logger.ERROR('KeyStore.systemOCMsgsSetlmtPayTxExpenseRootPath method called with invalid argument', {ctnNodeIndex: ctnNodeIndex});
         throw Error('Invalid ctnNodeIndex argument');
     }
 
@@ -3952,8 +3953,8 @@ KeyStore.extKeyType = Object.freeze({
             1: 'ctnNodeIndex'
         }
     }),
-    sys_oc_msg_setlmt_root: Object.freeze({
-        name: 'sys_oc_msg_setlmt_root',
+    sys_oc_msgs_setlmt_root: Object.freeze({
+        name: 'sys_oc_msgs_setlmt_root',
         description: 'system off-chain messages settlement root',
         pathRegEx: /^m\/(\d+)\/0\/6$/,
         pathParts: {
@@ -4191,16 +4192,16 @@ KeyStore.extKeyType = Object.freeze({
             2: 'addrIndex'
         }
     }),
-    sys_oc_msg_setlmt_pay_tx_exp_root: Object.freeze({
-        name: 'sys_oc_msg_setlmt_pay_tx_exp_root',
+    sys_oc_msgs_setlmt_pay_tx_exp_root: Object.freeze({
+        name: 'sys_oc_msgs_setlmt_pay_tx_exp_root',
         description: 'system off-chain messages settlement pay tx expense root',
         pathRegEx: /^m\/(\d+)\/0\/6\/0$/,
         pathParts: {
             1: 'ctnNodeIndex'
         }
     }),
-    sys_oc_msg_setlmt_pay_tx_exp_addr: Object.freeze({
-        name: 'sys_oc_msg_setlmt_pay_tx_exp_addr',
+    sys_oc_msgs_setlmt_pay_tx_exp_addr: Object.freeze({
+        name: 'sys_oc_msgs_setlmt_pay_tx_exp_addr',
         description: 'system off-chain messages settlement pay tx expense address',
         pathRegEx: /^m\/(\d+)\/0\/6\/0\/(\d+)$/,
         pathParts: {

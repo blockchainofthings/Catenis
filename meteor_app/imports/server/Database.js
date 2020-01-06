@@ -797,6 +797,28 @@ Database.initialize = function() {
             },
             {
                 fields: {
+                    'offChain.msgEnvCid': 1
+                },
+                opts: {
+                    unique: true,
+                    sparse: true,
+                    background: true,
+                    w: 1
+                }
+            },
+            {
+                fields: {
+                    'blockchain.txid': 1
+                },
+                opts: {
+                    sparse: true,
+                    background: true,
+                    w: 1
+                }
+            },
+            {
+                fields: {
+                    'offChain.msgEnvCid': 1,
                     'blockchain.txid': 1
                 },
                 opts: {
@@ -1288,6 +1310,16 @@ Database.initialize = function() {
                     background: true,
                     w: 1
                 }
+            }, {
+                fields: {
+                    'info.settleOffChainMessages.offChainMsgDataCids': 1
+                },
+                opts: {
+                    unique: true,
+                    sparse: true,
+                    background: true,
+                    w: 1
+                }
             }]
         },
         ReceivedTransaction: {
@@ -1465,6 +1497,198 @@ Database.initialize = function() {
                     'info.transferAsset.receivingDeviceId': 1
                 },
                 opts: {
+                    sparse: true,
+                    background: true,
+                    w: 1
+                }
+            }, {
+                fields: {
+                    'info.settleOffChainMessages.offChainMsgDataCids': 1
+                },
+                opts: {
+                    unique: true,
+                    sparse: true,
+                    background: true,
+                    w: 1
+                }
+            }]
+        },
+        SavedOffChainMsgData: {
+            indices: [{
+                fields: {
+                    dataType: 1
+                },
+                opts: {
+                    background: true,
+                    w: 1
+                }
+            }, {
+                fields: {
+                    msgType: 1
+                },
+                opts: {
+                    sparse: true,
+                    background: true,
+                    w: 1
+                }
+            }, {
+                fields: {
+                    cid: 1
+                },
+                opts: {
+                    unique: true,
+                    background: true,
+                    w: 1
+                }
+            }, {
+                fields: {
+                    savedDate: 1
+                },
+                opts: {
+                    background: true,
+                    w: 1
+                }
+            }, {
+                fields: {
+                    'settlement.settled': 1
+                },
+                opts: {
+                    background: true,
+                    w: 1
+                }
+            }, {
+                fields: {
+                    'settlement.settleOffChainMsgsTxid': 1
+                },
+                opts: {
+                    background: true,
+                    w: 1
+                }
+            }, {
+                fields: {
+                    'info.msgEnvelope.logMessage.deviceId': 1
+                },
+                opts: {
+                    sparse: true,
+                    background: true,
+                    w: 1
+                }
+            }, {
+                fields: {
+                    'info.msgEnvelope.sendMessage.originDeviceId': 1
+                },
+                opts: {
+                    sparse: true,
+                    background: true,
+                    w: 1
+                }
+            }, {
+                fields: {
+                    'info.msgEnvelope.sendMessage.targetDeviceId': 1
+                },
+                opts: {
+                    sparse: true,
+                    background: true,
+                    w: 1
+                }
+            }, {
+                fields: {
+                    'info.msgReceipt.sendMsgEnvelopeCid': 1
+                },
+                opts: {
+                    unique: true,
+                    sparse: true,
+                    background: true,
+                    w: 1
+                }
+            }]
+        },
+        RetrievedOffChainMsgData: {
+            indices: [{
+                fields: {
+                    dataType: 1
+                },
+                opts: {
+                    background: true,
+                    w: 1
+                }
+            }, {
+                fields: {
+                    msgType: 1
+                },
+                opts: {
+                    sparse: true,
+                    background: true,
+                    w: 1
+                }
+            }, {
+                fields: {
+                    cid: 1
+                },
+                opts: {
+                    unique: true,
+                    background: true,
+                    w: 1
+                }
+            }, {
+                fields: {
+                    savedDate: 1
+                },
+                opts: {
+                    background: true,
+                    w: 1
+                }
+            }, {
+                fields: {
+                    retrievedDate: 1
+                },
+                opts: {
+                    background: true,
+                    w: 1
+                }
+            }, {
+                fields: {
+                    savedOffChainMsgData_id: 1
+                },
+                opts: {
+                    unique: true,
+                    sparse: true,
+                    background: true,
+                    w: 1
+                }
+            }, {
+                fields: {
+                    'info.msgEnvelope.logMessage.deviceId': 1
+                },
+                opts: {
+                    sparse: true,
+                    background: true,
+                    w: 1
+                }
+            }, {
+                fields: {
+                    'info.msgEnvelope.sendMessage.originDeviceId': 1
+                },
+                opts: {
+                    sparse: true,
+                    background: true,
+                    w: 1
+                }
+            }, {
+                fields: {
+                    'info.msgEnvelope.sendMessage.targetDeviceId': 1
+                },
+                opts: {
+                    sparse: true,
+                    background: true,
+                    w: 1
+                }
+            }, {
+                fields: {
+                    'info.msgReceipt.sendMsgEnvelopeCid': 1
+                },
+                opts: {
+                    unique: true,
                     sparse: true,
                     background: true,
                     w: 1
@@ -1687,12 +1911,51 @@ Database.initialize = function() {
                 },
                 opts: {
                     unique: true,
+                    sparse: true,
                     background: true,
                     w: 1
                 }
             }, {
                 fields: {
                     'serviceTx.complementaryTx.txid': 1
+                },
+                opts: {
+                    sparse: true,
+                    background: true,
+                    w: 1
+                }
+            }, {
+                fields: {
+                    'offChainMsgServiceData.msgEnvelope.cid': 1
+                },
+                opts: {
+                    unique: true,
+                    sparse: true,
+                    background: true,
+                    w: 1
+                }
+            }, {
+                fields: {
+                    'offChainMsgServiceData.msgEnvelope.settlementTx.txid': 1
+                },
+                opts: {
+                    sparse: true,
+                    background: true,
+                    w: 1
+                }
+            }, {
+                fields: {
+                    'offChainMsgServiceData.msgReceipt.cid': 1
+                },
+                opts: {
+                    unique: true,
+                    sparse: true,
+                    background: true,
+                    w: 1
+                }
+            }, {
+                fields: {
+                    'offChainMsgServiceData.msgReceipt.settlementTx.txid': 1
                 },
                 opts: {
                     sparse: true,

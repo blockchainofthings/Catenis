@@ -21,6 +21,10 @@ import { Catenis } from './Catenis';
 import { LogMessageTransaction } from './LogMessageTransaction';
 import { SendMessageTransaction } from './SendMessageTransaction';
 import { CatenisMessage } from './CatenisMessage';
+import { OffChainMsgEnvelope } from './OffChainMsgEnvelope';
+import { Transaction } from './Transaction';
+import { LogOffChainMessage } from './LogOffChainMessage';
+import { SendOffChainMessage } from './SendOffChainMessage';
 
 // Config entries
 const messageConfig = config.get('message');
@@ -49,8 +53,15 @@ export function Message(docMessage) {
     this.targetDeviceId = docMessage.targetDeviceId;
     this.readConfirmationEnabled = docMessage.readConfirmationEnabled;
     this.isEncrypted = docMessage.isEncrypted;
-    this.txid = docMessage.blockchain.txid;
-    this.isTxConfirmed = docMessage.blockchain.confirmed;
+
+    if (docMessage.offChain) {
+        this.ocMsgEnvCid = docMessage.offChain.msgEnvCid;
+    }
+
+    if (docMessage.blockchain) {
+        this.txid = docMessage.blockchain.txid;
+        this.isTxConfirmed = docMessage.blockchain.confirmed;
+    }
 
     if (docMessage.externalStorage) {
         this.storageProviderName = docMessage.externalStorage.provider;
@@ -64,6 +75,23 @@ export function Message(docMessage) {
     this.firstReadDate = docMessage.firstReadDate;
     this.lastReadDate = docMessage.lastReadDate;
     this.readConfirmed = docMessage.readConfirmed;
+
+    Object.defineProperties(this, {
+        isOffChain: {
+            get: function () {
+                // noinspection JSPotentiallyInvalidUsageOfThis
+                return !!this.ocMsgEnvCid;
+            },
+            enumerable: true
+        },
+        isRecordedToBlockchain: {
+            get: function () {
+                // noinspection JSPotentiallyInvalidUsageOfThis
+                return !!this.txid;
+            },
+            enumerable: true
+        }
+    });
 }
 
 
@@ -275,6 +303,131 @@ Message.createRemoteMessage = function (sendMsgTransact, receivedDate) {
     return docMessage.messageId;
 };
 
+// Create a new off-chain Message issued by this Catenis node and returns its messageId
+//
+//  Arguments:
+//    offChainMessage: [Object] Instance of either LogOffChainMessage or SendOffChainMessage
+Message.createLocalOffChainMessage = function (offChainMessage) {
+    let action;
+
+    if (offChainMessage instanceof LogOffChainMessage) {
+        action = Message.action.log;
+    }
+    else if (offChainMessage instanceof SendOffChainMessage) {
+        action = Message.action.send;
+    }
+    else {
+        // Invalid argument
+        Catenis.logger.ERROR('Message.createLocalOffChainMessage method called with invalid argument', {offChainMessage});
+        throw Error('Invalid offChainMessage argument');
+    }
+
+    // Make sure that off-chain message has already been saved to to both Catenis node's
+    //  IPFS repository and local database
+    if (!offChainMessage.ocMsgEnvelope.savedToDatabase) {
+        Catenis.logger.ERROR('Cannot create message for an off-chain message that has not yet been saved', offChainMessage.ocMsgEnvelope);
+        throw new Meteor.Error('ctn_msg_oc_msg_unsaved', 'Cannot create message for an off-chain message that has not yet been saved', offChainMessage.ocMsgEnvelope);
+    }
+
+    const docMessage = {
+        messageId: newMessageId(offChainMessage.ocMsgEnvelope),
+        action: action,
+        source: Message.source.local
+    };
+
+    if (action === Message.action.log) {
+        docMessage.originDeviceId = offChainMessage.device.deviceId;
+    }
+    else {  // action == Message.action.send
+        docMessage.originDeviceId = offChainMessage.originDevice.deviceId;
+        docMessage.targetDeviceId = offChainMessage.targetDevice.deviceId;
+        docMessage.readConfirmationEnabled = offChainMessage.options.readConfirmation;
+    }
+
+    docMessage.isEncrypted = offChainMessage.options.encrypted;
+    docMessage.offChain = {
+        msgEnvCid: offChainMessage.ocMsgEnvelope.cid
+    };
+
+    const storageProvider = offChainMessage.options.storageProvider !== undefined ? offChainMessage.options.storageProvider : CatenisMessage.defaultStorageProvider;
+
+    docMessage.externalStorage = {
+        provider: storageProvider.name,
+        reference: CatenisMessage.getMessageStorageClass(storageProvider).getNativeMsgRef(offChainMessage.ocMsgEnvelope.msgRef)
+    };
+
+    docMessage.createdDate = new Date();
+    docMessage.sentDate = offChainMessage.ocMsgEnvelope.savedDate;
+
+    try {
+        docMessage._id = Catenis.db.collection.Message.insert(docMessage);
+    }
+    catch (err) {
+        Catenis.logger.ERROR(util.format('Error trying to create new local off-chain message: %s ', util.inspect(docMessage)), err);
+        throw new Meteor.Error('ctn_msg_insert_error', util.format('Error trying to create new local off-chain message: %s', util.inspect(docMessage)), err.stack);
+    }
+
+    return docMessage.messageId;
+};
+
+// Create a new off-chain Message issued by this Catenis node and returns its messageId
+//
+//  Arguments:
+//    sendOCMessage: [Object(SendOffChainMessage)] Instance of SendOffChainMessage
+//    blocked: [Boolean] Indicates whether message should be blocked
+Message.createRemoteOffChainMessage = function (sendOCMessage, blocked) {
+    // Validate arguments
+    const errArg = {};
+
+    if (!sendOCMessage instanceof SendOffChainMessage) {
+        errArg.sendOffChainMessage = sendOCMessage;
+    }
+
+    if (Object.keys(errArg).length > 0) {
+        const errArgs = Object.keys(errArg);
+
+        Catenis.logger.ERROR(util.format('Message.createRemoteOffChainMessage method called with invalid argument%s', errArgs.length > 1 ? 's' : ''), errArg);
+        throw Error(util.format('Invalid %s argument%s', errArgs.join(', '), errArgs.length > 1 ? 's' : ''));
+    }
+
+    const docMessage = {
+        messageId: newMessageId(sendOCMessage.ocMsgEnvelope),
+        action: Message.action.send,
+        source: Message.source.remote,
+        originDeviceId: sendOCMessage.originDevice.deviceId,
+        targetDeviceId: sendOCMessage.targetDevice.deviceId,
+        readConfirmationEnabled: sendOCMessage.options.readConfirmation,
+        isEncrypted: sendOCMessage.options.encrypted,
+        offChain: {
+            msgEnvCid: SendOffChainMessage.ocMsgEnvelope.cid
+        }
+    };
+
+    const storageProvider = sendOCMessage.options.storageProvider !== undefined ? sendOCMessage.options.storageProvider : CatenisMessage.defaultStorageProvider;
+
+    docMessage.externalStorage = {
+        provider: storageProvider.name,
+        reference: CatenisMessage.getMessageStorageClass(storageProvider).getNativeMsgRef(sendOCMessage.ocMsgEnvelope.msgRef)
+    };
+
+    if (!blocked) {
+        docMessage.receivedDate = sendOCMessage.ocMsgEnvelope.retrievedDate;
+    }
+    else {
+        docMessage.blocked = true;
+    }
+
+    try {
+        docMessage._id = Catenis.db.collection.Message.insert(docMessage);
+    }
+    catch (err) {
+        Catenis.logger.ERROR(util.format('Error trying to create new remote off-chain message: %s ', util.inspect(docMessage)), err);
+        throw new Meteor.Error('ctn_msg_insert_error', util.format('Error trying to create new remote off-chain message: %s', util.inspect(docMessage)), err.stack);
+    }
+
+    return docMessage.messageId;
+};
+
 Message.getMessageByMessageId = function (messageId, requestingDeviceId) {
     // Retrieve Message doc/rec
     const selector = {
@@ -308,6 +461,19 @@ Message.getMessageByMessageId = function (messageId, requestingDeviceId) {
         // No message available with the given client ID. Log error and throw exception
         Catenis.logger.ERROR('Could not find message with given message ID', {messageId: messageId});
         throw new Meteor.Error('ctn_msg_not_found', util.format('Could not find message with given message ID (%s)', messageId));
+    }
+
+    return new Message(docMessage);
+};
+
+Message.getMessageByOffChainCid = function (cid) {
+    // Retrieve Message doc/rec
+    const docMessage = Catenis.db.collection.Message.findOne({'offChain.msgEnvCid': cid});
+
+    if (!docMessage) {
+        // No message available with the given Catenis off-chain message IPFS CID. Log error and throw exception
+        Catenis.logger.ERROR('Could not find message with given Catenis off-chain message IPFS CID', {cid});
+        throw new Meteor.Error('ctn_msg_not_found', util.format('Could not find message with given Catenis off-chain message IPFS CID (%s)', cid));
     }
 
     return new Message(docMessage);
@@ -688,18 +854,28 @@ Message.readState = Object.freeze({
 
 // Synthesize new message ID using the blockchain addresses associated with
 //  a transaction's inputs
-function newMessageId(tx) {
-    // We compose a unique seed from the blockchain addresses of the transaction's inputs
-    //  We can guarantee that it will be unique because Catenis blockchain  addresses
-    //  are only used once
-    const seed = Catenis.application.commonSeed.toString() + ':' + tx.inputs.reduce((acc, input, index) => {
-        if (acc.length > 0) {
-            acc += ',';
-        }
-        return acc + 'address#:' + (index + 1) + input.address;
-    }, '');
+function newMessageId(msgTransport) {
+    let seed;
+    let prefix;
 
-    return 'm' + Random.createWithSeeds(seed).id(19);
+    if (msgTransport instanceof Transaction) {
+        // We compose a unique seed from the blockchain addresses of the transaction's inputs
+        //  We can guarantee that it will be unique because Catenis blockchain addresses
+        //  are only used once
+        seed = Catenis.application.commonSeed.toString() + ':' + msgTransport.inputs.reduce((acc, input, index) => {
+            if (acc.length > 0) {
+                acc += ',';
+            }
+            return acc + 'address#:' + (index + 1) + input.address;
+        }, '');
+        prefix = 'm';
+    }
+    else if (msgTransport instanceof OffChainMsgEnvelope) {
+        seed = Catenis.application.commonSeed.toString() + ':offChainCID:' + msgTransport.cid;
+        prefix = 'o';
+    }
+
+    return prefix + Random.createWithSeeds(seed).id(19);
 }
 
 function isValidMsgDirection(value) {

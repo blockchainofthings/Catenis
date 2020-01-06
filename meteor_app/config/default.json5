@@ -3,6 +3,11 @@
   // Parameters pertaining to the Catenis application
   "application": {
     "appName": "Catenis",
+    ctnNode: {  // Catenis node to which this instance of the application corresponds
+      index: 0,
+      privKey: "????",
+      pubKey: ""
+    },
     "environment": "production",
     "seedFilename": "seed.dat",
     "cryptoNetwork": "testnet",  // Available values: 'bitcoin' (for Bitcoin's production blockchain), 'testnet' (for Bitcoin's test blockchain)
@@ -164,6 +169,7 @@
       "systemServPymtPayTxExpense": 900,  // (15 min.)
       "systemMultiSigSignee": 900,  // (15 min.)
       "systemBcotSaleStock": 0,  // Indicates that addresses of this type should never expire
+      "systemOCMsgsSetlmtPayTxExpense": 900,  // (15 min.)
       "clientServAccCreditLine": 900,  // (15 min.)
       "clientServAccDebitLine": 900,  // (15 min.)
       "clientBcotPayment": 14400,  // (4 hours)
@@ -253,6 +259,15 @@
       "minBalancePostPaidServices": 100,  // Number of services to be post-paid used to calculate minimum balance threshold
       "servicesToPayToFund": 300  // Number of services to pay to consider when calculating total amount to fund
     },
+    "ocMsgsSettlementPayTxExpenseFunding": {
+      // NOTE: unitAmount (amount, in satoshis, equivalent to one unit of funding) is dynamically calculated
+      "unitAmountSafetyFactor": 0.3,  // Safety factor to use when calculating funding unit amount
+      "maxUnitsPerAddr": 5,  // Maximum number of units of funding that should be accumulated into a single UTXO/address (there should be a single UTXO per address)
+      "minAddrsToFund": 5,  // Number of UTXOs/addresses that should be funded before start accumulating funding units into a single UTXO/address (there should be a single UTXO per address)
+      "balanceSafetyFactor": 0.15, // Safety factor to use when calculating balance
+      "minBalanceSettlementCycles": 5,  // Number of Catenis off-chain messages settlement cycles used to calculate minimum balance threshold
+      "settlementCyclesToFund": 100  // Number of Catenis off-chain messages settlement cycles to consider when calculating total amount to fund
+    },
     "servicePayment": {
       "paymentResolution": 10,  // Resolution of amount, in satoshis, that should be allocated to pay for the expenses of transactions related to service payment. In other words, the allocated amount should be a multiple of this amount
       // To be used with pre-paid clients
@@ -291,6 +306,10 @@
         "unitAmount": 600,  // Amount, in satoshis, equivalent to one unit of funding
         "maxUnitsPerAddr": 10,  // Maximum number of units of funding that should be accumulated into a single UTXO/address (there should be a single UTXO per address)
         "minAddrsToFund": 10  // Number of UTXOs/addresses that should be funded before start accumulating funding units into a single UTXO/address (there should be a single UTXO per address)
+      },
+      "offChainMessagesSettlement": {
+        "minutesToConfirm": 300  // (5 hours) Time, in minutes, within which settle off-chain messages txs are expected to be confirmed.
+                                 //  NOTE: can be set to NULL to indicate that the optimum fee rate (lowest fee for fastest confirmation) should be used
       }
     },
     "sysTxConfig": {
@@ -298,6 +317,11 @@
         "numInputs": 3,           // Number of inputs (that spend P2PKH outputs)
         "numOutputs": 3,          // Number of (P2PKH) outputs
         "nullDataPayloadSize": 80 // Size, in bytes, of payload of null data output
+      },
+      "settleOffChainMessages": {  // Settle off-chain messages
+        "numInputs": 2,           // Number of inputs (that spend P2PKH outputs)
+        "numOutputs": 1,          // Number of (P2PKH) outputs
+        "nullDataPayloadSize": 39 // Size, in bytes, of payload of null data output
       }
     },
     "message": {
@@ -332,6 +356,14 @@
         "usageWeight": {
           "regular": 1,   // Regular read confirmation tx (using RBF) usage weight
           "terminal": 10  // Terminal read confirmation tx usage weight
+        }
+      },
+      "offChain": {
+        "price": {
+          "numMsgsPayCost": 10,  // Number of off-chain messages required to pay for full cost of settle off-chain messages transaction
+          "msgReceipt": {
+            "percCost": 0.25  // (25%) Percentage of off-chain message cost that shall be charged for off-chain message receipts
+          }
         }
       }
     },
@@ -378,11 +410,14 @@
       }
     },
     "serviceUsageWeight": {
-      "logMessage": 100,          // Log message usage weight
-      "sendMessage": 100,         // Send message (without read confirmation) usage weight
-      "sendMsgReadConfirm": 100,  // Send message with read confirmation usage weight
-      "issueAsset": 10,           // Issue asset usage weight
-      "transferAsset": 100        // Transfer asset usage weight
+      "logMessage": 9,                  // Log message usage weight
+      "sendMessage": 9,                 // Send message (without read confirmation) usage weight
+      "sendMsgReadConfirm": 9,          // Send message with read confirmation usage weight
+      "logOffChainMessage": 91,         // Log off-chain message usage weight
+      "sendOffChainMessage": 91,        // Send off-chain message (without read confirmation) usage weight
+      "sendOffChainMsgReadConfirm": 91, // Send off-chain message with read confirmation usage weight
+      "issueAsset": 10,                 // Issue asset usage weight
+      "transferAsset": 100              // Transfer asset usage weight
     }
   },
   // Parameters pertaining to BalanceInfo module
@@ -391,6 +426,7 @@
   },
   // Parameters pertaining to CatenisNode module
   "catenisNode": {
+    idPrefix: 'ctn-node',
     "serviceCreditAsset": {
       "nameFormat": "Catenis Service Credit - %s%s",
       "descriptionFormat": "Internal Catenis token used to pay for services consumed by devices of clients assigned to %s",
@@ -601,7 +637,8 @@
       "0.5",
       "0.6",
       "0.7",
-      "0.8"
+      "0.8",
+      "0.9"
     ]
   },
   // Parameters pertaining to Authentication module
@@ -741,7 +778,8 @@
         "key": "metaPlaceholder",
         "value": "Catenis Colored Coins metadata placeholder"
       },
-      "servTxidsKey": "servTxids"  // Name (key) of Colored Coins free user metadata used to refer to BCOT Token Payment transaction
+      "servTxidsKey": "servTxids",  // Name (key) of Colored Coins free user metadata used to refer to service transaction
+      "ocMsgServCidsKey": "ocMsgServCids"  // Name (key) of Colored Coins free user metadata used to refer to off-chain message related service data (off-chain message envelope)
     },
     "unconfirmedTxTimeout": 10080,  // (7 days) Timeout, in minutes, for waiting for latest sent spend service credit tx to be confirmed (set to 7 days, which is half the default mempool tx eviction time of 14 days)
     "txSizeThresholdRatio": 0.9  // Ratio that should be applied to maximum tx size to calculate threshold for spend service credit tx size. Above that size the tx fee rate should be reset so that is is confirmed as soon as possible
@@ -917,5 +955,42 @@
         "emailName": "TwoFactorAuthRecoveryCodeUsed"  // Name of e-mail contents used to notify of recovery code used
       }
     }
+  },
+  // Parameters pertaining to CatenisOffChainClient module
+  catenisOffChainClient: {
+    hostname: "localhost",
+    port: 8199,
+    connectTimeout: 5000,  // (5 sec.) Time, in milliseconds, to wait for a socket
+    requestTimeout: 30000,  // (30 sec.) Time, in milliseconds, to wait for request to finish
+    headersToSign: [
+      "(request-target)",
+      "Date",
+      "Host"
+    ]
+  },
+  // Parameters pertaining to CatenisOffChainNotification module
+  catenisOffChainNotification: {
+    connectTimeout: 5000,  // (5 sec.) Time, in milliseconds, to wait for a socket
+    handshakeTimeout: 30000,  // (5 sec.) Time, in milliseconds, to wait for handshake request
+    heartbeatPercentLag: 0.10,  // (10%) Percentage of server heartbeat time that client should wait for receiving ping packet
+    heartbeatProbingCount: 6,  // Number of heartbeat cycles to use to measure heartbeat time
+    defaultHeartbeatTimeout: 600000,  // (10 min.) Time, in milliseconds, to be used as heartbeat timeout before probing is done
+    minReconnectTimeout: 10000,  // (10 sec.) Minimum time, in milliseconds, to wait before trying to reconnect
+    maxReconnectTimeout: 600000,  // (10 min.) Minimum time, in milliseconds, to wait before trying to reconnect
+    message: {
+      newOffChainMsgData: 'NEW_OFF_CHAIN_MSG_DATA'
+    }
+  },
+  // Parameters pertaining to OffChainMessagesSettlement module
+  offChainMessagesSettlement: {
+    refTimeZone: "UTC+00:00",  // Reference time zone expressed as a time difference from UTC (in the UTC+/-HH:mm format)
+    startTime: "00:00:00",  // Time of day (formatted as HH[:mm[:ss[.SSS]]]), in reference to reference time zone, when settlement cycles should start
+    cyclesPerDay: 4,  // Number of settlement cycles in a day (24 hour period). Note that a value less than one can be used to designate a period
+                      //  (time between cycles) greater than 24 hours. In that case, the period shall be rounded to the nearest full hour
+    maxCyclesToPostpone: 4  // Maximum settlement cycles that can be postponed before a settle off-chain messages transaction is sent when there not enough off-chain messages to pay for tx cost
+  },
+  // Parameters pertaining to CatenisOffChainMonitor module
+  catenisOffChainMonitor: {
+    autoPollingTimeInterval: 15000  // (15 sec.) Time, in milliseconds, of interval to automatically polling for Catenis off-chain message data
   }
 }

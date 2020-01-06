@@ -32,37 +32,6 @@ import { BcotToken } from './BcotToken';
 
 // Config entries
 const serviceConfig = config.get('service');
-const servSysFundConfig = serviceConfig.get('systemFunding');
-const servServCreditIssueAddrFundConfig = serviceConfig.get('serviceCreditIssueAddrFunding');
-const servBcotSaleStockAddrFundConfig = serviceConfig.get('bcotSaleStockAddrFunding');
-const servServAccFundConfig = serviceConfig.get('serviceAccountFunding');
-const servPayTxExpFundConfig = serviceConfig.get('payTxExpenseFunding');
-const servReadConfPayTxExpFundConfig = serviceConfig.get('readConfirmPayTxExpenseFunding');
-const servSrvPymtPayTxExpFundConfig = serviceConfig.get('servicePaymentPayTxExpenseFunding');
-const servServPayConfig = serviceConfig.get('servicePayment');
-const srvServPaySpendServCredConfig = servServPayConfig.get('spendServiceCredit');
-const srvServPayDebtServAccConfig = servServPayConfig.get('debitServiceAccount');
-const srvSysMessageConfig = serviceConfig.get('sysMessage');
-const srvSysMsgMainAddrFundConfig = srvSysMessageConfig.get('mainAddrFunding');
-const srvSysTxCfgConfig = serviceConfig.get('sysTxConfig');
-const srvSysTxCfgSendSysMsgConfig = srvSysTxCfgConfig.get('sendSysMessage');
-const srvMessageConfig = serviceConfig.get('message');
-const srvMsgMainAddrFundConfig = srvMessageConfig.get('mainAddrFunding');
-const srvMsgReadConfirmConfig = srvMessageConfig.get('readConfirmation');
-const srvMsgReadConfTerminalTxConfig = srvMsgReadConfirmConfig.get('terminalReadConfirmTx');
-const srvMsgReadConfUseWeightConfig = srvMsgReadConfirmConfig.get('usageWeight');
-const srvMsgReadConfTermTxTypTxCfgConfig = srvMsgReadConfTerminalTxConfig.get('typicalTxConfig');
-const srvAssetConfig = serviceConfig.get('asset');
-const srvAssetIssuanceConfig = srvAssetConfig.get('issuance');
-const srvAsstIssuAssetIssueAddrFundConfig = srvAssetIssuanceConfig.get('assetIssueAddrFunding');
-const srvAssetTransferConfig = srvAssetConfig.get('transfer');
-const srvServTxCfgConfig = serviceConfig.get('serviceTxConfig');
-const srvServTxCfgLogMsgConfig = srvServTxCfgConfig.get('logMessage');
-const srvServTxCfgSendMsgConfig = srvServTxCfgConfig.get('sendMessage');
-const srvServTxCfgSendMsgRdCfConfig = srvServTxCfgConfig.get('sendMsgReadConfirm');
-const srvServTxCfgIssueAssetConfig = srvServTxCfgConfig.get('issueAsset');
-const srvServTxCfgTransfAssetConfig = srvServTxCfgConfig.get('transferAsset');
-const srvServUseWeightConfig = serviceConfig.get('serviceUsageWeight');
 
 // Configuration settings
 const cfgSettings = {
@@ -71,188 +40,215 @@ const cfgSettings = {
     paymentResolution: serviceConfig.get('paymentResolution'),
     maxNumAddrsPerFundingTx: serviceConfig.get('maxNumAddrsPerFundingTx'),
     systemFunding: {
-        clientsToFund: servSysFundConfig.get('clientsToFund'),
-        devicesPerClientToFund: servSysFundConfig.get('devicesPerClientToFund'),
-        multiplyFactor: servSysFundConfig.get('multiplyFactor')
+        clientsToFund: serviceConfig.get('systemFunding.clientsToFund'),
+        devicesPerClientToFund: serviceConfig.get('systemFunding.devicesPerClientToFund'),
+        multiplyFactor: serviceConfig.get('systemFunding.multiplyFactor')
     },
     serviceCreditIssueAddrFunding: {
-        unitAmount: servServCreditIssueAddrFundConfig.get('unitAmount'),
-        maxUnitsPerUtxo: servServCreditIssueAddrFundConfig.get('maxUnitsPerUtxo'),
-        minUtxosToFund: servServCreditIssueAddrFundConfig.get('minUtxosToFund'),
-        unitsPerPrePaidClients: servServCreditIssueAddrFundConfig.get('unitsPerPrePaidClients'),
-        unitsPerPostPaidClients: servServCreditIssueAddrFundConfig.get('unitsPerPostPaidClients'),
-        prePaidClientsToFund: servServCreditIssueAddrFundConfig.get('prePaidClientsToFund'),
-        postPaidClientsToFund: servServCreditIssueAddrFundConfig.get('postPaidClientsToFund')
+        unitAmount: serviceConfig.get('serviceCreditIssueAddrFunding.unitAmount'),
+        maxUnitsPerUtxo: serviceConfig.get('serviceCreditIssueAddrFunding.maxUnitsPerUtxo'),
+        minUtxosToFund: serviceConfig.get('serviceCreditIssueAddrFunding.minUtxosToFund'),
+        unitsPerPrePaidClients: serviceConfig.get('serviceCreditIssueAddrFunding.unitsPerPrePaidClients'),
+        unitsPerPostPaidClients: serviceConfig.get('serviceCreditIssueAddrFunding.unitsPerPostPaidClients'),
+        prePaidClientsToFund: serviceConfig.get('serviceCreditIssueAddrFunding.prePaidClientsToFund'),
+        postPaidClientsToFund: serviceConfig.get('serviceCreditIssueAddrFunding.postPaidClientsToFund')
     },
     bcotSaleStockAddrFunding: {
-        unitAmount: servBcotSaleStockAddrFundConfig.get('unitAmount'),
-        maxUnitsPerUtxo: servBcotSaleStockAddrFundConfig.get('maxUnitsPerUtxo'),
-        minUtxosToFund: servBcotSaleStockAddrFundConfig.get('minUtxosToFund'),
-        unitsPerPrePaidClients: servBcotSaleStockAddrFundConfig.get('unitsPerPrePaidClients'),
-        unitsPerPostPaidClients: servBcotSaleStockAddrFundConfig.get('unitsPerPostPaidClients'),
-        prePaidClientsToFund: servBcotSaleStockAddrFundConfig.get('prePaidClientsToFund'),
-        postPaidClientsToFund: servBcotSaleStockAddrFundConfig.get('postPaidClientsToFund')
+        unitAmount: serviceConfig.get('bcotSaleStockAddrFunding.unitAmount'),
+        maxUnitsPerUtxo: serviceConfig.get('bcotSaleStockAddrFunding.maxUnitsPerUtxo'),
+        minUtxosToFund: serviceConfig.get('bcotSaleStockAddrFunding.minUtxosToFund'),
+        unitsPerPrePaidClients: serviceConfig.get('bcotSaleStockAddrFunding.unitsPerPrePaidClients'),
+        unitsPerPostPaidClients: serviceConfig.get('bcotSaleStockAddrFunding.unitsPerPostPaidClients'),
+        prePaidClientsToFund: serviceConfig.get('bcotSaleStockAddrFunding.prePaidClientsToFund'),
+        postPaidClientsToFund: serviceConfig.get('bcotSaleStockAddrFunding.postPaidClientsToFund')
     },
     serviceAccountFunding: {
-        unitAmountSafetyFactor: servServAccFundConfig.get('unitAmountSafetyFactor'),
-        maxUnitsPerAddr: servServAccFundConfig.get('maxUnitsPerAddr'),
-        minAddrsToFund: servServAccFundConfig.get('minAddrsToFund')
+        unitAmountSafetyFactor: serviceConfig.get('serviceAccountFunding.unitAmountSafetyFactor'),
+        maxUnitsPerAddr: serviceConfig.get('serviceAccountFunding.maxUnitsPerAddr'),
+        minAddrsToFund: serviceConfig.get('serviceAccountFunding.minAddrsToFund')
     },
     payTxExpenseFunding: {
-        unitAmountSafetyFactor: servPayTxExpFundConfig.get('unitAmountSafetyFactor'),
-        maxUnitsPerAddr: servPayTxExpFundConfig.get('maxUnitsPerAddr'),
-        minAddrsToFund: servPayTxExpFundConfig.get('minAddrsToFund'),
-        balanceSafetyFactor: servPayTxExpFundConfig.get('balanceSafetyFactor'),
-        minBalanceSysMessages: servPayTxExpFundConfig.get('minBalanceSysMessages'),
-        minBalanceServicesPerDevice: servPayTxExpFundConfig.get('minBalanceServicesPerDevice'),
-        sysMessagesToFund: servPayTxExpFundConfig.get('sysMessagesToFund'),
-        devicesToFund: servPayTxExpFundConfig.get('devicesToFund')
+        unitAmountSafetyFactor: serviceConfig.get('payTxExpenseFunding.unitAmountSafetyFactor'),
+        maxUnitsPerAddr: serviceConfig.get('payTxExpenseFunding.maxUnitsPerAddr'),
+        minAddrsToFund: serviceConfig.get('payTxExpenseFunding.minAddrsToFund'),
+        balanceSafetyFactor: serviceConfig.get('payTxExpenseFunding.balanceSafetyFactor'),
+        minBalanceSysMessages: serviceConfig.get('payTxExpenseFunding.minBalanceSysMessages'),
+        minBalanceServicesPerDevice: serviceConfig.get('payTxExpenseFunding.minBalanceServicesPerDevice'),
+        sysMessagesToFund: serviceConfig.get('payTxExpenseFunding.sysMessagesToFund'),
+        devicesToFund: serviceConfig.get('payTxExpenseFunding.devicesToFund')
     },
     readConfirmPayTxExpenseFunding: {
-        unitAmountSafetyFactor: servReadConfPayTxExpFundConfig.get('unitAmountSafetyFactor'),
-        maxUnitsPerAddr: servReadConfPayTxExpFundConfig.get('maxUnitsPerAddr'),
-        minAddrsToFund: servReadConfPayTxExpFundConfig.get('minAddrsToFund'),
-        balanceSafetyFactor: servReadConfPayTxExpFundConfig.get('balanceSafetyFactor'),
-        minBalanceMessagesToConfirm: servReadConfPayTxExpFundConfig.get('minBalanceMessagesToConfirm'),
-        messagesToConfirmToFund: servReadConfPayTxExpFundConfig.get('messagesToConfirmToFund')
+        unitAmountSafetyFactor: serviceConfig.get('readConfirmPayTxExpenseFunding.unitAmountSafetyFactor'),
+        maxUnitsPerAddr: serviceConfig.get('readConfirmPayTxExpenseFunding.maxUnitsPerAddr'),
+        minAddrsToFund: serviceConfig.get('readConfirmPayTxExpenseFunding.minAddrsToFund'),
+        balanceSafetyFactor: serviceConfig.get('readConfirmPayTxExpenseFunding.balanceSafetyFactor'),
+        minBalanceMessagesToConfirm: serviceConfig.get('readConfirmPayTxExpenseFunding.minBalanceMessagesToConfirm'),
+        messagesToConfirmToFund: serviceConfig.get('readConfirmPayTxExpenseFunding.messagesToConfirmToFund')
     },
     servicePaymentPayTxExpenseFunding: {
-        unitAmountSafetyFactor: servSrvPymtPayTxExpFundConfig.get('unitAmountSafetyFactor'),
-        maxUnitsPerAddr: servSrvPymtPayTxExpFundConfig.get('maxUnitsPerAddr'),
-        minAddrsToFund: servSrvPymtPayTxExpFundConfig.get('minAddrsToFund'),
-        balanceSafetyFactor: servSrvPymtPayTxExpFundConfig.get('balanceSafetyFactor'),
-        minBalancePrePaidServices: servSrvPymtPayTxExpFundConfig.get('minBalancePrePaidServices'),
-        minBalancePostPaidServices: servSrvPymtPayTxExpFundConfig.get('minBalancePostPaidServices'),
-        servicesToPayToFund: servSrvPymtPayTxExpFundConfig.get('servicesToPayToFund')
+        unitAmountSafetyFactor: serviceConfig.get('servicePaymentPayTxExpenseFunding.unitAmountSafetyFactor'),
+        maxUnitsPerAddr: serviceConfig.get('servicePaymentPayTxExpenseFunding.maxUnitsPerAddr'),
+        minAddrsToFund: serviceConfig.get('servicePaymentPayTxExpenseFunding.minAddrsToFund'),
+        balanceSafetyFactor: serviceConfig.get('servicePaymentPayTxExpenseFunding.balanceSafetyFactor'),
+        minBalancePrePaidServices: serviceConfig.get('servicePaymentPayTxExpenseFunding.minBalancePrePaidServices'),
+        minBalancePostPaidServices: serviceConfig.get('servicePaymentPayTxExpenseFunding.minBalancePostPaidServices'),
+        servicesToPayToFund: serviceConfig.get('servicePaymentPayTxExpenseFunding.servicesToPayToFund')
+    },
+    ocMsgsSettlementPayTxExpenseFunding: {
+        unitAmountSafetyFactor: serviceConfig.get('ocMsgsSettlementPayTxExpenseFunding.unitAmountSafetyFactor'),
+        maxUnitsPerAddr: serviceConfig.get('ocMsgsSettlementPayTxExpenseFunding.maxUnitsPerAddr'),
+        minAddrsToFund: serviceConfig.get('ocMsgsSettlementPayTxExpenseFunding.minAddrsToFund'),
+        balanceSafetyFactor: serviceConfig.get('ocMsgsSettlementPayTxExpenseFunding.balanceSafetyFactor'),
+        minBalanceSettlementCycles: serviceConfig.get('ocMsgsSettlementPayTxExpenseFunding.minBalanceSettlementCycles'),
+        settlementCyclesToFund: serviceConfig.get('ocMsgsSettlementPayTxExpenseFunding.settlementCyclesToFund')
     },
     servicePayment: {
-        paymentResolution: servServPayConfig.get('paymentResolution'),
+        paymentResolution: serviceConfig.get('servicePayment.paymentResolution'),
         spendServiceCredit: {
-            initNumTxInputs: srvServPaySpendServCredConfig.get('initNumTxInputs'),
-            initNumTxOutputs: srvServPaySpendServCredConfig.get('initNumTxOutputs'),
-            initNumPubKeysMultiSigTxOutputs: srvServPaySpendServCredConfig.get('initNumPubKeysMultiSigTxOutputs'),
-            txNullDataPayloadSize: srvServPaySpendServCredConfig.get('txNullDataPayloadSize'),
-            maxNumClients: srvServPaySpendServCredConfig.get('maxNumClients'),
-            servsDistribPerClient: srvServPaySpendServCredConfig.get('servsDistribPerClient'),
-            maxServsPerClientInput: srvServPaySpendServCredConfig.get('maxServsPerClientInput'),
-            numClientsMultiSigOutput: srvServPaySpendServCredConfig.get('numClientsMultiSigOutput'),
-            percMaxUnitsPayTxExp: srvServPaySpendServCredConfig.get('percMaxUnitsPayTxExp'),
-            initTxFeeRate: srvServPaySpendServCredConfig.get('initTxFeeRate'),
-            txFeeRateIncrement: srvServPaySpendServCredConfig.get('txFeeRateIncrement')
+            initNumTxInputs: serviceConfig.get('servicePayment.spendServiceCredit.initNumTxInputs'),
+            initNumTxOutputs: serviceConfig.get('servicePayment.spendServiceCredit.initNumTxOutputs'),
+            initNumPubKeysMultiSigTxOutputs: serviceConfig.get('servicePayment.spendServiceCredit.initNumPubKeysMultiSigTxOutputs'),
+            txNullDataPayloadSize: serviceConfig.get('servicePayment.spendServiceCredit.txNullDataPayloadSize'),
+            maxNumClients: serviceConfig.get('servicePayment.spendServiceCredit.maxNumClients'),
+            servsDistribPerClient: serviceConfig.get('servicePayment.spendServiceCredit.servsDistribPerClient'),
+            maxServsPerClientInput: serviceConfig.get('servicePayment.spendServiceCredit.maxServsPerClientInput'),
+            numClientsMultiSigOutput: serviceConfig.get('servicePayment.spendServiceCredit.numClientsMultiSigOutput'),
+            percMaxUnitsPayTxExp: serviceConfig.get('servicePayment.spendServiceCredit.percMaxUnitsPayTxExp'),
+            initTxFeeRate: serviceConfig.get('servicePayment.spendServiceCredit.initTxFeeRate'),
+            txFeeRateIncrement: serviceConfig.get('servicePayment.spendServiceCredit.txFeeRateIncrement')
         },
         debitServiceAccount: {
-            initNumTxInputs: srvServPayDebtServAccConfig.get('initNumTxInputs'),
-            initNumTxOutputs: srvServPayDebtServAccConfig.get('initNumTxOutputs'),
-            initNumPubKeysMultiSigTxOutputs: srvServPayDebtServAccConfig.get('initNumPubKeysMultiSigTxOutputs'),
-            txNullDataPayloadSize: srvServPayDebtServAccConfig.get('txNullDataPayloadSize'),
-            maxNumClients: srvServPayDebtServAccConfig.get('maxNumClients'),
-            servsDistribPerClient: srvServPayDebtServAccConfig.get('servsDistribPerClient'),
-            numClientsMultiSigOutput: srvServPayDebtServAccConfig.get('numClientsMultiSigOutput'),
-            percMaxUnitsPayTxExp: srvServPayDebtServAccConfig.get('percMaxUnitsPayTxExp'),
-            initTxFeeRate: srvServPayDebtServAccConfig.get('initTxFeeRate'),
-            txFeeRateIncrement: srvServPayDebtServAccConfig.get('txFeeRateIncrement')
+            initNumTxInputs: serviceConfig.get('servicePayment.debitServiceAccount.initNumTxInputs'),
+            initNumTxOutputs: serviceConfig.get('servicePayment.debitServiceAccount.initNumTxOutputs'),
+            initNumPubKeysMultiSigTxOutputs: serviceConfig.get('servicePayment.debitServiceAccount.initNumPubKeysMultiSigTxOutputs'),
+            txNullDataPayloadSize: serviceConfig.get('servicePayment.debitServiceAccount.txNullDataPayloadSize'),
+            maxNumClients: serviceConfig.get('servicePayment.debitServiceAccount.maxNumClients'),
+            servsDistribPerClient: serviceConfig.get('servicePayment.debitServiceAccount.servsDistribPerClient'),
+            numClientsMultiSigOutput: serviceConfig.get('servicePayment.debitServiceAccount.numClientsMultiSigOutput'),
+            percMaxUnitsPayTxExp: serviceConfig.get('servicePayment.debitServiceAccount.percMaxUnitsPayTxExp'),
+            initTxFeeRate: serviceConfig.get('servicePayment.debitServiceAccount.initTxFeeRate'),
+            txFeeRateIncrement: serviceConfig.get('servicePayment.debitServiceAccount.txFeeRateIncrement')
         }
     },
     sysMessage: {
-        messagesPerMinute: srvSysMessageConfig.get('messagesPerMinute'),
-        minutesToConfirm: srvSysMessageConfig.get('minutesToConfirm'),
-        unconfMainAddrReuses: srvSysMessageConfig.get('unconfMainAddrReuses'),
+        messagesPerMinute: serviceConfig.get('sysMessage.messagesPerMinute'),
+        minutesToConfirm: serviceConfig.get('sysMessage.minutesToConfirm'),
+        unconfMainAddrReuses: serviceConfig.get('sysMessage.unconfMainAddrReuses'),
         mainAddrFunding: {
-            unitAmount: srvSysMsgMainAddrFundConfig.get('unitAmount'),
-            maxUnitsPerAddr: srvSysMsgMainAddrFundConfig.get('maxUnitsPerAddr'),
-            minAddrsToFund: srvSysMsgMainAddrFundConfig.get('minAddrsToFund')
+            unitAmount: serviceConfig.get('sysMessage.mainAddrFunding.unitAmount'),
+            maxUnitsPerAddr: serviceConfig.get('sysMessage.mainAddrFunding.maxUnitsPerAddr'),
+            minAddrsToFund: serviceConfig.get('sysMessage.mainAddrFunding.minAddrsToFund')
+        },
+        offChainMessagesSettlement: {
+            minutesToConfirm: serviceConfig.get('sysMessage.offChainMessagesSettlement.minutesToConfirm')
         }
     },
     sysTxConfig: {
         sendSysMessage: {
-            numInputs: srvSysTxCfgSendSysMsgConfig.get('numInputs'),
-            numOutputs: srvSysTxCfgSendSysMsgConfig.get('numOutputs'),
-            nullDataPayloadSize: srvSysTxCfgSendSysMsgConfig.get('nullDataPayloadSize')
+            numInputs: serviceConfig.get('sysTxConfig.sendSysMessage.numInputs'),
+            numOutputs: serviceConfig.get('sysTxConfig.sendSysMessage.numOutputs'),
+            nullDataPayloadSize: serviceConfig.get('sysTxConfig.sendSysMessage.nullDataPayloadSize')
+        },
+        settleOffChainMessages: {
+            numInputs: serviceConfig.get('sysTxConfig.settleOffChainMessages.numInputs'),
+            numOutputs: serviceConfig.get('sysTxConfig.settleOffChainMessages.numOutputs'),
+            nullDataPayloadSize: serviceConfig.get('sysTxConfig.settleOffChainMessages.nullDataPayloadSize')
         }
     },
     message: {
-        messagesPerMinute: srvMessageConfig.get('messagesPerMinute'),
-        minutesToConfirm: srvMessageConfig.get('minutesToConfirm'),
-        unconfMainAddrReuses: srvMessageConfig.get('unconfMainAddrReuses'),
-        readConfirmAddrAmount: srvMessageConfig.get('readConfirmAddrAmount'),
+        messagesPerMinute: serviceConfig.get('message.messagesPerMinute'),
+        minutesToConfirm: serviceConfig.get('message.minutesToConfirm'),
+        unconfMainAddrReuses: serviceConfig.get('message.unconfMainAddrReuses'),
+        readConfirmAddrAmount: serviceConfig.get('message.readConfirmAddrAmount'),
         mainAddrFunding: {
-            unitAmount: srvMsgMainAddrFundConfig.get('unitAmount'),
-            maxUnitsPerAddr: srvMsgMainAddrFundConfig.get('maxUnitsPerAddr'),
-            minAddrsToFund: srvMsgMainAddrFundConfig.get('minAddrsToFund')
+            unitAmount: serviceConfig.get('message.mainAddrFunding.unitAmount'),
+            maxUnitsPerAddr: serviceConfig.get('message.mainAddrFunding.maxUnitsPerAddr'),
+            minAddrsToFund: serviceConfig.get('message.mainAddrFunding.minAddrsToFund')
         },
         readConfirmation: {
-            paymentResolution: srvMsgReadConfirmConfig.get('paymentResolution'),
-            initNumTxInputs: srvMsgReadConfirmConfig.get('initNumTxInputs'),
-            initNumTxOutputs: srvMsgReadConfirmConfig.get('initNumTxOutputs'),
-            txNullDataPayloadSize: srvMsgReadConfirmConfig.get('txNullDataPayloadSize'),
-            txInputOutputGrowthRatio: srvMsgReadConfirmConfig.get('txInputOutputGrowthRatio'),
-            percMaxUnitsPayTxExp: srvMsgReadConfirmConfig.get('percMaxUnitsPayTxExp'),
-            initTxFeeRate: srvMsgReadConfirmConfig.get('initTxFeeRate'),
-            txFeeRateIncrement: srvMsgReadConfirmConfig.get('txFeeRateIncrement'),
+            paymentResolution: serviceConfig.get('message.readConfirmation.paymentResolution'),
+            initNumTxInputs: serviceConfig.get('message.readConfirmation.initNumTxInputs'),
+            initNumTxOutputs: serviceConfig.get('message.readConfirmation.initNumTxOutputs'),
+            txNullDataPayloadSize: serviceConfig.get('message.readConfirmation.txNullDataPayloadSize'),
+            txInputOutputGrowthRatio: serviceConfig.get('message.readConfirmation.txInputOutputGrowthRatio'),
+            percMaxUnitsPayTxExp: serviceConfig.get('message.readConfirmation.percMaxUnitsPayTxExp'),
+            initTxFeeRate: serviceConfig.get('message.readConfirmation.initTxFeeRate'),
+            txFeeRateIncrement: serviceConfig.get('message.readConfirmation.txFeeRateIncrement'),
             terminalReadConfirmTx: {
-                minutesToConfirm: srvMsgReadConfTerminalTxConfig.get('minutesToConfirm'),
+                minutesToConfirm: serviceConfig.get('message.readConfirmation.terminalReadConfirmTx.minutesToConfirm'),
                 typicalTxConfig: {
-                    numMessagesConfirmed: srvMsgReadConfTermTxTypTxCfgConfig.get('numMessagesConfirmed'),
-                    numPayTxExpenseInputs: srvMsgReadConfTermTxTypTxCfgConfig.get('numPayTxExpenseInputs'),
-                    hasChangeOutput: srvMsgReadConfTermTxTypTxCfgConfig.get('hasChangeOutput'),
-                    nullDataPayloadSize: srvMsgReadConfTermTxTypTxCfgConfig.get('nullDataPayloadSize')
+                    numMessagesConfirmed: serviceConfig.get('message.readConfirmation.terminalReadConfirmTx.typicalTxConfig.numMessagesConfirmed'),
+                    numPayTxExpenseInputs: serviceConfig.get('message.readConfirmation.terminalReadConfirmTx.typicalTxConfig.numPayTxExpenseInputs'),
+                    hasChangeOutput: serviceConfig.get('message.readConfirmation.terminalReadConfirmTx.typicalTxConfig.hasChangeOutput'),
+                    nullDataPayloadSize: serviceConfig.get('message.readConfirmation.terminalReadConfirmTx.typicalTxConfig.nullDataPayloadSize')
                 }
             },
             usageWeight: {
-                regular: srvMsgReadConfUseWeightConfig.get('regular'),
-                terminal: srvMsgReadConfUseWeightConfig.get('terminal')
+                regular: serviceConfig.get('message.readConfirmation.usageWeight.regular'),
+                terminal: serviceConfig.get('message.readConfirmation.usageWeight.terminal')
+            }
+        },
+        offChain: {
+            price: {
+                numMsgsPayCost: serviceConfig.get('message.offChain.price.numMsgsPayCost'),
+                msgReceipt: {
+                    percCost: serviceConfig.get('message.offChain.price.msgReceipt.percCost')
+                }
             }
         }
     },
     asset: {
         issuance: {
-            assetsPerMinute: srvAssetIssuanceConfig.get('assetsPerMinute'),
-            minutesToConfirm: srvAssetIssuanceConfig.get('minutesToConfirm'),
-            unconfAssetIssueAddrReuses: srvAssetIssuanceConfig.get('unconfAssetIssueAddrReuses'),
+            assetsPerMinute: serviceConfig.get('asset.issuance.assetsPerMinute'),
+            minutesToConfirm: serviceConfig.get('asset.issuance.minutesToConfirm'),
+            unconfAssetIssueAddrReuses: serviceConfig.get('asset.issuance.unconfAssetIssueAddrReuses'),
             assetIssueAddrFunding: {
-                unitAmount: srvAsstIssuAssetIssueAddrFundConfig.get('unitAmount'),
-                maxUnitsPerAddr: srvAsstIssuAssetIssueAddrFundConfig.get('maxUnitsPerAddr'),
-                minAddrsToFund: srvAsstIssuAssetIssueAddrFundConfig.get('minAddrsToFund')
+                unitAmount: serviceConfig.get('asset.issuance.assetIssueAddrFunding.unitAmount'),
+                maxUnitsPerAddr: serviceConfig.get('asset.issuance.assetIssueAddrFunding.maxUnitsPerAddr'),
+                minAddrsToFund: serviceConfig.get('asset.issuance.assetIssueAddrFunding.minAddrsToFund')
             }
         },
         transfer: {
-            minutesToConfirm: srvAssetTransferConfig.get('minutesToConfirm'),
+            minutesToConfirm: serviceConfig.get('asset.transfer.minutesToConfirm'),
         }
     },
     serviceTxConfig: {
         logMessage: {
-            numInputs: srvServTxCfgLogMsgConfig.get('numInputs'),
-            numOutputs: srvServTxCfgLogMsgConfig.get('numOutputs'),
-            nullDataPayloadSize: srvServTxCfgLogMsgConfig.get('nullDataPayloadSize')
+            numInputs: serviceConfig.get('serviceTxConfig.logMessage.numInputs'),
+            numOutputs: serviceConfig.get('serviceTxConfig.logMessage.numOutputs'),
+            nullDataPayloadSize: serviceConfig.get('serviceTxConfig.logMessage.nullDataPayloadSize')
         },
         sendMessage: {
-            numInputs: srvServTxCfgSendMsgConfig.get('numInputs'),
-            numOutputs: srvServTxCfgSendMsgConfig.get('numOutputs'),
-            nullDataPayloadSize: srvServTxCfgSendMsgConfig.get('nullDataPayloadSize')
+            numInputs: serviceConfig.get('serviceTxConfig.sendMessage.numInputs'),
+            numOutputs: serviceConfig.get('serviceTxConfig.sendMessage.numOutputs'),
+            nullDataPayloadSize: serviceConfig.get('serviceTxConfig.sendMessage.nullDataPayloadSize')
         },
         sendMsgReadConfirm: {
-            numInputs: srvServTxCfgSendMsgRdCfConfig.get('numInputs'),
-            numOutputs: srvServTxCfgSendMsgRdCfConfig.get('numOutputs'),
-            nullDataPayloadSize: srvServTxCfgSendMsgRdCfConfig.get('nullDataPayloadSize')
+            numInputs: serviceConfig.get('serviceTxConfig.sendMsgReadConfirm.numInputs'),
+            numOutputs: serviceConfig.get('serviceTxConfig.sendMsgReadConfirm.numOutputs'),
+            nullDataPayloadSize: serviceConfig.get('serviceTxConfig.sendMsgReadConfirm.nullDataPayloadSize')
         },
         issueAsset: {
-            numInputs: srvServTxCfgIssueAssetConfig.get('numInputs'),
-            numOutputs: srvServTxCfgIssueAssetConfig.get('numOutputs'),
-            nullDataPayloadSize: srvServTxCfgIssueAssetConfig.get('nullDataPayloadSize')
+            numInputs: serviceConfig.get('serviceTxConfig.issueAsset.numInputs'),
+            numOutputs: serviceConfig.get('serviceTxConfig.issueAsset.numOutputs'),
+            nullDataPayloadSize: serviceConfig.get('serviceTxConfig.issueAsset.nullDataPayloadSize')
         },
         transferAsset: {
-            numInputs: srvServTxCfgTransfAssetConfig.get('numInputs'),
-            numOutputs: srvServTxCfgTransfAssetConfig.get('numOutputs'),
-            nullDataPayloadSize: srvServTxCfgTransfAssetConfig.get('nullDataPayloadSize')
+            numInputs: serviceConfig.get('serviceTxConfig.transferAsset.numInputs'),
+            numOutputs: serviceConfig.get('serviceTxConfig.transferAsset.numOutputs'),
+            nullDataPayloadSize: serviceConfig.get('serviceTxConfig.transferAsset.nullDataPayloadSize')
         }
     },
     serviceUsageWeight: {
-        logMessage: srvServUseWeightConfig.get('logMessage'),
-        sendMessage: srvServUseWeightConfig.get('sendMessage'),
-        sendMsgReadConfirm: srvServUseWeightConfig.get('sendMsgReadConfirm'),
-        issueAsset: srvServUseWeightConfig.get('issueAsset'),
-        transferAsset: srvServUseWeightConfig.get('transferAsset')
-    },
+        logMessage: serviceConfig.get('serviceUsageWeight.logMessage'),
+        sendMessage: serviceConfig.get('serviceUsageWeight.sendMessage'),
+        sendMsgReadConfirm: serviceConfig.get('serviceUsageWeight.sendMsgReadConfirm'),
+        logOffChainMessage: serviceConfig.get('serviceUsageWeight.logOffChainMessage'),
+        sendOffChainMessage: serviceConfig.get('serviceUsageWeight.sendOffChainMessage'),
+        sendOffChainMsgReadConfirm: serviceConfig.get('serviceUsageWeight.sendOffChainMsgReadConfirm'),
+        issueAsset: serviceConfig.get('serviceUsageWeight.issueAsset'),
+        transferAsset: serviceConfig.get('serviceUsageWeight.transferAsset')
+    }
 };
 
 
@@ -272,7 +268,9 @@ Service.testFunctions = function () {
         systemFundingCost: systemFundingCost(),
         numActiveSystemDeviceMainAddresses: numActiveSystemDeviceMainAddresses(),
         estimatedSendSystemMessageTxCost: estimatedSendSystemMessageTxCost(),
+        estimatedSettleOffChainMessagesTxCost: estimatedSettleOffChainMessagesTxCost(),
         typicalSendSystemMessageTxSize: typicalSendSystemMessageTxSize(),
+        typicalSettleOffChainMessagesTxSize: typicalSettleOffChainMessagesTxSize(),
         deviceProvisionCost: deviceProvisionCost(),
         deviceMessageProvisionCost: deviceMessageProvisionCost(),
         deviceAssetProvisionCost: deviceAssetProvisionCost(),
@@ -286,6 +284,11 @@ Service.testFunctions = function () {
         typicalSendMessageTxSize: typicalSendMessageTxSize(),
         estimatedSendMessageReadConfirmTxCost: estimatedSendMessageReadConfirmTxCost(),
         typicalSendMessageReadConfirmTxSize: typicalSendMessageReadConfirmTxSize(),
+        estimatedOffChainMsgEnvelopeCost: estimatedOffChainMsgEnvelopeCost(),
+        estimatedOffChaiMsgReceiptCost: estimatedOffChaiMsgReceiptCost(),
+        estimatedLogOffChainMessageCost: estimatedLogOffChainMessageCost(),
+        estimatedSendOffChainMessageCost: estimatedSendOffChainMessageCost(),
+        estimatedSendOffChainMessageReadConfirmCost: estimatedSendOffChainMessageReadConfirmCost(),
         estimatedIssueAssetTxCost: estimatedIssueAssetTxCost(),
         typicalIssueAssetTxSize: typicalIssueAssetTxSize(),
         estimatedTransferAssetTxCost: estimatedTransferAssetTxCost(),
@@ -329,6 +332,10 @@ Service.getExpectedReadConfirmPayTxExpenseBalance = function (unreadMessages) {
 
 Service.getExpectedServicePaymentPayTxExpenseBalance = function () {
     return _.max([numPrePaidServices(), cfgSettings.servicePaymentPayTxExpenseFunding.minBalancePrePaidServices]) * averageSpendServCredTxCostPerService() + cfgSettings.servicePaymentPayTxExpenseFunding.minBalancePostPaidServices * averageDebitServAccountTxCostPerService();
+};
+
+Service.getMinimumOCMsgsSetlmtPayTxExpenseBalance = function () {
+    return estimatedSettleOffChainMessagesTxCost() * cfgSettings.ocMsgsSettlementPayTxExpenseFunding.minBalanceSettlementCycles;
 };
 
 Service.distributeServiceCreditIssuanceFund = function (amount) {
@@ -452,6 +459,28 @@ Service.distributeServicePaymentPayTxExpenseFund = function (amount) {
     };
 };
 
+Service.distributeOCMsgsSetlmtPayTxExpenseFund = function (amount) {
+    const fundUnitAmount = Service.ocMsgsSetlmtPayTxExpFundUnitAmount;
+    let totalAmount = Util.roundToResolution(amount, fundUnitAmount);
+
+    // Make sure that amount to fund is not below minimum
+    const minFundAmount = Service.minOCMsgsSetlmtPayTxExpenseFundAmount;
+
+    if (totalAmount < minFundAmount) {
+        totalAmount = minFundAmount;
+    }
+
+    // Make sure that required number of addresses to receive total amount to be
+    //  paid does not exceed practical limit (so they can fit in a single funding transaction).
+    //  If it does, readjust total amount
+    const distribResult = distributePayment(totalAmount, fundUnitAmount, cfgSettings.ocMsgsSettlementPayTxExpenseFunding.minAddrsToFund, cfgSettings.ocMsgsSettlementPayTxExpenseFunding.maxUnitsPerAddr, cfgSettings.maxNumAddrsPerFundingTx);
+
+    return {
+        totalAmount: distribResult.totalAmount,
+        amountPerAddress: distribResult.payments
+    };
+};
+
 Service.distributeSystemDeviceMainAddressFund = function () {
     let totalAmount = numActiveSystemDeviceMainAddresses() * cfgSettings.sysMessage.mainAddrFunding.unitAmount;
 
@@ -514,6 +543,21 @@ Service.logMessageServicePrice = function () {
     return getServicePrice(Service.clientPaidService.log_message);
 };
 
+// Returns price data for Log Off-Chain Message service
+//
+//  Return: {
+//    estimatedServiceCost: [Number], - Estimated cost, in satoshis, of the service
+//    priceMarkup: [Number], - Markup used to calculate the price of the service
+//    btcServicePrice: [Number], - Price of the service expressed in (bitcoin) satoshis
+//    bitcoinPrice: [Number] - Bitcoin price, in USD, used to calculate exchange rate
+//    bcotPrice: [Number] - BCOT token price, in USD, used to calculate exchange rate
+//    exchangeRate: [Number], - Bitcoin to BCOT token (1 BTC = x BCOT) exchange rate used to calculate final price
+//    finalServicePrice: [Number] - Price charged for the service expressed in Catenis service credit's lowest units
+//  }
+Service.logOffChainMessageServicePrice = function () {
+    return getServicePrice(Service.clientPaidService.log_off_chain_message);
+};
+
 // Returns price data for Send Message (with no read confirmation) service
 //
 //  Return: {
@@ -529,6 +573,21 @@ Service.sendMessageServicePrice = function () {
     return getServicePrice(Service.clientPaidService.send_message);
 };
 
+// Returns price data for Send Off-Chain Message (with no read confirmation) service
+//
+//  Return: {
+//    estimatedServiceCost: [Number], - Estimated cost, in satoshis, of the service
+//    priceMarkup: [Number], - Markup used to calculate the price of the service
+//    btcServicePrice: [Number], - Price of the service expressed in (bitcoin) satoshis
+//    bitcoinPrice: [Number] - Bitcoin price, in USD, used to calculate exchange rate
+//    bcotPrice: [Number] - BCOT token price, in USD, used to calculate exchange rate
+//    exchangeRate: [Number], - Bitcoin to BCOT token (1 BTC = x BCOT) exchange rate used to calculate final price
+//    finalServicePrice: [Number] - Price charged for the service expressed in Catenis service credit's lowest units
+//  }
+Service.sendOffChainMessageServicePrice = function () {
+    return getServicePrice(Service.clientPaidService.send_off_chain_message);
+};
+
 // Returns price data for Send Message with Read Confirmation service
 //
 //  Return: {
@@ -542,6 +601,21 @@ Service.sendMessageServicePrice = function () {
 //  }
 Service.sendMsgReadConfirmServicePrice = function () {
     return getServicePrice(Service.clientPaidService.send_msg_read_confirm);
+};
+
+// Returns price data for Send Off-Chain Message with Read Confirmation service
+//
+//  Return: {
+//    estimatedServiceCost: [Number], - Estimated cost, in satoshis, of the service
+//    priceMarkup: [Number], - Markup used to calculate the price of the service
+//    btcServicePrice: [Number], - Price of the service expressed in (bitcoin) satoshis
+//    bitcoinPrice: [Number] - Bitcoin price, in USD, used to calculate exchange rate
+//    bcotPrice: [Number] - BCOT token price, in USD, used to calculate exchange rate
+//    exchangeRate: [Number], - Bitcoin to BCOT token exchange rate used to calculate final price
+//    finalServicePrice: [Number] - Price charged for the service expressed in Catenis service credit's lowest units
+//  }
+Service.sendOffChainMsgReadConfirmServicePrice = function () {
+    return getServicePrice(Service.clientPaidService.send_off_chain_msg_read_confirm);
 };
 
 // Returns price data for Issue Asset service
@@ -600,17 +674,35 @@ Service.clientPaidService = Object.freeze({
         description: 'Record a message onto the blockchain',
         costFunction: estimatedLogMessageTxCost
     }),
+    log_off_chain_message: Object.freeze({
+        name: 'log_off_chain_message',
+        label: 'Log Off-Chain Message',
+        description: 'Record a message off-chain and later settle it to the blockchain',
+        costFunction: estimatedLogOffChainMessageCost
+    }),
     send_message: Object.freeze({
         name: 'send_message',
         label: 'Send Message',
         description: 'Record a message onto the blockchain addressing it to another device (with no read confirmation)',
         costFunction: estimatedSendMessageTxCost
     }),
+    send_off_chain_message: Object.freeze({
+        name: 'send_off_chain_message',
+        label: 'Send Off-Chain Message',
+        description: 'Record a message off-chain addressing it to another device (with no read confirmation) and later settle it to the blockchain',
+        costFunction: estimatedSendOffChainMessageCost
+    }),
     send_msg_read_confirm: Object.freeze({
         name: 'send_msg_read_confirm',
         label: 'Send Message w/Read Confirmation',
         description: 'Record a message onto the blockchain addressing it to another device, requesting to receive a read confirm',
         costFunction: estimatedSendMessageReadConfirmTxCost
+    }),
+    send_off_chain_msg_read_confirm: Object.freeze({
+        name: 'send_off_chain_msg_read_confirm',
+        label: 'Send Off-Chain Message w/Read Confirmation',
+        description: 'Record a message off-chain addressing it to another device, requesting to receive a read confirm, and later settle it to the blockchain',
+        costFunction: estimatedSendOffChainMessageReadConfirmCost
     }),
     issue_asset: Object.freeze({
         name: 'issue_asset',
@@ -642,8 +734,16 @@ function estimatedSendSystemMessageTxCost() {
     return Util.roundToResolution(typicalSendSystemMessageTxSize() * Catenis.bitcoinFees.getFeeRateByTime(cfgSettings.sysMessage.minutesToConfirm), cfgSettings.paymentResolution);
 }
 
+function estimatedSettleOffChainMessagesTxCost() {
+    return Util.roundToResolution(typicalSettleOffChainMessagesTxSize() * Service.feeRateForOffChainMsgsSettlement, cfgSettings.paymentResolution);
+}
+
 function typicalSendSystemMessageTxSize() {
     return Transaction.computeTransactionSize(cfgSettings.sysTxConfig.sendSysMessage.numInputs, cfgSettings.sysTxConfig.sendSysMessage.numOutputs, cfgSettings.sysTxConfig.sendSysMessage.nullDataPayloadSize);
+}
+
+function typicalSettleOffChainMessagesTxSize() {
+    return Transaction.computeTransactionSize(cfgSettings.sysTxConfig.settleOffChainMessages.numInputs, cfgSettings.sysTxConfig.settleOffChainMessages.numOutputs, cfgSettings.sysTxConfig.settleOffChainMessages.nullDataPayloadSize);
 }
 
 function deviceProvisionCost() {
@@ -672,6 +772,9 @@ function highestEstimatedServiceTxCost() {
         estimatedLogMessageTxCost(),
         estimatedSendMessageTxCost(),
         estimatedSendMessageReadConfirmTxCost(),
+        estimatedLogOffChainMessageCost(),
+        estimatedSendOffChainMessageCost(),
+        estimatedSendOffChainMessageReadConfirmCost(),
         estimatedIssueAssetTxCost(),
         estimatedTransferAssetTxCost()
     ]);
@@ -682,12 +785,18 @@ function averageEstimatedServiceTxCost() {
         estimatedLogMessageTxCost(),
         estimatedSendMessageTxCost(),
         estimatedSendMessageReadConfirmTxCost(),
+        estimatedLogOffChainMessageCost(),
+        estimatedSendOffChainMessageCost(),
+        estimatedSendOffChainMessageReadConfirmCost(),
         estimatedIssueAssetTxCost(),
         estimatedTransferAssetTxCost()
     ], [
         cfgSettings.serviceUsageWeight.logMessage,
         cfgSettings.serviceUsageWeight.sendMessage,
         cfgSettings.serviceUsageWeight.sendMsgReadConfirm,
+        cfgSettings.serviceUsageWeight.logOffChainMessage,
+        cfgSettings.serviceUsageWeight.sendOffChainMessage,
+        cfgSettings.serviceUsageWeight.sendOffChainMsgReadConfirm,
         cfgSettings.serviceUsageWeight.issueAsset,
         cfgSettings.serviceUsageWeight.transferAsset
     ]), cfgSettings.paymentResolution);
@@ -715,6 +824,26 @@ function estimatedSendMessageReadConfirmTxCost() {
 
 function typicalSendMessageReadConfirmTxSize() {
     return Transaction.computeTransactionSize(cfgSettings.serviceTxConfig.sendMsgReadConfirm.numInputs, cfgSettings.serviceTxConfig.sendMsgReadConfirm.numOutputs, cfgSettings.serviceTxConfig.sendMsgReadConfirm.nullDataPayloadSize);
+}
+
+function estimatedOffChainMsgEnvelopeCost() {
+    return Util.roundToResolution(estimatedSettleOffChainMessagesTxCost() / cfgSettings.message.offChain.price.numMsgsPayCost, cfgSettings.paymentResolution);
+}
+
+function estimatedOffChaiMsgReceiptCost() {
+    return Util.roundToResolution(estimatedOffChainMsgEnvelopeCost() * cfgSettings.message.offChain.price.msgReceipt.percCost, cfgSettings.paymentResolution);
+}
+
+function estimatedLogOffChainMessageCost() {
+    return estimatedOffChainMsgEnvelopeCost();
+}
+
+function estimatedSendOffChainMessageCost() {
+    return estimatedOffChainMsgEnvelopeCost();
+}
+
+function estimatedSendOffChainMessageReadConfirmCost() {
+    return estimatedOffChainMsgEnvelopeCost() + estimatedOffChaiMsgReceiptCost();
 }
 
 function estimatedIssueAssetTxCost() {
@@ -867,12 +996,18 @@ function averageServicePrice() {
         getServicePrice(Service.clientPaidService.log_message).finalServicePrice,
         getServicePrice(Service.clientPaidService.send_message).finalServicePrice,
         getServicePrice(Service.clientPaidService.send_msg_read_confirm).finalServicePrice,
+        getServicePrice(Service.clientPaidService.log_off_chain_message).finalServicePrice,
+        getServicePrice(Service.clientPaidService.send_off_chain_message).finalServicePrice,
+        getServicePrice(Service.clientPaidService.send_off_chain_msg_read_confirm).finalServicePrice,
         getServicePrice(Service.clientPaidService.issue_asset).finalServicePrice,
         getServicePrice(Service.clientPaidService.transfer_asset).finalServicePrice
     ], [
         cfgSettings.serviceUsageWeight.logMessage,
         cfgSettings.serviceUsageWeight.sendMessage,
         cfgSettings.serviceUsageWeight.sendMsgReadConfirm,
+        cfgSettings.serviceUsageWeight.logOffChainMessage,
+        cfgSettings.serviceUsageWeight.sendOffChainMessage,
+        cfgSettings.serviceUsageWeight.sendOffChainMsgReadConfirm,
         cfgSettings.serviceUsageWeight.issueAsset,
         cfgSettings.serviceUsageWeight.transferAsset
     ]), cfgSettings.servicePriceResolution);
@@ -1158,6 +1293,12 @@ Object.defineProperties(Service, {
         },
         enumerable: true
     },
+    feeRateForOffChainMsgsSettlement: {
+        get: function () {
+            return cfgSettings.sysMessage.offChainMessagesSettlement.minutesToConfirm ? Catenis.bitcoinFees.getFeeRateByTime(cfgSettings.sysMessage.offChainMessagesSettlement.minutesToConfirm) : Catenis.bitcoinFees.getOptimumFeeRate();
+        },
+        enumerable: true
+    },
     minutesToConfirmMessage: {
         get: function () {
             return cfgSettings.message.minutesToConfirm;
@@ -1234,6 +1375,18 @@ Object.defineProperties(Service, {
     servicePaymentPayTxExpBalanceSafetyFactor: {
         get: function () {
             return cfgSettings.servicePaymentPayTxExpenseFunding.balanceSafetyFactor;
+        },
+        enumerable: true
+    },
+    ocMsgsSetlmtPayTxExpFundUnitAmount: {
+        get: function () {
+            return Util.roundToResolution(estimatedSettleOffChainMessagesTxCost() * (1 + cfgSettings.ocMsgsSettlementPayTxExpenseFunding.unitAmountSafetyFactor), cfgSettings.paymentResolution);
+        },
+        enumerable: true
+    },
+    ocMsgsSetlmtPayTxExpBalanceSafetyFactor: {
+        get: function () {
+            return cfgSettings.ocMsgsSettlementPayTxExpenseFunding.balanceSafetyFactor;
         },
         enumerable: true
     },
@@ -1363,6 +1516,14 @@ Object.defineProperties(Service, {
         },
         enumerable: true
     },
+    minOCMsgsSetlmtPayTxExpenseFundAmount: {
+        get: function () {
+            const fundUnitAmount = Service.ocMsgsSetlmtPayTxExpFundUnitAmount;
+
+            return Util.roundToResolution(estimatedSettleOffChainMessagesTxCost() * cfgSettings.ocMsgsSettlementPayTxExpenseFunding.settlementCyclesToFund, fundUnitAmount);
+        },
+        enumerable: true
+    },
     spendServiceCreditInitTxFeeRate: {
         get: function () {
             return cfgSettings.message.readConfirmation.initTxFeeRate;
@@ -1380,6 +1541,17 @@ Object.defineProperties(Service, {
             return deviceAssetProvisionCost();
         },
         enumerable: true
+    },
+    numOffChainMsgsToPayCost: {
+        get: function () {
+            return cfgSettings.message.offChain.price.numMsgsPayCost;
+        },
+        enumerable: true
+    },
+    offChainMsgReceiptPercentageCost: {
+        get: function () {
+            return cfgSettings.message.offChain.price.msgReceipt.percCost;
+        }
     }
 });
 

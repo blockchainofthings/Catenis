@@ -24,6 +24,7 @@ import { Transaction } from './Transaction';
 import { SendMessageTransaction } from './SendMessageTransaction';
 import { ReadConfirmation } from './ReadConfirmation';
 import { Message } from './Message';
+import { CatenisOffChainMonitor } from './CatenisOffChainMonitor';
 
 // Config entries
 /*const config_entryConfig = config.get('config_entry');
@@ -66,6 +67,9 @@ ReceiveMessage.initialize = function () {
     Catenis.logger.TRACE('ReceiveMessage initialization');
     // Set up handler for event indicating that new send message transaction has been received
     TransactionMonitor.addEventHandler(TransactionMonitor.notifyEvent.send_message_tx_rcvd.name, processReceivedMessage);
+
+    // Set up handler for event indicating that send off-chain message has been retrieved
+    CatenisOffChainMonitor.addEventHandler(CatenisOffChainMonitor.notifyEvent.sendOCMsgRetrieved.name, sendOCMessageRetrieved);
 };
 
 
@@ -83,23 +87,21 @@ function processReceivedMessage(data) {
     try {
         // Get target device and make sure that it is active
         const targetDevice = Device.getDeviceByDeviceId(data.targetDeviceId);
+        const originDevice = Device.getDeviceByDeviceId(data.originDeviceId);
         let blockMessage = false;
 
         if (targetDevice.status !== Device.status.active.name) {
             // Indented receiving (target) device is not active.
             //  Log warning condition and mark message to be blocked
-            Catenis.logger.WARN('Device to which received message had been sent is not active. Message will be blocked', data);
+            Catenis.logger.WARN('Device to which received message has been sent is not active. Message will be blocked', data);
+            blockMessage = true;
+        }
+        else if (!targetDevice.shouldReceiveMsgFrom(originDevice)) {
+            // Block message if permission settings do not allow to receive message from origin device
             blockMessage = true;
         }
 
-        const originDevice = Device.getDeviceByDeviceId(data.originDeviceId);
-
-        if (!targetDevice.shouldReceiveMsgFrom(originDevice)) {
-            // Block message if permission settings do allow to receive message from origin device
-            blockMessage = true;
-        }
-
-        // Get send message transaction and received message onto local database
+        // Get send message transaction and save received message onto local database
         const sendMsgTransact = SendMessageTransaction.checkTransaction(Transaction.fromTxid(data.txid), null);
         const message = saveReceivedMessage(sendMsgTransact, blockMessage);
 
@@ -119,6 +121,38 @@ function processReceivedMessage(data) {
     catch (err) {
         // Error while processing received message. Log error condition
         Catenis.logger.ERROR(util.format('Error while processing received message (txid: %s).', data.txid), err);
+    }
+}
+
+function sendOCMessageRetrieved(sendOCMessage) {
+    Catenis.logger.TRACE('Received notification of newly retrieved send off-chain message', {sendOCMessage});
+    try {
+        // Make sure that target device is active
+        let blockMessage = false;
+
+        if (sendOCMessage.targetDevice.status !== Device.status.active.name) {
+            // Indented receiving (target) device is not active.
+            //  Log warning condition and mark message to be blocked
+            Catenis.logger.WARN('Device to which received off-chain message has been sent is not active. Message will be blocked', {sendOCMessage});
+            blockMessage = true;
+        }
+        else if (!sendOCMessage.targetDevice.shouldReceiveMsgFrom(sendOCMessage.originDevice)) {
+            // Block message if permission settings do allow to receive message from origin device
+            blockMessage = true;
+        }
+
+        // Save received off-chain message onto local database
+        const message = saveReceivedOffChainMessage(sendOCMessage, blockMessage);
+
+        if (!blockMessage && sendOCMessage.targetDevice.shouldBeNotifiedOfNewMessageFrom(sendOCMessage.originDevice)) {
+            // Send notification to target device that new message has been received
+            sendOCMessage.targetDevice.notifyNewMessageReceived(message, sendOCMessage.originDevice);
+        }
+    }
+    catch (err) {
+        // Error while processing notification of newly retrieved send off-chain message.
+        //  Just log error condition
+        Catenis.logger.ERROR('Error while processing notification of newly retrieved send off-chain message.', err);
     }
 }
 
@@ -156,6 +190,37 @@ function saveReceivedMessage(sendMsgTransact, blockMessage) {
 
     return message;
 }
+
+// Method used to record received message
+//
+//  Arguments:
+//    sendOCTransact: [Object(SendOffChainMessage)] - instance of SendOffChainMessage
+//    blockMessage: [Boolean] - indicates whether message should be blocked
+//
+//  Return:
+//    message: [Object] - instance of corresponding Message object
+function saveReceivedOffChainMessage(sendOCMessage, blockMessage) {
+    const docSavedOCMsgData = Catenis.db.collection.SavedOffChainMsgData.findOne({
+        cid: sendOCMessage.ocMsgEnvelope.cid
+    }, {
+        fields: {_id: 1}
+    });
+
+    let message;
+
+    if (docSavedOCMsgData) {
+        // It's a local message. Just instantiate it and set it as received
+        message = Message.getMessageByOffChainCid(sendOCMessage.ocMsgEnvelope.cid);
+        message.setReceived(!blockMessage ? sendOCMessage.ocMsgEnvelope.retrievedDate : undefined);
+    }
+    else {
+        // It' a remote message. Create new message
+        message = Message.createRemoteOffChainMessage(sendOCMessage, blockMessage);
+    }
+
+    return message;
+}
+
 
 // Module code
 //

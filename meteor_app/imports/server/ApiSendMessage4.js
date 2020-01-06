@@ -1,8 +1,8 @@
 /**
- * Created by Claudio on 2019-03-04.
+ * Created by claudio on 2020-01-02
  */
 
-//console.log('[ApiSendMessage3.js]: This code just ran.');
+//console.log('[ApiSendMessage4.js]: This code just ran.');
 
 // Module variables
 //
@@ -57,9 +57,14 @@ import { isValidMsgEncoding, isValidMsgStorage } from './ApiLogMessage';
 //      "encrypt":  [Boolean],         - (optional, default: true) Indicates whether message should be encrypted before storing. NOTE that, when message is passed
 //                                        in chunks, this option is only taken into consideration (and thus only needs to be passed) for the final message data chunk,
 //                                        and it shall be applied to the message's contents as a whole
+//      "offChain": [Boolean],         - (optional, default: false) Indicates whether message should be processed as a Catenis off-chain message. Catenis off-chain messages
+//                                        are stored on the external storage repository and only later its reference is settled to the blockchain along with references of
+//                                        other off-chain messages. NOTE that, when message is passed in chunks, this option is only taken into consideration (and thus
+//                                        only needs to be passed) for the final message data chunk, and it shall be applied to the message's contents as a whole
 //      "storage": [String],           - (optional, default: "auto") - One of the following values identifying where the message should be stored: "auto"|"embedded"|"external".
 //                                        NOTE that, when message is passed in chunks, this option is only taken into consideration (and thus only needs to be passed)
-//                                        for the final message data chunk, and it shall be applied to the message's contents as a whole
+//                                        for the final message data chunk, and it shall be applied to the message's contents as a whole. ALSO note that, when the offChain
+//                                        option is set to true, this option's value is disregarded and the processing is done as if the value "external" was passed
 //      "readConfirmation": [Boolean], - (optional, default: false) Indicates whether message should be sent with read confirmation enabled.
 //                                        NOTE that, when message is passed in chunks, this option is only taken into consideration (and thus only needs to be passed)
 //                                        for the final message data chunk, and it shall be applied to the message's contents as a whole
@@ -80,7 +85,7 @@ import { isValidMsgEncoding, isValidMsgStorage } from './ApiLogMessage';
 //    "messageId": [String]  - (optional) ID of sent message. Returned after the whole message's contents is sent if not doing asynchronous processing
 //    "provisionalMessageId": [String]  - (optional) Provisional message ID. Returned after the whole message's contents is sent if doing asynchronous processing
 //  }
-export function sendMessage3() {
+export function sendMessage4() {
     try {
         // Process request parameters
 
@@ -181,6 +186,7 @@ export function sendMessage3() {
 
         let optEncoding = 'utf8',
             optEncrypt = true,
+            optOffChain = false,
             optStorage = 'auto',
             optReadConfirmation = false,
             optAsync = false;
@@ -213,6 +219,16 @@ export function sendMessage3() {
 
                 if (typeof this.bodyParams.options.encrypt !== 'undefined') {
                     optEncrypt = this.bodyParams.options.encrypt;
+                }
+
+                // options.offChain
+                if (!(typeof this.bodyParams.options.offChain === 'undefined' || typeof this.bodyParams.options.offChain === 'boolean')) {
+                    Catenis.logger.DEBUG('Invalid \'options.offChain\' parameter for POST \'messages/send\' API request', this.bodyParams);
+                    return errorResponse.call(this, 400, 'Invalid parameters');
+                }
+
+                if (typeof this.bodyParams.options.offChain !== 'undefined') {
+                    optOffChain = this.bodyParams.options.offChain;
                 }
 
                 // options.storage
@@ -302,7 +318,7 @@ export function sendMessage3() {
         let sendResult;
 
         try {
-            sendResult = this.user.device.sendMessage2(msg, targetDeviceId, optEncrypt, optStorage, optReadConfirmation, undefined, optAsync);
+            sendResult = this.user.device.sendMessage3(msg, targetDeviceId, optEncrypt, optOffChain, optStorage, optReadConfirmation, undefined, optAsync);
         }
         catch (err) {
             let error;

@@ -87,6 +87,9 @@ import { CachedMessage } from './CachedMessage';
 import { TwoFactorAuthEventEmitter } from './TwoFactorAuthEventEmitter';
 import { TwoFactorAuthenticationUI } from './adminUI/TwoFactorAuthenticationUI';
 import { ClientTwoFactorAuthenticationUI } from './clientUI/ClientTwoFactorAuthenticationUI';
+import { CatenisOffChainClient } from './CatenisOffChainClient';
+import { OffChainMessagesSettlement } from './OffChainMessagesSettlement';
+import { CatenisOffChainMonitor } from './CatenisOffChainMonitor';
 // TEST - begin
 //import { TestCatenisColoredCoins } from './test/TestCatenisColoredCoins';
 // TEST - end
@@ -153,6 +156,7 @@ Meteor.startup(function () {
             ProvisionalMessage.initialize();
             CachedMessage.initialize();
             CatenisNode.initialize();
+            CatenisOffChainClient.initialize();
 
             Database.addMissingOmniTxValidityField();
 
@@ -170,6 +174,8 @@ Meteor.startup(function () {
 
             Database.fixReceivedTransactionBcotPaymentInfo();
 
+            OffChainMessagesSettlement.initialize();
+
             ClientLicense.initialize();
             BcotPayment.initialize();
             BcotReplenishment.initialize();
@@ -180,6 +186,7 @@ Meteor.startup(function () {
             ReceiveAsset.initialize();
             SpendServiceCredit.initialize();
             TransactionMonitor.initialize();
+            CatenisOffChainMonitor.initialize();
             TwoFactorAuthEventEmitter.initialize();
             ClientTwoFactorAuthenticationUI.initialize();
 

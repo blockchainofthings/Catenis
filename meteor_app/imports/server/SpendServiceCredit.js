@@ -28,6 +28,7 @@ import { TransactionMonitor } from './TransactionMonitor';
 import { Billing } from './Billing';
 import { Client } from './Client';
 import { CCFundSource } from './CCFundSource';
+import { Util } from './Util';
 
 // Config entries
 /*const config_entryConfig = config.get('config_entry');
@@ -249,15 +250,16 @@ SpendServiceCredit.prototype.provisionPaymentForService = function (client, pric
 //
 //  Arguments:
 //   paymentProvisionInfo [Object] - Object containing information about the payment provision (as returned by the provisionPaymentForService() method)
-//   serviceTxid [String] - Blockchain attributed ID of Catenis transaction used to convey the provided service
+//   serviceDataRef [String] Either the blockchain ID of the service transaction or the IPFS CID of the off-chain
+//                            message related service data entity (off-chain message envelope)
 //
 // NOTE: make sure that this method is called from code executed from the CCFundSource.utxoCS, FundSource.utxoCS, and
 //      the local procCS critical section objects
-SpendServiceCredit.prototype.confirmPaymentForService = function (paymentProvisionInfo, serviceTxid) {
+SpendServiceCredit.prototype.confirmPaymentForService = function (paymentProvisionInfo, serviceDataRef) {
     const spendServCredTransact = paymentProvisionInfo.spendServCredTransact;
 
     // Save service transaction ID onto spend service credit transaction
-    spendServCredTransact.setServiceTxid(serviceTxid);
+    spendServCredTransact.setServiceDataRef(serviceDataRef);
 
     // Update all references to provisioned spend service credit transaction...
     if (paymentProvisionInfo.newAllocated) {
@@ -325,8 +327,15 @@ SpendServiceCredit.prototype.confirmPaymentForService = function (paymentProvisi
     return spendServCredTransact;
 };
 
+// Arguments:
+//  client [Object(Client)] An instance of Catenis Client object
+//  serviceDataRef [String] Either the blockchain ID of the service transaction or the IPFS CID of the off-chain
+//                           message related service data entity (off-chain message envelope)
+//  price [Number] Price charged for the service expressed in Catenis service credit's lowest units
+//  sendNow [Boolean] Indicates whether pend service credit transaction should be sent right away
+//
 // NOTE: make sure that this method is called from code executed from the CCFundSource.utxoCS critical section object
-SpendServiceCredit.prototype.payForService = function (client, serviceTxid, price, sendNow = true) {
+SpendServiceCredit.prototype.payForService = function (client, serviceDataRef, price, sendNow = true) {
     let spendServCredTransact = undefined;
 
     // Execute code in critical section to make sure task is serialized
@@ -339,7 +348,7 @@ SpendServiceCredit.prototype.payForService = function (client, serviceTxid, pric
             Catenis.logger.DEBUG('>>>>>> Spend service credit transaction allocated for client (clientId: %s):', client.clientId, spendServCredTransact);
 
             try {
-                spendServCredTransact.payForService(client, serviceTxid, price);
+                spendServCredTransact.payForService(client, serviceDataRef, price);
                 tryAgain = false;
             }
             catch (err) {
@@ -411,8 +420,8 @@ SpendServiceCredit.prototype.payForService = function (client, serviceTxid, pric
 //      or .bind().
 //
 
-function newSpendServCredTransaction(ccTransact, addNoBillingServTxs) {
-    const spendServCredTransact = new SpendServiceCreditTransaction(this, ccTransact, true, addNoBillingServTxs);
+function newSpendServCredTransaction(ccTransact, addNoBillingServData) {
+    const spendServCredTransact = new SpendServiceCreditTransaction(this, ccTransact, true, addNoBillingServData);
 
     // Set up event handler to receive notification of tx unconfirmed for too long
     spendServCredTransact.on(SpendServiceCreditTransaction.notifyEvent.tx_unconfirmed_too_long.name, this.txUnconfirmedTooLongEventHandler);
@@ -720,7 +729,7 @@ function spendServCredTxConfirmed(data) {
                 }
 
                 let confirmedSpendServiceCreditTransact;
-                let missingServTxids = [];
+                let missingServDataRefs = [];
 
                 if (confirmedCcTransact.txid !== spendServCredTransact.lastSentCcTransact.txid || spendServCredTransact.txChanged) {
                     // The confirmed transaction is not the last sent spend service credit transaction, or
@@ -734,7 +743,7 @@ function spendServCredTxConfirmed(data) {
                     // Retrieve service transaction IDs that are missing from confirmed spend service credit transaction
                     confirmedSpendServiceCreditTransact = new SpendServiceCreditTransaction(undefined, confirmedCcTransact, false);
 
-                    missingServTxids = spendServCredTransact.missingServiceTxids(confirmedSpendServiceCreditTransact);
+                    missingServDataRefs = spendServCredTransact.missingServiceDataRefs(confirmedSpendServiceCreditTransact);
                 }
 
                 if (confirmedCcTransact.txid !== spendServCredTransact.lastSentCcTransact.txid) {
@@ -761,7 +770,7 @@ function spendServCredTxConfirmed(data) {
 
                                 // Add IDs of service transactions that had been paid by invalided transaction so they
                                 //  can be reprocessed
-                                missingServTxids = missingServTxids.concat(workSpendServCredTransact.serviceTxids);
+                                missingServDataRefs = missingServDataRefs.concat(workSpendServCredTransact.serviceDataRefs);
                             }
                         }
                     }
@@ -773,9 +782,9 @@ function spendServCredTxConfirmed(data) {
                 // Record service payment transaction for billing purpose
                 Billing.recordServicePaymentTransaction(confirmedSpendServiceCreditTransact !== undefined ? confirmedSpendServiceCreditTransact : spendServCredTransact);
 
-                if (missingServTxids.length > 0) {
+                if (missingServDataRefs.length > 0) {
                     // Reprocess payment of missing service transactions
-                    Meteor.defer(reprocessServicePayments.bind(this, missingServTxids));
+                    Meteor.defer(reprocessServicePayments.bind(this, missingServDataRefs));
                 }
             }
             else {
@@ -797,21 +806,24 @@ function spendServCredTxConfirmed(data) {
     }
 }
 
-function reprocessServicePayments(serviceTxids) {
-    Catenis.logger.TRACE('About to reprocess payment of services', {serviceTxids: serviceTxids});
+// Arguments:
+//  serviceDataRefs [String] Either the blockchain ID of the service transaction or the IPFS CID of the off-chain
+//                           message related service data entity (off-chain message envelope)
+function reprocessServicePayments(serviceDataRefs) {
+    Catenis.logger.TRACE('About to reprocess payment of services', {serviceDataRefs});
     try {
         const spendServCredTxsToSend = new Set();
         const spendServCredTxBillings = new Map();
 
         // Execute code in critical section to avoid Colored Coins UTXOs concurrency
         CCFundSource.utxoCS.execute(() => {
-            serviceTxids.forEach((txid) => {
+            serviceDataRefs.forEach((serviceDataRef) => {
                 try {
                     // Try to retrieve associated billing entry for service transaction
-                    const billing = Billing.getBillingByServiceTxid(txid);
+                    const billing = !Util.isValidCid(serviceDataRef) ? Billing.getBillingByServiceTxid(serviceDataRef) : Billing.getBillingByOffChainMsgEnvelopeCid(serviceDataRef);
 
                     if (billing !== undefined) {
-                        const spendServCredTransact = this.payForService(Client.getClientByClientId(billing.clientId, true), txid, billing.finalServicePrice, false);
+                        const spendServCredTransact = this.payForService(Client.getClientByClientId(billing.clientId, true), serviceDataRef, billing.finalServicePrice, false);
 
                         spendServCredTxsToSend.add(spendServCredTransact);
 
@@ -826,14 +838,14 @@ function reprocessServicePayments(serviceTxids) {
                     else {
                         // Billing entry for service transaction not found.
                         //  Log error condition and throw exception
-                        Catenis.logger.ERROR('Billing entry for service transaction (txid: %s) not found', txid);
+                        Catenis.logger.ERROR('Billing entry for service (serviceDataRef: %s) not found', serviceDataRef);
                         // noinspection ExceptionCaughtLocallyJS
-                        throw new Error(util.format('Billing entry for service transaction (txid: %s) not found', txid));
+                        throw new Error(util.format('Billing entry for service (serviceDataRef: %s) not found', serviceDataRef));
                     }
                 }
                 catch (err) {
                     // Error allocating spend service credit transaction to reprocess payment of service
-                    Catenis.logger.ERROR('Error allocating spend service credit transaction to reprocess payment of service (serviceTxid: %s).', txid, err);
+                    Catenis.logger.ERROR('Error allocating spend service credit transaction to reprocess payment of service (serviceDataRef: %s).', serviceDataRef, err);
                 }
             });
 
@@ -860,7 +872,7 @@ function reprocessServicePayments(serviceTxids) {
                         }
                         catch (err) {
                             // Error sending spend service credit transaction to reprocess payment of services
-                            Catenis.logger.ERROR('Error sending spend service credit transaction to reprocess payment of services (serviceTxids: %s).', spendServCredTransact.serviceTxids.join(', '), err);
+                            Catenis.logger.ERROR('Error sending spend service credit transaction to reprocess payment of services (serviceDataRefs: %s).', spendServCredTransact.serviceDataRefs.join(', '), err);
                         }
                     }
                 });
@@ -870,7 +882,7 @@ function reprocessServicePayments(serviceTxids) {
     catch (err) {
         // Error while reprocessing service transactions.
         //  Log error condition
-        Catenis.logger.ERROR('Error while reprocessing payment of services (serviceTxids: %s).', serviceTxids.join(', '), err);
+        Catenis.logger.ERROR('Error while reprocessing payment of services (serviceDataRefs: %s).', serviceDataRefs.join(', '), err);
     }
 }
 

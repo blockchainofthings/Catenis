@@ -28,6 +28,7 @@ import { Transaction } from './Transaction';
 import { FundSource } from './FundSource';
 import { removeProcessId } from './Startup';
 import { CryptoKeys } from './CryptoKeys';
+import { makeCtnNodeId } from './CatenisNode';
 
 // Config entries
 const appConfig = config.get('application');
@@ -35,6 +36,11 @@ const appConfig = config.get('application');
 // Configuration settings
 const cfgSettings = {
     appName: appConfig.get('appName'),
+    ctnNode: {
+        index: appConfig.get('ctnNode.index'),
+        privKey: appConfig.get('ctnNode.privKey'),
+        pubKey: appConfig.get('ctnNode.pubKey')
+    },
     environment: appConfig.get('environment'),
     seedFilename: appConfig.get('seedFilename'),
     cryptoNetwork: appConfig.get('cryptoNetwork'),
@@ -93,6 +99,15 @@ export function Application(cipherOnly = false) {
         //      from where the property has been defined), but it is especially dangerous if the
         //      object can be cloned.
         Object.defineProperties(this, {
+            ctnNode: {
+                get: function () {
+                    return {
+                        id: makeCtnNodeId(cfgSettings.ctnNode.index),
+                        ...cfgSettings.ctnNode
+                    }
+                },
+                enumerable: true
+            },
             environment: {
                 get: function () {
                     return cfgSettings.environment;
@@ -159,6 +174,9 @@ Application.prototype.startProcessing = function () {
 
         // Start monitoring of blockchain transactions
         Catenis.txMonitor.startMonitoring();
+
+        // Start Catenis off-chain monitoring
+        Catenis.ctnOCMonitor.start();
 
         // Change status to indicate that application has started
         this.status = Catenis.txMonitor.syncingBlocks ? Application.processingStatus.started_syncing_blocks : Application.processingStatus.started;
@@ -326,6 +344,9 @@ function shutdownHandler() {
 
         // Stop blockchain transaction monitoring
         Catenis.txMonitor.stopMonitoring();
+
+        // Stop Catenis off-chain monitoring
+        Catenis.ctnOCMonitor.stop();
 
         // Start timer to actually terminate the application
         Meteor.setTimeout(shutdown.bind(null, Application.exitCode.terminated), cfgSettings.shutdownTimeout);

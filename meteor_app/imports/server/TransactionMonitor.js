@@ -45,6 +45,7 @@ import { BcotPaymentTransaction } from './BcotPaymentTransaction';
 import { BcotPayment } from './BcotPayment';
 import { BcotReplenishmentTransaction } from './BcotReplenishmentTransaction';
 import { OmniTransaction } from './OmniTransaction';
+import { SettleOffChainMessagesTransaction } from './SettleOffChainMessagesTransaction';
 
 // Config entries
 const txMonitorConfig = config.get('transactionMonitor');
@@ -918,7 +919,7 @@ function handleNewTransactions(data) {
                     //  'read_confirmation', and 'transfer_asset' for now
                     if (doc.type === Transaction.type.credit_service_account.name || doc.type === Transaction.type.send_message.name
                             || doc.type === Transaction.type.read_confirmation.name || doc.type === Transaction.type.issue_asset.name
-                            || doc.type === Transaction.type.transfer_asset.name) {
+                            || doc.type === Transaction.type.transfer_asset.name || doc.type === Transaction.type.settle_off_chain_messages.name) {
                         Catenis.logger.TRACE('Processing sent transaction as received transaction', doc);
 
                         // Get needed data from read confirmation tx
@@ -981,6 +982,9 @@ function handleNewTransactions(data) {
                                     eventData.changeAmount = txInfo.changeAmount;
 
                                     break;
+
+                                case Transaction.type.settle_off_chain_messages.name:
+                                    eventData.offChainMsgDataCids = txInfo.offChainMsgDataCids;
                             }
 
                             eventsToEmit.push({
@@ -1036,6 +1040,7 @@ function handleNewTransactions(data) {
                         let omniTransact = undefined;
                         let bcotPayTransact;
                         let bcotReplenishTransact;
+                        let settleOCMsgsTransact;
 
                         if ((payments = sysFundingPayments(voutInfo)).length > 0) {
                             // Transaction used to fund the system has been received
@@ -1135,6 +1140,40 @@ function handleNewTransactions(data) {
                             rcvdTxDoc.info[Transaction.type.bcot_replenishment.dbInfoEntryName] = {
                                 encSentFromAddress: BcotPayment.encryptSentFromAddress(bcotReplenishTransact.payingAddress, bcotSaleStockAddrInfo),
                                 replenishedAmount: bcotReplenishTransact.replenishedAmount
+                            };
+
+                            rcvdTxDocsToCreate.push(rcvdTxDoc);
+                        }
+                        else if (SettleOffChainMessagesTransaction.isValidTxVouts(voutInfo)
+                                && (settleOCMsgsTransact = SettleOffChainMessagesTransaction.checkTransaction(transact || (transact = Transaction.fromTxid(txid))))
+                                && settleOCMsgsTransact.containMsgDataFromLocalSender()) {
+                            // Settle off-chain messages transaction (saved by another Catenis node and containing at least
+                            //  one off-chain message receipt for an off-chain message envelope saved by this Catenis node)
+
+                            // Prepare to emit event notifying of new transaction received
+                            //noinspection JSUnfilteredForInLoop
+                            eventsToEmit.push({
+                                name: TransactionMonitor.notifyEvent.settle_off_chain_messages_tx_rcvd.name,
+                                data: {
+                                    txid: txid,
+                                    transact: settleOCMsgsTransact,
+                                    offChainMsgDataCids: settleOCMsgsTransact.batchDocument.msgDataCids
+                                }
+                            });
+
+                            // Prepared to save received tx to the local database
+                            //noinspection JSUnfilteredForInLoop
+                            const rcvdTxDoc  = {
+                                type: Transaction.type.settle_off_chain_messages.name,
+                                txid: txid,
+                                receivedDate: new Date(data.ctnTxs[txid].timereceived * 1000),
+                                confirmation: {
+                                    confirmed: false
+                                },
+                                info: {}
+                            };
+                            rcvdTxDoc.info[Transaction.type.settle_off_chain_messages.dbInfoEntryName] = {
+                                offChainMsgDataCids: settleOCMsgsTransact.batchDocument.msgDataCids
                             };
 
                             rcvdTxDocsToCreate.push(rcvdTxDoc);
@@ -1476,6 +1515,10 @@ TransactionMonitor.notifyEvent = Object.freeze({
         name: 'funding_add_extra_read_confirm_tx_pay_funds_tx_conf',
         description: 'Funding transaction sent for adding funds to pay for read confirmation transaction expenses has been confirmed'
     }),
+    funding_add_extra_settle_oc_msgs_tx_pay_funds_tx_conf: Object.freeze({
+        name: 'funding_add_extra_settle_oc_msgs_tx_pay_funds_tx_conf',
+        description: 'Funding transaction sent for adding funds to pay for settle off-chain messages transaction expenses has been confirmed'
+    }),
     bcot_payment_tx_conf: Object.freeze({
         name: 'bcot_payment_tx_conf',
         description: 'Transaction used to send BCOT tokens as payment for services for a client has been confirmed'
@@ -1520,6 +1563,10 @@ TransactionMonitor.notifyEvent = Object.freeze({
         name: 'transfer_asset_tx_conf',
         description: 'Transaction used to transfer an amount of a Catenis asset between devices has been confirmed'
     }),
+    settle_off_chain_messages_tx_conf: Object.freeze({
+        name: 'settle_off_chain_messages_tx_conf',
+        description: 'Transaction used to settle Catenis off-chain messages to the blockchain has been confirmed'
+    }),
     // Events used to notify when a transaction of a given type is received
     sys_funding_tx_rcvd: Object.freeze({
         name: 'sys_funding_tx_rcvd',
@@ -1552,6 +1599,10 @@ TransactionMonitor.notifyEvent = Object.freeze({
     transfer_asset_tx_rcvd: Object.freeze({
         name: 'transfer_asset_tx_rcvd',
         description: 'Transaction used to transfer an amount of a Catenis asset between devices has been received'
+    }),
+    settle_off_chain_messages_tx_rcvd: Object.freeze({
+        name: 'settle_off_chain_messages_tx_rcvd',
+        description: 'Transaction used to settle Catenis off-chain messages to the blockchain has been received'
     })
 });
 
@@ -1608,6 +1659,7 @@ function processConfirmedSentTransactions(doc, eventsToEmit) {
 
                 case Transaction.type.spend_service_credit.name:
                     eventData.serviceTxids = txInfo.serviceTxids;
+                    eventData.ocMsgServiceCids = txInfo.ocMsgServiceCids;
 
                     break;
 
@@ -1629,6 +1681,11 @@ function processConfirmedSentTransactions(doc, eventsToEmit) {
                     eventData.receivingDeviceId = txInfo.receivingDeviceId;
                     eventData.amount = txInfo.amount;
                     eventData.changeAmount = txInfo.changeAmount;
+
+                    break;
+
+                case Transaction.type.settle_off_chain_messages.name:
+                    eventData.offChainMsgDataCids = txInfo.offChainMsgDataCids;
 
                     break;
             }
