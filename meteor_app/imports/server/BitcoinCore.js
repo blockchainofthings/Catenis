@@ -42,7 +42,7 @@ const cfgSettings = {
 export function BitcoinCore(network, host, username, password, timeout) {
     const opts = {
         host: host,
-        port: network === 'testnet' ? cfgSettings.testnetRpcPort : cfgSettings.mainRpcPort,
+        port: network === 'testnet' || network === 'regtest' ? cfgSettings.testnetRpcPort : cfgSettings.mainRpcPort,
         user: username,
         pass: password
     };

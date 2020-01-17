@@ -34,6 +34,7 @@ import {
     DeviceAssetAddress,
     DeviceAssetIssuanceAddress
 } from './BlockchainAddress';
+import { DeviceOffChainAddress } from './OffChainAddress';
 import { CatenisNode } from './CatenisNode';
 import { FundSource } from './FundSource';
 import { FundTransaction } from './FundTransaction';
@@ -69,6 +70,9 @@ import {
 } from './Message';
 import { CachedMessage } from './CachedMessage';
 import { procCS as spendServCredProcCS } from './SpendServiceCredit';
+import { LogOffChainMessage } from './LogOffChainMessage';
+import { SendOffChainMessage } from './SendOffChainMessage';
+import { OffChainMsgReceipt } from './OffChainMsgReceipt';
 
 
 // Definition of function classes
@@ -144,6 +148,7 @@ export function Device(docDevice, client) {
     this.readConfirmAddr = new DeviceReadConfirmAddress(this.client.ctnNode.ctnNodeIndex, this.client.clientIndex, this.deviceIndex);
     this.assetAddr = new DeviceAssetAddress(this.client.ctnNode.ctnNodeIndex, this.client.clientIndex, this.deviceIndex);
     this.assetIssuanceAddr = new DeviceAssetIssuanceAddress(this.client.ctnNode.ctnNodeIndex, this.client.clientIndex, this.deviceIndex);
+    this.offChainAddr = new DeviceOffChainAddress(this.client.ctnNode.ctnNodeIndex, this.client.clientIndex, this.deviceIndex);
 
     // Critical section object to avoid concurrent access to database at the
     //  device object level (when updating device status basically)
@@ -492,12 +497,12 @@ Device.prototype.fixFundAddresses = function () {
 // Send message to another device
 //
 //  Arguments:
-//    targetDeviceId: [String]   - Device ID identifying the device to which the message should be sent
-//    message: [Object(Buffer)]  - Object of type Buffer containing the message to be sent
-//    readConfirmation: [Boolean] - (optional, default: false) Indicates whether message should be sent with read confirmation enabled
-//    encryptMessage: [Boolean]   - (optional, default: true) Indicates whether message should be encrypted before sending it
-//    storageScheme: [String]     - (optional, default: 'auto') A field of the CatenisMessage.storageScheme property identifying how the message should be stored
-//    storageProvider: [Object]   - (optional, default: defaultStorageProvider) A field of the CatenisMessage.storageProvider property
+//    targetDeviceId [String]   - Device ID identifying the device to which the message should be sent
+//    message [Object(Buffer)]  - Object of type Buffer containing the message to be sent
+//    readConfirmation [Boolean] - (optional, default: false) Indicates whether message should be sent with read confirmation enabled
+//    encryptMessage [Boolean]   - (optional, default: true) Indicates whether message should be encrypted before sending it
+//    storageScheme [String]     - (optional, default: 'auto') A field of the CatenisMessage.storageScheme property identifying how the message should be stored
+//    storageProvider [Object]   - (optional, default: defaultStorageProvider) A field of the CatenisMessage.storageProvider property
 //                                   identifying the type of external storage to be used to store the message that should not be embedded
 //
 //  Return value:
@@ -516,11 +521,11 @@ Device.prototype.sendMessage = function (targetDeviceId, message, readConfirmati
 //      continuationToken: [String] - (optional) Indicates that this is a continuation message data chunk. This should be filled with the value
 //                                     returned in the 'continuationToken' field of the response from the previously sent message data chunk
 //    }
-//    targetDeviceId: [String]   - (optional) Device ID identifying the device to which the message should be sent
-//    encryptMessage: [Boolean]   - (optional, default: true) Indicates whether message should be encrypted before sending it
-//    storageScheme: [String]     - (optional, default: 'auto') A field of the CatenisMessage.storageScheme property identifying how the message should be stored
-//    readConfirmation: [Boolean] - (optional, default: false) Indicates whether message should be sent with read confirmation enabled
-//    storageProvider: [Object]   - (optional, default: defaultStorageProvider) A field of the CatenisMessage.storageProvider property
+//    targetDeviceId [String]   - (optional) Device ID identifying the device to which the message should be sent
+//    encryptMessage [Boolean]   - (optional, default: true) Indicates whether message should be encrypted before sending it
+//    storageScheme [String]     - (optional, default: 'auto') A field of the CatenisMessage.storageScheme property identifying how the message should be stored
+//    readConfirmation [Boolean] - (optional, default: false) Indicates whether message should be sent with read confirmation enabled
+//    storageProvider [Object]   - (optional, default: defaultStorageProvider) A field of the CatenisMessage.storageProvider property
 //                                   identifying the type of external storage to be used to store the message that should not be embedded
 //    async [Boolean] - (optional, default: false) Indicates whether processing should be done asynchronously. If set to true, a provisional
 //                       message ID is returned, which should be used to retrieve the processing outcome by calling the MessageProgress API method
@@ -533,6 +538,39 @@ Device.prototype.sendMessage = function (targetDeviceId, message, readConfirmati
 //      provisionalMessageId: [String]  - (optional) Provisional message ID. Returned after the whole message's contents is sent if doing asynchronous processing
 //    }
 Device.prototype.sendMessage2 = function (message, targetDeviceId, encryptMessage = true, storageScheme = 'auto', readConfirmation = false, storageProvider, async = false) {
+    return this.sendMessage3(message, targetDeviceId, encryptMessage, false, storageScheme, readConfirmation, storageProvider, async);
+};
+
+// Send message to another device
+//
+//  Arguments:
+//    message [Buffer(Buffer)|Object] {  - The message to be sent. If a Buffer object is passed, it is assumed to be the whole message's contents.
+//                                          Otherwise, it is expected that the message be passed in chunks using the following object to control it:
+//      dataChunk: [Object(Buffer)], - (optional) The current message data chunk. The actual message's contents should be comprised of one or more data chunks
+//      isFinal: [Boolean],          - Indicates whether this is the final (or the single) message data chunk
+//      continuationToken: [String]  - (optional) Indicates that this is a continuation message data chunk. This should be filled with the value
+//                                      returned in the 'continuationToken' field of the response from the previously sent message data chunk
+//    }
+//    targetDeviceId [String]    - (optional) Device ID identifying the device to which the message should be sent
+//    encryptMessage [Boolean]   - (optional, default: true) Indicates whether message should be encrypted before sending it
+//    offChain [Boolean]         - (optional, default: false) Indicates whether message should be processed as a Catenis off-chain message. Catenis off-chain
+//                                  messages are stored on the external storage repository and only later its reference is settled to the blockchain along
+//                                  with references of other off-chain messages
+//    storageScheme [String]     - (optional, default: 'auto') A field of the CatenisMessage.storageScheme property identifying how the message should be stored
+//    readConfirmation [Boolean] - (optional, default: false) Indicates whether message should be sent with read confirmation enabled
+//    storageProvider [Object]   - (optional, default: defaultStorageProvider) A field of the CatenisMessage.storageProvider property
+//                                  identifying the type of external storage to be used to store the message that should not be embedded
+//    async [Boolean]            - (optional, default: false) Indicates whether processing should be done asynchronously. If set to true, a provisional
+//                                  message ID is returned, which should be used to retrieve the processing outcome by calling the MessageProgress API method
+//
+//  Return value: {
+//    sendResult: {
+//      continuationToken: [String] - (optional) Token to be used when sending the following message data chunk. Returned if message passed in chunks
+//                                     and last message data chunk was not final
+//      messageId: [String]  - (optional) ID of sent message. Returned after the whole message's contents is sent if not doing asynchronous processing
+//      provisionalMessageId: [String]  - (optional) Provisional message ID. Returned after the whole message's contents is sent if doing asynchronous processing
+//    }
+Device.prototype.sendMessage3 = function (message, targetDeviceId, encryptMessage = true, offChain = false, storageScheme = 'auto', readConfirmation = false, storageProvider, async = false) {
     // Make sure that device is not deleted
     if (this.status === Device.status.deleted.name) {
         // Cannot send message from a deleted device. Log error and throw exception
@@ -616,7 +654,7 @@ Device.prototype.sendMessage2 = function (message, targetDeviceId, encryptMessag
 
             // Execute code in critical section to avoid Colored Coins UTXOs concurrency
             CCFundSource.utxoCS.execute(() => {
-                const servicePriceInfo = Service.sendMessageServicePrice();
+                const servicePriceInfo = !offChain ? Service.sendMessageServicePrice() : Service.sendOffChainMessageServicePrice();
 
                 if (this.client.billingMode === Client.billingMode.prePaid) {
                     // Make sure that client has enough service credits to pay for service
@@ -625,11 +663,12 @@ Device.prototype.sendMessage2 = function (message, targetDeviceId, encryptMessag
                     if (serviceAccountBalance < servicePriceInfo.finalServicePrice) {
                         // Client does not have enough credits to pay for service.
                         //  Log error condition and throw exception
-                        Catenis.logger.ERROR('Client does not have enough credits to pay for send message service', {
+                        const errMsg = util.format('Client does not have enough credits to pay for send%s message service', offChain ? ' off-chain' : '');
+                        Catenis.logger.ERROR(errMsg, {
                             serviceAccountBalance: serviceAccountBalance,
                             servicePrice: servicePriceInfo.finalServicePrice
                         });
-                        throw new Meteor.Error('ctn_device_low_service_acc_balance', 'Client does not have enough credits to pay for send message service');
+                        throw new Meteor.Error('ctn_device_low_service_acc_balance', errMsg);
                     }
                 }
             });
@@ -697,7 +736,7 @@ Device.prototype.sendMessage2 = function (message, targetDeviceId, encryptMessag
             FundSource.utxoCS.execute(() => {
                 // Execute code in critical section to avoid concurrent spend service credit tasks
                 spendServCredProcCS.execute(() => {
-                    const servicePriceInfo = Service.sendMessageServicePrice();
+                    const servicePriceInfo = !offChain ? Service.sendMessageServicePrice() : Service.sendOffChainMessageServicePrice();
                     let paymentProvisionInfo;
 
                     if (this.client.billingMode === Client.billingMode.prePaid) {
@@ -708,17 +747,19 @@ Device.prototype.sendMessage2 = function (message, targetDeviceId, encryptMessag
                             if ((err instanceof Meteor.Error) && err.error === 'ctn_spend_serv_cred_utxo_alloc_error') {
                                 // Unable to allocate service credits from client service account to pay for service.
                                 //  Log error and throw exception
-                                Catenis.logger.ERROR('Client does not have enough credits to pay for send message service', {
+                                const errMsg = util.format('Client does not have enough credits to pay for send%s message service', offChain ? ' off-chain' : '');
+                                Catenis.logger.ERROR(errMsg, {
                                     serviceAccountBalance: this.client.serviceAccountBalance(),
                                     servicePrice: servicePriceInfo.finalServicePrice
                                 });
-                                throw new Meteor.Error('ctn_device_low_service_acc_balance', 'Client does not have enough credits to pay for send message service');
+                                throw new Meteor.Error('ctn_device_low_service_acc_balance', errMsg);
                             }
                             else {
                                 // Error provisioning spend service credit transaction to pay for service.
                                 //  Log error and throw exception
-                                Catenis.logger.ERROR('Error provisioning spend service credit transaction to pay for send message service.', err);
-                                throw new Error('Error provisioning spend service credit transaction to pay for send message service');
+                                const errMsg = util.format('Error provisioning spend service credit transaction to pay for send%s message service', offChain ? ' off-chain' : '');
+                                Catenis.logger.ERROR('%s.', errMsg, err);
+                                throw new Error(errMsg);
                             }
                         }
                     }
@@ -728,50 +769,97 @@ Device.prototype.sendMessage2 = function (message, targetDeviceId, encryptMessag
                         throw new Error('Processing for postpaid billing mode not yet implemented');
                     }
 
-                    let sendMsgTransact;
+                    let serviceData;
+                    let serviceDataRef;
 
-                    try {
-                        // Prepare transaction to send message to a device
-                        sendMsgTransact = new SendMessageTransaction(this, targetDevice, messageReadable, {
-                            readConfirmation: readConfirmation,
-                            encrypted: encryptMessage,
-                            storageScheme: storageScheme,
-                            storageProvider: storageProvider
-                        });
+                    if (!offChain) {
+                        let sendMsgTransact;
 
-                        // Build and send transaction
-                        sendMsgTransact.buildTransaction();
+                        try {
+                            // Prepare transaction to send message to a device
+                            sendMsgTransact = new SendMessageTransaction(this, targetDevice, messageReadable, {
+                                readConfirmation: readConfirmation,
+                                encrypted: encryptMessage,
+                                storageScheme: storageScheme,
+                                storageProvider: storageProvider
+                            });
 
-                        sendMsgTransact.sendTransaction();
+                            // Build and send transaction
+                            sendMsgTransact.buildTransaction();
 
-                        // Force polling of blockchain so newly sent transaction is received and processed right away
-                        Catenis.txMonitor.pollNow();
+                            sendMsgTransact.sendTransaction();
 
-                        // Create message and save it to local database
-                        messageId = Message.createLocalMessage(sendMsgTransact);
-                    }
-                    catch (err) {
-                        // Error sending message to another device.
-                        //  Log error condition
-                        Catenis.logger.ERROR('Error sending message to another device.', err);
+                            // Force polling of blockchain so newly sent transaction is received and processed right away
+                            Catenis.txMonitor.pollNow();
 
-                        if (sendMsgTransact && !sendMsgTransact.txid) {
-                            // Revert output addresses added to transaction
-                            sendMsgTransact.revertOutputAddresses();
+                            // Create message and save it to local database
+                            messageId = Message.createLocalMessage(sendMsgTransact);
+                        }
+                        catch (err) {
+                            // Error sending message to another device.
+                            //  Log error condition
+                            Catenis.logger.ERROR('Error sending message to another device.', err);
+
+                            if (sendMsgTransact && !sendMsgTransact.txid) {
+                                // Revert output addresses added to transaction
+                                sendMsgTransact.revertOutputAddresses();
+                            }
+
+                            // Rethrows exception
+                            throw err;
                         }
 
-                        // Rethrows exception
-                        throw err;
+                        serviceData = sendMsgTransact;
+                        serviceDataRef = sendMsgTransact.txid;
+                    }
+                    else {
+                        // Off-Chain message
+                        let sendOCMessage;
+
+                        try {
+                            // Prepare to log off-chain message
+                            sendOCMessage = new SendOffChainMessage(this, targetDevice, messageReadable, {
+                                readConfirmation: readConfirmation,
+                                encrypted: encryptMessage,
+                                storageProvider: storageProvider
+                            });
+
+                            // Assemble and save off-chain message
+                            sendOCMessage.assemble();
+
+                            // Save off-chain message requesting that associated Catenis off-chain message envelope
+                            //  be immediately retrieved so it can be processed by local Catenis node right away
+                            sendOCMessage.save(true);
+
+                            // Create message and save it to local database
+                            messageId = Message.createLocalOffChainMessage(sendOCMessage);
+                        }
+                        catch (err) {
+                            // Error sending off-chain message
+                            //  Log error condition
+                            Catenis.logger.ERROR('Error sending off-chain message.', err);
+
+                            if (sendOCMessage && !sendOCMessage.cid) {
+                                // Revert off-chain addresses added to Catenis off-chain message envelope
+                                sendOCMessage.revertOffChainAddresses();
+                            }
+
+                            // Rethrows exception
+                            throw err;
+                        }
+
+                        serviceData = sendOCMessage;
+                        serviceDataRef = sendOCMessage.cid;
                     }
 
                     try {
                         // Record billing info for service
-                        const billing = Billing.createNew(this, sendMsgTransact, servicePriceInfo);
+                        const billing = Billing.createNew(this, serviceData, servicePriceInfo);
 
                         let servicePayTransact;
 
                         if (this.client.billingMode === Client.billingMode.prePaid) {
-                            servicePayTransact = Catenis.spendServCredit.confirmPaymentForService(paymentProvisionInfo, sendMsgTransact.txid);
+                            servicePayTransact = Catenis.spendServCredit.confirmPaymentForService(paymentProvisionInfo, serviceDataRef);
                         }
                         else if (this.client.billingMode === Client.billingMode.postPaid) {
                             // Not yet implemented
@@ -786,12 +874,12 @@ Device.prototype.sendMessage2 = function (message, targetDeviceId, encryptMessag
                         if ((err instanceof Meteor.Error) && err.error === 'ctn_spend_serv_cred_tx_rejected') {
                             // Spend service credit transaction has been rejected.
                             //  Log warning condition
-                            Catenis.logger.WARN('Billing for send message service (serviceTxid: %s) recorded with no service payment transaction', sendMsgTransact.txid);
+                            Catenis.logger.WARN('Billing for send%s message service (serviceDataRef: %s) recorded with no service payment transaction', offChain ? ' off-chain' : '', serviceDataRef);
                         }
                         else {
                             // Error recording billing info for send message service.
                             //  Just log error condition
-                            Catenis.logger.ERROR('Error recording billing info for send message service (serviceTxid: %s),', sendMsgTransact.txid, err);
+                            Catenis.logger.ERROR('Error recording billing info for send%s message service (serviceDataRef: %s),', offChain ? ' off-chain' : '', serviceDataRef, err);
                         }
                     }
                 });
@@ -895,6 +983,39 @@ Device.prototype.logMessage = function (message, encryptMessage = true, storageS
 //      provisionalMessageId: [String]  - (optional) Provisional message ID. Returned after the whole message's contents is sent if doing asynchronous processing
 //    }
 Device.prototype.logMessage2 = function (message, encryptMessage = true, storageScheme = 'auto', storageProvider, async = false) {
+    return this.logMessage3(message, encryptMessage, false, storageScheme, storageProvider, async);
+};
+
+// Log message on the blockchain
+//
+//  Arguments:
+//    message [Buffer(Buffer)|Object] {  - The message to be logged. If a Buffer object is passed, it is assumed to be the whole message's contents.
+//                                          Otherwise, it is expected that the message be passed in chunks using the following object to control it:
+//      dataChunk: [Object(Buffer)], - (optional) The current message data chunk. The actual message's contents should be comprised of one or more data chunks
+//      isFinal: [Boolean],          - Indicates whether this is the final (or the single) message data chunk
+//      continuationToken: [String]  - (optional) Indicates that this is a continuation message data chunk. This should be filled with the value
+//                                      returned in the 'continuationToken' field of the response from the previously sent message data chunk
+//    }
+//    encryptMessage [Boolean] - (optional, default: true) Indicates whether message should be encrypted before logging it
+//    offChain [Boolean]       - (optional, default: false) Indicates whether message should be processed as a Catenis off-chain message. Catenis off-chain
+//                                messages are stored on the external storage repository and only later its reference is settled to the blockchain along
+//                                with references of other off-chain messages
+//    storageScheme [String]   - (optional, default: 'auto') A field of the CatenisMessage.storageScheme property identifying how the message should be stored.
+//                                Note that, when the offChain parameter is set to true, this parameter's value is disregarded and the processing is done as
+//                                if the value 'external' was passed
+//    storageProvider [Object] - (optional, default: defaultStorageProvider) A field of the CatenisMessage.storageProvider property
+//                                identifying the type of external storage to be used to store the message that should not be embedded
+//    async [Boolean]          - (optional, default: false) Indicates whether processing should be done asynchronously. If set to true, a provisional
+//                                message ID is returned, which should be used to retrieve the processing outcome by calling the MessageProgress API method
+//
+//  Return value:
+//    logResult: {
+//      continuationToken: [String] - (optional) Token to be used when sending the following message data chunk. Returned if message passed in chunks
+//                                     and last message data chunk was not final
+//      messageId: [String]  - (optional) ID of logged message. Returned after the whole message's contents is sent if not doing asynchronous processing
+//      provisionalMessageId: [String]  - (optional) Provisional message ID. Returned after the whole message's contents is sent if doing asynchronous processing
+//    }
+Device.prototype.logMessage3 = function (message, encryptMessage = true, offChain = false, storageScheme = 'auto', storageProvider, async = false) {
     // Make sure that device is not deleted
     if (this.status === Device.status.deleted.name) {
         // Cannot log message for a deleted device. Log error and throw exception
@@ -942,7 +1063,7 @@ Device.prototype.logMessage2 = function (message, encryptMessage = true, storage
 
             // Execute code in critical section to avoid Colored Coins UTXOs concurrency
             CCFundSource.utxoCS.execute(() => {
-                const servicePriceInfo = Service.logMessageServicePrice();
+                const servicePriceInfo = !offChain ? Service.logMessageServicePrice() : Service.logOffChainMessageServicePrice();
 
                 if (this.client.billingMode === Client.billingMode.prePaid) {
                     // Make sure that client has enough service credits to pay for service
@@ -951,11 +1072,12 @@ Device.prototype.logMessage2 = function (message, encryptMessage = true, storage
                     if (serviceAccountBalance < servicePriceInfo.finalServicePrice) {
                         // Client does not have enough credits to pay for service.
                         //  Log error condition and throw exception
-                        Catenis.logger.ERROR('Client does not have enough credits to pay for log message service', {
+                        const errMsg = util.format('Client does not have enough credits to pay for log%s message service', offChain ? ' off-chain' : '');
+                        Catenis.logger.ERROR(errMsg, {
                             serviceAccountBalance: serviceAccountBalance,
                             servicePrice: servicePriceInfo.finalServicePrice
                         });
-                        throw new Meteor.Error('ctn_device_low_service_acc_balance', 'Client does not have enough credits to pay for log message service');
+                        throw new Meteor.Error('ctn_device_low_service_acc_balance', errMsg);
                     }
                 }
             });
@@ -1023,7 +1145,7 @@ Device.prototype.logMessage2 = function (message, encryptMessage = true, storage
             FundSource.utxoCS.execute(() => {
                 // Execute code in critical section to avoid concurrent spend service credit tasks
                 spendServCredProcCS.execute(() => {
-                    const servicePriceInfo = Service.logMessageServicePrice();
+                    const servicePriceInfo = !offChain ? Service.logMessageServicePrice() : Service.logOffChainMessageServicePrice();
                     let paymentProvisionInfo;
 
                     if (this.client.billingMode === Client.billingMode.prePaid) {
@@ -1034,17 +1156,19 @@ Device.prototype.logMessage2 = function (message, encryptMessage = true, storage
                             if ((err instanceof Meteor.Error) && err.error === 'ctn_spend_serv_cred_utxo_alloc_error') {
                                 // Unable to allocate service credits from client service account to pay for service.
                                 //  Log error and throw exception
-                                Catenis.logger.ERROR('Client does not have enough credits to pay for log message service', {
+                                const errMsg = util.format('Client does not have enough credits to pay for log%s message service', offChain ? ' off-chain' : '');
+                                Catenis.logger.ERROR(errMsg, {
                                     serviceAccountBalance: this.client.serviceAccountBalance(),
                                     servicePrice: servicePriceInfo.finalServicePrice
                                 });
-                                throw new Meteor.Error('ctn_device_low_service_acc_balance', 'Client does not have enough credits to pay for log message service');
+                                throw new Meteor.Error('ctn_device_low_service_acc_balance', errMsg);
                             }
                             else {
                                 // Error provisioning spend service credit transaction to pay for service.
                                 //  Log error and throw exception
-                                Catenis.logger.ERROR('Error provisioning spend service credit transaction to pay for log message service.', err);
-                                throw new Error('Error provisioning spend service credit transaction to pay for log message service');
+                                const errMsg = util.format('Error provisioning spend service credit transaction to pay for log%s message service', offChain ? ' off-chain' : '');
+                                Catenis.logger.ERROR('%s.', errMsg, err);
+                                throw new Error(errMsg);
                             }
                         }
                     }
@@ -1054,49 +1178,95 @@ Device.prototype.logMessage2 = function (message, encryptMessage = true, storage
                         throw new Error('Processing for postpaid billing mode not yet implemented');
                     }
 
-                    let logMsgTransact;
+                    let serviceData;
+                    let serviceDataRef;
 
-                    try {
-                        // Prepare transaction to log message
-                        logMsgTransact = new LogMessageTransaction(this, messageReadable, {
-                            encrypted: encryptMessage,
-                            storageScheme: storageScheme,
-                            storageProvider: storageProvider
-                        });
+                    if (!offChain) {
+                        let logMsgTransact;
 
-                        // Build and send transaction
-                        logMsgTransact.buildTransaction();
+                        try {
+                            // Prepare transaction to log message
+                            logMsgTransact = new LogMessageTransaction(this, messageReadable, {
+                                encrypted: encryptMessage,
+                                storageScheme: storageScheme,
+                                storageProvider: storageProvider
+                            });
 
-                        logMsgTransact.sendTransaction();
+                            // Build and send transaction
+                            logMsgTransact.buildTransaction();
 
-                        // Force polling of blockchain so newly sent transaction is received and processed right away
-                        Catenis.txMonitor.pollNow();
+                            logMsgTransact.sendTransaction();
 
-                        // Create message and save it to local database
-                        messageId = Message.createLocalMessage(logMsgTransact);
-                    }
-                    catch (err) {
-                        // Error logging message
-                        //  Log error condition
-                        Catenis.logger.ERROR('Error logging message.', err);
+                            // Force polling of blockchain so newly sent transaction is received and processed right away
+                            Catenis.txMonitor.pollNow();
 
-                        if (logMsgTransact && !logMsgTransact.txid) {
-                            // Revert output addresses added to transaction
-                            logMsgTransact.revertOutputAddresses();
+                            // Create message and save it to local database
+                            messageId = Message.createLocalMessage(logMsgTransact);
+                        }
+                        catch (err) {
+                            // Error logging message
+                            //  Log error condition
+                            Catenis.logger.ERROR('Error logging message.', err);
+
+                            if (logMsgTransact && !logMsgTransact.txid) {
+                                // Revert output addresses added to transaction
+                                logMsgTransact.revertOutputAddresses();
+                            }
+
+                            // Rethrows exception
+                            throw err;
                         }
 
-                        // Rethrows exception
-                        throw err;
+                        serviceData = logMsgTransact;
+                        serviceDataRef = logMsgTransact.txid;
+                    }
+                    else {
+                        // Off-Chain message
+                        let logOCMessage;
+
+                        try {
+                            // Prepare to log off-chain message
+                            logOCMessage = new LogOffChainMessage(this, messageReadable, {
+                                encrypted: encryptMessage,
+                                storageProvider: storageProvider
+                            });
+
+                            // Assemble and save off-chain message
+                            logOCMessage.assemble();
+
+                            // Save off-chain message requesting that associated Catenis off-chain message envelope
+                            //  be immediately retrieved so it can be processed by local Catenis node right away
+                            logOCMessage.save(true);
+
+                            // Create message and save it to local database
+                            messageId = Message.createLocalOffChainMessage(logOCMessage);
+                        }
+                        catch (err) {
+                            // Error logging off-chain message
+                            //  Log error condition
+                            Catenis.logger.ERROR('Error logging off-chain message.', err);
+
+                            if (logOCMessage && !logOCMessage.cid) {
+                                // Revert off-chain addresses added to Catenis off-chain message envelope
+                                logOCMessage.revertOffChainAddresses();
+                            }
+
+                            // Rethrows exception
+                            throw err;
+                        }
+
+                        serviceData = logOCMessage;
+                        serviceDataRef = logOCMessage.cid;
                     }
 
                     try {
                         // Record billing info for service
-                        const billing = Billing.createNew(this, logMsgTransact, servicePriceInfo);
+                        const billing = Billing.createNew(this, serviceData, servicePriceInfo);
 
                         let servicePayTransact;
 
                         if (this.client.billingMode === Client.billingMode.prePaid) {
-                            servicePayTransact = Catenis.spendServCredit.confirmPaymentForService(paymentProvisionInfo, logMsgTransact.txid);
+                            servicePayTransact = Catenis.spendServCredit.confirmPaymentForService(paymentProvisionInfo, serviceDataRef);
                         }
                         else if (this.client.billingMode === Client.billingMode.postPaid) {
                             // Not yet implemented
@@ -1111,12 +1281,12 @@ Device.prototype.logMessage2 = function (message, encryptMessage = true, storage
                         if ((err instanceof Meteor.Error) && err.error === 'ctn_spend_serv_cred_tx_rejected') {
                             // Spend service credit transaction has been rejected.
                             //  Log warning condition
-                            Catenis.logger.WARN('Billing for log message service (serviceTxid: %s) recorded with no service payment transaction', logMsgTransact.txid);
+                            Catenis.logger.WARN('Billing for log%s message service (serviceDataRef: %s) recorded with no service payment transaction', offChain ? ' off-chain' : '', serviceDataRef);
                         }
                         else {
                             // Error recording billing info for log message service.
                             //  Just log error condition
-                            Catenis.logger.ERROR('Error recording billing info for log message service (serviceTxid: %s),', logMsgTransact.txid, err);
+                            Catenis.logger.ERROR('Error recording billing info for log%s message service (serviceDataRef: %s),', offChain ? ' off-chain' : '', serviceDataRef, err);
                         }
                     }
                 });
@@ -1277,6 +1447,47 @@ Device.prototype.readMessage2 = function (messageId, encoding) {
 //                                    (no continuation token) if doing asynchronous processing
 //    }
 Device.prototype.readMessage3 = function (messageId, encoding, continuationToken, dataChunkSize, async = false) {
+    return this.readMessage4(messageId, encoding, continuationToken, dataChunkSize, async, false);
+};
+
+// Read message previously sent/logged
+//
+//  Arguments:
+//    messageId: [String]  - ID of message to read
+//    encoding: [String]  - The encoding that should be used for the returned message
+//    continuationToken [String]  - (optional) Indicates that this is a continuation call and that the following message data chunk should be returned
+//    dataChunkSize [Number]  - (optional) Size, in bytes, of the largest message data chunk that should be returned. This is effectively used to signal
+//                               that the message should be retrieved/read in chunks
+//    async [Boolean]  - (optional) Indicates whether processing should be done asynchronously. If set to true, a cached message ID is returned,
+//                        which should be used to retrieve the processing outcome by calling the MessageProgress API method
+//    handleOffChainMsg: [Boolean] - Indicates whether off-chain message should be properly handled
+//
+//  Return value:
+//    readResult: {
+//      msgInfo: {  - (optional) Returned along with the 'msgData' field for the first (or the only) part of the message's contents returned for a
+//                         given message ID
+//        action: [String],    - Action originally performed on the message; either 'log' or 'send'
+//        from: {         - Note: only returned if origin device different than device that issued the request, unless
+//                          it is the (rare) case where the device that issued the request sent a message to itself
+//          deviceId: [String],     - Catenis ID of the origin device (device that had sent/logged the message)
+//          name: [String],         - (only returned if defined and device that issued the request has permission to access this device's main props) Assigned name of the device
+//          prodUniqueId: [String]  - (only returned if defined and device that issued the request has permission to access this device's main props) Product unique ID of the device
+//        },
+//        to: {          - Note: only returned if target device different than device that issued the request
+//          deviceId: [String]      - Catenis ID of target device (device to which the message had been sent)
+//          name: [String],         - (only returned if defined and device that issued the request has permission to access this device's main props) Assigned name of the device
+//          prodUniqueId: [String]  - (only returned if defined and device that issued the request has permission to access this device's main props) Product unique ID of the device
+//        }
+//      },
+//      msgData: [String],   - (optional) The message's contents formatted using the specified encoding. Returned as a response to the initial call to this API method
+//                             with a given message ID (no continuation token) if not doing asynchronous processing, or as a response for a continuation call
+//                             (continuation token was passed)
+//      continuationToken: [String],  - (optional) Token to be used when requesting the following message data chunk. This is returned along with the 'msgData'
+//                                       field if the whole message's contents has not yet been returned
+//      cachedMessageId: [String]  - (optional) Cached message ID. Returned as a response to the initial call to this API method with a given message ID
+//                                    (no continuation token) if doing asynchronous processing
+//    }
+Device.prototype.readMessage4 = function (messageId, encoding, continuationToken, dataChunkSize, async = false, handleOffChainMsg = true) {
     // Make sure that device is not deleted
     if (this.status === Device.status.deleted.name) {
         // Cannot read message for a deleted device. Log error and throw exception
@@ -1365,119 +1576,166 @@ Device.prototype.readMessage3 = function (messageId, encoding, continuationToken
         //      stream will be automatically used to write the contents of the retrieved message
     }
 
-    let msgTransact;
+    let msgTransport;
     let msgInfo;
 
     const doProcessing = () => {
-        // Get transaction associated with message
-        let txid = message.txid;
-        let transact = undefined;
-        let alreadyRetried = false;
-        let tryAgain;
+        if (handleOffChainMsg && message.isOffChain) {
+            // Off-chain message
+            const ocMessage = message.action === Message.action.log ? LogOffChainMessage.fromMsgEnvelopeCid(message.ocMsgEnvCid, messageDuplex) :
+                (message.action === Message.action.send ? SendOffChainMessage.fromMsgEnvelopeCid(message.ocMsgEnvCid, messageDuplex) : undefined);
 
-        do {
-            tryAgain = false;
-
-            try {
-                transact = Transaction.fromTxid(txid);
-            }
-            catch (err) {
-                if ((err instanceof Meteor.Error) && err.error === 'ctn_btcore_rpc_error' && err.details !== undefined && typeof err.details.code === 'number'
-                    && (err.details.code === BitcoinCore.rpcErrorCode.RPC_INVALID_ADDRESS_OR_KEY || err.details.code === BitcoinCore.rpcErrorCode.RPC_INVALID_PARAMETER)) {
-                    // Error indicating that transaction id is not valid
-
-                    if (!alreadyRetried) {
-                        // Try to retrieve info about transaction
-                        let txInfo;
-
+            if (ocMessage !== undefined) {
+                // Indicates that message has been read
+                if (message.readNow()) {
+                    // This was the first time that message has been read
+                    if (message.action === Message.action.send && message.readConfirmationEnabled && this.shouldSendReadMsgConfirmationTo(ocMessage.originDevice)) {
+                        // Save Catenis off-chain message receipt to confirm that off-chain message has been read
                         try {
-                            // Make sure that error thrown by getTransaction() is not logged.
-                            //  This is necessary because any transaction that are not associated
-                            //  with a wallet address will make getTransaction() to throw an error
-                            //  (with code = RPC_INVALID_ADDRESS_OR_KEY)
-                            txInfo = Catenis.bitcoinCore.getTransaction(txid, false, false);
+                            const ocMsgReceipt = new OffChainMsgReceipt();
+                            ocMsgReceipt.assemble(ocMessage.ocMsgEnvelope.cid);
+
+                            ocMsgReceipt.save(true);
+
+                            ocMsgReceipt.saveToDatabase();
                         }
                         catch (err) {
-                            if (!((err instanceof Meteor.Error) && err.error === 'ctn_btcore_rpc_error' && err.details !== undefined && typeof err.details.code === 'number'
-                                && err.details.code === BitcoinCore.rpcErrorCode.RPC_INVALID_ADDRESS_OR_KEY)) {
-                                // An error other than indication that it is a non-wallet tx id.
-                                //  Just re-throws it
-                                throw err;
-                            }
-                        }
-
-                        if (txInfo) {
-                            // Checks if tx id had been replaced by another transaction that had already been
-                            //  confirmed (possibly) due to malleability
-                            // noinspection JSUnresolvedVariable
-                            if (txInfo.walletconflicts.length > 0) {
-                                // noinspection JSUnresolvedVariable
-                                txInfo.walletconflicts.some((cnfltTxid) => {
-                                    const cnfltTxInfo = Catenis.bitcoinCore.getTransaction(cnfltTxid);
-
-                                    if (cnfltTxInfo.confirmations > 0 && Transaction.areTxsIdentical(cnfltTxInfo, txInfo)) {
-                                        // Conflicting (confirmed) tx is identical to original tx. Assume that original tx
-                                        //  had its ID replaced due to malleability
-
-                                        // Replace tx id and try to get transaction associated with message again
-                                        txid = cnfltTxid;
-                                        tryAgain = true;
-                                        alreadyRetried = true;
-
-                                        // Stop loop (walletconflicts.some)
-                                        return true;
-                                    }
-
-                                    return false;
-                                });
-                            }
+                            // Error while trying to save Catenis off-chain message receipt
+                            Catenis.logger.ERROR('Error while trying to save Catenis off-chain message receipt to confirm that off-chain message (msgEnvCid: %s) has been read.', ocMessage.ocMsgEnvelope.cid, err);
                         }
                     }
+                }
 
-                    if (!tryAgain) {
-                        //  Log Error and throws exception
-                        Catenis.logger.ERROR('Message has an invalid transaction id', {messageId: messageId, txid: txid});
-                        throw new Meteor.Error('ctn_msg_invalid_txid', util.format('Message (messageId: %s) has an invalid transaction id: %s', messageId, txid));
-                    }
-                }
-                else {
-                    // An error other than invalid transaction id.
-                    //  Just re-throws it
-                    throw err;
-                }
+                msgTransport = ocMessage;
             }
-        }
-        while (tryAgain);
-
-        // Parse transaction to read its contents
-        msgTransact = message.action === Message.action.log ? LogMessageTransaction.checkTransaction(transact, messageDuplex) :
-            (message.action === Message.action.send ? SendMessageTransaction.checkTransaction(transact, messageDuplex) : undefined);
-
-        if (msgTransact !== undefined) {
-            // Indicates that message has been read
-            if (message.readNow()) {
-                // This was the first time that message has been read
-                if (message.action === Message.action.send && message.readConfirmationEnabled) {
-                    // Confirm that message has been read
-                    const confirmType = this.shouldSendReadMsgConfirmationTo(msgTransact.originDevice) ? ReadConfirmation.confirmationType.spendNotify : ReadConfirmation.confirmationType.spendOnly;
-
-                    try {
-                        Catenis.readConfirm.confirmMessageRead(msgTransact, confirmType);
-                    }
-                    catch (err) {
-                        // Error while trying to send confirmation of message read
-                        Catenis.logger.ERROR('Error while trying to send confirmation of message read.', err);
-                    }
-                }
+            else {
+                // Inconsistent Catenis off-chain message envelope (this should never happen). Log error and throws exception
+                Catenis.logger.ERROR('Message is associated with an inconsistent Catenis off-chain message envelope', {
+                    messageId: messageId,
+                    ocMsgEnvCid: message.ocMsgEnvCid,
+                });
+                throw new Meteor.Error('ctn_msg_invalid_oc_msg', util.format('Message (messageId: %s) is associated with an inconsistent Catenis off-chain message envelope (cid: %s)', messageId, message.ocMsgEnvCid));
             }
         }
         else {
-            // Not a valid Catenis transaction (this should never happen). Log error and throws exception
-            Catenis.logger.ERROR('Message is associated with a non-Catenis transaction', {messageId: messageId, txid: txid});
-            throw new Meteor.Error('ctn_msg_invalid_tx', util.format('Message (messageId: %s) is associated with a non-Catenis transaction id: %s', messageId, txid));
+            // Get transaction associated with message
+            let txid = message.txid;
+            let transact = undefined;
+            let alreadyRetried = false;
+            let tryAgain;
+
+            do {
+                tryAgain = false;
+
+                try {
+                    transact = Transaction.fromTxid(txid);
+                }
+                catch (err) {
+                    if ((err instanceof Meteor.Error) && err.error === 'ctn_btcore_rpc_error' && err.details !== undefined && typeof err.details.code === 'number'
+                            && (err.details.code === BitcoinCore.rpcErrorCode.RPC_INVALID_ADDRESS_OR_KEY || err.details.code === BitcoinCore.rpcErrorCode.RPC_INVALID_PARAMETER)) {
+                        // Error indicating that transaction id is not valid
+
+                        if (!alreadyRetried) {
+                            // Try to retrieve info about transaction
+                            let txInfo;
+
+                            try {
+                                // Make sure that error thrown by getTransaction() is not logged.
+                                //  This is necessary because any transaction that are not associated
+                                //  with a wallet address will make getTransaction() to throw an error
+                                //  (with code = RPC_INVALID_ADDRESS_OR_KEY)
+                                txInfo = Catenis.bitcoinCore.getTransaction(txid, false, false);
+                            }
+                            catch (err) {
+                                if (!((err instanceof Meteor.Error) && err.error === 'ctn_btcore_rpc_error' && err.details !== undefined && typeof err.details.code === 'number'
+                                    && err.details.code === BitcoinCore.rpcErrorCode.RPC_INVALID_ADDRESS_OR_KEY)) {
+                                    // An error other than indication that it is a non-wallet tx id.
+                                    //  Just re-throws it
+                                    throw err;
+                                }
+                            }
+
+                            if (txInfo) {
+                                // Checks if tx id had been replaced by another transaction that had already been
+                                //  confirmed (possibly) due to malleability
+                                // noinspection JSUnresolvedVariable
+                                if (txInfo.walletconflicts.length > 0) {
+                                    // noinspection JSUnresolvedVariable
+                                    txInfo.walletconflicts.some((cnfltTxid) => {
+                                        const cnfltTxInfo = Catenis.bitcoinCore.getTransaction(cnfltTxid);
+
+                                        if (cnfltTxInfo.confirmations > 0 && Transaction.areTxsIdentical(cnfltTxInfo, txInfo)) {
+                                            // Conflicting (confirmed) tx is identical to original tx. Assume that original tx
+                                            //  had its ID replaced due to malleability
+
+                                            // Replace tx id and try to get transaction associated with message again
+                                            txid = cnfltTxid;
+                                            tryAgain = true;
+                                            alreadyRetried = true;
+
+                                            // Stop loop (walletconflicts.some)
+                                            return true;
+                                        }
+
+                                        return false;
+                                    });
+                                }
+                            }
+                        }
+
+                        if (!tryAgain) {
+                            //  Log Error and throws exception
+                            Catenis.logger.ERROR('Message has an invalid transaction id', {
+                                messageId: messageId,
+                                txid: txid
+                            });
+                            throw new Meteor.Error('ctn_msg_invalid_txid', util.format('Message (messageId: %s) has an invalid transaction id: %s', messageId, txid));
+                        }
+                    }
+                    else {
+                        // An error other than invalid transaction id.
+                        //  Just re-throws it
+                        throw err;
+                    }
+                }
+            }
+            while (tryAgain);
+
+            // Parse transaction to read its contents
+            let msgTransact = message.action === Message.action.log ? LogMessageTransaction.checkTransaction(transact, messageDuplex) :
+                (message.action === Message.action.send ? SendMessageTransaction.checkTransaction(transact, messageDuplex) : undefined);
+
+            if (msgTransact !== undefined) {
+                // Indicates that message has been read
+                if (message.readNow()) {
+                    // This was the first time that message has been read
+                    if (message.action === Message.action.send && message.readConfirmationEnabled) {
+                        // Confirm that message has been read
+                        const confirmType = this.shouldSendReadMsgConfirmationTo(msgTransact.originDevice) ? ReadConfirmation.confirmationType.spendNotify : ReadConfirmation.confirmationType.spendOnly;
+
+                        try {
+                            Catenis.readConfirm.confirmMessageRead(msgTransact, confirmType);
+                        }
+                        catch (err) {
+                            // Error while trying to send confirmation of message read
+                            Catenis.logger.ERROR('Error while trying to send confirmation of message read.', err);
+                        }
+                    }
+                }
+
+                msgTransport = msgTransact;
+            }
+            else {
+                // Not a valid Catenis transaction (this should never happen). Log error and throws exception
+                Catenis.logger.ERROR('Message is associated with a non-Catenis transaction', {
+                    messageId: messageId,
+                    txid: txid
+                });
+                throw new Meteor.Error('ctn_msg_invalid_tx', util.format('Message (messageId: %s) is associated with a non-Catenis transaction id: %s', messageId, txid));
+            }
         }
 
-        msgInfo = getMessageInfo.call(this, message, msgTransact);
+        msgInfo = getMessageInfo.call(this, message, msgTransport);
     };
 
     if (async) {
@@ -1550,7 +1808,7 @@ Device.prototype.readMessage3 = function (messageId, encoding, continuationToken
 
             // Read message's contents directly from Catenis transaction
             // noinspection JSUnusedAssignment
-            const messageReadable = msgTransact.messageReadable;
+            const messageReadable = msgTransport.messageReadable;
             msgData = Buffer.from('');
 
             const fut = new Future();
@@ -1711,6 +1969,7 @@ Device.prototype.retrieveMessageContainer = function (messageId) {
     return this.retrieveMessageContainer2(messageId, false);
 };
 
+
 // Retrieve info about where a message previously sent/logged is recorded
 //
 //  Arguments:
@@ -1731,6 +1990,33 @@ Device.prototype.retrieveMessageContainer = function (messageId) {
 //    }
 //
 Device.prototype.retrieveMessageContainer2 = function (messageId, targetDeviceCanRetrieve = true) {
+    return this.retrieveMessageContainer3(messageId, targetDeviceCanRetrieve, false);
+};
+
+// Retrieve info about where a message previously sent/logged is recorded
+//
+//  Arguments:
+//    messageId: [String] - ID of message to get container info
+//    targetDeviceCanRetrieve: [Boolean] - Indicates whether target device can also retrieve the message container
+//    handleOffChainMsg: [Boolean] - Indicates whether off-chain message should be properly handled
+//
+//  Return value:
+//    containerInfo: {
+//      offChain: {           - Note: only returned for Catenis off-chain messages
+//        cid: [String]          - IPFS CID of Catenis off-chain message envelope data structure that holds the message's contents
+//      },
+//      blockchain: {         - Note: for Catenis off-chain messages, this property refers to the transaction used to settle off-chain
+//                               messages to the blockchain, and it is only returned at a later time after the settlement takes place
+//        txid: [String],        - ID of blockchain transaction where message is recorded
+//                                  NOTE: due to malleability, the ID of the transaction might change until the it is finally confirmed
+//        isConfirmed: [Boolean] - Indicates whether the returned txid is confirmed
+//      },
+//      externalStorage: {    - Note: only returned if message is stored in an external storage
+//        <storage_provider_name>: [String] - Key: storage provider name. Value: reference to message in external storage
+//      }
+//    }
+//
+Device.prototype.retrieveMessageContainer3 = function (messageId, targetDeviceCanRetrieve = true, handleOffChainMsg = true) {
     // Make sure that device is not deleted
     if (this.status === Device.status.deleted.name) {
         // Cannot retrieve message container for a deleted device. Log error and throw exception
@@ -1757,12 +2043,27 @@ Device.prototype.retrieveMessageContainer2 = function (messageId, targetDeviceCa
     }
 
     // Returns message container info
-    const containerInfo = {
-        blockchain: {
+    const containerInfo = {};
+
+    if (handleOffChainMsg && message.isOffChain) {
+        // Off-chain message
+        containerInfo.offChain = {
+            cid: message.ocMsgEnvCid
+        };
+
+        if (message.isRecordedToBlockchain) {
+            containerInfo.blockchain = {
+                txid: message.txid,
+                isConfirmed: message.isTxConfirmed
+            };
+        }
+    }
+    else {
+        containerInfo.blockchain = {
             txid: message.txid,
             isConfirmed: message.isTxConfirmed
-        }
-    };
+        };
+    }
 
     if (message.storageProviderName && message.externalStorageRef) {
         containerInfo.externalStorage = {};
@@ -3441,14 +3742,14 @@ function deactivateDevice() {
     });
 }
 
-function getMessageInfo(message, msgTransact) {
+function getMessageInfo(message, msgTransport) {
     const msgInfo = {
         action: message.action
     };
 
     if (message.action === Message.action.log) {
         // Logged message
-        const originDevice = msgTransact.device;
+        const originDevice = msgTransport.device;
 
         // Return only info about device that logged the message only if it is
         //  different from the current device
@@ -3463,8 +3764,8 @@ function getMessageInfo(message, msgTransact) {
     }
     else if (message.action === Message.action.send) {
         // Sent message
-        const originDevice = msgTransact.originDevice;
-        const targetDevice = msgTransact.targetDevice;
+        const originDevice = msgTransport.originDevice;
+        const targetDevice = msgTransport.targetDevice;
 
         if (targetDevice.deviceId === this.deviceId) {
             // Message was sent to current device. So return only info about the device that sent

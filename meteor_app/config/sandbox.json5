@@ -2,6 +2,9 @@
 {
   // Parameters pertaining to the Catenis application
   "application": {
+    ctnNode: {  // Catenis node to which this instance of the application corresponds
+      pubKey: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDJ2d7ctsjpeK1z9tD1NFCs/vOJ+WPaDHgKSh5ftU5ASBUH/fwl3R8vN1TLc1kmjJ7SA8K9BnmmNkU71eWhTutYdhL6O5MLumB+wu/nVmrmD4dgnEf9MKbJt49azJfvI5tVbjB+L6lHqBgJGz40LWhbkYvnceY1yL0ONkx6EYdotBjB/P4xVCFDH6nKhtUj+FKA1D8Ma508klUgAtBWLEdLAbhjSOm5aCVlZzs5EmqemmHJByGr/ewFRbG3iAKEiv6oElgkSSCsco4nx1aLzPc46wR4HbHO7Yke0C0DMmZCn/ptP7MvV40eIZ95hh7+WjuIJCIQrQE5aKJ/yhDmk61X"
+    },
     "environment": "sandbox",
     "seedFilename": "seed.beta2.dat",
     "cryptoNetwork": "testnet",  // Available values: 'bitcoin' (for Bitcoin's production blockchain), 'testnet' (for Bitcoin's test blockchain)

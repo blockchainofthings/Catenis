@@ -229,6 +229,10 @@ FundTransaction.fundingEvent = Object.freeze({
     add_extra_read_confirm_tx_pay_funds: Object.freeze({
         name: 'add_extra_read_confirm_tx_pay_funds',
         description: 'Add extra fund for read confirmation pay tx expense'
+    }),
+    add_extra_settle_oc_msgs_tx_pay_funds: Object.freeze({
+        name: 'add_extra_settle_oc_msgs_tx_pay_funds',
+        description: 'Add extra fund for off-chain messages settlement pay tx expense'
     })
 });
 

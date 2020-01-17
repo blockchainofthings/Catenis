@@ -37,7 +37,7 @@ import {
     BaseDeviceReadConfirmAddress,
     BaseDeviceMainAddress,
     BaseDeviceAssetAddress,
-    BaseDeviceAssetIssuanceAddress
+    BaseDeviceAssetIssuanceAddress, BaseSystemOCMsgsSetlmtPayTxExpenseAddress
 } from './BaseBlockchainAddress';
 import { KeyStore } from './KeyStore';
 
@@ -170,6 +170,16 @@ export class SystemBcotSaleStockAddress extends BlockchainAddress {
 
         // noinspection JSUnusedGlobalSymbols
         this._baseAddr = BaseSystemBcotSaleStockAddress.getInstance(ctnNodeIndex, KeyStore.systemBcotSaleStockRootPath(ctnNodeIndex));
+    }
+}
+
+// SystemOCMsgsSetlmtPayTxExpenseAddress derived class
+export class SystemOCMsgsSetlmtPayTxExpenseAddress extends BlockchainAddress {
+    constructor (ctnNodeIndex) {
+        super();
+
+        // noinspection JSUnusedGlobalSymbols
+        this._baseAddr = BaseSystemOCMsgsSetlmtPayTxExpenseAddress.getInstance(ctnNodeIndex, KeyStore.systemOCMsgsSetlmtPayTxExpenseRootPath(ctnNodeIndex));
     }
 }
 

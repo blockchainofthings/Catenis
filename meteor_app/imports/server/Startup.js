@@ -27,6 +27,7 @@ import { IpfsClusterClient } from './IpfsClusterClient';
 import { IpfsServerMonitor } from './IpfsServerMonitor';
 import { BitcoinFees } from './BitcoinFees';
 import { BaseBlockchainAddress } from './BaseBlockchainAddress';
+import { BaseOffChainAddress } from './BaseOffChainAddress';
 import { CatenisNode } from './CatenisNode';
 import { Client } from './Client';
 import { Database } from './Database';
@@ -86,6 +87,9 @@ import { CachedMessage } from './CachedMessage';
 import { TwoFactorAuthEventEmitter } from './TwoFactorAuthEventEmitter';
 import { TwoFactorAuthenticationUI } from './adminUI/TwoFactorAuthenticationUI';
 import { ClientTwoFactorAuthenticationUI } from './clientUI/ClientTwoFactorAuthenticationUI';
+import { CatenisOffChainClient } from './CatenisOffChainClient';
+import { OffChainMessagesSettlement } from './OffChainMessagesSettlement';
+import { CatenisOffChainMonitor } from './CatenisOffChainMonitor';
 // TEST - begin
 //import { TestCatenisColoredCoins } from './test/TestCatenisColoredCoins';
 // TEST - end
@@ -152,6 +156,7 @@ Meteor.startup(function () {
             ProvisionalMessage.initialize();
             CachedMessage.initialize();
             CatenisNode.initialize();
+            CatenisOffChainClient.initialize();
 
             Database.addMissingOmniTxValidityField();
 
@@ -159,6 +164,7 @@ Meteor.startup(function () {
             CheckImportAddresses(cfgSettings.fixMissingAddresses);
 
             BaseBlockchainAddress.initialize();
+            BaseOffChainAddress.initialize();
             Client.initialize();
             Device.initialize();
 
@@ -167,6 +173,8 @@ Meteor.startup(function () {
             Device.checkDeviceInitialRights();
 
             Database.fixReceivedTransactionBcotPaymentInfo();
+
+            OffChainMessagesSettlement.initialize();
 
             ClientLicense.initialize();
             BcotPayment.initialize();
@@ -178,6 +186,7 @@ Meteor.startup(function () {
             ReceiveAsset.initialize();
             SpendServiceCredit.initialize();
             TransactionMonitor.initialize();
+            CatenisOffChainMonitor.initialize();
             TwoFactorAuthEventEmitter.initialize();
             ClientTwoFactorAuthenticationUI.initialize();
 

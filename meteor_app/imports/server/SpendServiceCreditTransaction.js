@@ -48,7 +48,8 @@ const cfgSettings = {
             key: spndSrvCrdTxCcMetaPlhdConfig.get('key'),
             value: spndSrvCrdTxCcMetaPlhdConfig.get('value')
         },
-        servTxidsKey: spndSrvCrdTxCcMetaConfig.get('servTxidsKey')
+        servTxidsKey: spndSrvCrdTxCcMetaConfig.get('servTxidsKey'),
+        ocMsgServCidsKey: spndSrvCrdTxCcMetaConfig.get('ocMsgServCidsKey')
     },
     unconfirmedTxTimeout: spendServCredTxConfig.get('unconfirmedTxTimeout'),
     txSizeThresholdRatio: spendServCredTxConfig.get('txSizeThresholdRatio')
@@ -60,7 +61,7 @@ const cfgSettings = {
 
 // SpendServiceCreditTransaction function class
 export class SpendServiceCreditTransaction extends events.EventEmitter {
-    constructor (spendServCredCtrl, ccTransact, unconfirmed, addNoBillingServTxs) {
+    constructor (spendServCredCtrl, ccTransact, unconfirmed, addNoBillingServData) {
         super();
 
         // Properties definition
@@ -89,6 +90,12 @@ export class SpendServiceCreditTransaction extends events.EventEmitter {
                             vout: changeOutputPos
                         });
                     }
+                },
+                enumerable: true
+            },
+            serviceDataRefs: {
+                get: function () {
+                    return this.serviceTxids.concat(this.ocMsgServiceCids);
                 },
                 enumerable: true
             }
@@ -131,15 +138,29 @@ export class SpendServiceCreditTransaction extends events.EventEmitter {
                 }
             });
 
-            // Identify blockchain assigned ID of service transaction for which payments
+            // Identify service data reference (either blockchain assigned ID of service transaction or IPFS CID of
+            //  off-chain message envelope used to convey off-chain message related service) for which payments
             //  have been made by this transaction
+            let hasServTxids = false;
+            let hasOCMsgServCids = false;
+
+            // noinspection CommaExpressionJS
             if (this.ccTransact.ccMetadata !== undefined && this.ccTransact.ccMetadata.userData !== undefined
-                    && this.ccTransact.ccMetadata.userData[cfgSettings.ccMetadata.servTxidsKey] !== undefined) {
-                Catenis.logger.DEBUG('>>>>>> Spend service credit Colored Coins metadata', {
+                    && (hasServTxids = this.ccTransact.ccMetadata.userData[cfgSettings.ccMetadata.servTxidsKey] !== undefined,
+                    hasOCMsgServCids = this.ccTransact.ccMetadata.userData[cfgSettings.ccMetadata.ocMsgServCidsKey] !== undefined,
+                    hasServTxids || hasOCMsgServCids)) {
+                const debugInfo = {};
+                if (hasServTxids) debugInfo.servTxids = {
                     raw: this.ccTransact.ccMetadata.userData[cfgSettings.ccMetadata.servTxidsKey],
                     string: this.ccTransact.ccMetadata.userData[cfgSettings.ccMetadata.servTxidsKey].toString()
-                });
-                this.serviceTxids = JSON.parse(this.ccTransact.ccMetadata.userData[cfgSettings.ccMetadata.servTxidsKey].toString());
+                };
+                if (hasOCMsgServCids) debugInfo.ocMsgServCids = {
+                    raw: this.ccTransact.ccMetadata.userData[cfgSettings.ccMetadata.ocMsgServCidsKey],
+                    string: this.ccTransact.ccMetadata.userData[cfgSettings.ccMetadata.ocMsgServCidsKey].toString()
+                };
+                Catenis.logger.DEBUG('>>>>>> Spend service credit Colored Coins metadata', debugInfo);
+                this.serviceTxids = hasServTxids ? JSON.parse(this.ccTransact.ccMetadata.userData[cfgSettings.ccMetadata.servTxidsKey].toString()) : [];
+                this.ocMsgServiceCids = hasOCMsgServCids ? JSON.parse(this.ccTransact.ccMetadata.userData[cfgSettings.ccMetadata.ocMsgServCidsKey].toString()) : [];
             }
             else {
                 // Colored Coins metadata missing. Try to get service transactions from
@@ -157,7 +178,8 @@ export class SpendServiceCreditTransaction extends events.EventEmitter {
                 });
 
                 if (docSpendServCredTx !== undefined) {
-                    this.serviceTxids = docSpendServCredTx.info.spendServiceCredit.serviceTxids;
+                    this.serviceTxids = docSpendServCredTx.info.spendServiceCredit.serviceTxids || [];
+                    this.ocMsgServiceCids = docSpendServCredTx.info.spendServiceCredit.ocMsgServiceCids || [];
                 }
                 else {
                     // Unable to retrieve spend service credit transaction from local database.
@@ -176,12 +198,25 @@ export class SpendServiceCreditTransaction extends events.EventEmitter {
 
             this.txChanged = false;
 
-            if (addNoBillingServTxs) {
-                const extServTxids = Util.mergeArrays(this.serviceTxids, getServiceTxsWithNoBilling());
+            if (addNoBillingServData) {
+                const serviceData = getServiceDataWithNoBilling();
 
-                if (extServTxids.length > this.serviceTxids.length) {
-                    this.serviceTxids = extServTxids;
-                    this.txChanged = true;
+                if (serviceData.serviceTxids) {
+                    const extServTxids = Util.mergeArrays(this.serviceTxids, serviceData.serviceTxids);
+
+                    if (extServTxids.length > this.serviceTxids.length) {
+                        this.serviceTxids = extServTxids;
+                        this.txChanged = true;
+                    }
+                }
+
+                if (serviceData.ocMsgServiceCids) {
+                    const extOCMsgServCids = Util.mergeArrays(this.ocMsgServiceCids, serviceData.ocMsgServiceCids);
+
+                    if (extOCMsgServCids.length > this.ocMsgServiceCids.length) {
+                        this.ocMsgServiceCids = extOCMsgServCids;
+                        this.txChanged = true;
+                    }
                 }
             }
 
@@ -207,6 +242,7 @@ export class SpendServiceCreditTransaction extends events.EventEmitter {
             this.rbfTxInfo = undefined;
             this.clientIds = [];
             this.serviceTxids = [];
+            this.ocMsgServiceCids = [];
             this.fee = 0;
             this.change = 0;
             this.txChanged = false;
@@ -247,6 +283,7 @@ SpendServiceCreditTransaction.prototype.clone = function () {
 
     clone.clientIds = _und.clone(clone.clientIds);
     clone.serviceTxids = _und.clone(clone.serviceTxids);
+    clone.ocMsgServiceCids = _und.clone(clone.ocMsgServiceCids);
     clone.txids = _und.clone(clone.txids);
 
     return clone;
@@ -280,8 +317,14 @@ SpendServiceCreditTransaction.prototype.needsToSend = function () {
     return this.txChanged && this.txFunded;
 };
 
+// Arguments:
+//  client [Object(Client)] An instance of Catenis Client object
+//  serviceDataRef [String] Either the blockchain ID of the service transaction or the IPFS CID of the off-chain
+//                           message related service data entity (off-chain message envelope)
+//  price [Number] Price charged for the service expressed in Catenis service credit's lowest units
+//
 // NOTE: make sure that this method is called from code executed from the CCFundSource.utxoCS critical section object
-SpendServiceCreditTransaction.prototype.payForService = function (client, serviceTxid, price) {
+SpendServiceCreditTransaction.prototype.payForService = function (client, serviceDataRef, price) {
     if (!this.noMorePaymentsAccepted) {
         const newCcTransact = this.ccTransact.clone();
 
@@ -417,22 +460,42 @@ SpendServiceCreditTransaction.prototype.payForService = function (client, servic
         }
 
         let newServiceTxids;
+        let newOCMsgServiceCids;
         const ccMetadata = new CCMetadata();
 
-        if (serviceTxid) {
-            // Save ID of service transaction the service provided by which is being paid and
-            //  add it to Colored Coins metadata
-            newServiceTxids = this.serviceTxids.concat();
-            newServiceTxids.push(serviceTxid);
+        if (serviceDataRef) {
+            if (!Util.isValidCid(serviceDataRef)) {
+                // Service transaction ID
 
-            ccMetadata.setFreeUserData(cfgSettings.ccMetadata.servTxidsKey, Buffer.from(JSON.stringify(newServiceTxids)), true);
+                // Save ID of service transaction the service provided by which is being paid to
+                //  add it to Colored Coins metadata
+                newServiceTxids = this.serviceTxids.concat();
+                newServiceTxids.push(serviceDataRef);
+            }
+            else {
+                // Off-Chain message envelope CID
+
+                // Save IPFS CID of off-chain message envelope the service provided by which is being paid to
+                //  add it to Colored Coins metadata
+                newOCMsgServiceCids = this.ocMsgServiceCids.concat();
+                newOCMsgServiceCids.push(serviceDataRef);
+            }
+
+            if (newServiceTxids || this.serviceTxids.length > 0) {
+                ccMetadata.setFreeUserData(cfgSettings.ccMetadata.servTxidsKey, Buffer.from(JSON.stringify(newServiceTxids || this.serviceTxids)), true);
+            }
+
+            if (newOCMsgServiceCids || this.ocMsgServiceCids.length > 0) {
+                ccMetadata.setFreeUserData(cfgSettings.ccMetadata.ocMsgServCidsKey, Buffer.from(JSON.stringify(newOCMsgServiceCids || this.ocMsgServiceCids)), true);
+            }
             Catenis.logger.DEBUG('>>>>>> New spend service credit Colored Coins metadata', {
-                newServiceTxids: newServiceTxids,
+                newServiceTxids: newServiceTxids || this.serviceTxids,
+                newOCMsgServiceCids: newOCMsgServiceCids || this.ocMsgServiceCids,
                 ccMetadata: ccMetadata
             });
         }
         else {
-            // No service transaction ID passed. Add a placeholder metadata for now
+            // No service data reference passed. Add a placeholder metadata for now
             ccMetadata.setFreeUserData(cfgSettings.ccMetadata.placeholder.key, cfgSettings.ccMetadata.placeholder.value);
         }
 
@@ -529,6 +592,10 @@ SpendServiceCreditTransaction.prototype.payForService = function (client, servic
             this.serviceTxids = newServiceTxids;
         }
 
+        if (newOCMsgServiceCids) {
+            this.ocMsgServiceCids = newOCMsgServiceCids;
+        }
+
         if (newClient) {
             // Save client Id
             this.clientIds.push(client.clientId);
@@ -545,23 +612,54 @@ SpendServiceCreditTransaction.prototype.payForService = function (client, servic
     }
 };
 
-SpendServiceCreditTransaction.prototype.setServiceTxid = function (serviceTxid) {
-    // Save ID of service transaction the service provided by which is being paid and
-    //  add it to Colored Coins metadata
-    const newServiceTxids = this.serviceTxids.concat();
-    newServiceTxids.push(serviceTxid);
+// Arguments:
+//  serviceDataRef [String] Either the blockchain ID of the service transaction or the IPFS CID of the off-chain
+//                           message related service data entity (off-chain message envelope)
+SpendServiceCreditTransaction.prototype.setServiceDataRef = function (serviceDataRef) {
+    let newServiceTxids;
+    let newOCMsgServiceCids;
+
+    if (!Util.isValidCid(serviceDataRef)) {
+        // Service transaction ID
+
+        // Save ID of service transaction the service provided by which is being paid to
+        //  add it to Colored Coins metadata
+        newServiceTxids = this.serviceTxids.concat();
+        newServiceTxids.push(serviceDataRef);
+    }
+    else {
+        // Off-Chain message envelope CID
+
+        // Save IPFS CID of off-chain message envelope the service provided by which is being paid to
+        //  add it to Colored Coins metadata
+        newOCMsgServiceCids = this.ocMsgServiceCids.concat();
+        newOCMsgServiceCids.push(serviceDataRef);
+    }
 
     const ccMetadata = new CCMetadata();
 
-    ccMetadata.setFreeUserData(cfgSettings.ccMetadata.servTxidsKey, Buffer.from(JSON.stringify(newServiceTxids)), true);
+    if (newServiceTxids || this.serviceTxids.length > 0) {
+        ccMetadata.setFreeUserData(cfgSettings.ccMetadata.servTxidsKey, Buffer.from(JSON.stringify(newServiceTxids || this.serviceTxids)), true);
+    }
+
+    if (newOCMsgServiceCids || this.ocMsgServiceCids.length > 0) {
+        ccMetadata.setFreeUserData(cfgSettings.ccMetadata.ocMsgServCidsKey, Buffer.from(JSON.stringify(newOCMsgServiceCids || this.ocMsgServiceCids)), true);
+    }
     Catenis.logger.DEBUG('>>>>>> New spend service credit Colored Coins metadata', {
-        newServiceTxids: newServiceTxids,
+        newServiceTxids: newServiceTxids || this.serviceTxids,
+        newOCMsgServiceCids: newOCMsgServiceCids || this.ocMsgServiceCids,
         ccMetadata: ccMetadata
     });
 
     this.ccTransact.replaceCcMetadata(ccMetadata);
 
-    this.serviceTxids = newServiceTxids;
+    if (newServiceTxids) {
+        this.serviceTxids = newServiceTxids;
+    }
+
+    if (newOCMsgServiceCids) {
+        this.ocMsgServiceCids = newOCMsgServiceCids;
+    }
 };
 
 // NOTE: make sure that this method is called from code executed from the FundSource.utxoCS critical section object
@@ -942,10 +1040,19 @@ SpendServiceCreditTransaction.prototype.sendTransaction = function (isTerminal =
             }
 
             // Save sent transaction onto local database
-            this.ccTransact.saveSentTransaction(Transaction.type.spend_service_credit, {
-                clientIds: this.clientIds,
-                serviceTxids: this.serviceTxids
-            });
+            const info = {
+                clientIds: this.clientIds
+            };
+
+            if (this.serviceTxids.length > 0) {
+                info.serviceTxids = this.serviceTxids;
+            }
+
+            if (this.ocMsgServiceCids.length > 0) {
+                info.ocMsgServiceCids = this.ocMsgServiceCids;
+            }
+
+            this.ccTransact.saveSentTransaction(Transaction.type.spend_service_credit, info);
 
             if (prevLastSentCcTransact !== undefined) {
                 // Update entry of previous spend service credit transaction to indicate that it has been replaced
@@ -1028,14 +1135,14 @@ SpendServiceCreditTransaction.prototype.getFeeInfo = function () {
 
         return {
             fee: lastSentTxFee,
-            feeShare: new BigNumber(lastSentTxFee).dividedBy(this.serviceTxids.length).decimalPlaces(0, BigNumber.ROUND_HALF_EVEN).toNumber()
+            feeShare: new BigNumber(lastSentTxFee).dividedBy(this.serviceDataRefs.length).decimalPlaces(0, BigNumber.ROUND_HALF_EVEN).toNumber()
         }
     }
 };
 
 // Return service transaction IDs that are in this spend service credit transact but not in the other one
-SpendServiceCreditTransaction.prototype.missingServiceTxids = function (otherSpendServCredTx) {
-    const diffResult = Util.diffArrays(otherSpendServCredTx.serviceTxids, this.serviceTxids);
+SpendServiceCreditTransaction.prototype.missingServiceDataRefs = function (otherSpendServCredTx) {
+    const diffResult = Util.diffArrays(otherSpendServCredTx.serviceDataRefs, this.serviceDataRefs);
 
     return diffResult !== undefined && diffResult.added !== undefined ? diffResult.added : [];
 };
@@ -1281,17 +1388,41 @@ function checkSystemFunding() {
     Catenis.ctnHubNode.checkServicePaymentPayTxExpenseFundingBalance();
 }
 
-function getServiceTxsWithNoBilling() {
-    return Catenis.db.collection.Billing.find({
+function getServiceDataWithNoBilling() {
+    const result = {};
+
+    Catenis.db.collection.Billing.find({
         servicePaymentTx: {
             $exists: false
         }
     }, {
         fields: {
-            'serviceTx.txid': 1
+            'serviceTx.txid': 1,
+            'offChainMsgServiceData.msgEnvelope.cid': 1
         }
-    }).map((doc) => doc.serviceTx.txid);
+    }).forEach((doc) => {
+        if (doc.serviceTx) {
+            if (!result.serviceTxids) {
+                result.serviceTxids = [doc.serviceTx.txid];
+            }
+            else {
+                result.serviceTxids.push(doc.serviceTx.txid);
+            }
+        }
+
+        if (doc.offChainMsgServiceData) {
+            if (!result.ocMsgServiceCids) {
+                result.ocMsgServiceCids = [doc.offChainMsgServiceData.msgEnvelope.cid];
+            }
+            else {
+                result.ocMsgServiceCids.push(doc.offChainMsgServiceData.msgEnvelope.cid);
+            }
+        }
+    });
+
+    return result;
 }
+
 
 // Module code
 //

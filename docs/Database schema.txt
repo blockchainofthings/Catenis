@@ -4,7 +4,8 @@ Catenis app database schema:
 Application {
   _id: [string], // MongoDB internal document ID provided by Meteor
   seedHmac: [string],  // Base-64 formatted HMAC-SHA256 signature of a predefined text using the application seed as the key. This is used to validate the application seed
-  lastBlockHeight: [number]  // Height of last blockchain block that has already been processed by the application
+  lastBlockHeight: [number],  // Height of last blockchain block that has already been processed by the application
+  lastRetrievedOCMsgDataDate: [date/time]  // Date and time when Catenis off-chain message data (either envelope or receipt) has been last retrieved
 }
 
 BitcoinFees {
@@ -52,6 +53,17 @@ IssuedBlockchainAddress {
                                 //  If set to null, address never expires; useful for unlocked Colored Coins issuing assets
   status: [string],  // Valid values: 'new' (from creation util expiration date), 'expired' (after expiration date while there are UTXOs associated with it), 'obsolete' (after expiration date if there are no UTXOs associated with it), 'nonexistent' (address for given index does not exist), 'discarded' (excluded from current available range of addresses of that type)
   lastStatusChangedDate: [date/time]  // Date and time when status has been last modified
+}
+
+IssuedOffChainAddress {
+  _id: [string], // MongoDB internal document ID provided by Meteor
+  type: [string],  // Name of address type (HD node extended key type)
+  parentPath: [string],  // Path of the HD node from which this address is derived
+  path: [string],  // The HD node path which identifies this address
+  addrIndex: [integer],  // The position occupied by this address within the range of addresses of that type
+  pubKeyHash: [string],  // Base-64 formatted HASH160 hash of the ECDSA public key that represents the off-chain address
+  issuedDate: [date/time],  // Date and time when address has been issued (doc/rec created)
+  isNonExistent: [boolean]  // Indicates that the address for the given index does not exist
 }
 
 License {
@@ -171,8 +183,11 @@ Message {
   targetDeviceId: [string],  // External ID of the device to which message had been sent. This field should only be present for sent messages (action = 'send')
   readConfirmationEnabled: [boolean],  // Indicates whether message was sent with read confirmation enabled. This field should only be present for sent messages (action = 'send')
   isEncrypted: [boolean],   // Indicates whether stored message is encrypted
-  blockchain: {
-    txid: [string],  // Blockchain attributed ID (hash) of transaction created to record the message
+  offChain: {  // This field should only exist for off-chain messages
+    msgEnvCid: [string]  // IPFS CID of the Catenis off-chain message envelope used to record the message
+  },
+  blockchain: {  // In case of off-chain messages, this field is only written at a later time when the Settle Off-Chain Messages tx is sent
+    txid: [string],  // Blockchain attributed ID (hash) of transaction created to record the message or, in case of off-chain messages, to settle the off-chain messages onto the blockchain
     confirmed: [boolean]  // Indicates whether transaction created to record the message has already been confirmed
   },
   externalStorage: {
@@ -255,7 +270,7 @@ MessageChunk {
 
 SentTransaction {
   _id: [string], // MongoDB internal document ID provided by Meteor
-  type: [string], // Identifies the type of transaction that was sent. Valid values (from Catenis.Transaction.type): 'funding', 'credit_service_account', 'store_bcot', 'redeem_bcot', 'spend_service_credit', 'send_message', 'log_message', 'read_confirmation', 'issue_asset', 'transfer_asset'
+  type: [string], // Identifies the type of transaction that was sent. Valid values (from Catenis.Transaction.type): 'funding', 'credit_service_account', 'store_bcot', 'redeem_bcot', 'spend_service_credit', 'send_message', 'log_message', 'read_confirmation', 'issue_asset', 'transfer_asset', 'settle_off_chain_messages'
   txid: [string], // Blockchain attributed ID (hash) of the sent transaction
   sentDate: [date/time], // Date and time when transaction was sent to the blockchain network
   confirmation: {
@@ -294,7 +309,8 @@ SentTransaction {
     },
     spendServiceCredit: { // Information for spend service credit transaction
       clientIds: [Array(string)],  // External ID of clients that are the owners of the service account from where Catenis service credits are spent
-      serviceTxids: [Array(string)]  // Blockchain assigned ID of transactions used to convey service that are paid by this tx
+      serviceTxids: [Array(string)],  // Blockchain assigned ID of transactions used to convey service that are paid by this tx
+      ocMsgServiceCids: [Array(string)]  // IPFS CID of Catenis off-chain message envelopes used to convey off-chain message related services (log/send off-chain messages)
     },
     sendMessage: { // Information for send message transactions
       originDeviceId: [string], // External ID of the device that sent the message
@@ -334,6 +350,9 @@ SentTransaction {
       receivingDeviceId: [string], // External ID of the device that receives the assets
       amount: [number],            // Amount of asset transferred
       changeAmount: [number]       // Amount of asset sent back to sending device as change
+    },
+    settleOffChainMessages: {
+      offChainMsgDataCids: [Array(string)]  // List of IPFS CIDs of Catenis off-chain message data (either envelope or receipt) that have been settled to the blockchain
     }
   },
   originalTxid: [string]  // Blockchain attributed ID (hash) that had been originally assigned to the transaction. If this field exists, it means that this transaction's ID had been modified due to malleability, and the txid field has the modified tx id.
@@ -341,7 +360,8 @@ SentTransaction {
 
 ReceivedTransaction {
   _id: [string], // MongoDB internal document ID provided by Meteor
-  type: [string], // Identifies the type of transaction that was received. Valid values (from Catenis.Transaction.type): 'sys_funding', 'bcot_payment', 'bcot_replenishment', 'credit_service_account', 'send_message', 'read_confirmation', 'issue_asset', 'transfer_asset'
+  type: [string], // Identifies the type of transaction that was received. Valid values (from Catenis.Transaction.type): 'sys_funding', 'bcot_payment', 'bcot_replenishment', 'credit_service_account', 'send_message', 'read_confirmation', 'issue_asset', 'transfer_asset', 'settle_off_chain_messages'
+                  //  Note: only settle off-chain messages tx containing off-chain message envelopes saved by this Catenis node or off-chain message receipts for off-chain message envelopes sent by this Catenis node are added to this DB collection
   txid: [string], // Blockchain attributed ID (hash) of the received transaction
   receivedDate: [date/time], // Date and time when transaction was received. This is derived from timereceived property returned by gettransaction RPC method
   sentTransaction_id: [string], // MongoDB internal ID of SentTransaction doc/rec which corresponds to this transaction. This field should be filled (exist) for all received transactions that have been sent by this Catenis node. Note that for transactions of the 'sys_funding' type this field must never be filled (exist) since those types of transactions are not sent by the system
@@ -406,9 +426,62 @@ ReceivedTransaction {
       receivingDeviceId: [string], // External ID of the device that receives the assets
       amount: [number],            // Amount of asset transferred
       changeAmount: [number]       // Amount of asset sent back to sending device as change
+    },
+    settleOffChainMessages: {
+      offChainMsgDataCids: [Array(string)]  // List of IPFS CIDs of Catenis off-chain message data (either envelope or receipt) that have been settled to the blockchain
     }
   },
   originalTxid: [string]  // Blockchain attributed ID (hash) that had been originally assigned to the transaction. If this field exists, it means that this transaction's ID had been modified due to malleability, and the txid field has the modified tx id.
+}
+
+SavedOffChainMsgData {
+  _id: [string], // MongoDB internal document ID provided by Meteor
+  dataType: [string],  // Identifies the type of Catenis off-chain message data that was saved. Valid values (from ctnOffChainLib.OffChainData.msgDataType): 'msg-envelope', 'msg-receipt'
+  msgType: [string],  // Identifies the type of message referred by the Catenis off-chain message envelope. Valid values (from ctnOffChainLib.MessagEnvelope.msgType): 'log-message', 'send-message'.
+                      //  Note: this field should only exist when dataType field equals 'msg-envelope'
+  cid: [string],  // IPFS CID of Catenis off-chain message data
+  savedDate: [date/time],  // Date and time when Catenis off-chain message data has been saved to Catenis node's IPFS repository
+  settlement: {
+    settled: [boolean],  // Indicates whether this Catenis off-chain message has already been settled to the blockchain
+    settleOffChainMsgsTxid: [string]  // Blockchain attributed ID (hash) of the transaction used to settle this Catenis off-chain message to the blockchain (Settle Off-Chain Messages tx)
+  },
+  info: {  // Specific information about the Catenis off-chain message data according to its type
+    msgEnvelope: {
+      logMessage: {
+        deviceId: [string] // External ID of the device that logged the message
+      },
+      sendMessage: {
+        originDeviceId: [string], // External ID of the device that sent the message
+        targetDeviceId: [string] // External ID of the device that receives the message
+      }
+    }
+    msgReceipt: {
+      sendMsgEnvelopeCid: [string]  // IPFS CID of Catenis off-chain message envelope that refers to the sent message for which this receipt is issued
+    }
+  }
+}
+
+RetrievedOffChainMsgData {
+  _id: [string], // MongoDB internal document ID provided by Meteor
+  dataType: [string],  // Identifies the type of Catenis off-chain message data that was retrieved. Valid values (from ctnOffChainLib.OffChainData.msgDataType): 'msg-envelope', 'msg-receipt'
+  msgType: [string],  // Identifies the type of message referred by the Catenis off-chain message envelope. Valid values (from ctnOffChainLib.MessagEnvelope.msgType): 'send-message'.
+                      //  Note: this field should only exist when dataType field equals 'msg-envelope'
+  cid: [string],  // IPFS CID of Catenis off-chain message data
+  savedDate: [date/time],  // Date and time when Catenis off-chain message data has been saved to Catenis node's IPFS repository
+  retrievedDate: [date/time],  // Date and time when Catenis off-chain message data has been retrieved from Catenis node's IPFS repository
+  savedOffChainMsgData_id: [string], // MongoDB internal ID of SavedOffChainMsgData doc/rec which corresponds to this Catenis off-chain message data.
+                                     //  Note: this field should be filled (exist) for all saved Catenis off-chain message data that have been saved by this Catenis node.
+  info: {  // Specific information about the Catenis off-chain message data according to its type
+    msgEnvelope: {
+      sendMessage: {
+        originDeviceId: [string], // External ID of the device that sent the message
+        targetDeviceId: [string] // External ID of the device that receives the message
+      }
+    }
+    msgReceipt: {
+      sendMsgEnvelopeCid: [string]  // IPFS CID of Catenis off-chain message envelope that refers to the sent message for which this receipt is issued
+    }
+  }
 }
 
 Malleability {
@@ -477,7 +550,25 @@ Billing {
                         //         This "complementary" doc/rec shall only include the following fields: type, clientId, deviceId, service, serviceTx.txid, serviceTx.complementaryTx.txid, serviceTx.complementaryTx.fee, createdDate
       txid: [string],  // Blockchain attributed ID (hash) of the complementary (read confirmation) transaction
       fee: [number],  // Amount, in satoshis, paid as fee for the complementary (read confirmation) transaction
-      feeShare: [number]  // Amount, in satoshis, that represents the portion of the fee paid for the complementary (read confirmation) transaction that applies this specific service (sent message)
+      feeShare: [number]  // Amount, in satoshis, that represents the portion of the fee paid for the complementary (read confirmation) transaction that applies to this specific service (sent message)
+    }
+  },
+  offChainMsgServiceData: {  // Catenis off-chain message data structures used to convey off-chain message related services (log_off_chain_message, send_off_chain_message and send_off_chain_msg_read_confirm)
+    msgEnvelope: {
+      cid: [string],  // IPFS CID of Catenis off-chain message envelope
+      settlementTx: {
+        txid: [string],  // Blockchain attributed ID (hash) of settle off-chain messages transaction containing this Catenis off-chain message envelope
+        fee: [number],   // Amount, in satoshis, paid as fee for the settle off-chain messages transaction
+        feeShare: [number]  // Amount, in satoshis, that represents the portion of the fee paid for the settle off-chain messages transaction that applies to this specific (off-chain message related) service
+      }
+    },
+    msgReceipt: {  // This field should only exist for 'send_off_chain_msg_read_confirm' service, after a Catenis off-chain message receipt data structure is retrieved (and this will only happen if the target device accepts the message and allows read message confirmation to be sent back to the origin device)
+      cid: [string],  // IPFS CID of Catenis off-chain message receipt
+      settlementTx: {
+        txid: [string],  // Blockchain attributed ID (hash) of settle off-chain messages transaction containing this Catenis off-chain message receipt
+        fee: [number],   // Amount, in satoshis, paid as fee for the settle off-chain messages transaction
+        feeShare: [number]  // Amount, in satoshis, that represents the portion of the fee paid for the settle off-chain messages transaction that applies to this specific (off-chain message related) service
+      }
     }
   },
   estimatedServiceCost: [number], - Estimated cost, in satoshis, of the service

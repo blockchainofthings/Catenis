@@ -2,9 +2,12 @@
 {
   // Parameters pertaining to the Catenis application
   "application": {
+    ctnNode: {  // Catenis node to which this instance of the application corresponds
+      pubKey: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDKqZ82mcs8IQ+ZCkEkCKwkgW5hno7Rte2XNOKuwPYXNRDtkvIQiNbmy7wJBn7Fmq+mUsaZAtf++yYsD6vbgEz4/Q2+5qCnQIebUMP4JzoWRt+qJgIcS9HdKAt/j6hlVrLzb7AhV+jLBEZ+vv9Jj7x+MIWK0qTjvWngpWrvne4S1OtuDRXbH5TY+l0UqtqlyPD/P8or1evjx5RnmzMJSde0OghfbnwqfDgQIqIW+n+Ig5Df0MR4rrelCxzPodMvjXxB6+OcK8AAAJJ+AsRGzSS3rVnviDhxPcMOm3b2LWNehKgmTuIgg6VYLhGix/BdsfyXKxnoFDG4KyriKoaE+C+X"
+    },
     "environment": "development",
     "seedFilename": "seed.test2.dat",
-    "cryptoNetwork": "testnet",  // Available values: 'bitcoin' (for Bitcoin's production blockchain), 'testnet' (for Bitcoin's test blockchain)
+    "cryptoNetwork": "regtest",  // Available values: 'bitcoin' (for Bitcoin's production blockchain), 'testnet' (for Bitcoin's test blockchain)
     "shutdownTimeout": 30000   // (30 sec.) Time, in milliseconds, that the application should wait after it receives a terminate request before it actually terminates
   },
   // Parameters pertaining to the Startup module
@@ -145,7 +148,8 @@
   "spendServiceCreditTransaction": {
     "maxNumClients": 12,  // Maximum number of clients that can be assigned to a single spend service credit transaction
     "ccMetadata": {
-      "servTxidsKey": "servTxids"  // Name (key) of Colored Coins free user metadata used to refer to BCOT Token Payment transaction
+      "servTxidsKey": "servTxids",  // Name (key) of Colored Coins free user metadata used to refer to service transaction
+      "ocMsgServCidsKey": "ocMsgServCids"  // Name (key) of Colored Coins free user metadata used to refer to off-chain message related service data (off-chain message envelope)
     },
     "unconfirmedTxTimeout": 10080,  // (7 days) Timeout, in minutes, for waiting for latest sent spend service credit tx to be confirmed (set to 7 days, which is half the default mempool tx eviction time of 14 days)
     "txSizeThresholdRatio": 0.9  // Ratio that should be applied to maximum tx size to calculate threshold for spend service credit tx size. Above that size the tx fee rate should be reset so that is is confirmed as soon as possible
@@ -172,5 +176,13 @@
   // Parameters pertaining to TwoFactorAuthentication module
   "twoFactorAuthentication": {
     "userVerificationInterval": 3600  // (1 hour) Time, in seconds, within which it is expected that the user verifies a newly issued secret key
+  },
+  // Parameters pertaining to OffChainMessagesSettlement module
+  offChainMessagesSettlement: {
+    refTimeZone: "UTC-03:00",  // Reference time zone expressed as a time difference from UTC (in the UTC+/-HH:mm format)
+    startTime: "00",  // Time of day (formatted as HH[:mm[:ss[.SSS]]]), in reference to reference time zone, when settlement cycles should start
+    cyclesPerDay: 144,//96,  // Number of settlement cycles in a day (24 hour period). Note that a value less than one can be used to designate a period
+                       //  (time between cycles) greater than 24 hours. In that case, the period shall be rounded to the nearest full hour
+    maxCyclesToPostpone: 0  // Maximum settlement cycles that can be postponed before a settle off-chain messages transaction is sent when there not enough off-chain messages to pay for tx cost
   }
 }

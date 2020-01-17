@@ -16,6 +16,10 @@ import util from 'util';
 // Third-party node modules
 import config from 'config';
 import bitcoinLib from 'bitcoinjs-lib';
+// NOTE: the following import is sort of a hack since the templates defined in the current version
+//      (5.1.6) of the bitcoinjs library was not meant to be externally exported, so it might not
+//      work for future versions of the library
+import bitcoinLib_multisig from 'bitcoinjs-lib/src/templates/multisig';
 // noinspection JSFileReferences
 import BigNumber from 'bignumber.js';
 import _und from 'underscore';
@@ -715,6 +719,14 @@ Transaction.prototype.realSize = function () {
 Transaction.prototype.getTransaction = function () {
     if (this.rawTransaction === undefined) {
         // Build transaction adding all inputs and outputs in sequence
+        //
+        // NOTE: even though bitcoinjs has deprecated the TransactionBuilder class in favor of the new Psbt
+        //      class, claiming that it will eventually be removed in a future major release, we have
+        //      decided to keep using TransactionBuilder for now because of a requirement of the Psbt class
+        //      (actually a requirement of the Partially Signed Bitcoin Transaction Format - BIP-174),
+        //      which states that: when adding an input spending a non-segwit tx output (e.g. a P2PKH output),
+        //      the whole transaction (in hex format) for the output being spent needs to be passed as a
+        //      parameter.
         const txBuilder = new bitcoinLib.TransactionBuilder(Catenis.application.cryptoNetwork),
             vins = [];
 
@@ -727,7 +739,7 @@ Transaction.prototype.getTransaction = function () {
                 txBuilder.addOutput(output.payInfo.address, output.payInfo.amount);
             }
             else if (output.type === Transaction.outputType.nullData) {
-                txBuilder.addOutput(bitcoinLib.script.nullData.output.encode(output.data), 0);
+                txBuilder.addOutput(bitcoinLib.payments.embed({data: [output.data]}).output, 0);
             }
             else if (output.type === Transaction.outputType.multisig) {
                 const pubKeys = output.payInfo.addrInfo.map((addrInfo) => {
@@ -741,7 +753,11 @@ Transaction.prototype.getTransaction = function () {
                     }
                 });
 
-                txBuilder.addOutput(bitcoinLib.script.multisig.output.encode(output.payInfo.nSigs, pubKeys), output.payInfo.amount);
+                // NOTE: we are NOT using bitcoinLib.payments.p2ms(), which is the current recommended way to generate
+                //      multisignature outputs, because it validates the public keys passed in, and, in our case,
+                //      one or more of the provided public keys can be fabricated to hold additional data that will
+                //      not fit in a null data output (which is the case with Colored Coins metadata)
+                txBuilder.addOutput(encodeMultiSigOutput(output.payInfo.nSigs, pubKeys), output.payInfo.amount);
             }
         });
 
@@ -750,7 +766,14 @@ Transaction.prototype.getTransaction = function () {
 
         this.inputs.forEach((input) => {
             if (input.addrInfo) {
-                txBuilder.sign(vins[vinIdx++], input.addrInfo.cryptoKeys.keyPair);
+                // NOTE: we are assuming that ALL tx outputs being spent are of type P2PKH
+                // TODO: review this so, in the future, other types of tx output (e.g. multisignature
+                //  and segwit outputs) can be spent
+                txBuilder.sign({
+                    prevOutScriptType: 'p2pkh',
+                    vin: vins[vinIdx++],
+                    keyPair: input.addrInfo.cryptoKeys.keyPair
+                });
             }
         });
 
@@ -1549,7 +1572,7 @@ Transaction.fromHex = function (hexTx, txTime, blockTime) {
                 }
                 else if (output.scriptPubKey.type === 'nulldata') {
                     txOutput.type = Transaction.outputType.nullData;
-                    txOutput.data = bitcoinLib.script.decompile(Buffer.from(output.scriptPubKey.hex, 'hex'))[1];
+                    txOutput.data = Buffer.concat(bitcoinLib.payments.embed({output: Buffer.from(output.scriptPubKey.hex, 'hex')}).data);
 
                     // Add information about null data
                     tx.hasNullDataOutput = true;
@@ -1557,7 +1580,7 @@ Transaction.fromHex = function (hexTx, txTime, blockTime) {
                 }
                 else if (output.scriptPubKey.type === 'multisig') {
                     // Multi-signature output. Decode scriptPubKey to get public keys
-                    const decodedScript = bitcoinLib.script.multisig.output.decode(Buffer.from(output.scriptPubKey.hex, 'hex'), false);
+                    const pubKeys = bitcoinLib.payments.p2ms({output: Buffer.from(output.scriptPubKey.hex, 'hex')}, {validate: false}).pubkeys;
 
                     txOutput.type = Transaction.outputType.multisig;
                     txOutput.payInfo = {
@@ -1568,7 +1591,7 @@ Transaction.fromHex = function (hexTx, txTime, blockTime) {
                             // Try to get information about address in multi-sig output
                             const addrInfo = Catenis.keyStore.getAddressInfo(address, true);
 
-                            return addrInfo !== null ? addrInfo : decodedScript.pubKeys[idx].toString('hex');
+                            return addrInfo !== null ? addrInfo : pubKeys[idx].toString('hex');
                         })
                     }
                 }
@@ -1717,6 +1740,12 @@ Transaction.fixMalleability = function (source, originalTxid, modifiedTxid) {
                         })
                     });
 
+                    Catenis.db.collection.SavedOffChainMsgData.update({'settlement.settleOffChainMsgsTxid': originalTxid}, {
+                        $set: {
+                            'settlement.settleOffChainMsgsTxid': modifiedTxid
+                        }
+                    });
+
                     Catenis.db.collection.Billing.update({'serviceTx.txid': originalTxid}, {
                         $set: {
                             'serviceTx.txid': modifiedTxid
@@ -1749,6 +1778,24 @@ Transaction.fixMalleability = function (source, originalTxid, modifiedTxid) {
                 Catenis.db.collection.ReceivedTransaction.update({'info.readConfirmation.spentReadConfirmTxOuts.txid': originalTxid}, {
                     $set: {
                         'info.readConfirmation.spentReadConfirmTxOuts.$.txid': modifiedTxid
+                    }
+                });
+
+                Catenis.db.collection.Billing.update({'serviceTx.complementaryTx.txid': originalTxid}, {
+                    $set: {
+                        'serviceTx.complementaryTx.txid': modifiedTxid
+                    }
+                });
+
+                Catenis.db.collection.Billing.update({'offChainMsgServiceData.msgEnvelope.settlementTx.txid': originalTxid}, {
+                    $set: {
+                        'offChainMsgServiceData.msgEnvelope.settlementTx.txid': modifiedTxid
+                    }
+                });
+
+                Catenis.db.collection.Billing.update({'offChainMsgServiceData.msgReceipt.settlementTx.txid': originalTxid}, {
+                    $set: {
+                        'offChainMsgServiceData.msgReceipt.settlementTx.txid': modifiedTxid
                     }
                 });
 
@@ -1845,6 +1892,11 @@ Transaction.type = Object.freeze({
         name: 'transfer_asset',
         description: 'Transaction used to transfer an amount of Catenis asset owned by a device to another device',
         dbInfoEntryName: 'transferAsset'
+    }),
+    settle_off_chain_messages: Object.freeze({
+        name: 'settle_off_chain_messages',
+        description: 'Transaction used to settle Catenis off-chain messages to the blockchain',
+        dbInfoEntryName: 'settleOffChainMessages'
     })
 });
 
@@ -1909,11 +1961,6 @@ Transaction.ioToken = Object.freeze({
         token: '<p2_sys_read_conf_pay_tx_exp_addr>',
         description: 'Output (or input spending such output) paying to a system read confirmation pay tx expense address'
     }),
-    p2_sys_serv_pymt_pay_tx_exp_root: Object.freeze({
-        name: 'p2_sys_serv_pymt_pay_tx_exp_root',
-        token: '<p2_sys_serv_pymt_pay_tx_exp_root>',
-        description: 'Output (or input spending such output) paying to a system service payment pay tx expense address'
-    }),
     p2_sys_serv_cred_issu_addr: Object.freeze({
         name: 'p2_sys_serv_cred_issu_addr',
         token: '<p2_sys_serv_cred_issu_addr>',
@@ -1933,6 +1980,11 @@ Transaction.ioToken = Object.freeze({
         name: 'p2_sys_bcot_sale_stck_addr',
         token: '<p2_sys_bcot_sale_stck_addr>',
         description: 'Output (or input spending such output) paying to a system BCOT token sale stock address'
+    }),
+    p2_sys_oc_msgs_setlmt_pay_tx_exp_addr: Object.freeze({
+        name: 'p2_sys_oc_msgs_setlmt_pay_tx_exp_addr',
+        token: '<p2_sys_oc_msgs_setlmt_pay_tx_exp_addr>',
+        description: 'Output (or input spending such output) paying to a system off-chain messages settlement pay tx expense address'
     }),
     p2_cln_srv_acc_cred_ln_addr: Object.freeze({
         name: 'p2_cln_srv_acc_cred_ln_addr',
@@ -2026,11 +2078,10 @@ function isTransactFuncClassToMatch(transactFuncClass) {
 // NOTE: this method DOES NOT validate whether the supplied hex-encoded string is a valid
 //        public key, which is exactly what we want since it is primarily used to convert
 //        fabricated public keys used to store Colored Coins data (basically metadata hash)
-//        that might not fit into a tx null data output. We do NOT do it by simply calling
-//        bitcoinLib.ECPair.fromPublicKeyBuffer().getAddress(), which might at first
-//        seem to be more intuitive, because the ECPair.fromPublicKeyBuffer() method checks
-//        and adjusts the pubic key before importing it, and we would end up producing a
-//        blockchain address that did not match our fabricated public key.
+//        that might not fit into a tx null data output. We do NOT do it by simply issuing
+//        the statement bitcoinLib.payments.p2pkh({pubkey, network}).address, which might
+//        at first seem to be more intuitive, because bitcoinLib.payment.p2pkh() checks
+//        whether the passed in public key is valid.
 function addressFromPublicKey(pubKey) {
     return bitcoinLib.address.toBase58Check(bitcoinLib.crypto.hash160(Buffer.from(pubKey, 'hex')), Catenis.application.cryptoNetwork.pubKeyHash);
 }
@@ -2044,6 +2095,28 @@ export function fixClone(clone) {
     }
 
     return clone;
+}
+
+function encodeMultiSigOutput (m, pubKeys) {
+    if (typeof m !== 'number' || !Array.isArray(pubKeys)) {
+        throw new Error(util.format('encodeMultiSigOutput(): method called with invalid parameters: %s', util.inspect({
+            m: m,
+            pubKeys: pubKeys
+        })));
+    }
+
+    const n = pubKeys.length;
+
+    if (n < m) {
+        throw new TypeError('encodeMultiSigOutput(): not enough pubKeys provided');
+    }
+
+    return bitcoinLib.script.compile([].concat(
+        bitcoinLib.script.OPS.OP_RESERVED + m,
+        pubKeys,
+        bitcoinLib.script.OPS.OP_RESERVED + n,
+        bitcoinLib.script.OPS.OP_CHECKMULTISIG
+    ))
 }
 
 

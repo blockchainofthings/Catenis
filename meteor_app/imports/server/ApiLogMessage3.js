@@ -1,8 +1,8 @@
 /**
- * Created by Claudio on 2019-02-18.
+ * Created by claudio on 2019-12-27
  */
 
-//console.log('[ApiLogMessage2.js]: This code just ran.');
+//console.log('[ApiLogMessage3.js]: This code just ran.');
 
 // Module variables
 //
@@ -20,14 +20,6 @@ import { Meteor } from 'meteor/meteor';
 import { Catenis } from './Catenis';
 import { successResponse, errorResponse } from './RestApi';
 import { isValidMsgEncoding, isValidMsgStorage } from './ApiLogMessage';
-
-// Config entries
-/*const config_entryConfig = config.get('config_entry');
-
-// Configuration settings
-const cfgSettings = {
-    property: config_entryConfig.get('property_name')
-};*/
 
 
 // Definition of module (private) functions
@@ -50,10 +42,15 @@ const cfgSettings = {
 //      "encrypt":  [Boolean],  - (optional, default: true) Indicates whether message should be encrypted before storing. NOTE that, when message is passed
 //                                 in chunks, this option is only taken into consideration (and thus only needs to be passed) for the final message data chunk,
 //                                 and it shall be applied to the message's contents as a whole
+//      "offChain": [Boolean],  - (optional, default: false) Indicates whether message should be processed as a Catenis off-chain message. Catenis off-chain messages
+//                                 are stored on the external storage repository and only later its reference is settled to the blockchain along with references of
+//                                 other off-chain messages. NOTE that, when message is passed in chunks, this option is only taken into consideration (and thus
+//                                 only needs to be passed) for the final message data chunk, and it shall be applied to the message's contents as a whole
 //      "storage": [String],    - (optional, default: "auto") - One of the following values identifying where the message should be stored: "auto"|"embedded"|"external".
 //                                 NOTE that, when message is passed in chunks, this option is only taken into consideration (and thus only needs to be passed)
-//                                 for the final message data chunk, and it shall be applied to the message's contents as a whole
-//      "async": [Boolean]      - (optional, default: "false") - Indicates whether processing (storage of message to the blockchain) should be done asynchronously.
+//                                 for the final message data chunk, and it shall be applied to the message's contents as a whole. ALSO note that, when the offChain
+//                                 option is set to true, this option's value is disregarded and the processing is done as if the value "external" was passed
+//      "async": [Boolean]      - (optional, default: "false") - Indicates whether processing (storage of message) should be done asynchronously.
 //                                 If set to true, a provisional message ID is returned, which should be used to retrieve the processing outcome by calling
 //                                 the MessageProgress API method. NOTE that, when message is passed in chunks, this option is only taken into consideration
 //                                 (and thus only needs to be passed) for the final message data chunk, and it shall be applied to the message's contents as a whole
@@ -67,7 +64,7 @@ const cfgSettings = {
 //                                        if not doing asynchronous processing
 //    "provisionalMessageId": [String] - (optional) Provisional message ID. Returned right after the whole message's contents is received if doing asynchronous processing
 //  }
-export function logMessage2() {
+export function logMessage3() {
     try {
         // Process request parameters
 
@@ -116,6 +113,7 @@ export function logMessage2() {
 
         let optEncoding = 'utf8',
             optEncrypt = true,
+            optOffChain = false,
             optStorage = 'auto',
             optAsync = false;
 
@@ -147,6 +145,16 @@ export function logMessage2() {
 
                 if (typeof this.bodyParams.options.encrypt !== 'undefined') {
                     optEncrypt = this.bodyParams.options.encrypt;
+                }
+
+                // options.offChain
+                if (!(typeof this.bodyParams.options.offChain === 'undefined' || typeof this.bodyParams.options.offChain === 'boolean')) {
+                    Catenis.logger.DEBUG('Invalid \'options.offChain\' parameter for POST \'messages/log\' API request', this.bodyParams);
+                    return errorResponse.call(this, 400, 'Invalid parameters');
+                }
+
+                if (typeof this.bodyParams.options.offChain !== 'undefined') {
+                    optOffChain = this.bodyParams.options.offChain;
                 }
 
                 // options.storage
@@ -226,7 +234,7 @@ export function logMessage2() {
         let logResult;
 
         try {
-            logResult = this.user.device.logMessage2(msg, optEncrypt, optStorage, undefined, optAsync);
+            logResult = this.user.device.logMessage3(msg, optEncrypt, optOffChain, optStorage, undefined, optAsync);
         }
         catch (err) {
             let error;
