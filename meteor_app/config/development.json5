@@ -112,10 +112,10 @@
   },
   // Parameters pertaining to IpfsServerMonitor module
   "ipfsServerMonitor": {
-    "enabled": false,
+    "enabled": true,
     "ipfsCluster": {
       "inUse": true,  // Indicates whether IPFS Cluster in being used
-      "numberOfPeers": 1  // Expected number of active IPFS Cluster nodes
+      "numberOfPeers": 2  // Expected number of active IPFS Cluster nodes
     },
     "checkInterval": 30  // (30 sec.) Time, in seconds, defining the period within which IPFS server shall be checked to make sure it is still alive
   },
