@@ -177,6 +177,11 @@
   "twoFactorAuthentication": {
     "userVerificationInterval": 3600  // (1 hour) Time, in seconds, within which it is expected that the user verifies a newly issued secret key
   },
+  // Parameters pertaining to CatenisOffChainClient module
+  catenisOffChainClient: {
+    hostname: "catenis-local-1",
+    port: 8199,
+  },
   // Parameters pertaining to OffChainMessagesSettlement module
   offChainMessagesSettlement: {
     refTimeZone: "UTC-03:00",  // Reference time zone expressed as a time difference from UTC (in the UTC+/-HH:mm format)
