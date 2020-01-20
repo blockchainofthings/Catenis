@@ -134,5 +134,13 @@
   // Parameters pertaining to BcotToken module
   "bcotToken": {
     "bcotOmniPropertyId": 2147484804  // BCOT token Omni property ID
+  },
+  // Parameters pertaining to OffChainMessagesSettlement module
+  offChainMessagesSettlement: {
+    refTimeZone: "UTC-05:00",  // Reference time zone expressed as a time difference from UTC (in the UTC+/-HH:mm format)
+    startTime: "00:00:00",  // Time of day (formatted as HH[:mm[:ss[.SSS]]]), in reference to reference time zone, when settlement cycles should start
+    cyclesPerDay: 4,  // Number of settlement cycles in a day (24 hour period). Note that a value less than one can be used to designate a period
+                      //  (time between cycles) greater than 24 hours. In that case, the period shall be rounded to the nearest full hour
+    maxCyclesToPostpone: 4  // Maximum settlement cycles that can be postponed before a settle off-chain messages transaction is sent when there not enough off-chain messages to pay for tx cost
   }
 }
