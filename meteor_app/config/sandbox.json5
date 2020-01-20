@@ -98,12 +98,12 @@
     "testnetRpcPort": 17332, // Port used to connect with Omni Core server via its RPC interface to interact with bitcoin's testnet blockchain
     "rpcConnectionTimeout": 30000  // (30 sec.) Timeout, in milliseconds, for RPC connection with the Omni Core server
   },
-  // Parameter pertaining to IpfsClient module
+  // Parameters pertaining to IpfsClient module
   "ipfsClient": {
     "apiHost": "127.0.0.1",
     "apiPort": 9095  // Connects to IPFS Cluster node (via its HTTP proxy) instead of to IPFS node (port 5001) directly
   },
-  // Parameter pertaining to IpfsClusterClient module
+  // Parameters pertaining to IpfsClusterClient module
   "ipfsClusterClient": {
     "apiUrl": "http://localhost:9094/",  // URL of IPFS Cluster REST API
     "localAddress": null,  // (optional, can be set to null) IP address of local network interface to use to connect to the IPFS Cluster RESP API. If not specified, the default network interface is used

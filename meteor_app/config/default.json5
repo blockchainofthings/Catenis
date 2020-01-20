@@ -97,7 +97,7 @@
   "parseRequestBody": {
     "reqBodySizeLimit": 15  // Maximum size, in MB, of data that can be received as the body of requests to the Catenis API methods
   },
-  // Parameters pertaining to RestApi module
+  // Parameters pertaining to CompressResponseBody module
   "compressResponseBody": {
     "useCompression": true,   // Indicate whether response body should be compressed
     "compressThreshold": 1024   // Minimum size, in bytes, of response body for it to be compressed
@@ -590,13 +590,13 @@
     "nullDataMaxSize": 80,  // Maximum size, in bytes, of data that fits in null data output
     "defaultStorageProvider": "ipfs"
   },
-  // Parameter pertaining to IpfsClient module
+  // Parameters pertaining to IpfsClient module
   "ipfsClient": {
     "apiHost": "catenis-ipfs",
     "apiPort": 5001,
     "apiProtocol": "http"
   },
-  // Parameter pertaining to IpfsClusterClient module
+  // Parameters pertaining to IpfsClusterClient module
   "ipfsClusterClient": {
     "apiUrl": "http://catenis-ipfs:9094/",  // URL of IPFS Cluster REST API
     "localAddress": null,  // (optional, can be set to null) IP address of local network interface to use to connect to the IPFS Cluster RESP API. If not specified, the default network interface is used
@@ -654,7 +654,7 @@
       "signValidDays": 7  // Number of days from specified signature date after which signature is not considered valid anymore
     }
   },
-  // Parameters pertaining to NotifyMsgDispatcher module
+  // Parameters pertaining to Notification module
   "notification": {
     "notifyRootPath": "notify",  // Root path to be used for all notification message dispatcher based on the HTTP protocol.
                                 //  NOTE: the Rest API root path (see restApi section above) plus the API version shall be prepended to this path to form the fully qualified notification root path

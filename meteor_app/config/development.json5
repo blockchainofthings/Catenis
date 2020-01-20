@@ -57,7 +57,7 @@
   "parseRequestBody": {
     "reqBodySizeLimit": 15  // Maximum size, in MB, of data that can be received as the body of requests to the Catenis API methods
   },
-  // Parameters pertaining to RestApi module
+  // Parameters pertaining to CompressResponseBody module
   "compressResponseBody": {
     "useCompression": true,   // Indicate whether response body should be compressed
     "compressThreshold": 1024   // Minimum size, in bytes, of response body for it to be compressed
@@ -98,13 +98,13 @@
     "rpcConnectionTimeout": 30000,  // (30 sec.) Timeout, in milliseconds, for RPC connection with the Omni Core server
     "rescanTimeout": 900000 // (15 min.) Timeout, in milliseconds, for waiting on Omni Core to finish rescanning the blockchain after importing private key
   },
-  // Parameter pertaining to IpfsClient module
+  // Parameters pertaining to IpfsClient module
   "ipfsClient": {
     "apiHost": "catenis-local-1",
     "apiPort": 9095,  // Connects to IPFS Cluster node (via its HTTP proxy) instead of to IPFS node (port 5001) directly
     "apiProtocol": "http"
   },
-  // Parameter pertaining to IpfsClusterClient module
+  // Parameters pertaining to IpfsClusterClient module
   "ipfsClusterClient": {
     "apiUrl": "http://catenis-local-1:9094/",  // URL of IPFS Cluster REST API
     "localAddress": null,  // (optional, can be set to null) IP address of local network interface to use to connect to the IPFS Cluster RESP API. If not specified, the default network interface is used
