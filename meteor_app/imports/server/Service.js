@@ -668,23 +668,17 @@ Service.avrgDebitServAccTxCostPerServCtrl = {
 };
 
 Service.clientPaidService = Object.freeze({
-    log_message: Object.freeze({
-        name: 'log_message',
-        label: 'Log Message',
-        description: 'Record a message onto the blockchain',
-        costFunction: estimatedLogMessageTxCost
-    }),
     log_off_chain_message: Object.freeze({
         name: 'log_off_chain_message',
         label: 'Log Off-Chain Message',
         description: 'Record a message off-chain and later settle it to the blockchain',
         costFunction: estimatedLogOffChainMessageCost
     }),
-    send_message: Object.freeze({
-        name: 'send_message',
-        label: 'Send Message',
-        description: 'Record a message onto the blockchain addressing it to another device (with no read confirmation)',
-        costFunction: estimatedSendMessageTxCost
+    log_message: Object.freeze({
+        name: 'log_message',
+        label: 'Log Message',
+        description: 'Record a message onto the blockchain',
+        costFunction: estimatedLogMessageTxCost
     }),
     send_off_chain_message: Object.freeze({
         name: 'send_off_chain_message',
@@ -692,17 +686,23 @@ Service.clientPaidService = Object.freeze({
         description: 'Record a message off-chain addressing it to another device (with no read confirmation) and later settle it to the blockchain',
         costFunction: estimatedSendOffChainMessageCost
     }),
-    send_msg_read_confirm: Object.freeze({
-        name: 'send_msg_read_confirm',
-        label: 'Send Message w/Read Confirmation',
-        description: 'Record a message onto the blockchain addressing it to another device, requesting to receive a read confirm',
-        costFunction: estimatedSendMessageReadConfirmTxCost
+    send_message: Object.freeze({
+        name: 'send_message',
+        label: 'Send Message',
+        description: 'Record a message onto the blockchain addressing it to another device (with no read confirmation)',
+        costFunction: estimatedSendMessageTxCost
     }),
     send_off_chain_msg_read_confirm: Object.freeze({
         name: 'send_off_chain_msg_read_confirm',
         label: 'Send Off-Chain Message w/Read Confirmation',
         description: 'Record a message off-chain addressing it to another device, requesting to receive a read confirm, and later settle it to the blockchain',
         costFunction: estimatedSendOffChainMessageReadConfirmCost
+    }),
+    send_msg_read_confirm: Object.freeze({
+        name: 'send_msg_read_confirm',
+        label: 'Send Message w/Read Confirmation',
+        description: 'Record a message onto the blockchain addressing it to another device, requesting to receive a read confirm',
+        costFunction: estimatedSendMessageReadConfirmTxCost
     }),
     issue_asset: Object.freeze({
         name: 'issue_asset',
