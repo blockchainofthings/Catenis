@@ -57,7 +57,7 @@ import { isValidMsgEncoding, isValidMsgStorage } from './ApiLogMessage';
 //      "encrypt":  [Boolean],         - (optional, default: true) Indicates whether message should be encrypted before storing. NOTE that, when message is passed
 //                                        in chunks, this option is only taken into consideration (and thus only needs to be passed) for the final message data chunk,
 //                                        and it shall be applied to the message's contents as a whole
-//      "offChain": [Boolean],         - (optional, default: false) Indicates whether message should be processed as a Catenis off-chain message. Catenis off-chain messages
+//      "offChain": [Boolean],         - (optional, default: true) Indicates whether message should be processed as a Catenis off-chain message. Catenis off-chain messages
 //                                        are stored on the external storage repository and only later its reference is settled to the blockchain along with references of
 //                                        other off-chain messages. NOTE that, when message is passed in chunks, this option is only taken into consideration (and thus
 //                                        only needs to be passed) for the final message data chunk, and it shall be applied to the message's contents as a whole
@@ -186,7 +186,7 @@ export function sendMessage4() {
 
         let optEncoding = 'utf8',
             optEncrypt = true,
-            optOffChain = false,
+            optOffChain = true,
             optStorage = 'auto',
             optReadConfirmation = false,
             optAsync = false;

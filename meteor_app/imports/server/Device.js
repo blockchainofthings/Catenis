@@ -553,7 +553,7 @@ Device.prototype.sendMessage2 = function (message, targetDeviceId, encryptMessag
 //    }
 //    targetDeviceId [String]    - (optional) Device ID identifying the device to which the message should be sent
 //    encryptMessage [Boolean]   - (optional, default: true) Indicates whether message should be encrypted before sending it
-//    offChain [Boolean]         - (optional, default: false) Indicates whether message should be processed as a Catenis off-chain message. Catenis off-chain
+//    offChain [Boolean]         - (optional, default: true) Indicates whether message should be processed as a Catenis off-chain message. Catenis off-chain
 //                                  messages are stored on the external storage repository and only later its reference is settled to the blockchain along
 //                                  with references of other off-chain messages
 //    storageScheme [String]     - (optional, default: 'auto') A field of the CatenisMessage.storageScheme property identifying how the message should be stored
@@ -570,7 +570,7 @@ Device.prototype.sendMessage2 = function (message, targetDeviceId, encryptMessag
 //      messageId: [String]  - (optional) ID of sent message. Returned after the whole message's contents is sent if not doing asynchronous processing
 //      provisionalMessageId: [String]  - (optional) Provisional message ID. Returned after the whole message's contents is sent if doing asynchronous processing
 //    }
-Device.prototype.sendMessage3 = function (message, targetDeviceId, encryptMessage = true, offChain = false, storageScheme = 'auto', readConfirmation = false, storageProvider, async = false) {
+Device.prototype.sendMessage3 = function (message, targetDeviceId, encryptMessage = true, offChain = true, storageScheme = 'auto', readConfirmation = false, storageProvider, async = false) {
     // Make sure that device is not deleted
     if (this.status === Device.status.deleted.name) {
         // Cannot send message from a deleted device. Log error and throw exception
@@ -997,7 +997,7 @@ Device.prototype.logMessage2 = function (message, encryptMessage = true, storage
 //                                      returned in the 'continuationToken' field of the response from the previously sent message data chunk
 //    }
 //    encryptMessage [Boolean] - (optional, default: true) Indicates whether message should be encrypted before logging it
-//    offChain [Boolean]       - (optional, default: false) Indicates whether message should be processed as a Catenis off-chain message. Catenis off-chain
+//    offChain [Boolean]       - (optional, default: true) Indicates whether message should be processed as a Catenis off-chain message. Catenis off-chain
 //                                messages are stored on the external storage repository and only later its reference is settled to the blockchain along
 //                                with references of other off-chain messages
 //    storageScheme [String]   - (optional, default: 'auto') A field of the CatenisMessage.storageScheme property identifying how the message should be stored.
@@ -1015,7 +1015,7 @@ Device.prototype.logMessage2 = function (message, encryptMessage = true, storage
 //      messageId: [String]  - (optional) ID of logged message. Returned after the whole message's contents is sent if not doing asynchronous processing
 //      provisionalMessageId: [String]  - (optional) Provisional message ID. Returned after the whole message's contents is sent if doing asynchronous processing
 //    }
-Device.prototype.logMessage3 = function (message, encryptMessage = true, offChain = false, storageScheme = 'auto', storageProvider, async = false) {
+Device.prototype.logMessage3 = function (message, encryptMessage = true, offChain = true, storageScheme = 'auto', storageProvider, async = false) {
     // Make sure that device is not deleted
     if (this.status === Device.status.deleted.name) {
         // Cannot log message for a deleted device. Log error and throw exception
