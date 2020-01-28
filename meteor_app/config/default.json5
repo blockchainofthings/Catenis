@@ -115,12 +115,25 @@
     "dbPurgeInterval": 86400000  // (24 hours) Time interval, in milliseconds, for executing process to purge database (delete oldest fees docs/recs)
   },
   // Parameters pertaining to BitcoinTicker module
-  "bitcoinTicker": {
-    "apiUrl": "https://apiv2.bitcoinaverage.com/indices/global/",  // URL of API (from BitcoinAverage) used to retrieve current market info on different crypto currencies
-    "bitcoinTickerEndPoint": "ticker/short?crypto=BTC&fiat=USD",  // API endpoint used to retrieve bitcoin market price
-    "apiKey": "?????",  // (optional, can be set to null) Public key of the API key pair provided by the service (required for certain API services)
-    "localAddress": null,  // (optional, can be set to null) IP address of local network interface to use to issue requests to the Web service
-    "timeout": 20000  // (20 sec.) Timeout, in milliseconds, for connection/request with API server
+  bitcoinTicker: {
+    mainImplementation: 'bitcoinAverage',  // Name of bitcoin ticker implementation that should be normally used over the others (the backup ones)
+    minCheckRevertMainInstanceTimeout: 300000,  // (5 min.) Minimum time, in milliseconds, to wait before trying to revert back to using main bitcoin ticker implementation instance
+    maxCheckRevertMainInstanceTimeout: 86400000  // (24 hours) Minimum time, in milliseconds, to wait before trying to revert back to using main bitcoin ticker implementation instance
+  },
+  // Parameters pertaining to BitcoinAverageBitcoinTicker module
+  bitcoinAverageBitcoinTicker: {
+    apiUrl: "https://apiv2.bitcoinaverage.com/indices/global/",  // URL of API (from BitcoinAverage) used to retrieve current market info on different crypto currencies
+    bitcoinTickerEndPoint: "ticker/short?crypto=BTC&fiat=USD",  // API endpoint used to retrieve bitcoin market price
+    apiKey: "?????",  // (optional, can be set to null) Public key of the API key pair provided by the service (required for certain API services)
+    localAddress: null,  // (optional, can be set to null) IP address of local network interface to use to issue requests to the Web service
+    timeout: 20000  // (20 sec.) Timeout, in milliseconds, for connection/request with API server
+  },
+  // Parameters pertaining to GeminiBitcoinTicker module
+  geminiBitcoinTicker: {
+    apiUrl: "https://api.sandbox.gemini.com/",  // URL of API (from Gemini) used to retrieve current market info on different crypto currencies
+    bitcoinTickerEndPoint: "v1/pubticker/btcusd",  // API endpoint used to retrieve bitcoin market price
+    localAddress: null,  // (optional, can be set to null) IP address of local network interface to use to issue requests to the Web service
+    timeout: 20000  // (20 sec.) Timeout, in milliseconds, for connection/request with API server
   },
   // Parameters pertaining to BitcoinPrice module
   "bitcoinPrice": {

@@ -19,7 +19,6 @@ import { Meteor } from 'meteor/meteor';
 // References code in other (Catenis) modules
 import { Catenis } from './Catenis';
 import { Util } from './Util';
-import { BcotPrice } from './BcotPrice';
 
 // Config entries
 const btcPriceConfig = config.get('bitcoinPrice');
