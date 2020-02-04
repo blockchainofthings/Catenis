@@ -73,7 +73,7 @@
   },
   // Parameters pertaining to BitcoinTicker module
   bitcoinTicker: {
-    mainImplementation: 'bitcoinAverage',  // Name of bitcoin ticker implementation that should be normally used over the others (the backup ones)
+    mainImplementation: 'gemini',  // Name of bitcoin ticker implementation that should be normally used over the others (the backup ones)
     minCheckRevertMainInstanceTimeout: 1800000,  // (30 min.) Minimum time, in milliseconds, to wait before trying to revert back to using main bitcoin ticker implementation instance
     maxCheckRevertMainInstanceTimeout: 1800000  // (30 min.) Minimum time, in milliseconds, to wait before trying to revert back to using main bitcoin ticker implementation instance
   },
