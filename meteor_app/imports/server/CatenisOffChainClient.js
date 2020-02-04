@@ -273,7 +273,7 @@ export function httpSignRequest(req) {
     httpSignature.sign(req, {
         keyId: Catenis.application.ctnNode.id,
         key: Catenis.application.ctnNode.privKey,
-        headers: cfgSettings.headersToSign
+        headers: cfgSettings.headersToSign.concat()
     });
 }
 

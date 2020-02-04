@@ -1056,7 +1056,7 @@ function averageSpendServCredTxCostPerService() {
             paymentResolution: cfgSettings.servicePayment.paymentResolution,
             initNumTxInputs: cfgSettings.servicePayment.spendServiceCredit.initNumTxInputs,
             initNumTxOutputs: cfgSettings.servicePayment.spendServiceCredit.initNumTxOutputs,
-            initNumPubKeysMultiSigTxOutputs: cfgSettings.servicePayment.spendServiceCredit.initNumPubKeysMultiSigTxOutputs,
+            initNumPubKeysMultiSigTxOutputs: cfgSettings.servicePayment.spendServiceCredit.initNumPubKeysMultiSigTxOutputs.concat(),
             initTxNullDataPayloadSize: cfgSettings.servicePayment.spendServiceCredit.txNullDataPayloadSize,
             txFeeRateIncrement: cfgSettings.servicePayment.spendServiceCredit.txFeeRateIncrement,
             initTxFeeRate: cfgSettings.servicePayment.spendServiceCredit.initTxFeeRate
@@ -1136,7 +1136,7 @@ function averageDebitServAccountTxCostPerService() {
             paymentResolution: cfgSettings.servicePayment.paymentResolution,
             initNumTxInputs: cfgSettings.servicePayment.debitServiceAccount.initNumTxInputs,
             initNumTxOutputs: cfgSettings.servicePayment.debitServiceAccount.initNumTxOutputs,
-            initNumPubKeysMultiSigTxOutputs: cfgSettings.servicePayment.debitServiceAccount.initNumPubKeysMultiSigTxOutputs,
+            initNumPubKeysMultiSigTxOutputs: cfgSettings.servicePayment.debitServiceAccount.initNumPubKeysMultiSigTxOutputs.concat(),
             initTxNullDataPayloadSize: cfgSettings.servicePayment.debitServiceAccount.txNullDataPayloadSize,
             txFeeRateIncrement: cfgSettings.servicePayment.debitServiceAccount.txFeeRateIncrement,
             initTxFeeRate: cfgSettings.servicePayment.debitServiceAccount.initTxFeeRate
