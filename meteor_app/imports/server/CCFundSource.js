@@ -47,7 +47,7 @@ import { AncestorTransactions } from './AncestorTransactions';
 //                                         - if not defined, a default diff of 1 (one) is used, so the upper limit is set to (maxCount-1)
 //                                         - if a non-negative value is passed, the upper limit is set to (maxCount-value)
 //                                         - if a negative value is passed, no upper limit shall be enforced
-//        ancestorsSizeDiff: [Number], - (optional) Amount to be deducted from maximum size (in bytes) of (unconfirmed) ancestor txs for tx to be accepted into mempool (to be relayed).
+//        ancestorsSizeDiff: [Number], - (optional) Amount to be deducted from maximum virtual size (in vbytes) of (unconfirmed) ancestor txs for tx to be accepted into mempool (to be relayed).
 //                                        The resulting amount shall be used as an upper limit to filter UTXOs that should be used as fund source
 //                                        - if not defined, a default diff of 1000 (1K) is used, so the upper limit is set to (maxSize-1000)
 //                                        - if a non-negative value is passed, the upper limit is set to (maxSize-value)
@@ -57,7 +57,7 @@ import { AncestorTransactions } from './AncestorTransactions';
 //                                           - if not defined, a default diff of 1 (one) is used, so the upper limit is set to (maxCount-1)
 //                                           - if a non-negative value is passed, the upper limit is set to (maxCount-value)
 //                                           - if a negative value is passed, no upper limit shall be enforced
-//        descendantsSizeDiff: [Number], - (optional) Amount to be deducted from maximum size (in bytes) of (unconfirmed) descendant txs for tx to be accepted into mempool (to be relayed).
+//        descendantsSizeDiff: [Number], - (optional) Amount to be deducted from maximum virtual size (in vbytes) of (unconfirmed) descendant txs for tx to be accepted into mempool (to be relayed).
 //                                          The resulting amount shall be used as an upper limit to filter UTXOs that should be used as fund source
 //                                          - if not defined, a default diff of 1000 (1K) is used, so the upper limit is set to (maxSize-1000)
 //                                          - if a non-negative value is passed, the upper limit is set to (maxSize-value)
@@ -99,13 +99,13 @@ export function CCFundSource(ccAssetId, addresses, options) {
     //      confirmations: [number],        - Number of confirmations for the UTXO transaction
     //      allocated: [boolean],           - Indicates whether this entry has already been allocated
     //      ancestorsCount: [number],       - Number of ancestor transactions of the UTXO transaction, including itself. This should only exist for confirmations = 0
-    //      ancestorsSize: [number],        - Total size, in bytes, of ancestor transactions of the UTXO transaction, including itself. This should only exist for confirmations = 0
+    //      ancestorsSize: [number],        - Total virtual size, in vbytes, of ancestor transactions of the UTXO transaction, including itself. This should only exist for confirmations = 0
     //      descendantsCount: [number],     - Number of descendant transactions of the UTXO transaction, including itself. This should only exist for confirmations = 0
-    //      descendantsSize: [number],      - Total size, in bytes, of descendant transactions of the UTXO transaction, including itself. This should only exist for confirmations = 0
-    //      size: [number],                 - Size, in bytes, of the UTXO transaction. This should only exist for confirmations = 0
+    //      descendantsSize: [number],      - Total virtual size, in vbytes, of descendant transactions of the UTXO transaction, including itself. This should only exist for confirmations = 0
+    //      vsize: [number],                - Virtual size, in vbytes, of the UTXO transaction. This should only exist for confirmations = 0
     //      ancestors: [array(object)] [{   - List with data about all the ancestor transactions of the UTXO transaction. This should only exist for confirmations = 0
     //        txid: [string],                   - ID/hash of the ancestor transaction
-    //        size: [number]                    - Size, in bytes, of the ancestor transaction
+    //        vsize: [number]                   - Virtual size, in vbytes, of the ancestor transaction
     //      }]
     //  }
     this.db = new Loki();
@@ -611,7 +611,7 @@ function loadUtxos() {
                     docUtxo.descendantsSize = mempoolTxInfo.descendantsize;
                     docUtxo.ancestorsCount = mempoolTxInfo.ancestorcount;
                     docUtxo.ancestorsSize = mempoolTxInfo.ancestorsize;
-                    docUtxo.size = mempoolTxInfo.size;
+                    docUtxo.vsize = mempoolTxInfo.vsize;
                     docUtxo.ancestors = mempoolTxInfo.ancestors;
 
                     // Indicate that unconfirmed UTXOs have been loaded

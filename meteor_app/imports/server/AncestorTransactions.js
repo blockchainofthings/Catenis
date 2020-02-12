@@ -42,7 +42,7 @@ export class AncestorTransactions {
     //   options: {
     //     ancestorsCountLimit: [Number], - (optional) Total number of ancestor transactions that can be included.
     //                                       Note: can be set to `null` to indicate that no limit should be applied
-    //     ancestorsSizeLimit: [Number], - (optional) Total size, in bytes, of included ancestor transactions
+    //     ancestorsSizeLimit: [Number], - (optional) Total virtual size, in vbytes, of included ancestor transactions
     //                                       Note: can be set to `null` to indicate that no limit should be applied
     //     mempoolTxInfoCache: [Object(Map)], - (optional) A map object used to store retrieved memory pool entry info
     //     initTxInputs: [Array(Object)|Object] [{ - (optional) Transaction inputs (or a single input) to be used to
@@ -109,10 +109,10 @@ export class AncestorTransactions {
     //  Arguments:
     //   utxo: [Object] {
     //     txid: [string],
-    //     size: [number],
+    //     vsize: [number],
     //     ancestors: [array(object)] [{
     //       txid: [string],
-    //       size: [number]
+    //       vsize: [number]
     //     }]
     //   }
     //
@@ -128,7 +128,7 @@ export class AncestorTransactions {
 
         if (uniqueAncestors.length > 0) {
             if (this.ancestorsCountLimit === null || this.ancestorsCountLimit - this.ancestorsCount >= uniqueAncestors.length) {
-                const uniqueAncestorsSize = uniqueAncestors.reduce((size, ancestor) => size + ancestor.size, 0);
+                const uniqueAncestorsSize = uniqueAncestors.reduce((vsize, ancestor) => vsize + ancestor.vsize, 0);
 
                 if (this.ancestorsSizeLimit === null || this.ancestorsSizeLimit - this.ancestorsSize >= uniqueAncestorsSize) {
                     return true;
@@ -147,10 +147,10 @@ export class AncestorTransactions {
     //  Arguments:
     //   utxo: [Object] {
     //     txid: [string],
-    //     size: [number],
+    //     vsize: [number],
     //     ancestors: [array(object)] [{
     //       txid: [string],
-    //       size: [number]
+    //       vsize: [number]
     //     }]
     //   }
     //   logError: [Boolean] - (optional) Indicates whether an error message should be logged if UTXO cannot be accepted
@@ -181,7 +181,7 @@ export class AncestorTransactions {
             else {
                 // Include ancestor transaction
                 this.ancestorRefCounter.set(ancestor.txid, 1);
-                this.ancestorsSize += ancestor.size;
+                this.ancestorsSize += ancestor.vsize;
             }
         };
 
@@ -198,10 +198,10 @@ export class AncestorTransactions {
     //  Arguments:
     //   utxo: [Object] {
     //     txid: [string],
-    //     size: [number],
+    //     vsize: [number],
     //     ancestors: [array(object)] [{
     //       txid: [string],
-    //       size: [number]
+    //       vsize: [number]
     //     }]
     //   }
     //
@@ -227,10 +227,10 @@ export class AncestorTransactions {
     //  Arguments:
     //   utxo: [Object] {
     //     txid: [string],
-    //     size: [number],
+    //     vsize: [number],
     //     ancestors: [array(object)] [{
     //       txid: [string],
-    //       size: [number]
+    //       vsize: [number]
     //     }]
     //   }
     //   strictRemove: [Boolean] - Indicates that UTXO to remove is expected to be currently included
@@ -253,7 +253,7 @@ export class AncestorTransactions {
                     }
                     else {
                         // No more reference count; exclude ancestor transaction
-                        this.ancestorsSize -= ancestor.size;
+                        this.ancestorsSize -= ancestor.vsize;
                         this.ancestorRefCounter.delete(ancestor.txid);
                     }
 
@@ -301,10 +301,10 @@ export class AncestorTransactions {
 //  Arguments:
 //   utxo: [Object] {
 //     txid: [string],
-//     size: [number],
+//     vsize: [number],
 //     ancestors: [array(object)] [{
 //       txid: [string],
-//       size: [number]
+//       vsize: [number]
 //     }]
 //   }
 function getUniqueAncestors(utxo) {
@@ -313,7 +313,7 @@ function getUniqueAncestors(utxo) {
     if (!this.ancestorRefCounter.has(utxo.txid)) {
         uniqueAncestors.push({
             txid: utxo.txid,
-            size: utxo.size
+            vsize: utxo.vsize
         });
     }
 
@@ -364,7 +364,7 @@ function initAncestors(txInputs) {
             for (let idx = 0; idx < count; idx++) {
                 const utxo = {
                     txid: txid,
-                    size: mempoolTxInfo.size,
+                    vsize: mempoolTxInfo.vsize,
                     ancestors: mempoolTxInfo.ancestors
                 };
 

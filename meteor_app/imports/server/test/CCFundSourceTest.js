@@ -2532,7 +2532,8 @@ const mempoolTestData0 = {};
 
 const mempoolTestData1 = {
     "a34345f69e5beb3618dfca9a22326f6e978d5ec6ab5d5c57e685e6f812cd628d": {
-        "size": 497,
+        "vsize": 497,
+        "weight": 1988,
         "fee": 0.00010000,
         "modifiedfee": 0.00010000,
         "time": 1557439359,
@@ -2548,7 +2549,8 @@ const mempoolTestData1 = {
         ]
     },
     "cb5713d8dc0d5825c8bd2f391e6bd0a9f9c0d3164dd1d594959094e27d34d460": {
-        "size": 361,
+        "vsize": 361,
+        "weight": 1444,
         "fee": 0.00010000,
         "modifiedfee": 0.00010000,
         "time": 1557440748,
@@ -2565,7 +2567,8 @@ const mempoolTestData1 = {
         ]
     },
     "7fa35e8cabf89a25324f7fa25f2f22f47850e97a3c3b05e875ba95c7ead80ad6": {
-        "size": 509,
+        "vsize": 509,
+        "weight": 2036,
         "fee": 0.00010000,
         "modifiedfee": 0.00010000,
         "time": 1557441095,
@@ -2582,7 +2585,8 @@ const mempoolTestData1 = {
         ]
     },
     "3d7b9563008b95c25cdd67ab35f256f228d0edb1a2ab8c9110d2a09a2345d373": {
-        "size": 474,
+        "vsize": 474,
+        "weight": 1996,
         "fee": 0.00010000,
         "modifiedfee": 0.00010000,
         "time": 1557500764,
@@ -2600,7 +2604,8 @@ const mempoolTestData1 = {
         ]
     },
     "ad244897a99caa76a5698567dd5c43cb42384b530ac158a7d8cf0be5f9638443": {
-        "size": 475,
+        "vsize": 475,
+        "weight": 1900,
         "fee": 0.00010000,
         "modifiedfee": 0.00010000,
         "time": 1557501112,
@@ -2622,7 +2627,8 @@ const mempoolTestData1 = {
 // Simulate that two UTXO are not in the memory pool anymore
 const mempoolTestData2 = {
     "a34345f69e5beb3618dfca9a22326f6e978d5ec6ab5d5c57e685e6f812cd628d": {
-        "size": 497,
+        "vsize": 497,
+        "weight": 1988,
         "fee": 0.00010000,
         "modifiedfee": 0.00010000,
         "time": 1557439359,
@@ -2638,7 +2644,8 @@ const mempoolTestData2 = {
         ]
     },
     "7fa35e8cabf89a25324f7fa25f2f22f47850e97a3c3b05e875ba95c7ead80ad6": {
-        "size": 509,
+        "vsize": 509,
+        "weight": 2036,
         "fee": 0.00010000,
         "modifiedfee": 0.00010000,
         "time": 1557441095,
@@ -2655,7 +2662,8 @@ const mempoolTestData2 = {
         ]
     },
     "ad244897a99caa76a5698567dd5c43cb42384b530ac158a7d8cf0be5f9638443": {
-        "size": 475,
+        "vsize": 475,
+        "weight": 1900,
         "fee": 0.00010000,
         "modifiedfee": 0.00010000,
         "time": 1557501112,
@@ -2677,7 +2685,8 @@ const mempoolTestData2 = {
 // Simulate unconfirmed additional UTXOs
 const mempoolTestData3 = {
     "3d7b9563008b95c25cdd67ab35f256f228d0edb1a2ab8c9110d2a09a2345d373": {
-        "size": 474,
+        "vsize": 474,
+        "weight": 1896,
         "fee": 0.00010000,
         "modifiedfee": 0.00010000,
         "time": 1557500764,
@@ -2693,7 +2702,8 @@ const mempoolTestData3 = {
         ]
     },
     "ad244897a99caa76a5698567dd5c43cb42384b530ac158a7d8cf0be5f9638443": {
-        "size": 475,
+        "vsize": 475,
+        "weight": 1900,
         "fee": 0.00010000,
         "modifiedfee": 0.00010000,
         "time": 1557501112,

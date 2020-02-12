@@ -429,9 +429,9 @@ BitcoinCore.prototype.getTxOut = function (txid, vout) {
 //  wallet, but only suppress the details portion of the transaction info returned.
 //  So, this can be useful if one only needs to retrieve, say, the raw hex data
 //  representation of the transaction.
-BitcoinCore.prototype.getTransaction = function (txid, includeDetails = false, logError = true) {
+BitcoinCore.prototype.getTransaction = function (txid, includeDetails = false, verbose = false, logError = true) {
     try {
-        return this.rpcApi.gettransaction(txid, includeDetails);
+        return this.rpcApi.gettransaction(txid, includeDetails, verbose);
     }
     catch (err) {
         handleError('gettransaction', err, logError);
@@ -594,7 +594,7 @@ BitcoinCore.prototype.getRawTransactionCheck = function (txid, logError = true) 
             //  Check if it is possibly a transaction that had been sent by Catenis previously
             //  and that have been replaced later
             try {
-                return this.rpcApi.gettransaction(txid, false).hex;
+                return this.rpcApi.gettransaction(txid, false, false).hex;
             }
             catch (err2) {
                 handleError('gettransaction', err2, logError);
@@ -623,17 +623,10 @@ BitcoinCore.prototype.getDecodedRawTransactionCheck = function (txid, logError =
             let hexTx;
 
             try {
-                hexTx = this.rpcApi.gettransaction(txid, false).hex;
+                return this.rpcApi.gettransaction(txid, false, true).decoded;
             }
             catch (err2) {
                 handleError('gettransaction', err2, logError);
-            }
-
-            try {
-                return this.rpcApi.decoderawtransaction(hexTx);
-            }
-            catch (err3) {
-                handleError('decoderawtransaction', err3, logError);
             }
         }
         else {

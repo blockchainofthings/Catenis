@@ -203,9 +203,9 @@
   // Parameters pertaining to FundSource module
   "fundSource": {
     "maxAncestorsCount": 25, // Maximum count of (unconfirmed) ancestor txs for tx to be accepted into mempool (to be relayed)
-    "maxAncestorsSize": 101000,  // Maximum total size (in bytes) of (unconfirmed) ancestor txs for tx to be accepted into mempool (to be relayed)
+    "maxAncestorsSize": 101000,  // Maximum total virtual size (in vbytes) of (unconfirmed) ancestor txs for tx to be accepted into mempool (to be relayed)
     "maxDescendantsCount": 25, // Maximum count of (unconfirmed) descendant txs for tx to be accepted into mempool (to be relayed)
-    "maxDescendantsSize": 101000  // Maximum total size (in bytes) of (unconfirmed) descendant txs for tx to be accepted into mempool (to be relayed)
+    "maxDescendantsSize": 101000  // Maximum total virtual size (in vbytes) of (unconfirmed) descendant txs for tx to be accepted into mempool (to be relayed)
   },
   // Parameters pertaining to Service module
   "service": {

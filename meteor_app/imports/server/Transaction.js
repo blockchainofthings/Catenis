@@ -1427,7 +1427,7 @@ Transaction.parse = function (serializedTx) {
 
 Transaction.fromTxid = function (txid, getTxTime = false, getBlockTime = false) {
     if (getTxTime || getBlockTime) {
-        const txInfo = Catenis.bitcoinCore.getTransaction(txid, false, false);
+        const txInfo = Catenis.bitcoinCore.getTransaction(txid, false, false, false);
 
         const args = [txInfo.hex];
 
