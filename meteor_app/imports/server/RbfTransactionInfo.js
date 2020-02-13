@@ -267,7 +267,7 @@ export class RbfTransactionInfo {
         }
     }
 
-    // DEPRECATED
+    // DEPRECATED in favor of the new updateTxInfo() method
     setRealTxSize(size, countInputs = 0) {
         size = parseInt(size);
 
@@ -394,7 +394,8 @@ class TxSize {
         this.max += sizeInc;
     }
 
-    // DEPRECATED
+    // DEPRECATED in favor of instead creating a new instance with the actual inputs and outputs info
+    //  (see updateTxInfo() method of RbfTransactionInfo class)
     setRealSize(size, countInputs = 0) {
         // Note: allow a variation of +/- countInputs if real size had already been set previously (min = max = avrg)
         if ((size >= this.min && size <= this.max) || (this.min === this.max && this.max === this.avrg
