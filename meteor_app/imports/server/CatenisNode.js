@@ -212,32 +212,41 @@ CatenisNode.prototype.startNode = function () {
             fundDeviceMainAddresses.call(this, distribFund.amountPerAddress);
         }
 
-        // Make sure that system service credit issuance is properly provisioned
-        this.checkServiceCreditIssuanceProvision();
-
         if (this.type === CatenisNode.nodeType.hub.name) {
             // Make sure that BCOT token sale stock info is updated
             Catenis.bcotSaleStock.checkBcotSaleStock();
-
-            // Make sure that system BCOT token sale stock is properly provisioned
-            this.checkBcotSaleStockProvision();
         }
 
-        // Make sure that system service payment pay tx expense addresses are properly funded
-        this.checkServicePaymentPayTxExpenseFundingBalance();
-
-        // Make sure that system pay tx expense addresses are properly funded
-        this.checkPayTxExpenseFundingBalance();
-
-        // Make sure that system read confirmation pay tx expense addresses are properly funded
-        this.checkReadConfirmPayTxExpenseFundingBalance();
-
-        // Make sure that system off-chain messages settlement pay tx expense addresses are properly funded
-        this.checkOCMessagesSettlementPayTxExpenseFundingBalance();
+        // Make sure that funds are properly distributed as needed
+        this.checkFundDistribution();
     });
 
     // Prepare to receive notification that bitcoin fee rates changed
     Catenis.bitcoinFees.on(BitcoinFees.notifyEvent.bitcoin_fees_changed.name, processBitcoinFeesChange.bind(this));
+};
+
+// NOTE: make sure that this method is called from code executed from the FundSource.utxoCS
+//  critical section object
+CatenisNode.prototype.checkFundDistribution = function () {
+    // Make sure that system service credit issuance is properly provisioned
+    this.checkServiceCreditIssuanceProvision();
+
+    if (this.type === CatenisNode.nodeType.hub.name) {
+        // Make sure that system BCOT token sale stock is properly provisioned
+        this.checkBcotSaleStockProvision();
+    }
+
+    // Make sure that system service payment pay tx expense addresses are properly funded
+    this.checkServicePaymentPayTxExpenseFundingBalance();
+
+    // Make sure that system pay tx expense addresses are properly funded
+    this.checkPayTxExpenseFundingBalance();
+
+    // Make sure that system read confirmation pay tx expense addresses are properly funded
+    this.checkReadConfirmPayTxExpenseFundingBalance();
+
+    // Make sure that system off-chain messages settlement pay tx expense addresses are properly funded
+    this.checkOCMessagesSettlementPayTxExpenseFundingBalance();
 };
 
 CatenisNode.prototype.serviceCreditAssetInfo = function () {

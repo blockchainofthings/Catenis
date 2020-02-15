@@ -375,6 +375,9 @@ function sysFundingTxConfirmed(data) {
         FundSource.utxoCS.execute(() => {
             // Make sure that funding balance info is updated
             Catenis.ctnHubNode.checkFundingBalance();
+
+            // Make sure that funds are properly distributed as needed
+            Catenis.ctnHubNode.checkFundDistribution();
         });
 
         // Assume system already started. Check if there are devices to provision
