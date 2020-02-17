@@ -1794,7 +1794,7 @@ function getAssetId(txout, address, issuingOpts) {
             vout: txout.vout,
             address: address
         }]
-    });
+    }, Catenis.application.cryptoNetwork);
 }
 
 // Checks and returns decoded Colored Coins data if it is valid
