@@ -42,6 +42,15 @@ export function CryptoKeys(keyPair) {
     if (this.keyPair.compressed === undefined) {
         this.keyPair.compressed = true;
     }
+
+    // Make sure that generated bitcoin signatures are 71-bytes long (including the trailing SIGHASH byte)
+    //  or less. The probability for smaller signatures (< 71 bytes) is very small though, so we can
+    //  assume that signatures will take up exactly 71 bytes when estimating transaction size.
+    //  NOTE: there is a computational cost for doing it since, on average, the signature needs to be
+    //      calculated twice. This however is expected to be a transitional solution until bitcoin starts
+    //      using Schnorr signatures (BIP 340), which will have a fixed 64-byte length (65 bytes, when
+    //      including the trailing SIGHASH byte).
+    this.keyPair.lowR = true;
 }
 
 
@@ -84,16 +93,22 @@ CryptoKeys.prototype.getUncompressedPublicKey = function () {
     return this.keyPair.compressed ? secp256k1.publicKeyConvert(pubKey, false) : pubKey;
 };
 
-CryptoKeys.prototype.getAddress = function () {
-    return bitcoinLib.payments.p2pkh({pubkey: this.keyPair.publicKey, network: this.keyPair.network}).address;
+CryptoKeys.prototype.getAddress = function (forWitness = true) {
+    return (forWitness ? bitcoinLib.payments.p2wpkh : bitcoinLib.payments.p2pkh)({
+        pubkey: this.keyPair.publicKey,
+        network: this.keyPair.network
+    }).address;
 };
 
 CryptoKeys.prototype.getPubKeyHash = function () {
     return bitcoinLib.crypto.hash160(this.keyPair.publicKey);
 };
 
-CryptoKeys.prototype.getAddressAndPubKeyHash = function () {
-    const p2pkh = bitcoinLib.payments.p2pkh({pubkey: this.keyPair.publicKey, network: this.keyPair.network});
+CryptoKeys.prototype.getAddressAndPubKeyHash = function (forWitness = true) {
+    const p2pkh = (forWitness ? bitcoinLib.payments.p2wpkh : bitcoinLib.payments.p2pkh)({
+        pubkey: this.keyPair.publicKey,
+        network: this.keyPair.network
+    });
 
     return {
         address: p2pkh.address,
