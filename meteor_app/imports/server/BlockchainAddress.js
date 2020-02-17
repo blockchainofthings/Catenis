@@ -58,8 +58,14 @@ export class SystemDeviceMainAddress extends BlockchainAddress {
     constructor (ctnNodeIndex) {
         super();
 
-        // noinspection JSUnusedGlobalSymbols
-        this._baseAddr = BaseSystemDeviceMainAddress.getInstance(ctnNodeIndex, KeyStore.systemDeviceMainAddressRootPath(ctnNodeIndex));
+        const parentPath = KeyStore.systemDeviceMainAddressRootPath(ctnNodeIndex);
+
+        this._getBaseInstance = () => BaseSystemDeviceMainAddress.getInstance(ctnNodeIndex, parentPath);
+
+        // Reference base blockchain address object so existing addresses are immediately
+        //  loaded onto local key storage
+        // noinspection BadExpressionStatementJS
+        this._baseAddr;
     }
 }
 
@@ -68,8 +74,14 @@ export class SystemFundingPaymentAddress extends BlockchainAddress {
     constructor (ctnNodeIndex) {
         super();
 
-        // noinspection JSUnusedGlobalSymbols
-        this._baseAddr = BaseSystemFundingPaymentAddress.getInstance(ctnNodeIndex, KeyStore.systemFundingPaymentRootPath(ctnNodeIndex));
+        const parentPath = KeyStore.systemFundingPaymentRootPath(ctnNodeIndex);
+
+        this._getBaseInstance = () => BaseSystemFundingPaymentAddress.getInstance(ctnNodeIndex, parentPath);
+
+        // Reference base blockchain address object so existing addresses are immediately
+        //  loaded onto local key storage
+        // noinspection BadExpressionStatementJS
+        this._baseAddr;
     }
 }
 
@@ -78,8 +90,14 @@ export class SystemFundingChangeAddress extends BlockchainAddress {
     constructor (ctnNodeIndex) {
         super();
 
-        // noinspection JSUnusedGlobalSymbols
-        this._baseAddr = BaseSystemFundingChangeAddress.getInstance(ctnNodeIndex, KeyStore.systemFundingChangeRootPath(ctnNodeIndex));
+        const parentPath = KeyStore.systemFundingChangeRootPath(ctnNodeIndex);
+
+        this._getBaseInstance = () => BaseSystemFundingChangeAddress.getInstance(ctnNodeIndex, parentPath);
+
+        // Reference base blockchain address object so existing addresses are immediately
+        //  loaded onto local key storage
+        // noinspection BadExpressionStatementJS
+        this._baseAddr;
     }
 }
 
@@ -88,8 +106,14 @@ export class SystemPayTxExpenseAddress extends BlockchainAddress {
     constructor (ctnNodeIndex) {
         super();
 
-        // noinspection JSUnusedGlobalSymbols
-        this._baseAddr = BaseSystemPayTxExpenseAddress.getInstance(ctnNodeIndex, KeyStore.systemPayTxExpenseRootPath(ctnNodeIndex));
+        const parentPath = KeyStore.systemPayTxExpenseRootPath(ctnNodeIndex);
+
+        this._getBaseInstance = () => BaseSystemPayTxExpenseAddress.getInstance(ctnNodeIndex, parentPath);
+
+        // Reference base blockchain address object so existing addresses are immediately
+        //  loaded onto local key storage
+        // noinspection BadExpressionStatementJS
+        this._baseAddr;
     }
 }
 
@@ -98,8 +122,14 @@ export class SystemReadConfirmSpendNotifyAddress extends BlockchainAddress {
     constructor (ctnNodeIndex) {
         super();
 
-        // noinspection JSUnusedGlobalSymbols
-        this._baseAddr = BaseSystemReadConfirmSpendNotifyAddress.getInstance(ctnNodeIndex, KeyStore.systemReadConfirmSpendNotifyRootPath(ctnNodeIndex));
+        const parentPath = KeyStore.systemReadConfirmSpendNotifyRootPath(ctnNodeIndex);
+
+        this._getBaseInstance = () => BaseSystemReadConfirmSpendNotifyAddress.getInstance(ctnNodeIndex, parentPath);
+
+        // Reference base blockchain address object so existing addresses are immediately
+        //  loaded onto local key storage
+        // noinspection BadExpressionStatementJS
+        this._baseAddr;
     }
 }
 
@@ -108,8 +138,14 @@ export class SystemReadConfirmSpendOnlyAddress extends BlockchainAddress {
     constructor (ctnNodeIndex) {
         super();
 
-        // noinspection JSUnusedGlobalSymbols
-        this._baseAddr = BaseSystemReadConfirmSpendOnlyAddress.getInstance(ctnNodeIndex, KeyStore.systemReadConfirmSpendOnlyRootPath(ctnNodeIndex));
+        const parentPath = KeyStore.systemReadConfirmSpendOnlyRootPath(ctnNodeIndex);
+
+        this._getBaseInstance = () => BaseSystemReadConfirmSpendOnlyAddress.getInstance(ctnNodeIndex, parentPath);
+
+        // Reference base blockchain address object so existing addresses are immediately
+        //  loaded onto local key storage
+        // noinspection BadExpressionStatementJS
+        this._baseAddr;
     }
 }
 
@@ -118,8 +154,14 @@ export class SystemReadConfirmSpendNullAddress extends BlockchainAddress {
     constructor (ctnNodeIndex) {
         super();
 
-        // noinspection JSUnusedGlobalSymbols
-        this._baseAddr = BaseSystemReadConfirmSpendNullAddress.getInstance(ctnNodeIndex, KeyStore.systemReadConfirmSpendNullRootPath(ctnNodeIndex));
+        const parentPath = KeyStore.systemReadConfirmSpendNullRootPath(ctnNodeIndex);
+
+        this._getBaseInstance = () => BaseSystemReadConfirmSpendNullAddress.getInstance(ctnNodeIndex, parentPath);
+
+        // Reference base blockchain address object so existing addresses are immediately
+        //  loaded onto local key storage
+        // noinspection BadExpressionStatementJS
+        this._baseAddr;
     }
 }
 
@@ -128,8 +170,14 @@ export class SystemReadConfirmPayTxExpenseAddress extends BlockchainAddress {
     constructor (ctnNodeIndex) {
         super();
 
-        // noinspection JSUnusedGlobalSymbols
-        this._baseAddr = BaseSystemReadConfirmPayTxExpenseAddress.getInstance(ctnNodeIndex, KeyStore.systemReadConfirmPayTxExpenseRootPath(ctnNodeIndex));
+        const parentPath = KeyStore.systemReadConfirmPayTxExpenseRootPath(ctnNodeIndex);
+
+        this._getBaseInstance = () => BaseSystemReadConfirmPayTxExpenseAddress.getInstance(ctnNodeIndex, parentPath);
+
+        // Reference base blockchain address object so existing addresses are immediately
+        //  loaded onto local key storage
+        // noinspection BadExpressionStatementJS
+        this._baseAddr;
     }
 }
 
@@ -138,8 +186,14 @@ export class SystemServiceCreditIssuingAddress extends BlockchainAddress {
     constructor (ctnNodeIndex) {
         super();
 
-        // noinspection JSUnusedGlobalSymbols
-        this._baseAddr = BaseSystemServiceCreditIssuingAddress.getInstance(ctnNodeIndex, KeyStore.systemServiceCreditIssuingRootPath(ctnNodeIndex));
+        const parentPath = KeyStore.systemServiceCreditIssuingRootPath(ctnNodeIndex);
+
+        this._getBaseInstance = () => BaseSystemServiceCreditIssuingAddress.getInstance(ctnNodeIndex, parentPath);
+
+        // Reference base blockchain address object so existing addresses are immediately
+        //  loaded onto local key storage
+        // noinspection BadExpressionStatementJS
+        this._baseAddr;
     }
 }
 
@@ -148,8 +202,14 @@ export class SystemServicePaymentPayTxExpenseAddress extends BlockchainAddress {
     constructor (ctnNodeIndex) {
         super();
 
-        // noinspection JSUnusedGlobalSymbols
-        this._baseAddr = BaseSystemServicePaymentPayTxExpenseAddress.getInstance(ctnNodeIndex, KeyStore.systemServicePaymentPayTxExpenseRootPath(ctnNodeIndex));
+        const parentPath = KeyStore.systemServicePaymentPayTxExpenseRootPath(ctnNodeIndex);
+
+        this._getBaseInstance = () => BaseSystemServicePaymentPayTxExpenseAddress.getInstance(ctnNodeIndex, parentPath);
+
+        // Reference base blockchain address object so existing addresses are immediately
+        //  loaded onto local key storage
+        // noinspection BadExpressionStatementJS
+        this._baseAddr;
     }
 }
 
@@ -158,8 +218,14 @@ export class SystemMultiSigSigneeAddress extends BlockchainAddress {
     constructor (ctnNodeIndex) {
         super();
 
-        // noinspection JSUnusedGlobalSymbols
-        this._baseAddr = BaseSystemMultiSigSigneeAddress.getInstance(ctnNodeIndex, KeyStore.systemMultiSigSigneeRootPath(ctnNodeIndex));
+        const parentPath = KeyStore.systemMultiSigSigneeRootPath(ctnNodeIndex);
+
+        this._getBaseInstance = () => BaseSystemMultiSigSigneeAddress.getInstance(ctnNodeIndex, parentPath);
+
+        // Reference base blockchain address object so existing addresses are immediately
+        //  loaded onto local key storage
+        // noinspection BadExpressionStatementJS
+        this._baseAddr;
     }
 }
 
@@ -168,8 +234,14 @@ export class SystemBcotSaleStockAddress extends BlockchainAddress {
     constructor (ctnNodeIndex) {
         super();
 
-        // noinspection JSUnusedGlobalSymbols
-        this._baseAddr = BaseSystemBcotSaleStockAddress.getInstance(ctnNodeIndex, KeyStore.systemBcotSaleStockRootPath(ctnNodeIndex));
+        const parentPath = KeyStore.systemBcotSaleStockRootPath(ctnNodeIndex);
+
+        this._getBaseInstance = () => BaseSystemBcotSaleStockAddress.getInstance(ctnNodeIndex, parentPath);
+
+        // Reference base blockchain address object so existing addresses are immediately
+        //  loaded onto local key storage
+        // noinspection BadExpressionStatementJS
+        this._baseAddr;
     }
 }
 
@@ -178,8 +250,14 @@ export class SystemOCMsgsSetlmtPayTxExpenseAddress extends BlockchainAddress {
     constructor (ctnNodeIndex) {
         super();
 
-        // noinspection JSUnusedGlobalSymbols
-        this._baseAddr = BaseSystemOCMsgsSetlmtPayTxExpenseAddress.getInstance(ctnNodeIndex, KeyStore.systemOCMsgsSetlmtPayTxExpenseRootPath(ctnNodeIndex));
+        const parentPath = KeyStore.systemOCMsgsSetlmtPayTxExpenseRootPath(ctnNodeIndex);
+
+        this._getBaseInstance = () => BaseSystemOCMsgsSetlmtPayTxExpenseAddress.getInstance(ctnNodeIndex, parentPath);
+
+        // Reference base blockchain address object so existing addresses are immediately
+        //  loaded onto local key storage
+        // noinspection BadExpressionStatementJS
+        this._baseAddr;
     }
 }
 
@@ -188,8 +266,14 @@ export class ClientServiceAccountCreditLineAddress extends BlockchainAddress {
     constructor (ctnNodeIndex, clientIndex) {
         super();
 
-        // noinspection JSUnusedGlobalSymbols
-        this._baseAddr = BaseClientServiceAccountCreditLineAddress.getInstance(ctnNodeIndex, clientIndex, KeyStore.clientServiceAccountCreditLineAddressRootPath(ctnNodeIndex, clientIndex));
+        const parentPath = KeyStore.clientServiceAccountCreditLineAddressRootPath(ctnNodeIndex, clientIndex);
+
+        this._getBaseInstance = () => BaseClientServiceAccountCreditLineAddress.getInstance(ctnNodeIndex, clientIndex, parentPath);
+
+        // Reference base blockchain address object so existing addresses are immediately
+        //  loaded onto local key storage
+        // noinspection BadExpressionStatementJS
+        this._baseAddr;
     }
 }
 
@@ -198,8 +282,14 @@ export class ClientServiceAccountDebitLineAddress extends BlockchainAddress {
     constructor (ctnNodeIndex, clientIndex) {
         super();
 
-        // noinspection JSUnusedGlobalSymbols
-        this._baseAddr = BaseClientServiceAccountDebitLineAddress.getInstance(ctnNodeIndex, clientIndex, KeyStore.clientServiceAccountDebitLineAddressRootPath(ctnNodeIndex, clientIndex));
+        const parentPath = KeyStore.clientServiceAccountDebitLineAddressRootPath(ctnNodeIndex, clientIndex);
+
+        this._getBaseInstance = () => BaseClientServiceAccountDebitLineAddress.getInstance(ctnNodeIndex, clientIndex, parentPath);
+
+        // Reference base blockchain address object so existing addresses are immediately
+        //  loaded onto local key storage
+        // noinspection BadExpressionStatementJS
+        this._baseAddr;
     }
 }
 
@@ -208,8 +298,14 @@ export class ClientBcotPaymentAddress extends BlockchainAddress {
     constructor (ctnNodeIndex, clientIndex) {
         super();
 
-        // noinspection JSUnusedGlobalSymbols
-        this._baseAddr = BaseClientBcotPaymentAddress.getInstance(ctnNodeIndex, clientIndex, KeyStore.clientBcotPaymentAddressRootPath(ctnNodeIndex, clientIndex));
+        const parentPath = KeyStore.clientBcotPaymentAddressRootPath(ctnNodeIndex, clientIndex);
+
+        this._getBaseInstance = () => BaseClientBcotPaymentAddress.getInstance(ctnNodeIndex, clientIndex, parentPath);
+
+        // Reference base blockchain address object so existing addresses are immediately
+        //  loaded onto local key storage
+        // noinspection BadExpressionStatementJS
+        this._baseAddr;
     }
 }
 
@@ -218,8 +314,14 @@ export class DeviceReadConfirmAddress extends BlockchainAddress {
     constructor (ctnNodeIndex, clientIndex, deviceIndex) {
         super();
 
-        // noinspection JSUnusedGlobalSymbols
-        this._baseAddr = BaseDeviceReadConfirmAddress.getInstance(ctnNodeIndex, clientIndex, deviceIndex, KeyStore.deviceReadConfirmAddressRootPath(ctnNodeIndex, clientIndex, deviceIndex));
+        const parentPath = KeyStore.deviceReadConfirmAddressRootPath(ctnNodeIndex, clientIndex, deviceIndex);
+
+        this._getBaseInstance = () => BaseDeviceReadConfirmAddress.getInstance(ctnNodeIndex, clientIndex, deviceIndex, parentPath);
+
+        // Reference base blockchain address object so existing addresses are immediately
+        //  loaded onto local key storage
+        // noinspection BadExpressionStatementJS
+        this._baseAddr;
     }
 }
 
@@ -228,8 +330,14 @@ export class DeviceMainAddress extends BlockchainAddress {
     constructor (ctnNodeIndex, clientIndex, deviceIndex) {
         super();
 
-        // noinspection JSUnusedGlobalSymbols
-        this._baseAddr = BaseDeviceMainAddress.getInstance(ctnNodeIndex, clientIndex, deviceIndex, KeyStore.deviceMainAddressRootPath(ctnNodeIndex, clientIndex, deviceIndex));
+        const parentPath = KeyStore.deviceMainAddressRootPath(ctnNodeIndex, clientIndex, deviceIndex);
+
+        this._getBaseInstance = () => BaseDeviceMainAddress.getInstance(ctnNodeIndex, clientIndex, deviceIndex, parentPath);
+
+        // Reference base blockchain address object so existing addresses are immediately
+        //  loaded onto local key storage
+        // noinspection BadExpressionStatementJS
+        this._baseAddr;
     }
 }
 
@@ -238,8 +346,14 @@ export class DeviceAssetAddress extends BlockchainAddress {
     constructor (ctnNodeIndex, clientIndex, deviceIndex) {
         super();
 
-        // noinspection JSUnusedGlobalSymbols
-        this._baseAddr = BaseDeviceAssetAddress.getInstance(ctnNodeIndex, clientIndex, deviceIndex, KeyStore.deviceAssetAddressRootPath(ctnNodeIndex, clientIndex, deviceIndex));
+        const parentPath = KeyStore.deviceAssetAddressRootPath(ctnNodeIndex, clientIndex, deviceIndex);
+
+        this._getBaseInstance = () => BaseDeviceAssetAddress.getInstance(ctnNodeIndex, clientIndex, deviceIndex, parentPath);
+
+        // Reference base blockchain address object so existing addresses are immediately
+        //  loaded onto local key storage
+        // noinspection BadExpressionStatementJS
+        this._baseAddr;
     }
 }
 
@@ -248,14 +362,20 @@ export class DeviceAssetIssuanceAddress extends BlockchainAddress {
     constructor (ctnNodeIndex, clientIndex, deviceIndex) {
         super();
 
-        // noinspection JSUnusedGlobalSymbols
-        this._baseAddr = BaseDeviceAssetIssuanceAddress.getInstance(ctnNodeIndex, clientIndex, deviceIndex, KeyStore.deviceAssetIssuanceAddressRootPath(ctnNodeIndex, clientIndex, deviceIndex));
+        const parentPath = KeyStore.deviceAssetIssuanceAddressRootPath(ctnNodeIndex, clientIndex, deviceIndex);
+
+        this._getBaseInstance = () => BaseDeviceAssetIssuanceAddress.getInstance(ctnNodeIndex, clientIndex, deviceIndex, parentPath);
+
+        // Reference base blockchain address object so existing addresses are immediately
+        //  loaded onto local key storage
+        // noinspection BadExpressionStatementJS
+        this._baseAddr;
     }
 }
 
 // BlockchainAddress function class
 function BlockchainAddress() {
-    this._baseAddr = undefined;
+    this._getBaseInstance = undefined;
 
     //  NOTE: arrow functions should NOT be used for the getter/setter of the defined properties.
     //      This is to avoid that, if `this` is referred from within the getter/setter body, it
@@ -265,6 +385,13 @@ function BlockchainAddress() {
     //      from where the property has been defined), but it is especially dangerous if the
     //      object can be cloned.
     Object.defineProperties(this, {
+        _baseAddr: {
+            get: function () {
+                // noinspection JSPotentiallyInvalidUsageOfThis
+                return this._getBaseInstance();
+            },
+            enumerable: false
+        },
         type: {
             get: function () {
                 // noinspection JSPotentiallyInvalidUsageOfThis
