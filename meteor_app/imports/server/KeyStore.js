@@ -244,7 +244,7 @@ export function KeyStore(ctnHubNodeIndex, seed, cryptoNetwork, masterOnly = fals
         // Initialize in-memory database
         this.db = new Loki();
         // noinspection JSCheckFunctionSignatures
-        this.collExtKey = this.db.addCollection('ExtendedKey', {indices: ['type', 'path', 'parentPath', 'index', 'address']});
+        this.collExtKey = this.db.addCollection('ExtendedKey', {indices: ['type', 'path', 'parentPath', 'index', 'address', 'pubKeyHash']});
 
         this.collExtKey.ensureUniqueIndex('path');
         this.collExtKey.ensureUniqueIndex('address');
