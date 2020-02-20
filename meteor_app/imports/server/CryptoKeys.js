@@ -24,6 +24,7 @@ import { Meteor } from 'meteor/meteor';
 import { Catenis } from './Catenis';
 import { ECCipher } from './ECCipher';
 import { ECDecipher } from './ECDecipher';
+import { BitcoinInfo } from './BitcoinInfo';
 
 
 // Definition of function classes
@@ -34,8 +35,17 @@ import { ECDecipher } from './ECDecipher';
 // Constructor
 //  keyPair [Object] - Object representing a ECDSA key pair. Should be either an ECPair or a BIP32 class instance
 //                      gotten from bitcoinjs-lib's ECPair.fromXXX() or bip32.fromXXX() methods
-export function CryptoKeys(keyPair) {
+//  btcAddressType [Object] - (optional) Object representing the type of bitcoin address that should be generated from the encapsulated
+//                             crypto key pair. Valid values: any of the properties of BitcoinInfo.addressType
+export function CryptoKeys(keyPair, btcAddressType) {
     this.keyPair = keyPair;
+
+    if (btcAddressType !== undefined && !BitcoinInfo.isValidAddressType(btcAddressType)) {
+        Catenis.logger.ERROR('CryptoKeys constructor called with an invalid \'btcAddressType\' argument', {btcAddressType});
+        throw new Error('CryptoKeys constructor called with an invalid \'btcAddressType\' argument');
+    }
+
+    this.btcAddressType = btcAddressType;
 
     // Make sure that `compressed` property is defined.
     //  Rationale: BIP32 instances only handle compressed keys even though they do not define a `compressed` property
@@ -93,8 +103,13 @@ CryptoKeys.prototype.getUncompressedPublicKey = function () {
     return this.keyPair.compressed ? secp256k1.publicKeyConvert(pubKey, false) : pubKey;
 };
 
-CryptoKeys.prototype.getAddress = function (forWitness = true) {
-    return (forWitness ? bitcoinLib.payments.p2wpkh : bitcoinLib.payments.p2pkh)({
+CryptoKeys.prototype.getAddress = function () {
+    // Make sure that bitcoin address type is specified
+    if (!this.btcAddressType) {
+        throw new Error('Cannot generate address from crypto key pair; bitcoin address type not specified');
+    }
+
+    return this.btcAddressType.btcPayment({
         pubkey: this.keyPair.publicKey,
         network: this.keyPair.network
     }).address;
@@ -104,8 +119,13 @@ CryptoKeys.prototype.getPubKeyHash = function () {
     return bitcoinLib.crypto.hash160(this.keyPair.publicKey);
 };
 
-CryptoKeys.prototype.getAddressAndPubKeyHash = function (forWitness = true) {
-    const p2pkh = (forWitness ? bitcoinLib.payments.p2wpkh : bitcoinLib.payments.p2pkh)({
+CryptoKeys.prototype.getAddressAndPubKeyHash = function () {
+    // Make sure that bitcoin address type is specified
+    if (!this.btcAddressType) {
+        throw new Error('Cannot generate address from crypto key pair; bitcoin address type not specified');
+    }
+
+    const p2pkh = this.btcAddressType.btcPayment({
         pubkey: this.keyPair.publicKey,
         network: this.keyPair.network
     });

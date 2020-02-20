@@ -90,6 +90,7 @@ import { ClientTwoFactorAuthenticationUI } from './clientUI/ClientTwoFactorAuthe
 import { CatenisOffChainClient } from './CatenisOffChainClient';
 import { OffChainMessagesSettlement } from './OffChainMessagesSettlement';
 import { CatenisOffChainMonitor } from './CatenisOffChainMonitor';
+import { BitcoinInfo } from './BitcoinInfo';
 // TEST - begin
 //import { TestCatenisColoredCoins } from './test/TestCatenisColoredCoins';
 // TEST - end
@@ -135,6 +136,7 @@ Meteor.startup(function () {
             Database.addMissingBtcServicePriceField();
             Application.initialize();
             AccountsEmail.initialize();
+            BitcoinInfo.initialize();
             LicenseExpireEmailNotify.initialize();
             LicenseOverdueEmailNotify.initialize();
             LicenseExpireRemindEmailNotify.initialize();
