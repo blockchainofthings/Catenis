@@ -530,15 +530,6 @@ BitcoinCore.prototype.abandonTransaction = function (txid) {
     }
 };
 
-BitcoinCore.prototype.abandonTransaction = function (txid) {
-    try {
-        return this.rpcApi.command('abandontransaction', txid);
-    }
-    catch (err) {
-        handleError('abandontransaction', err);
-    }
-};
-
 BitcoinCore.prototype.listSinceBlock = function (blockHash, targetConfirmations) {
     targetConfirmations = targetConfirmations !== undefined ? targetConfirmations : 1;
 
