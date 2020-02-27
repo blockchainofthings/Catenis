@@ -730,6 +730,12 @@ Transaction.prototype.getTransaction = function () {
         const txBuilder = new bitcoinLib.TransactionBuilder(Catenis.application.cryptoNetwork),
             vins = [];
 
+        // Note: we need to set the low-R parameter in the Transaction Builder object to make sure that
+        //      generated bitcoin signatures are 71-bytes long (including the trailing SIGHASH byte)
+        //      since Transaction Builder overrides the setting in the Key Pair object and its default
+        //      setting is false
+        txBuilder.setLowR(true);
+
         this.inputs.forEach((input) => {
             vins.push(txBuilder.addInput(input.txout.txid, input.txout.vout, this.useOptInRBF ? 0xffffffff - 2 : undefined));
         });
