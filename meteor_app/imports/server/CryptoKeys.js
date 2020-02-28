@@ -211,6 +211,7 @@ CryptoKeys.prototype.continueEncryptData = function (data, isFinal = false) {
 
     let cipheredData;
 
+    // noinspection DuplicatedCode
     try {
         if (data) {
             cipheredData = this.ecCipher.update(data);
@@ -301,6 +302,7 @@ CryptoKeys.prototype.continueDecryptData = function (data, isFinal = false) {
 
     let plainData;
 
+    // noinspection DuplicatedCode
     try {
         if (data) {
             plainData = this.ecDecipher.update(data);
