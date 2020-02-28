@@ -230,15 +230,8 @@ Util.mergeArrays = function (ar1, ar2) {
 // This method is to be used in place of underscore.js's clone() method to overcome a limitation
 //  of that method where accessor type properties (getter/setter) are copied as data properties
 Util.cloneObj = function (obj) {
-    const cloneObj = {};
-
-    Object.getOwnPropertyNames(obj).forEach((propName) => {
-        Object.defineProperty(cloneObj, propName, Object.getOwnPropertyDescriptor(obj, propName));
-    });
-
-    Object.setPrototypeOf(cloneObj, Object.getPrototypeOf(obj));
-
-    return cloneObj;
+    // noinspection CommaExpressionJS
+    return  Object.create(obj, Object.getOwnPropertyNames(obj).reduce((o, n) => (o[n] = Object.getOwnPropertyDescriptor(obj, n), o), {}));
 };
 
 // Clone an object or an array. If the array contains objects, the objects are also cloned. If those objects

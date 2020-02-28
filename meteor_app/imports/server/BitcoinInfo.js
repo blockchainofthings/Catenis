@@ -14,19 +14,10 @@
 // Third-party node modules
 import bitcoinLib from 'bitcoinjs-lib';
 // Meteor packages
-import { Meteor } from 'meteor/meteor';
+//import { Meteor } from 'meteor/meteor';
 
 // References code in other (Catenis) modules
 import { Catenis } from './Catenis';
-import { add } from 'winston';
-
-// Config entries
-/*const config_entryConfig = config.get('config_entry');
-
-// Configuration settings
-const cfgSettings = {
-    property: config_entryConfig.get('property_name')
-};*/
 
 
 // Definition of classes
@@ -164,7 +155,7 @@ export class BitcoinInfo {
     }
 
     static getAddressTypeByName(name) {
-        const foundKey = Object.keys(BitcoinInfo.addressType).find(key => BitcoinInfo.addressType[key].name === name);
+        const foundKey = Object.values(BitcoinInfo.addressType).find(_addrType => _addrType.name === name);
 
         if (foundKey) {
             return BitcoinInfo.addressType[foundKey];
@@ -172,11 +163,11 @@ export class BitcoinInfo {
     }
 
     static isValidAddressType(addrType) {
-        return Object.keys(BitcoinInfo.addressType).some(key => BitcoinInfo.addressType[key] === addrType);
+        return Object.values(BitcoinInfo.addressType).some(_addrType => _addrType === addrType);
     }
 
     static getOutputTypeByName(name) {
-        const foundKey = Object.keys(BitcoinInfo.outputType).find(key => BitcoinInfo.outputType[key].name === name);
+        const foundKey = Object.values(BitcoinInfo.outputType).find(_outputType => _outputType.name === name);
 
         return foundKey ? BitcoinInfo.outputType[foundKey] : BitcoinInfo.outputType.unknown;
     }
@@ -187,7 +178,7 @@ export class BitcoinInfo {
         if (matchResult) {
             const descPrefix = matchResult[0];
 
-            const foundKey = Object.keys(BitcoinInfo.outputType).find(key => BitcoinInfo.outputType[key].descPrefix === descPrefix);
+            const foundKey = Object.values(BitcoinInfo.outputType).find(_outputType => _outputType.descPrefix === descPrefix);
 
             if (foundKey) {
                 return BitcoinInfo.outputType[foundKey];
@@ -198,7 +189,7 @@ export class BitcoinInfo {
     static getOutputTypeByAddressType(addrType) {
         const addrTypeName = typeof addrType === 'string' ? addrType : addrType.name;
 
-        const foundKey = Object.keys(BitcoinInfo.outputType).find(key => BitcoinInfo.outputType[key].addressType === addrTypeName);
+        const foundKey = Object.values(BitcoinInfo.outputType).find(_outputType => _outputType.addressType === addrTypeName);
 
         if (foundKey) {
             return BitcoinInfo.outputType[foundKey];
