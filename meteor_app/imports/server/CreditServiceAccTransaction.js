@@ -137,6 +137,7 @@ CreditServiceAccTransaction.prototype.buildTransaction = function () {
 
         this.issuingAmount = servCredDistribFund.totalAmount;
 
+        // noinspection DuplicatedCode
         if (this.issuingAmount > 0) {
             // Get Catenis service credit issuance address
             const servCredIssueAddr = this.client.ctnNode.servCredIssueAddr.lastAddressKeys().getAddress();
@@ -197,7 +198,12 @@ CreditServiceAccTransaction.prototype.buildTransaction = function () {
             const servCredIssueAddrAllocUtxo = servCredIssueAddrAllocResult.utxos[0];
 
             // Add Colored Coins asset issuing input
-            this.ccTransact.addIssuingInput(servCredIssueAddrAllocUtxo.txout, servCredIssueAddr, servCredIssueAddrInfo, this.issuingAmount, servCredAssetInfo.issuingOpts);
+            this.ccTransact.addIssuingInput(servCredIssueAddrAllocUtxo.txout, {
+                isWitness: servCredIssueAddrAllocUtxo.isWitness,
+                scriptPubKey: servCredIssueAddrAllocUtxo.scriptPubKey,
+                address: servCredIssueAddr,
+                addrInfo: servCredIssueAddrInfo
+            }, this.issuingAmount, servCredAssetInfo.issuingOpts);
 
             // Add Colored Coins asset transfer outputs
             this.ccTransact.setTransferOutputs(servCredDistribFund.amountPerAddress.map((amount) => {
@@ -235,6 +241,9 @@ CreditServiceAccTransaction.prototype.buildTransaction = function () {
             const multiSigSigneeAddr = this.client.ctnNode.multiSigSigneeAddr.newAddressKeys().getAddress();
 
             // Assemble Colored Coins transaction
+            // TODO: avoid preallocating and passing multisig address to assemble() method and reverting it if not used.
+            //  Solution: pass an "address allocation" function instead, which would be used by the assemble() method
+            //  only in case it is really needed.
             this.ccTransact.assemble(multiSigSigneeAddr);
 
             if (!this.ccTransact.includesMultiSigOutput) {
@@ -248,14 +257,14 @@ CreditServiceAccTransaction.prototype.buildTransaction = function () {
             // Add additional required outputs
 
             // Add system service credit issuance address refund output
-            this.ccTransact.addP2PKHOutput(servCredIssueAddr, Service.serviceCreditIssuanceAddrAmount);
+            this.ccTransact.addPubKeyHashOutput(servCredIssueAddr, Service.serviceCreditIssuanceAddrAmount);
 
             // NOTE: we do not care to check if change is not below dust amount because it is guaranteed
             //      that the change amount be a multiple of the basic amount that is allocated to device
             //      main addresses which in turn is guaranteed to not be below dust
             if (servCredIssueAddrAllocResult.changeAmount > 0) {
                 // Add system service credit issuance address change output
-                this.ccTransact.addP2PKHOutput(servCredIssueAddr, servCredIssueAddrAllocResult.changeAmount);
+                this.ccTransact.addPubKeyHashOutput(servCredIssueAddr, servCredIssueAddrAllocResult.changeAmount);
             }
 
             // Now, allocate UTXOs to pay for tx expense
@@ -282,6 +291,8 @@ CreditServiceAccTransaction.prototype.buildTransaction = function () {
             const inputs = payTxAllocResult.utxos.map((utxo) => {
                 return {
                     txout: utxo.txout,
+                    isWitness: utxo.isWitness,
+                    scriptPubKey: utxo.scriptPubKey,
                     address: utxo.address,
                     addrInfo: Catenis.keyStore.getAddressInfo(utxo.address)
                 }
@@ -291,7 +302,7 @@ CreditServiceAccTransaction.prototype.buildTransaction = function () {
 
             if (payTxAllocResult.changeAmount >= Transaction.txOutputDustAmount) {
                 // Add new output to receive change
-                this.ccTransact.addP2PKHOutput(this.client.ctnNode.fundingChangeAddr.newAddressKeys().getAddress(), payTxAllocResult.changeAmount);
+                this.ccTransact.addPubKeyHashOutput(this.client.ctnNode.fundingChangeAddr.newAddressKeys().getAddress(), payTxAllocResult.changeAmount);
             }
 
             // Create new Asset database doc/rec if necessary

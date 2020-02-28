@@ -113,6 +113,7 @@ export function LogMessageTransaction(device, messageReadable, options) {
 //
 
 LogMessageTransaction.prototype.buildTransaction = function () {
+    // noinspection DuplicatedCode
     if (!this.txBuilt) {
         // Add transaction inputs
 
@@ -150,7 +151,12 @@ LogMessageTransaction.prototype.buildTransaction = function () {
         this.deviceMainAddrKeys = devMainAddrInfo.cryptoKeys;
 
         // Add device main address input
-        this.transact.addInput(devMainAddrAllocUtxo.txout, devMainAddrAllocUtxo.address, devMainAddrInfo);
+        this.transact.addInput(devMainAddrAllocUtxo.txout, {
+            isWitness: devMainAddrAllocUtxo.isWitness,
+            scriptPubKey: devMainAddrAllocUtxo.scriptPubKey,
+            address: devMainAddrAllocUtxo.address,
+            addrInfo: devMainAddrInfo
+        });
 
         // Add transaction outputs
 
@@ -175,7 +181,7 @@ LogMessageTransaction.prototype.buildTransaction = function () {
             const devMainAddrRefundKeys = this.device.mainAddr.newAddressKeys();
 
             // Add device main address refund output
-            this.transact.addP2PKHOutput(devMainAddrRefundKeys.getAddress(), Service.devMainAddrAmount);
+            this.transact.addPubKeyHashOutput(devMainAddrRefundKeys.getAddress(), Service.devMainAddrAmount);
         }
 
         // NOTE: we do not care to check if change is not below dust amount because it is guaranteed
@@ -183,7 +189,7 @@ LogMessageTransaction.prototype.buildTransaction = function () {
         //      main addresses which in turn is guaranteed to not be below dust
         if (devMainAddrAllocResult.changeAmount > 0) {
             // Add device main address change output
-            this.transact.addP2PKHOutput(this.device.mainAddr.newAddressKeys().getAddress(), devMainAddrAllocResult.changeAmount);
+            this.transact.addPubKeyHashOutput(this.device.mainAddr.newAddressKeys().getAddress(), devMainAddrAllocResult.changeAmount);
         }
 
         // Now, allocate UTXOs to pay for tx expense
@@ -210,6 +216,8 @@ LogMessageTransaction.prototype.buildTransaction = function () {
         const inputs = payTxAllocResult.utxos.map((utxo) => {
             return {
                 txout: utxo.txout,
+                isWitness: utxo.isWitness,
+                scriptPubKey: utxo.scriptPubKey,
                 address: utxo.address,
                 addrInfo: Catenis.keyStore.getAddressInfo(utxo.address)
             }
@@ -219,7 +227,7 @@ LogMessageTransaction.prototype.buildTransaction = function () {
 
         if (payTxAllocResult.changeAmount >= Transaction.txOutputDustAmount) {
             // Add new output to receive change
-            this.transact.addP2PKHOutput(Catenis.ctnHubNode.payTxExpenseAddr.newAddressKeys().getAddress(), payTxAllocResult.changeAmount);
+            this.transact.addPubKeyHashOutput(Catenis.ctnHubNode.payTxExpenseAddr.newAddressKeys().getAddress(), payTxAllocResult.changeAmount);
         }
 
         // Indicate that transaction is already built

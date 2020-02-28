@@ -152,6 +152,7 @@ export function TransferAssetTransaction(sendingDevice, receivingDevice, amount,
 //
 
 TransferAssetTransaction.prototype.buildTransaction = function () {
+    // noinspection DuplicatedCode
     if (!this.txBuilt) {
         // Add Colored Coins related transaction inputs and outputs
         //
@@ -182,6 +183,8 @@ TransferAssetTransaction.prototype.buildTransaction = function () {
         this.ccTransact.addTransferInputs(devAssetAddrAllocResult.utxos.map((utxo) => {
             return {
                 txout: utxo.txout,
+                isWitness: utxo.isWitness,
+                scriptPubKey: utxo.scriptPubKey,
                 address: utxo.address,
                 addrInfo: Catenis.keyStore.getAddressInfo(utxo.address)
             }
@@ -237,6 +240,8 @@ TransferAssetTransaction.prototype.buildTransaction = function () {
         this.ccTransact.addInputs(payTxAllocResult.utxos.map((utxo) => {
             return {
                 txout: utxo.txout,
+                isWitness: utxo.isWitness,
+                scriptPubKey: utxo.scriptPubKey,
                 address: utxo.address,
                 addrInfo: Catenis.keyStore.getAddressInfo(utxo.address)
             }
@@ -244,7 +249,7 @@ TransferAssetTransaction.prototype.buildTransaction = function () {
 
         if (payTxAllocResult.changeAmount >= Transaction.txOutputDustAmount) {
             // Add new output to receive change
-            this.ccTransact.addP2PKHOutput(this.sendingDevice.client.ctnNode.payTxExpenseAddr.newAddressKeys().getAddress(), payTxAllocResult.changeAmount);
+            this.ccTransact.addPubKeyHashOutput(this.sendingDevice.client.ctnNode.payTxExpenseAddr.newAddressKeys().getAddress(), payTxAllocResult.changeAmount);
         }
 
         // Indicate that transaction is already built
@@ -360,6 +365,7 @@ TransferAssetTransaction.checkTransaction = function (ccTransact) {
                     }
                 }
 
+                // noinspection DuplicatedCode
                 if (sendDevAssetAddrChange === undefined || areAddressesFromSameDevice(sendDevAssetAddrs[0].addrInfo, sendDevAssetAddrChange.addrInfo)) {
                     // Instantiate transfer asset transaction
                     transferAssetTransact = new TransferAssetTransaction();

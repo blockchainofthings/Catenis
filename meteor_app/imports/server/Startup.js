@@ -91,6 +91,7 @@ import { CatenisOffChainClient } from './CatenisOffChainClient';
 import { OffChainMessagesSettlement } from './OffChainMessagesSettlement';
 import { CatenisOffChainMonitor } from './CatenisOffChainMonitor';
 import { BitcoinInfo } from './BitcoinInfo';
+import { TransactionCache } from './TransactionCache';
 // TEST - begin
 //import { TestCatenisColoredCoins } from './test/TestCatenisColoredCoins';
 // TEST - end
@@ -137,6 +138,7 @@ Meteor.startup(function () {
             Application.initialize();
             AccountsEmail.initialize();
             BitcoinInfo.initialize();
+            TransactionCache.initialize();
             LicenseExpireEmailNotify.initialize();
             LicenseOverdueEmailNotify.initialize();
             LicenseExpireRemindEmailNotify.initialize();

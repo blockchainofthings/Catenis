@@ -77,6 +77,7 @@ export function StoreBcotTransaction(bcotPayTransact) {
 //
 
 StoreBcotTransaction.prototype.buildTransaction = function () {
+    // noinspection DuplicatedCode
     if (!this.txBuilt) {
         // Add transaction inputs
 
@@ -108,7 +109,12 @@ StoreBcotTransaction.prototype.buildTransaction = function () {
         }
 
         // Add client BCOT payment (sending) address input
-        this.omniTransact.addSendingAddressInput(clientBcotPayAddrUtxos[0].txout, this.sendingAddress, Catenis.keyStore.getAddressInfo(this.sendingAddress));
+        this.omniTransact.addSendingAddressInput(clientBcotPayAddrUtxos[0].txout, {
+            isWitness: clientBcotPayAddrUtxos[0].isWitness,
+            scriptPubKey: clientBcotPayAddrUtxos[0].scriptPubKey,
+            address: this.sendingAddress,
+            addrInfo: Catenis.keyStore.getAddressInfo(this.sendingAddress)
+        });
 
         // Add transaction outputs
 
@@ -142,6 +148,8 @@ StoreBcotTransaction.prototype.buildTransaction = function () {
         const inputs = payTxAllocResult.utxos.map((utxo) => {
             return {
                 txout: utxo.txout,
+                isWitness: utxo.isWitness,
+                scriptPubKey: utxo.scriptPubKey,
                 address: utxo.address,
                 addrInfo: Catenis.keyStore.getAddressInfo(utxo.address)
             }
@@ -153,7 +161,7 @@ StoreBcotTransaction.prototype.buildTransaction = function () {
             // Add new output to receive change
             //  Note: it should be automatically inserted just before the reference address output, so the reference
             //      address output is the last output of the transaction
-            this.omniTransact.addP2PKHOutput(this.client.ctnNode.fundingChangeAddr.newAddressKeys().getAddress(), payTxAllocResult.changeAmount);
+            this.omniTransact.addPubKeyHashOutput(this.client.ctnNode.fundingChangeAddr.newAddressKeys().getAddress(), payTxAllocResult.changeAmount);
         }
 
         // Indicate that transaction is already built

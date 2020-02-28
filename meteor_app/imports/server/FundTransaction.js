@@ -86,7 +86,7 @@ FundTransaction.prototype.addPayees = function (blockchainAddress, amountPerAddr
         }
     });
 
-    this.transact.addP2PKHOutputs(payInfos);
+    this.transact.addPubKeyHashOutputs(payInfos);
 
     // Save type of payee
     this.payees.push(blockchainAddress.type);
@@ -99,7 +99,7 @@ FundTransaction.prototype.addPayees = function (blockchainAddress, amountPerAddr
 //
 FundTransaction.prototype.addSingleAddressPayee = function (blockchainAddressType, address, amount) {
     // Add transaction output paying the specified amount to the specific address
-    this.transact.addP2PKHOutput(address, amount);
+    this.transact.addPubKeyHashOutput(address, amount);
 
     // Save type of payee
     this.payees.push(blockchainAddressType);
@@ -125,6 +125,7 @@ FundTransaction.prototype.addPayingSource = function () {
             outputAmount: this.transact.totalOutputsAmount()
         }, false);
 
+        // noinspection DuplicatedCode
         if (fundResult !== null) {
             // NOTE: we DO NOT care to lock the allocated UTXOs because it is expected that
             //  the code used to call this method and the method to actually send the transaction
@@ -135,6 +136,8 @@ FundTransaction.prototype.addPayingSource = function () {
             const inputs = fundResult.utxos.map((utxo) => {
                 return {
                     txout: utxo.txout,
+                    isWitness: utxo.isWitness,
+                    scriptPubKey: utxo.scriptPubKey,
                     address: utxo.address,
                     addrInfo: Catenis.keyStore.getAddressInfo(utxo.address)
                 }
@@ -144,7 +147,7 @@ FundTransaction.prototype.addPayingSource = function () {
 
             if (fundResult.changeAmount >= Transaction.txOutputDustAmount) {
                 // Add new output to receive change
-                this.transact.addP2PKHOutput(Catenis.ctnHubNode.fundingChangeAddr.newAddressKeys().getAddress(), fundResult.changeAmount);
+                this.transact.addPubKeyHashOutput(Catenis.ctnHubNode.fundingChangeAddr.newAddressKeys().getAddress(), fundResult.changeAmount);
             }
 
             // Indicate that funds to pay for tx expense have been allocated

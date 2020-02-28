@@ -27,6 +27,7 @@ import { Service } from './Service';
 import { Transaction } from './Transaction';
 import { MessageReadable } from './MessageReadable';
 import { BufferMessageDuplex } from './BufferMessageDuplex';
+import { BitcoinInfo } from './BitcoinInfo';
 
 
 // Definition of function classes
@@ -117,6 +118,7 @@ export function SendMessageTransaction(originDevice, targetDevice, messageReadab
 //
 
 SendMessageTransaction.prototype.buildTransaction = function () {
+    // noinspection DuplicatedCode
     if (!this.txBuilt) {
         // Add transaction inputs
 
@@ -154,7 +156,12 @@ SendMessageTransaction.prototype.buildTransaction = function () {
         this.originDeviceMainAddrKeys = origDevMainAddrInfo.cryptoKeys;
 
         // Add origin device main address input
-        this.transact.addInput(origDevMainAddrAllocUtxo.txout, origDevMainAddrAllocUtxo.address, origDevMainAddrInfo);
+        this.transact.addInput(origDevMainAddrAllocUtxo.txout, {
+            isWitness: origDevMainAddrAllocUtxo.isWitness,
+            scriptPubKey: origDevMainAddrAllocUtxo.scriptPubKey,
+            address: origDevMainAddrAllocUtxo.address,
+            addrInfo: origDevMainAddrInfo
+        });
 
         // Add transaction outputs
 
@@ -162,14 +169,14 @@ SendMessageTransaction.prototype.buildTransaction = function () {
         this.targetDeviceMainAddrKeys = this.targetDevice.mainAddr.newAddressKeys();
 
         // Add target device main address output
-        this.transact.addP2PKHOutput(this.targetDeviceMainAddrKeys.getAddress(), Service.devMainAddrAmount);
+        this.transact.addPubKeyHashOutput(this.targetDeviceMainAddrKeys.getAddress(), Service.devMainAddrAmount);
 
         if (this.options.readConfirmation) {
             // Prepare to add target device read confirmation output
             const trgtDevReadConfirmAddrKeys = this.targetDevice.readConfirmAddr.newAddressKeys();
 
             // Add target device read confirmation output
-            this.transact.addP2PKHOutput(trgtDevReadConfirmAddrKeys.getAddress(), Service.devReadConfirmAddrAmount);
+            this.transact.addPubKeyHashOutput(trgtDevReadConfirmAddrKeys.getAddress(), Service.devReadConfirmAddrAmount);
         }
 
         // Prepare to add null data output containing message data
@@ -193,7 +200,7 @@ SendMessageTransaction.prototype.buildTransaction = function () {
             const origDevMainAddrRefundKeys = this.originDevice.mainAddr.newAddressKeys();
 
             // Add origin device main address refund output
-            this.transact.addP2PKHOutput(origDevMainAddrRefundKeys.getAddress(), Service.devMainAddrAmount);
+            this.transact.addPubKeyHashOutput(origDevMainAddrRefundKeys.getAddress(), Service.devMainAddrAmount);
         }
 
         // NOTE: we do not care to check if change is not below dust amount because it is guaranteed
@@ -201,7 +208,7 @@ SendMessageTransaction.prototype.buildTransaction = function () {
         //      main addresses which in turn is guaranteed to not be below dust
         if (origDevMainAddrAllocResult.changeAmount > 0) {
             // Add origin device main address change output
-            this.transact.addP2PKHOutput(this.originDevice.mainAddr.newAddressKeys().getAddress(), origDevMainAddrAllocResult.changeAmount);
+            this.transact.addPubKeyHashOutput(this.originDevice.mainAddr.newAddressKeys().getAddress(), origDevMainAddrAllocResult.changeAmount);
         }
 
         // Now, allocate UTXOs to pay for tx expense
@@ -228,6 +235,8 @@ SendMessageTransaction.prototype.buildTransaction = function () {
         const inputs = payTxAllocResult.utxos.map((utxo) => {
             return {
                 txout: utxo.txout,
+                isWitness: utxo.isWitness,
+                scriptPubKey: utxo.scriptPubKey,
                 address: utxo.address,
                 addrInfo: Catenis.keyStore.getAddressInfo(utxo.address)
             }
@@ -237,7 +246,7 @@ SendMessageTransaction.prototype.buildTransaction = function () {
 
         if (payTxAllocResult.changeAmount >= Transaction.txOutputDustAmount) {
             // Add new output to receive change
-            this.transact.addP2PKHOutput(Catenis.ctnHubNode.payTxExpenseAddr.newAddressKeys().getAddress(), payTxAllocResult.changeAmount);
+            this.transact.addPubKeyHashOutput(Catenis.ctnHubNode.payTxExpenseAddr.newAddressKeys().getAddress(), payTxAllocResult.changeAmount);
         }
 
         // Indicate that transaction is already built
@@ -320,7 +329,7 @@ SendMessageTransaction.checkTransaction = function (transact, messageDuplex) {
         let trgtDevReadConfirmAddr;
         let nextOutputPos = 2;
 
-        if (output2.type !== Transaction.outputType.nullData) {
+        if (output2.type !== BitcoinInfo.outputType.nulldata) {
             // Yes, it is present. Get it and adjust next output (after null data output) position
             trgtDevReadConfirmAddr = getAddrAndAddrInfo(output2.payInfo);
             nextOutputPos++;
@@ -377,6 +386,7 @@ SendMessageTransaction.checkTransaction = function (transact, messageDuplex) {
                 }
             }
 
+            // noinspection DuplicatedCode
             if (ctnMessage !== undefined && ctnMessage.isSendMessage()) {
                 // Instantiate send message transaction
                 // noinspection JSValidateTypes

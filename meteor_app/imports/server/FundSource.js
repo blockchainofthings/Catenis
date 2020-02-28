@@ -27,6 +27,7 @@ import { Transaction } from './Transaction';
 import { Util } from './Util';
 import { BitcoinCore } from './BitcoinCore';
 import { AncestorTransactions } from './AncestorTransactions';
+import { BitcoinInfo } from './BitcoinInfo';
 
 // Config entries
 const fundSourceConfig = config.get('fundSource');
@@ -94,6 +95,7 @@ export const cfgSettings = {
 //
 // NOTE: make sure that objects of this function class are instantiated and used (their methods
 //  called) from code executed from the FundSource.utxoCS critical section object
+// noinspection DuplicatedCode
 export function FundSource(addresses, options) {
     // Initialize in-memory database to hold UTXOs
     //  Structure of collUtxo collection: {
@@ -101,6 +103,8 @@ export function FundSource(addresses, options) {
     //      address: [string],              - Bitcoin address that holds the spent amount
     //      txid: [string],                 - ID/hash of the transaction that contains the UTXO (UTXO transaction)
     //      vout: [number],                 - Order/index of output of the UTXO transaction
+    //      type: [string],                 - Tx output type. Valid values (from BitcoinInfo.outputType): 'pubkeyhash', 'witness_v0_keyhash' (see note below)
+    //      isWitness: [boolean],           - Indicates whether tx output is of a segregated witness type
     //      scriptPubKey: [string],         - Public key script of the UTXO
     //      amount: [number],               - Spent amount, in satoshis
     //      confirmations: [number],        - Number of confirmations for the UTXO transaction
@@ -115,6 +119,9 @@ export function FundSource(addresses, options) {
     //        vsize: [number]                   - Virtual size, in vbytes, of the ancestor transaction
     //      }]
     //  }
+    //  NOTE: the list of UTXOs should not include outputs of a script type (i.e. 'scripthash' and 'witness_v0_scripthash')
+    //      since Catenis does not handle such outputs. Also, 'multisig' outputs should not be listed due to a
+    //      Bitcoin Core's limitation where 'multisig' outputs are not listed by the listunspent RPC method.
     this.db = new Loki();
     // noinspection JSCheckFunctionSignatures
     this.collUtxo = this.db.addCollection('UTXO', {
@@ -124,6 +131,7 @@ export function FundSource(addresses, options) {
         indices: [
             'address',
             'txid',
+            'isWitness',
             'amount',
             'confirmations',
             'allocated',
@@ -239,6 +247,7 @@ export function FundSource(addresses, options) {
 // Public FundSource object methods
 //
 
+// noinspection DuplicatedCode
 FundSource.prototype.getBalance = function (includeUnconfirmed = true, includeAllocated = false) {
     const conditions = [];
     let filterResult = false;
@@ -297,6 +306,7 @@ FundSource.prototype.getBalance = function (includeUnconfirmed = true, includeAl
     }, 0);
 };
 
+// noinspection DuplicatedCode
 FundSource.prototype.getBalancePerAddress = function (includeUnconfirmed = true, includeAllocated = false) {
     const conditions = [];
     let filterResult = false;
@@ -371,6 +381,7 @@ FundSource.prototype.getBalancePerAddress = function (includeUnconfirmed = true,
 //      vout: [Number],
 //      amount: [Number]      // Amount in satoshis
 //    },
+//    isWitness: [Boolean],
 //    scriptPubKey: [String]
 //  }]
 FundSource.prototype.getUtxosOfTx = function (txid) {
@@ -382,6 +393,7 @@ FundSource.prototype.getUtxosOfTx = function (txid) {
                 vout: doc.vout,
                 amount: doc.amount
             },
+            isWitness: doc.isWitness,
             scriptPubKey: doc.scriptPubKey
         }
     });
@@ -401,6 +413,7 @@ FundSource.prototype.getUtxosOfTx = function (txid) {
 //        vout: [Number],
 //        amount: [Number]      // Amount in satoshis
 //      },
+//      isWitness: [Boolean],
 //      scriptPubKey: [String]
 //    }],
 //    allocatedAmount: [Number]
@@ -422,6 +435,7 @@ FundSource.prototype.allocateUtxosByPredicate = function (predicate, includeUnco
     };
     let filterResult = false;
 
+    // noinspection DuplicatedCode
     if (includeUnconfirmed && this.loadedUnconfirmedUtxos) {
         const unconfConditions = [];
 
@@ -483,6 +497,7 @@ FundSource.prototype.allocateUtxosByPredicate = function (predicate, includeUnco
                     vout: docUtxo.vout,
                     amount: docUtxo.amount
                 },
+                isWitness: docUtxo.isWitness,
                 scriptPubKey: docUtxo.scriptPubKey
             });
             allocatedAmount += docUtxo.amount;
@@ -514,6 +529,7 @@ FundSource.prototype.allocateUtxosByPredicate = function (predicate, includeUnco
 //        vout: [Number],
 //        amount: [Number]      // Amount in satoshis
 //      },
+//      isWitness: [Boolean],
 //      scriptPubKey: [String]
 //    }],
 //    changeAmount: [Number]  // Optional
@@ -522,6 +538,7 @@ FundSource.prototype.allocateUtxosByPredicate = function (predicate, includeUnco
 FundSource.prototype.allocateFund = function (amount) {
     let result = null;
     
+    // noinspection DuplicatedCode
     if (amount > 0) {
         const utxoResultSets = [];
         let maxUtxoResultSetLength = 0;
@@ -608,6 +625,7 @@ FundSource.prototype.allocateFund = function (amount) {
                             vout: docUtxo.vout,
                             amount: docUtxo.amount
                         },
+                        isWitness: docUtxo.isWitness,
                         scriptPubKey: docUtxo.scriptPubKey
                     });
                     allocatedAmount += docUtxo.amount;
@@ -656,6 +674,7 @@ FundSource.prototype.allocateFund = function (amount) {
 //        vout: [Number],
 //        amount: [Number]      // Amount in satoshis
 //      },
+//      isWitness: [Boolean],
 //      scriptPubKey: [String]
 //    }],
 //    changeAmount: [Number]  // Optional
@@ -711,6 +730,7 @@ FundSource.prototype.allocateFundForTxExpense = function (txInfo, isFixedFeed, f
 
     let result = null;
 
+    // noinspection DuplicatedCode
     if (amount === undefined || amount > 0) {
         const utxoResultSets = [];
         let maxUtxoResultSetLength = 0;
@@ -844,6 +864,7 @@ FundSource.prototype.allocateFundForTxExpense = function (txInfo, isFixedFeed, f
                             vout: docUtxo.vout,
                             amount: docUtxo.amount,
                         },
+                        isWitness: docUtxo.isWitness,
                         scriptPubKey: docUtxo.scriptPubKey
                     });
                     allocatedAmount += docUtxo.amount;
@@ -870,6 +891,7 @@ FundSource.prototype.allocateFundForTxExpense = function (txInfo, isFixedFeed, f
     return result;
 };
 
+// noinspection DuplicatedCode
 FundSource.prototype.clearAllocatedUtxos = function () {
     const docAllocatedUtxos = this.collUtxo.find({allocated: true});
 
@@ -903,20 +925,30 @@ function isExcludedUtxo(utxo) {
 }
 
 function insertUtxo(utxo, unconfTxids) {
-    this.collUtxo.insert({
-        txout: Util.txoutToString(utxo),
-        address: utxo.address,
-        txid: utxo.txid,
-        vout: utxo.vout,
-        scriptPubKey: utxo.scriptPubKey,
-        amount: new BigNumber(utxo.amount).times(100000000).toNumber(),
-        confirmations: utxo.confirmations,
-        allocated: false
-    });
+    const outputType = BitcoinInfo.getOutputTypeByDescriptor(utxo.desc);
 
-    if (utxo.confirmations === 0) {
-        // Store unconfirmed transaction ID
-        unconfTxids.add(utxo.txid);
+    if (outputType && (outputType === BitcoinInfo.outputType.witness_v0_keyhash || outputType === BitcoinInfo.outputType.pubkeyhash)) {
+        this.collUtxo.insert({
+            txout: Util.txoutToString(utxo),
+            address: utxo.address,
+            txid: utxo.txid,
+            vout: utxo.vout,
+            type: outputType.name,
+            isWitness: outputType.isWitness,
+            scriptPubKey: utxo.scriptPubKey,
+            amount: new BigNumber(utxo.amount).times(100000000).toNumber(),
+            confirmations: utxo.confirmations,
+            allocated: false
+        });
+
+        if (utxo.confirmations === 0) {
+            // Store unconfirmed transaction ID
+            unconfTxids.add(utxo.txid);
+        }
+    }
+    else {
+        // UTXO of an unexpected type.
+        Catenis.logger.WARN('Unexpected output type: UTXO NOT added to fund source list', utxo);
     }
 }
 
@@ -945,6 +977,7 @@ function loadUtxos() {
         });
     }
 
+    // noinspection DuplicatedCode
     if (unconfTxids.size > 0) {
         // Update descendants and ancestors info for all unconfirmed UTXO
         //  onto local DB
@@ -1046,6 +1079,7 @@ function loadUtxos() {
 //                                        The second result set contains both confirmed and unconfirmed UTXOs
 //  numWorkUtxos [Number] - Number of UTXOs that should be used for allocating the requested amount
 //  work [Object] - Object used to return the largest delta amount tried when allocation does not succeed
+// noinspection DuplicatedCode
 function allocateUtxos(amount, utxoResultSets, numWorkUtxos, work) {
     let docAllocatedUtxos = undefined,
         exactAmountAllocated = false;
@@ -1383,9 +1417,9 @@ FundSource.utxoCS = new CriticalSection();
 // Definition of module (private) functions
 //
 
+// noinspection DuplicatedCode
 function computeAdditionalUtxos(addUtxoTxInputs) {
     const txidUtxos = new Map();
-    const txidNoScriptPubKeyUtxos = new Map();
 
     if (!Array.isArray(addUtxoTxInputs)) {
         addUtxoTxInputs = [addUtxoTxInputs];
@@ -1396,19 +1430,11 @@ function computeAdditionalUtxos(addUtxoTxInputs) {
             txid: txInput.txout.txid,
             vout: txInput.txout.vout,
             address: txInput.address,
-            amount: new BigNumber(txInput.txout.amount).dividedBy(100000000).toNumber()
+            scriptPubKey: txInput.scriptPubKey
         };
 
-        if (txInput.scriptPubKey !== undefined) {
-            utxo.scriptPubKey = txInput.scriptPubKey;
-        }
-        else {
-            if (txidNoScriptPubKeyUtxos.has(txInput.txout.txid)) {
-                txidNoScriptPubKeyUtxos.get(txInput.txout.txid).push(utxo);
-            }
-            else {
-                txidNoScriptPubKeyUtxos.set(txInput.txout.txid, [utxo]);
-            }
+        if (txInput.txout.amount !== undefined) {
+            utxo.amount = new BigNumber(txInput.txout.amount).dividedBy(100000000).toNumber();
         }
 
         if (txidUtxos.has(txInput.txout.txid)) {
@@ -1419,34 +1445,36 @@ function computeAdditionalUtxos(addUtxoTxInputs) {
         }
     });
 
-    const txidRawTransaction = new Map();
     let hasUnconfirmedUtxo = false;
 
     for (let [txid, utxos] of txidUtxos) {
-        // Retrieve transaction info to get number of confirmations for its related UTXOs
-        const txInfo = Catenis.bitcoinCore.getTransaction(txid);
+        // Retrieve transaction info to get number of confirmations and descriptor
+        //  for their corresponding tx outputs
+        const txInfo = Catenis.bitcoinCore.getDecodedRawTransactionCheck(txid);
 
         utxos.forEach((utxo) => {
+            const txout = txInfo.vout[utxo.vout];
+            const scriptPubKey = txout.scriptPubKey;
+
+            // Make sure that UTXO is complete
+            if (!utxo.address) {
+                utxo.address = scriptPubKey.addresses[0];
+            }
+
+            if (!utxo.scriptPubKey) {
+                utxo.scriptPubKey = scriptPubKey.hex;
+            }
+
+            if (utxo.amount === undefined) {
+                utxo.amount = txout.value;
+            }
+
             utxo.confirmations = txInfo.confirmations;
+            utxo.desc = BitcoinInfo.getOutputTypeByName(scriptPubKey.type).desc;
         });
 
         if (txInfo.confirmations === 0) {
             hasUnconfirmedUtxo = true;
-        }
-
-        if (txidNoScriptPubKeyUtxos.has(txid)) {
-            txidRawTransaction.set(txid, txInfo.hex);
-        }
-    }
-
-    if (txidRawTransaction.size > 0) {
-        for (let [txid, hexTx] of txidRawTransaction) {
-            // Decode raw transaction to get script pub key for its related UTXOs
-            const tx = Catenis.bitcoinCore.decodeRawTransaction(hexTx);
-
-            txidNoScriptPubKeyUtxos.get(txid).forEach((utxo) => {
-                utxo.scriptPubKey = tx.vout[utxo.vout].scriptPubKey.hex;
-            });
         }
     }
 

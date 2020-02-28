@@ -1005,5 +1005,10 @@
   // Parameters pertaining to CatenisOffChainMonitor module
   catenisOffChainMonitor: {
     autoPollingTimeInterval: 15000  // (15 sec.) Time, in milliseconds, of interval to automatically polling for Catenis off-chain message data
+  },
+  // Parameters pertaining to TransactionCache module
+  transactionCache: {
+    transactTTL: 604800000,  // (7 dias) Time, in milliseconds, before cached transactions are considered aged
+    ttlEvaluationInterval: 3600000  // (1 hour) Period of time, in milliseconds, when cached transactions' time-to-live is evaluated (and transactions marked as aged as appropriate)
   }
 }

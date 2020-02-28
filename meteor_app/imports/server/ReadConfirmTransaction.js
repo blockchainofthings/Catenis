@@ -647,6 +647,8 @@ ReadConfirmTransaction.prototype.addSendMsgTxToConfirm = function (sendMsgTransa
             vout: readConfirmOutputPos,
             amount: readConfirmOutput.payInfo.amount,
         },
+        isWitness: readConfirmOutput.type.isWitness,
+        scriptPubKey: readConfirmOutput.scriptPubKey,
         address: readConfirmOutput.payInfo.address,
         addrInfo: readConfirmOutput.payInfo.addrInfo
     };
@@ -689,6 +691,7 @@ ReadConfirmTransaction.prototype.mergeReadConfirmTransaction = function (readCon
     let newInputAdded = false;
 
     // Process read confirmation address to spend null
+    // noinspection DuplicatedCode
     for (let inputPos = 0; inputPos < readConfirmTransact.nextReadConfirmAddrSpndNullInputPos; inputPos++) {
         const newOutputAdded = addReadConfirmAddrSpendNull.call(this, readConfirmTransact.transact.getInputAt(inputPos), readConfirmTransact.transact.getOutputAt(readConfirmTransact.readConfirmSpendNullOutputPos).payInfo.address);
 
@@ -705,6 +708,7 @@ ReadConfirmTransaction.prototype.mergeReadConfirmTransaction = function (readCon
     }
 
     // Process read confirmation address to spend only
+    // noinspection DuplicatedCode
     for (let inputPos = readConfirmTransact.nextReadConfirmAddrSpndNullInputPos; inputPos < readConfirmTransact.nextReadConfirmAddrSpndOnlyInputPos; inputPos++) {
         const newOutputAdded = addReadConfirmAddrSpendOnly.call(this, readConfirmTransact.transact.getInputAt(inputPos), readConfirmTransact.transact.getOutputAt(readConfirmTransact.readConfirmSpendOnlyOutputPos).payInfo.address);
 
@@ -864,6 +868,8 @@ ReadConfirmTransaction.prototype.fundTransaction = function () {
                             const inputs = allocResult.utxos.map((utxo) => {
                                 return {
                                     txout: utxo.txout,
+                                    isWitness: utxo.isWitness,
+                                    scriptPubKey: utxo.scriptPubKey,
                                     address: utxo.address,
                                     addrInfo: Catenis.keyStore.getAddressInfo(utxo.address)
                                 }
@@ -899,7 +905,7 @@ ReadConfirmTransaction.prototype.fundTransaction = function () {
                                 // A change output is required
                                 if (this.change === 0) {
                                     // Transaction did not have a change output yet, so add a new one
-                                    this.transact.addP2PKHOutput(Catenis.ctnHubNode.readConfirmPayTxExpenseAddr.newAddressKeys().getAddress(), newChange);
+                                    this.transact.addPubKeyHashOutput(Catenis.ctnHubNode.readConfirmPayTxExpenseAddr.newAddressKeys().getAddress(), newChange);
                                 }
                                 else {
                                     // Transaction already had change output, so just reset its amount
@@ -1071,6 +1077,7 @@ function setReadConfirmSpendNotifyOutputPos(ctnNodeIndex) {
     }
 }
 
+// noinspection DuplicatedCode
 function addReadConfirmAddrSpendNull(input, readConfirmSpendAddress) {
     // Add input
     this.transact.addInputs(input, this.nextReadConfirmAddrSpndNullInputPos);
@@ -1087,13 +1094,14 @@ function addReadConfirmAddrSpendNull(input, readConfirmSpendAddress) {
         // Add new output
         this.hasReadConfirmSpendNullOutput = true;
         readConfirmSpendAddress = readConfirmSpendAddress !== undefined ? readConfirmSpendAddress : Catenis.ctnHubNode.readConfirmSpendNullAddr.newAddressKeys().getAddress();
-        this.transact.addP2PKHOutput(readConfirmSpendAddress, input.txout.amount, this.readConfirmSpendNullOutputPos);
+        this.transact.addPubKeyHashOutput(readConfirmSpendAddress, input.txout.amount, this.readConfirmSpendNullOutputPos);
         newOutputAdded = true;
     }
 
     return newOutputAdded;
 }
 
+// noinspection DuplicatedCode
 function addReadConfirmAddrSpendOnly(input, readConfirmSpendAddress) {
     // Add input
     this.transact.addInputs(input, this.nextReadConfirmAddrSpndOnlyInputPos);
@@ -1110,7 +1118,7 @@ function addReadConfirmAddrSpendOnly(input, readConfirmSpendAddress) {
         // Add new output
         this.hasReadConfirmSpendOnlyOutput = true;
         readConfirmSpendAddress = readConfirmSpendAddress !== undefined ? readConfirmSpendAddress : Catenis.ctnHubNode.readConfirmSpendOnlyAddr.newAddressKeys().getAddress();
-        this.transact.addP2PKHOutput(readConfirmSpendAddress, input.txout.amount, this.readConfirmSpendOnlyOutputPos);
+        this.transact.addPubKeyHashOutput(readConfirmSpendAddress, input.txout.amount, this.readConfirmSpendOnlyOutputPos);
         newOutputAdded = true;
     }
 
@@ -1133,7 +1141,7 @@ function addReadConfirmAddrSpendNotify(input, ctnNode, readConfirmSpendAddress) 
         // Add new output
         setReadConfirmSpendNotifyOutputPos.call(this, ctnNode.ctnNodeIndex);
         readConfirmSpendAddress = readConfirmSpendAddress !== undefined ? input.txout : ctnNode.readConfirmSpendNotifyAddr.newAddressKeys().getAddress();
-        this.transact.addP2PKHOutput(readConfirmSpendAddress, input.txout.amount, getReadConfirmSpendNotifyOutputPos.call(this, ctnNode.ctnNodeIndex));
+        this.transact.addPubKeyHashOutput(readConfirmSpendAddress, input.txout.amount, getReadConfirmSpendNotifyOutputPos.call(this, ctnNode.ctnNodeIndex));
         newOutputAdded = true;
     }
 
@@ -1174,6 +1182,7 @@ function initReadConfirmTxInfo() {
     this.readConfirmTxInfo = new RbfTransactionInfo(opts);
 }
 
+// noinspection DuplicatedCode
 function retrieveReplacedTransactionIds() {
     this.txids = [];
     let nextTxid = this.transact.txid;

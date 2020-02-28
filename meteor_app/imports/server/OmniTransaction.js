@@ -109,11 +109,23 @@ export class OmniTransaction extends Transaction {
         return super.addOutputs(outputs, fixOutputPosition.call(this, pos));
     }
 
-    addSendingAddressInput(txout, address, addrInfo) {
+    //  Arguments:
+    //   txout [Object] {  Unspent tx output to spend
+    //     txid: [String],   Transaction ID
+    //     vout: [Number],   Output number in tx
+    //     amount: [Number]  Amount help by output in satoshis
+    //   }
+    //   outputInfo [Object] {
+    //     isWitness: [Boolean],    Indicates whether unspent tx output is of a (segregated) witness type
+    //     scriptPubKey: [String],  (not required for non-witness outputs) Hex-encoded public key script of unspent tx output
+    //     address: [String],       Blockchain address associated with unspent tx output
+    //     addrInfo: [Object]       Catenis address info including crypto key pair required to spend output
+    //   }
+    addSendingAddressInput(txout, outputInfo) {
         if (!this.hasSendingAddressInput) {
-            const result = this.addInput(txout, address, addrInfo, 0);
+            const result = this.addInput(txout, outputInfo, 0);
 
-            this.sendingAddress = address;
+            this.sendingAddress = outputInfo.address;
 
             return result;
         }
@@ -124,7 +136,7 @@ export class OmniTransaction extends Transaction {
 
     addReferenceAddressOutput(address, amount) {
         if (!this.hasReferenceAddressOutput) {
-            const result = this.addP2PKHOutput(address, amount);
+            const result = this.addPubKeyHashOutput(address, amount);
 
             this.referenceAddress = address;
 

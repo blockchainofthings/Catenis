@@ -1790,7 +1790,10 @@ const utxosTestData0 = [
         "scriptPubKey": "76a914d47bedbbd448fdaa61c4ecd250866f5c6be8980088ac",
         "amount": 0.00007000,
         "confirmations": 10,
-        "spendable": true
+        "spendable": false,
+        "solvable": true,
+        "desc": "pkh([492a6fca]0370577560dddf474a8626d9e367a04129d7803572dae7b96758c02b6325d2ea93)#sjdgl7zx",
+        "safe": true
     },
     {
         "txid": "579c4d89751dc8880f389056a6990274dc6b7c60e8143a7d118a6370b6366682",
@@ -1800,7 +1803,10 @@ const utxosTestData0 = [
         "scriptPubKey": "76a914d47bedbbd448fdaa61c4ecd250866f5c6be8980088ac",
         "amount": 0.00006500,
         "confirmations": 50,
-        "spendable": true
+        "spendable": false,
+        "solvable": true,
+        "desc": "pkh([492a6fca]0370577560dddf474a8626d9e367a04129d7803572dae7b96758c02b6325d2ea93)#sjdgl7zx",
+        "safe": true
     },
     {
         "txid": "3d7b9563008b95c25cdd67ab35f256f228d0edb1a2ab8c9110d2a09a2345d373",
@@ -1810,7 +1816,10 @@ const utxosTestData0 = [
         "scriptPubKey": "76a914d47bedbbd448fdaa61c4ecd250866f5c6be8980088ac",
         "amount": 0.00005000,
         "confirmations": 1,
-        "spendable": true
+        "spendable": false,
+        "solvable": true,
+        "desc": "pkh([492a6fca]0370577560dddf474a8626d9e367a04129d7803572dae7b96758c02b6325d2ea93)#sjdgl7zx",
+        "safe": true
     },
     {
         "txid": "ad244897a99caa76a5698567dd5c43cb42384b530ac158a7d8cf0be5f9638443",
@@ -1820,7 +1829,10 @@ const utxosTestData0 = [
         "scriptPubKey": "76a914d47bedbbd448fdaa61c4ecd250866f5c6be8980088ac",
         "amount": 0.00004000,
         "confirmations": 1,
-        "spendable": true
+        "spendable": false,
+        "solvable": true,
+        "desc": "pkh([492a6fca]0370577560dddf474a8626d9e367a04129d7803572dae7b96758c02b6325d2ea93)#sjdgl7zx",
+        "safe": true
     },
     {
         "txid": "a34345f69e5beb3618dfca9a22326f6e978d5ec6ab5d5c57e685e6f812cd628d",
@@ -1830,7 +1842,10 @@ const utxosTestData0 = [
         "scriptPubKey": "76a914d47bedbbd448fdaa61c4ecd250866f5c6be8980088ac",
         "amount": 0.00003000,
         "confirmations": 1,
-        "spendable": true
+        "spendable": false,
+        "solvable": true,
+        "desc": "pkh([492a6fca]0370577560dddf474a8626d9e367a04129d7803572dae7b96758c02b6325d2ea93)#sjdgl7zx",
+        "safe": true
     },
     {
         "txid": "7fa35e8cabf89a25324f7fa25f2f22f47850e97a3c3b05e875ba95c7ead80ad6",
@@ -1840,7 +1855,10 @@ const utxosTestData0 = [
         "scriptPubKey": "76a914d47bedbbd448fdaa61c4ecd250866f5c6be8980088ac",
         "amount": 0.00002000,
         "confirmations": 1,
-        "spendable": true
+        "spendable": false,
+        "solvable": true,
+        "desc": "pkh([492a6fca]0370577560dddf474a8626d9e367a04129d7803572dae7b96758c02b6325d2ea93)#sjdgl7zx",
+        "safe": true
     },
     {
         "txid": "cb5713d8dc0d5825c8bd2f391e6bd0a9f9c0d3164dd1d594959094e27d34d460",
@@ -1850,7 +1868,10 @@ const utxosTestData0 = [
         "scriptPubKey": "76a914d47bedbbd448fdaa61c4ecd250866f5c6be8980088ac",
         "amount": 0.00001200,
         "confirmations": 1,
-        "spendable": true
+        "spendable": false,
+        "solvable": true,
+        "desc": "pkh([492a6fca]0370577560dddf474a8626d9e367a04129d7803572dae7b96758c02b6325d2ea93)#sjdgl7zx",
+        "safe": true
     }
 ];
 
@@ -1865,7 +1886,10 @@ const utxosTestData1 = [
         "scriptPubKey": "76a914d47bedbbd448fdaa61c4ecd250866f5c6be8980088ac",
         "amount": 0.00007000,
         "confirmations": 10,
-        "spendable": true
+        "spendable": false,
+        "solvable": true,
+        "desc": "pkh([492a6fca]0370577560dddf474a8626d9e367a04129d7803572dae7b96758c02b6325d2ea93)#sjdgl7zx",
+        "safe": true
     },
     {
         "txid": "579c4d89751dc8880f389056a6990274dc6b7c60e8143a7d118a6370b6366682",
@@ -1875,7 +1899,10 @@ const utxosTestData1 = [
         "scriptPubKey": "76a914d47bedbbd448fdaa61c4ecd250866f5c6be8980088ac",
         "amount": 0.00006500,
         "confirmations": 50,
-        "spendable": true
+        "spendable": false,
+        "solvable": true,
+        "desc": "pkh([492a6fca]0370577560dddf474a8626d9e367a04129d7803572dae7b96758c02b6325d2ea93)#sjdgl7zx",
+        "safe": true
     },
 
     // Fabricated unconfirmed UTXO entries
@@ -1888,7 +1915,10 @@ const utxosTestData1 = [
         "scriptPubKey": "76a914d47bedbbd448fdaa61c4ecd250866f5c6be8980088ac",
         "amount": 0.00005000,
         "confirmations": 0,
-        "spendable": true
+        "spendable": false,
+        "solvable": true,
+        "desc": "pkh([492a6fca]0370577560dddf474a8626d9e367a04129d7803572dae7b96758c02b6325d2ea93)#sjdgl7zx",
+        "safe": true
     },
     {
         "txid": "ad244897a99caa76a5698567dd5c43cb42384b530ac158a7d8cf0be5f9638443",
@@ -1898,7 +1928,10 @@ const utxosTestData1 = [
         "scriptPubKey": "76a914d47bedbbd448fdaa61c4ecd250866f5c6be8980088ac",
         "amount": 0.00004000,
         "confirmations": 0,
-        "spendable": true
+        "spendable": false,
+        "solvable": true,
+        "desc": "pkh([492a6fca]0370577560dddf474a8626d9e367a04129d7803572dae7b96758c02b6325d2ea93)#sjdgl7zx",
+        "safe": true
     },
     {
         "txid": "a34345f69e5beb3618dfca9a22326f6e978d5ec6ab5d5c57e685e6f812cd628d",
@@ -1908,7 +1941,10 @@ const utxosTestData1 = [
         "scriptPubKey": "76a914d47bedbbd448fdaa61c4ecd250866f5c6be8980088ac",
         "amount": 0.00003000,
         "confirmations": 0,
-        "spendable": true
+        "spendable": false,
+        "solvable": true,
+        "desc": "pkh([492a6fca]0370577560dddf474a8626d9e367a04129d7803572dae7b96758c02b6325d2ea93)#sjdgl7zx",
+        "safe": true
     },
     {
         "txid": "7fa35e8cabf89a25324f7fa25f2f22f47850e97a3c3b05e875ba95c7ead80ad6",
@@ -1918,7 +1954,10 @@ const utxosTestData1 = [
         "scriptPubKey": "76a914d47bedbbd448fdaa61c4ecd250866f5c6be8980088ac",
         "amount": 0.00002000,
         "confirmations": 0,
-        "spendable": true
+        "spendable": false,
+        "solvable": true,
+        "desc": "pkh([492a6fca]0370577560dddf474a8626d9e367a04129d7803572dae7b96758c02b6325d2ea93)#sjdgl7zx",
+        "safe": true
     },
     {
         "txid": "cb5713d8dc0d5825c8bd2f391e6bd0a9f9c0d3164dd1d594959094e27d34d460",
@@ -1928,7 +1967,10 @@ const utxosTestData1 = [
         "scriptPubKey": "76a914d47bedbbd448fdaa61c4ecd250866f5c6be8980088ac",
         "amount": 0.00001200,
         "confirmations": 0,
-        "spendable": true
+        "spendable": false,
+        "solvable": true,
+        "desc": "pkh([492a6fca]0370577560dddf474a8626d9e367a04129d7803572dae7b96758c02b6325d2ea93)#sjdgl7zx",
+        "safe": true
     }
 ];
 
@@ -1944,7 +1986,10 @@ const utxosTestData2 = [
         "scriptPubKey": "76a914d47bedbbd448fdaa61c4ecd250866f5c6be8980088ac",
         "amount": 0.00007000,
         "confirmations": 10,
-        "spendable": true
+        "spendable": false,
+        "solvable": true,
+        "desc": "pkh([492a6fca]0370577560dddf474a8626d9e367a04129d7803572dae7b96758c02b6325d2ea93)#sjdgl7zx",
+        "safe": true
     },
     {
         "txid": "579c4d89751dc8880f389056a6990274dc6b7c60e8143a7d118a6370b6366682",
@@ -1954,7 +1999,10 @@ const utxosTestData2 = [
         "scriptPubKey": "76a914d47bedbbd448fdaa61c4ecd250866f5c6be8980088ac",
         "amount": 0.00006500,
         "confirmations": 50,
-        "spendable": true
+        "spendable": false,
+        "solvable": true,
+        "desc": "pkh([492a6fca]0370577560dddf474a8626d9e367a04129d7803572dae7b96758c02b6325d2ea93)#sjdgl7zx",
+        "safe": true
     }
 ];
 

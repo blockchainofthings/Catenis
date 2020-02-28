@@ -96,6 +96,7 @@ export function RedeemBcotTransaction(client, redeemedAmount) {
 //
 
 RedeemBcotTransaction.prototype.buildTransaction = function () {
+    // noinspection DuplicatedCode
     if (!this.txBuilt) {
         // Add transaction inputs
 
@@ -127,7 +128,12 @@ RedeemBcotTransaction.prototype.buildTransaction = function () {
         }
 
         // Add system BCOT token sale stock (sending) address input
-        this.omniTransact.addSendingAddressInput(bcotSaleStockAddrAllocResult.utxos[0].txout, bcotSaleStockAddr, Catenis.keyStore.getAddressInfo(bcotSaleStockAddr));
+        this.omniTransact.addSendingAddressInput(bcotSaleStockAddrAllocResult.utxos[0].txout, {
+            isWitness: bcotSaleStockAddrAllocResult.utxos[0].isWitness,
+            scriptPubKey: bcotSaleStockAddrAllocResult.utxos[0].scriptPubKey,
+            address: bcotSaleStockAddr,
+            addrInfo: Catenis.keyStore.getAddressInfo(bcotSaleStockAddr)
+        });
 
         // Add transaction outputs
 
@@ -135,14 +141,14 @@ RedeemBcotTransaction.prototype.buildTransaction = function () {
         this.omniTransact.addOmniPayloadOutput(this.bcotAmount);
 
         // Add system BCOT token sale stock address refund output
-        this.omniTransact.addP2PKHOutput(bcotSaleStockAddr, Service.bcotSaleStockAddrAmount);
+        this.omniTransact.addPubKeyHashOutput(bcotSaleStockAddr, Service.bcotSaleStockAddrAmount);
 
         // NOTE: we do not care to check if change is not below dust amount because it is guaranteed
         //      that the change amount be a multiple of the basic amount that is allocated to BCOT
         //      token sale stock address which in turn is guaranteed to not be below dust
         if (bcotSaleStockAddrAllocResult.changeAmount > 0) {
             // Add system service credit issuance address change output
-            this.omniTransact.addP2PKHOutput(bcotSaleStockAddr, bcotSaleStockAddrAllocResult.changeAmount);
+            this.omniTransact.addPubKeyHashOutput(bcotSaleStockAddr, bcotSaleStockAddrAllocResult.changeAmount);
         }
 
         // Add BCOT store (reference) address output
@@ -172,6 +178,8 @@ RedeemBcotTransaction.prototype.buildTransaction = function () {
         const inputs = payTxAllocResult.utxos.map((utxo) => {
             return {
                 txout: utxo.txout,
+                isWitness: utxo.isWitness,
+                scriptPubKey: utxo.scriptPubKey,
                 address: utxo.address,
                 addrInfo: Catenis.keyStore.getAddressInfo(utxo.address)
             }
@@ -183,7 +191,7 @@ RedeemBcotTransaction.prototype.buildTransaction = function () {
             // Add new output to receive change
             //  Note: it should be automatically inserted just before the reference address output, so the reference
             //      address output is the last output of the transaction
-            this.omniTransact.addP2PKHOutput(Catenis.ctnHubNode.fundingChangeAddr.newAddressKeys().getAddress(), payTxAllocResult.changeAmount);
+            this.omniTransact.addPubKeyHashOutput(Catenis.ctnHubNode.fundingChangeAddr.newAddressKeys().getAddress(), payTxAllocResult.changeAmount);
         }
 
         // Indicate that transaction is already built

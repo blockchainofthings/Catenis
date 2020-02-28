@@ -29,7 +29,12 @@ export class TestCatenisColoredCoins {
         if (TestCatenisColoredCoins.isInitialized()) {
             this.ccTransact = new CCTransaction();
 
-            this.ccTransact.addIssuingInput(TestCatenisColoredCoins.inputs[0].txout, TestCatenisColoredCoins.inputs[0].address, TestCatenisColoredCoins.inputs[0].addrInfo, 123456789);
+            this.ccTransact.addIssuingInput(TestCatenisColoredCoins.inputs[0].txout, {
+                isWitness: TestCatenisColoredCoins.inputs[0].isWitness,
+                scriptPubKey: TestCatenisColoredCoins.inputs[0].scriptPubKey,
+                address: TestCatenisColoredCoins.inputs[0].address,
+                addrInfo: TestCatenisColoredCoins.inputs[0].addrInfo
+            }, 123456789);
 
             let limit = 0;
 
@@ -85,7 +90,12 @@ export class TestCatenisColoredCoins {
         if (TestCatenisColoredCoins.isInitialized()) {
             this.ccTransact = new CCTransaction();
 
-            this.ccTransact.addTransferInput(TestCatenisColoredCoins.assetInput.txout, TestCatenisColoredCoins.assetInput.address, TestCatenisColoredCoins.assetInput.addrInfo);
+            this.ccTransact.addTransferInput(TestCatenisColoredCoins.assetInput.txout, {
+                isWitness: TestCatenisColoredCoins.assetInput.isWitness,
+                scriptPubKey: TestCatenisColoredCoins.assetInput.scriptPubKey,
+                address: TestCatenisColoredCoins.assetInput.address,
+                addrInfo: TestCatenisColoredCoins.assetInput.addrInfo
+            });
 
             let limit = 0;
 
@@ -158,6 +168,8 @@ export class TestCatenisColoredCoins {
                 assetDivisibility: 4,
                 isAggregatableAsset: true
             },
+            isWitness: utxo.isWitness,
+            scriptPubKey: utxo.scriptPubKey,
             address: utxo.address,
             addrInfo: Catenis.keyStore.getAddressInfo(utxo.address)
         };
@@ -171,6 +183,8 @@ export class TestCatenisColoredCoins {
                     vout: utxo.vout,
                     amount: utxo.amount
                 },
+                isWitness: utxo.isWitness,
+                scriptPubKey: utxo.scriptPubKey,
                 address: utxo.address,
                 addrInfo: Catenis.keyStore.getAddressInfo(utxo.address)
             }

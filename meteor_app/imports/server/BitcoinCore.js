@@ -339,12 +339,24 @@ BitcoinCore.prototype.unlockUnspent = function (txouts) {
 };
 
 BitcoinCore.prototype.sendRawTransaction = function (hexTx) {
+    let result;
+
     try {
-        return this.rpcApi.sendrawtransaction(hexTx);
+        result = this.rpcApi.sendrawtransaction(hexTx);
     }
     catch (err) {
         handleError('sendrawtransaction', err);
     }
+
+    // Store raw transaction in local cache
+    try {
+        Catenis.txCache.store(result, hexTx);
+    }
+    catch (err) {
+        Catenis.logger.ERROR('Error storing raw transaction in local cache.', err);
+    }
+
+    return result;
 };
 
 BitcoinCore.prototype.getMempoolInfo = function () {
@@ -379,19 +391,35 @@ BitcoinCore.prototype.getRawMempool = function (verbose) {
 //  the method return an object. Otherwise (verbose specifically
 //  set as false), the method returns a hex encoded string, which
 //  represents the block contents
-BitcoinCore.prototype.getBlock = function (blockHash, verbose) {
+BitcoinCore.prototype.getBlock = function (blockHash, verbose, addTxsToCache = false) {
     const args = [blockHash];
 
     if (verbose !== undefined) {
         args.push(verbose);
     }
 
+    let result;
+
     try {
-        return this.rpcApi.getblock.apply(this.btcClient, args);
+        result = this.rpcApi.getblock.apply(this.btcClient, args);
     }
     catch (err) {
         handleError('getblock', err);
     }
+
+    if (addTxsToCache && result.tx.length > 0 && typeof result.tx[0] === 'object') {
+        // Store raw transactions in local cache
+        result.tx.forEach(tx => {
+            try {
+                Catenis.txCache.store(tx.txid, tx.hex);
+            }
+            catch (err) {
+                Catenis.logger.ERROR('Error storing raw transaction in local cache.', err);
+            }
+        });
+    }
+
+    return result;
 };
 
 BitcoinCore.prototype.getBlockCount = function () {
@@ -430,12 +458,24 @@ BitcoinCore.prototype.getTxOut = function (txid, vout) {
 //  So, this can be useful if one only needs to retrieve, say, the raw hex data
 //  representation of the transaction.
 BitcoinCore.prototype.getTransaction = function (txid, includeDetails = false, verbose = false, logError = true) {
+    let result;
+
     try {
-        return this.rpcApi.gettransaction(txid, includeDetails, verbose);
+        result = this.rpcApi.gettransaction(txid, includeDetails, verbose);
     }
     catch (err) {
         handleError('gettransaction', err, logError);
     }
+
+    // Store raw transaction in local cache
+    try {
+        Catenis.txCache.store(txid, result.hex);
+    }
+    catch (err) {
+        Catenis.logger.ERROR('Error storing raw transaction in local cache.', err);
+    }
+
+    return result;
 };
 
 // Note: by default the verbose arg is set to false what makes
@@ -451,21 +491,45 @@ BitcoinCore.prototype.getRawTransaction = function (txid, verbose, logError = tr
         args.push(verbose ? 1 : 0);
     }
 
+    let result;
+
     try {
-        return this.rpcApi.getrawtransaction.apply(this.btcClient, args);
+        result = this.rpcApi.getrawtransaction.apply(this.btcClient, args);
     }
     catch (err) {
         handleError('getrawtransaction', err, logError);
     }
+
+    // Store raw transaction in local cache
+    try {
+        Catenis.txCache.store(txid, typeof result === 'string' ? result : result.hex);
+    }
+    catch (err) {
+        Catenis.logger.ERROR('Error storing raw transaction in local cache.', err);
+    }
+
+    return result;
 };
 
 BitcoinCore.prototype.decodeRawTransaction = function (hexTx, logError = true) {
+    let result;
+
     try {
-        return this.rpcApi.decoderawtransaction(hexTx);
+        result = this.rpcApi.decoderawtransaction(hexTx);
     }
     catch (err) {
         handleError('decoderawtransaction', err, logError);
     }
+
+    // Store raw transaction in local cache
+    try {
+        Catenis.txCache.store(result.txid, hexTx);
+    }
+    catch (err) {
+        Catenis.logger.ERROR('Error storing raw transaction in local cache.', err);
+    }
+
+    return result;
 };
 
 BitcoinCore.prototype.decodeScript = function (hexScript) {
@@ -611,10 +675,17 @@ BitcoinCore.prototype.getDecodedRawTransactionCheck = function (txid, logError =
             // No transaction exists (neither in mempool nor the blockchain) with that txid.
             //  Check if it is possibly a transaction that had been sent by Catenis previously
             //  and that have been replaced later
-            let hexTx;
-
             try {
-                return this.rpcApi.gettransaction(txid, false, true).decoded;
+                const tx = this.rpcApi.gettransaction(txid, false, true);
+
+                const decTx = tx.decoded;
+                decTx.hex = tx.hex;
+                decTx.blockhash = tx.blockhash;
+                decTx.confirmations = tx.confirmations;
+                decTx.time = tx.time;
+                decTx.blocktime = tx.blocktime;
+
+                return decTx;
             }
             catch (err2) {
                 handleError('gettransaction', err2, logError);

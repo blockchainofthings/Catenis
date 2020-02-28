@@ -95,6 +95,7 @@ SettleOffChainMessagesTransaction.prototype.containMsgDataFromLocalSender = func
 };
 
 SettleOffChainMessagesTransaction.prototype.buildTransaction = function () {
+    // noinspection DuplicatedCode
     if (!this.txBuilt) {
         // Add transaction outputs
 
@@ -137,6 +138,8 @@ SettleOffChainMessagesTransaction.prototype.buildTransaction = function () {
         const inputs = payTxAllocResult.utxos.map((utxo) => {
             return {
                 txout: utxo.txout,
+                isWitness: utxo.isWitness,
+                scriptPubKey: utxo.scriptPubKey,
                 address: utxo.address,
                 addrInfo: Catenis.keyStore.getAddressInfo(utxo.address)
             }
@@ -146,7 +149,7 @@ SettleOffChainMessagesTransaction.prototype.buildTransaction = function () {
 
         if (payTxAllocResult.changeAmount >= Transaction.txOutputDustAmount) {
             // Add new output to receive change
-            this.transact.addP2PKHOutput(Catenis.ctnHubNode.ocMsgsSetlmtPayTxExpenseAddr.newAddressKeys().getAddress(), payTxAllocResult.changeAmount);
+            this.transact.addPubKeyHashOutput(Catenis.ctnHubNode.ocMsgsSetlmtPayTxExpenseAddr.newAddressKeys().getAddress(), payTxAllocResult.changeAmount);
         }
 
         // Indicate that transaction is already built

@@ -16,10 +16,6 @@ import util from 'util';
 // Third-party node modules
 import config from 'config';
 import bitcoinLib from 'bitcoinjs-lib';
-// NOTE: the following import is sort of a hack since the templates defined in the current version
-//      (5.1.6) of the bitcoinjs library was not meant to be externally exported, so it might not
-//      work for future versions of the library
-import bitcoinLib_multisig from 'bitcoinjs-lib/src/templates/multisig';
 // noinspection JSFileReferences
 import BigNumber from 'bignumber.js';
 import _und from 'underscore';
@@ -33,6 +29,7 @@ import { BaseBlockchainAddress } from './BaseBlockchainAddress';
 import { CriticalSection } from './CriticalSection';
 import { Util } from './Util';
 import { KeyStore } from './KeyStore';
+import { BitcoinInfo } from './BitcoinInfo';
 
 // Config entries
 const configTransact = config.get('transaction');
@@ -64,7 +61,9 @@ const dbMalleabilityCS = new CriticalSection();
 //      vout: [Number],
 //      amount: [number]  - Amount, in satoshis
 //    },
-//    address:  - (optional) Blockchain address associated with unspent output being spent
+//    isWitness: [Boolean],  - Indicates whether unspent output being spent is of a segregated witness type
+//    scriptPubKey: [String],  - (optional for non-witness tx out) Hex-encoded public key script of unspent output being spent
+//    address: [String]  - (optional) Blockchain address associated with unspent output being spent
 //    addrInfo: {  - Info about blockchain address associated with unspent output being spent (as returned by Catenis.keyStore.getAddressInfo())
 //                    Should only exist for Catenis blockchain addresses
 //      cryptoKeys: [Object(CryptoKeys)],  - Pair of crypto keys associated with this address
@@ -77,8 +76,8 @@ const dbMalleabilityCS = new CriticalSection();
 //  }
 //
 //  output: {
-//    type: [String],  - Either 'P2PKH', 'P2SH', 'nullData' or 'multisig'
-//    payInfo: {       - Should only exist for 'P2PKH', 'P2SH', or 'multisig' output types
+//    type: [Object],  - Object representing the type of the tx output. Valid values: any of the properties of BitcoinInfo.outputType
+//    payInfo: {       - Should exist for a paying output type (any type other than 'nulldata' or 'unknown')
 //      address: [String|Array(String)], - Blockchain address to where payment should be sent.
 //                                          NOTE: for 'multisig' outputs, this is actually a list of addresses
 //      nSigs: [Number], - Number of signatures required to spend multi-signature output. Should only exist for 'multisig' output type
@@ -96,7 +95,9 @@ const dbMalleabilityCS = new CriticalSection();
 //        pathParts: [Object]    - Object with components that make up the HD extended key path associated with this address
 //      }
 //    },
-//    data: [Object(Buffer)] - Should only exist for 'nullData' output type
+//    data: [Object(Buffer)], - Should only exist for 'nulldata' output type
+//    scriptPubKey: [String]  - Hex-encoded public key script of the tx output. Should only exist when transaction is deserialized
+//                               (generated from Transaction.fromHex())
 //  }
 
 export function Transaction(useOptInRBF = false) {
@@ -132,6 +133,24 @@ export function Transaction(useOptInRBF = false) {
 // Public Transaction object methods
 //
 
+// Add one or more inputs to the transaction (spending a given unspent tx output each)
+//
+//  Arguments:
+//   inputs [Array(Object)|Object] [{
+//     txout {  Unspent tx output to spend
+//       txid: [String],   Transaction ID
+//       vout: [Number],   Output number in tx
+//       amount: [Number]  Amount help by output in satoshis
+//     },
+//     isWitness: [Boolean],    Indicates whether unspent tx output is of a (segregated) witness type
+//     scriptPubKey: [String],  (not required for non-witness outputs) Hex-encoded public key script of unspent tx output
+//     address: [String],       Blockchain address associated with unspent tx output
+//     addrInfo: [Object]       Catenis address info including crypto key pair required to spend output
+//   }]
+//   pos [Number]  Position (starting from zero) at which inputs should be added to transaction in sequence. If the
+//                  specified position is already taken, the current inputs are pushed aside (shifted) before inserting
+//                  the new ones. If no position is specified, inputs are added after the last occupied position
+// noinspection DuplicatedCode
 Transaction.prototype.addInputs = function (inputs, pos) {
     if (!Array.isArray(inputs)) {
         inputs = [inputs];
@@ -168,15 +187,26 @@ Transaction.prototype.addInputs = function (inputs, pos) {
     }
 };
 
-Transaction.prototype.addInput = function (txout, address, addrInfo, pos) {
+// Add an input to the transaction (spending a given unspent tx output)
+//
+//  Arguments:
+//   txout [Object] {  Unspent tx output to spend
+//     txid: [String],   Transaction ID
+//     vout: [Number],   Output number in tx
+//     amount: [Number]  Amount help by output in satoshis
+//   }
+//   outputInfo [Object] {
+//     isWitness: [Boolean],    Indicates whether unspent tx output is of a (segregated) witness type
+//     scriptPubKey: [String],  (not required for non-witness outputs) Hex-encoded public key script of unspent tx output
+//     address: [String],       Blockchain address associated with unspent tx output
+//     addrInfo: [Object]       Catenis address info including crypto key pair required to spend output
+//   }
+//   pos [Number]  Position (starting from zero) at which input should be added to transaction
+Transaction.prototype.addInput = function (txout, outputInfo, pos) {
     const input = {
-        txout: txout,
-        address: address
+        txout,
+        ...outputInfo
     };
-
-    if (addrInfo) {
-        input.addrInfo = addrInfo;
-    }
 
     this.addInputs(input, pos);
 };
@@ -213,6 +243,24 @@ Transaction.prototype.removeInputAt = function (pos) {
     return input;
 };
 
+// Add one or more output to the transaction
+//
+//  Arguments:
+//   outputs [Array(Object)|Object] [{
+//     type: [Object],   Object representing the type of the tx output. Valid values: any of the properties of BitcoinInfo.outputType
+//     payInfo: {   Should only be specified for a paying output type (any type other than 'nulldata' or 'unknown')
+//       address: [String],   Blockchain address to where payment should be sent
+//       nSigs: [Number],     Number of signatures required to spend multi-signature output. Should only be specified for 'multisig' output type
+//       amount: [Number],    Amount, in satoshis, to send
+//       addrInfo: [Array(Object)]   List of Catenis address infos (including crypto key pair required to spend output) or hex-encoded
+//                                    public keys (for non-Catenis blockchain addresses). Should only be specified for 'multisig' output type
+//     },
+//     data: [Object(Buffer)]   Data to embed for 'nulldata' output type
+//   }]
+//   pos [Number]  Position (starting from zero) at which outputs should be added to transaction in sequence. If the
+//                  specified position is already taken, the current outputs are pushed aside (shifted) before inserting
+//                  the new ones. If no position is specified, inputs are added after the last occupied position
+// noinspection DuplicatedCode
 Transaction.prototype.addOutputs = function (outputs, pos) {
     if (!Array.isArray(outputs)) {
         outputs = [outputs];
@@ -249,7 +297,16 @@ Transaction.prototype.addOutputs = function (outputs, pos) {
     }
 };
 
-Transaction.prototype.addP2PKHOutputs = function (payInfos, pos) {
+// Add one or more output to the transaction that pay to a public key hash either using
+//  segregated witness (P2WPKH) or not (P2PKH)
+//
+//  Arguments:
+//   payInfos [Array(Object)|Object] [{
+//     address: [String],  Blockchain address to where payment should be sent
+//     amount: [Number]    Amount, in satoshis, to send
+//   }]
+//   pos [Number]  Position (starting from zero) at which outputs should be added to transaction
+Transaction.prototype.addPubKeyHashOutputs = function (payInfos, pos) {
     if (!Array.isArray(payInfos)) {
         payInfos = [payInfos];
     }
@@ -260,7 +317,7 @@ Transaction.prototype.addP2PKHOutputs = function (payInfos, pos) {
 
     const outputs = payInfos.map((payInfo) => {
         return {
-            type: Transaction.outputType.P2PKH,
+            type: Catenis.bitcoinInfo.getOutputTypeForAddress(payInfo.address),
             payInfo: payInfo
         }
     });
@@ -268,8 +325,15 @@ Transaction.prototype.addP2PKHOutputs = function (payInfos, pos) {
     this.addOutputs(outputs, pos);
 };
 
-Transaction.prototype.addP2PKHOutput = function (address, amount, pos) {
-    this.addP2PKHOutputs({
+// Add an output to the transaction that pays to a public key hash either using segregated
+//  witness (P2WPKH) or not (P2PKH)
+//
+//  Arguments:
+//   address [String|Array(String)]  Blockchain address to where payment should be sent
+//   amount [Number]  Amount, in satoshis, to send
+//   pos [Number]  Position (starting from zero) at which output should be added to transaction
+Transaction.prototype.addPubKeyHashOutput = function (address, amount, pos) {
+    this.addPubKeyHashOutputs({
         address: address,
         amount: amount
     }, pos);
@@ -286,7 +350,7 @@ Transaction.prototype.addMultiSigOutputs = function (payInfos, pos) {
 
     const outputs = payInfos.map((payInfo) => {
         return {
-            type: Transaction.outputType.multisig,
+            type: BitcoinInfo.outputType.multisig,
             payInfo: payInfo
         }
     });
@@ -344,8 +408,7 @@ Transaction.prototype.addMultiSigOutput = function (addresses, nSigs, amount, po
 Transaction.prototype.incrementOutputAmount = function (pos, amount) {
     const output = this.outputs[pos];
 
-    if (output !== undefined && (output.type === Transaction.outputType.P2PKH || output.type === Transaction.outputType.P2SH || output.type === Transaction.outputType.multisig)
-            && amount !== 0) {
+    if (output !== undefined && Transaction.isPayingOutput(output.type) && amount !== 0) {
         output.payInfo.amount += amount;
         invalidateTx.call(this);
     }
@@ -354,8 +417,7 @@ Transaction.prototype.incrementOutputAmount = function (pos, amount) {
 Transaction.prototype.resetOutputAmount = function (pos, amount) {
     const output = this.outputs[pos];
 
-    if (output !== undefined && (output.type === Transaction.outputType.P2PKH || output.type === Transaction.outputType.P2SH || output.type === Transaction.outputType.multisig)
-            && amount !== output.payInfo.amount) {
+    if (output !== undefined && Transaction.isPayingOutput(output.type) && amount !== output.payInfo.amount) {
         output.payInfo.amount = amount;
         invalidateTx.call(this);
     }
@@ -370,7 +432,7 @@ Transaction.prototype.addNullDataOutput = function (data, pos) {
         }
 
         this.addOutputs({
-            type: Transaction.outputType.nullData,
+            type: BitcoinInfo.outputType.nulldata,
             data: data
         }, pos);
         this.hasNullDataOutput = true;
@@ -435,7 +497,7 @@ Transaction.prototype.removeOutputAt = function (pos) {
     if (this.outputs[pos] !== undefined) {
         output = this.outputs.splice(pos, 1)[0];
 
-        if (output.type === Transaction.outputType.nullData) {
+        if (output.type === BitcoinInfo.outputType.nulldata) {
             this.hasNullDataOutput = false;
             this.nullDataPayloadSize = 0;
         }
@@ -452,7 +514,7 @@ Transaction.prototype.getMultiSigOutputPositions = function () {
     const poss = [];
 
     for (let pos = 0, lastPos = this.outputs.length - 1; pos <= lastPos; pos++) {
-        if (this.outputs[pos].type === Transaction.outputType.multisig) {
+        if (this.outputs[pos].type === BitcoinInfo.outputType.multisig) {
             poss.push(pos);
         }
     }
@@ -465,7 +527,7 @@ Transaction.prototype.getNullDataOutputPosition = function () {
 
     if (this.hasNullDataOutput) {
         pos = this.outputs.findIndex((output) => {
-            return output.type === Transaction.outputType.nullData;
+            return output.type === BitcoinInfo.outputType.nulldata;
         });
 
         if (pos < 0) {
@@ -484,7 +546,7 @@ Transaction.prototype.getNullDataOutput = function () {
 
     if (this.hasNullDataOutput) {
         output = this.outputs.find((output) => {
-            return output.type === Transaction.outputType.nullData;
+            return output.type === BitcoinInfo.outputType.nulldata;
         });
 
         if (output === undefined) {
@@ -517,8 +579,8 @@ Transaction.prototype.listOutputAddresses = function (startPos = 0, endPos) {
     for (let pos = startPos, lastPos = endPos === undefined ? this.outputs.length - 1 : endPos; pos <= lastPos; pos++) {
         const output = this.outputs[pos];
 
-        if (output !== undefined && (output.type === Transaction.outputType.P2PKH || output.type === Transaction.outputType.P2SH || output.type === Transaction.outputType.multisig)) {
-            if (output.type !== Transaction.outputType.multisig) {
+        if (output !== undefined && Transaction.isPayingOutput(output.type)) {
+            if (output.type !== BitcoinInfo.outputType.multisig) {
                 addrList.push(output.payInfo.address);
             }
             else {
@@ -555,7 +617,7 @@ Transaction.prototype.totalOutputsAmount = function (startPos = 0, endPos) {
     for (let pos = startPos, lastPos = endPos === undefined ? this.outputs.length - 1 : endPos; pos <= lastPos; pos++) {
         const output = this.outputs[pos];
 
-        if (output !== undefined && (output.type === Transaction.outputType.P2PKH || output.type === Transaction.outputType.P2SH || output.type === Transaction.outputType.multisig)) {
+        if (output !== undefined && Transaction.isPayingOutput(output.type)) {
             sum += output.payInfo.amount;
         }
     }
@@ -567,6 +629,7 @@ Transaction.prototype.feeAmount = function () {
     return this.totalInputsAmount() - this.totalOutputsAmount();
 };
 
+// noinspection DuplicatedCode
 Transaction.prototype.countInputs = function (startPos = 0, endPos) {
     let count = 0;
 
@@ -579,6 +642,35 @@ Transaction.prototype.countInputs = function (startPos = 0, endPos) {
     return count;
 };
 
+Transaction.prototype.countNonWitnessInputs = function (startPos = 0, endPos) {
+    let count = 0;
+
+    for (let pos = startPos, lastPos = endPos === undefined ? this.inputs.length - 1 : endPos; pos <= lastPos; pos++) {
+        const input = this.inputs[pos];
+
+        if (input !== undefined && !input.isWitness) {
+            count++;
+        }
+    }
+
+    return count;
+};
+
+Transaction.prototype.countWitnessInputs = function (startPos = 0, endPos) {
+    let count = 0;
+
+    for (let pos = startPos, lastPos = endPos === undefined ? this.inputs.length - 1 : endPos; pos <= lastPos; pos++) {
+        const input = this.inputs[pos];
+
+        if (input !== undefined && input.isWitness) {
+            count++;
+        }
+    }
+
+    return count;
+};
+
+// noinspection DuplicatedCode
 Transaction.prototype.countOutputs = function (startPos = 0, endPos) {
     let count = 0;
 
@@ -591,13 +683,29 @@ Transaction.prototype.countOutputs = function (startPos = 0, endPos) {
     return count;
 };
 
+// noinspection DuplicatedCode
 Transaction.prototype.countP2PKHOutputs = function (startPos = 0, endPos) {
     let count = 0;
 
     for (let pos = startPos, lastPos = endPos === undefined ? this.outputs.length - 1 : endPos; pos <= lastPos; pos++) {
         const output = this.outputs[pos];
 
-        if (output !== undefined && output.type === Transaction.outputType.P2PKH) {
+        if (output !== undefined && output.type === BitcoinInfo.outputType.pubkeyhash) {
+            count++;
+        }
+    }
+
+    return count;
+};
+
+// noinspection DuplicatedCode
+Transaction.prototype.countP2WPKHOutputs = function (startPos = 0, endPos) {
+    let count = 0;
+
+    for (let pos = startPos, lastPos = endPos === undefined ? this.outputs.length - 1 : endPos; pos <= lastPos; pos++) {
+        const output = this.outputs[pos];
+
+        if (output !== undefined && output.type === BitcoinInfo.outputType.witness_v0_keyhash) {
             count++;
         }
     }
@@ -611,7 +719,7 @@ Transaction.prototype.getNumPubKeysMultiSigOutputs = function (startPos = 0, end
     for (let pos = startPos, lastPos = endPos === undefined ? this.outputs.length - 1 : endPos; pos <= lastPos; pos++) {
         const output = this.outputs[pos];
 
-        if (output !== undefined && output.type === Transaction.outputType.multisig) {
+        if (output !== undefined && output.type === BitcoinInfo.outputType.multisig) {
             numPubKeysMultiSigOutputs.push(output.payInfo.addrInfo.length);
         }
     }
@@ -720,70 +828,98 @@ Transaction.prototype.getTransaction = function () {
     if (this.rawTransaction === undefined) {
         // Build transaction adding all inputs and outputs in sequence
         //
-        // NOTE: even though bitcoinjs has deprecated the TransactionBuilder class in favor of the new Psbt
-        //      class, claiming that it will eventually be removed in a future major release, we have
-        //      decided to keep using TransactionBuilder for now because of a requirement of the Psbt class
-        //      (actually a requirement of the Partially Signed Bitcoin Transaction Format - BIP-174),
-        //      which states that: when adding an input spending a non-segwit tx output (e.g. a P2PKH output),
-        //      the whole transaction (in hex format) for the output being spent needs to be passed as a
-        //      parameter.
-        const txBuilder = new bitcoinLib.TransactionBuilder(Catenis.application.cryptoNetwork),
-            vins = [];
+        // NOTE: build transaction using the new Psbt class of bitcoinjs since the previous method,
+        //      which used the TransactionBuilder class, has been deprecated. The Psbt class implements
+        //      the Partially Signed Bitcoin Transaction (PSBT) format, which has been specified in
+        //      BIP 174 and implemented in Bitcoin Core since ver. 0.17.
+        const psbt = new bitcoinLib.Psbt({network: Catenis.application.cryptoNetwork});
 
-        // Note: we need to set the low-R parameter in the Transaction Builder object to make sure that
-        //      generated bitcoin signatures are 71-bytes long (including the trailing SIGHASH byte)
-        //      since Transaction Builder overrides the setting in the Key Pair object and its default
-        //      setting is false
-        txBuilder.setLowR(true);
+        // Add inputs
+        this.inputs.forEach(input => {
+            const inputData = {
+                hash: input.txout.txid,
+                index: input.txout.vout
+            };
 
-        this.inputs.forEach((input) => {
-            vins.push(txBuilder.addInput(input.txout.txid, input.txout.vout, this.useOptInRBF ? 0xffffffff - 2 : undefined));
+            if (this.useOptInRBF) {
+                inputData.sequence = 0xffffffff - 2;
+            }
+
+            if (input.isWitness) {
+                // Spend a "pay-to-witness" tx output
+                inputData.witnessUtxo = {
+                    script: Buffer.from(input.scriptPubKey, 'hex'),
+                    value: input.txout.amount
+                }
+            }
+            else {
+                // Spend a legacy (non-witness) tx output
+                inputData.nonWitnessUtxo = Catenis.txCache.retrieve(inputData.hash);
+            }
+
+            psbt.addInput(inputData);
         });
 
-        this.outputs.forEach((output) => {
-            if (output.type === Transaction.outputType.P2PKH) {
-                txBuilder.addOutput(output.payInfo.address, output.payInfo.amount);
-            }
-            else if (output.type === Transaction.outputType.nullData) {
-                txBuilder.addOutput(bitcoinLib.payments.embed({data: [output.data]}).output, 0);
-            }
-            else if (output.type === Transaction.outputType.multisig) {
-                const pubKeys = output.payInfo.addrInfo.map((addrInfo) => {
-                    if (typeof addrInfo === 'object') {
-                        // Address info. Get public key from key pair
-                        return addrInfo.cryptoKeys.getCompressedPublicKey();
-                    }
-                    else {
-                        // It is actually a public key. So, just return it
-                        return Buffer.from(addrInfo, 'hex');
-                    }
-                });
+        // Add outputs
+        this.outputs.forEach(output => {
+            let outputData;
 
-                // NOTE: we are NOT using bitcoinLib.payments.p2ms(), which is the current recommended way to generate
-                //      multisignature outputs, because it validates the public keys passed in, and, in our case,
-                //      one or more of the provided public keys can be fabricated to hold additional data that will
-                //      not fit in a null data output (which is the case with Colored Coins metadata)
-                txBuilder.addOutput(encodeMultiSigOutput(output.payInfo.nSigs, pubKeys), output.payInfo.amount);
+            switch(output.type) {
+                case BitcoinInfo.outputType.witness_v0_keyhash:
+                case BitcoinInfo.outputType.pubkeyhash:
+                    outputData = {
+                        address: output.payInfo.address,
+                        value: output.payInfo.amount
+                    };
+
+                    break;
+
+                case BitcoinInfo.outputType.nulldata:
+                    outputData = {
+                        script: bitcoinLib.payments.embed({data: [output.data]}).output,
+                        value: 0
+                    };
+
+                    break;
+
+                case BitcoinInfo.outputType.multisig:
+                    const pubKeys = output.payInfo.addrInfo.map((addrInfo) => {
+                        if (typeof addrInfo === 'object') {
+                            // Address info. Get public key from key pair
+                            return addrInfo.cryptoKeys.getCompressedPublicKey();
+                        }
+                        else {
+                            // It is actually a public key. So, just return it
+                            return Buffer.from(addrInfo, 'hex');
+                        }
+                    });
+
+                    // NOTE: we are NOT using bitcoinLib.payments.p2ms(), which is the current recommended way to generate
+                    //      multisignature outputs, because it validates the public keys passed in, and, in our case,
+                    //      one or more of the provided public keys can be fabricated to hold additional data that will
+                    //      not fit in a null data output (which is the case with Colored Coins metadata)
+                    outputData = {
+                        script: encodeMultiSigOutput(output.payInfo.nSigs, pubKeys),
+                        value: output.payInfo.amount
+                    };
+
+                    break;
             }
+
+            psbt.addOutput(outputData);
         });
 
-        // Now, signs each input
-        let vinIdx = 0;
-
-        this.inputs.forEach((input) => {
+        // Sign inputs
+        this.inputs.forEach((input, idx) => {
             if (input.addrInfo) {
-                // NOTE: we are assuming that ALL tx outputs being spent are of type P2PKH
-                // TODO: review this so, in the future, other types of tx output (e.g. multisignature
-                //  and segwit outputs) can be spent
-                txBuilder.sign({
-                    prevOutScriptType: 'p2pkh',
-                    vin: vins[vinIdx++],
-                    keyPair: input.addrInfo.cryptoKeys.keyPair
-                });
+                psbt.signInput(idx, input.addrInfo.cryptoKeys.keyPair);
             }
         });
 
-        this.rawTransaction = txBuilder.build().toHex();
+        psbt.validateSignaturesOfAllInputs();
+        psbt.finalizeAllInputs();
+
+        this.rawTransaction = psbt.extractTransaction().toHex();
     }
 
     return this.rawTransaction;
@@ -806,20 +942,22 @@ Transaction.prototype.sendTransaction = function (resend = false) {
 //      txid: [String],           - Blockchain assigned ID of transaction containing output that is spent by this input
 //      vout: [Number],           - Index which identifies the output that is spent by this input
 //      amount: [Number],         - Amount, in satoshis, associated with the output that is spent by this input
+//      isWitness: [Boolean],     - Indicates whether output that is spent is of a segregated witness type
 //      addrPath: [String]        - HD node path of the blockchain address associated with the output that is spent by this input
 //                                   Note: it shall have the actual blockchain address for non-Catenis blockchain addresses
 //    }],
 //    outputs: [{ [Array(Object)] - List of outputs currently added to the transaction
-//      type: [String],           - Identifies the type of the output. Either: 'P2PKH', 'P2SH', 'nullData' or 'multisig'
-//      addrPath: [String|Array(String)], - (only present for output of type 'P2PKH', 'P2SH' or 'multisig') HD node path of the
-//                                           blockchain address to where payment should be sent, or the actual address for
-//                                           non-Catenis blockchain addresses.
+//      type: [String],           - Identifies the type of the output. Value of 'name' property of corresponding output type object
+//      addrPath: [String|Array(String)], - (only present for a paying output type (any type other than 'nulldata' or 'unknown'))
+//                                           HD node path of the blockchain address to where payment should be sent, or the actual
+//                                           address for non-Catenis blockchain addresses.
 //                                            NOTE: for 'multisig' outputs, this is actually a list of either HD node path
 //                                              (for Catenis blockchain addresses) or hex-encoded public keys (for non-Catenis
 //                                              blockchain addresses)
 //      nSigs: [Number],          - (only present for output of type 'multisig') Number of signatures required to spend output
-//      amount: [Number],         - (only present for output of type 'P2PKH', 'P2SH' or 'multisig') Amount, in satoshis, to send
-//      data: [String]            - (only present for output of type 'nullData') Base-64 encoded data to be embedded in transaction
+//      amount: [Number],         - (only present for a paying output type (any type other than 'nulldata' or 'unknown')) Amount, in satoshis, to send
+//      data: [String],           - (only present for output of type 'nullData') Base-64 encoded data to be embedded in transaction
+//      scriptPubKey: [String]    - (optional) Hex-encoded public key script of the tx output
 //    }],
 //    useOptInRBF: [Boolean],     - Indicates whether tx uses Replace By Fee feature
 //    txid: [String]              - (only present if tx had already been sent) The blockchain assigned ID of the transaction
@@ -833,25 +971,26 @@ Transaction.prototype.serialize = function () {
                 txid: input.txout.txid,
                 vout: input.txout.vout,
                 amount: input.txout.amount,
+                isWitness: input.isWitness,
                 addrPath: addrInfo !== null ? addrInfo.path : input.address
             };
         }),
         outputs: this.outputs.map((output) => {
             const convOutput = {
-                type: output.type
+                type: output.type.name
             };
 
-            if (convOutput.type === Transaction.outputType.P2PKH || convOutput.type === Transaction.outputType.P2SH) {
+            if (Transaction.isSingleAddressPayingOutput(output.type)) {
                 const addrInfo = Catenis.keyStore.getAddressInfo(output.payInfo.address, true);
 
                 convOutput.addrPath = addrInfo !== null ? addrInfo.path : output.payInfo.address;
                 convOutput.amount = output.payInfo.amount;
             }
-            else if (convOutput.type === Transaction.outputType.nullData) {
+            else if (convOutput.type === BitcoinInfo.outputType.nulldata) {
                 // noinspection JSCheckFunctionSignatures
                 convOutput.data = output.data.toString('base64');
             }
-            else if (convOutput.type === Transaction.outputType.multisig) {
+            else if (convOutput.type === BitcoinInfo.outputType.multisig) {
                 convOutput.addrPath = output.payInfo.addrInfo.map((addrInfo) => {
                     if (typeof addrInfo === 'object') {
                         // Address info. Return blockchain address path
@@ -864,6 +1003,10 @@ Transaction.prototype.serialize = function () {
                 });
                 convOutput.nSigs = output.payInfo.nSigs;
                 convOutput.amount = output.payInfo.amount;
+            }
+
+            if (output.scriptPubKey) {
+                convOutput.scriptPubKey = output.scriptPubKey;
             }
 
             return convOutput;
@@ -1008,14 +1151,14 @@ Transaction.prototype.initComparison = function () {
 
         this.outputs.forEach((output) => {
             // The key to use depends on the type of output
-            if (output.type === Transaction.outputType.P2PKH) {
-                // Use both type and address root (parent) path|address as key
+            if (output.type === BitcoinInfo.outputType.witness_v0_keyhash || output.type === BitcoinInfo.outputType.pubkeyhash) {
+                // Use both type (name) and address root (parent) path|address as key
                 if (output.payInfo.addrInfo === undefined) {
                     // Address info not yet present, try to get it
                     output.payInfo.addrInfo = Catenis.keyStore.getAddressInfo(output.payInfo.address, true);
                 }
 
-                const key = {type: output.type};
+                const key = {type: output.type.name};
 
                 if (output.payInfo.addrInfo) {
                     key.rootPath = output.payInfo.addrInfo.parentPath
@@ -1027,19 +1170,19 @@ Transaction.prototype.initComparison = function () {
 
                 this.compOutputs.set(JSON.stringify(key), output);
             }
-            else if (output.type === Transaction.outputType.P2SH) {
-                // Use both type and address as the key
+            else if (output.type === BitcoinInfo.outputType.witness_v0_scripthash || output.type === BitcoinInfo.outputType.scripthash) {
+                // Use both type (name) and address as the key
                 this.compOutputs.set(JSON.stringify({
-                    type: output.type,
+                    type: output.type.name,
                     address: output.address
                 }), output);
             }
-            else if (output.type === Transaction.outputType.nullData) {
-                // Use the type as the key
-                this.compOutputs.set(output.type, output);
+            else if (output.type === BitcoinInfo.outputType.nulldata) {
+                // Use the type (name) as the key
+                this.compOutputs.set(output.type.name, output);
             }
-            else if (output.type === Transaction.outputType.multisig) {
-                // Use type, list of address root (parent) paths|addresses, and number of signatures as key
+            else if (output.type === BitcoinInfo.outputType.multisig) {
+                // Use type (name), list of address root (parent) paths|addresses, and number of signatures as key
                 const addresses = output.payInfo.addrInfo.map((addrInfo, idx) => {
                     if (typeof addrInfo === 'object') {
                         // Address info. Return parent path
@@ -1052,7 +1195,7 @@ Transaction.prototype.initComparison = function () {
                 });
 
                 this.compOutputs.set(JSON.stringify({
-                    type: output.type,
+                    type: output.type.name,
                     address: addresses,
                     nSigs: output.payInfo.nSigs
                 }), output);
@@ -1077,8 +1220,7 @@ Transaction.prototype.initComparison = function () {
 //     otherOutput: [Object] - The output of the other transaction that is identical to the output in this transaction
 //                           -  NOTE: only present for diffType.update
 //     deltaAmount: [Number] - The amount difference between two identical outputs that exist in both txs but that do not have the same amount
-//                           -  NOTE: only present for diffType.update and Transaction.outputType.P2PKH, Transaction.outputType.P2SH or
-//                                  Transaction.outputType.multisig
+//                           -  NOTE: only present for diffType.update and a paying output type (any type other than 'nulldata' or 'unknown')
 //   }]
 // }
 Transaction.prototype.diffTransaction = function (transact) {
@@ -1125,7 +1267,7 @@ Transaction.prototype.diffTransaction = function (transact) {
             // Outputs are identical. Check if their data are different
             const otherOutput = transact.compOutputs.get(key);
 
-            if (output.type === Transaction.outputType.P2PKH || output.type === Transaction.outputType.P2SH || output.type === Transaction.outputType.multisig) {
+            if (Transaction.isPayingOutput(output.type)) {
                 if (output.payInfo.amount !== otherOutput.payInfo.amount) {
                     diffResult.outputs.push({
                         diffType: Transaction.diffType.update,
@@ -1135,7 +1277,7 @@ Transaction.prototype.diffTransaction = function (transact) {
                     })
                 }
             }
-            else if (output.type === Transaction.outputType.nullData) {
+            else if (output.type === BitcoinInfo.outputType.nulldata) {
                 if (output.data.compare(otherOutput.data) !== 0) {
                     diffResult.outputs.push({
                         diffType: Transaction.diffType.update,
@@ -1200,13 +1342,13 @@ function initInputTokenSequence() {
 
 function initOutputTokenSequence() {
     this.outTokenSequence = this.outputs.reduce((seq, output) => {
-        if (output.type !== Transaction.outputType.multisig) {
+        if (output.type !== BitcoinInfo.outputType.multisig) {
             let addrType = null;
 
-            if (output.type === Transaction.outputType.nullData) {
+            if (output.type === BitcoinInfo.outputType.nulldata) {
                 addrType = undefined;
             }
-            else if (output.type === Transaction.outputType.P2PKH || output.type === Transaction.outputType.P2SH) {
+            else if (Transaction.isSingleAddressPayingOutput(output.type)) {
                 addrType = ('addrInfo' in output.payInfo) ? output.payInfo.addrInfo.type : null;
             }
 
@@ -1309,7 +1451,8 @@ Transaction.parse = function (serializedTx) {
                 txid: input.txid,
                 vout: input.vout,
                 amount: input.amount
-            }
+            },
+            isWitness: input.isWitness
         };
 
         if (KeyStore.isValidPath(input.addrPath)) {
@@ -1337,13 +1480,12 @@ Transaction.parse = function (serializedTx) {
     });
 
     txObj.outputs.forEach((output, idx) => {
-        let convOutput;
+        const outputType = BitcoinInfo.getOutputTypeByName(output.type);
+        const convOutput = {
+            type: outputType
+        };
 
-        if (output.type === Transaction.outputType.P2PKH || output.type === Transaction.outputType.P2SH) {
-            convOutput = {
-                type: output.type
-            };
-
+        if (Transaction.isSingleAddressPayingOutput(outputType)) {
             if (KeyStore.isValidPath(output.addrPath)) {
                 const addrInfo = Catenis.keyStore.getAddressInfoByPath(output.addrPath, true);
 
@@ -1371,26 +1513,20 @@ Transaction.parse = function (serializedTx) {
                 };
             }
         }
-        else if (output.type === Transaction.outputType.nullData) {
+        else if (output.type === BitcoinInfo.outputType.nulldata) {
             const dataBuf = Buffer.from(output.data, 'base64');
 
-            convOutput = {
-                type: output.type,
-                data: dataBuf
-            };
+            convOutput.data = dataBuf;
 
             tx.hasNullDataOutput = true;
             tx.nullDataPayloadSize = dataBuf.length;
         }
-        else if (output.type === Transaction.outputType.multisig) {
-            convOutput = {
-                type: output.type,
-                payInfo: {
-                    address: [],
-                    nSigs: output.nSigs,
-                    amount: output.amount,
-                    addrInfo: []
-                }
+        else if (output.type === BitcoinInfo.outputType.multisig) {
+            convOutput.payInfo = {
+                address: [],
+                nSigs: output.nSigs,
+                amount: output.amount,
+                addrInfo: []
             };
 
             output.addrPath.forEach((addrPath) => {
@@ -1418,9 +1554,11 @@ Transaction.parse = function (serializedTx) {
             });
         }
 
-        if (convOutput !== undefined) {
-            tx.outputs[idx] = convOutput;
+        if (output.scriptPubKey) {
+            convOutput.scriptPubKey = output.scriptPubKey;
         }
+
+        tx.outputs[idx] = convOutput;
     });
 
     if (txObj.txid !== undefined) {
@@ -1481,7 +1619,8 @@ Transaction.fromHex = function (hexTx, txTime, blockTime) {
                     txout: {
                         txid: input.txid,
                         vout: input.vout
-                    }
+                    },
+                    isWitness: !!input.txinwitness
                 });
 
                 // Check if input does not call for opt-in RBF
@@ -1519,13 +1658,18 @@ Transaction.fromHex = function (hexTx, txTime, blockTime) {
                         // Save amount of output spent by input
                         input.txout.amount = new BigNumber(output.value).times(100000000).toNumber();
 
-                        if (output.scriptPubKey.type === 'pubkeyhash' || output.scriptPubKey.type === 'scripthash') {
+                        // Save public key script of spent output
+                        input.scriptPubKey = output.scriptPubKey.hex;
+
+                        const outputType = BitcoinInfo.getOutputTypeByName(output.scriptPubKey.type);
+
+                        if (Transaction.isPayingOutput(outputType)) {
                             // Save address associated with output spent by input
                             input.address = output.scriptPubKey.addresses[0];
 
-                            // Since all Catenis node's blockchain addresses are of the P2PKH type,
+                            // Since the type of all Catenis node's blockchain addresses is either P2PKH or P2WPKH,
                             //  we filter that specific type before trying to get its information
-                            if (output.scriptPubKey.type === 'pubkeyhash') {
+                            if (outputType === BitcoinInfo.outputType.witness_v0_keyhash || outputType === BitcoinInfo.outputType.pubkeyhash) {
                                 // Try to get information about address associated with
                                 //  spent output
                                 const addrInfo = Catenis.keyStore.getAddressInfo(output.scriptPubKey.addresses[0], true);
@@ -1546,10 +1690,12 @@ Transaction.fromHex = function (hexTx, txTime, blockTime) {
             // Get outputs
             decodedTx.vout.forEach((output) => {
                 // Identity type of output
-                const txOutput = {};
+                const outputType = BitcoinInfo.getOutputTypeByName(output.scriptPubKey.type);
+                const txOutput = {
+                    type: outputType
+                };
 
-                if (output.scriptPubKey.type === 'pubkeyhash') {
-                    txOutput.type = Transaction.outputType.P2PKH;
+                if (Transaction.isSingleAddressPayingOutput(outputType)) {
                     txOutput.payInfo = {
                         address: output.scriptPubKey.addresses[0],
                         amount: new BigNumber(output.value).times(100000000).toNumber()
@@ -1562,33 +1708,17 @@ Transaction.fromHex = function (hexTx, txTime, blockTime) {
                         txOutput.payInfo.addrInfo = addrInfo;
                     }
                 }
-                else if (output.scriptPubKey.type === 'scripthash') {
-                    txOutput.type = Transaction.outputType.P2SH;
-                    txOutput.payInfo = {
-                        address: output.scriptPubKey.addresses[0],
-                        amount: new BigNumber(output.value).times(100000000).toNumber()
-                    };
-
-                    // Try to get information about address associated with output
-                    const addrInfo = Catenis.keyStore.getAddressInfo(txOutput.payInfo.address, true);
-
-                    if (addrInfo !== null) {
-                        txOutput.payInfo.addrInfo = addrInfo;
-                    }
-                }
-                else if (output.scriptPubKey.type === 'nulldata') {
-                    txOutput.type = Transaction.outputType.nullData;
+                else if (outputType === BitcoinInfo.outputType.nulldata) {
                     txOutput.data = Buffer.concat(bitcoinLib.payments.embed({output: Buffer.from(output.scriptPubKey.hex, 'hex')}).data);
 
                     // Add information about null data
                     tx.hasNullDataOutput = true;
                     tx.nullDataPayloadSize = txOutput.data.length;
                 }
-                else if (output.scriptPubKey.type === 'multisig') {
+                else if (outputType === BitcoinInfo.outputType.multisig) {
                     // Multi-signature output. Decode scriptPubKey to get public keys
                     const pubKeys = bitcoinLib.payments.p2ms({output: Buffer.from(output.scriptPubKey.hex, 'hex')}, {validate: false}).pubkeys;
 
-                    txOutput.type = Transaction.outputType.multisig;
                     txOutput.payInfo = {
                         address: output.scriptPubKey.addresses,
                         nSigs: output.scriptPubKey.reqSigs,
@@ -1604,9 +1734,9 @@ Transaction.fromHex = function (hexTx, txTime, blockTime) {
                 else {
                     // An unexpected scriptPubKey type. Log error and save type as it is
                     Catenis.logger.WARN('Transaction output with an unexpected scriptPubKey type', {output: output});
-
-                    txOutput.type = output.scriptPubKey.type;
                 }
+
+                txOutput.scriptPubKey = output.scriptPubKey.hex;
 
                 tx.outputs.push(txOutput);
             });
@@ -1816,16 +1946,36 @@ Transaction.fixMalleability = function (source, originalTxid, modifiedTxid) {
     });
 };
 
+Transaction.isPayingOutput = function (outputType) {
+    switch (outputType) {
+        case BitcoinInfo.outputType.witness_v0_keyhash:
+        case BitcoinInfo.outputType.pubkeyhash:
+        case BitcoinInfo.outputType.witness_v0_scripthash:
+        case BitcoinInfo.outputType.scripthash:
+        case BitcoinInfo.outputType.multisig:
+            return true;
+
+        default:
+            return false;
+    }
+};
+
+Transaction.isSingleAddressPayingOutput = function (outputType) {
+    switch (outputType) {
+        case BitcoinInfo.outputType.witness_v0_keyhash:
+        case BitcoinInfo.outputType.pubkeyhash:
+        case BitcoinInfo.outputType.witness_v0_scripthash:
+        case BitcoinInfo.outputType.scripthash:
+            return true;
+
+        default:
+            return false;
+    }
+};
+
 
 // Transaction function class (public) properties
 //
-
-Transaction.outputType = Object.freeze({
-    P2PKH: 'P2PKH',         // Pay to public key hash
-    P2SH: 'P2SH',           // Pay to script hash
-    nullData: 'nullData',    // Null data (OP_RETURN) output
-    multisig: 'multisig'    // Multi-signature output
-});
 
 Transaction.diffType = Object.freeze({
     delete: 'D',        // Identifies an input/output that exists in this tx but not in the other tx
