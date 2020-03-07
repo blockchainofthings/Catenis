@@ -96,7 +96,6 @@ export function RedeemBcotTransaction(client, redeemedAmount) {
 //
 
 RedeemBcotTransaction.prototype.buildTransaction = function () {
-    // noinspection DuplicatedCode
     if (!this.txBuilt) {
         // Add transaction inputs
 

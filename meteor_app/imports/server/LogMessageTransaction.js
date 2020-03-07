@@ -113,7 +113,6 @@ export function LogMessageTransaction(device, messageReadable, options) {
 //
 
 LogMessageTransaction.prototype.buildTransaction = function () {
-    // noinspection DuplicatedCode
     if (!this.txBuilt) {
         // Add transaction inputs
 

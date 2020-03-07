@@ -152,7 +152,6 @@ export function TransferAssetTransaction(sendingDevice, receivingDevice, amount,
 //
 
 TransferAssetTransaction.prototype.buildTransaction = function () {
-    // noinspection DuplicatedCode
     if (!this.txBuilt) {
         // Add Colored Coins related transaction inputs and outputs
         //
@@ -365,7 +364,6 @@ TransferAssetTransaction.checkTransaction = function (ccTransact) {
                     }
                 }
 
-                // noinspection DuplicatedCode
                 if (sendDevAssetAddrChange === undefined || areAddressesFromSameDevice(sendDevAssetAddrs[0].addrInfo, sendDevAssetAddrChange.addrInfo)) {
                     // Instantiate transfer asset transaction
                     transferAssetTransact = new TransferAssetTransaction();

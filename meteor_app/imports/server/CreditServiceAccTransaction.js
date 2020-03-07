@@ -137,7 +137,6 @@ CreditServiceAccTransaction.prototype.buildTransaction = function () {
 
         this.issuingAmount = servCredDistribFund.totalAmount;
 
-        // noinspection DuplicatedCode
         if (this.issuingAmount > 0) {
             // Get Catenis service credit issuance address
             const servCredIssueAddr = this.client.ctnNode.servCredIssueAddr.lastAddressKeys().getAddress();

@@ -84,7 +84,6 @@ import { BitcoinInfo } from './BitcoinInfo';
 //
 // NOTE: make sure that objects of this function class are instantiated and used (their methods
 //  called) from code executed from the CCFundSource.utxoCS critical section object
-// noinspection DuplicatedCode
 export function CCFundSource(ccAssetId, addresses, options) {
     // Initialize in-memory database to hold UTXOs
     //  Structure of collUtxo collection: {
@@ -241,7 +240,6 @@ export function CCFundSource(ccAssetId, addresses, options) {
 // Public CCFundSource object methods
 //
 
-// noinspection DuplicatedCode
 CCFundSource.prototype.getBalance = function (includeUnconfirmed = true, includeAllocated = false) {
     const conditions = [];
     let filterResult = false;
@@ -358,7 +356,6 @@ CCFundSource.prototype.allocateFund = function (amount) {
             maxUtxoResultSetLength = confUtxoResultSet.length;
         }
 
-        // noinspection DuplicatedCode
         if (this.loadedUnconfirmedUtxos) {
             // Retrieve both confirmed and unconfirmed UTXOs sorting them by higher value, higher confirmations,
             //  lower ancestors count (for unconfirmed UTXOs), lower ancestors size (for unconfirmed UTXOs),
@@ -457,7 +454,6 @@ CCFundSource.prototype.allocateFund = function (amount) {
     return result;
 };
 
-// noinspection DuplicatedCode
 CCFundSource.prototype.clearAllocatedUtxos = function () {
     const docAllocatedUtxos = this.collUtxo.find({allocated: true});
 
@@ -590,7 +586,6 @@ function loadUtxos() {
         });
     }
 
-    // noinspection DuplicatedCode
     if (unconfTxids.size > 0) {
         // Update descendants and ancestors info for all unconfirmed UTXO
         //  onto local DB
@@ -692,7 +687,6 @@ function loadUtxos() {
 //                                        The second result set contains both confirmed and unconfirmed UTXOs
 //  numWorkUtxos [Number] - Number of UTXOs that should be used for allocating the requested asset amount
 //  work [Object] - Object used to return the largest delta amount tried when allocation does not succeed
-// noinspection DuplicatedCode
 function allocateUtxos(amount, utxoResultSets, numWorkUtxos, work) {
     let docAllocatedUtxos = undefined,
         exactAmountAllocated = false;
@@ -1047,7 +1041,6 @@ CCFundSource.utxoCS = new CriticalSection();
 // Definition of module (private) functions
 //
 
-// noinspection DuplicatedCode
 function computeAdditionalUtxos(addUtxoTxInputs) {
     const txidUtxos = new Map();
 

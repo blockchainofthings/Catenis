@@ -95,7 +95,6 @@ SettleOffChainMessagesTransaction.prototype.containMsgDataFromLocalSender = func
 };
 
 SettleOffChainMessagesTransaction.prototype.buildTransaction = function () {
-    // noinspection DuplicatedCode
     if (!this.txBuilt) {
         // Add transaction outputs
 

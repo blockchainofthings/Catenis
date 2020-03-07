@@ -215,7 +215,6 @@ export function IssueAssetTransaction(issuingDevice, holdingDevice, amount, asse
 //
 
 IssueAssetTransaction.prototype.buildTransaction = function () {
-    // noinspection DuplicatedCode
     if (!this.txBuilt) {
         // Add Colored Coins related transaction inputs and outputs
         //
@@ -496,7 +495,6 @@ IssueAssetTransaction.checkTransaction = function (ccTransact) {
                 }
             }
 
-            // noinspection DuplicatedCode
             if (!error) {
                 // Instantiate issue asset transaction
                 issueAssetTransact = new IssueAssetTransaction();

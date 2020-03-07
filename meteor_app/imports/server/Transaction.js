@@ -150,7 +150,6 @@ export function Transaction(useOptInRBF = false) {
 //   pos [Number]  Position (starting from zero) at which inputs should be added to transaction in sequence. If the
 //                  specified position is already taken, the current inputs are pushed aside (shifted) before inserting
 //                  the new ones. If no position is specified, inputs are added after the last occupied position
-// noinspection DuplicatedCode
 Transaction.prototype.addInputs = function (inputs, pos) {
     if (!Array.isArray(inputs)) {
         inputs = [inputs];
@@ -260,7 +259,6 @@ Transaction.prototype.removeInputAt = function (pos) {
 //   pos [Number]  Position (starting from zero) at which outputs should be added to transaction in sequence. If the
 //                  specified position is already taken, the current outputs are pushed aside (shifted) before inserting
 //                  the new ones. If no position is specified, inputs are added after the last occupied position
-// noinspection DuplicatedCode
 Transaction.prototype.addOutputs = function (outputs, pos) {
     if (!Array.isArray(outputs)) {
         outputs = [outputs];
@@ -629,7 +627,6 @@ Transaction.prototype.feeAmount = function () {
     return this.totalInputsAmount() - this.totalOutputsAmount();
 };
 
-// noinspection DuplicatedCode
 Transaction.prototype.countInputs = function (startPos = 0, endPos) {
     let count = 0;
 
@@ -670,7 +667,6 @@ Transaction.prototype.countWitnessInputs = function (startPos = 0, endPos) {
     return count;
 };
 
-// noinspection DuplicatedCode
 Transaction.prototype.countOutputs = function (startPos = 0, endPos) {
     let count = 0;
 
@@ -683,7 +679,6 @@ Transaction.prototype.countOutputs = function (startPos = 0, endPos) {
     return count;
 };
 
-// noinspection DuplicatedCode
 Transaction.prototype.countP2PKHOutputs = function (startPos = 0, endPos) {
     let count = 0;
 
@@ -698,7 +693,6 @@ Transaction.prototype.countP2PKHOutputs = function (startPos = 0, endPos) {
     return count;
 };
 
-// noinspection DuplicatedCode
 Transaction.prototype.countP2WPKHOutputs = function (startPos = 0, endPos) {
     let count = 0;
 

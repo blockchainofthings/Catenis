@@ -125,7 +125,6 @@ FundTransaction.prototype.addPayingSource = function () {
             outputAmount: this.transact.totalOutputsAmount()
         }, false);
 
-        // noinspection DuplicatedCode
         if (fundResult !== null) {
             // NOTE: we DO NOT care to lock the allocated UTXOs because it is expected that
             //  the code used to call this method and the method to actually send the transaction

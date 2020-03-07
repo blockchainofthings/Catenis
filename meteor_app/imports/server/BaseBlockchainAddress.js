@@ -69,7 +69,6 @@ let updtIssuedAddrsIntervalHandle,
 
 // BaseSystemDeviceMainAddress derived class
 export class BaseSystemDeviceMainAddress extends BaseBlockchainAddress {
-    // noinspection DuplicatedCode
     constructor (ctnNodeIndex) {
         super();
         this.type = KeyStore.extKeyType.sys_dev_main_addr.name;
@@ -119,7 +118,6 @@ export class BaseSystemDeviceMainAddress extends BaseBlockchainAddress {
 
 // BaseSystemFundingPaymentAddress derived class
 export class BaseSystemFundingPaymentAddress extends BaseBlockchainAddress {
-    // noinspection DuplicatedCode
     constructor (ctnNodeIndex) {
         super();
         this.type = KeyStore.extKeyType.sys_fund_pay_addr.name;
@@ -169,7 +167,6 @@ export class BaseSystemFundingPaymentAddress extends BaseBlockchainAddress {
 
 // BaseSystemFundingChangeAddress derived class
 export class BaseSystemFundingChangeAddress extends BaseBlockchainAddress {
-    // noinspection DuplicatedCode
     constructor (ctnNodeIndex) {
         super();
         this.type = KeyStore.extKeyType.sys_fund_chg_addr.name;
@@ -219,7 +216,6 @@ export class BaseSystemFundingChangeAddress extends BaseBlockchainAddress {
 
 // BaseSystemPayTxExpenseAddress derived class
 export class BaseSystemPayTxExpenseAddress extends BaseBlockchainAddress {
-    // noinspection DuplicatedCode
     constructor (ctnNodeIndex) {
         super();
         this.type = KeyStore.extKeyType.sys_pay_tx_exp_addr.name;
@@ -269,7 +265,6 @@ export class BaseSystemPayTxExpenseAddress extends BaseBlockchainAddress {
 
 // BaseSystemReadConfirmSpendNotifyAddress derived class
 export class BaseSystemReadConfirmSpendNotifyAddress extends BaseBlockchainAddress {
-    // noinspection DuplicatedCode
     constructor (ctnNodeIndex) {
         super();
         this.type = KeyStore.extKeyType.sys_read_conf_spnd_ntfy_addr.name;
@@ -319,7 +314,6 @@ export class BaseSystemReadConfirmSpendNotifyAddress extends BaseBlockchainAddre
 
 // BaseSystemReadConfirmSpendOnlyAddress derived class
 export class BaseSystemReadConfirmSpendOnlyAddress extends BaseBlockchainAddress {
-    // noinspection DuplicatedCode
     constructor (ctnNodeIndex) {
         super();
         this.type = KeyStore.extKeyType.sys_read_conf_spnd_only_addr.name;
@@ -369,7 +363,6 @@ export class BaseSystemReadConfirmSpendOnlyAddress extends BaseBlockchainAddress
 
 // BaseSystemReadConfirmSpendNullAddress derived class
 export class BaseSystemReadConfirmSpendNullAddress extends BaseBlockchainAddress {
-    // noinspection DuplicatedCode
     constructor (ctnNodeIndex) {
         super();
         this.type = KeyStore.extKeyType.sys_read_conf_spnd_null_addr.name;
@@ -419,7 +412,6 @@ export class BaseSystemReadConfirmSpendNullAddress extends BaseBlockchainAddress
 
 // BaseSystemReadConfirmPayTxExpenseAddress derived class
 export class BaseSystemReadConfirmPayTxExpenseAddress extends BaseBlockchainAddress {
-    // noinspection DuplicatedCode
     constructor (ctnNodeIndex) {
         super();
         this.type = KeyStore.extKeyType.sys_read_conf_pay_tx_exp_addr.name;
@@ -469,7 +461,6 @@ export class BaseSystemReadConfirmPayTxExpenseAddress extends BaseBlockchainAddr
 
 // BaseSystemServiceCreditIssuingAddress derived class
 export class BaseSystemServiceCreditIssuingAddress extends BaseBlockchainAddress {
-    // noinspection DuplicatedCode
     constructor (ctnNodeIndex) {
         super();
         this.type = KeyStore.extKeyType.sys_serv_cred_issu_addr.name;
@@ -519,7 +510,6 @@ export class BaseSystemServiceCreditIssuingAddress extends BaseBlockchainAddress
 
 // BaseSystemServicePaymentPayTxExpenseAddress derived class
 export class BaseSystemServicePaymentPayTxExpenseAddress extends BaseBlockchainAddress {
-    // noinspection DuplicatedCode
     constructor (ctnNodeIndex) {
         super();
         this.type = KeyStore.extKeyType.sys_serv_pymt_pay_tx_exp_addr.name;
@@ -569,7 +559,6 @@ export class BaseSystemServicePaymentPayTxExpenseAddress extends BaseBlockchainA
 
 // BaseSystemMultiSigSigneeAddress derived class
 export class BaseSystemMultiSigSigneeAddress extends BaseBlockchainAddress {
-    // noinspection DuplicatedCode
     constructor (ctnNodeIndex) {
         super();
         this.type = KeyStore.extKeyType.sys_msig_sign_addr.name;
@@ -619,7 +608,6 @@ export class BaseSystemMultiSigSigneeAddress extends BaseBlockchainAddress {
 
 // BaseSystemBcotSaleStockAddress derived class
 export class BaseSystemBcotSaleStockAddress extends BaseBlockchainAddress {
-    // noinspection DuplicatedCode
     constructor (ctnNodeIndex) {
         super();
         this.type = KeyStore.extKeyType.sys_bcot_sale_stck_addr.name;
@@ -680,7 +668,6 @@ export class BaseSystemBcotSaleStockAddress extends BaseBlockchainAddress {
 
 // BaseSystemOCMsgsSetlmtPayTxExpenseAddress derived class
 export class BaseSystemOCMsgsSetlmtPayTxExpenseAddress extends BaseBlockchainAddress {
-    // noinspection DuplicatedCode
     constructor (ctnNodeIndex) {
         super();
         this.type = KeyStore.extKeyType.sys_oc_msgs_setlmt_pay_tx_exp_addr.name;
@@ -730,7 +717,6 @@ export class BaseSystemOCMsgsSetlmtPayTxExpenseAddress extends BaseBlockchainAdd
 
 // BaseClientServiceAccountCreditLineAddress derived class
 export class BaseClientServiceAccountCreditLineAddress extends BaseBlockchainAddress {
-    // noinspection DuplicatedCode
     constructor (ctnNodeIndex, clientIndex) {
         super();
         this.type = KeyStore.extKeyType.cln_srv_acc_cred_ln_addr.name;
@@ -783,7 +769,6 @@ export class BaseClientServiceAccountCreditLineAddress extends BaseBlockchainAdd
 
 // BaseClientServiceAccountDebitLineAddress derived class
 export class BaseClientServiceAccountDebitLineAddress extends BaseBlockchainAddress {
-    // noinspection DuplicatedCode
     constructor (ctnNodeIndex, clientIndex) {
         super();
         this.type = KeyStore.extKeyType.cln_srv_acc_debt_ln_addr.name;
@@ -836,7 +821,6 @@ export class BaseClientServiceAccountDebitLineAddress extends BaseBlockchainAddr
 
 // BaseClientBcotPaymentAddress derived class
 export class BaseClientBcotPaymentAddress extends BaseBlockchainAddress {
-    // noinspection DuplicatedCode
     constructor (ctnNodeIndex, clientIndex) {
         super();
         this.type = KeyStore.extKeyType.cln_bcot_pay_addr.name;
@@ -900,7 +884,6 @@ export class BaseClientBcotPaymentAddress extends BaseBlockchainAddress {
 
 // BaseDeviceReadConfirmAddress derived class
 export class BaseDeviceReadConfirmAddress extends BaseBlockchainAddress {
-    // noinspection DuplicatedCode
     constructor (ctnNodeIndex, clientIndex, deviceIndex) {
         super();
         this.type = KeyStore.extKeyType.dev_read_conf_addr.name;
@@ -956,7 +939,6 @@ export class BaseDeviceReadConfirmAddress extends BaseBlockchainAddress {
 
 // BaseDeviceMainAddress derived class
 export class BaseDeviceMainAddress extends BaseBlockchainAddress {
-    // noinspection DuplicatedCode
     constructor (ctnNodeIndex, clientIndex, deviceIndex) {
         super();
         this.type = KeyStore.extKeyType.dev_main_addr.name;
@@ -1012,7 +994,6 @@ export class BaseDeviceMainAddress extends BaseBlockchainAddress {
 
 // BaseDeviceAssetAddress derived class
 export class BaseDeviceAssetAddress extends BaseBlockchainAddress {
-    // noinspection DuplicatedCode
     constructor (ctnNodeIndex, clientIndex, deviceIndex) {
         super();
         this.type = KeyStore.extKeyType.dev_asst_addr.name;
@@ -1579,7 +1560,6 @@ BaseBlockchainAddress.retrieveObsoleteAddress = function (addr, checkAddressInUs
             let addrKeys = Catenis.keyStore.getCryptoKeysByPath(docIssuedAddr.path);
 
             // Make sure that address is not yet in local key storage
-            // noinspection DuplicatedCode
             if (addrKeys === null) {
                 let classInstance = BaseBlockchainAddress.getInstance({type: docIssuedAddr.type, pathParts: KeyStore.getPathParts(docIssuedAddr)});
 
@@ -1641,7 +1621,6 @@ BaseBlockchainAddress.retrieveObsoleteAddress = function (addr, checkAddressInUs
                     found = false;
 
                 // Make sure that address is not yet in local key storage
-                // noinspection DuplicatedCode
                 if (addrKeys === null) {
                     let classInstance = BaseBlockchainAddress.getInstance({type: docIssuedAddr.type, pathParts: KeyStore.getPathParts(docIssuedAddr)});
 

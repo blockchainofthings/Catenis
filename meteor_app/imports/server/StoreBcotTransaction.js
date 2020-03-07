@@ -77,7 +77,6 @@ export function StoreBcotTransaction(bcotPayTransact) {
 //
 
 StoreBcotTransaction.prototype.buildTransaction = function () {
-    // noinspection DuplicatedCode
     if (!this.txBuilt) {
         // Add transaction inputs
 

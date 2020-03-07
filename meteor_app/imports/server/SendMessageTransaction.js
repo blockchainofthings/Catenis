@@ -118,7 +118,6 @@ export function SendMessageTransaction(originDevice, targetDevice, messageReadab
 //
 
 SendMessageTransaction.prototype.buildTransaction = function () {
-    // noinspection DuplicatedCode
     if (!this.txBuilt) {
         // Add transaction inputs
 
@@ -386,7 +385,6 @@ SendMessageTransaction.checkTransaction = function (transact, messageDuplex) {
                 }
             }
 
-            // noinspection DuplicatedCode
             if (ctnMessage !== undefined && ctnMessage.isSendMessage()) {
                 // Instantiate send message transaction
                 // noinspection JSValidateTypes

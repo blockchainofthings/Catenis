@@ -691,7 +691,6 @@ ReadConfirmTransaction.prototype.mergeReadConfirmTransaction = function (readCon
     let newInputAdded = false;
 
     // Process read confirmation address to spend null
-    // noinspection DuplicatedCode
     for (let inputPos = 0; inputPos < readConfirmTransact.nextReadConfirmAddrSpndNullInputPos; inputPos++) {
         const newOutputAdded = addReadConfirmAddrSpendNull.call(this, readConfirmTransact.transact.getInputAt(inputPos), readConfirmTransact.transact.getOutputAt(readConfirmTransact.readConfirmSpendNullOutputPos).payInfo.address);
 
@@ -708,7 +707,6 @@ ReadConfirmTransaction.prototype.mergeReadConfirmTransaction = function (readCon
     }
 
     // Process read confirmation address to spend only
-    // noinspection DuplicatedCode
     for (let inputPos = readConfirmTransact.nextReadConfirmAddrSpndNullInputPos; inputPos < readConfirmTransact.nextReadConfirmAddrSpndOnlyInputPos; inputPos++) {
         const newOutputAdded = addReadConfirmAddrSpendOnly.call(this, readConfirmTransact.transact.getInputAt(inputPos), readConfirmTransact.transact.getOutputAt(readConfirmTransact.readConfirmSpendOnlyOutputPos).payInfo.address);
 
@@ -1077,7 +1075,6 @@ function setReadConfirmSpendNotifyOutputPos(ctnNodeIndex) {
     }
 }
 
-// noinspection DuplicatedCode
 function addReadConfirmAddrSpendNull(input, readConfirmSpendAddress) {
     // Add input
     this.transact.addInputs(input, this.nextReadConfirmAddrSpndNullInputPos);
@@ -1101,7 +1098,6 @@ function addReadConfirmAddrSpendNull(input, readConfirmSpendAddress) {
     return newOutputAdded;
 }
 
-// noinspection DuplicatedCode
 function addReadConfirmAddrSpendOnly(input, readConfirmSpendAddress) {
     // Add input
     this.transact.addInputs(input, this.nextReadConfirmAddrSpndOnlyInputPos);
@@ -1182,7 +1178,6 @@ function initReadConfirmTxInfo() {
     this.readConfirmTxInfo = new RbfTransactionInfo(opts);
 }
 
-// noinspection DuplicatedCode
 function retrieveReplacedTransactionIds() {
     this.txids = [];
     let nextTxid = this.transact.txid;

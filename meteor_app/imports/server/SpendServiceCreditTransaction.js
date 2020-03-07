@@ -465,7 +465,6 @@ SpendServiceCreditTransaction.prototype.payForService = function (client, servic
         let newOCMsgServiceCids;
         const ccMetadata = new CCMetadata();
 
-        // noinspection DuplicatedCode
         if (serviceDataRef) {
             if (!Util.isValidCid(serviceDataRef)) {
                 // Service transaction ID
@@ -618,7 +617,6 @@ SpendServiceCreditTransaction.prototype.payForService = function (client, servic
 // Arguments:
 //  serviceDataRef [String] Either the blockchain ID of the service transaction or the IPFS CID of the off-chain
 //                           message related service data entity (off-chain message envelope)
-// noinspection DuplicatedCode
 SpendServiceCreditTransaction.prototype.setServiceDataRef = function (serviceDataRef) {
     let newServiceTxids;
     let newOCMsgServiceCids;
@@ -717,7 +715,6 @@ SpendServiceCreditTransaction.prototype.fundTransaction = function () {
                     const deltaFee = newFee - this.fee;
 
                     // Check if change is enough to cover difference in fee
-                    // noinspection DuplicatedCode
                     if (this.change >= deltaFee) {
                         newChange = this.change - deltaFee;
 
@@ -793,7 +790,6 @@ SpendServiceCreditTransaction.prototype.fundTransaction = function () {
                 // Get amount that should be paid in fee
                 newFee = this.rbfTxInfo.getNewTxFee().fee;
 
-                // noinspection DuplicatedCode
                 if (newFee > this.fee) {
                     //  Prepare to allocate UTXOs to pay for new transaction expense
 
@@ -929,7 +925,6 @@ SpendServiceCreditTransaction.prototype.fundTransaction = function () {
                     newChange = 0;
                 }
 
-                // noinspection DuplicatedCode
                 if (newChange > 0) {
                     if (changeOutputPos >= 0) {
                         // Change output already exists, so just reset its amount
@@ -973,7 +968,6 @@ SpendServiceCreditTransaction.prototype.fundTransaction = function () {
                     this.rbfTxInfo.incrementNumTxInputs(-expectNumPayTxExpInputs);
                 }
 
-                // noinspection DuplicatedCode
                 if (newChange > 0) {
                     if (changeOutputPos >= 0) {
                         // Change output already exists, so just reset its amount
@@ -1306,7 +1300,6 @@ function initRbfTxInfo() {
     this.rbfTxInfo = new RbfTransactionInfo(opts);
 }
 
-// noinspection DuplicatedCode
 function retrieveReplacedTransactionIds() {
     this.txids = [];
     let nextTxid = this.ccTransact.txid;
