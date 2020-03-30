@@ -412,6 +412,10 @@ Util.isValidCid = function (cid) {
     return isValid;
 };
 
+Util.isNonNullObject = function (obj) {
+    return typeof obj === 'object' && obj !== null;
+};
+
 
 // Util function class (public) properties
 //

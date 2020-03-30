@@ -159,7 +159,7 @@ ReadConfirmation.prototype.confirmMessageRead = function (sendMsgTransact, confi
             this.activeReadConfirmTransact.addSendMsgTxToConfirm(sendMsgTransact, readConfirmOutputPos, confirmType);
 
             if (this.activeReadConfirmTransact.needsToFund() || this.activeReadConfirmTransact.needsToSend()) {
-                if (this.activeReadConfirmTransact.transact.estimateSize() > Transaction.maxTxSize * cfgSettings.txSizeThresholdRatio) {
+                if (this.activeReadConfirmTransact.transact.estimateSize().vsize > Transaction.maxTxVsize * cfgSettings.txSizeThresholdRatio) {
                     // Current transaction size is above threshold
 
                     // Terminate currently active read confirmation transaction resetting its fee rate

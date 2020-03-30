@@ -18,7 +18,6 @@ import config from 'config';
 import bitcoinLib from 'bitcoinjs-lib';
 // noinspection JSFileReferences
 import BigNumber from 'bignumber.js';
-import _und from 'underscore';
 // Meteor packages
 import { Meteor } from 'meteor/meteor';
 
@@ -30,16 +29,17 @@ import { CriticalSection } from './CriticalSection';
 import { Util } from './Util';
 import { KeyStore } from './KeyStore';
 import { BitcoinInfo } from './BitcoinInfo';
+import { TransactionSize } from './TransactionSize';
 
 // Config entries
 const configTransact = config.get('transaction');
 
 // Configuration settings
 export const cfgSettings = {
-    txOutputDustAmount: configTransact.get('txOutputDustAmount'),
-    txInputSize: configTransact.get('txInputSize'),
-    txOutputSize: configTransact.get('txOutputSize'),
-    maxTxSize: configTransact.get('maxTxSize'),
+    witnessOutputDustAmount: configTransact.get('witnessOutputDustAmount'),
+    nonWitnessOutputDustAmount: configTransact.get('nonWitnessOutputDustAmount'),
+    legacyDustAmount: configTransact.get('legacyDustAmount'),
+    maxTxVsize: configTransact.get('maxTxVsize'),
     pubKeySize: configTransact.get('pubKeySize'),
     oneOf2MultiSigTxOutputDustAmount: configTransact.get('oneOf2MultiSigTxOutputDustAmount'),
     oneOf3multiSigTxOutputDustAmount: configTransact.get('oneOf3multiSigTxOutputDustAmount')
@@ -105,13 +105,21 @@ export function Transaction(useOptInRBF = false) {
     this.outputs = [];
     this.hasNullDataOutput = false;
     this.nullDataPayloadSize = 0;
-    this.rawTransaction = undefined;
+    // rawTxInfo: {
+    //   hex: [String],  Hex-encoded serialized transaction
+    //   sizeInfo: {
+    //     size: [Number],  Total transaction size, in bytes
+    //     vsize: [Number],  Virtual transaction size, in vbytes
+    //     weight: [Number]  Transaction weight
+    //   }
+    // }
+    this.rawTxInfo = undefined;
     this.txid = undefined;
     this.sentDate = undefined;
     this.txSaved = false;
     this.useOptInRBF = useOptInRBF;     // Indicates whether opt-in Replace By Fee feature should be used when building transaction
 
-    this.savedSizeProfile = undefined;
+    this.txSize = new TransactionSize(this);
 
     // Input and output sequence of tokens. Each token corresponds to an input/output
     //  of the transaction, and basically identifies what type of blockchain address
@@ -150,6 +158,10 @@ export function Transaction(useOptInRBF = false) {
 //   pos [Number]  Position (starting from zero) at which inputs should be added to transaction in sequence. If the
 //                  specified position is already taken, the current inputs are pushed aside (shifted) before inserting
 //                  the new ones. If no position is specified, inputs are added after the last occupied position
+//
+//  Return:
+//   posAdded [Number]  Starting position where inputs have been effectively added, or
+//                       `undefined` if no inputs have been added
 Transaction.prototype.addInputs = function (inputs, pos) {
     if (!Array.isArray(inputs)) {
         inputs = [inputs];
@@ -163,11 +175,12 @@ Transaction.prototype.addInputs = function (inputs, pos) {
         if (pos === undefined) {
             // If no specific position has been given, add new
             //  input to the end of list of inputs
+            pos = this.inputs.length;
             Array.prototype.push.apply(this.inputs, inputs);
         }
         else {
             // A specific position has been given
-            inputs.forEach((input, idx) => {
+            inputs.some((input, idx) => {
                 if (this.inputs[pos + idx] === undefined) {
                     // The position is not yet taken. Just add new
                     //  input to that position
@@ -176,13 +189,21 @@ Transaction.prototype.addInputs = function (inputs, pos) {
                 else {
                     // The position is already taken. Push aside input
                     //  that is currently in that position, and add
-                    //  new input to that position
-                    this.inputs.splice(pos + idx, 0, input);
+                    //  the remaining inputs into that position
+                    Array.prototype.splice.apply(this.inputs, [pos + idx, 0, ...inputs.slice(idx)]);
+
+                    // Stop iterating
+                    return true;
                 }
+
+                // Continue iterating
+                return false;
             });
         }
 
         invalidateTx.call(this);
+
+        return pos;
     }
 };
 
@@ -201,13 +222,17 @@ Transaction.prototype.addInputs = function (inputs, pos) {
 //     addrInfo: [Object]       Catenis address info including crypto key pair required to spend output
 //   }
 //   pos [Number]  Position (starting from zero) at which input should be added to transaction
+//
+//  Return:
+//   posAdded [Number]  Position where input has been effectively added, or
+//                       `undefined` if input has not been added
 Transaction.prototype.addInput = function (txout, outputInfo, pos) {
     const input = {
         txout,
         ...outputInfo
     };
 
-    this.addInputs(input, pos);
+    return this.addInputs(input, pos);
 };
 
 Transaction.prototype.lastInputPosition = function () {
@@ -242,23 +267,28 @@ Transaction.prototype.removeInputAt = function (pos) {
     return input;
 };
 
-// Add one or more output to the transaction
+// Add one or more outputs to the transaction
 //
 //  Arguments:
 //   outputs [Array(Object)|Object] [{
 //     type: [Object],   Object representing the type of the tx output. Valid values: any of the properties of BitcoinInfo.outputType
 //     payInfo: {   Should only be specified for a paying output type (any type other than 'nulldata' or 'unknown')
-//       address: [String],   Blockchain address to where payment should be sent
+//       address: [String|Array(String)],  Blockchain address to where payment should be sent.
+//                                          NOTE: for 'multisig' outputs, this is actually a list of addresses
 //       nSigs: [Number],     Number of signatures required to spend multi-signature output. Should only be specified for 'multisig' output type
 //       amount: [Number],    Amount, in satoshis, to send
-//       addrInfo: [Array(Object)]   List of Catenis address infos (including crypto key pair required to spend output) or hex-encoded
-//                                    public keys (for non-Catenis blockchain addresses). Should only be specified for 'multisig' output type
+//       addrInfo: [Array(Object|String)]  List of Catenis address infos (including crypto key pair required to spend output) or hex-encoded
+//                                          public keys (for non-Catenis blockchain addresses). Should only be specified for 'multisig' output type
 //     },
 //     data: [Object(Buffer)]   Data to embed for 'nulldata' output type
 //   }]
 //   pos [Number]  Position (starting from zero) at which outputs should be added to transaction in sequence. If the
 //                  specified position is already taken, the current outputs are pushed aside (shifted) before inserting
 //                  the new ones. If no position is specified, inputs are added after the last occupied position
+//
+//  Return:
+//   posAdded [Number]  Starting position where outputs have been effectively added, or
+//                       `undefined` if no outputs have been added
 Transaction.prototype.addOutputs = function (outputs, pos) {
     if (!Array.isArray(outputs)) {
         outputs = [outputs];
@@ -272,11 +302,12 @@ Transaction.prototype.addOutputs = function (outputs, pos) {
         if (pos === undefined) {
             // If no specific position has been given, add new
             //  output to the end of list of outputs
+            pos = this.outputs.length;
             Array.prototype.push.apply(this.outputs, outputs);
         }
         else {
             // A specific position has been given
-            outputs.forEach((output, idx) => {
+            outputs.some((output, idx) => {
                 if (this.outputs[pos + idx] === undefined) {
                     // The position is not yet taken. Just add new
                     //  output to that position
@@ -285,17 +316,25 @@ Transaction.prototype.addOutputs = function (outputs, pos) {
                 else {
                     // The position is already taken. Push aside output
                     //  that is currently in that position, and add
-                    //  new output to that position
-                    this.outputs.splice(pos + idx, 0, output);
+                    //  the remaining outputs into that position
+                    Array.prototype.splice.apply(this.outputs, [pos + idx, 0, ...outputs.slice(idx)]);
+
+                    // Stop iterating
+                    return true;
                 }
+
+                // Continue iterating
+                return false;
             });
         }
 
         invalidateTx.call(this);
+
+        return pos;
     }
 };
 
-// Add one or more output to the transaction that pay to a public key hash either using
+// Add one or more outputs to the transaction that pay to a public key hash either using
 //  segregated witness (P2WPKH) or not (P2PKH)
 //
 //  Arguments:
@@ -304,6 +343,10 @@ Transaction.prototype.addOutputs = function (outputs, pos) {
 //     amount: [Number]    Amount, in satoshis, to send
 //   }]
 //   pos [Number]  Position (starting from zero) at which outputs should be added to transaction
+//
+//  Return:
+//   posAdded [Number]  Starting position where outputs have been effectively added, or
+//                       `undefined` if no outputs have been added
 Transaction.prototype.addPubKeyHashOutputs = function (payInfos, pos) {
     if (!Array.isArray(payInfos)) {
         payInfos = [payInfos];
@@ -320,23 +363,42 @@ Transaction.prototype.addPubKeyHashOutputs = function (payInfos, pos) {
         }
     });
 
-    this.addOutputs(outputs, pos);
+    return this.addOutputs(outputs, pos);
 };
 
 // Add an output to the transaction that pays to a public key hash either using segregated
 //  witness (P2WPKH) or not (P2PKH)
 //
 //  Arguments:
-//   address [String|Array(String)]  Blockchain address to where payment should be sent
+//   address [String]  Blockchain address to where payment should be sent
 //   amount [Number]  Amount, in satoshis, to send
 //   pos [Number]  Position (starting from zero) at which output should be added to transaction
+//
+//  Return:
+//   posAdded [Number]  Position where output has been effectively added, or
+//                       `undefined` if output has not been added
 Transaction.prototype.addPubKeyHashOutput = function (address, amount, pos) {
-    this.addPubKeyHashOutputs({
+    return this.addPubKeyHashOutputs({
         address: address,
         amount: amount
     }, pos);
 };
 
+// Add one or more outputs to the transaction that pay to multiple public key hashes (multisig)
+//
+//  Arguments:
+//   payInfos [Array(Object)|Object] [{
+//     address: [Array(String)],  List of Catenis blockchain addresses or non-Catenis hex-encoded public keys
+//     nSigs: [Number],     Number of signatures required to spend multi-signature output
+//     amount: [Number],    Amount, in satoshis, to send
+//     addrInfo: [Array(Object|String)]  List of Catenis address infos (including crypto key pair required to spend output) or hex-encoded
+//                                          public keys (for non-Catenis blockchain addresses)
+//   }]
+//   pos [Number]  Position (starting from zero) at which outputs should be added to transaction
+//
+//  Return:
+//   posAdded [Number]  Starting position where outputs have been effectively added, or
+//                       `undefined` if no outputs have been added
 Transaction.prototype.addMultiSigOutputs = function (payInfos, pos) {
     if (!Array.isArray(payInfos)) {
         payInfos = [payInfos];
@@ -353,16 +415,22 @@ Transaction.prototype.addMultiSigOutputs = function (payInfos, pos) {
         }
     });
 
-    this.addOutputs(outputs, pos);
+    return this.addOutputs(outputs, pos);
 };
 
-// Arguments:
-//  addresses: [Array(String)] - List of Catenis blockchain addresses or non-Catenis hex-encoded public keys
-//  nSigs: [Number] - Number of signatures required for spending multi-signature output
-//  amount: [Number] - Amount, in satoshis, to send
-//  pos: [Number] - Position (zero-based index) for output in transaction
+// Add an output to the transaction that pays to multiple public key hashes (multisig)
+//
+//  Arguments:
+//   addresses [Array(String)]  List of Catenis blockchain addresses or non-Catenis hex-encoded public keys
+//   nSigs [Number]  Number of signatures required for spending multi-signature output
+//   amount [Number]  Amount, in satoshis, to send
+//   pos [Number]  Position (zero-based index) for output in transaction
+//
+//  Return:
+//   posAdded [Number]  Position where output has been effectively added, or
+//                       `undefined` if output has not been added
 Transaction.prototype.addMultiSigOutput = function (addresses, nSigs, amount, pos) {
-    this.addMultiSigOutputs(addresses.reduce((payInfo, address) => {
+    return this.addMultiSigOutputs(addresses.reduce((payInfo, address) => {
         if (Util.isValidBlockchainAddress(address)) {
             // Address is a valid blockchain address
             const addrInfo = Catenis.keyStore.getAddressInfo(address, true);
@@ -421,24 +489,29 @@ Transaction.prototype.resetOutputAmount = function (pos, amount) {
     }
 };
 
+// Add an output to the transaction that is used to embed data (nulldata)
+//
+//  Arguments:
+//   data [Object(Buffer)|String]  The data to be embedded
+//
+//  Return:
+//   posAdded [Number]  Position where output has been effectively added, or
+//                      `undefined` if output has not been added
 Transaction.prototype.addNullDataOutput = function (data, pos) {
-    let result = false;
-
     if (!this.hasNullDataOutput) {
         if (!Buffer.isBuffer(data)) {
             data = Buffer.from(data);
         }
 
-        this.addOutputs({
+        const posAdded = this.addOutputs({
             type: BitcoinInfo.outputType.nulldata,
             data: data
         }, pos);
         this.hasNullDataOutput = true;
         this.nullDataPayloadSize = data.length;
-        result = true;
-    }
 
-    return result;
+        return posAdded;
+    }
 };
 
 Transaction.prototype.resetNullDataOutput = function (data) {
@@ -721,105 +794,31 @@ Transaction.prototype.getNumPubKeysMultiSigOutputs = function (startPos = 0, end
     return numPubKeysMultiSigOutputs;
 };
 
+//  Return:
+//   sizeInfo: {
+//     size: [Number],  Total transaction size, in bytes
+//     vsize: [Number],  Virtual transaction size, in vbytes
+//     weight: [Number]  Transaction weight
+//   }
 Transaction.prototype.estimateSize = function () {
-    return Transaction.computeTransactionSize(this.countInputs(), this.countP2PKHOutputs(), this.nullDataPayloadSize, this.getNumPubKeysMultiSigOutputs());
+    return this.txSize.getSizeInfo();
 };
 
-// Used to save transaction parameters that are used to compute the (estimated) transaction size
-Transaction.prototype.saveSizeProfile = function () {
-    this.savedSizeProfile = {
-        numInputs: this.countInputs(),
-        numP2PKHOutputs: this.countP2PKHOutputs(),
-        numPubKeysMultiSigOutputs: this.getNumPubKeysMultiSigOutputs(),
-        nullDataPayloadSize: this.nullDataPayloadSize
-    };
-};
-
-// Compare the current values of the parameters that are used to compute the (estimated) transaction
-//  size with the values of previously saved parameters to account for differences in such parameters
-//
-// Return:
-//  diffResult: { - (only returned if the size profile of the transaction has changed)
-//    numInputs: {  - (only exists if there are differences in number of inputs)
-//      current: [Number]
-//      delta: [Number]
-//    },
-//    numP2PKHOutputs: {  - (only exists if there are differences in number of P2PK outputs)
-//      current: [Number]
-//      delta: [Number]
-//    },
-//    numPubKeysMultiSigOutputs: {  - (only exists if there are differences in number of multi-signature outputs)
-//      current: [Number]
-//      delta: {
-//        added: [Array(Number)],
-//        deleted: [Array(Number)]
-//    },
-//    nullDataPayloadSize: {  - (only exists if there are differences in size of payload of null data output)
-//      current: [Number]
-//      delta: [Number]
-//    }
-//  }
-Transaction.prototype.compareSizeProfile = function () {
-    const curSizeProfile = {
-        numInputs: this.countInputs(),
-        numP2PKHOutputs: this.countP2PKHOutputs(),
-        numPubKeysMultiSigOutputs: this.getNumPubKeysMultiSigOutputs(),
-        nullDataPayloadSize: this.nullDataPayloadSize
-    };
-
-    if (this.savedSizeProfile === undefined) {
-        this.savedSizeProfile = {
-            numInputs: 0,
-            numP2PKHOutputs: 0,
-            numPubKeysMultiSigOutputs: [],
-            nullDataPayloadSize: 0
-        };
-    }
-    const diffNumInputs = {
-        current: curSizeProfile.numInputs,
-        delta: curSizeProfile.numInputs - this.savedSizeProfile.numInputs
-    };
-    const diffNumP2PKHOutputs = {
-        current: curSizeProfile.numP2PKHOutputs,
-        delta: curSizeProfile.numP2PKHOutputs - this.savedSizeProfile.numP2PKHOutputs
-    };
-    const diffNumPubKeysMultiSigOutputs = {
-        current: curSizeProfile.numPubKeysMultiSigOutputs,
-        delta: Util.diffArrays(this.savedSizeProfile.numPubKeysMultiSigOutputs, curSizeProfile.numPubKeysMultiSigOutputs)
-    };
-    const diffNullDataPayloadSize = {
-        current: curSizeProfile.nullDataPayloadSize,
-        delta: curSizeProfile.nullDataPayloadSize - this.savedSizeProfile.nullDataPayloadSize
-    };
-
-    const diffResult = {};
-
-    if (diffNumInputs.delta !== 0) {
-        diffResult.numInputs = diffNumInputs;
-    }
-
-    if (diffNumP2PKHOutputs.delta !== 0) {
-        diffResult.numP2PKHOutputs = diffNumP2PKHOutputs;
-    }
-
-    if (diffNumPubKeysMultiSigOutputs.delta !== undefined) {
-        diffResult.numPubKeysMultiSigOutputs = diffNumPubKeysMultiSigOutputs;
-    }
-
-    if (diffNullDataPayloadSize.delta !== 0) {
-        diffResult.nullDataPayloadSize = diffNullDataPayloadSize;
-    }
-
-    return Object.keys(diffResult).length > 0 ? diffResult : undefined;
-};
-
+//  Return:
+//   sizeInfo: {
+//     size: [Number],  Total transaction size, in bytes
+//     vsize: [Number],  Virtual transaction size, in vbytes
+//     weight: [Number]  Transaction weight
+//   }
 Transaction.prototype.realSize = function () {
-    return this.rawTransaction !== undefined ? this.rawTransaction.length / 2 : undefined;
+    if (this.rawTxInfo) {
+        return this.rawTxInfo.sizeInfo;
+    }
 };
 
 // Returns signed raw transaction in hex format
 Transaction.prototype.getTransaction = function () {
-    if (this.rawTransaction === undefined) {
+    if (!this.rawTxInfo) {
         // Build transaction adding all inputs and outputs in sequence
         //
         // NOTE: build transaction using the new Psbt class of bitcoinjs since the previous method,
@@ -913,10 +912,19 @@ Transaction.prototype.getTransaction = function () {
         psbt.validateSignaturesOfAllInputs();
         psbt.finalizeAllInputs();
 
-        this.rawTransaction = psbt.extractTransaction().toHex();
+        const btcTx = psbt.extractTransaction();
+
+        this.rawTxInfo = {
+            hex: btcTx.toHex(),
+            sizeInfo: {
+                size: btcTx.byteLength(),
+                vsize: btcTx.virtualSize(),
+                weight: btcTx.weight()
+            }
+        }
     }
 
-    return this.rawTransaction;
+    return this.rawTxInfo.hex;
 };
 
 // Sends transaction to blockchain network and returns its id
@@ -1308,7 +1316,7 @@ Transaction.prototype.clone = function () {
 //
 
 function invalidateTx() {
-    this.rawTransaction = this.txid = undefined;
+    this.rawTxInfo = this.txid = undefined;
     this.txSaved = false;
     this.compInputs = this.compOutputs = undefined;
 }
@@ -1401,37 +1409,6 @@ function initOutputTokenSequence() {
 
 // Transaction function class (public) methods
 //
-
-//  Returns estimated transaction size, in bytes
-//
-//  nInputs: [number]   // Number of inputs spending P2PKH unspent outputs
-//  nOutputs: [number]  // Number of P2PKH outputs
-//  nullDataPayloadSize: [number]   // Size, in bytes, of data in null data output (0 if no null data output exists)
-//  numPubKeysMultiSigOutputs: [Number|Array(Number)] - List containing number of public kes in each multi-signature output
-//
-Transaction.computeTransactionSize = function (nInputs, nOutputs, nullDataPayloadSize = 0, numPubKeysMultiSigOutputs) {
-    let sizeMultiSigOutputs = 0;
-
-    if (numPubKeysMultiSigOutputs !== undefined) {
-        numPubKeysMultiSigOutputs = !Array.isArray(numPubKeysMultiSigOutputs) ? [numPubKeysMultiSigOutputs] : numPubKeysMultiSigOutputs;
-
-        numPubKeysMultiSigOutputs.forEach((numPubKeys) => {
-            sizeMultiSigOutputs += Transaction.multiSigOutputSize(numPubKeys);
-        });
-    }
-
-    return nInputs * cfgSettings.txInputSize + nOutputs * cfgSettings.txOutputSize + Transaction.nullDataOutputSize(nullDataPayloadSize) + sizeMultiSigOutputs + 10;
-};
-
-Transaction.multiSigOutputSize = function (numPubKeys) {
-    // Note: the last expression in parenthesis accounts for the number of bytes
-    //  required to express the size of the script itself
-    return 12 + (numPubKeys * (cfgSettings.pubKeySize + 1)) + (numPubKeys > 7 ? 1 : 0);
-};
-
-Transaction.nullDataOutputSize = function (payloadSize) {
-    return payloadSize > 0 ? (payloadSize <= 75 ? 11 : 12) + payloadSize : 0;
-};
 
 // Reconstruct transaction object from a serialized string
 Transaction.parse = function (serializedTx) {
@@ -1593,7 +1570,14 @@ Transaction.fromHex = function (hexTx, txTime, blockTime) {
             const tx = new Transaction();
 
             // Save basic transaction info
-            tx.rawTransaction = hexTx;
+            tx.rawTxInfo = {
+                hex: hexTx,
+                sizeInfo: {
+                    size: decodedTx.size,
+                    vsize: decodedTx.vsize,
+                    weight: decodedTx.weight
+                }
+            };
             tx.txid = decodedTx.txid;
             tx.useOptInRBF = true;
 
@@ -1967,6 +1951,18 @@ Transaction.isSingleAddressPayingOutput = function (outputType) {
     }
 };
 
+Transaction.dustAmountByOutputType = function (outputType) {
+    return outputType.isWitness ? cfgSettings.witnessOutputDustAmount : cfgSettings.nonWitnessOutputDustAmount;
+};
+
+Transaction.dustAmountByAddressType = function (addrType) {
+    return Transaction.dustAmountByOutputType(BitcoinInfo.getOutputTypeByAddressType(addrType));
+};
+
+Transaction.dustAmountByAddress = function (address) {
+    return Transaction.dustAmountByOutputType(Catenis.bitcoinInfo.getOutputTypeForAddress(address));
+};
+
 
 // Transaction function class (public) properties
 //
@@ -2239,10 +2235,9 @@ function addressFromPublicKey(pubKey) {
 export function fixClone(clone) {
     clone.inputs = Util.cloneObjArray(clone.inputs);
     clone.outputs = Util.cloneObjArray(clone.outputs);
-
-    if (clone.savedSizeProfile !== undefined) {
-        clone.savedSizeProfile = _und.clone(clone.savedSizeProfile);
-    }
+    clone.txSize = clone.txSize.clone();
+    // Attach transaction size object to cloned transaction object
+    clone.txSize.resetState(clone);
 
     return clone;
 }
@@ -2266,7 +2261,7 @@ function encodeMultiSigOutput (m, pubKeys) {
         pubKeys,
         bitcoinLib.script.OPS.OP_RESERVED + n,
         bitcoinLib.script.OPS.OP_CHECKMULTISIG
-    ))
+    ));
 }
 
 
@@ -2275,27 +2270,27 @@ function encodeMultiSigOutput (m, pubKeys) {
 
 // Definition of properties
 Object.defineProperties(Transaction, {
-    txOutputDustAmount: {
+    witnessOutputDustAmount: {
         get: function () {
-            return cfgSettings.txOutputDustAmount;
+            return cfgSettings.witnessOutputDustAmount;
         },
         enumerable: true
     },
-    txInputSize: {
+    nonWitnessOutputDustAmount: {
         get: function () {
-            return cfgSettings.txInputSize;
+            return cfgSettings.nonWitnessOutputDustAmount;
         },
         enumerable: true
     },
-    txOutputSize: {
+    legacyDustAmount: {
         get: function () {
-            return cfgSettings.txOutputSize;
+            return cfgSettings.legacyDustAmount;
         },
         enumerable: true
     },
-    maxTxSize: {
+    maxTxVsize: {
         get: function () {
-            return cfgSettings.maxTxSize;
+            return cfgSettings.maxTxVsize;
         },
         enumerable: true
     }

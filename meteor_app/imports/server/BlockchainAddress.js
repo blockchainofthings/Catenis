@@ -406,6 +406,13 @@ function BlockchainAddress() {
             },
             enumerable: true
         },
+        btcAddressType: {
+            get: function () {
+                // noinspection JSPotentiallyInvalidUsageOfThis
+                return this._baseAddr.btcAddressType;
+            },
+            enumerable: true
+        },
         addressValidity: {
             get: function () {
                 // noinspection JSPotentiallyInvalidUsageOfThis

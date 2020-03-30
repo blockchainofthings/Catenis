@@ -20,7 +20,7 @@
 import { Catenis } from './Catenis';
 import { FundSource } from './FundSource';
 import { Transaction } from './Transaction';
-
+import { BitcoinInfo } from './BitcoinInfo';
 
 // Definition of function classes
 //
@@ -105,22 +105,70 @@ FundTransaction.prototype.addSingleAddressPayee = function (blockchainAddressTyp
     this.payees.push(blockchainAddressType);
 };
 
+//  Arguments:
+//   blockchainAddressType: [String] - Type of blockchain address
+//   addresses: [Array(String)|String] - List of blockchain addresses to which amount should be paid
+//   amountsPerUtxo: [Array(Array(Number))|Array(Number)] - List of the amount to be assigned to different outpoints
+//                                                           (UTXOs) for each address
+//
+FundTransaction.prototype.addMultipleAddressesPayees = function (blockchainAddressType, addresses, amountsPerUtxo) {
+    if (!Array.isArray(addresses)) {
+        // A single address passed; conform it
+        addresses = [addresses];
+
+        // Assume that outpoint amounts passed are also for a single address
+        //  and conform them too
+        amountsPerUtxo = [amountsPerUtxo];
+    }
+
+    // Prepare list of outputs to be added to transaction
+    const payInfos = addresses.reduce((payInfos, address, idx) => {
+        const amountPerUtxo = amountsPerUtxo[idx];
+
+        if (Array.isArray(amountPerUtxo)) {
+            amountPerUtxo.forEach(amount => {
+                payInfos.push({
+                    address,
+                    amount
+                });
+            });
+        }
+        else {
+            // Assume that address should have a single UTXO
+            payInfos.push({
+                address,
+                amount: amountPerUtxo
+            });
+        }
+
+        return payInfos;
+    }, []);
+
+    this.transact.addPubKeyHashOutputs(payInfos);
+
+    // Save type of payee
+    this.payees.push(blockchainAddressType);
+};
+
 FundTransaction.prototype.addPayingSource = function () {
     let result = false;
 
     if (!this.fundsAllocated) {
+        const txChangeOutputType = BitcoinInfo.getOutputTypeByAddressType(Catenis.ctnHubNode.fundingChangeAddr.btcAddressType);
         const fundSrc = new FundSource(Catenis.ctnHubNode.listFundingAddressesInUse(), {
             useUnconfirmedUtxo: true,
             unconfUtxoInfo: {
                 initTxInputs: this.transact.inputs
             },
-            smallestChange: true
+            smallestChange: true,
+            useAllNonWitnessUtxosFirst: true,   // Default setting; could have been omitted
+            useWitnessOutputForChange: txChangeOutputType.isWitness
         });
 
         // Try to allocate UTXOs to pay for tx expense using optimum fee rate and default
         //  payment resolution
         const fundResult = fundSrc.allocateFundForTxExpense({
-            txSize: this.transact.estimateSize(),
+            txSzStSnapshot: this.transact.txSize,
             inputAmount: this.transact.totalInputsAmount(),
             outputAmount: this.transact.totalOutputsAmount()
         }, false);
@@ -144,7 +192,7 @@ FundTransaction.prototype.addPayingSource = function () {
 
             this.transact.addInputs(inputs);
 
-            if (fundResult.changeAmount >= Transaction.txOutputDustAmount) {
+            if (fundResult.changeAmount >= Transaction.dustAmountByOutputType(txChangeOutputType)) {
                 // Add new output to receive change
                 this.transact.addPubKeyHashOutput(Catenis.ctnHubNode.fundingChangeAddr.newAddressKeys().getAddress(), fundResult.changeAmount);
             }
@@ -235,6 +283,10 @@ FundTransaction.fundingEvent = Object.freeze({
     add_extra_settle_oc_msgs_tx_pay_funds: Object.freeze({
         name: 'add_extra_settle_oc_msgs_tx_pay_funds',
         description: 'Add extra fund for off-chain messages settlement pay tx expense'
+    }),
+    fix_dust_funding: Object.freeze({
+        name: 'fix_dust_funding',
+        description: 'Refund addresses that are funded with dust amount to use the new, lower dust amount for segregated witness output'
     })
 });
 

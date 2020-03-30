@@ -1057,7 +1057,7 @@ CCTransaction.prototype.assemble = function (spendMultiSigOutputAddress) {
 
                     this.addPubKeyHashOutputs(_und.extend({
                         address: transferOutput.address,
-                        amount: txCfgSettings.txOutputDustAmount,
+                        amount: Transaction.dustAmountByAddress(transferOutput.address)
                     }, assetInfo), outputPos++);
 
                     this.numCcTransferOutputs++;

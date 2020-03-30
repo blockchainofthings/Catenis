@@ -32,6 +32,7 @@ import {
     areAddressesFromSameDevice
 } from './SendMessageTransaction';
 import { Service } from './Service';
+import { BitcoinInfo } from './BitcoinInfo';
 
 // Config entries
 /*const config_entryConfig = config.get('config_entry');
@@ -216,15 +217,18 @@ TransferAssetTransaction.prototype.buildTransaction = function () {
         // Add additional required outputs
 
         // Allocate UTXOs to pay for tx expense
+        const txChangeOutputType = BitcoinInfo.getOutputTypeByAddressType(this.sendingDevice.client.ctnNode.payTxExpenseAddr.btcAddressType);
         const payTxFundSource = new FundSource(this.sendingDevice.client.ctnNode.payTxExpenseAddr.listAddressesInUse(), {
             useUnconfirmedUtxo: true,
             unconfUtxoInfo: {
                 initTxInputs: this.ccTransact.inputs
             },
-            smallestChange: true
+            smallestChange: true,
+            useAllNonWitnessUtxosFirst: true,   // Default setting; could have been omitted
+            useWitnessOutputForChange: txChangeOutputType.isWitness
         });
         const payTxAllocResult = payTxFundSource.allocateFundForTxExpense({
-            txSize: this.ccTransact.estimateSize(),
+            txSzStSnapshot: this.ccTransact.txSize,
             inputAmount: this.ccTransact.totalInputsAmount(),
             outputAmount: this.ccTransact.totalOutputsAmount()
         }, false, Catenis.bitcoinFees.getFeeRateByTime(Service.minutesToConfirmAssetTransfer));
@@ -246,7 +250,7 @@ TransferAssetTransaction.prototype.buildTransaction = function () {
             }
         }));
 
-        if (payTxAllocResult.changeAmount >= Transaction.txOutputDustAmount) {
+        if (payTxAllocResult.changeAmount >= Transaction.dustAmountByOutputType(txChangeOutputType)) {
             // Add new output to receive change
             this.ccTransact.addPubKeyHashOutput(this.sendingDevice.client.ctnNode.payTxExpenseAddr.newAddressKeys().getAddress(), payTxAllocResult.changeAmount);
         }

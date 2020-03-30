@@ -22,9 +22,10 @@ import { Transaction } from './Transaction';
 import { Client } from './Client';
 import { FundSource } from './FundSource';
 import { BcotToken } from './BcotToken';
-import { StoreBcotTransaction } from './StoreBcotTransaction';
+import { bcotStoreAddrAmount } from './StoreBcotTransaction';
 import { Service } from './Service';
 import { OmniTransaction } from './OmniTransaction';
+import { BitcoinInfo } from './BitcoinInfo';
 
 // Config entries
 const redeemBcotTxConfig = config.get('redeemBcotTransaction');
@@ -151,18 +152,21 @@ RedeemBcotTransaction.prototype.buildTransaction = function () {
         }
 
         // Add BCOT store (reference) address output
-        this.omniTransact.addReferenceAddressOutput(BcotToken.storeBcotAddress, StoreBcotTransaction.bcotStoreAddrAmount);
+        this.omniTransact.addReferenceAddressOutput(BcotToken.storeBcotAddress, bcotStoreAddrAmount);
 
         // Now, allocate UTXOs to pay for tx expense
+        const txChangeOutputType = BitcoinInfo.getOutputTypeByAddressType(Catenis.ctnHubNode.fundingChangeAddr.btcAddressType);
         const payTxFundSource = new FundSource(Catenis.ctnHubNode.listFundingAddressesInUse(), {
             useUnconfirmedUtxo: true,
             unconfUtxoInfo: {
                 initTxInputs: this.omniTransact.inputs
             },
-            smallestChange: true
+            smallestChange: true,
+            useAllNonWitnessUtxosFirst: true,   // Default setting; could have been omitted
+            useWitnessOutputForChange: txChangeOutputType.isWitness
         });
         const payTxAllocResult = payTxFundSource.allocateFundForTxExpense({
-            txSize: this.omniTransact.estimateSize(),
+            txSzStSnapshot: this.omniTransact.txSize,
             inputAmount: this.omniTransact.totalInputsAmount(),
             outputAmount: this.omniTransact.totalOutputsAmount()
         }, false, Catenis.bitcoinFees.getFeeRateByTime(cfgSettings.timeToConfirm));
@@ -186,7 +190,7 @@ RedeemBcotTransaction.prototype.buildTransaction = function () {
 
         this.omniTransact.addInputs(inputs);
 
-        if (payTxAllocResult.changeAmount >= Transaction.txOutputDustAmount) {
+        if (payTxAllocResult.changeAmount >= Transaction.dustAmountByOutputType(txChangeOutputType)) {
             // Add new output to receive change
             //  Note: it should be automatically inserted just before the reference address output, so the reference
             //      address output is the last output of the transaction

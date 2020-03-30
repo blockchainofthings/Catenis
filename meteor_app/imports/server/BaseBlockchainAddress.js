@@ -73,7 +73,7 @@ export class BaseSystemDeviceMainAddress extends BaseBlockchainAddress {
         super();
         this.type = KeyStore.extKeyType.sys_dev_main_addr.name;
         this.parentPath = KeyStore.systemDeviceMainAddressRootPath(ctnNodeIndex);
-        this.btcAddressType = BitcoinInfo.addressType.witness_v0_keyhash;
+        // NOTE: `btcAddressType` defined as a getter property (see below)
 
         // Make sure that an object of this class has not been instantiated yet
         if (hasInstantiatedObject(this.parentPath)) {
@@ -92,6 +92,10 @@ export class BaseSystemDeviceMainAddress extends BaseBlockchainAddress {
 
         // Save this instance
         setInstantiatedObject(this.parentPath, this);
+    }
+
+    get btcAddressType() {
+        return Catenis.application.legacyDustFunding ? BitcoinInfo.addressType.pubkeyhash : BitcoinInfo.addressType.witness_v0_keyhash;
     }
 
     // Get instance of this class
@@ -943,7 +947,7 @@ export class BaseDeviceMainAddress extends BaseBlockchainAddress {
         super();
         this.type = KeyStore.extKeyType.dev_main_addr.name;
         this.parentPath = KeyStore.deviceMainAddressRootPath(ctnNodeIndex, clientIndex, deviceIndex);
-        this.btcAddressType = BitcoinInfo.addressType.witness_v0_keyhash;
+        // NOTE: `btcAddressType` defined as a getter property (see below)
 
         // Make sure that an object of this class has not been instantiated yet
         if (hasInstantiatedObject(this.parentPath)) {
@@ -962,6 +966,10 @@ export class BaseDeviceMainAddress extends BaseBlockchainAddress {
 
         // Save this instance
         setInstantiatedObject(this.parentPath, this);
+    }
+
+    get btcAddressType() {
+        return Catenis.application.legacyDustFunding ? BitcoinInfo.addressType.pubkeyhash : BitcoinInfo.addressType.witness_v0_keyhash;
     }
 
     // Get instance of this class
@@ -1053,7 +1061,7 @@ export class BaseDeviceAssetIssuanceAddress extends BaseBlockchainAddress {
         super();
         this.type = KeyStore.extKeyType.dev_asst_issu_addr.name;
         this.parentPath = KeyStore.deviceAssetIssuanceAddressRootPath(ctnNodeIndex, clientIndex, deviceIndex);
-        this.btcAddressType = BitcoinInfo.addressType.witness_v0_keyhash;
+        // NOTE: `btcAddressType` defined as a getter property (see below)
 
         // Make sure that an object of this class has not been instantiated yet
         if (hasInstantiatedObject(this.parentPath)) {
@@ -1073,6 +1081,10 @@ export class BaseDeviceAssetIssuanceAddress extends BaseBlockchainAddress {
 
         // Save this instance
         setInstantiatedObject(this.parentPath, this);
+    }
+
+    get btcAddressType() {
+        return Catenis.application.legacyDustFunding ? BitcoinInfo.addressType.pubkeyhash : BitcoinInfo.addressType.witness_v0_keyhash;
     }
 
     // Get instance of this class
@@ -1400,11 +1412,15 @@ function resetObsoleteAddress(addr, docIssuedAddr) {
 // BaseBlockchainAddress function class (public) methods
 //
 
-BaseBlockchainAddress.initialize = function () {
+BaseBlockchainAddress.initialize = function (delayIssuedBlockchainAddressUpdate = false) {
     Catenis.logger.TRACE('BaseBlockchainAddress initialization');
     // Update issued blockchain addresses now, and set recurring timer
     //  to update issued blockchain addresses periodically later
-    updateIssuedAddresses();
+    if (!delayIssuedBlockchainAddressUpdate) {
+        Catenis.logger.TRACE('Delaying update of issued blockchain addresses');
+        updateIssuedAddresses();
+    }
+
     Catenis.logger.TRACE('Setting recurring timer to update issued blockchain addresses');
     updtIssuedAddrsIntervalHandle = Meteor.setInterval(updateIssuedAddresses, cfgSettings.updateIssuedAddressesInterval);
 
@@ -1902,7 +1918,6 @@ BaseBlockchainAddress.revertAddressList = function (addrList) {
 //
 
 BaseBlockchainAddress.instantiatedObjects = new Map();
-
 
 // Definition of module (private) functions
 //

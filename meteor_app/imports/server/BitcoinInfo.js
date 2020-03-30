@@ -155,11 +155,7 @@ export class BitcoinInfo {
     }
 
     static getAddressTypeByName(name) {
-        const foundKey = Object.values(BitcoinInfo.addressType).find(_addrType => _addrType.name === name);
-
-        if (foundKey) {
-            return BitcoinInfo.addressType[foundKey];
-        }
+        return Object.values(BitcoinInfo.addressType).find(_addrType => _addrType.name === name);
     }
 
     static isValidAddressType(addrType) {
@@ -167,9 +163,8 @@ export class BitcoinInfo {
     }
 
     static getOutputTypeByName(name) {
-        const foundKey = Object.values(BitcoinInfo.outputType).find(_outputType => _outputType.name === name);
-
-        return foundKey ? BitcoinInfo.outputType[foundKey] : BitcoinInfo.outputType.unknown;
+        return Object.values(BitcoinInfo.outputType).find(_outputType => _outputType.name === name)
+            || BitcoinInfo.outputType.unknown;
     }
 
     static getOutputTypeByDescriptor(desc) {
@@ -178,22 +173,14 @@ export class BitcoinInfo {
         if (matchResult) {
             const descPrefix = matchResult[0];
 
-            const foundKey = Object.values(BitcoinInfo.outputType).find(_outputType => _outputType.descPrefix === descPrefix);
-
-            if (foundKey) {
-                return BitcoinInfo.outputType[foundKey];
-            }
+            return Object.values(BitcoinInfo.outputType).find(_outputType => _outputType.descPrefix === descPrefix);
         }
     }
 
     static getOutputTypeByAddressType(addrType) {
         const addrTypeName = typeof addrType === 'string' ? addrType : addrType.name;
 
-        const foundKey = Object.values(BitcoinInfo.outputType).find(_outputType => _outputType.addressType === addrTypeName);
-
-        if (foundKey) {
-            return BitcoinInfo.outputType[foundKey];
-        }
+        return Object.values(BitcoinInfo.outputType).find(_outputType => _outputType.addressType === addrTypeName);
     }
 }
 

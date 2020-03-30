@@ -31,6 +31,7 @@ import {
 } from './SendMessageTransaction';
 import { MessageReadable } from './MessageReadable';
 import { BufferMessageDuplex } from './BufferMessageDuplex';
+import { BitcoinInfo } from './BitcoinInfo';
 
 // Definition of function classes
 //
@@ -192,15 +193,18 @@ LogMessageTransaction.prototype.buildTransaction = function () {
         }
 
         // Now, allocate UTXOs to pay for tx expense
+        const txChangeOutputType = BitcoinInfo.getOutputTypeByAddressType(Catenis.ctnHubNode.payTxExpenseAddr.btcAddressType);
         const payTxFundSource = new FundSource(Catenis.ctnHubNode.payTxExpenseAddr.listAddressesInUse(), {
             useUnconfirmedUtxo: true,
             unconfUtxoInfo: {
                 initTxInputs: this.transact.inputs
             },
-            smallestChange: true
+            smallestChange: true,
+            useAllNonWitnessUtxosFirst: true,   // Default setting; could have been omitted
+            useWitnessOutputForChange: txChangeOutputType.isWitness
         });
         const payTxAllocResult = payTxFundSource.allocateFundForTxExpense({
-            txSize: this.transact.estimateSize(),
+            txSzStSnapshot: this.transact.txSize,
             inputAmount: this.transact.totalInputsAmount(),
             outputAmount: this.transact.totalOutputsAmount()
         }, false, Catenis.bitcoinFees.getFeeRateByTime(Service.minutesToConfirmMessage));
@@ -224,7 +228,7 @@ LogMessageTransaction.prototype.buildTransaction = function () {
 
         this.transact.addInputs(inputs);
 
-        if (payTxAllocResult.changeAmount >= Transaction.txOutputDustAmount) {
+        if (payTxAllocResult.changeAmount >= Transaction.dustAmountByOutputType(txChangeOutputType)) {
             // Add new output to receive change
             this.transact.addPubKeyHashOutput(Catenis.ctnHubNode.payTxExpenseAddr.newAddressKeys().getAddress(), payTxAllocResult.changeAmount);
         }

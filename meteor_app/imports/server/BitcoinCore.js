@@ -637,11 +637,13 @@ BitcoinCore.prototype.getMempoolAncestors = function (txid, verbose, logError = 
 //  match directly to only one RPC method
 //
 
-BitcoinCore.prototype.getRawTransactionCheck = function (txid, logError = true) {
+BitcoinCore.prototype.getRawTransactionCheck = function (txid, logError = true, addTxToCache = true) {
     // First try to retrieve the raw hex data representation of the transaction
     //  using getrawtransaction RPC method
+    let result;
+
     try {
-        return this.rpcApi.getrawtransaction(txid, false);
+        result = this.rpcApi.getrawtransaction(txid, false);
     }
     catch (err) {
         if (err.code === BitcoinCore.rpcErrorCode.RPC_INVALID_ADDRESS_OR_KEY) {
@@ -649,7 +651,7 @@ BitcoinCore.prototype.getRawTransactionCheck = function (txid, logError = true) 
             //  Check if it is possibly a transaction that had been sent by Catenis previously
             //  and that have been replaced later
             try {
-                return this.rpcApi.gettransaction(txid, false, false).hex;
+                result = this.rpcApi.gettransaction(txid, false, false).hex;
             }
             catch (err2) {
                 handleError('gettransaction', err2, logError);
@@ -659,6 +661,18 @@ BitcoinCore.prototype.getRawTransactionCheck = function (txid, logError = true) 
             handleError('getrawtransaction', err, logError);
         }
     }
+
+    // Store raw transaction in local cache
+    if (addTxToCache) {
+        try {
+            Catenis.txCache.store(txid, typeof result === 'string' ? result : result.hex);
+        }
+        catch (err) {
+            Catenis.logger.ERROR('Error storing raw transaction in local cache.', err);
+        }
+    }
+
+    return result;
 };
 
 // Note: the actual contents of the returned decoded transaction may vary depending on
@@ -667,8 +681,10 @@ BitcoinCore.prototype.getRawTransactionCheck = function (txid, logError = true) 
 //  RPC method, it includes three additional properties: hex, blockchash, and confirmations
 BitcoinCore.prototype.getDecodedRawTransactionCheck = function (txid, logError = true) {
     // First try to retrieve the decoded transaction using getrawtransaction RPC method
+    let result;
+
     try {
-        return this.rpcApi.getrawtransaction(txid, true);
+        result = this.rpcApi.getrawtransaction(txid, true);
     }
     catch (err) {
         if (err.code === BitcoinCore.rpcErrorCode.RPC_INVALID_ADDRESS_OR_KEY) {
@@ -678,14 +694,12 @@ BitcoinCore.prototype.getDecodedRawTransactionCheck = function (txid, logError =
             try {
                 const tx = this.rpcApi.gettransaction(txid, false, true);
 
-                const decTx = tx.decoded;
-                decTx.hex = tx.hex;
-                decTx.blockhash = tx.blockhash;
-                decTx.confirmations = tx.confirmations;
-                decTx.time = tx.time;
-                decTx.blocktime = tx.blocktime;
-
-                return decTx;
+                result = tx.decoded;
+                result.hex = tx.hex;
+                result.blockhash = tx.blockhash;
+                result.confirmations = tx.confirmations;
+                result.time = tx.time;
+                result.blocktime = tx.blocktime;
             }
             catch (err2) {
                 handleError('gettransaction', err2, logError);
@@ -695,6 +709,16 @@ BitcoinCore.prototype.getDecodedRawTransactionCheck = function (txid, logError =
             handleError('getrawtransaction', err, logError);
         }
     }
+
+    // Store raw transaction in local cache
+    try {
+        Catenis.txCache.store(txid, result.hex);
+    }
+    catch (err) {
+        Catenis.logger.ERROR('Error storing raw transaction in local cache.', err);
+    }
+
+    return result;
 };
 
 BitcoinCore.prototype.getMempoolEntryWithAncestors = function(txid, logError = true) {

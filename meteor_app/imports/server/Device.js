@@ -267,9 +267,11 @@ Device.prototype.delete = function (deletedDate) {
     }
 };
 
-Device.prototype.fundAddresses = function () {
+// NOTE: calling this method with `checkStatus` set to false is NOT recommended
+//  and should be used only for development purpose
+Device.prototype.fundAddresses = function (checkStatus = true) {
     // Make sure that device's status is new
-    if (this.status !== Device.status.new.name) {
+    if (checkStatus && this.status !== Device.status.new.name) {
         // Cannot fund addresses of device the status of which is not new. Log error and throw exception
         Catenis.logger.ERROR('Cannot fund addresses of a device the status of which is not \'new\'', {deviceId: this.deviceId, currentStatus: this.status});
         throw new Meteor.Error('ctn_device_inconsistent_status', util.format('Cannot fund addresses of a device (deviceId: %s) the status of which is not \'new\' (currentStatus: %s)', this.deviceId, this.status));
@@ -311,9 +313,36 @@ Device.prototype.fundAddresses = function () {
             assetIssuanceAddrDistribFund.amountPerAddress = undefined;
         }
 
-        if (devMainAddrDistribFund.amountPerAddress !== undefined || assetIssuanceAddrDistribFund.amountPerAddress !== undefined) {
-            // Device main addresses and/or device asset issuance addresses not funded yet, so fund them now
-            fundDeviceAddresses.call(this, devMainAddrDistribFund.amountPerAddress, assetIssuanceAddrDistribFund.amountPerAddress);
+        let unlockedAssetIssueAddressAmount;
+
+        if (this.status !== Device.status.new.name) {
+            // Check unlocked asset issuance addresses
+            const unlockedAssetIssuanceAddresses = this.getUnlockedAssetIssuanceAddresses();
+            const unlockAssetIssueAddrBalance = new FundSource(unlockedAssetIssuanceAddresses, {useUnconfirmedUtxo: true}).getBalance(true);
+
+            if (unlockAssetIssueAddrBalance === 0) {
+                // Refund unlocked asset issuance addresses
+                unlockedAssetIssueAddressAmount = unlockedAssetIssuanceAddresses.reduce((addressAmount, address) => {
+                    let amount = Service.devAssetIssuanceAddrAmount(address);
+                    const changeAmount = Service.deviceAssetProvisionCost(address) - amount;
+
+                    if (changeAmount > 0) {
+                        amount = [amount, changeAmount];
+                    }
+
+                    addressAmount[address] = amount;
+
+                    return addressAmount;
+                }, {});
+            }
+        }
+
+        //if (devMainAddrDistribFund.amountPerAddress !== undefined || assetIssuanceAddrDistribFund.amountPerAddress !== undefined) {
+        //    fundDeviceAddresses.call(this, devMainAddrDistribFund.amountPerAddress, assetIssuanceAddrDistribFund.amountPerAddress);
+        if (devMainAddrDistribFund.amountPerAddress !== undefined || assetIssuanceAddrDistribFund.amountPerAddress !== undefined || unlockedAssetIssueAddressAmount !== undefined) {
+            // Device main addresses and/or device asset issuance addresses not funded yet, or unlocked asset
+            //  issuance addresses need to be refunded,  so fund them now
+            fundDeviceAddresses.call(this, devMainAddrDistribFund.amountPerAddress, assetIssuanceAddrDistribFund.amountPerAddress, unlockedAssetIssueAddressAmount);
 
             // Set new device status to pending
             newDevStatus = Device.status.pending.name;
@@ -397,15 +426,14 @@ Device.prototype.fixFundAddresses = function () {
         }
 
         // First, check if funding of device asset issuance addresses allocated to unlocked assets are OK
-        const devUnlockedAssetIssueAddrs = getUnlockedAssetIssuanceAddresses.call(this);
+        const devUnlockedAssetIssueAddrs = this.getUnlockedAssetIssuanceAddresses();
         let devUnlockedAssetIssueAddrAmount = {};
 
         if (devUnlockedAssetIssueAddrs.length > 0) {
             const addressBalance = new FundSource(devUnlockedAssetIssueAddrs, {useUnconfirmedUtxo: true}).getBalancePerAddress(true);
 
-            const expectAddrBalance = Service.deviceAssetProvisionCost;
-
             devUnlockedAssetIssueAddrs.forEach((unlockedAssetIssueAddr) => {
+                const expectAddrBalance = Service.deviceAssetProvisionCost(unlockedAssetIssueAddr);
                 let balance = addressBalance[unlockedAssetIssueAddr];
 
                 if (balance === undefined) {
@@ -2928,7 +2956,7 @@ Device.prototype.notifyFinalMessageProgress = function (ephemeralMessageId, msgP
 
 /** Asset related methods **/
 Device.prototype.getAssetIssuanceAddressesInUseExcludeUnlocked = function () {
-    const unlockedAssetIssueAddrs = getUnlockedAssetIssuanceAddresses.call(this);
+    const unlockedAssetIssueAddrs = this.getUnlockedAssetIssuanceAddresses();
 
     if (unlockedAssetIssueAddrs.length > 0) {
         let unlockedAssetIssueAddrsSet;
@@ -2948,6 +2976,24 @@ Device.prototype.getAssetIssuanceAddressesInUseExcludeUnlocked = function () {
         return this.assetIssuanceAddr.listAddressesInUse();
     }
 };
+
+// Return list of device asset issuance addresses allocated to unlocked assets
+Device.prototype.getUnlockedAssetIssuanceAddresses = function () {
+    return Catenis.db.collection.Asset.find({
+        type: Asset.type.device,
+        issuingType: CCTransaction.issuingAssetType.unlocked,
+        'issuance.entityId': this.deviceId
+    }, {
+        fields: {
+            'issuance.addrPath': 1
+        }
+    }).map((doc) => {
+        const addrInfo = Catenis.keyStore.getAddressInfoByPath(doc.issuance.addrPath, true);
+
+        return addrInfo !== null ? addrInfo.cryptoKeys.getAddress() : undefined;
+    }).filter(addr => addr !== undefined);
+};
+
 
 // Retrieve the current balance of a given asset held by this device
 //
@@ -3586,23 +3632,6 @@ Device.prototype.listAssetHolders = function (assetId, limit, skip) {
 //      or .bind().
 //
 
-// Return list of device asset issuance addresses allocated to unlocked assets
-function getUnlockedAssetIssuanceAddresses() {
-    return Catenis.db.collection.Asset.find({
-        type: Asset.type.device,
-        issuingType: CCTransaction.issuingAssetType.unlocked,
-        'issuance.entityId': this.deviceId
-    }, {
-        fields: {
-            'issuance.addrPath': 1
-        }
-    }).map((doc) => {
-        const addrInfo = Catenis.keyStore.getAddressInfoByPath(doc.issuance.addrPath);
-
-        return addrInfo !== null ? addrInfo.cryptoKeys.getAddress() : undefined;
-    }).filter(addr => addr !== undefined);
-}
-
 // NOTE: make sure that this method is called from code executed from the FundSource.utxoCS
 //  critical section object
 function fundDeviceAddresses(amountPerDevMainAddress, amountPerAssetIssuanceAddress, unlockedAssetIssueAddressAmount) {
@@ -3628,9 +3657,7 @@ function fundDeviceAddresses(amountPerDevMainAddress, amountPerAssetIssuanceAddr
         }
 
         if (unlockedAssetIssueAddressAmount !== undefined) {
-            Object.keys(unlockedAssetIssueAddressAmount).forEach((address) => {
-                fundTransact.addSingleAddressPayee(this.assetIssuanceAddr.type, address, unlockedAssetIssueAddressAmount[address]);
-            });
+            fundTransact.addMultipleAddressesPayees(this.assetIssuanceAddr.type, Object.keys(unlockedAssetIssueAddressAmount), Object.values(unlockedAssetIssueAddressAmount));
         }
 
         if (fundTransact.addPayingSource()) {

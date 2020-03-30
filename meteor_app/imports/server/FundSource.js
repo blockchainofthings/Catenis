@@ -23,11 +23,15 @@ import { Meteor } from 'meteor/meteor';
 import { Catenis } from './Catenis';
 import { CriticalSection } from './CriticalSection';
 import { Service } from './Service';
-import { Transaction } from './Transaction';
 import { Util } from './Util';
 import { BitcoinCore } from './BitcoinCore';
 import { AncestorTransactions } from './AncestorTransactions';
 import { BitcoinInfo } from './BitcoinInfo';
+import {
+    TransactionSize,
+    smallestWitnessInputVirtualSizeIncrement,
+    smallestNonWitnessInputVirtualSizeIncrement
+} from './TransactionSize';
 
 // Config entries
 const fundSourceConfig = config.get('fundSource');
@@ -88,9 +92,14 @@ export const cfgSettings = {
 //      excludeUtxos: [string|Array(string)], - (optional) List of UTXOs (formatted as "txid:n") that should not be taken into account when allocating new UTXOs
 //                                               (because those UTXOs are associated with txs that use opt-in RBF (Replace By Fee) as such can be replaced by
 //                                               other txs and have their own outputs invalidated)
-//      addUtxoTxInputs: [Object|Array(Object)] - (optional) List of transaction input objects (the same as used by the inputs property of the Transaction object)
+//      addUtxoTxInputs: [Object|Array(Object)], - (optional) List of transaction input objects (the same as used by the inputs property of the Transaction object)
 //                                                  the UTXOs spent by them should be added to the list of available UTXOs. These inputs should belong to transactions
 //                                                  that use opt-in RBF that are being replaced
+//      useAllNonWitnessUtxosFirst: [Boolean], - (optional, default: true) Indicates whether all non-witness UTXOs should be used before using witness UTXOs when allocating funds.
+//                                                Note that this setting only applies when there are mixed (both non-witness and witness) UTXOs loaded.
+//                                                ALSO NOTE that when allocating funds to pay for a tx expense, this setting is forced to ON provided that a fee rate (non-fixed fee) is passed
+//      useWitnessOutputForChange: [Boolean] - (optional, default: true) Indicates whether it is expected that change outputs shall pay to segregated witness addresses
+//                                                                        when allocating funds to pay for a tx expense
 //    }
 //
 // NOTE: make sure that objects of this function class are instantiated and used (their methods
@@ -146,9 +155,11 @@ export function FundSource(addresses, options) {
     this.useUnconfirmedUtxo = false;
     this.smallestChange = false;
     this.higherAmountUtxos = false;
+    this.useAllNonWitnessUtxosFirst = true;
+    this.useWitnessOutputForChange = true;
 
     if (options !== undefined) {
-        if (options.useUnconfirmedUtxo) {
+        if (options.useUnconfirmedUtxo !== undefined) {
             this.useUnconfirmedUtxo = !!options.useUnconfirmedUtxo;
         }
 
@@ -232,7 +243,18 @@ export function FundSource(addresses, options) {
                 this.ancestorTxs = undefined;
             }
         }
+
+        if (options.useAllNonWitnessUtxosFirst !== undefined) {
+            this.useAllNonWitnessUtxosFirst = !!options.useAllNonWitnessUtxosFirst;
+        }
+
+        if (options.useWitnessOutputForChange !== undefined) {
+            this.useWitnessOutputForChange = !!options.useWitnessOutputForChange;
+        }
     }
+
+    this.hasWitnessUtxos = false;
+    this.hasNonWitnessUtxos = false;
 
     if (addresses.length > 0) {
         // Load UTXOs into local DB
@@ -240,11 +262,25 @@ export function FundSource(addresses, options) {
 
         loadUtxos.call(this);
     }
+
+    Object.defineProperties(this, {
+        hasMixedUtxos: {
+            get: function () {
+                // noinspection JSPotentiallyInvalidUsageOfThis
+                return this.hasWitnessUtxos && this.hasNonWitnessUtxos;
+            },
+            enumerable: true
+        }
+    });
 }
 
 
 // Public FundSource object methods
 //
+
+FundSource.prototype.hasUtxoToAllocate = function() {
+    return this.collUtxo.count({allocated: false}) > 0;
+};
 
 FundSource.prototype.getBalance = function (includeUnconfirmed = true, includeAllocated = false) {
     const conditions = [];
@@ -423,8 +459,13 @@ FundSource.prototype.allocateUtxosByPredicate = function (predicate, includeUnco
     const query = {
         $and: [{
             allocated: false
-        }, predicate]
+        }]
     };
+
+    if (predicate) {
+        query.$and.push(predicate);
+    }
+
     let confCondition = {
         confirmations: {
             $gt: 0
@@ -533,111 +574,202 @@ FundSource.prototype.allocateUtxosByPredicate = function (predicate, includeUnco
 //
 FundSource.prototype.allocateFund = function (amount) {
     let result = null;
-    
+
     if (amount > 0) {
-        const utxoResultSets = [];
-        let maxUtxoResultSetLength = 0;
+        let allocateNonWitnessUtxosFirst = this.hasMixedUtxos && this.useAllNonWitnessUtxosFirst;
+        let allocatingNonWitnessUtxos = allocateNonWitnessUtxosFirst;
+        let allocatedNonWitnessDocUtxos;
+        let savedAncestorTxs;
+        let nonWitnessAmount;
+        let doItAgain;
 
-        // Retrieve only confirmed UTXOs sorting them by higher value, and higher confirmations
-        const confUtxoResultSet = this.collUtxo.chain().find({
-            $and: [{
-                allocated: false
-            }, {
-                confirmations: {
-                    $gt: 0
-                }
-            }]
-        }).compoundsort([
-            ['amount', true],
-            ['confirmations', true]
-        ]).data();
+        do {
+            doItAgain = false;
 
-        if (confUtxoResultSet.length > 0) {
-            utxoResultSets.push(confUtxoResultSet);
-            maxUtxoResultSetLength = confUtxoResultSet.length;
-        }
+            const utxoResultSets = [];
+            let maxUtxoResultSetLength = 0;
 
-        if (this.loadedUnconfirmedUtxos) {
-            // Retrieve both confirmed and unconfirmed UTXOs sorting them by higher value, higher confirmations,
-            //  lower ancestors count (for unconfirmed UTXOs), lower ancestors size (for unconfirmed UTXOs),
-            //  lower descendants count (for unconfirmed UTXOs), lower descendants size (for unconfirmed UTXOs)
-            const conditions = [{allocated: false}];
+            // Retrieve only confirmed UTXOs sorting them by higher value, and higher confirmations
+            const query = {
+                $and: [{
+                    allocated: false
+                }, {
+                    confirmations: {
+                        $gt: 0
+                    }
+                }]
+            };
 
-            if (this.ancestorsCountUpperLimit !== undefined) {
-                conditions.push({ancestorsCount: {$lte: this.ancestorsCountUpperLimit}});
-            }
-
-            if (this.ancestorsSizeUpperLimit !== undefined) {
-                conditions.push({ancestorsSize: {$lte: this.ancestorsSizeUpperLimit}});
-            }
-
-            if (this.descendantsCountUpperLimit !== undefined) {
-                conditions.push({descendantsCount: {$lte: this.descendantsCountUpperLimit}});
-            }
-
-            if (this.descendantsSizeUpperLimit !== undefined) {
-                conditions.push({descendantsSize: {$lte: this.descendantsSizeUpperLimit}});
-            }
-
-            const query = conditions.length > 1 ? {$and: conditions} : conditions[0],
-                unconfUtxoResultSet = this.collUtxo.chain().find(query).compoundsort([
-                    ['amount', true],
-                    ['confirmations', true],
-                    'ancestorsCount',
-                    'ancestorsSize',
-                    'descendantsCount',
-                    'descendantsSize'
-                ]).data();
-
-            if (unconfUtxoResultSet.length > 0) {
-                utxoResultSets.push(unconfUtxoResultSet);
-                maxUtxoResultSetLength = unconfUtxoResultSet.length > maxUtxoResultSetLength ? unconfUtxoResultSet.length : maxUtxoResultSetLength;
-            }
-        }
-
-        if (maxUtxoResultSetLength > 0) {
-            let allocatedUtxos = undefined;
-
-            // Try to allocate as little UTXOs as possible to fulfill requested amount, starting
-            //  with one UTXO, and going up to the number of UTXOs returned in result sets
-            for (let numWorkUtxos = 1; numWorkUtxos <= maxUtxoResultSetLength; numWorkUtxos++) {
-                if ((allocatedUtxos = allocateUtxos.call(this, amount, utxoResultSets, numWorkUtxos)) !== undefined) {
-                    // UTXOs successfully allocated. Stop trying
-                    break;
-                }
-            }
-
-            if (allocatedUtxos !== undefined) {
-                // UTXOs have been allocated. Prepare to return result
-                let allocatedAmount = 0;
-                result = {utxos: []};
-
-                allocatedUtxos.docUtxos.forEach((docUtxo) => {
-                    result.utxos.push({
-                        address: docUtxo.address,
-                        txout: {
-                            txid: docUtxo.txid,
-                            vout: docUtxo.vout,
-                            amount: docUtxo.amount
-                        },
-                        isWitness: docUtxo.isWitness,
-                        scriptPubKey: docUtxo.scriptPubKey
-                    });
-                    allocatedAmount += docUtxo.amount;
-                    docUtxo.allocated = true;
+            if (allocateNonWitnessUtxosFirst) {
+                // Non-witness UTXOs should be allocated first, so set select condition appropriately
+                query.$and.push({
+                    isWitness: !allocatingNonWitnessUtxos
                 });
+            }
 
-                // Change amount (in satoshis)
-                result.changeAmount = allocatedAmount - amount;
+            const confUtxoResultSet = this.collUtxo.chain().find(query).compoundsort([
+                ['amount', true],
+                ['confirmations', true]
+            ]).data();
 
-                // Update local DB setting UTXOs as allocated
-                this.collUtxo.update(allocatedUtxos.docUtxos);
+            if (confUtxoResultSet.length > 0) {
+                utxoResultSets.push(confUtxoResultSet);
+                maxUtxoResultSetLength = confUtxoResultSet.length;
+            }
 
-                // NOTE: force the rebuild of the binary index on the 'allocated' property to work around
-                //  an issue found with Lokijs (https://github.com/techfort/LokiJS/issues/639)
-                this.collUtxo.ensureIndex('allocated', true);
+            if (this.loadedUnconfirmedUtxos) {
+                // Retrieve both confirmed and unconfirmed UTXOs sorting them by higher value, higher confirmations,
+                //  lower ancestors count (for unconfirmed UTXOs), lower ancestors size (for unconfirmed UTXOs),
+                //  lower descendants count (for unconfirmed UTXOs), lower descendants size (for unconfirmed UTXOs)
+                const conditions = [{allocated: false}];
+
+                if (this.ancestorsCountUpperLimit !== undefined) {
+                    conditions.push({ancestorsCount: {$lte: this.ancestorsCountUpperLimit}});
+                }
+
+                if (this.ancestorsSizeUpperLimit !== undefined) {
+                    conditions.push({ancestorsSize: {$lte: this.ancestorsSizeUpperLimit}});
+                }
+
+                if (this.descendantsCountUpperLimit !== undefined) {
+                    conditions.push({descendantsCount: {$lte: this.descendantsCountUpperLimit}});
+                }
+
+                if (this.descendantsSizeUpperLimit !== undefined) {
+                    conditions.push({descendantsSize: {$lte: this.descendantsSizeUpperLimit}});
+                }
+
+                if (allocateNonWitnessUtxosFirst) {
+                    // Non-witness UTXOs should be allocated first, so set select condition appropriately
+                    conditions.push({
+                        isWitness: !allocatingNonWitnessUtxos
+                    });
+                }
+
+                const query = conditions.length > 1 ? {$and: conditions} : conditions[0],
+                    unconfUtxoResultSet = this.collUtxo.chain().find(query).compoundsort([
+                        ['amount', true],
+                        ['confirmations', true],
+                        'ancestorsCount',
+                        'ancestorsSize',
+                        'descendantsCount',
+                        'descendantsSize'
+                    ]).data();
+
+                if (unconfUtxoResultSet.length > 0) {
+                    utxoResultSets.push(unconfUtxoResultSet);
+                    maxUtxoResultSetLength = unconfUtxoResultSet.length > maxUtxoResultSetLength ? unconfUtxoResultSet.length : maxUtxoResultSetLength;
+                }
+            }
+
+            if (maxUtxoResultSetLength > 0) {
+                let allocatedUtxos = undefined;
+
+                // Try to allocate as little UTXOs as possible to fulfill requested amount, starting
+                //  with one UTXO, and going up to the number of UTXOs returned in result sets
+                for (let numWorkUtxos = 1; numWorkUtxos <= maxUtxoResultSetLength; numWorkUtxos++) {
+                    if ((allocatedUtxos = allocateUtxos.call(this, amount, utxoResultSets, numWorkUtxos)) !== undefined) {
+                        // UTXOs successfully allocated. Stop trying
+                        break;
+                    }
+                }
+
+                if (allocatedUtxos !== undefined) {
+                    // UTXOs have been allocated. Prepare to return result
+                    let allocatedAmount = 0;
+                    result = {utxos: []};
+
+                    if (allocatedNonWitnessDocUtxos) {
+                        // Append non-witness UTXOs that have been previously allocated
+                        //  and reset amount to its initial value
+                        allocatedUtxos.docUtxos = allocatedNonWitnessDocUtxos.concat(allocatedUtxos.docUtxos);
+                        // noinspection JSUnusedAssignment
+                        amount += nonWitnessAmount;
+                    }
+
+                    allocatedUtxos.docUtxos.forEach((docUtxo) => {
+                        result.utxos.push({
+                            address: docUtxo.address,
+                            txout: {
+                                txid: docUtxo.txid,
+                                vout: docUtxo.vout,
+                                amount: docUtxo.amount
+                            },
+                            isWitness: docUtxo.isWitness,
+                            scriptPubKey: docUtxo.scriptPubKey
+                        });
+                        allocatedAmount += docUtxo.amount;
+                        docUtxo.allocated = true;
+                    });
+
+                    // Change amount (in satoshis)
+                    result.changeAmount = allocatedAmount - amount;
+
+                    // Update local DB setting UTXOs as allocated
+                    this.collUtxo.update(allocatedUtxos.docUtxos);
+
+                    // NOTE: force the rebuild of the binary index on the 'allocated' property to work around
+                    //  an issue found with Lokijs (https://github.com/techfort/LokiJS/issues/639)
+                    this.collUtxo.ensureIndex('allocated', true);
+                }
+                else {
+                    // Could not allocate UTXOs the amount of which would be enough to cover
+                    //  the required amount
+                    if (allocateNonWitnessUtxosFirst) {
+                        // Non-witness UTXOs should be allocated first
+                        if (allocatingNonWitnessUtxos) {
+                            // First pass to allocate non-witness UTXOs. Allocate all possible
+                            //  non-witness UTXOs, and continue to next pass
+                            if (this.ancestorTxs) {
+                                savedAncestorTxs = this.ancestorTxs.clone();
+                            }
+
+                            const _allocatedNonWitnessDocUtxos = [];
+                            nonWitnessAmount = 0;
+
+                            // Note: we only use the last UTXO result set, which is the one with most UTXOs
+                            utxoResultSets[utxoResultSets.length - 1].some(docUtxo => {
+                                if (!this.ancestorTxs || this.ancestorTxs.checkAddUtxo(docUtxo)) {
+                                    _allocatedNonWitnessDocUtxos.push(docUtxo);
+                                    nonWitnessAmount += docUtxo.amount;
+
+                                    // Safeguard: make sure that allocated non-witness UTXOs are not going to be
+                                    //      enough to pay for tx expense by themselves
+                                    if (nonWitnessAmount >= amount) {
+                                        Catenis.logger.WARN('Unexpected condition: allocated non-witness UTXOs should not be enough to pay for tx expense', '. Reverting last allocated non-witness UTXO');
+                                        // Revert allocation of last non-witness UTXO...
+                                        nonWitnessAmount -= docUtxo.amount;
+                                        _allocatedNonWitnessDocUtxos.pop();
+
+                                        // ... and stop iterating
+                                        return true;
+                                    }
+                                }
+
+                                // Continue iterating
+                                return false;
+                            });
+
+                            if (_allocatedNonWitnessDocUtxos.length > 0) {
+                                allocatedNonWitnessDocUtxos = _allocatedNonWitnessDocUtxos;
+                                // Adjust amount by discounting what have already been allocated
+                                amount -= nonWitnessAmount;
+                            }
+
+                            allocatingNonWitnessUtxos = false;
+                            doItAgain = true;
+                        }
+                        else {
+                            // Failed to allocate UTXOs. Just reset ancestor transactions (note: no need to reset amount)
+                            if (savedAncestorTxs) {
+                                this.ancestorTxs = savedAncestorTxs;
+                            }
+                        }
+                    }
+                }
             }
         }
+        while (doItAgain);
     }
     else {
         // Indicate that there is no need to allocated additional UTXOs
@@ -647,9 +779,17 @@ FundSource.prototype.allocateFund = function (amount) {
     return result;
 };
 
-// Arguments description:
+//  Arguments description:
 //   txInfo {
-//     txSize: [Number], - Current transaction virtual size, in vbytes
+//     txSzStSnapshot: [Object] {  A snapshot object with the current tx size state (as defined below). Optionally, an
+//                                  instance of the TransactionSizeState class can be passed in place of a state snapshot
+//       numWitnessInputs: [Number],
+//       numNonWitnessInputs: [Number],
+//       numWitnessOutputs: [Number],
+//       numNonWitnessOutputs: [Number],
+//       numPubKeysMultiSigOutputs: [Array(Number)],
+//       nullDataPayloadSize: [Number]
+//     },
 //     inputAmount: [Number], - Total amount of current inputs in the transaction, in satoshis
 //     outputAmount: [Number] - Total amount of current outputs in the transaction, in satoshis
 //   }
@@ -657,11 +797,14 @@ FundSource.prototype.allocateFund = function (amount) {
 //   fee [Number] - Amount, in satoshis, corresponding to the fee to be paid for the transaction. If fee is
 //                   not fixed (isFixedFeed = false), this should be interpreted as a fee rate, in satoshis/byte,
 //                   that should be used to calculate the actual transaction fee
-//  amountResolution: [Number] - The resolution, in satoshis, of the calculated amount to be allocated.
-//                                The allocated amount should be a multiple of that amount
-//  maxNumUtxos: [Number] - (optional) Maximum number of UTXOs that can be allocated
+//   paymentResolution: [Number] - The resolution, in satoshis, of the calculated transaction fee. In other words,
+//                                the transaction fee should be a multiple of that amount. If not specified and
+//                                a fixed fee is passed, no rounding shall be made (the exact fee passed is
+//                                used). When a fee rate is passed, though, and no payment resolution is specified,
+//                                the standard payment resolution (as specified in the Service module) is used
+//   maxNumUtxos: [Number] - (optional) Maximum number of UTXOs that can be allocated
 //
-//  result: {
+//  Result: {
 //    utxos: [{
 //      address: [String],
 //      txout: {
@@ -675,7 +818,7 @@ FundSource.prototype.allocateFund = function (amount) {
 //    changeAmount: [Number]  // Optional
 //  }
 //
-FundSource.prototype.allocateFundForTxExpense = function (txInfo, isFixedFeed, fee, amountResolution, maxNumUtxos) {
+FundSource.prototype.allocateFundForTxExpense = function (txInfo, isFixedFeed, fee, paymentResolution, maxNumUtxos) {
     // Check arguments
     if (fee === undefined) {
         if (!isFixedFeed) {
@@ -689,193 +832,334 @@ FundSource.prototype.allocateFundForTxExpense = function (txInfo, isFixedFeed, f
         }
     }
 
-    amountResolution = amountResolution || Service.paymentResolution;
-
     // Calculate amount to be allocated (to pay for transaction expense)
-    const txDiffAmount = txInfo.inputAmount - txInfo.outputAmount;
-    let amount = undefined;
+    let txDiffAmount = txInfo.inputAmount - txInfo.outputAmount;
+    let amount;
     // NOTE: the following variables only apply to non-fixed fee
-    let txExpense = 0,
-        deltaFeePerInput = 0,
-        deltaFeePerOutput = 0;
+    let feeRate,
+        txSize = new TransactionSize(txInfo.txSzStSnapshot);
 
     if (isFixedFeed) {
         // Using a fixed fee for transaction. Calculate amount to be allocated now (and only once).
         //  If current tx input amount is already enough to pay for the required transaction fee,
         //  set amount to zero to indicate that there is no need to allocate anything
-        amount = txDiffAmount < fee ? Math.ceil((fee - txDiffAmount) / amountResolution) * amountResolution : 0;
+        if (paymentResolution) {
+            fee = Util.roundToResolution(fee, paymentResolution);
+        }
+
+        amount = fee - txDiffAmount;
     }
     else {
-        // Not using a fixed fee for transaction. Interpret passed fee as a fee rate. For now,
-        //  calculate the transaction expense (amount required to balance the amount of the tx inputs
-        //  with the amount of the tx outputs plus the calculated fee), and check if it is needed.
+        // Not using a fixed fee for transaction. Interpret passed fee as a fee rate. For now, calculate
+        //  the amount to pay for the transaction expense (amount required to balance the amount of the
+        //  tx inputs with the amount of the tx outputs plus the calculated fee), and check if it is needed.
         //  The actual amount to be allocated (if required) shall be calculated afterwards
-        txExpense = (txInfo.txSize * fee) - txDiffAmount;
-
-        if (txExpense <= 0) {
-            // No need to allocated anything to cover transaction expense
-            amount = 0;
-        }
-        else {
-            // Prepare values to be used when adjusting tx expense later on
-            deltaFeePerInput = Transaction.txInputSize * fee;  // Increment in tx fee due to adding a new input to the tx
-            deltaFeePerOutput = Transaction.txOutputSize * fee; // Increment in tx fee due to adding a new output to the tx
-        }
+        feeRate = fee;
+        paymentResolution = paymentResolution || Service.paymentResolution;
+        fee = Util.roundToResolution(txSize.getSizeInfo().vsize * feeRate, paymentResolution);
+        amount = fee - txDiffAmount;
     }
 
     let result = null;
 
-    if (amount === undefined || amount > 0) {
-        const utxoResultSets = [];
-        let maxUtxoResultSetLength = 0;
-    
-        // Retrieve only confirmed UTXOs sorting them by higher value, and higher confirmations
-        const confUtxoResultSet = this.collUtxo.chain().find({$and: [{allocated: false}, {confirmations: {$gt: 0}}]}).compoundsort([['amount', true], ['confirmations', true]]).data();
-    
-        if (confUtxoResultSet.length > 0) {
-            utxoResultSets.push(confUtxoResultSet);
-            maxUtxoResultSetLength = confUtxoResultSet.length;
-        }
-    
-        if (this.loadedUnconfirmedUtxos) {
-            // Retrieve both confirmed and unconfirmed UTXOs sorting them by higher value, higher confirmations,
-            //  lower ancestors count (for unconfirmed UTXOs), lower ancestors size (for unconfirmed UTXOs),
-            //  lower descendants count (for unconfirmed UTXOs), lower descendants size (for unconfirmed UTXOs)
-            const conditions = [{allocated: false}];
+    if (amount > 0) {
+        // Note: when not using a fixed fee (but a fee rate instead) force to allocated no-witness UTXOs first
+        //      if there are mixed (both witness and non-witness) UTXOs
+        let allocateNonWitnessUtxosFirst = this.hasMixedUtxos && (!isFixedFeed || this.useAllNonWitnessUtxosFirst);
+        let allocatingNonWitnessUtxos = allocateNonWitnessUtxosFirst;
+        let allocatedNonWitnessDocUtxos;
+        let savedAncestorTxs;
+        let nonWitnessAmount;
+        let doItAgain;
 
-            if (this.ancestorsCountUpperLimit !== undefined) {
-                conditions.push({ancestorsCount: {$lte: this.ancestorsCountUpperLimit}});
+        do {
+            doItAgain = false;
+
+            // Begin processing
+            const utxoResultSets = [];
+            let maxUtxoResultSetLength = 0;
+
+            // Retrieve only confirmed UTXOs sorting them by higher value, and higher confirmations
+            const query = {
+                $and: [{
+                    allocated: false
+                }, {
+                    confirmations: {
+                        $gt: 0
+                    }
+                }]
+            };
+
+            if (allocateNonWitnessUtxosFirst) {
+                // Non-witness UTXOs should be allocated first, so set select condition appropriately
+                query.$and.push({
+                    isWitness: !allocatingNonWitnessUtxos
+                });
             }
 
-            if (this.ancestorsSizeUpperLimit !== undefined) {
-                conditions.push({ancestorsSize: {$lte: this.ancestorsSizeUpperLimit}});
+            const confUtxoResultSet = this.collUtxo.chain().find(query).compoundsort([
+                ['amount', true],
+                ['confirmations', true]
+            ]).data();
+
+            if (confUtxoResultSet.length > 0) {
+                utxoResultSets.push(confUtxoResultSet);
+                maxUtxoResultSetLength = confUtxoResultSet.length;
             }
 
-            if (this.descendantsCountUpperLimit !== undefined) {
-                conditions.push({descendantsCount: {$lte: this.descendantsCountUpperLimit}});
-            }
+            if (this.loadedUnconfirmedUtxos) {
+                // Retrieve both confirmed and unconfirmed UTXOs sorting them by higher value, higher confirmations,
+                //  lower ancestors count (for unconfirmed UTXOs), lower ancestors size (for unconfirmed UTXOs),
+                //  lower descendants count (for unconfirmed UTXOs), lower descendants size (for unconfirmed UTXOs)
+                const conditions = [{allocated: false}];
 
-            if (this.descendantsSizeUpperLimit !== undefined) {
-                conditions.push({descendantsSize: {$lte: this.descendantsSizeUpperLimit}});
-            }
-
-            const query = conditions.length > 1 ? {$and: conditions} : conditions[0],
-                unconfUtxoResultSet = this.collUtxo.chain().find(query).compoundsort([['amount', true], ['confirmations', true], 'ancestorsCount', 'ancestorsSize', 'descendantsCount', 'descendantsSize']).data();
-
-            if (unconfUtxoResultSet.length > 0) {
-                utxoResultSets.push(unconfUtxoResultSet);
-                maxUtxoResultSetLength = unconfUtxoResultSet.length > maxUtxoResultSetLength ? unconfUtxoResultSet.length : maxUtxoResultSetLength;
-            }
-        }
-
-        if (maxUtxoResultSetLength > 0) {
-            let allocatedUtxos = undefined;
-
-            // Try to allocate as little UTXOs as possible to fulfill requested amount, starting with one
-            //  UTXO, and going up to the maximum number of UTXOs or the number of UTXOs returned in result sets
-            for (let numWorkUtxos = 1, maxWorkUtxos = typeof maxNumUtxos === 'number' ? Math.min(maxNumUtxos, maxUtxoResultSetLength) : maxUtxoResultSetLength;
-                    numWorkUtxos <= maxWorkUtxos; numWorkUtxos++) {
-                if (!isFixedFeed) {
-                    // Not using fixed fee for transaction. Amount to be allocated depends on number
-                    //  of UTXO to allocate (numWorkUtxos), so it needs to be recalculated every time it changes
-    
-                    // Adjust the transaction expense by adding the amount corresponding to the increment
-                    //  in the tx fee due to adding a new input to the transaction (each UTXO counts as one input).
-                    //  For now, we assume that there will be no (additional tx output for) change
-                    txExpense += deltaFeePerInput;
-                    amount = Math.ceil((txExpense) / amountResolution) * amountResolution;
+                if (this.ancestorsCountUpperLimit !== undefined) {
+                    conditions.push({ancestorsCount: {$lte: this.ancestorsCountUpperLimit}});
                 }
 
-                const work = {};
-    
-                if ((allocatedUtxos = allocateUtxos.call(this, amount, utxoResultSets, numWorkUtxos, work)) !== undefined) {
-                    // UTXOs successfully allocated
-                    if (isFixedFeed || allocatedUtxos.exactAmountAllocated) {
-                        // Stop trying
-                        break;
-                    }
-                    else {
-                        // Could not allocate exact amount (with no change). Recalculate amount,
-                        //  this time assuming there will be one additional tx out (for the change)
-                        const newAmount = Math.ceil((txExpense + deltaFeePerOutput) / amountResolution) * amountResolution;
+                if (this.ancestorsSizeUpperLimit !== undefined) {
+                    conditions.push({ancestorsSize: {$lte: this.ancestorsSizeUpperLimit}});
+                }
 
-                        if (newAmount > amount) {
-                            // New amount is different (actually larger) than original amount. Reset amount
-                            //  and try to allocated UTXOs again
-                            amount = newAmount;
+                if (this.descendantsCountUpperLimit !== undefined) {
+                    conditions.push({descendantsCount: {$lte: this.descendantsCountUpperLimit}});
+                }
 
-                            if ((allocatedUtxos = allocateUtxos.call(this, amount, utxoResultSets, numWorkUtxos, work)) !== undefined) {
-                                // UTXOs successfully allocated. Stop trying
-                                break;
-                            }
-                            else {
-                                // Failed to allocated UTXOs. Check if we should keep trying by incrementing
-                                //  the number of UTXOs (and consequently of tx inputs) to use
-                                if (work.largestTriedDeltaAmount < deltaFeePerInput) {
-                                    // Largest delta amount used to allocated UTXOs in current try is smaller
-                                    //  than the delta amount that would be added to the amount to be allocated.
-                                    //  Since it is guaranteed that largest delta amount for next try is NOT going
-                                    //  to be larger than largest delta amount for current try, then it is
-                                    //  just a waste of time and processing resources to keep on trying.
-                                    //  So we stop processing now
-                                    break;
-                                }
-                            }
+                if (this.descendantsSizeUpperLimit !== undefined) {
+                    conditions.push({descendantsSize: {$lte: this.descendantsSizeUpperLimit}});
+                }
+
+                if (allocateNonWitnessUtxosFirst) {
+                    // Non-witness UTXOs should be allocated first, so set select condition appropriately
+                    conditions.push({
+                        isWitness: !allocatingNonWitnessUtxos
+                    });
+                }
+
+                const query = conditions.length > 1 ? {$and: conditions} : conditions[0];
+                const unconfUtxoResultSet = this.collUtxo.chain().find(query).compoundsort([
+                        ['amount', true],
+                        ['confirmations', true],
+                        'ancestorsCount',
+                        'ancestorsSize',
+                        'descendantsCount',
+                        'descendantsSize'
+                    ]).data();
+
+                if (unconfUtxoResultSet.length > 0) {
+                    utxoResultSets.push(unconfUtxoResultSet);
+                    maxUtxoResultSetLength = unconfUtxoResultSet.length > maxUtxoResultSetLength ? unconfUtxoResultSet.length : maxUtxoResultSetLength;
+                }
+            }
+
+            if (maxUtxoResultSetLength > 0) {
+                let allocatedUtxos = undefined;
+
+                // Try to allocate as little UTXOs as possible to fulfill requested amount, starting with one
+                //  UTXO, and going up to the maximum number of UTXOs or the number of UTXOs returned in result sets
+                for (let numWorkUtxos = 1, maxWorkUtxos = typeof maxNumUtxos === 'number' ? Math.min(maxNumUtxos, maxUtxoResultSetLength) : maxUtxoResultSetLength;
+                     numWorkUtxos <= maxWorkUtxos; numWorkUtxos++) {
+                    if (!isFixedFeed) {
+                        // Not using fixed fee for transaction. Amount to be allocated depends on number
+                        //  of UTXO to allocate (numWorkUtxos), so it needs to be recalculated every time it changes
+
+                        // For now, assume that there will be no (additional tx output for) change. So adjust
+                        // transaction size by adding one more input, and recalculate tx expense and amount
+                        if (allocateNonWitnessUtxosFirst && allocatingNonWitnessUtxos
+                                || !this.hasMixedUtxos && this.hasNonWitnessUtxos) {
+                            txSize.addNonWitnessInputs(1);
                         }
                         else {
-                            // There is no difference in the amount if a change output is added, so there is no
-                            //  need to try to allocate UTXOs again. Assume that previously allocated UTXOs
-                            //  are correct, and just stop processing
+                            txSize.addWitnessInputs(1);
+                        }
+
+                        fee = Util.roundToResolution(txSize.getSizeInfo().vsize * feeRate, paymentResolution);
+                        amount = fee - txDiffAmount;
+                    }
+
+                    const work = {};
+
+                    if ((allocatedUtxos = allocateUtxos.call(this, amount, utxoResultSets, numWorkUtxos, work)) !== undefined) {
+                        // UTXOs successfully allocated
+                        if (isFixedFeed || allocatedUtxos.exactAmountAllocated) {
+                            // Stop trying
+                            break;
+                        }
+                        else {
+                            // Could not allocate exact amount (with no change). Adjust transaction size
+                            //  assuming that there will be one additional tx output for the change, and
+                            //  recalculate amount
+                            txSize.addOutputs(this.useWitnessOutputForChange, 1);
+
+                            const newFee = Util.roundToResolution(txSize.getSizeInfo().vsize * feeRate, paymentResolution);
+                            const newAmount = newFee - txDiffAmount;
+
+                            if (newAmount > amount) {
+                                // New amount is different (actually larger) than original amount. Reset amount
+                                //  and try to allocated UTXOs again
+                                amount = newAmount;
+
+                                if ((allocatedUtxos = allocateUtxos.call(this, amount, utxoResultSets, numWorkUtxos, work)) !== undefined) {
+                                    // UTXOs successfully allocated. Stop trying
+                                    break;
+                                }
+                                else {
+                                    // Failed to allocated UTXOs. Check if we should keep trying by incrementing
+                                    //  the number of UTXOs (and consequently of tx inputs) to use
+                                    const smallestInputVirtualSizeIncrement = allocateNonWitnessUtxosFirst && allocatingNonWitnessUtxos || this.hasNonWitnessUtxos
+                                        ? smallestNonWitnessInputVirtualSizeIncrement : smallestWitnessInputVirtualSizeIncrement;
+
+                                    if (work.largestTriedDeltaAmount < smallestInputVirtualSizeIncrement * feeRate) {
+                                        // Largest delta amount used to allocated UTXOs in current try is smaller than
+                                        //  the smallest increment that would be added to the amount to be allocated.
+                                        //  Since it is guaranteed that largest delta amount for next try is NOT going
+                                        //  to be larger than largest delta amount for current try, then it is
+                                        //  just a waste of time and processing resources to keep on trying.
+                                        //  So we stop processing now
+                                        break;
+                                    }
+                                }
+                            }
+                            else {
+                                // There is no difference in the amount if a change output is added, so there is no
+                                //  need to try to allocate UTXOs again. Assume that previously allocated UTXOs
+                                //  are correct, and just stop processing
+                                break;
+                            }
+
+                            // Reset transaction size by removing tx output that had been added for change
+                            txSize.addOutputs(this.useWitnessOutputForChange, -1);
+                        }
+                    }
+                    else {
+                        // Failed to allocated UTXOs. Check if we should keep trying by incrementing
+                        //  the number of UTXOs (and consequently of tx inputs) to use
+                        const smallestInputVirtualSizeIncrement = allocateNonWitnessUtxosFirst && allocatingNonWitnessUtxos || this.hasNonWitnessUtxos
+                            ? smallestNonWitnessInputVirtualSizeIncrement : smallestWitnessInputVirtualSizeIncrement;
+
+                        if (!isFixedFeed && work.largestTriedDeltaAmount < smallestInputVirtualSizeIncrement * feeRate) {
+                            // Largest delta amount used to allocated UTXOs in current try is smaller than
+                            //  the smallest increment that would be added to the amount to be allocated.
+                            //  Since it is guaranteed that largest delta amount for next try is NOT going
+                            //  to be larger than largest delta amount for current try, then it is
+                            //  just a waste of time and processing resources to keep on trying.
+                            //  So we stop processing now
                             break;
                         }
                     }
                 }
+
+                if (allocatedUtxos !== undefined) {
+                    // UTXOs allocated. Prepare to return result
+                    let allocatedAmount = 0;
+                    result = {utxos: []};
+
+                    if (allocatedNonWitnessDocUtxos) {
+                        // Append non-witness UTXOs that have been previously allocated
+                        //  and reset amount to its initial value
+                        allocatedUtxos.docUtxos = allocatedNonWitnessDocUtxos.concat(allocatedUtxos.docUtxos);
+                        // noinspection JSUnusedAssignment
+                        amount += nonWitnessAmount;
+                    }
+
+                    allocatedUtxos.docUtxos.forEach((docUtxo) => {
+                        result.utxos.push({
+                            address: docUtxo.address,
+                            txout: {
+                                txid: docUtxo.txid,
+                                vout: docUtxo.vout,
+                                amount: docUtxo.amount,
+                            },
+                            isWitness: docUtxo.isWitness,
+                            scriptPubKey: docUtxo.scriptPubKey
+                        });
+                        allocatedAmount += docUtxo.amount;
+                        docUtxo.allocated = true;
+                    });
+
+                    // Change amount (in satoshis)
+                    result.changeAmount = allocatedAmount - amount;
+
+                    // Update local DB setting UTXOs as allocated
+                    this.collUtxo.update(allocatedUtxos.docUtxos);
+
+                    // NOTE: force the rebuild of the binary index on the 'allocated' property to work around
+                    //  an issue found with Lokijs (https://github.com/techfort/LokiJS/issues/639)
+                    this.collUtxo.ensureIndex('allocated', true);
+                }
                 else {
-                    // Failed to allocated UTXOs. Check if we should keep trying by incrementing
-                    //  the number of UTXOs (and consequently of tx inputs) to use
-                    if (!isFixedFeed && work.largestTriedDeltaAmount < deltaFeePerInput) {
-                        // Largest delta amount used to allocated UTXOs in current try is smaller
-                        //  than the delta amount that would be added to the amount to be allocated.
-                        //  Since it is guaranteed that largest delta amount for next try is NOT going
-                        //  to be larger than largest delta amount for current try, then it is
-                        //  just a waste of time and processing resources to keep on trying.
-                        //  So we stop processing now
-                        break;
+                    // Could not allocate UTXOs the amount of which would be enough to cover
+                    //  the required amount
+                    if (allocateNonWitnessUtxosFirst) {
+                        // Non-witness UTXOs should be allocated first
+                        if (allocatingNonWitnessUtxos) {
+                            // First pass to allocate non-witness UTXOs. Allocate all possible
+                            //  non-witness UTXOs, and continue to next pass
+                            if (this.ancestorTxs) {
+                                savedAncestorTxs = this.ancestorTxs.clone();
+                            }
+
+                            const _allocatedNonWitnessDocUtxos = [];
+                            nonWitnessAmount = 0;
+                            txSize.resetState(txInfo.txSzStSnapshot);
+
+                            // Note: we only use the last UTXO result set, which is the one with most UTXOs
+                            utxoResultSets[utxoResultSets.length - 1].some(docUtxo => {
+                                if (!this.ancestorTxs || this.ancestorTxs.checkAddUtxo(docUtxo)) {
+                                    _allocatedNonWitnessDocUtxos.push(docUtxo);
+                                    nonWitnessAmount += docUtxo.amount;
+
+                                    // Adjust transaction size by adding one tx input of the corresponding type
+                                    txSize.addInputs(docUtxo.isWitness, 1);
+
+                                    // Safeguard: make sure that allocated non-witness UTXOs are not going to be
+                                    //      enough to pay for tx expense by themselves
+                                    if (nonWitnessAmount >= amount) {
+                                        Catenis.logger.WARN('Unexpected condition: allocated non-witness UTXOs should not be enough to pay for tx expense', '. Reverting last allocated non-witness UTXO');
+                                        // Revert allocation of last non-witness UTXO...
+                                        txSize.addInputs(docUtxo.isWitness, -1);
+                                        nonWitnessAmount -= docUtxo.amount;
+                                        _allocatedNonWitnessDocUtxos.pop();
+
+                                        // ... and stop iterating
+                                        return true;
+                                    }
+                                }
+
+                                // Continue iterating
+                                return false;
+                            });
+
+                            if (_allocatedNonWitnessDocUtxos.length > 0) {
+                                allocatedNonWitnessDocUtxos = _allocatedNonWitnessDocUtxos;
+
+                                if (isFixedFeed) {
+                                    // Adjust amount by discounting what have already been allocated
+                                    amount -= nonWitnessAmount;
+                                }
+                                else {
+                                    // Adjust tx diff amount (inputs amount - outputs amount) by adding
+                                    //  what have already been allocated
+                                    txDiffAmount += nonWitnessAmount;
+                                }
+                            }
+
+                            allocatingNonWitnessUtxos = false;
+                            doItAgain = true;
+                        }
+                        else {
+                            // Failed to allocate UTXOs. Just reset ancestor transactions (note: no need to reset
+                            //  amount/tx diff amount and transaction size)
+                            if (savedAncestorTxs) {
+                                this.ancestorTxs = savedAncestorTxs;
+                            }
+                        }
                     }
                 }
             }
-    
-            if (allocatedUtxos !== undefined) {
-                // UTXOs allocated. Prepared to return result
-                let allocatedAmount = 0;
-                result = {utxos: []};
-    
-                allocatedUtxos.docUtxos.forEach((docUtxo) => {
-                    result.utxos.push({
-                        address: docUtxo.address,
-                        txout: {
-                            txid: docUtxo.txid,
-                            vout: docUtxo.vout,
-                            amount: docUtxo.amount,
-                        },
-                        isWitness: docUtxo.isWitness,
-                        scriptPubKey: docUtxo.scriptPubKey
-                    });
-                    allocatedAmount += docUtxo.amount;
-                    docUtxo.allocated = true;
-                });
-    
-                // Change amount (in satoshis)
-                result.changeAmount = allocatedAmount - amount;
-    
-                // Update local DB setting UTXOs as allocated
-                this.collUtxo.update(allocatedUtxos.docUtxos);
-
-                // NOTE: force the rebuild of the binary index on the 'allocated' property to work around
-                //  an issue found with Lokijs (https://github.com/techfort/LokiJS/issues/639)
-                this.collUtxo.ensureIndex('allocated', true);
-            }
+            // End processing
         }
+        while (doItAgain);
     }
     else {
         // Indicate that there is no need to allocated additional UTXOs to pay for tx expense
@@ -933,6 +1217,13 @@ function insertUtxo(utxo, unconfTxids) {
             confirmations: utxo.confirmations,
             allocated: false
         });
+
+        if (outputType.isWitness) {
+            this.hasWitnessUtxos = true;
+        }
+        else {
+            this.hasNonWitnessUtxos = true;
+        }
 
         if (utxo.confirmations === 0) {
             // Store unconfirmed transaction ID
@@ -1459,8 +1750,8 @@ function computeAdditionalUtxos(addUtxoTxInputs) {
                 utxo.amount = txout.value;
             }
 
-            utxo.confirmations = txInfo.confirmations;
-            utxo.desc = BitcoinInfo.getOutputTypeByName(scriptPubKey.type).desc;
+            utxo.confirmations = txInfo.confirmations || 0;
+            utxo.desc = BitcoinInfo.getOutputTypeByName(scriptPubKey.type).descPrefix;
         });
 
         if (txInfo.confirmations === 0) {

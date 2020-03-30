@@ -16,6 +16,7 @@ import fs from 'fs';
 // Third-party node modules
 import config from 'config';
 import bitcoinLib from 'bitcoinjs-lib';
+import BigNumber from 'bignumber.js';
 // Meteor packages
 import { Meteor } from 'meteor/meteor';
 import { Roles } from 'meteor/alanning:roles';
@@ -29,6 +30,9 @@ import { FundSource } from './FundSource';
 import { removeProcessId } from './Startup';
 import { CryptoKeys } from './CryptoKeys';
 import { makeCtnNodeId } from './CatenisNode';
+import { UtxoConsolidation } from './UtxoConsolidation';
+import { FundTransaction } from './FundTransaction';
+import { Service } from './Service';
 
 // Config entries
 const appConfig = config.get('application');
@@ -67,7 +71,7 @@ const statusRegEx = {
 //
 
 // Application function class
-export function Application(cipherOnly = false) {
+export function Application(cipherOnly = false, legacyDustFunding = false) {
     // Get application seed
     const appSeedPath = path.join(process.env.PWD, cfgSettings.seedFilename),
         encData = fs.readFileSync(appSeedPath, {encoding: 'utf8'});
@@ -89,6 +93,8 @@ export function Application(cipherOnly = false) {
         if (!isSeedValid(this.masterSeed)) {
             throw new Error('Application (master) seed does not match seed currently recorded onto the database');
         }
+
+        this.legacyDustFunding = legacyDustFunding;
 
         // Save environment and Catenis node index associated with application
         //  NOTE: arrow functions should NOT be used for the getter/setter of the defined properties.
@@ -167,8 +173,16 @@ export function Application(cipherOnly = false) {
 // Public Application object methods
 //
 
-Application.prototype.startProcessing = function () {
+Application.prototype.startProcessing = function (fixDustFunding = false) {
     try {
+        // Check whether addresses that are funded with a dust amount should be refunded
+        //  to use the new, lower dust amount for segregated witness output, and
+        //  consolidate their UTXOs if so; then later, when the Catenis node is started,
+        //  those addresses shall be funded with the correct dust amount
+        if (fixDustFunding) {
+            checkFixDustFunding(Catenis.ctnHubNode);
+        }
+
         // Start Catenis Hub node
         Catenis.ctnHubNode.startNode();
 
@@ -320,6 +334,25 @@ Application.prototype.createAdminUser = function (username, password, descriptio
     return adminUserId;
 };
 
+// NOTE: this method should be used with care. It is intended to be used for
+//  development purpose only
+Application.prototype.refundAddressesWithLegacyDustAmount = function () {
+    this.legacyDustFunding = true;
+
+    consolidateUtxosOfAllDustFundedAddresses(Catenis.ctnHubNode);
+
+    // Execute code in critical section to avoid UTXOs concurrency
+    FundSource.utxoCS.execute(() => {
+        Catenis.ctnHubNode._fundDeviceMainAddresses();
+        Catenis.ctnHubNode.checkServiceCreditIssuanceProvision();
+        Catenis.ctnHubNode.checkBcotSaleStockProvision();
+    });
+
+    Catenis.ctnHubNode.fundAllDevicesAddresses();
+
+    this.legacyDustFunding = false
+};
+
 
 // Module functions used to simulate private Application object methods
 //  NOTE: these functions need to be bound to an Application object reference (this) before
@@ -390,10 +423,10 @@ function sysFundingTxConfirmed(data) {
 // Application function class (public) methods
 //
 
-Application.initialize = function (cipherOnly = false) {
+Application.initialize = function (cipherOnly = false, legacyDustFunding = false) {
     Catenis.logger.TRACE('Application initialization');
     // Instantiate App object
-    Catenis.application = new Application(cipherOnly);
+    Catenis.application = new Application(cipherOnly, legacyDustFunding);
 };
 
 
@@ -495,6 +528,578 @@ function shutdown() {
     removeProcessId();
 
     process.exit(Application.exitCode.terminated);
+}
+
+function checkFixDustFunding(ctnNode) {
+    function computeAddressUtxosInfo(allocResult) {
+        // Result: a Map object with the following entries:
+        //   address => {
+        //     legacyDustUtxos: [Array(Object)]  List of UTXOs for that given address the amount of which is a multiple of the legacy dust amount
+        //     legacyDustUnits: [Array(Number)]  List with number of legacy dust amount units attributed to each UTXOs for that given address
+        //     hasNonLegacyDustUtxos: [Boolean]  Indicates whether there are any UTXOs for that given address that do not have a multiple of the legacy dust amount attributed to it
+        //   }
+        return allocResult.utxos.reduce((addrUtxosInfo, utxo) => {
+            let utxosInfo;
+
+            if (!addrUtxosInfo.has(utxo.address)) {
+                addrUtxosInfo.set(utxo.address, utxosInfo = {
+                    legacyDustUtxos: [],
+                    legacyDustUnits: [],
+                    hasNonLegacyDustUtxos: false
+                });
+            }
+            else {
+                utxosInfo = addrUtxosInfo.get(utxo.address);
+            }
+
+            const legacyDustUnits = new BigNumber(utxo.txout.amount).div(Transaction.legacyDustAmount);
+
+            if (legacyDustUnits.isInteger()) {
+                // UTXO has an amount that is a multiple of the legacy dust amount
+                utxosInfo.legacyDustUtxos.push(utxo);
+                utxosInfo.legacyDustUnits.push(legacyDustUnits.toNumber());
+            }
+            else {
+                // Indicate that address has at least one UTXO the amount of which is not a multiple
+                //  of the legacy dust amount
+                utxosInfo.hasNonLegacyDustUtxos = true;
+            }
+
+            return addrUtxosInfo;
+        }, new Map())
+    }
+
+    // Execute code in critical section to avoid UTXOs concurrency
+    FundSource.utxoCS.execute(() => {
+        Catenis.logger.TRACE('Checking if dust funding needs to be fixed and fix it if so');
+        const utxoCons = new UtxoConsolidation(ctnNode);
+        const fundTransact = new FundTransaction(FundTransaction.fundingEvent.fix_dust_funding);
+        let errMessage;
+
+        // Check UTXOs associated with system Service Credit Issuance address
+        let fundSrc = new FundSource(ctnNode.serviceCreditIssuanceAddress, {useUnconfirmedUtxo: true});
+        let allocResult = fundSrc.allocateUtxosByPredicate();
+
+        if (allocResult) {
+            if (!fundSrc.hasUtxoToAllocate()) {
+                // Check if address has UTXOs that need to be replaced
+                const utxosInfo = computeAddressUtxosInfo(allocResult).get(ctnNode.serviceCreditIssuanceAddress);
+
+                if (utxosInfo.legacyDustUtxos.length > 0) {
+                    if (!utxosInfo.hasNonLegacyDustUtxos) {
+                        // Add UTXOs to be consolidated
+                        utxoCons.addUtxos(utxosInfo.legacyDustUtxos);
+
+                        // Prepare to refund address with new dust amount
+                        fundTransact.addMultipleAddressesPayees(
+                            ctnNode.servCredIssueAddr.type,
+                            ctnNode.serviceCreditIssuanceAddress,
+                            utxosInfo.legacyDustUnits.map(count => count * Service.serviceCreditIssuanceAddrAmount)
+                        );
+                    }
+                    else {
+                        // Unexpected situation: address is funded with a mixture of legacy and non-legacy dust amount.
+                        //  Set error message
+                        errMessage = 'System service credit issuance address is funded with a mixture of legacy and non-legacy dust amount; aborting procedure to fix dust funding';
+                    }
+                }
+            }
+            else {
+                // Not all UTXOs have been allocated. Set error message
+                errMessage = 'Not all UTXOs could be allocated to check if funding of system service credit issuance address needs to be fixed; aborting procedure to fix dust funding';
+            }
+        }
+        else {
+            // There are no UTXOs associated with system service credit issuance address.
+            //  Log warning condition
+            Catenis.logger.WARN('No UTXOs available to fix dust funding for system service credit issuance address');
+        }
+
+        if (!errMessage && ctnNode.bcotSaleStockAddr) {
+            // Check UTXOs associated with system BCOT Sale Stock address
+            fundSrc = new FundSource(ctnNode.bcotSaleStockAddress, {useUnconfirmedUtxo: true});
+            allocResult = fundSrc.allocateUtxosByPredicate();
+
+            if (allocResult) {
+                if (!fundSrc.hasUtxoToAllocate()) {
+                    // Check if address has UTXOs that need to be replaced
+                    const utxosInfo = computeAddressUtxosInfo(allocResult).get(ctnNode.bcotSaleStockAddress);
+
+                    if (utxosInfo.legacyDustUtxos.length > 0) {
+                        if (!utxosInfo.hasNonLegacyDustUtxos) {
+                            // Add UTXOs to be consolidated
+                            utxoCons.addUtxos(utxosInfo.legacyDustUtxos);
+
+                            // Prepare to refund address with new dust amount
+                            fundTransact.addMultipleAddressesPayees(
+                                ctnNode.bcotSaleStockAddr.type,
+                                ctnNode.bcotSaleStockAddress,
+                                utxosInfo.legacyDustUnits.map(count => count * Service.bcotSaleStockAddrAmount)
+                            );
+                        }
+                        else {
+                            // Unexpected situation: address is funded with a mixture of legacy and non-legacy dust amount.
+                            //  Set error message
+                            errMessage = 'BCOT sale stock address is funded with a mixture of legacy and non-legacy dust amount; aborting procedure to fix dust funding';
+                        }
+                    }
+                }
+                else {
+                    // Not all UTXOs have been allocated. Set error message
+                    errMessage = 'Not all UTXOs could be allocated to check if funding of system BCOT sale stock address needs to be fixed; aborting procedure to fix dust funding';
+                }
+            }
+            else {
+                // There are no UTXOs associated with system BCOT sale stock address.
+                //  Log warning condition
+                Catenis.logger.WARN('No UTXOs available to fix dust funding for system BCOT sale stock address');
+            }
+        }
+
+        let addrsToSetAsObsolete = [];
+
+        if (!errMessage) {
+            // Check UTXOs associated with System Device Main addresses
+            fundSrc = new FundSource(ctnNode.deviceMainAddr.listAddressesInUse(), {useUnconfirmedUtxo: true});
+            allocResult = fundSrc.allocateUtxosByPredicate();
+
+            if (allocResult) {
+                if (!fundSrc.hasUtxoToAllocate()) {
+                    // Check if addresses have UTXOs that need to be replaced
+                    const addrUtxosInfo = computeAddressUtxosInfo(allocResult);
+                    const utxosToConsolidate = [];
+                    const amountToRefundByAddress = [];
+
+                    for (let [address, utxosInfo] of addrUtxosInfo) {
+                        if (utxosInfo.legacyDustUtxos.length > 0) {
+                            if (!utxosInfo.hasNonLegacyDustUtxos && utxosInfo.legacyDustUtxos.length === 1) {
+                                // Save UTXOs to be consolidated
+                                utxosToConsolidate.push(utxosInfo.legacyDustUtxos[0]);
+
+                                // Save address to be set as obsolete
+                                addrsToSetAsObsolete.push(address);
+
+                                // Save amount based on new dust amount that is to be used to refund address
+                                amountToRefundByAddress.push(utxosInfo.legacyDustUnits[0] * Service.sysDevMainAddrAmount);
+                            }
+                            else {
+                                // Unexpected situation: address is funded with more than one UTXO.
+                                //  Set error message and stop iteration
+                                errMessage = 'System device main address is funded with more than one UTXO; aborting procedure to fix dust funding';
+                                break;
+                            }
+                        }
+                    }
+
+                    if (!errMessage && utxosToConsolidate.length > 0) {
+                        // Add UTXOs to be consolidated
+                        utxoCons.addUtxos(utxosToConsolidate);
+
+                        // Prepare to refund addresses
+                        fundTransact.addPayees(ctnNode.deviceMainAddr, amountToRefundByAddress);
+                    }
+                }
+                else {
+                    // Not all UTXOs have been allocated. Set error message
+                    errMessage = 'Not all UTXOs could be allocated to check if funding of system device main addresses needs to be fixed; aborting procedure to fix dust funding';
+                }
+            }
+            else {
+                // There are no UTXOs associated with system device main addresses.
+                //  Log warning condition
+                Catenis.logger.WARN('No UTXOs available to fix dust funding for system device main addresses');
+            }
+        }
+
+        if (!errMessage) {
+            ctnNode.listClients().some(client => {
+                return client.listDevices().some(device => {
+                    // Check UTXOs associated with device Main addresses
+                    let fundSrc = new FundSource(device.mainAddr.listAddressesInUse(), {useUnconfirmedUtxo: true});
+                    let allocResult = fundSrc.allocateUtxosByPredicate();
+
+                    if (allocResult) {
+                        if (!fundSrc.hasUtxoToAllocate()) {
+                            // Check if addresses have UTXOs that need to be replaced
+                            const addrUtxosInfo = computeAddressUtxosInfo(allocResult);
+                            const utxosToConsolidate = [];
+                            const amountToRefundByAddress = [];
+
+                            for (let [address, utxosInfo] of addrUtxosInfo) {
+                                if (utxosInfo.legacyDustUtxos.length > 0) {
+                                    if (!utxosInfo.hasNonLegacyDustUtxos && utxosInfo.legacyDustUtxos.length === 1) {
+                                        // Save UTXOs to be consolidated
+                                        utxosToConsolidate.push(utxosInfo.legacyDustUtxos[0]);
+
+                                        // Save address to be set as obsolete
+                                        addrsToSetAsObsolete.push(address);
+
+                                        // Save amount based on new dust amount that is to be used to refund address
+                                        amountToRefundByAddress.push(utxosInfo.legacyDustUnits[0] * Service.devMainAddrAmount);
+                                    }
+                                    else {
+                                        // Unexpected situation: address is funded with more than one UTXO.
+                                        //  Set error message and stop iteration
+                                        errMessage = 'Device main address is funded with more than one UTXO; aborting procedure to fix dust funding';
+                                        break;
+                                    }
+                                }
+                            }
+
+                            if (!errMessage && utxosToConsolidate.length > 0) {
+                                // Add UTXOs to be consolidated
+                                utxoCons.addUtxos(utxosToConsolidate);
+
+                                // Prepare to refund addresses
+                                fundTransact.addPayees(device.mainAddr, amountToRefundByAddress);
+                            }
+                        }
+                        else {
+                            // Not all UTXOs have been allocated. Set error message
+                            errMessage = 'Not all UTXOs could be allocated to check if funding of device main addresses needs to be fixed; aborting procedure to fix dust funding';
+                        }
+                    }
+                    else {
+                        // There are no UTXOs associated with device main addresses.
+                        //  Log warning condition
+                        Catenis.logger.WARN('No UTXOs available to fix dust funding for device (deviceId: %s) main addresses', device.deviceId);
+                    }
+
+                    if (!errMessage) {
+                        // Check UTXOs associated with device Asset Issuance addresses for unlocked assets
+                        fundSrc = new FundSource(device.getUnlockedAssetIssuanceAddresses(), {useUnconfirmedUtxo: true});
+                        allocResult = fundSrc.allocateUtxosByPredicate();
+
+                        if (allocResult) {
+                            if (!fundSrc.hasUtxoToAllocate()) {
+                                // Check if addresses have UTXOs that need to be replaced
+                                const addrUtxosInfo = computeAddressUtxosInfo(allocResult);
+                                let utxosToConsolidate = [];
+                                const addressesToRefund = [];
+                                const amountsPerUtxoToRefund = [];
+
+                                for (let [address, utxosInfo] of addrUtxosInfo) {
+                                    if (utxosInfo.legacyDustUtxos.length > 0) {
+                                        if (!utxosInfo.hasNonLegacyDustUtxos) {
+                                            // Save UTXOs to be consolidated
+                                            utxosToConsolidate = utxosToConsolidate.concat(utxosInfo.legacyDustUtxos);
+
+                                            // Save address to refund
+                                            addressesToRefund.push(address);
+
+                                            // Save amounts per output to refund this address
+                                            amountsPerUtxoToRefund.push(utxosInfo.legacyDustUnits.map(count => count * Service.devAssetIssuanceAddrAmount(address)));
+                                        }
+                                        else {
+                                            // Unexpected situation: address is funded with a mixture of legacy and non-legacy dust amount.
+                                            //  Set error message and stop iteration
+                                            errMessage = 'Device asset issuance address (for unlocked asset) is funded with a mixture of legacy and non-legacy dust amount; aborting procedure to fix dust funding';
+                                            break;
+                                        }
+                                    }
+                                }
+
+                                if (!errMessage && utxosToConsolidate.length > 0) {
+                                    // Add UTXOs to be consolidated
+                                    utxoCons.addUtxos(utxosToConsolidate);
+
+                                    // Prepare to refund addresses
+                                    fundTransact.addMultipleAddressesPayees(
+                                        device.assetIssuanceAddr.type,
+                                        addressesToRefund,
+                                        amountsPerUtxoToRefund
+                                    );
+                                }
+                            }
+                            else {
+                                // Not all UTXOs have been allocated. Set error message
+                                errMessage = 'Not all UTXOs could be allocated to check if funding of device asset issuance addresses (for unlocked asset) needs to be fixed; aborting procedure to fix dust funding';
+                            }
+                        }
+                        else {
+                            // There are no UTXOs associated with device asset issuance addresses.
+                            //  Log warning condition
+                            Catenis.logger.WARN('No UTXOs available to fix dust funding for device (deviceId: %s) asset issuance addresses (for unlocked asset)', device.deviceId);
+                        }
+                    }
+
+                    if (!errMessage) {
+                        // Check UTXOs associated with device Asset Issuance addresses for locked assets
+                        fundSrc = new FundSource(device.getAssetIssuanceAddressesInUseExcludeUnlocked(), {useUnconfirmedUtxo: true});
+                        allocResult = fundSrc.allocateUtxosByPredicate();
+
+                        if (allocResult) {
+                            if (!fundSrc.hasUtxoToAllocate()) {
+                                // Check if addresses have UTXOs that need to be replaced
+                                const addrUtxosInfo = computeAddressUtxosInfo(allocResult);
+                                const utxosToConsolidate = [];
+                                const amountToRefundByAddress = [];
+
+                                for (let [address, utxosInfo] of addrUtxosInfo) {
+                                    if (utxosInfo.legacyDustUtxos.length > 0) {
+                                        if (!utxosInfo.hasNonLegacyDustUtxos && utxosInfo.legacyDustUtxos.length === 1) {
+                                            // Save UTXOs to be consolidated
+                                            utxosToConsolidate.push(utxosInfo.legacyDustUtxos[0]);
+
+                                            // Save address to be set as obsolete
+                                            addrsToSetAsObsolete.push(address);
+
+                                            // Save amount based on new dust amount that is to be used to refund address
+                                            amountToRefundByAddress.push(utxosInfo.legacyDustUnits[0] * Service.devAssetIssuanceAddrAmount());
+                                        }
+                                        else {
+                                            // Unexpected situation: address is funded with more than one UTXO.
+                                            //  Set error message and stop iteration
+                                            errMessage = 'Device asset issuance address is funded with more than one UTXO; aborting procedure to fix dust funding';
+                                            break;
+                                        }
+                                    }
+                                }
+
+                                if (!errMessage && utxosToConsolidate.length > 0) {
+                                    // Add UTXOs to be consolidated
+                                    utxoCons.addUtxos(utxosToConsolidate);
+
+                                    // Prepare to refund addresses
+                                    fundTransact.addPayees(device.assetIssuanceAddr, amountToRefundByAddress);
+                                }
+                            }
+                            else {
+                                // Not all UTXOs have been allocated. Set error message
+                                errMessage = 'Not all UTXOs could be allocated to check if funding of device asset issuance addresses needs to be fixed; aborting procedure to fix dust funding';
+                            }
+                        }
+                        else {
+                            // There are no UTXOs associated with device main addresses.
+                            //  Log warning condition
+                            Catenis.logger.WARN('No UTXOs available to fix dust funding for device (deviceId: %s) asset issuance addresses', device.deviceId);
+                        }
+                    }
+
+                    // Stop iterating is there was an error
+                    return !!errMessage;
+                });
+            });
+        }
+
+        if (!errMessage) {
+            if (utxoCons.hasUtxosToConsolidate()) {
+                // Consolidate UTXOs that should be replaced
+                try {
+                    const consolidationTxids = utxoCons.consolidate();
+                    Catenis.logger.INFO('Dust funded UTXOs successfully consolidated', {consolidationTxids});
+                }
+                catch (err) {
+                    // Error consolidating UTXOs to fix dust funding.
+                    //  Log error and throw exception
+                    Catenis.logger.ERROR('Error consolidating UTXOs to fix dust funding.', err);
+                    throw new Error('Error consolidating UTXOs to fix dust funding');
+                }
+
+                // Set corresponding addresses as obsolete
+                Catenis.keyStore.setAddressListAsObsolete(addrsToSetAsObsolete);
+
+                // Prepare to issue transaction to refund addresses
+                if (fundTransact.addPayingSource()) {
+                    // Issue transaction to refund addresses
+                    try {
+                        const refundTxid = fundTransact.sendTransaction();
+                        Catenis.logger.INFO('Dust funded UTXOs successfully refunded', {refundTxid});
+                    }
+                    catch (err) {
+                        // Error refunding addresses to fix dust funding.
+                        //  Log error and throw exception
+                        Catenis.logger.ERROR('Error refunding addresses to fix dust funding.', err);
+                        throw new Error('Error refunding addresses to fix dust funding');
+                    }
+                }
+                else {
+                    // Unable to allocate funds to pay for refund transaction expense.
+                    //  Log error and throw exception
+                    Catenis.logger.ERROR('Unable to allocate funds to pay for refund transaction expense');
+                    throw new Error('Unable to allocate funds to pay for refund transaction expense');
+                }
+            }
+            else {
+                Catenis.logger.DEBUG('No dust funded addresses need to be fixed');
+            }
+        }
+        else {
+            // Log error and throw exception
+            Catenis.logger.ERROR(errMessage);
+            throw new Error(errMessage);
+        }
+    });
+}
+
+// NOTE: this function should be used with care. It is intended to be used for
+//  development purpose only
+function consolidateUtxosOfAllDustFundedAddresses(ctnNode) {
+    function allocationAddresses(allocResult) {
+        return Array.from(allocResult.utxos.reduce((addrs, utxo) => {
+            if (!addrs.has(utxo.address)) {
+                addrs.add(utxo.address);
+            }
+
+            return addrs;
+        }, new Set()));
+    }
+
+    // Execute code in critical section to avoid UTXOs concurrency
+    FundSource.utxoCS.execute(() => {
+        Catenis.logger.TRACE('Preparing to consolidate UTXOs of all dust funded addresses');
+        const utxoCons = new UtxoConsolidation(ctnNode);
+        let failed = false;
+
+        // Try to allocate all UTXOs associated with system Service Credit Issuance address
+        let fundSrc = new FundSource(ctnNode.servCredIssueAddr.lastAddressKeys().getAddress(), {useUnconfirmedUtxo: true});
+        let allocResult = fundSrc.allocateUtxosByPredicate();
+
+        if (allocResult) {
+            if (!fundSrc.hasUtxoToAllocate()) {
+                // Add allocated UTXOs to be consolidated
+                utxoCons.addUtxos(allocResult.utxos);
+            }
+            else {
+                // Not all UTXOs have been allocated. Indicate failure
+                failed = true;
+            }
+        }
+        else {
+            // There are no UTXOs associated with system service credit issuance address.
+            //  Log warning condition
+            Catenis.logger.WARN('No UTXOs available for system service credit issuance address');
+        }
+
+        if (!failed && ctnNode.bcotSaleStockAddr) {
+            // Try to allocate all UTXOs associated with system BCOT Sale Stock address
+            fundSrc = new FundSource(ctnNode.bcotSaleStockAddr.lastAddressKeys().getAddress(), {useUnconfirmedUtxo: true});
+            allocResult = fundSrc.allocateUtxosByPredicate();
+
+            if (allocResult) {
+                if (!fundSrc.hasUtxoToAllocate()) {
+                    // Add allocated UTXOs to be consolidated
+                    utxoCons.addUtxos(allocResult.utxos);
+                }
+                else {
+                    // Not all UTXOs have been allocated. Indicate failure
+                    failed = true;
+                }
+            }
+            else {
+                // There are no UTXOs associated with system BCOT sale stock address.
+                //  Log warning condition
+                Catenis.logger.WARN('No UTXOs available for system BCOT sale stock address');
+            }
+        }
+
+        let addrsToSetAsObsolete = [];
+
+        if (!failed) {
+            // Try to allocate all UTXOs associated with System Device Main addresses
+            fundSrc = new FundSource(ctnNode.deviceMainAddr.listAddressesInUse(), {useUnconfirmedUtxo: true});
+            allocResult = fundSrc.allocateUtxosByPredicate();
+
+            if (allocResult) {
+                if (!fundSrc.hasUtxoToAllocate()) {
+                    // Add allocated UTXOs to be consolidated
+                    utxoCons.addUtxos(allocResult.utxos);
+
+                    // And set corresponding addresses to be set as obsolete
+                    addrsToSetAsObsolete = addrsToSetAsObsolete.concat(allocationAddresses(allocResult));
+                }
+                else {
+                    // Not all UTXOs have been allocated. Indicate failure
+                    failed = true;
+                }
+            }
+            else {
+                // There are no UTXOs associated with system device main addresses.
+                //  Log warning condition
+                Catenis.logger.WARN('No UTXOs available for system device main addresses');
+            }
+        }
+
+        if (!failed) {
+            failed = ctnNode.listClients().some(client => {
+                return client.listDevices().some(device => {
+                    let devFailed = false;
+
+                    // Try to allocate all UTXOs associated with device Main addresses
+                    let fundSrc = new FundSource(device.mainAddr.listAddressesInUse(), {useUnconfirmedUtxo: true});
+                    let allocResult = fundSrc.allocateUtxosByPredicate();
+
+                    if (allocResult) {
+                        if (!fundSrc.hasUtxoToAllocate()) {
+                            // Add allocated UTXOs to be consolidated
+                            utxoCons.addUtxos(allocResult.utxos);
+
+                            // And set corresponding addresses to be set as obsolete
+                            addrsToSetAsObsolete = addrsToSetAsObsolete.concat(allocationAddresses(allocResult));
+                        }
+                        else {
+                            // Not all UTXOs have been allocated. Indicate failure
+                            devFailed = true;
+                        }
+                    }
+                    else {
+                        // There are no UTXOs associated with device main addresses.
+                        //  Log warning condition
+                        Catenis.logger.WARN('No UTXOs available for device (deviceId: %s) main addresses', device.deviceId);
+                    }
+
+                    if (!devFailed) {
+                        // Try to allocate all UTXOs associated with device Asset Issuance addresses
+                        fundSrc = new FundSource(device.assetIssuanceAddr.listAddressesInUse(), {useUnconfirmedUtxo: true});
+                        allocResult = fundSrc.allocateUtxosByPredicate();
+
+                        if (allocResult) {
+                            if (!fundSrc.hasUtxoToAllocate()) {
+                                // Add allocated UTXOs to be consolidated
+                                utxoCons.addUtxos(allocResult.utxos);
+
+                                // And set corresponding addresses to be set as obsolete
+                                addrsToSetAsObsolete = addrsToSetAsObsolete.concat(allocationAddresses(allocResult));
+                            }
+                            else {
+                                // Not all UTXOs have been allocated. Indicate failure
+                                devFailed = true;
+                            }
+                        }
+                        else {
+                            // There are no UTXOs associated with device asset issuance addresses.
+                            //  Log warning condition
+                            Catenis.logger.WARN('No UTXOs available for device (deviceId: %s) asset issuance addresses', device.deviceId);
+                        }
+                    }
+
+                    return devFailed;
+                });
+            });
+        }
+
+        if (!failed) {
+            try {
+                const consolidationTxids = utxoCons.consolidate();
+                Catenis.logger.INFO('Dust funded UTXOs successfully consolidated', {consolidationTxids});
+            }
+            catch (err) {
+                // Error consolidating UTXOs of all dust funded addresses.
+                //  Log error and throw exception
+                Catenis.logger.ERROR('Error consolidating UTXOs of all dust funded addresses');
+                throw new Error('Error consolidating UTXOs of all dust funded addresses');
+            }
+
+            // Set corresponding addresses as obsolete
+            Catenis.keyStore.setAddressListAsObsolete(addrsToSetAsObsolete);
+        }
+        else {
+            // Not all UTXOs could be allocated to be consolidated.
+            //  Log error and throw exception
+            Catenis.logger.ERROR('Not all UTXOs could be allocated to be consolidated; aborting procedure consolidate UTXOs of all dust funded addresses');
+            throw new Error('Not all UTXOs could be allocated to be consolidated; aborting procedure consolidate UTXOs of all dust funded addresses');
+        }
+    });
 }
 
 

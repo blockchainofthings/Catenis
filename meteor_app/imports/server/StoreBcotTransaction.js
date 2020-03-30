@@ -24,15 +24,17 @@ import { OmniTransaction } from './OmniTransaction';
 import { BcotPaymentTransaction } from './BcotPaymentTransaction';
 import { FundSource } from './FundSource';
 import { CatenisNode } from './CatenisNode';
+import { BitcoinInfo } from './BitcoinInfo';
 
 // Config entries
 const storeBcotTxConfig = config.get('storeBcotTransaction');
 
 // Configuration settings
 const cfgSettings = {
-    bcotStoreAddrAmount: storeBcotTxConfig.get('bcotStoreAddrAmount'),
     timeToConfirm: storeBcotTxConfig.get('timeToConfirm')
 };
+
+export const bcotStoreAddrAmount = Transaction.nonWitnessOutputDustAmount;  // Amount, in satoshis, to be paid to BCOT store address output
 
 
 // Definition of function classes
@@ -121,18 +123,21 @@ StoreBcotTransaction.prototype.buildTransaction = function () {
         this.omniTransact.addOmniPayloadOutput(this.amount);
 
         // Add BCOT store (reference) address output
-        this.omniTransact.addReferenceAddressOutput(BcotToken.storeBcotAddress, cfgSettings.bcotStoreAddrAmount);
+        this.omniTransact.addReferenceAddressOutput(BcotToken.storeBcotAddress, bcotStoreAddrAmount);
 
         // Now, allocate UTXOs to pay for tx expense
+        const txChangeOutputType = BitcoinInfo.getOutputTypeByAddressType(this.client.ctnNode.fundingChangeAddr.btcAddressType);
         const payTxFundSource = new FundSource(this.client.ctnNode.listFundingAddressesInUse(), {
             useUnconfirmedUtxo: true,
             unconfUtxoInfo: {
                 initTxInputs: this.omniTransact.inputs
             },
-            smallestChange: true
+            smallestChange: true,
+            useAllNonWitnessUtxosFirst: true,   // Default setting; could have been omitted
+            useWitnessOutputForChange: txChangeOutputType.isWitness
         });
         const payTxAllocResult = payTxFundSource.allocateFundForTxExpense({
-            txSize: this.omniTransact.estimateSize(),
+            txSzStSnapshot: this.omniTransact.txSize,
             inputAmount: this.omniTransact.totalInputsAmount(),
             outputAmount: this.omniTransact.totalOutputsAmount()
         }, false, Catenis.bitcoinFees.getFeeRateByTime(cfgSettings.timeToConfirm));
@@ -156,7 +161,7 @@ StoreBcotTransaction.prototype.buildTransaction = function () {
 
         this.omniTransact.addInputs(inputs);
 
-        if (payTxAllocResult.changeAmount >= Transaction.txOutputDustAmount) {
+        if (payTxAllocResult.changeAmount >= Transaction.dustAmountByOutputType(txChangeOutputType)) {
             // Add new output to receive change
             //  Note: it should be automatically inserted just before the reference address output, so the reference
             //      address output is the last output of the transaction
@@ -261,16 +266,6 @@ StoreBcotTransaction.matchingPattern = Object.freeze({
 
 // Module code
 //
-
-// Definition of properties
-Object.defineProperties(StoreBcotTransaction, {
-    bcotStoreAddrAmount: {
-        get: () => {
-            return cfgSettings.bcotStoreAddrAmount;
-        },
-        enumerable: true
-    }
-});
 
 // Lock function class
 Object.freeze(StoreBcotTransaction);

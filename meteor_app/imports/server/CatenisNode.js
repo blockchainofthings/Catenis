@@ -97,20 +97,6 @@ export class CatenisNode extends events.EventEmitter {
         this.props = docCtnNode.props;
         this.status = docCtnNode.status;
 
-        //  NOTE: arrow functions should NOT be used for the getter/setter of the defined properties.
-        //      This is to avoid that, if `this` is referred from within the getter/setter body, it
-        //      refers to the object from where the properties have been defined rather than to the
-        //      object from where the property is being accessed. Normally, this does not represent
-        //      an issue (since the object from where the property is accessed is the same object
-        //      from where the property has been defined), but it is especially dangerous if the
-        //      object can be cloned.
-        Object.defineProperty(this, 'internalName', {
-            get: function () {
-                return this.type === CatenisNode.nodeType.hub.name ? 'Catenis Hub node' : util.format('Catenis Gateway #%d node', this.ctnNodeIndex);
-            },
-            enumerable: true
-        });
-
         // Instantiate objects to manage blockchain addresses for Catenis node
         this.deviceMainAddr = new SystemDeviceMainAddress(this.ctnNodeIndex);
         this.fundingPaymentAddr = new SystemFundingPaymentAddress(this.ctnNodeIndex);
@@ -154,6 +140,24 @@ export class CatenisNode extends events.EventEmitter {
 
         // Set up handler to process event indicating that credit service account tx has been confirmed
         TransactionMonitor.addEventHandler(TransactionMonitor.notifyEvent.credit_service_account_tx_conf.name, creditServAccTxConfirmed);
+    }
+
+
+    // Public object properties (getters/setters)
+    //
+
+    get internalName() {
+        return this.type === CatenisNode.nodeType.hub.name ? 'Catenis Hub node' : util.format('Catenis Gateway #%d node', this.ctnNodeIndex);
+    }
+
+    get serviceCreditIssuanceAddress() {
+        return this._serviceCreditIssuanceAddress ? this._serviceCreditIssuanceAddress : (this._serviceCreditIssuanceAddress = this.servCredIssueAddr.lastAddressKeys().getAddress());
+    }
+
+    get bcotSaleStockAddress() {
+        if (this.bcotSaleStockAddr) {
+            return this._bcotSaleStockAddress ? this._bcotSaleStockAddress : (this._bcotSaleStockAddress = this.bcotSaleStockAddr.lastAddressKeys().getAddress());
+        }
     }
 }
 
@@ -260,7 +264,7 @@ CatenisNode.prototype.serviceCreditAssetInfo = function () {
 
 CatenisNode.prototype.getServiceCreditAsset = function () {
     try {
-        return Asset.getAssetByIssuanceAddressPath(Catenis.keyStore.getAddressInfo(this.servCredIssueAddr.lastAddressKeys().getAddress()).path);
+        return Asset.getAssetByIssuanceAddressPath(Catenis.keyStore.getAddressInfo(this.serviceCreditIssuanceAddress).path);
     }
     catch (err) {
         if (!((err instanceof Meteor.Error) && err.error === 'ctn_asset_not_found')) {
@@ -273,7 +277,7 @@ CatenisNode.prototype.getServiceCreditAsset = function () {
 // NOTE: this method only applies to (and is only functional for) the Catenis Hub node
 CatenisNode.prototype.getBcotSaleStockAddress = function () {
     if (this.type === CatenisNode.nodeType.hub.name) {
-        return this.bcotSaleStockAddr.lastAddressKeys().getAddress();
+        return this.bcotSaleStockAddress;
     }
 };
 
@@ -326,7 +330,7 @@ CatenisNode.prototype.checkPayTxExpenseFundingBalance = function () {
 //  critical section object
 CatenisNode.prototype.checkServiceCreditIssuanceProvision = function () {
     const servCredIssuanceBalanceInfo = new BalanceInfo(Service.getExpectedServiceCreditIssuanceBalance(),
-        this.servCredIssueAddr.lastAddressKeys().getAddress(), {
+        this.serviceCreditIssuanceAddress, {
             useSafetyFactor: false
         });
 
@@ -428,6 +432,21 @@ CatenisNode.prototype.checkOCMessagesSettlementPayTxExpenseFundingBalance = func
     }
 
     return payTxBalanceInfo.hasLowBalance();
+};
+
+CatenisNode.prototype.listClients = function (includeDeleted = true) {
+    // Retrieve Client docs/recs associated with this Catenis node
+    const query = {
+        catenisNode_id: this.doc_id
+    };
+
+    if (!includeDeleted) {
+        query.status = {
+            $ne: Client.status.deleted.name
+        };
+    }
+
+    return Catenis.db.collection.Client.find(query).map(doc => new Client(doc, this));
 };
 
 CatenisNode.prototype.getClientByIndex = function (clientIndex, includeDeleted = true) {
@@ -1073,6 +1092,25 @@ function fundDeviceMainAddresses(amountPerAddress) {
         throw err;
     }
 }
+
+// NOTE: this method should be used with care. It is intended to be used for
+//  development purpose only
+//
+// NOTE 2: make sure that this method is called from code executed from the FundSource.utxoCS
+//  critical section object
+CatenisNode.prototype._fundDeviceMainAddresses = function () {
+    fundDeviceMainAddresses.call(this, Service.distributeSystemDeviceMainAddressFund().amountPerAddress);
+};
+
+// NOTE: this method should be used with care. It is intended to be used for
+//  development purpose only
+CatenisNode.prototype.fundAllDevicesAddresses = function () {
+    this.listClients().forEach(client => {
+        client.listDevices().forEach(device => {
+            device.fundAddresses(false);
+        });
+    });
+};
 
 
 // CatenisNode function class (public) methods

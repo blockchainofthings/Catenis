@@ -34,6 +34,8 @@ import { KeyStore } from './KeyStore';
 import { Util } from './Util';
 import { CatenisNode } from './CatenisNode';
 import { CreditServiceAccTransaction } from './CreditServiceAccTransaction';
+import { UtxoCounter } from './UtxoCounter';
+import { BitcoinInfo } from './BitcoinInfo';
 
 // Config entries
 const spendServCredTxConfig = config.get('spendServiceCreditTransaction');
@@ -224,7 +226,7 @@ export class SpendServiceCreditTransaction extends events.EventEmitter {
 
             // Make sure that more payments are not accepted if service txs with no billing had been added to the
             //  list of service tx ids (txChanged == true)
-            this.noMorePaymentsAccepted = this.txChanged || this.ccTransact.realSize() > Transaction.maxTxSize * cfgSettings.txSizeThresholdRatio;
+            this.noMorePaymentsAccepted = this.txChanged || this.ccTransact.realSize().vsize > Transaction.maxTxVsize * cfgSettings.txSizeThresholdRatio;
 
             // Instantiate RBF tx info object
             initRbfTxInfo.call(this);
@@ -328,7 +330,7 @@ SpendServiceCreditTransaction.prototype.payForService = function (client, servic
     if (!this.noMorePaymentsAccepted) {
         const newCcTransact = this.ccTransact.clone();
 
-        newCcTransact.saveSizeProfile();
+        newCcTransact.txSize.takeStateSnapshot();
 
         let allocateServiceCredit = true;
         let excludeUtxos;
@@ -548,41 +550,17 @@ SpendServiceCreditTransaction.prototype.payForService = function (client, servic
 
         if (this.rbfTxInfo !== undefined) {
             // Prepare to update RBF transaction info
-            const compareResult = newCcTransact.compareSizeProfile();
+            const deltaTxSzStSnapshot = newCcTransact.txSize.diffState();
             Catenis.logger.DEBUG('>>>>>> About to adjust RbfTxInfo for spend service credit tx', {
-                compareResult: compareResult
+                deltaTxSzStSnapshot
             });
 
-            if (compareResult !== undefined) {
-                // Update parameters that affect size of transaction
-                if (compareResult.numInputs !== undefined) {
-                    this.rbfTxInfo.incrementNumTxInputs(compareResult.numInputs.delta);
-                }
-
-                if (compareResult.numP2PKHOutputs !== undefined) {
-                    this.rbfTxInfo.incrementNumTxOutputs(compareResult.numP2PKHOutputs.delta);
-                }
-
-                if (compareResult.numPubKeysMultiSigOutputs !== undefined) {
-                    if (compareResult.numPubKeysMultiSigOutputs.delta.added !== undefined) {
-                        compareResult.numPubKeysMultiSigOutputs.delta.added.forEach((numPubKeys) => {
-                            this.rbfTxInfo.addMultiSigOutput(numPubKeys);
-                        });
-                    }
-
-                    if (compareResult.numPubKeysMultiSigOutputs.delta.deleted !== undefined) {
-                        compareResult.numPubKeysMultiSigOutputs.delta.deleted.forEach((numPubKeys) => {
-                            this.rbfTxInfo.addMultiSigOutput(-numPubKeys);
-                        });
-                    }
-                }
-
-                if (compareResult.nullDataPayloadSize !== undefined) {
-                    this.rbfTxInfo.setNullDataPayloadSize(compareResult.nullDataPayloadSize.current);
-                }
+            if (deltaTxSzStSnapshot) {
+                // Update RBF transaction info
+                this.rbfTxInfo.txSize.adjustState(deltaTxSzStSnapshot);
             }
             else {
-                // No change in size so just force it to recalculate fee
+                // No change in tx size state so just force it to recalculate fee
                 this.rbfTxInfo.forceRecalculateFee();
             }
         }
@@ -676,22 +654,25 @@ SpendServiceCreditTransaction.prototype.fundTransaction = function () {
         });
 
         const changeOutputPos = getChangeOutputPos.call(this);
-        const payTxExpInputs = getPayTxExpInputs.call(this);
+        const payTxExpInputCounter = new UtxoCounter({
+            utxos: getPayTxExpInputs.call(this)
+        });
         let allocatePayTxExpense = true;
         let excludeUtxos;
         let addUtxoTxInputs;
-        let expectNumPayTxExpInputs;
+        let expectPayTxExpInputCounter;
         let newFee;
         let newChange = 0;
+        const txChangeOutputType = BitcoinInfo.getOutputTypeByAddressType(Catenis.ctnHubNode.servPymtPayTxExpenseAddr.btcAddressType);
 
         if (this.fee === 0) {
             // Prepare to allocate UTXOs to pay for transaction expense for the first time
             
             // Assume that no input shall be used to pay for tx expense
-            expectNumPayTxExpInputs = 0;
+            expectPayTxExpInputCounter = new UtxoCounter();
             
             // And assume that there shall be one output for change
-            this.rbfTxInfo.incrementNumTxOutputs(1);
+            this.rbfTxInfo.addOutputs(txChangeOutputType.isWitness, 1);
             
             // Get amount that should be paid in fee
             newFee = this.rbfTxInfo.getNewTxFee().fee;
@@ -719,7 +700,7 @@ SpendServiceCreditTransaction.prototype.fundTransaction = function () {
                         newChange = this.change - deltaFee;
 
                         // Make sure that change amount is not below dust amount
-                        if (newChange > 0 && newChange < Transaction.txOutputDustAmount) {
+                        if (newChange > 0 && newChange < Transaction.dustAmountByOutputType(txChangeOutputType)) {
                             newFee += newChange;
                             newChange = 0;
                         }
@@ -729,7 +710,8 @@ SpendServiceCreditTransaction.prototype.fundTransaction = function () {
                             // Remove output to receive change
                             this.ccTransact.revertOutputAddresses(changeOutputPos, changeOutputPos);
                             this.ccTransact.removeOutputAt(changeOutputPos);
-                            this.rbfTxInfo.incrementNumTxOutputs(-1);
+
+                            this.rbfTxInfo.addOutputs(txChangeOutputType.isWitness, -1);
                         }
                         else {
                             // Reset amount of change output
@@ -745,7 +727,7 @@ SpendServiceCreditTransaction.prototype.fundTransaction = function () {
 
                         // Assume that the same number of inputs currently used to pay for tx expense
                         //  shall be used to pay for the new tx expense
-                        expectNumPayTxExpInputs = payTxExpInputs.length;
+                        expectPayTxExpInputCounter = new UtxoCounter(payTxExpInputCounter);
 
                         if (this.lastSentCcTransact !== undefined) {
                             // Make sure that change output of last sent transaction is excluded
@@ -763,9 +745,9 @@ SpendServiceCreditTransaction.prototype.fundTransaction = function () {
                             addUtxoTxInputs = getPayTxExpInputs.call(this, this.lastSentCcTransact);
                         }
 
-                        if (payTxExpInputs.length > 0) {
+                        if (payTxExpInputCounter.totalCount > 0) {
                             // Remove current inputs used to pay for tx expense
-                            this.ccTransact.removeInputs(getFirstPayTxExpInputPos.call(this), payTxExpInputs.length);
+                            this.ccTransact.removeInputs(getFirstPayTxExpInputPos.call(this), payTxExpInputCounter.totalCount);
                         }
                     }
                 }
@@ -782,10 +764,10 @@ SpendServiceCreditTransaction.prototype.fundTransaction = function () {
 
                 // Assume that the same number of inputs currently used to pay for tx expense
                 //  shall be used to pay for the new tx expense
-                expectNumPayTxExpInputs = payTxExpInputs.length;
+                expectPayTxExpInputCounter = new UtxoCounter(payTxExpInputCounter);
 
                 // And that there shall be one output for change
-                this.rbfTxInfo.incrementNumTxOutputs(1);
+                this.rbfTxInfo.addOutputs(txChangeOutputType.isWitness, 1);
 
                 // Get amount that should be paid in fee
                 newFee = this.rbfTxInfo.getNewTxFee().fee;
@@ -809,16 +791,16 @@ SpendServiceCreditTransaction.prototype.fundTransaction = function () {
                         addUtxoTxInputs = getPayTxExpInputs.call(this, this.lastSentCcTransact);
                     }
 
-                    if (payTxExpInputs.length > 0) {
+                    if (payTxExpInputCounter.totalCount > 0) {
                         // Remove current inputs used to pay for tx expense
-                        this.ccTransact.removeInputs(getFirstPayTxExpInputPos.call(this), payTxExpInputs.length);
+                        this.ccTransact.removeInputs(getFirstPayTxExpInputPos.call(this), payTxExpInputCounter.totalCount);
                     }
                 }
                 else {
                     // Current fee is already enough to cover required fee
 
-                    // Adjust RBF tx info to discount change out that is not used
-                    this.rbfTxInfo.incrementNumTxOutputs(-1);
+                    // Adjust RBF tx info to discount change output that is not used
+                    this.rbfTxInfo.addOutputs(txChangeOutputType.isWitness, -1);
 
                     // And Indicate that transaction change should not be updated and that no more UTXOs should
                     //  be allocated to pay for tx expense
@@ -852,7 +834,9 @@ SpendServiceCreditTransaction.prototype.fundTransaction = function () {
                                 } : undefined,
                                 higherAmountUtxos: true,
                                 excludeUtxos: excludeUtxos,
-                                addUtxoTxInputs: addUtxoTxInputs
+                                addUtxoTxInputs: addUtxoTxInputs,
+                                useAllNonWitnessUtxosFirst: true,
+                                useWitnessOutputForChange: txChangeOutputType.isWitness
                             }
                         });
                         payTxExpFundSource = new FundSource(Catenis.ctnHubNode.servPymtPayTxExpenseAddr.listAddressesInUse(), {
@@ -863,7 +847,9 @@ SpendServiceCreditTransaction.prototype.fundTransaction = function () {
                             } : undefined,
                             higherAmountUtxos: true,
                             excludeUtxos: excludeUtxos,
-                            addUtxoTxInputs: addUtxoTxInputs
+                            addUtxoTxInputs: addUtxoTxInputs,
+                            useAllNonWitnessUtxosFirst: true,   // Default setting; could have been omitted
+                            useWitnessOutputForChange: txChangeOutputType.isWitness
                         });
                     }
                     Catenis.logger.DEBUG('>>>>>> About to allocate funds to pay for spend service credit transaction expense', {
@@ -883,12 +869,17 @@ SpendServiceCreditTransaction.prototype.fundTransaction = function () {
                         throw new Meteor.Error('ctn_spend_serv_cred_fund_utxo_alloc_error', 'Unable to allocate UTXOs for system service payment pay tx expense addresses');
                     }
 
+                    const deltaPayTxExpInputCounter = new UtxoCounter(payTxExpAllocResult, payTxExpFundSource).diff(expectPayTxExpInputCounter);
+
                     // Make sure that number of allocated UTXOs match expected number of pay tx expense inputs
-                    if (payTxExpAllocResult.utxos.length > expectNumPayTxExpInputs) {
+                    if ((deltaPayTxExpInputCounter.nonWitnessCount === 0 && deltaPayTxExpInputCounter.witnessCount > 0)
+                            || deltaPayTxExpInputCounter.nonWitnessCount > 0) {
                         // Adjust expected number of pay tx expense inputs, recalculate new fee,
                         //  and try to allocate UTXOs again
-                        expectNumPayTxExpInputs++;
-                        this.rbfTxInfo.incrementNumTxInputs(1);
+                        const useWitnessInput = deltaPayTxExpInputCounter.nonWitnessCount === 0;
+
+                        expectPayTxExpInputCounter.incrementCount(useWitnessInput);
+                        this.rbfTxInfo.addInputs(useWitnessInput, 1);
 
                         newFee = this.rbfTxInfo.getNewTxFee().fee;
                         txExpenseAmount = calculateTxExpense.call(this, newFee);
@@ -897,10 +888,26 @@ SpendServiceCreditTransaction.prototype.fundTransaction = function () {
 
                         tryAgain = true;
                     }
-                    else if (payTxExpAllocResult.utxos.length < expectNumPayTxExpInputs) {
+                    else if ((deltaPayTxExpInputCounter.nonWitnessCount === 0 && deltaPayTxExpInputCounter.witnessCount < 0)
+                            || (deltaPayTxExpInputCounter.nonWitnessCount < 0 && deltaPayTxExpInputCounter.witnessCount === 0)) {
                         // Number of allocated UTXOs is less than expected number of pay tx expense inputs.
                         //  Just adjust RBF tx info to reflect correct number of pay tx expense inputs
-                        this.rbfTxInfo.incrementNumTxInputs(payTxExpAllocResult.utxos.length - expectNumPayTxExpInputs);
+                        if (deltaPayTxExpInputCounter.witnessCount < 0) {
+                            this.rbfTxInfo.addInputs(true, deltaPayTxExpInputCounter.witnessCount);
+                        }
+                        else {
+                            this.rbfTxInfo.addInputs(false, deltaPayTxExpInputCounter.nonWitnessCount);
+                        }
+                    }
+                    else if (deltaPayTxExpInputCounter.totalCount !== 0) {
+                        // Number of allocated UTXOs differs from expected number of inputs to pay for tx fee in
+                        //  an unexpected way
+                        Catenis.logger.ERROR('Number of allocated UTXOs differs from expected number of inputs to pay for tx fee in an unexpected way', {
+                            numAllocatedUtxos: payTxExpAllocResult.utxos.length,
+                            expectPayTxExpInputCounter,
+                            deltaPayTxExpInputCounter
+                        });
+                        throw new Meteor.Error('ctn_read_confirm_fund_tx_error', 'Number of allocated UTXOs differs from expected number of inputs to pay for tx fee in an unexpected way');
                     }
                 }
                 while (tryAgain);
@@ -920,7 +927,7 @@ SpendServiceCreditTransaction.prototype.fundTransaction = function () {
                 newChange = payTxExpAllocResult.changeAmount;
 
                 // Make sure that change amount is not below dust amount
-                if (newChange > 0 && newChange < Transaction.txOutputDustAmount) {
+                if (newChange > 0 && newChange < Transaction.dustAmountByOutputType(txChangeOutputType)) {
                     newFee += newChange;
                     newChange = 0;
                 }
@@ -944,7 +951,7 @@ SpendServiceCreditTransaction.prototype.fundTransaction = function () {
                     }
 
                     // Adjust RBF tx info to discount change output that is not used
-                    this.rbfTxInfo.incrementNumTxOutputs(-1);
+                    this.rbfTxInfo.addOutputs(txChangeOutputType.isWitness, -1);
                 }
             }
             else {
@@ -952,20 +959,24 @@ SpendServiceCreditTransaction.prototype.fundTransaction = function () {
                 if (txExpenseAmount < 0) {
                     newChange = -txExpenseAmount;
 
-                    if (newChange < Transaction.txOutputDustAmount) {
+                    if (newChange < Transaction.dustAmountByOutputType(txChangeOutputType)) {
                         newFee += newChange;
                         newChange = 0;
                     }
                 }
 
-                if (payTxExpInputs.length > 0) {
+                if (payTxExpInputCounter.totalCount > 0) {
                     // Remove inputs that were used to pay for tx expense
-                    this.ccTransact.removeInputs(getFirstPayTxExpInputPos.call(this), payTxExpInputs);
+                    this.ccTransact.removeInputs(getFirstPayTxExpInputPos.call(this), payTxExpInputCounter.totalCount);
                 }
 
-                if (expectNumPayTxExpInputs > 0) {
-                    // Adjust RBF tx info to discount inputs used to pay for tx expense
-                    this.rbfTxInfo.incrementNumTxInputs(-expectNumPayTxExpInputs);
+                // Adjust RBF tx info to discount inputs used to pay for tx expense (if any)
+                if (expectPayTxExpInputCounter.witnessCount > 0) {
+                    this.rbfTxInfo.addInputs(-expectPayTxExpInputCounter.witnessCount);
+                }
+
+                if (expectPayTxExpInputCounter.nonWitnessCount > 0) {
+                    this.rbfTxInfo.addInputs(-expectPayTxExpInputCounter.nonWitnessCount);
                 }
 
                 if (newChange > 0) {
@@ -987,7 +998,7 @@ SpendServiceCreditTransaction.prototype.fundTransaction = function () {
                     }
 
                     // Adjust RBF tx info to discount change output that is not used
-                    this.rbfTxInfo.incrementNumTxOutputs(-1);
+                    this.rbfTxInfo.addOutputs(txChangeOutputType.isWitness, -1);
                 }
             }
         }
@@ -1027,7 +1038,7 @@ SpendServiceCreditTransaction.prototype.sendTransaction = function (isTerminal =
 
             this.rbfTxInfo.updateTxInfo(this.ccTransact);
 
-            if (isTerminal || this.ccTransact.realSize() > Transaction.maxTxSize * cfgSettings.txSizeThresholdRatio) {
+            if (isTerminal || this.ccTransact.realSize().vsize > Transaction.maxTxVsize * cfgSettings.txSizeThresholdRatio) {
                 // Either it has specifically asked for this to the a terminal transaction (no more transactions
                 //  should be sent after this one to replace it) or its size is above threshold.
                 //  Either way, indicate that no more payments as accepted
@@ -1283,10 +1294,6 @@ function unconfirmedTxTimeout(txid) {
 function initRbfTxInfo() {
     const opts = {
         paymentResolution: Service.servicePaymentResolution,
-        initNumTxInputs: this.ccTransact.countInputs(),
-        initNumTxOutputs: this.ccTransact.countP2PKHOutputs(),
-        initNumPubKeysMultiSigTxOutputs: this.ccTransact.getNumPubKeysMultiSigOutputs(),
-        initTxNullDataPayloadSize: this.ccTransact.nullDataPayloadSize,
         txFeeRateIncrement: Service.spendServiceCreditTxFeeRateIncrement
     };
 
@@ -1297,7 +1304,7 @@ function initRbfTxInfo() {
         opts.initTxFeeRate = Service.spendServiceCreditInitTxFeeRate;
     }
 
-    this.rbfTxInfo = new RbfTransactionInfo(opts);
+    this.rbfTxInfo = new RbfTransactionInfo(this.ccTransact, opts);
 }
 
 function retrieveReplacedTransactionIds() {

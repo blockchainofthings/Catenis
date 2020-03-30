@@ -102,6 +102,8 @@ const startupConfig = config.get('startup');
 // Configuration settings
 const cfgSettings = {
     fixMissingAddresses: startupConfig.get('fixMissingAddresses'),
+    legacyDustFunding: startupConfig.get('legacyDustFunding'),
+    fixDustFunding: startupConfig.get('fixDustFunding'),
     bypassProcessing: startupConfig.get('bypassProcessing'),
     dataToCipher: startupConfig.get('dataToCipher'),
     pidFilename: startupConfig.get('pidFilename')
@@ -129,13 +131,20 @@ Meteor.startup(function () {
         else {
             // Normal processing
             Catenis.logger.INFO('Starting initialization...');
+
+            // Make sure that dust funding related configuration settings are consistent
+            if (cfgSettings.fixDustFunding && cfgSettings.legacyDustFunding) {
+                Catenis.logger.FATAL('Inconsistent dust funding related configuration setting; fix dust funding with legacy dust funding set');
+                throw new Error('Inconsistent dust funding related configuration setting; fix dust funding with legacy dust funding set');
+            }
+
             Database.initialize();
             Database.removeInconsistentAssetIndices();
             Database.fixBillingExchangeRate();
             Database.removeBcotExchangeRateColl();
             Database.addMissingClientTimeZone();
             Database.addMissingBtcServicePriceField();
-            Application.initialize();
+            Application.initialize(false, cfgSettings.legacyDustFunding);
             AccountsEmail.initialize();
             BitcoinInfo.initialize();
             TransactionCache.initialize();
@@ -167,7 +176,7 @@ Meteor.startup(function () {
             // Make sure that all addresses are currently imported onto Bitcoin Core
             CheckImportAddresses(cfgSettings.fixMissingAddresses);
 
-            BaseBlockchainAddress.initialize();
+            BaseBlockchainAddress.initialize(cfgSettings.fixDustFunding);
             BaseOffChainAddress.initialize();
             Client.initialize();
             Device.initialize();
@@ -234,7 +243,7 @@ Meteor.startup(function () {
 
             Catenis.logger.INFO('Initialization ended.');
 
-            Catenis.application.startProcessing();
+            Catenis.application.startProcessing(cfgSettings.fixDustFunding);
         }
     }
 });

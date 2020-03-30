@@ -157,6 +157,10 @@ export class TransactionMonitor extends events.EventEmitter {
             Catenis.logger.TRACE('Setting recurring timer to check for old unconfirmed transactions');
             this.idCheckUnconfTxsInterval = Meteor.setInterval(checkOldUnconfirmedTxs.bind(this), cfgSettings.checkOldUnconfTxsInterval);
 
+            // TODO: we need to make sure that this procedure is only started after all currently issued blockchain
+            //  blocks are processed. For now, we should increase that timeout (add a new parameter to the config file).
+            //  Ideally, though, we should wait for an event an internal event that all currently issued blocks have
+            //  been processed
             // Do not check for old unconfirmed transactions right now, but give it some time (1 min) for
             //  the normal processing of blockchain blocks to catch up before doing the first check
             Meteor.setTimeout(checkOldUnconfirmedTxs.bind(this), 60000);
@@ -1180,7 +1184,7 @@ function handleNewTransactions(data) {
                         }
                         // TODO: parse transaction (using Transaction.fromHex()) and try to identify Catenis transactions (using tx.matches())
                         else {
-                            // TODO: IMPORTANT - identify unrecognized transactions that send bitcoins to internal Catenis addresses (any address other than sys_fund_addr) and spend the amount transferred  to a "garbage" addresss that should be defined so the bitcoins are gotten out of the way
+                            // TODO: IMPORTANT - identify unrecognized transactions that send bitcoins to internal Catenis addresses (any address other than sys_fund_addr) and spend the amount transferred  to a "garbage" address that should be defined so the bitcoins are gotten out of the way
                             // An unrecognized transaction had been received.
                             //  Log warning condition
                             // noinspection JSUnfilteredForInLoop
@@ -1369,6 +1373,7 @@ function checkOldUnconfirmedTxs() {
     }
 }
 
+// TODO: to avoid concurrency with the regular processing of blockchain blocks, recently confirmed txs should be filtered out
 function fixOldUnconfirmedTxs(docTxs, source) {
     try {
         const eventsToEmit = [];

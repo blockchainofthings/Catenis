@@ -36,6 +36,7 @@ import { BaseBlockchainAddress } from './BaseBlockchainAddress';
 import { KeyStore } from './KeyStore';
 import { Util } from './Util';
 import { RedeemBcotTransaction } from './RedeemBcotTransaction';
+import { BitcoinInfo } from './BitcoinInfo';
 
 // Config entries
 const credServAccTxConfig = config.get('creditServiceAccTransaction');
@@ -267,15 +268,18 @@ CreditServiceAccTransaction.prototype.buildTransaction = function () {
             }
 
             // Now, allocate UTXOs to pay for tx expense
+            const txChangeOutputType = BitcoinInfo.getOutputTypeByAddressType(this.client.ctnNode.fundingChangeAddr.btcAddressType);
             const payTxFundSource = new FundSource(this.client.ctnNode.listFundingAddressesInUse(), {
                 useUnconfirmedUtxo: true,
                 unconfUtxoInfo: {
                     initTxInputs: this.ccTransact.inputs
                 },
-                smallestChange: true
+                smallestChange: true,
+                useAllNonWitnessUtxosFirst: true,   // Default setting; could have been omitted
+                useWitnessOutputForChange: txChangeOutputType.isWitness
             });
             const payTxAllocResult = payTxFundSource.allocateFundForTxExpense({
-                txSize: this.ccTransact.estimateSize(),
+                txSzStSnapshot: this.ccTransact.txSize,
                 inputAmount: this.ccTransact.totalInputsAmount(),
                 outputAmount: this.ccTransact.totalOutputsAmount()
             }, false, Catenis.bitcoinFees.getOptimumFeeRate());
@@ -299,7 +303,7 @@ CreditServiceAccTransaction.prototype.buildTransaction = function () {
 
             this.ccTransact.addInputs(inputs);
 
-            if (payTxAllocResult.changeAmount >= Transaction.txOutputDustAmount) {
+            if (payTxAllocResult.changeAmount >= Transaction.dustAmountByOutputType(txChangeOutputType)) {
                 // Add new output to receive change
                 this.ccTransact.addPubKeyHashOutput(this.client.ctnNode.fundingChangeAddr.newAddressKeys().getAddress(), payTxAllocResult.changeAmount);
             }

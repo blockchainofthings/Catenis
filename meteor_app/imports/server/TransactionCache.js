@@ -78,7 +78,7 @@ export class TransactionCache {
         if (!docTx) {
             docTx = {
                 txid,
-                rawTx: Buffer.from(hexTx = Catenis.bitcoinCore.getRawTransactionCheck(txid), 'hex')
+                rawTx: Buffer.from(hexTx = Catenis.bitcoinCore.getRawTransactionCheck(txid, true, false), 'hex')
             };
 
             this.collCachedTx.insert(docTx);
