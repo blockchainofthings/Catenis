@@ -229,7 +229,6 @@ export class RbfTransactionInfo {
             this.feeRate = Math.floor(this.fee / realTxSizeInfo.vsize);
 
             this.txSize = new TransactionSize(transact, false);
-            this.txSize.setRealSize(realTxSizeInfo);
 
             this.newFee = this.fee;
             this.newFeeRate = this.feeRate;

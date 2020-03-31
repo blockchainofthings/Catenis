@@ -104,8 +104,6 @@ export class TransactionSize extends TransactionSizeState {
     constructor(txOrStateSnapshot, dynamic) {
         super(txOrStateSnapshot, dynamic);
 
-        this.deltaBaseSize = this.deltaWitnessDataSize = 0;
-
         this.getSizeInfo(true);
     }
 
@@ -126,8 +124,7 @@ export class TransactionSize extends TransactionSizeState {
     }
 
     get baseSize() {
-        return this.deltaBaseSize
-            + 4                                                     // Version
+        return 4                                                    // Version
             + compactSizeUIntLength(this.numInputs)                 // Inputs count
             + witnessInputLength * this.numWitnessInputs            // Witness (spend P2WPKH output) inputs
             + nonWitnessInputLength * this.numNonWitnessInputs      // Non-witness (spend P2PKH output) inputs
@@ -141,8 +138,7 @@ export class TransactionSize extends TransactionSizeState {
     }
 
     get witnessDataSize() {
-        return this.deltaWitnessDataSize
-            + 2                                                             // Marker & Flag bytes
+        return 2                                                            // Marker & Flag bytes
             + witnessInputWitnessFieldLength * this.numWitnessInputs        // Witness field of witness (spend P2WPKH output) inputs
             + nonWitnessInputWitnessFieldLength * this.numNonWitnessInputs; // Witness field of non-witness (spend P2PKH output) inputs
     }
@@ -178,51 +174,6 @@ export class TransactionSize extends TransactionSizeState {
         }
 
         return sizeInfo;
-    }
-
-    // Register the real size of the transaction. This information is used to calculate a correction
-    //  value that is then taken into account when returning the estimated tx size info
-    //
-    //  Arguments:
-    //   realSizeInfo: {
-    //     size: [Number],  Transaction size, in bytes, including witness data if present
-    //     vsize: [Number],  Transaction virtual size, in vbytes, of transaction
-    //     weight: [Number]  Transaction weight
-    //   }
-    setRealSize(realSizeInfo) {
-        const realTotalSize = realSizeInfo.size;
-        const realBaseSize = computeTxBaseSize(realTotalSize, realSizeInfo.weight);
-        const realWitnessDataSize = realTotalSize - realBaseSize;
-
-        // Make sure that realSizeInfo is consistent
-        if (realWitnessDataSize < 0 || computeTxWeight(realBaseSize, realTotalSize) !== realSizeInfo.weight || (realWitnessDataSize > 0) !== this.hasWitness) {
-            Catenis.logger.DEBUG('TransactionSize: inconsistent \'realSizeInfo\' argument', {
-                realSizeInfo,
-                hasWitness: this.hasWitness
-            });
-            throw new TypeError('TransactionSize: inconsistent \'realSizeInfo\' argument');
-        }
-
-        const currentUnfixedBaseSize = this.baseSize - this.deltaBaseSize;
-        const currentUnfixedTotalSize = this._totalSizeFromBaseSize(currentUnfixedBaseSize, true);
-        const currentUnfixedWitnessDataSize = currentUnfixedTotalSize > currentUnfixedBaseSize ? currentUnfixedTotalSize - currentUnfixedBaseSize : 0;
-
-        let deltaBaseSize = realBaseSize - currentUnfixedBaseSize;
-        let deltaWitnessDataSize = realWitnessDataSize - currentUnfixedWitnessDataSize;
-
-        // Make sure that correction values are not inconsistent
-        if (deltaBaseSize <= -currentUnfixedBaseSize || deltaWitnessDataSize < -currentUnfixedWitnessDataSize) {
-            Catenis.logger.ERROR('TransactionSize: inconsistent correction values for transaction size; clearing correction values', {
-                deltaBaseSize,
-                deltaWitnessDataSize,
-                currentUnfixedBaseSize,
-                currentUnfixedWitnessDataSize
-            });
-            deltaWitnessDataSize = deltaBaseSize = 0;
-        }
-
-        this.deltaBaseSize = deltaBaseSize;
-        this.deltaWitnessDataSize = deltaWitnessDataSize;
     }
 
     // Get info about estimated transaction size change when compared to last saved tx size info
@@ -280,8 +231,8 @@ export class TransactionSize extends TransactionSizeState {
     // Internal object methods
     //
 
-    _totalSizeFromBaseSize(baseSize, unfixed = false) {
-        return this.hasWitness ? baseSize + (unfixed ? this.witnessDataSize - this.deltaWitnessDataSize : this.witnessDataSize) : baseSize;
+    _totalSizeFromBaseSize(baseSize) {
+        return this.hasWitness ? baseSize + this.witnessDataSize : baseSize;
     }
 }
 
@@ -375,10 +326,6 @@ function computeTxWeight(baseSize, totalSize) {
 
 function computeTxVirtualSize(weight) {
     return Math.ceil(weight / 4);
-}
-
-function computeTxBaseSize(totalSize, weight) {
-    return Math.round((weight - totalSize) / 3);
 }
 
 
