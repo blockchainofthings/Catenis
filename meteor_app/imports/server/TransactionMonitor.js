@@ -1276,7 +1276,7 @@ function validateNewTxsBatchDependency(blockInfo) {
 
             fut.wait();
 
-            this.removeListener(TransactionMonitor.internalEvent.blockchain_polling_done, newTxsBatchProcDoneCallback);
+            this.removeListener(TransactionMonitor.internalEvent.new_txs_batch_processing_done, newTxsBatchProcDoneCallback);
             clearTimeout(idTmo);
         }).wait();
 
