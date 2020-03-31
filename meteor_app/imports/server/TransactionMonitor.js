@@ -57,6 +57,8 @@ const cfgSettings = {
     purgeFoundNewCtnTxsInterval: txMonitorConfig.get('purgeFoundNewCtnTxsInterval'),
     limitTxConfirmTime: txMonitorConfig.get('limitTxConfirmTime'),
     checkOldUnconfTxsInterval: txMonitorConfig.get('checkOldUnconfTxsInterval'),
+    checkOldUnconfTxsDelay: txMonitorConfig.get('checkOldUnconfTxsDelay'),
+    blocksBehindToFixUnconfTxs: txMonitorConfig.get('blocksBehindToFixUnconfTxs'),
     newTxsBatchProcDoneTimeout: txMonitorConfig.get('newTxsBatchProcDoneTimeout')
 };
 
@@ -157,13 +159,9 @@ export class TransactionMonitor extends events.EventEmitter {
             Catenis.logger.TRACE('Setting recurring timer to check for old unconfirmed transactions');
             this.idCheckUnconfTxsInterval = Meteor.setInterval(checkOldUnconfirmedTxs.bind(this), cfgSettings.checkOldUnconfTxsInterval);
 
-            // TODO: we need to make sure that this procedure is only started after all currently issued blockchain
-            //  blocks are processed. For now, we should increase that timeout (add a new parameter to the config file).
-            //  Ideally, though, we should wait for an event an internal event that all currently issued blocks have
-            //  been processed
-            // Do not check for old unconfirmed transactions right now, but give it some time (1 min) for
-            //  the normal processing of blockchain blocks to catch up before doing the first check
-            Meteor.setTimeout(checkOldUnconfirmedTxs.bind(this), 60000);
+            // Do not check for old unconfirmed transactions right now, but give it some time for the
+            //  normal processing of blockchain blocks to catch up before doing the first check
+            Meteor.setTimeout(checkOldUnconfirmedTxs.bind(this), cfgSettings.checkOldUnconfTxsDelay);
         }
 
         if (this.idPurgeFoundNewCtnTxsInterval === undefined) {
@@ -1362,7 +1360,7 @@ function checkOldUnconfirmedTxs() {
         Catenis.logger.WARN('Found old unconfirmed transactions', oldUnconfTxs);
 
         // Fix old unconfirmed transactions
-        Catenis.logger.TRACE('Fixing old unconfirmed transactions');
+        Catenis.logger.TRACE('Check if old unconfirmed transactions should be fixed');
         if (docOldUnconfSentTxs.length > 0) {
             fixOldUnconfirmedTxs.call(this, docOldUnconfSentTxs, Transaction.source.sent_tx);
         }
@@ -1373,7 +1371,6 @@ function checkOldUnconfirmedTxs() {
     }
 }
 
-// TODO: to avoid concurrency with the regular processing of blockchain blocks, recently confirmed txs should be filtered out
 function fixOldUnconfirmedTxs(docTxs, source) {
     try {
         const eventsToEmit = [];
@@ -1426,8 +1423,9 @@ function fixOldUnconfirmedTxs(docTxs, source) {
                 });
             }
 
-            if (isConfirmed) {
-                // Process confirmed transactions
+            if (isConfirmed && getBlockHeight(blockInfo.hash) <= this.lastBlock.height - cfgSettings.blocksBehindToFixUnconfTxs) {
+                // Process confirmed transaction
+                Catenis.logger.TRACE('Old unconfirmed transaction (txid: %s) already confirmed; process it now', docTx.txid);
                 (source === Transaction.source.sent_tx ? processConfirmedSentTransactions : processConfirmedReceivedTransactions)(docTx, eventsToEmit);
 
                 // Save transactions to update confirmation state in local database by block

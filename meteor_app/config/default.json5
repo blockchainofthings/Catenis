@@ -625,6 +625,8 @@
     "purgeFoundNewCtnTxsInterval": 3600000,  // (1 hour) Time interval, in milliseconds, for executing method to purge transactions from list of found new Catenis transactions
     "limitTxConfirmTime": 360,  // (6 hour) Time, in minutes, after which it is expected for any Catenis issued transaction to have already been confirmed
     "checkOldUnconfTxsInterval": 1800000,  // (30 min.) Time interval, in milliseconds, for checking if there are old transactions that have not yet been confirmed
+    checkOldUnconfTxsDelay: 300000,  // (5 min.) Time, in milliseconds, to wait before checking if there are old transactions that have not yet been confirmed
+    blocksBehindToFixUnconfTxs: 2,  // Number of blocks that old unconfirmed transactions should have been confirmed for they to be fixed
     "newTxsBatchProcDoneTimeout": 60000  // (1 min.) Timeout, in milliseconds, for waiting for a given new transactions batch to finish processing
   },
   // Parameters pertaining to CatenisMessage module
