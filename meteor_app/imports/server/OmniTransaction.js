@@ -101,43 +101,119 @@ export class OmniTransaction extends Transaction {
         this.referenceAddress = undefined;
     }
 
+    // Add one or more inputs to the transaction (spending a given unspent tx output each)
+    //
+    //  Arguments:
+    //   inputs [Array(Object)|Object] [{
+    //     txout {  Unspent tx output to spend
+    //       txid: [String],   Transaction ID
+    //       vout: [Number],   Output number in tx
+    //       amount: [Number]  Amount help by output in satoshis
+    //     },
+    //     isWitness: [Boolean],    Indicates whether unspent tx output is of a (segregated) witness type
+    //     scriptPubKey: [String],  (not required for non-witness outputs) Hex-encoded public key script of unspent tx output
+    //     address: [String],       Blockchain address associated with unspent tx output
+    //     addrInfo: [Object]       Catenis address info including crypto key pair required to spend output
+    //   }]
+    //   pos [Number]  Position (starting from zero) at which inputs should be added to transaction in sequence. If the
+    //                  specified position is already taken, the current inputs are pushed aside (shifted) before inserting
+    //                  the new ones. If no position is specified, inputs are added after the last occupied position
+    //
+    //  Return:
+    //   posAdded [Number]  Starting position where inputs have been effectively added, or
+    //                       `undefined` if no inputs have been added
     addInputs(inputs, pos) {
         return super.addInputs(inputs, fixInputPosition.call(this, pos));
     }
 
+    // Add one or more outputs to the transaction
+    //
+    //  Arguments:
+    //   outputs [Array(Object)|Object] [{
+    //     type: [Object],   Object representing the type of the tx output. Valid values: any of the properties of BitcoinInfo.outputType
+    //     payInfo: {   Should only be specified for a paying output type (any type other than 'nulldata' or 'unknown')
+    //       address: [String|Array(String)],  Blockchain address to where payment should be sent.
+    //                                          NOTE: for 'multisig' outputs, this is actually a list of addresses
+    //       nSigs: [Number],     Number of signatures required to spend multi-signature output. Should only be specified for 'multisig' output type
+    //       amount: [Number],    Amount, in satoshis, to send
+    //       addrInfo: [Array(Object|String)]  List of Catenis address infos (including crypto key pair required to spend output) or hex-encoded
+    //                                          public keys (for non-Catenis blockchain addresses). Should only be specified for 'multisig' output type
+    //     },
+    //     data: [Object(Buffer)]   Data to embed for 'nulldata' output type
+    //   }]
+    //   pos [Number]  Position (starting from zero) at which outputs should be added to transaction in sequence. If the
+    //                  specified position is already taken, the current outputs are pushed aside (shifted) before inserting
+    //                  the new ones. If no position is specified, inputs are added after the last occupied position
+    //
+    //  Return:
+    //   posAdded [Number]  Starting position where outputs have been effectively added, or
+    //                       `undefined` if no outputs have been added
     addOutputs(outputs, pos) {
         return super.addOutputs(outputs, fixOutputPosition.call(this, pos));
     }
 
-    addSendingAddressInput(txout, address, addrInfo) {
+    // Add an input to the transaction used to indicate from where Omni assets should be sent
+    //
+    //  Arguments:
+    //   txout [Object] {  Unspent tx output to spend
+    //     txid: [String],   Transaction ID
+    //     vout: [Number],   Output number in tx
+    //     amount: [Number]  Amount held by output in satoshis
+    //   }
+    //   outputInfo [Object] {
+    //     isWitness: [Boolean],    Indicates whether unspent tx output is of a (segregated) witness type
+    //     scriptPubKey: [String],  (not required for non-witness outputs) Hex-encoded public key script of unspent tx output
+    //     address: [String],       Blockchain address associated with unspent tx output
+    //     addrInfo: [Object]       Catenis address info including crypto key pair required to spend output
+    //   }
+    //
+    //  Return:
+    //   posAdded [Number]  Position where input has been effectively added, or
+    //                       `undefined` if input has not been added
+    addSendingAddressInput(txout, outputInfo) {
         if (!this.hasSendingAddressInput) {
-            const result = this.addInput(txout, address, addrInfo, 0);
+            const posAdded = this.addInput(txout, outputInfo, 0);
 
-            this.sendingAddress = address;
+            this.sendingAddress = outputInfo.address;
 
-            return result;
+            return posAdded;
         }
         else {
             Catenis.logger.ERROR('Omni transaction already has a Sending Address input');
         }
     }
 
+    // Add an output to the transaction used to indicate to where the Omni assets should be sent
+    //
+    //  Arguments:
+    //   address [String]  Blockchain address to where payment should be sent
+    //   amount [Number]  Amount, in satoshis, to send
+    //
+    //  Return:
+    //   posAdded [Number]  Position where output has been effectively added, or
+    //                       `undefined` if output has not been added
     addReferenceAddressOutput(address, amount) {
         if (!this.hasReferenceAddressOutput) {
-            const result = this.addP2PKHOutput(address, amount);
+            const posAdded = this.addPubKeyHashOutput(address, amount);
 
             this.referenceAddress = address;
 
-            return result;
+            return posAdded;
         }
         else {
             Catenis.logger.ERROR('Omni transaction already as a Reference Address output');
         }
     }
 
+    // Add an output to the transaction that embeds data encoded according to the Omni transaction type
+    //
     // NOTE: arguments depend on Omni transaction type
     //  omniTxType.simpleSend:
     //    amount [Number|String] - Amount of property tokens to send expressed in the token's lowest unit
+    //
+    //  Return:
+    //   posAdded [Number]  Position where output has been effectively added, or
+    //                       `undefined` if output has not been added
     addOmniPayloadOutput() {
         if (!this.hasOmniPayloadOutput) {
             let omniData;
@@ -152,11 +228,11 @@ export class OmniTransaction extends Transaction {
 
             if (omniData) {
                 // Add null data output
-                const result = this.addNullDataOutput(Buffer.concat([Buffer.from(omniDataPrefix), Buffer.from(omniData, 'hex')]));
+                const posAdded = this.addNullDataOutput(Buffer.concat([Buffer.from(omniDataPrefix), Buffer.from(omniData, 'hex')]));
 
                 this.hasOmniPayloadOutput = true;
 
-                return result;
+                return posAdded;
             }
         }
         else {

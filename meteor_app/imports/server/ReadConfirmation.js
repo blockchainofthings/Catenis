@@ -122,7 +122,7 @@ ReadConfirmation.prototype.confirmMessageRead = function (sendMsgTransact, confi
     readConfirmCS.execute(() => {
         // Find read confirmation output of send message transaction
         const readConfirmOutputPos = sendMsgTransact.transact.outputs.findIndex((output) => {
-            if (output.type === Transaction.outputType.P2PKH) {
+            if (output.type === BitcoinInfo.outputType.witness_v0_keyhash || output.type === BitcoinInfo.outputType.pubkeyhash) {
                 let addrInfo;
 
                 if (output.payInfo.addrInfo === undefined && (addrInfo = Catenis.keyStore.getAddressInfo(output.payInfo.address, true)) !== null) {
@@ -159,7 +159,7 @@ ReadConfirmation.prototype.confirmMessageRead = function (sendMsgTransact, confi
             this.activeReadConfirmTransact.addSendMsgTxToConfirm(sendMsgTransact, readConfirmOutputPos, confirmType);
 
             if (this.activeReadConfirmTransact.needsToFund() || this.activeReadConfirmTransact.needsToSend()) {
-                if (this.activeReadConfirmTransact.transact.estimateSize() > Transaction.maxTxSize * cfgSettings.txSizeThresholdRatio) {
+                if (this.activeReadConfirmTransact.transact.estimateSize().vsize > Transaction.maxTxVsize * cfgSettings.txSizeThresholdRatio) {
                     // Current transaction size is above threshold
 
                     // Terminate currently active read confirmation transaction resetting its fee rate
@@ -774,7 +774,8 @@ function newReadConfirmTransactionFromDiff(confirmedTransact, lastSentTransact) 
 
     diffResult.outputs.forEach((diffOutput) => {
         // Only take into consideration outputs of system spend read confirmation addresses
-        if (diffOutput.output.type === Transaction.outputType.P2PKH && (diffOutput.output.payInfo.addrInfo.type === KeyStore.extKeyType.sys_read_conf_spnd_ntfy_addr.name
+        if ((diffOutput.output.type === BitcoinInfo.outputType.witness_v0_keyhash || diffOutput.output.type === BitcoinInfo.outputType.pubkeyhash)
+                && (diffOutput.output.payInfo.addrInfo.type === KeyStore.extKeyType.sys_read_conf_spnd_ntfy_addr.name
                 || diffOutput.output.payInfo.addrInfo.type === KeyStore.extKeyType.sys_read_conf_spnd_only_addr.name
                 || diffOutput.output.payInfo.addrInfo.type === KeyStore.extKeyType.sys_read_conf_spnd_null_addr.name)) {
             if (diffOutput.diffType === Transaction.diffType.insert) {

@@ -36,6 +36,7 @@ import {
     areAddressesFromSameDevice
 } from './SendMessageTransaction';
 import { CatenisNode } from './CatenisNode';
+import { BitcoinInfo } from './BitcoinInfo';
 
 // Config entries
 /*const config_entryConfig = config.get('config_entry');
@@ -229,7 +230,7 @@ IssueAssetTransaction.prototype.buildTransaction = function () {
                 initTxInputs: this.ccTransact.inputs
             }
         });
-        const devAssetIssueAddrAllocResult = devAssetIssueAddrFundSource.allocateFund(Service.devAssetIssuanceAddrAmount);
+        const devAssetIssueAddrAllocResult = devAssetIssueAddrFundSource.allocateFund(Service.devAssetIssuanceAddrAmount(typeof devAssetIssueAddr === 'string' ? devAssetIssueAddr : undefined));
 
         // Make sure that UTXOs have been correctly allocated
         if (devAssetIssueAddrAllocResult === null) {
@@ -251,7 +252,12 @@ IssueAssetTransaction.prototype.buildTransaction = function () {
         const devAssetIssueAddrAllocUtxo = devAssetIssueAddrAllocResult.utxos[0];
 
         // Add Colored Coins asset issuing input
-        this.ccTransact.addIssuingInput(devAssetIssueAddrAllocUtxo.txout, devAssetIssueAddrAllocUtxo.address, Catenis.keyStore.getAddressInfo(devAssetIssueAddrAllocUtxo.address), this.amount, this.assetInfo.issuingOpts);
+        this.ccTransact.addIssuingInput(devAssetIssueAddrAllocUtxo.txout, {
+            isWitness: devAssetIssueAddrAllocUtxo.isWitness,
+            scriptPubKey: devAssetIssueAddrAllocUtxo.scriptPubKey,
+            address: devAssetIssueAddrAllocUtxo.address,
+            addrInfo: Catenis.keyStore.getAddressInfo(devAssetIssueAddrAllocUtxo.address)
+        }, this.amount, this.assetInfo.issuingOpts);
 
         // Add Colored Coins asset transfer output
         this.ccTransact.setTransferOutput(this.holdingDevice.assetAddr.newAddressKeys().getAddress(), this.amount, 0);
@@ -291,42 +297,46 @@ IssueAssetTransaction.prototype.buildTransaction = function () {
 
         if (this.asset || this.assetInfo.issuingOpts.type === CCTransaction.issuingAssetType.unlocked) {
             // Issuing an unlocked asset. Add issuing device asset issuance address #1 refund output
-            this.ccTransact.addP2PKHOutput(devAssetIssueAddrAllocUtxo.address, Service.devAssetIssuanceAddrAmount);
+            const addrAmount = Service.devAssetIssuanceAddrAmount(devAssetIssueAddrAllocUtxo.address);
+            this.ccTransact.addPubKeyHashOutput(devAssetIssueAddrAllocUtxo.address, addrAmount);
 
-            const changeAmount = this.asset ? devAssetIssueAddrAllocResult.changeAmount : Service.deviceAssetProvisionCost - Service.devAssetIssuanceAddrAmount;
+            const changeAmount = this.asset ? devAssetIssueAddrAllocResult.changeAmount : Service.deviceAssetProvisionCost(devAssetIssueAddrAllocUtxo.address) - addrAmount;
 
             // NOTE: we do not care to check if change is not below dust amount because it is guaranteed
             //      that the change amount be a multiple of the basic amount that is allocated to device
             //      asset issuance addresses which in turn is guaranteed to not be below dust
             if (changeAmount > 0) {
                 // Add issuing device asset issuance address #1 change output
-                this.ccTransact.addP2PKHOutput(devAssetIssueAddrAllocUtxo.address, changeAmount);
+                this.ccTransact.addPubKeyHashOutput(devAssetIssueAddrAllocUtxo.address, changeAmount);
             }
         }
 
         if (!this.asset) {
             // Not reissuing an asset. Add issuing device asset issuance address #2 refund output
-            this.ccTransact.addP2PKHOutput(this.issuingDevice.assetIssuanceAddr.newAddressKeys().getAddress(), Service.devAssetIssuanceAddrAmount);
+            this.ccTransact.addPubKeyHashOutput(this.issuingDevice.assetIssuanceAddr.newAddressKeys().getAddress(), Service.devAssetIssuanceAddrAmount());
 
             // NOTE: we do not care to check if change is not below dust amount because it is guaranteed
             //      that the change amount be a multiple of the basic amount that is allocated to device
             //      asset issuance addresses which in turn is guaranteed to not be below dust
             if (devAssetIssueAddrAllocResult.changeAmount > 0) {
                 // Add issuing device asset issuance address #3 change output
-                this.ccTransact.addP2PKHOutput(this.issuingDevice.assetIssuanceAddr.newAddressKeys().getAddress(), devAssetIssueAddrAllocResult.changeAmount);
+                this.ccTransact.addPubKeyHashOutput(this.issuingDevice.assetIssuanceAddr.newAddressKeys().getAddress(), devAssetIssueAddrAllocResult.changeAmount);
             }
         }
 
         // Now, allocate UTXOs to pay for tx expense
+        const txChangeOutputType = BitcoinInfo.getOutputTypeByAddressType(this.issuingDevice.client.ctnNode.payTxExpenseAddr.btcAddressType);
         const payTxFundSource = new FundSource(this.issuingDevice.client.ctnNode.payTxExpenseAddr.listAddressesInUse(), {
             useUnconfirmedUtxo: true,
             unconfUtxoInfo: {
                 initTxInputs: this.ccTransact.inputs
             },
-            smallestChange: true
+            smallestChange: true,
+            useAllNonWitnessUtxosFirst: true,   // Default setting; could have been omitted
+            useWitnessOutputForChange: txChangeOutputType.isWitness
         });
         const payTxAllocResult = payTxFundSource.allocateFundForTxExpense({
-            txSize: this.ccTransact.estimateSize(),
+            txSzStSnapshot: this.ccTransact.txSize,
             inputAmount: this.ccTransact.totalInputsAmount(),
             outputAmount: this.ccTransact.totalOutputsAmount()
         }, false, Catenis.bitcoinFees.getFeeRateByTime(Service.minutesToConfirmAssetIssuance));
@@ -341,14 +351,16 @@ IssueAssetTransaction.prototype.buildTransaction = function () {
         this.ccTransact.addInputs(payTxAllocResult.utxos.map((utxo) => {
             return {
                 txout: utxo.txout,
+                isWitness: utxo.isWitness,
+                scriptPubKey: utxo.scriptPubKey,
                 address: utxo.address,
                 addrInfo: Catenis.keyStore.getAddressInfo(utxo.address)
             }
         }));
 
-        if (payTxAllocResult.changeAmount >= Transaction.txOutputDustAmount) {
+        if (payTxAllocResult.changeAmount >= Transaction.dustAmountByOutputType(txChangeOutputType)) {
             // Add new output to receive change
-            this.ccTransact.addP2PKHOutput(this.issuingDevice.client.ctnNode.payTxExpenseAddr.newAddressKeys().getAddress(), payTxAllocResult.changeAmount);
+            this.ccTransact.addPubKeyHashOutput(this.issuingDevice.client.ctnNode.payTxExpenseAddr.newAddressKeys().getAddress(), payTxAllocResult.changeAmount);
         }
 
         // Indicate that transaction is already built

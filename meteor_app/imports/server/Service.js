@@ -23,12 +23,13 @@ import { _ } from 'meteor/underscore';
 
 // References code in other (Catenis) modules
 import { Catenis } from './Catenis';
-import { Transaction } from './Transaction';
 import { RbfTransactionInfo } from './RbfTransactionInfo';
 import { Client } from './Client';
 import { Device } from './Device';
 import { Util } from './Util';
 import { BcotToken } from './BcotToken';
+import { TransactionSize } from './TransactionSize';
+import { Transaction } from './Transaction';
 
 // Config entries
 const serviceConfig = config.get('service');
@@ -45,7 +46,6 @@ const cfgSettings = {
         multiplyFactor: serviceConfig.get('systemFunding.multiplyFactor')
     },
     serviceCreditIssueAddrFunding: {
-        unitAmount: serviceConfig.get('serviceCreditIssueAddrFunding.unitAmount'),
         maxUnitsPerUtxo: serviceConfig.get('serviceCreditIssueAddrFunding.maxUnitsPerUtxo'),
         minUtxosToFund: serviceConfig.get('serviceCreditIssueAddrFunding.minUtxosToFund'),
         unitsPerPrePaidClients: serviceConfig.get('serviceCreditIssueAddrFunding.unitsPerPrePaidClients'),
@@ -54,7 +54,6 @@ const cfgSettings = {
         postPaidClientsToFund: serviceConfig.get('serviceCreditIssueAddrFunding.postPaidClientsToFund')
     },
     bcotSaleStockAddrFunding: {
-        unitAmount: serviceConfig.get('bcotSaleStockAddrFunding.unitAmount'),
         maxUnitsPerUtxo: serviceConfig.get('bcotSaleStockAddrFunding.maxUnitsPerUtxo'),
         minUtxosToFund: serviceConfig.get('bcotSaleStockAddrFunding.minUtxosToFund'),
         unitsPerPrePaidClients: serviceConfig.get('bcotSaleStockAddrFunding.unitsPerPrePaidClients'),
@@ -105,8 +104,10 @@ const cfgSettings = {
     servicePayment: {
         paymentResolution: serviceConfig.get('servicePayment.paymentResolution'),
         spendServiceCredit: {
-            initNumTxInputs: serviceConfig.get('servicePayment.spendServiceCredit.initNumTxInputs'),
-            initNumTxOutputs: serviceConfig.get('servicePayment.spendServiceCredit.initNumTxOutputs'),
+            initNumTxWitnessInputs: serviceConfig.get('servicePayment.spendServiceCredit.initNumTxWitnessInputs'),
+            initNumTxNonWitnessInputs: serviceConfig.get('servicePayment.spendServiceCredit.initNumTxNonWitnessInputs'),
+            initNumTxWitnessOutputs: serviceConfig.get('servicePayment.spendServiceCredit.initNumTxWitnessOutputs'),
+            initNumTxNonWitnessOutputs: serviceConfig.get('servicePayment.spendServiceCredit.initNumTxNonWitnessOutputs'),
             initNumPubKeysMultiSigTxOutputs: serviceConfig.get('servicePayment.spendServiceCredit.initNumPubKeysMultiSigTxOutputs'),
             txNullDataPayloadSize: serviceConfig.get('servicePayment.spendServiceCredit.txNullDataPayloadSize'),
             maxNumClients: serviceConfig.get('servicePayment.spendServiceCredit.maxNumClients'),
@@ -118,8 +119,10 @@ const cfgSettings = {
             txFeeRateIncrement: serviceConfig.get('servicePayment.spendServiceCredit.txFeeRateIncrement')
         },
         debitServiceAccount: {
-            initNumTxInputs: serviceConfig.get('servicePayment.debitServiceAccount.initNumTxInputs'),
-            initNumTxOutputs: serviceConfig.get('servicePayment.debitServiceAccount.initNumTxOutputs'),
+            initNumTxWitnessInputs: serviceConfig.get('servicePayment.debitServiceAccount.initNumTxWitnessInputs'),
+            initNumTxNonWitnessInputs: serviceConfig.get('servicePayment.debitServiceAccount.initNumTxNonWitnessInputs'),
+            initNumTxWitnessOutputs: serviceConfig.get('servicePayment.debitServiceAccount.initNumTxWitnessOutputs'),
+            initNumTxNonWitnessOutputs: serviceConfig.get('servicePayment.debitServiceAccount.initNumTxNonWitnessOutputs'),
             initNumPubKeysMultiSigTxOutputs: serviceConfig.get('servicePayment.debitServiceAccount.initNumPubKeysMultiSigTxOutputs'),
             txNullDataPayloadSize: serviceConfig.get('servicePayment.debitServiceAccount.txNullDataPayloadSize'),
             maxNumClients: serviceConfig.get('servicePayment.debitServiceAccount.maxNumClients'),
@@ -135,7 +138,6 @@ const cfgSettings = {
         minutesToConfirm: serviceConfig.get('sysMessage.minutesToConfirm'),
         unconfMainAddrReuses: serviceConfig.get('sysMessage.unconfMainAddrReuses'),
         mainAddrFunding: {
-            unitAmount: serviceConfig.get('sysMessage.mainAddrFunding.unitAmount'),
             maxUnitsPerAddr: serviceConfig.get('sysMessage.mainAddrFunding.maxUnitsPerAddr'),
             minAddrsToFund: serviceConfig.get('sysMessage.mainAddrFunding.minAddrsToFund')
         },
@@ -145,13 +147,17 @@ const cfgSettings = {
     },
     sysTxConfig: {
         sendSysMessage: {
-            numInputs: serviceConfig.get('sysTxConfig.sendSysMessage.numInputs'),
-            numOutputs: serviceConfig.get('sysTxConfig.sendSysMessage.numOutputs'),
+            numWitnessInputs: serviceConfig.get('sysTxConfig.sendSysMessage.numWitnessInputs'),
+            numNonWitnessInputs: serviceConfig.get('sysTxConfig.sendSysMessage.numNonWitnessInputs'),
+            numWitnessOutputs: serviceConfig.get('sysTxConfig.sendSysMessage.numWitnessOutputs'),
+            numNonWitnessOutputs: serviceConfig.get('sysTxConfig.sendSysMessage.numNonWitnessOutputs'),
             nullDataPayloadSize: serviceConfig.get('sysTxConfig.sendSysMessage.nullDataPayloadSize')
         },
         settleOffChainMessages: {
-            numInputs: serviceConfig.get('sysTxConfig.settleOffChainMessages.numInputs'),
-            numOutputs: serviceConfig.get('sysTxConfig.settleOffChainMessages.numOutputs'),
+            numWitnessInputs: serviceConfig.get('sysTxConfig.settleOffChainMessages.numWitnessInputs'),
+            numNonWitnessInputs: serviceConfig.get('sysTxConfig.settleOffChainMessages.numNonWitnessInputs'),
+            numWitnessOutputs: serviceConfig.get('sysTxConfig.settleOffChainMessages.numWitnessOutputs'),
+            numNonWitnessOutputs: serviceConfig.get('sysTxConfig.settleOffChainMessages.numNonWitnessOutputs'),
             nullDataPayloadSize: serviceConfig.get('sysTxConfig.settleOffChainMessages.nullDataPayloadSize')
         }
     },
@@ -159,16 +165,16 @@ const cfgSettings = {
         messagesPerMinute: serviceConfig.get('message.messagesPerMinute'),
         minutesToConfirm: serviceConfig.get('message.minutesToConfirm'),
         unconfMainAddrReuses: serviceConfig.get('message.unconfMainAddrReuses'),
-        readConfirmAddrAmount: serviceConfig.get('message.readConfirmAddrAmount'),
         mainAddrFunding: {
-            unitAmount: serviceConfig.get('message.mainAddrFunding.unitAmount'),
             maxUnitsPerAddr: serviceConfig.get('message.mainAddrFunding.maxUnitsPerAddr'),
             minAddrsToFund: serviceConfig.get('message.mainAddrFunding.minAddrsToFund')
         },
         readConfirmation: {
             paymentResolution: serviceConfig.get('message.readConfirmation.paymentResolution'),
-            initNumTxInputs: serviceConfig.get('message.readConfirmation.initNumTxInputs'),
-            initNumTxOutputs: serviceConfig.get('message.readConfirmation.initNumTxOutputs'),
+            initNumTxWitnessInputs: serviceConfig.get('message.readConfirmation.initNumTxWitnessInputs'),
+            initNumTxNonWitnessInputs: serviceConfig.get('message.readConfirmation.initNumTxNonWitnessInputs'),
+            initNumTxWitnessOutputs: serviceConfig.get('message.readConfirmation.initNumTxWitnessOutputs'),
+            initNumTxNonWitnessOutputs: serviceConfig.get('message.readConfirmation.initNumTxNonWitnessOutputs'),
             txNullDataPayloadSize: serviceConfig.get('message.readConfirmation.txNullDataPayloadSize'),
             txInputOutputGrowthRatio: serviceConfig.get('message.readConfirmation.txInputOutputGrowthRatio'),
             percMaxUnitsPayTxExp: serviceConfig.get('message.readConfirmation.percMaxUnitsPayTxExp'),
@@ -203,7 +209,6 @@ const cfgSettings = {
             minutesToConfirm: serviceConfig.get('asset.issuance.minutesToConfirm'),
             unconfAssetIssueAddrReuses: serviceConfig.get('asset.issuance.unconfAssetIssueAddrReuses'),
             assetIssueAddrFunding: {
-                unitAmount: serviceConfig.get('asset.issuance.assetIssueAddrFunding.unitAmount'),
                 maxUnitsPerAddr: serviceConfig.get('asset.issuance.assetIssueAddrFunding.maxUnitsPerAddr'),
                 minAddrsToFund: serviceConfig.get('asset.issuance.assetIssueAddrFunding.minAddrsToFund')
             }
@@ -214,28 +219,38 @@ const cfgSettings = {
     },
     serviceTxConfig: {
         logMessage: {
-            numInputs: serviceConfig.get('serviceTxConfig.logMessage.numInputs'),
-            numOutputs: serviceConfig.get('serviceTxConfig.logMessage.numOutputs'),
+            numWitnessInputs: serviceConfig.get('serviceTxConfig.logMessage.numWitnessInputs'),
+            numNonWitnessInputs: serviceConfig.get('serviceTxConfig.logMessage.numNonWitnessInputs'),
+            numWitnessOutputs: serviceConfig.get('serviceTxConfig.logMessage.numWitnessOutputs'),
+            numNonWitnessOutputs: serviceConfig.get('serviceTxConfig.logMessage.numNonWitnessOutputs'),
             nullDataPayloadSize: serviceConfig.get('serviceTxConfig.logMessage.nullDataPayloadSize')
         },
         sendMessage: {
-            numInputs: serviceConfig.get('serviceTxConfig.sendMessage.numInputs'),
-            numOutputs: serviceConfig.get('serviceTxConfig.sendMessage.numOutputs'),
+            numWitnessInputs: serviceConfig.get('serviceTxConfig.sendMessage.numWitnessInputs'),
+            numNonWitnessInputs: serviceConfig.get('serviceTxConfig.sendMessage.numNonWitnessInputs'),
+            numWitnessOutputs: serviceConfig.get('serviceTxConfig.sendMessage.numWitnessOutputs'),
+            numNonWitnessOutputs: serviceConfig.get('serviceTxConfig.sendMessage.numNonWitnessOutputs'),
             nullDataPayloadSize: serviceConfig.get('serviceTxConfig.sendMessage.nullDataPayloadSize')
         },
         sendMsgReadConfirm: {
-            numInputs: serviceConfig.get('serviceTxConfig.sendMsgReadConfirm.numInputs'),
-            numOutputs: serviceConfig.get('serviceTxConfig.sendMsgReadConfirm.numOutputs'),
+            numWitnessInputs: serviceConfig.get('serviceTxConfig.sendMsgReadConfirm.numWitnessInputs'),
+            numNonWitnessInputs: serviceConfig.get('serviceTxConfig.sendMsgReadConfirm.numNonWitnessInputs'),
+            numWitnessOutputs: serviceConfig.get('serviceTxConfig.sendMsgReadConfirm.numWitnessOutputs'),
+            numNonWitnessOutputs: serviceConfig.get('serviceTxConfig.sendMsgReadConfirm.numNonWitnessOutputs'),
             nullDataPayloadSize: serviceConfig.get('serviceTxConfig.sendMsgReadConfirm.nullDataPayloadSize')
         },
         issueAsset: {
-            numInputs: serviceConfig.get('serviceTxConfig.issueAsset.numInputs'),
-            numOutputs: serviceConfig.get('serviceTxConfig.issueAsset.numOutputs'),
+            numWitnessInputs: serviceConfig.get('serviceTxConfig.issueAsset.numWitnessInputs'),
+            numNonWitnessInputs: serviceConfig.get('serviceTxConfig.issueAsset.numNonWitnessInputs'),
+            numWitnessOutputs: serviceConfig.get('serviceTxConfig.issueAsset.numWitnessOutputs'),
+            numNonWitnessOutputs: serviceConfig.get('serviceTxConfig.issueAsset.numNonWitnessOutputs'),
             nullDataPayloadSize: serviceConfig.get('serviceTxConfig.issueAsset.nullDataPayloadSize')
         },
         transferAsset: {
-            numInputs: serviceConfig.get('serviceTxConfig.transferAsset.numInputs'),
-            numOutputs: serviceConfig.get('serviceTxConfig.transferAsset.numOutputs'),
+            numWitnessInputs: serviceConfig.get('serviceTxConfig.transferAsset.numWitnessInputs'),
+            numNonWitnessInputs: serviceConfig.get('serviceTxConfig.transferAsset.numNonWitnessInputs'),
+            numWitnessOutputs: serviceConfig.get('serviceTxConfig.transferAsset.numWitnessOutputs'),
+            numNonWitnessOutputs: serviceConfig.get('serviceTxConfig.transferAsset.numNonWitnessOutputs'),
             nullDataPayloadSize: serviceConfig.get('serviceTxConfig.transferAsset.nullDataPayloadSize')
         }
     },
@@ -269,34 +284,34 @@ Service.testFunctions = function () {
         numActiveSystemDeviceMainAddresses: numActiveSystemDeviceMainAddresses(),
         estimatedSendSystemMessageTxCost: estimatedSendSystemMessageTxCost(),
         estimatedSettleOffChainMessagesTxCost: estimatedSettleOffChainMessagesTxCost(),
-        typicalSendSystemMessageTxSize: typicalSendSystemMessageTxSize(),
-        typicalSettleOffChainMessagesTxSize: typicalSettleOffChainMessagesTxSize(),
+        typicalSendSystemMessageTxVsize: typicalSendSystemMessageTxVsize(),
+        typicalSettleOffChainMessagesTxVsize: typicalSettleOffChainMessagesTxVsize(),
         deviceProvisionCost: deviceProvisionCost(),
         deviceMessageProvisionCost: deviceMessageProvisionCost(),
-        deviceAssetProvisionCost: deviceAssetProvisionCost(),
+        deviceAssetProvisionCost: Service.deviceAssetProvisionCost(),
         numActiveDeviceMainAddresses: numActiveDeviceMainAddresses(),
         numActiveDeviceAssetIssuanceAddresses: numActiveDeviceAssetIssuanceAddresses(),
         highestEstimatedServiceTxCost: highestEstimatedServiceTxCost(),
         averageEstimatedServiceTxCost: averageEstimatedServiceTxCost(),
         estimatedLogMessageTxCost: estimatedLogMessageTxCost(),
-        typicalLogMessageTxSize: typicalLogMessageTxSize(),
+        typicalLogMessageTxVsize: typicalLogMessageTxVsize(),
         estimatedSendMessageTxCost: estimatedSendMessageTxCost(),
-        typicalSendMessageTxSize: typicalSendMessageTxSize(),
+        typicalSendMessageTxVsize: typicalSendMessageTxVsize(),
         estimatedSendMessageReadConfirmTxCost: estimatedSendMessageReadConfirmTxCost(),
-        typicalSendMessageReadConfirmTxSize: typicalSendMessageReadConfirmTxSize(),
+        typicalSendMessageReadConfirmTxVsize: typicalSendMessageReadConfirmTxVsize(),
         estimatedOffChainMsgEnvelopeCost: estimatedOffChainMsgEnvelopeCost(),
         estimatedOffChaiMsgReceiptCost: estimatedOffChaiMsgReceiptCost(),
         estimatedLogOffChainMessageCost: estimatedLogOffChainMessageCost(),
         estimatedSendOffChainMessageCost: estimatedSendOffChainMessageCost(),
         estimatedSendOffChainMessageReadConfirmCost: estimatedSendOffChainMessageReadConfirmCost(),
         estimatedIssueAssetTxCost: estimatedIssueAssetTxCost(),
-        typicalIssueAssetTxSize: typicalIssueAssetTxSize(),
+        typicalIssueAssetTxVsize: typicalIssueAssetTxVsize(),
         estimatedTransferAssetTxCost: estimatedTransferAssetTxCost(),
-        typicalTransferAssetTxSize: typicalTransferAssetTxSize(),
+        typicalTransferAssetTxVsize: typicalTransferAssetTxVsize(),
         highestEstimatedReadConfirmTxCostPerMessage: highestEstimatedReadConfirmTxCostPerMessage(),
         averageEstimatedReadConfirmTxCostPerMessage: averageEstimatedReadConfirmTxCostPerMessage(),
         estimatedTerminalReadConfirmTxCostPerMessage: estimatedTerminalReadConfirmTxCostPerMessage(),
-        typicalTerminalReadConfirmTxSize: typicalTerminalReadConfirmTxSize(),
+        typicalTerminalReadConfirmTxVsize: typicalTerminalReadConfirmTxVsize(),
         numInputsTerminalReadConfirmTx: numInputsTerminalReadConfirmTx(),
         numOutputsTerminalReadConfirmTx: numOutputsTerminalReadConfirmTx(),
         averageReadConfirmTxCostPerMessage: averageReadConfirmTxCostPerMessage(),
@@ -313,13 +328,13 @@ Service.testFunctions = function () {
 Service.getExpectedServiceCreditIssuanceBalance = function () {
     return (Math.ceil(Client.activePrePaidClientsCount() * cfgSettings.serviceCreditIssueAddrFunding.unitsPerPrePaidClients)
             + Math.ceil(Client.activePostPaidClientsCount() * cfgSettings.serviceCreditIssueAddrFunding.unitsPerPostPaidClients))
-            * cfgSettings.serviceCreditIssueAddrFunding.unitAmount;
+            * Service.serviceCreditIssuanceAddrAmount;
 };
 
 Service.getExpectedBcotSaleStockBalance = function () {
     return (Math.ceil(Client.activePrePaidClientsCount() * cfgSettings.bcotSaleStockAddrFunding.unitsPerPrePaidClients)
         + Math.ceil(Client.activePostPaidClientsCount() * cfgSettings.bcotSaleStockAddrFunding.unitsPerPostPaidClients))
-        * cfgSettings.bcotSaleStockAddrFunding.unitAmount;
+        * Service.bcotSaleStockAddrAmount;
 };
 
 Service.getMinimumPayTxExpenseBalance = function () {
@@ -339,7 +354,7 @@ Service.getMinimumOCMsgsSetlmtPayTxExpenseBalance = function () {
 };
 
 Service.distributeServiceCreditIssuanceFund = function (amount) {
-    let totalAmount = Util.roundToResolution(amount, cfgSettings.serviceCreditIssueAddrFunding.unitAmount);
+    let totalAmount = Util.roundToResolution(amount, Service.serviceCreditIssuanceAddrAmount);
 
     // Make sure that amount to fund is not below minimum
     const minFundAmount = Service.minServiceCreditIssuanceFundAmount;
@@ -350,12 +365,12 @@ Service.distributeServiceCreditIssuanceFund = function (amount) {
 
     return {
         totalAmount: totalAmount,
-        amountPerAddress: distributePayment(totalAmount, cfgSettings.serviceCreditIssueAddrFunding.unitAmount, cfgSettings.serviceCreditIssueAddrFunding.minUtxosToFund, cfgSettings.serviceCreditIssueAddrFunding.maxUnitsPerUtxo)
+        amountPerAddress: distributePayment(totalAmount, Service.serviceCreditIssuanceAddrAmount, cfgSettings.serviceCreditIssueAddrFunding.minUtxosToFund, cfgSettings.serviceCreditIssueAddrFunding.maxUnitsPerUtxo)
     };
 };
 
 Service.distributeBcotSaleStockFund = function (amount) {
-    let totalAmount = Util.roundToResolution(amount, cfgSettings.bcotSaleStockAddrFunding.unitAmount);
+    let totalAmount = Util.roundToResolution(amount, Service.bcotSaleStockAddrAmount);
 
     // Make sure that amount to fund is not below minimum
     const minFundAmount = Service.minBcotSaleStockFundAmount;
@@ -366,7 +381,7 @@ Service.distributeBcotSaleStockFund = function (amount) {
 
     return {
         totalAmount: totalAmount,
-        amountPerAddress: distributePayment(totalAmount, cfgSettings.bcotSaleStockAddrFunding.unitAmount, cfgSettings.bcotSaleStockAddrFunding.minUtxosToFund, cfgSettings.bcotSaleStockAddrFunding.maxUnitsPerUtxo)
+        amountPerAddress: distributePayment(totalAmount, Service.bcotSaleStockAddrAmount, cfgSettings.bcotSaleStockAddrFunding.minUtxosToFund, cfgSettings.bcotSaleStockAddrFunding.maxUnitsPerUtxo)
     };
 };
 
@@ -482,11 +497,11 @@ Service.distributeOCMsgsSetlmtPayTxExpenseFund = function (amount) {
 };
 
 Service.distributeSystemDeviceMainAddressFund = function () {
-    let totalAmount = numActiveSystemDeviceMainAddresses() * cfgSettings.sysMessage.mainAddrFunding.unitAmount;
+    let totalAmount = numActiveSystemDeviceMainAddresses() * Service.sysDevMainAddrAmount;
 
     return {
         totalAmount: totalAmount,
-        amountPerAddress: distributePayment(totalAmount, cfgSettings.sysMessage.mainAddrFunding.unitAmount, cfgSettings.sysMessage.mainAddrFunding.minAddrsToFund, cfgSettings.sysMessage.mainAddrFunding.maxUnitsPerAddr)
+        amountPerAddress: distributePayment(totalAmount, Service.sysDevMainAddrAmount, cfgSettings.sysMessage.mainAddrFunding.minAddrsToFund, cfgSettings.sysMessage.mainAddrFunding.maxUnitsPerAddr)
     }
 };
 
@@ -494,15 +509,15 @@ Service.distributeSystemDeviceMainAddressFund = function () {
 //  of the 'messagesPerMinute' and/or 'minutesToConfirm' system configuration settings (and thus the total funding
 //  amount that should be allocated)
 Service.distributeSystemMainAddressDeltaFund  = function (deltaAmount) {
-    return distributePayment(deltaAmount, cfgSettings.sysMessage.mainAddrFunding.unitAmount, cfgSettings.sysMessage.mainAddrFunding.minAddrsToFund, cfgSettings.sysMessage.mainAddrFunding.maxUnitsPerAddr)
+    return distributePayment(deltaAmount, Service.sysDevMainAddrAmount, cfgSettings.sysMessage.mainAddrFunding.minAddrsToFund, cfgSettings.sysMessage.mainAddrFunding.maxUnitsPerAddr)
 };
 
 Service.distributeDeviceMainAddressFund  = function () {
-    let totalAmount = numActiveDeviceMainAddresses() * cfgSettings.message.mainAddrFunding.unitAmount;
+    let totalAmount = numActiveDeviceMainAddresses() * Service.devMainAddrAmount;
 
     return {
         totalAmount: totalAmount,
-        amountPerAddress: distributePayment(totalAmount, cfgSettings.message.mainAddrFunding.unitAmount, cfgSettings.message.mainAddrFunding.minAddrsToFund, cfgSettings.message.mainAddrFunding.maxUnitsPerAddr)
+        amountPerAddress: distributePayment(totalAmount, Service.devMainAddrAmount, cfgSettings.message.mainAddrFunding.minAddrsToFund, cfgSettings.message.mainAddrFunding.maxUnitsPerAddr)
     };
 };
 
@@ -510,22 +525,23 @@ Service.distributeDeviceMainAddressFund  = function () {
 //  of the 'messagesPerMinute' and/or 'minutesToConfirm' system configuration settings (and thus the total funding
 //  amount that should be allocated)
 Service.distributeDeviceMainAddressDeltaFund  = function (deltaAmount) {
-    return distributePayment(deltaAmount, cfgSettings.message.mainAddrFunding.unitAmount, cfgSettings.message.mainAddrFunding.minAddrsToFund, cfgSettings.message.mainAddrFunding.maxUnitsPerAddr)
+    return distributePayment(deltaAmount, Service.devMainAddrAmount, cfgSettings.message.mainAddrFunding.minAddrsToFund, cfgSettings.message.mainAddrFunding.maxUnitsPerAddr)
 };
 
 Service.distributeDeviceAssetIssuanceAddressFund = function () {
-    let totalAmount = numActiveDeviceAssetIssuanceAddresses() * cfgSettings.asset.issuance.assetIssueAddrFunding.unitAmount;
+    const addrAmount = Service.devAssetIssuanceAddrAmount();
+    let totalAmount = numActiveDeviceAssetIssuanceAddresses() * addrAmount;
 
     return {
         totalAmount: totalAmount,
-        amountPerAddress: distributePayment(totalAmount, cfgSettings.asset.issuance.assetIssueAddrFunding.unitAmount, cfgSettings.asset.issuance.assetIssueAddrFunding.minAddrsToFund, cfgSettings.asset.issuance.assetIssueAddrFunding.maxUnitsPerAddr)
+        amountPerAddress: distributePayment(totalAmount, addrAmount, cfgSettings.asset.issuance.assetIssueAddrFunding.minAddrsToFund, cfgSettings.asset.issuance.assetIssueAddrFunding.maxUnitsPerAddr)
     };
 };
 // This method should be used to fix the funding amount allocated to a device's main addresses due to the change
 //  of the 'messagesPerMinute' and/or 'minutesToConfirm' system configuration settings (and thus the total funding
 //  amount that should be allocated)
 Service.distributeDeviceAssetIssuanceAddressDeltaFund  = function (deltaAmount) {
-    return distributePayment(deltaAmount, cfgSettings.asset.issuance.assetIssueAddrFunding.unitAmount, cfgSettings.asset.issuance.assetIssueAddrFunding.minAddrsToFund, cfgSettings.asset.issuance.assetIssueAddrFunding.maxUnitsPerAddr)
+    return distributePayment(deltaAmount, Service.devAssetIssuanceAddrAmount(), cfgSettings.asset.issuance.assetIssueAddrFunding.minAddrsToFund, cfgSettings.asset.issuance.assetIssueAddrFunding.maxUnitsPerAddr)
 };
 
 // Returns price data for Log Message service
@@ -648,6 +664,16 @@ Service.transferAssetServicePrice = function () {
     return getServicePrice(Service.clientPaidService.transfer_asset);
 };
 
+Service.devAssetIssuanceAddrAmount = function (address) {
+        return Catenis.application.legacyDustFunding ? Transaction.legacyDustAmount
+            : (address ? Transaction.dustAmountByAddress(address) : Transaction.witnessOutputDustAmount);
+};
+
+Service.deviceAssetProvisionCost = function (address) {
+    return numActiveDeviceAssetIssuanceAddresses() * Service.devAssetIssuanceAddrAmount(address);
+};
+
+
 
 // Service function class (public) properties
 //
@@ -731,32 +757,40 @@ function numActiveSystemDeviceMainAddresses() {
 }
 
 function estimatedSendSystemMessageTxCost() {
-    return Util.roundToResolution(typicalSendSystemMessageTxSize() * Catenis.bitcoinFees.getFeeRateByTime(cfgSettings.sysMessage.minutesToConfirm), cfgSettings.paymentResolution);
+    return Util.roundToResolution(typicalSendSystemMessageTxVsize() * Catenis.bitcoinFees.getFeeRateByTime(cfgSettings.sysMessage.minutesToConfirm), cfgSettings.paymentResolution);
 }
 
 function estimatedSettleOffChainMessagesTxCost() {
-    return Util.roundToResolution(typicalSettleOffChainMessagesTxSize() * Service.feeRateForOffChainMsgsSettlement, cfgSettings.paymentResolution);
+    return Util.roundToResolution(typicalSettleOffChainMessagesTxVsize() * Service.feeRateForOffChainMsgsSettlement, cfgSettings.paymentResolution);
 }
 
-function typicalSendSystemMessageTxSize() {
-    return Transaction.computeTransactionSize(cfgSettings.sysTxConfig.sendSysMessage.numInputs, cfgSettings.sysTxConfig.sendSysMessage.numOutputs, cfgSettings.sysTxConfig.sendSysMessage.nullDataPayloadSize);
+function typicalSendSystemMessageTxVsize() {
+    return new TransactionSize({
+        numWitnessInputs: cfgSettings.sysTxConfig.sendSysMessage.numWitnessInputs,
+        numNonWitnessInputs: cfgSettings.sysTxConfig.sendSysMessage.numNonWitnessInputs,
+        numWitnessOutputs: cfgSettings.sysTxConfig.sendSysMessage.numWitnessOutputs,
+        numNonWitnessOutputs: cfgSettings.sysTxConfig.sendSysMessage.numNonWitnessOutputs,
+        nullDataPayloadSize: cfgSettings.sysTxConfig.sendSysMessage.nullDataPayloadSize
+    }).savedSizeInfo.vsize;
 }
 
-function typicalSettleOffChainMessagesTxSize() {
-    return Transaction.computeTransactionSize(cfgSettings.sysTxConfig.settleOffChainMessages.numInputs, cfgSettings.sysTxConfig.settleOffChainMessages.numOutputs, cfgSettings.sysTxConfig.settleOffChainMessages.nullDataPayloadSize);
+function typicalSettleOffChainMessagesTxVsize() {
+    return new TransactionSize({
+        numWitnessInputs: cfgSettings.sysTxConfig.settleOffChainMessages.numWitnessInputs,
+        numNonWitnessInputs: cfgSettings.sysTxConfig.settleOffChainMessages.numNonWitnessInputs,
+        numWitnessOutputs: cfgSettings.sysTxConfig.settleOffChainMessages.numWitnessOutputs,
+        numNonWitnessOutputs: cfgSettings.sysTxConfig.settleOffChainMessages.numNonWitnessOutputs,
+        nullDataPayloadSize: cfgSettings.sysTxConfig.settleOffChainMessages.nullDataPayloadSize
+    }).savedSizeInfo.vsize;
 }
 
 function deviceProvisionCost() {
     // Includes cost to fund device main addresses and asset issuance addresses
-    return deviceMessageProvisionCost() + deviceAssetProvisionCost();
+    return deviceMessageProvisionCost() + Service.deviceAssetProvisionCost();
 }
 
 function deviceMessageProvisionCost() {
-    return numActiveDeviceMainAddresses() * cfgSettings.message.mainAddrFunding.unitAmount;
-}
-
-function deviceAssetProvisionCost() {
-    return numActiveDeviceAssetIssuanceAddresses() * cfgSettings.asset.issuance.assetIssueAddrFunding.unitAmount;
+    return numActiveDeviceMainAddresses() * Service.devMainAddrAmount;
 }
 
 function numActiveDeviceMainAddresses() {
@@ -803,27 +837,45 @@ function averageEstimatedServiceTxCost() {
 }
 
 function estimatedLogMessageTxCost() {
-    return Util.roundToResolution(typicalLogMessageTxSize() * Catenis.bitcoinFees.getFeeRateByTime(cfgSettings.message.minutesToConfirm), cfgSettings.paymentResolution);
+    return Util.roundToResolution(typicalLogMessageTxVsize() * Catenis.bitcoinFees.getFeeRateByTime(cfgSettings.message.minutesToConfirm), cfgSettings.paymentResolution);
 }
 
-function typicalLogMessageTxSize() {
-    return Transaction.computeTransactionSize(cfgSettings.serviceTxConfig.logMessage.numInputs, cfgSettings.serviceTxConfig.logMessage.numOutputs, cfgSettings.serviceTxConfig.logMessage.nullDataPayloadSize);
+function typicalLogMessageTxVsize() {
+    return new TransactionSize({
+        numWitnessInputs: cfgSettings.serviceTxConfig.logMessage.numWitnessInputs,
+        numNonWitnessInputs: cfgSettings.serviceTxConfig.logMessage.numNonWitnessInputs,
+        numWitnessOutputs: cfgSettings.serviceTxConfig.logMessage.numWitnessOutputs,
+        numNonWitnessOutputs: cfgSettings.serviceTxConfig.logMessage.numNonWitnessOutputs,
+        nullDataPayloadSize: cfgSettings.serviceTxConfig.logMessage.nullDataPayloadSize
+    }).savedSizeInfo.vsize;
 }
 
 function estimatedSendMessageTxCost() {
-    return Util.roundToResolution(typicalSendMessageTxSize() * Catenis.bitcoinFees.getFeeRateByTime(cfgSettings.message.minutesToConfirm), cfgSettings.paymentResolution);
+    return Util.roundToResolution(typicalSendMessageTxVsize() * Catenis.bitcoinFees.getFeeRateByTime(cfgSettings.message.minutesToConfirm), cfgSettings.paymentResolution);
 }
 
-function typicalSendMessageTxSize() {
-    return Transaction.computeTransactionSize(cfgSettings.serviceTxConfig.sendMessage.numInputs, cfgSettings.serviceTxConfig.sendMessage.numOutputs, cfgSettings.serviceTxConfig.sendMessage.nullDataPayloadSize);
+function typicalSendMessageTxVsize() {
+    return new TransactionSize({
+        numWitnessInputs: cfgSettings.serviceTxConfig.sendMessage.numWitnessInputs,
+        numNonWitnessInputs: cfgSettings.serviceTxConfig.sendMessage.numNonWitnessInputs,
+        numWitnessOutputs: cfgSettings.serviceTxConfig.sendMessage.numWitnessOutputs,
+        numNonWitnessOutputs: cfgSettings.serviceTxConfig.sendMessage.numNonWitnessOutputs,
+        nullDataPayloadSize: cfgSettings.serviceTxConfig.sendMessage.nullDataPayloadSize
+    }).savedSizeInfo.vsize;
 }
 
 function estimatedSendMessageReadConfirmTxCost() {
-    return Util.roundToResolution(typicalSendMessageReadConfirmTxSize() * Catenis.bitcoinFees.getFeeRateByTime(cfgSettings.message.minutesToConfirm), cfgSettings.paymentResolution);
+    return Util.roundToResolution(typicalSendMessageReadConfirmTxVsize() * Catenis.bitcoinFees.getFeeRateByTime(cfgSettings.message.minutesToConfirm), cfgSettings.paymentResolution);
 }
 
-function typicalSendMessageReadConfirmTxSize() {
-    return Transaction.computeTransactionSize(cfgSettings.serviceTxConfig.sendMsgReadConfirm.numInputs, cfgSettings.serviceTxConfig.sendMsgReadConfirm.numOutputs, cfgSettings.serviceTxConfig.sendMsgReadConfirm.nullDataPayloadSize);
+function typicalSendMessageReadConfirmTxVsize() {
+    return new TransactionSize({
+        numWitnessInputs: cfgSettings.serviceTxConfig.sendMsgReadConfirm.numWitnessInputs,
+        numNonWitnessInputs: cfgSettings.serviceTxConfig.sendMsgReadConfirm.numNonWitnessInputs,
+        numWitnessOutputs: cfgSettings.serviceTxConfig.sendMsgReadConfirm.numWitnessOutputs,
+        numNonWitnessOutputs: cfgSettings.serviceTxConfig.sendMsgReadConfirm.numNonWitnessOutputs,
+        nullDataPayloadSize: cfgSettings.serviceTxConfig.sendMsgReadConfirm.nullDataPayloadSize
+    }).savedSizeInfo.vsize;
 }
 
 function estimatedOffChainMsgEnvelopeCost() {
@@ -847,19 +899,31 @@ function estimatedSendOffChainMessageReadConfirmCost() {
 }
 
 function estimatedIssueAssetTxCost() {
-    return Util.roundToResolution(typicalIssueAssetTxSize() * Catenis.bitcoinFees.getFeeRateByTime(cfgSettings.asset.issuance.minutesToConfirm), cfgSettings.paymentResolution);
+    return Util.roundToResolution(typicalIssueAssetTxVsize() * Catenis.bitcoinFees.getFeeRateByTime(cfgSettings.asset.issuance.minutesToConfirm), cfgSettings.paymentResolution);
 }
 
-function typicalIssueAssetTxSize() {
-    return Transaction.computeTransactionSize(cfgSettings.serviceTxConfig.issueAsset.numInputs, cfgSettings.serviceTxConfig.issueAsset.numOutputs, cfgSettings.serviceTxConfig.issueAsset.nullDataPayloadSize);
+function typicalIssueAssetTxVsize() {
+    return new TransactionSize({
+        numWitnessInputs: cfgSettings.serviceTxConfig.issueAsset.numWitnessInputs,
+        numNonWitnessInputs: cfgSettings.serviceTxConfig.issueAsset.numNonWitnessInputs,
+        numWitnessOutputs: cfgSettings.serviceTxConfig.issueAsset.numWitnessOutputs,
+        numNonWitnessOutputs: cfgSettings.serviceTxConfig.issueAsset.numNonWitnessOutputs,
+        nullDataPayloadSize: cfgSettings.serviceTxConfig.issueAsset.nullDataPayloadSize
+    }).savedSizeInfo.vsize;
 }
 
 function estimatedTransferAssetTxCost() {
-    return Util.roundToResolution(typicalTransferAssetTxSize() * Catenis.bitcoinFees.getFeeRateByTime(cfgSettings.asset.transfer.minutesToConfirm), cfgSettings.paymentResolution);
+    return Util.roundToResolution(typicalTransferAssetTxVsize() * Catenis.bitcoinFees.getFeeRateByTime(cfgSettings.asset.transfer.minutesToConfirm), cfgSettings.paymentResolution);
 }
 
-function typicalTransferAssetTxSize() {
-    return Transaction.computeTransactionSize(cfgSettings.serviceTxConfig.transferAsset.numInputs, cfgSettings.serviceTxConfig.transferAsset.numOutputs, cfgSettings.serviceTxConfig.transferAsset.nullDataPayloadSize);
+function typicalTransferAssetTxVsize() {
+    return new TransactionSize({
+        numWitnessInputs: cfgSettings.serviceTxConfig.transferAsset.numWitnessInputs,
+        numNonWitnessInputs: cfgSettings.serviceTxConfig.transferAsset.numNonWitnessInputs,
+        numWitnessOutputs: cfgSettings.serviceTxConfig.transferAsset.numWitnessOutputs,
+        numNonWitnessOutputs: cfgSettings.serviceTxConfig.transferAsset.numNonWitnessOutputs,
+        nullDataPayloadSize: cfgSettings.serviceTxConfig.transferAsset.nullDataPayloadSize
+    }).savedSizeInfo.vsize;
 }
 
 function highestEstimatedReadConfirmTxCostPerMessage() {
@@ -880,13 +944,20 @@ function averageEstimatedReadConfirmTxCostPerMessage() {
 }
 
 function estimatedTerminalReadConfirmTxCostPerMessage() {
-    const typicalTxCost = Util.roundToResolution(typicalTerminalReadConfirmTxSize() * Catenis.bitcoinFees.getFeeRateByTime(cfgSettings.message.readConfirmation.terminalReadConfirmTx.minutesToConfirm), cfgSettings.message.readConfirmation.paymentResolution);
+    const typicalTxCost = Util.roundToResolution(typicalTerminalReadConfirmTxVsize() * Catenis.bitcoinFees.getFeeRateByTime(cfgSettings.message.readConfirmation.terminalReadConfirmTx.minutesToConfirm), cfgSettings.message.readConfirmation.paymentResolution);
 
     return Util.roundToResolution(typicalTxCost / cfgSettings.message.readConfirmation.terminalReadConfirmTx.typicalTxConfig.numMessagesConfirmed, cfgSettings.message.readConfirmation.paymentResolution);
 }
 
-function typicalTerminalReadConfirmTxSize() {
-    return Transaction.computeTransactionSize(numInputsTerminalReadConfirmTx(), numOutputsTerminalReadConfirmTx(), cfgSettings.message.readConfirmation.terminalReadConfirmTx.typicalTxConfig.nullDataPayloadSize);
+function typicalTerminalReadConfirmTxVsize() {
+    // NOTE: the settings below are for the best case where only segregated witness inputs and outputs are used
+    //      (which is true in the long run for the sandbox environment and should be true for the production
+    //      environment from inception)
+    return new TransactionSize({
+        numWitnessInputs: numInputsTerminalReadConfirmTx(),
+        numWitnessOutputs: numOutputsTerminalReadConfirmTx(),
+        nullDataPayloadSize: cfgSettings.message.readConfirmation.terminalReadConfirmTx.typicalTxConfig.nullDataPayloadSize
+    }).savedSizeInfo.vsize;
 }
 
 function numInputsTerminalReadConfirmTx() {
@@ -937,10 +1008,13 @@ function averageReadConfirmTxCostPerMessage() {
         let numMsgs = 0;
         let sumFeePerMsg = 0;
         const readConfirmTxInfo = new RbfTransactionInfo({
+            numWitnessInputs: cfgSettings.message.readConfirmation.initNumTxWitnessInputs,
+            numNonWitnessInputs: cfgSettings.message.readConfirmation.initNumTxNonWitnessInputs,
+            numWitnessOutputs: cfgSettings.message.readConfirmation.initNumTxWitnessOutputs,
+            numNonWitnessOutputs: cfgSettings.message.readConfirmation.initNumTxNonWitnessOutputs,
+            nullDataPayloadSize: cfgSettings.message.readConfirmation.txNullDataPayloadSize
+        }, {
             paymentResolution: cfgSettings.message.readConfirmation.paymentResolution,
-            initNumTxInputs: cfgSettings.message.readConfirmation.initNumTxInputs,
-            initNumTxOutputs: cfgSettings.message.readConfirmation.initNumTxOutputs,
-            initTxNullDataPayloadSize: cfgSettings.message.readConfirmation.txNullDataPayloadSize,
             txFeeRateIncrement: cfgSettings.message.readConfirmation.txFeeRateIncrement,
             initTxFeeRate: cfgSettings.message.readConfirmation.initTxFeeRate
         });
@@ -951,23 +1025,31 @@ function averageReadConfirmTxCostPerMessage() {
 
             if (numMsgs > 1) {
                 // Add one more tx input to spend a new read confirmation output
-                readConfirmTxInfo.incrementNumTxInputs(1);
+                //  Note: we are assuming the best case where inputs that spend read confirmation
+                //      outputs are all of the segregated witness type
+                readConfirmTxInfo.addInputs(true, 1);
 
                 if (numMsgs % maxUnitsPayTxExp === 0) {
                     // Add one more tx input to pay for tx fee
-                    readConfirmTxInfo.incrementNumTxInputs(1);
+                    //  Note: we are assuming the best case where inputs to pay for tx fee are all
+                    //      of the segregated witness type
+                    readConfirmTxInfo.addInputs(true, 1);
                 }
 
                 if (numMsgs <= 3) {
                     // Add one more tx output for paying spent read confirmation outputs to both
                     //  system read confirmation spend only and system read confirmation spend null addresses
-                    readConfirmTxInfo.incrementNumTxOutputs(1);
+                    //  Note: we are assuming the best case where outputs for paying spent read confirmation outputs
+                    //      are all of the segregated witness type
+                    readConfirmTxInfo.addOutputs(true, 1);
                 }
 
                 if (numMsgs % cfgSettings.message.readConfirmation.txInputOutputGrowthRatio === 0) {
                     // Add one more tx output for paying spent read confirmation outputs to
                     //  system read confirmation spend notify address of a different Catenis node
-                    readConfirmTxInfo.incrementNumTxOutputs(1);
+                    //  Note: we are assuming the best case where outputs for paying spent read confirmation outputs
+                    //      are all of the segregated witness type
+                    readConfirmTxInfo.addOutputs(true, 1);
                 }
             }
 
@@ -986,6 +1068,7 @@ function averageReadConfirmTxCostPerMessage() {
 
 // Returns highest service price expressed in Catenis service credit's lowest units
 function highestServicePrice() {
+    // noinspection JSCheckFunctionSignatures
     return _.max(Object.values(Service.clientPaidService).map((paidService) => {
         return getServicePrice(paidService).finalServicePrice;
     }));
@@ -1053,11 +1136,14 @@ function averageSpendServCredTxCostPerService() {
         let sumFeePerServ = 0;
         const servsPerClient = [1];
         const spendServCredTxInfo = new RbfTransactionInfo({
+            numWitnessInputs: cfgSettings.servicePayment.spendServiceCredit.initNumTxWitnessInputs,
+            numNonWitnessInputs: cfgSettings.servicePayment.spendServiceCredit.initNumTxNonWitnessInputs,
+            numWitnessOutputs: cfgSettings.servicePayment.spendServiceCredit.initNumTxWitnessOutputs,
+            numNonWitnessOutputs: cfgSettings.servicePayment.spendServiceCredit.initNumTxNonWitnessOutputs,
+            numPubKeysMultiSigOutputs: cfgSettings.servicePayment.spendServiceCredit.initNumPubKeysMultiSigTxOutputs.concat(),  // Pass a copy of the config array parameter
+            nullDataPayloadSize: cfgSettings.servicePayment.spendServiceCredit.txNullDataPayloadSize
+        }, {
             paymentResolution: cfgSettings.servicePayment.paymentResolution,
-            initNumTxInputs: cfgSettings.servicePayment.spendServiceCredit.initNumTxInputs,
-            initNumTxOutputs: cfgSettings.servicePayment.spendServiceCredit.initNumTxOutputs,
-            initNumPubKeysMultiSigTxOutputs: cfgSettings.servicePayment.spendServiceCredit.initNumPubKeysMultiSigTxOutputs.concat(),
-            initTxNullDataPayloadSize: cfgSettings.servicePayment.spendServiceCredit.txNullDataPayloadSize,
             txFeeRateIncrement: cfgSettings.servicePayment.spendServiceCredit.txFeeRateIncrement,
             initTxFeeRate: cfgSettings.servicePayment.spendServiceCredit.initTxFeeRate
         });
@@ -1074,8 +1160,12 @@ function averageSpendServCredTxCostPerService() {
                     // Add inputs and outputs for new client
                     servsPerClient[clientIdx] = 0;
 
-                    spendServCredTxInfo.incrementNumTxInputs(1);
-                    spendServCredTxInfo.incrementNumTxOutputs(1);
+                    // Note: we are assuming the best case where client inputs are all
+                    //      of the segregated witness type
+                    spendServCredTxInfo.addInputs(true, 1);
+                    // Note: we are assuming the best case where client outputs are all
+                    //      of the segregated witness type
+                    spendServCredTxInfo.addOutputs(true, 1);
 
                     if (servsPerClient.length === cfgSettings.servicePayment.spendServiceCredit.numClientsMultiSigOutput) {
                         // Add multi-signature output
@@ -1087,14 +1177,18 @@ function averageSpendServCredTxCostPerService() {
 
                 if (++servsPerClient[clientIdx] % cfgSettings.servicePayment.spendServiceCredit.maxServsPerClientInput === 0) {
                     // Add a new client service account credit line address input
-                    spendServCredTxInfo.incrementNumTxInputs(1);
+                    //  Note: we are assuming the best case where client service account credit line
+                    //      address inputs to pay for tx fee are all of the segregated witness type
+                    spendServCredTxInfo.addInputs(true, 1);
 
                     txChanged = true;
                 }
 
                 if (numServs % maxUnitsPayTxExp === 0) {
                     // Add one more tx input to pay for tx fee
-                    spendServCredTxInfo.incrementNumTxInputs(1);
+                    //  Note: we are assuming the best case where inputs to pay for tx fee are all
+                    //      of the segregated witness type
+                    spendServCredTxInfo.addInputs(true, 1);
 
                     txChanged = true;
                 }
@@ -1132,12 +1226,15 @@ function averageDebitServAccountTxCostPerService() {
         let numServs = 0;
         let sumFeePerServ = 0;
         const servsPerClient = [1];
-        const spendServCredTxInfo = new RbfTransactionInfo({
+        const debitServCredTxInfo = new RbfTransactionInfo({
+            numWitnessInputs: cfgSettings.servicePayment.debitServiceAccount.initNumTxWitnessInputs,
+            numNonWitnessInputs: cfgSettings.servicePayment.debitServiceAccount.initNumTxNonWitnessInputs,
+            numWitnessOutputs: cfgSettings.servicePayment.debitServiceAccount.initNumTxWitnessOutputs,
+            numNonWitnessOutputs: cfgSettings.servicePayment.debitServiceAccount.initNumTxNonWitnessOutputs,
+            numPubKeysMultiSigOutputs: cfgSettings.servicePayment.debitServiceAccount.initNumPubKeysMultiSigTxOutputs.concat(),  // Pass a copy of the config array parameter
+            nullDataPayloadSize: cfgSettings.servicePayment.debitServiceAccount.txNullDataPayloadSize,
+        }, {
             paymentResolution: cfgSettings.servicePayment.paymentResolution,
-            initNumTxInputs: cfgSettings.servicePayment.debitServiceAccount.initNumTxInputs,
-            initNumTxOutputs: cfgSettings.servicePayment.debitServiceAccount.initNumTxOutputs,
-            initNumPubKeysMultiSigTxOutputs: cfgSettings.servicePayment.debitServiceAccount.initNumPubKeysMultiSigTxOutputs.concat(),
-            initTxNullDataPayloadSize: cfgSettings.servicePayment.debitServiceAccount.txNullDataPayloadSize,
             txFeeRateIncrement: cfgSettings.servicePayment.debitServiceAccount.txFeeRateIncrement,
             initTxFeeRate: cfgSettings.servicePayment.debitServiceAccount.initTxFeeRate
         });
@@ -1154,11 +1251,13 @@ function averageDebitServAccountTxCostPerService() {
                     // Add outputs for new client
                     servsPerClient[clientIdx] = 0;
 
-                    spendServCredTxInfo.incrementNumTxOutputs(1);
+                    // Note: we are assuming the best case where client outputs are all
+                    //      of the segregated witness type
+                    debitServCredTxInfo.addOutputs(true, 1);
 
                     if (servsPerClient.length === cfgSettings.servicePayment.debitServiceAccount.numClientsMultiSigOutput) {
                         // Add multi-signature output
-                        spendServCredTxInfo.addMultiSigOutput(3);
+                        debitServCredTxInfo.addMultiSigOutput(3);
                     }
 
                     txChanged = true;
@@ -1167,19 +1266,21 @@ function averageDebitServAccountTxCostPerService() {
                 ++servsPerClient[clientIdx];
 
                 if (numServs % maxUnitsPayTxExp === 0) {
-                    // Add one more tx input to pay for tx fee
-                    spendServCredTxInfo.incrementNumTxInputs(1);
+                    // Add one more tx input to pay for tx fee.
+                    //  Note: we are assuming the best case where inputs to pay for tx fee are all
+                    //      of the segregated witness type
+                    debitServCredTxInfo.addInputs(true, 1);
 
                     txChanged = true;
                 }
 
                 if (!txChanged) {
-                    spendServCredTxInfo.forceRecalculateFee();
+                    debitServCredTxInfo.forceRecalculateFee();
                 }
             }
 
-            lastTxFee = spendServCredTxInfo.getNewTxFee();
-            spendServCredTxInfo.confirmTxFee();
+            lastTxFee = debitServCredTxInfo.getNewTxFee();
+            debitServCredTxInfo.confirmTxFee();
 
             sumFeePerServ += Util.roundToResolution(lastTxFee.fee / numServs, cfgSettings.servicePayment.paymentResolution);
         }
@@ -1398,7 +1499,7 @@ Object.defineProperties(Service, {
     },
     devMainAddrAmount: {
         get: function () {
-            return cfgSettings.message.mainAddrFunding.unitAmount;
+            return Catenis.application.legacyDustFunding ? Transaction.legacyDustAmount : Transaction.witnessOutputDustAmount;
         },
         enumerable: true
     },
@@ -1410,25 +1511,31 @@ Object.defineProperties(Service, {
     },
     devReadConfirmAddrAmount: {
         get: function () {
-            return cfgSettings.message.readConfirmAddrAmount;
+            return Transaction.witnessOutputDustAmount;
         },
         enumerable: true
     },
-    devAssetIssuanceAddrAmount: {
+    readConfirmInitNumTxWitnessInputs: {
         get: function () {
-            return cfgSettings.asset.issuance.assetIssueAddrFunding.unitAmount;
+            return cfgSettings.message.readConfirmation.initNumTxWitnessInputs;
         },
         enumerable: true
     },
-    readConfirmInitNumTxInputs: {
+    readConfirmInitNumTxNonWitnessInputs: {
         get: function () {
-            return cfgSettings.message.readConfirmation.initNumTxInputs;
+            return cfgSettings.message.readConfirmation.initNumTxNonWitnessInputs;
         },
         enumerable: true
     },
-    readConfirmInitNumTxOutputs: {
+    readConfirmInitNumTxWitnessOutputs: {
         get: function () {
-            return cfgSettings.message.readConfirmation.initNumTxOutputs;
+            return cfgSettings.message.readConfirmation.initNumTxWitnessOutputs;
+        },
+        enumerable: true
+    },
+    readConfirmInitNumTxNonWitnessOutputs: {
+        get: function () {
+            return cfgSettings.message.readConfirmation.initNumTxNonWitnessOutputs;
         },
         enumerable: true
     },
@@ -1462,15 +1569,21 @@ Object.defineProperties(Service, {
         },
         enumerable: true
     },
+    sysDevMainAddrAmount: {
+        get: function () {
+            return Catenis.application.legacyDustFunding ? Transaction.legacyDustAmount : Transaction.witnessOutputDustAmount;
+        },
+        enumerable: true
+    },
     serviceCreditIssuanceAddrAmount: {
         get: function () {
-            return cfgSettings.serviceCreditIssueAddrFunding.unitAmount;
+            return Catenis.application.legacyDustFunding ? Transaction.legacyDustAmount : Transaction.dustAmountByAddress(Catenis.ctnHubNode.serviceCreditIssuanceAddress);
         },
         enumerable: true
     },
     bcotSaleStockAddrAmount: {
         get: function () {
-            return cfgSettings.bcotSaleStockAddrFunding.unitAmount;
+            return Catenis.application.legacyDustFunding ? Transaction.legacyDustAmount : Transaction.dustAmountByAddress(Catenis.ctnHubNode.bcotSaleStockAddress);
         },
         enumerable: true
     },
@@ -1478,7 +1591,7 @@ Object.defineProperties(Service, {
         get: function () {
             return (Math.ceil(cfgSettings.serviceCreditIssueAddrFunding.prePaidClientsToFund * cfgSettings.serviceCreditIssueAddrFunding.unitsPerPrePaidClients)
                 + Math.ceil(cfgSettings.serviceCreditIssueAddrFunding.postPaidClientsToFund * cfgSettings.serviceCreditIssueAddrFunding.unitsPerPostPaidClients))
-                * cfgSettings.serviceCreditIssueAddrFunding.unitAmount;
+                * Service.serviceCreditIssuanceAddrAmount;
         },
         enumerable: true
     },
@@ -1486,7 +1599,7 @@ Object.defineProperties(Service, {
         get: function () {
             return (Math.ceil(cfgSettings.bcotSaleStockAddrFunding.prePaidClientsToFund * cfgSettings.bcotSaleStockAddrFunding.unitsPerPrePaidClients)
                 + Math.ceil(cfgSettings.bcotSaleStockAddrFunding.postPaidClientsToFund * cfgSettings.bcotSaleStockAddrFunding.unitsPerPostPaidClients))
-                * cfgSettings.bcotSaleStockAddrFunding.unitAmount;
+                * Service.bcotSaleStockAddrAmount;
         },
         enumerable: true
     },
@@ -1533,12 +1646,6 @@ Object.defineProperties(Service, {
     spendServiceCreditTxFeeRateIncrement: {
         get: function () {
             return cfgSettings.message.readConfirmation.txFeeRateIncrement;
-        },
-        enumerable: true
-    },
-    deviceAssetProvisionCost: {
-        get: function () {
-            return deviceAssetProvisionCost();
         },
         enumerable: true
     },

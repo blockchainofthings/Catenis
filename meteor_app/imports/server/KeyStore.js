@@ -178,6 +178,7 @@ import { Catenis } from './Catenis';
 import { BaseBlockchainAddress } from './BaseBlockchainAddress';
 import { CryptoKeys } from './CryptoKeys';
 import { BaseOffChainAddress } from './BaseOffChainAddress';
+import { BitcoinInfo } from './BitcoinInfo';
 
 // Config entries
 const configKeyStore = config.get('keyStore');
@@ -227,6 +228,7 @@ let purgeUnusedExtKeyIntervalHandle;
 //      index: [integer],
 //      strHDNode: [string],
 //      address: [string],
+//      btcAddressType: [string],
 //      pubKeyHash: [string],
 //      isLeaf: [boolean],
 //      isReserved: [boolean],
@@ -284,13 +286,13 @@ KeyStore.prototype.removeExtKeysByParentPath = function (parentPath) {
 KeyStore.prototype.getCryptoKeysByPath = function (path) {
     const docExtKey = this.collExtKey.by('path', path);
 
-    return docExtKey !== undefined ? new CryptoKeys(bitcoinLib.bip32.fromBase58(docExtKey.strHDNode, this.cryptoNetwork)) : null;
+    return docExtKey !== undefined ? new CryptoKeys(bitcoinLib.bip32.fromBase58(docExtKey.strHDNode, this.cryptoNetwork), BitcoinInfo.getAddressTypeByName(docExtKey.btcAddressType)) : null;
 };
 
 KeyStore.prototype.getCryptoKeysByAddress = function (addr) {
     const docExtKey = this.collExtKey.by('address', addr);
 
-    return docExtKey !== undefined ? new CryptoKeys(bitcoinLib.bip32.fromBase58(docExtKey.strHDNode, this.cryptoNetwork)) : null;
+    return docExtKey !== undefined ? new CryptoKeys(bitcoinLib.bip32.fromBase58(docExtKey.strHDNode, this.cryptoNetwork), BitcoinInfo.getAddressTypeByName(docExtKey.btcAddressType)) : null;
 };
 
 KeyStore.prototype.getTypeAndPathByAddress = function (addr) {
@@ -329,7 +331,7 @@ KeyStore.prototype.getAddressInfo = function (addr, retrieveObsolete = false, ch
             }
 
             addrInfo = {
-                cryptoKeys: new CryptoKeys(bitcoinLib.bip32.fromBase58(docExtKey.strHDNode, this.cryptoNetwork)),
+                cryptoKeys: new CryptoKeys(bitcoinLib.bip32.fromBase58(docExtKey.strHDNode, this.cryptoNetwork), BitcoinInfo.getAddressTypeByName(docExtKey.btcAddressType)),
                 type: docExtKey.type,
                 path: docExtKey.path,
                 parentPath: docExtKey.parentPath,
@@ -372,7 +374,7 @@ KeyStore.prototype.getAddressInfoByPath = function (path, retrieveObsolete = fal
             }
 
             addrInfo = {
-                cryptoKeys: new CryptoKeys(bitcoinLib.bip32.fromBase58(docExtKey.strHDNode, this.cryptoNetwork)),
+                cryptoKeys: new CryptoKeys(bitcoinLib.bip32.fromBase58(docExtKey.strHDNode, this.cryptoNetwork), BitcoinInfo.getAddressTypeByName(docExtKey.btcAddressType)),
                 type: docExtKey.type,
                 path: path,
                 parentPath: docExtKey.parentPath,
@@ -804,7 +806,10 @@ KeyStore.prototype.initCatenisNodeHDNodes = function (ctnNodeIndex) {
 
         // Store all newly created HD extended keys
         hdNodesToStore.forEach((hdNodeToStore) => {
-            storeHDNode.call(this, hdNodeToStore.type, hdNodeToStore.path, hdNodeToStore.hdNode, hdNodeToStore.isLeaf, hdNodeToStore.isReserved);
+            storeHDNode.call(this, hdNodeToStore.type, hdNodeToStore.path, hdNodeToStore.hdNode, {
+                isLeaf: hdNodeToStore.isLeaf,
+                isReserved: hdNodeToStore.isReserved
+            });
         });
     }
 
@@ -812,7 +817,7 @@ KeyStore.prototype.initCatenisNodeHDNodes = function (ctnNodeIndex) {
     return true;
 };
 
-KeyStore.prototype.getSystemFundingPaymentAddressKeys = function (ctnNodeIndex, addrIndex, isObsolete = false) {
+KeyStore.prototype.getSystemFundingPaymentAddressKeys = function (ctnNodeIndex, addrIndex, btcAddressType, isObsolete = false) {
     // Validate arguments
     const errArg = {};
 
@@ -833,7 +838,7 @@ KeyStore.prototype.getSystemFundingPaymentAddressKeys = function (ctnNodeIndex, 
 
     // Try to retrieve system funding payment address HD extended key for given Catenis node with the given index
     const sysFundingPaymentAddrPath = util.format('m/%d/0/1/0/%d', ctnNodeIndex, addrIndex);
-    let sysFundingPaymentAddrHDNode = retrieveHDNode.call(this, sysFundingPaymentAddrPath),
+    let sysFundingPaymentAddrHDNode = retrieveHDNode.call(this, sysFundingPaymentAddrPath, true),
         sysFundingPaymentAddrKeys = null;
 
     if (sysFundingPaymentAddrHDNode === null) {
@@ -868,13 +873,22 @@ KeyStore.prototype.getSystemFundingPaymentAddressKeys = function (ctnNodeIndex, 
             }
             else {
                 // Store created HD extended key
-                storeHDNode.call(this, 'sys_fund_pay_addr', sysFundingPaymentAddrPath, sysFundingPaymentAddrHDNode, true, false, isObsolete);
+                storeHDNode.call(this, 'sys_fund_pay_addr', sysFundingPaymentAddrPath, sysFundingPaymentAddrHDNode, {
+                    isLeaf: true,
+                    isReserved: false,
+                    isObsolete: isObsolete,
+                    btcAddressType: btcAddressType
+                });
             }
         }
     }
+    else {
+        btcAddressType = sysFundingPaymentAddrHDNode.btcAddressType;
+        sysFundingPaymentAddrHDNode = sysFundingPaymentAddrHDNode.hdNode;
+    }
 
     if (sysFundingPaymentAddrHDNode !== null) {
-        sysFundingPaymentAddrKeys = new CryptoKeys(sysFundingPaymentAddrHDNode);
+        sysFundingPaymentAddrKeys = new CryptoKeys(sysFundingPaymentAddrHDNode, btcAddressType);
     }
 
     return sysFundingPaymentAddrKeys;
@@ -937,7 +951,7 @@ KeyStore.prototype.listSystemFundingPaymentAddressesInUse = function (ctnNodeInd
     return this.listSystemFundingPaymentAddresses(ctnNodeIndex, fromAddrIndex, toAddrIndex, true);
 };
 
-KeyStore.prototype.getSystemFundingChangeAddressKeys = function (ctnNodeIndex, addrIndex, isObsolete = false) {
+KeyStore.prototype.getSystemFundingChangeAddressKeys = function (ctnNodeIndex, addrIndex, btcAddressType, isObsolete = false) {
     // Validate arguments
     const errArg = {};
 
@@ -958,7 +972,7 @@ KeyStore.prototype.getSystemFundingChangeAddressKeys = function (ctnNodeIndex, a
 
     // Try to retrieve system funding change address HD extended key for given Catenis node with the given index
     const sysFundingChangeAddrPath = util.format('m/%d/0/1/1/%d', ctnNodeIndex, addrIndex);
-    let sysFundingChangeAddrHDNode = retrieveHDNode.call(this, sysFundingChangeAddrPath),
+    let sysFundingChangeAddrHDNode = retrieveHDNode.call(this, sysFundingChangeAddrPath, true),
         sysFundingChangeAddrKeys = null;
 
     if (sysFundingChangeAddrHDNode === null) {
@@ -993,13 +1007,22 @@ KeyStore.prototype.getSystemFundingChangeAddressKeys = function (ctnNodeIndex, a
             }
             else {
                 // Store created HD extended key
-                storeHDNode.call(this, 'sys_fund_chg_addr', sysFundingChangeAddrPath, sysFundingChangeAddrHDNode, true, false, isObsolete);
+                storeHDNode.call(this, 'sys_fund_chg_addr', sysFundingChangeAddrPath, sysFundingChangeAddrHDNode, {
+                    isLeaf: true,
+                    isReserved: false,
+                    isObsolete: isObsolete,
+                    btcAddressType: btcAddressType
+                });
             }
         }
     }
+    else {
+        btcAddressType = sysFundingChangeAddrHDNode.btcAddressType;
+        sysFundingChangeAddrHDNode = sysFundingChangeAddrHDNode.hdNode;
+    }
 
     if (sysFundingChangeAddrHDNode !== null) {
-        sysFundingChangeAddrKeys = new CryptoKeys(sysFundingChangeAddrHDNode);
+        sysFundingChangeAddrKeys = new CryptoKeys(sysFundingChangeAddrHDNode, btcAddressType);
     }
 
     return sysFundingChangeAddrKeys;
@@ -1062,7 +1085,7 @@ KeyStore.prototype.listSystemFundingChangeAddressesInUse = function (ctnNodeInde
     return this.listSystemFundingChangeAddresses(ctnNodeIndex, fromAddrIndex, toAddrIndex, true);
 };
 
-KeyStore.prototype.getSystemPayTxExpenseAddressKeys = function (ctnNodeIndex, addrIndex, isObsolete = false) {
+KeyStore.prototype.getSystemPayTxExpenseAddressKeys = function (ctnNodeIndex, addrIndex, btcAddressType, isObsolete = false) {
     // Validate arguments
     const errArg = {};
 
@@ -1083,7 +1106,7 @@ KeyStore.prototype.getSystemPayTxExpenseAddressKeys = function (ctnNodeIndex, ad
 
     // Try to retrieve system pay tx expense address HD extended key for given Catenis node with the given index
     const sysPayTxExpenseAddrPath = util.format('m/%d/0/2/%d', ctnNodeIndex, addrIndex);
-    let sysPayTxExpenseAddrHDNode = retrieveHDNode.call(this, sysPayTxExpenseAddrPath),
+    let sysPayTxExpenseAddrHDNode = retrieveHDNode.call(this, sysPayTxExpenseAddrPath, true),
         sysPayTxExpenseAddrKeys = null;
 
     if (sysPayTxExpenseAddrHDNode === null) {
@@ -1118,13 +1141,22 @@ KeyStore.prototype.getSystemPayTxExpenseAddressKeys = function (ctnNodeIndex, ad
             }
             else {
                 // Store created HD extended key
-                storeHDNode.call(this, 'sys_pay_tx_exp_addr', sysPayTxExpenseAddrPath, sysPayTxExpenseAddrHDNode, true, false, isObsolete);
+                storeHDNode.call(this, 'sys_pay_tx_exp_addr', sysPayTxExpenseAddrPath, sysPayTxExpenseAddrHDNode, {
+                    isLeaf: true,
+                    isReserved: false,
+                    isObsolete: isObsolete,
+                    btcAddressType: btcAddressType
+                });
             }
         }
     }
+    else {
+        btcAddressType = sysPayTxExpenseAddrHDNode.btcAddressType;
+        sysPayTxExpenseAddrHDNode = sysPayTxExpenseAddrHDNode.hdNode;
+    }
 
     if (sysPayTxExpenseAddrHDNode !== null) {
-        sysPayTxExpenseAddrKeys = new CryptoKeys(sysPayTxExpenseAddrHDNode);
+        sysPayTxExpenseAddrKeys = new CryptoKeys(sysPayTxExpenseAddrHDNode, btcAddressType);
     }
 
     return sysPayTxExpenseAddrKeys;
@@ -1187,7 +1219,7 @@ KeyStore.prototype.listSystemPayTxExpenseAddressesInUse = function (ctnNodeIndex
     return this.listSystemPayTxExpenseAddresses(ctnNodeIndex, fromAddrIndex, toAddrIndex);
 };
 
-KeyStore.prototype.getSystemReadConfirmSpendNotifyAddressKeys = function (ctnNodeIndex, addrIndex, isObsolete = false) {
+KeyStore.prototype.getSystemReadConfirmSpendNotifyAddressKeys = function (ctnNodeIndex, addrIndex, btcAddressType, isObsolete = false) {
     // Validate arguments
     const errArg = {};
 
@@ -1208,7 +1240,7 @@ KeyStore.prototype.getSystemReadConfirmSpendNotifyAddressKeys = function (ctnNod
 
     // Try to retrieve system read confirmation spend notify address HD extended key for given Catenis node with the given index
     const sysReadConfSpendNotifyAddrPath = util.format('m/%d/0/3/0/0/%d', ctnNodeIndex, addrIndex);
-    let sysReadConfSpendNotifyAddrHDNode = retrieveHDNode.call(this, sysReadConfSpendNotifyAddrPath),
+    let sysReadConfSpendNotifyAddrHDNode = retrieveHDNode.call(this, sysReadConfSpendNotifyAddrPath, true),
         sysReadConfSpendNotifyAddrKeys = null;
 
     if (sysReadConfSpendNotifyAddrHDNode === null) {
@@ -1243,13 +1275,22 @@ KeyStore.prototype.getSystemReadConfirmSpendNotifyAddressKeys = function (ctnNod
             }
             else {
                 // Store created HD extended key
-                storeHDNode.call(this, 'sys_read_conf_spnd_ntfy_addr', sysReadConfSpendNotifyAddrPath, sysReadConfSpendNotifyAddrHDNode, true, false, isObsolete);
+                storeHDNode.call(this, 'sys_read_conf_spnd_ntfy_addr', sysReadConfSpendNotifyAddrPath, sysReadConfSpendNotifyAddrHDNode, {
+                    isLeaf: true,
+                    isReserved: false,
+                    isObsolete: isObsolete,
+                    btcAddressType: btcAddressType
+                });
             }
         }
     }
+    else {
+        btcAddressType = sysReadConfSpendNotifyAddrHDNode.btcAddressType;
+        sysReadConfSpendNotifyAddrHDNode = sysReadConfSpendNotifyAddrHDNode.hdNode;
+    }
 
     if (sysReadConfSpendNotifyAddrHDNode !== null) {
-        sysReadConfSpendNotifyAddrKeys = new CryptoKeys(sysReadConfSpendNotifyAddrHDNode);
+        sysReadConfSpendNotifyAddrKeys = new CryptoKeys(sysReadConfSpendNotifyAddrHDNode, btcAddressType);
     }
 
     return sysReadConfSpendNotifyAddrKeys;
@@ -1312,7 +1353,7 @@ KeyStore.prototype.listSystemReadConfirmSpendNotifyAddressesInUse = function (ct
     return this.listSystemReadConfirmSpendNotifyAddresses(ctnNodeIndex, fromAddrIndex, toAddrIndex);
 };
 
-KeyStore.prototype.getSystemReadConfirmSpendOnlyAddressKeys = function (ctnNodeIndex, addrIndex, isObsolete = false) {
+KeyStore.prototype.getSystemReadConfirmSpendOnlyAddressKeys = function (ctnNodeIndex, addrIndex, btcAddressType, isObsolete = false) {
     // Validate arguments
     const errArg = {};
 
@@ -1333,7 +1374,7 @@ KeyStore.prototype.getSystemReadConfirmSpendOnlyAddressKeys = function (ctnNodeI
 
     // Try to retrieve system read confirmation spend only address HD extended key for given Catenis node with the given index
     const sysReadConfSpendOnlyAddrPath = util.format('m/%d/0/3/0/1/%d', ctnNodeIndex, addrIndex);
-    let sysReadConfSpendOnlyAddrHDNode = retrieveHDNode.call(this, sysReadConfSpendOnlyAddrPath),
+    let sysReadConfSpendOnlyAddrHDNode = retrieveHDNode.call(this, sysReadConfSpendOnlyAddrPath, true),
         sysReadConfSpendOnlyAddrKeys = null;
 
     if (sysReadConfSpendOnlyAddrHDNode === null) {
@@ -1368,13 +1409,22 @@ KeyStore.prototype.getSystemReadConfirmSpendOnlyAddressKeys = function (ctnNodeI
             }
             else {
                 // Store created HD extended key
-                storeHDNode.call(this, 'sys_read_conf_spnd_only_addr', sysReadConfSpendOnlyAddrPath, sysReadConfSpendOnlyAddrHDNode, true, false, isObsolete);
+                storeHDNode.call(this, 'sys_read_conf_spnd_only_addr', sysReadConfSpendOnlyAddrPath, sysReadConfSpendOnlyAddrHDNode, {
+                    isLeaf: true,
+                    isReserved: false,
+                    isObsolete: isObsolete,
+                    btcAddressType: btcAddressType
+                });
             }
         }
     }
+    else {
+        btcAddressType = sysReadConfSpendOnlyAddrHDNode.btcAddressType;
+        sysReadConfSpendOnlyAddrHDNode = sysReadConfSpendOnlyAddrHDNode.hdNode;
+    }
 
     if (sysReadConfSpendOnlyAddrHDNode !== null) {
-        sysReadConfSpendOnlyAddrKeys = new CryptoKeys(sysReadConfSpendOnlyAddrHDNode);
+        sysReadConfSpendOnlyAddrKeys = new CryptoKeys(sysReadConfSpendOnlyAddrHDNode, btcAddressType);
     }
 
     return sysReadConfSpendOnlyAddrKeys;
@@ -1437,7 +1487,7 @@ KeyStore.prototype.listSystemReadConfirmSpendOnlyAddressesInUse = function (ctnN
     return this.listSystemReadConfirmSpendOnlyAddresses(ctnNodeIndex, fromAddrIndex, toAddrIndex);
 };
 
-KeyStore.prototype.getSystemReadConfirmSpendNullAddressKeys = function (ctnNodeIndex, addrIndex, isObsolete = false) {
+KeyStore.prototype.getSystemReadConfirmSpendNullAddressKeys = function (ctnNodeIndex, addrIndex, btcAddressType, isObsolete = false) {
     // Validate arguments
     const errArg = {};
 
@@ -1458,7 +1508,7 @@ KeyStore.prototype.getSystemReadConfirmSpendNullAddressKeys = function (ctnNodeI
 
     // Try to retrieve system read confirmation spend null address HD extended key for given Catenis node with the given index
     const sysReadConfSpendNullAddrPath = util.format('m/%d/0/3/0/2/%d', ctnNodeIndex, addrIndex);
-    let sysReadConfSpendNullAddrHDNode = retrieveHDNode.call(this, sysReadConfSpendNullAddrPath),
+    let sysReadConfSpendNullAddrHDNode = retrieveHDNode.call(this, sysReadConfSpendNullAddrPath, true),
         sysReadConfSpendNullAddrKeys = null;
 
     if (sysReadConfSpendNullAddrHDNode === null) {
@@ -1493,13 +1543,22 @@ KeyStore.prototype.getSystemReadConfirmSpendNullAddressKeys = function (ctnNodeI
             }
             else {
                 // Store created HD extended key
-                storeHDNode.call(this, 'sys_read_conf_spnd_null_addr', sysReadConfSpendNullAddrPath, sysReadConfSpendNullAddrHDNode, true, false, isObsolete);
+                storeHDNode.call(this, 'sys_read_conf_spnd_null_addr', sysReadConfSpendNullAddrPath, sysReadConfSpendNullAddrHDNode, {
+                    isLeaf: true,
+                    isReserved: false,
+                    isObsolete: isObsolete,
+                    btcAddressType: btcAddressType
+                });
             }
         }
     }
+    else {
+        btcAddressType = sysReadConfSpendNullAddrHDNode.btcAddressType;
+        sysReadConfSpendNullAddrHDNode = sysReadConfSpendNullAddrHDNode.hdNode;
+    }
 
     if (sysReadConfSpendNullAddrHDNode !== null) {
-        sysReadConfSpendNullAddrKeys = new CryptoKeys(sysReadConfSpendNullAddrHDNode);
+        sysReadConfSpendNullAddrKeys = new CryptoKeys(sysReadConfSpendNullAddrHDNode, btcAddressType);
     }
 
     return sysReadConfSpendNullAddrKeys;
@@ -1562,7 +1621,7 @@ KeyStore.prototype.listSystemReadConfirmSpendNullAddressesInUse = function (ctnN
     return this.listSystemReadConfirmSpendNullAddresses(ctnNodeIndex, fromAddrIndex, toAddrIndex);
 };
 
-KeyStore.prototype.getSystemReadConfirmPayTxExpenseAddressKeys = function (ctnNodeIndex, addrIndex, isObsolete = false) {
+KeyStore.prototype.getSystemReadConfirmPayTxExpenseAddressKeys = function (ctnNodeIndex, addrIndex, btcAddressType, isObsolete = false) {
     // Validate arguments
     const errArg = {};
 
@@ -1583,7 +1642,7 @@ KeyStore.prototype.getSystemReadConfirmPayTxExpenseAddressKeys = function (ctnNo
 
     // Try to retrieve system read confirmation pay tx expense address HD extended key for given Catenis node with the given index
     const sysReadConfPayTxExpenseAddrPath = util.format('m/%d/0/3/1/%d', ctnNodeIndex, addrIndex);
-    let sysReadConfPayTxExpenseAddrHDNode = retrieveHDNode.call(this, sysReadConfPayTxExpenseAddrPath),
+    let sysReadConfPayTxExpenseAddrHDNode = retrieveHDNode.call(this, sysReadConfPayTxExpenseAddrPath, true),
         sysReadConfPayTxExpenseAddrKeys = null;
 
     if (sysReadConfPayTxExpenseAddrHDNode === null) {
@@ -1618,13 +1677,22 @@ KeyStore.prototype.getSystemReadConfirmPayTxExpenseAddressKeys = function (ctnNo
             }
             else {
                 // Store created HD extended key
-                storeHDNode.call(this, 'sys_read_conf_pay_tx_exp_addr', sysReadConfPayTxExpenseAddrPath, sysReadConfPayTxExpenseAddrHDNode, true, false, isObsolete);
+                storeHDNode.call(this, 'sys_read_conf_pay_tx_exp_addr', sysReadConfPayTxExpenseAddrPath, sysReadConfPayTxExpenseAddrHDNode, {
+                    isLeaf: true,
+                    isReserved: false,
+                    isObsolete: isObsolete,
+                    btcAddressType: btcAddressType
+                });
             }
         }
     }
+    else {
+        btcAddressType = sysReadConfPayTxExpenseAddrHDNode.btcAddressType;
+        sysReadConfPayTxExpenseAddrHDNode = sysReadConfPayTxExpenseAddrHDNode.hdNode;
+    }
 
     if (sysReadConfPayTxExpenseAddrHDNode !== null) {
-        sysReadConfPayTxExpenseAddrKeys = new CryptoKeys(sysReadConfPayTxExpenseAddrHDNode);
+        sysReadConfPayTxExpenseAddrKeys = new CryptoKeys(sysReadConfPayTxExpenseAddrHDNode, btcAddressType);
     }
 
     return sysReadConfPayTxExpenseAddrKeys;
@@ -1687,7 +1755,7 @@ KeyStore.prototype.listSystemReadConfirmPayTxExpenseAddressesInUse = function (c
     return this.listSystemReadConfirmPayTxExpenseAddresses(ctnNodeIndex, fromAddrIndex, toAddrIndex);
 };
 
-KeyStore.prototype.getSystemServiceCreditIssuingAddressKeys = function (ctnNodeIndex, addrIndex, isObsolete = false) {
+KeyStore.prototype.getSystemServiceCreditIssuingAddressKeys = function (ctnNodeIndex, addrIndex, btcAddressType, isObsolete = false) {
     // Validate arguments
     const errArg = {};
 
@@ -1708,7 +1776,7 @@ KeyStore.prototype.getSystemServiceCreditIssuingAddressKeys = function (ctnNodeI
 
     // Try to retrieve system service credit issuance address HD extended key for given Catenis node with the given index
     const sysServCredIssueAddrPath = util.format('m/%d/0/4/0/0/%d', ctnNodeIndex, addrIndex);
-    let sysServCredIssueAddrHDNode = retrieveHDNode.call(this, sysServCredIssueAddrPath),
+    let sysServCredIssueAddrHDNode = retrieveHDNode.call(this, sysServCredIssueAddrPath, true),
         sysServCredIssueAddrKeys = null;
 
     if (sysServCredIssueAddrHDNode === null) {
@@ -1743,13 +1811,22 @@ KeyStore.prototype.getSystemServiceCreditIssuingAddressKeys = function (ctnNodeI
             }
             else {
                 // Store created HD extended key
-                storeHDNode.call(this, 'sys_serv_cred_issu_addr', sysServCredIssueAddrPath, sysServCredIssueAddrHDNode, true, false, isObsolete);
+                storeHDNode.call(this, 'sys_serv_cred_issu_addr', sysServCredIssueAddrPath, sysServCredIssueAddrHDNode, {
+                    isLeaf: true,
+                    isReserved: false,
+                    isObsolete: isObsolete,
+                    btcAddressType: btcAddressType
+                });
             }
         }
     }
+    else {
+        btcAddressType = sysServCredIssueAddrHDNode.btcAddressType;
+        sysServCredIssueAddrHDNode = sysServCredIssueAddrHDNode.hdNode;
+    }
 
     if (sysServCredIssueAddrHDNode !== null) {
-        sysServCredIssueAddrKeys = new CryptoKeys(sysServCredIssueAddrHDNode);
+        sysServCredIssueAddrKeys = new CryptoKeys(sysServCredIssueAddrHDNode, btcAddressType);
     }
 
     return sysServCredIssueAddrKeys;
@@ -1812,7 +1889,7 @@ KeyStore.prototype.listSystemServiceCreditIssuingAddressesInUse = function (ctnN
     return this.listSystemServiceCreditIssuingAddresses(ctnNodeIndex, fromAddrIndex, toAddrIndex);
 };
 
-KeyStore.prototype.getSystemServicePaymentPayTxExpenseAddressKeys = function (ctnNodeIndex, addrIndex, isObsolete = false) {
+KeyStore.prototype.getSystemServicePaymentPayTxExpenseAddressKeys = function (ctnNodeIndex, addrIndex, btcAddressType, isObsolete = false) {
     // Validate arguments
     const errArg = {};
 
@@ -1833,7 +1910,7 @@ KeyStore.prototype.getSystemServicePaymentPayTxExpenseAddressKeys = function (ct
 
     // Try to retrieve system service payment pay tx expense address HD extended key for given Catenis node with the given index
     const sysServPymtPayTxExpenseAddrPath = util.format('m/%d/0/4/0/1/%d', ctnNodeIndex, addrIndex);
-    let sysServPymtPayTxExpenseAddrHDNode = retrieveHDNode.call(this, sysServPymtPayTxExpenseAddrPath),
+    let sysServPymtPayTxExpenseAddrHDNode = retrieveHDNode.call(this, sysServPymtPayTxExpenseAddrPath, true),
         sysServPymtPayTxExpenseAddrKeys = null;
 
     if (sysServPymtPayTxExpenseAddrHDNode === null) {
@@ -1868,13 +1945,22 @@ KeyStore.prototype.getSystemServicePaymentPayTxExpenseAddressKeys = function (ct
             }
             else {
                 // Store created HD extended key
-                storeHDNode.call(this, 'sys_serv_pymt_pay_tx_exp_addr', sysServPymtPayTxExpenseAddrPath, sysServPymtPayTxExpenseAddrHDNode, true, false, isObsolete);
+                storeHDNode.call(this, 'sys_serv_pymt_pay_tx_exp_addr', sysServPymtPayTxExpenseAddrPath, sysServPymtPayTxExpenseAddrHDNode, {
+                    isLeaf: true,
+                    isReserved: false,
+                    isObsolete: isObsolete,
+                    btcAddressType: btcAddressType
+                });
             }
         }
     }
+    else {
+        btcAddressType = sysServPymtPayTxExpenseAddrHDNode.btcAddressType;
+        sysServPymtPayTxExpenseAddrHDNode = sysServPymtPayTxExpenseAddrHDNode.hdNode;
+    }
 
     if (sysServPymtPayTxExpenseAddrHDNode !== null) {
-        sysServPymtPayTxExpenseAddrKeys = new CryptoKeys(sysServPymtPayTxExpenseAddrHDNode);
+        sysServPymtPayTxExpenseAddrKeys = new CryptoKeys(sysServPymtPayTxExpenseAddrHDNode, btcAddressType);
     }
 
     return sysServPymtPayTxExpenseAddrKeys;
@@ -1937,7 +2023,7 @@ KeyStore.prototype.listSystemServicePaymentPayTxExpenseAddressesInUse = function
     return this.listSystemServicePaymentPayTxExpenseAddresses(ctnNodeIndex, fromAddrIndex, toAddrIndex);
 };
 
-KeyStore.prototype.getSystemMultiSigSigneeAddressKeys = function (ctnNodeIndex, addrIndex, isObsolete = false) {
+KeyStore.prototype.getSystemMultiSigSigneeAddressKeys = function (ctnNodeIndex, addrIndex, btcAddressType, isObsolete = false) {
     // Validate arguments
     const errArg = {};
 
@@ -1958,7 +2044,7 @@ KeyStore.prototype.getSystemMultiSigSigneeAddressKeys = function (ctnNodeIndex, 
 
     // Try to retrieve system multi-signature Colored Coins tx output signee address HD extended key for given Catenis node with the given index
     const sysMultiSigSigneeAddrPath = util.format('m/%d/0/4/1/%d', ctnNodeIndex, addrIndex);
-    let sysMultiSigSigneeAddrHDNode = retrieveHDNode.call(this, sysMultiSigSigneeAddrPath),
+    let sysMultiSigSigneeAddrHDNode = retrieveHDNode.call(this, sysMultiSigSigneeAddrPath, true),
         sysMultiSigSigneeAddrKeys = null;
 
     if (sysMultiSigSigneeAddrHDNode === null) {
@@ -1993,13 +2079,22 @@ KeyStore.prototype.getSystemMultiSigSigneeAddressKeys = function (ctnNodeIndex, 
             }
             else {
                 // Store created HD extended key
-                storeHDNode.call(this, 'sys_msig_sign_addr', sysMultiSigSigneeAddrPath, sysMultiSigSigneeAddrHDNode, true, false, isObsolete);
+                storeHDNode.call(this, 'sys_msig_sign_addr', sysMultiSigSigneeAddrPath, sysMultiSigSigneeAddrHDNode, {
+                    isLeaf: true,
+                    isReserved: false,
+                    isObsolete: isObsolete,
+                    btcAddressType: btcAddressType
+                });
             }
         }
     }
+    else {
+        btcAddressType = sysMultiSigSigneeAddrHDNode.btcAddressType;
+        sysMultiSigSigneeAddrHDNode = sysMultiSigSigneeAddrHDNode.hdNode;
+    }
 
     if (sysMultiSigSigneeAddrHDNode !== null) {
-        sysMultiSigSigneeAddrKeys = new CryptoKeys(sysMultiSigSigneeAddrHDNode);
+        sysMultiSigSigneeAddrKeys = new CryptoKeys(sysMultiSigSigneeAddrHDNode, btcAddressType);
     }
 
     return sysMultiSigSigneeAddrKeys;
@@ -2063,7 +2158,7 @@ KeyStore.prototype.listSystemMultiSigSigneeAddressesInUse = function (ctnNodeInd
 };
 
 // NOTE: this method only applies to the Catenis Hub node
-KeyStore.prototype.getSystemBcotSaleStockAddressKeys = function (ctnNodeIndex, addrIndex, isObsolete = false) {
+KeyStore.prototype.getSystemBcotSaleStockAddressKeys = function (ctnNodeIndex, addrIndex, btcAddressType, isObsolete = false) {
     // Validate arguments
     const errArg = {};
 
@@ -2084,7 +2179,7 @@ KeyStore.prototype.getSystemBcotSaleStockAddressKeys = function (ctnNodeIndex, a
 
     // Try to retrieve system BCOT token sale stock address HD extended key for given Catenis node with the given index
     const sysBcotSaleStockAddrPath = util.format('m/%d/0/5/0/%d', ctnNodeIndex, addrIndex);
-    let sysBcotSaleStockAddrHDNode = retrieveHDNode.call(this, sysBcotSaleStockAddrPath),
+    let sysBcotSaleStockAddrHDNode = retrieveHDNode.call(this, sysBcotSaleStockAddrPath, true),
         sysBcotSaleStockAddrKeys = null;
 
     if (sysBcotSaleStockAddrHDNode === null) {
@@ -2119,13 +2214,22 @@ KeyStore.prototype.getSystemBcotSaleStockAddressKeys = function (ctnNodeIndex, a
             }
             else {
                 // Store created HD extended key
-                storeHDNode.call(this, 'sys_bcot_sale_stck_addr', sysBcotSaleStockAddrPath, sysBcotSaleStockAddrHDNode, true, false, isObsolete);
+                storeHDNode.call(this, 'sys_bcot_sale_stck_addr', sysBcotSaleStockAddrPath, sysBcotSaleStockAddrHDNode, {
+                    isLeaf: true,
+                    isReserved: false,
+                    isObsolete: isObsolete,
+                    btcAddressType: btcAddressType
+                });
             }
         }
     }
+    else {
+        btcAddressType = sysBcotSaleStockAddrHDNode.btcAddressType;
+        sysBcotSaleStockAddrHDNode = sysBcotSaleStockAddrHDNode.hdNode;
+    }
 
     if (sysBcotSaleStockAddrHDNode !== null) {
-        sysBcotSaleStockAddrKeys = new CryptoKeys(sysBcotSaleStockAddrHDNode);
+        sysBcotSaleStockAddrKeys = new CryptoKeys(sysBcotSaleStockAddrHDNode, btcAddressType);
     }
 
     return sysBcotSaleStockAddrKeys;
@@ -2190,7 +2294,7 @@ KeyStore.prototype.listSystemBcotSaleStockAddressesInUse = function (ctnNodeInde
     return this.listSystemBcotSaleStockAddresses(ctnNodeIndex, fromAddrIndex, toAddrIndex);
 };
 
-KeyStore.prototype.getSystemOCMsgsSettlementPayTxExpenseAddressKeys = function (ctnNodeIndex, addrIndex, isObsolete = false) {
+KeyStore.prototype.getSystemOCMsgsSettlementPayTxExpenseAddressKeys = function (ctnNodeIndex, addrIndex, btcAddressType, isObsolete = false) {
     // Validate arguments
     const errArg = {};
 
@@ -2211,7 +2315,7 @@ KeyStore.prototype.getSystemOCMsgsSettlementPayTxExpenseAddressKeys = function (
 
     // Try to retrieve system off-chain messages settlement pay tx expense address HD extended key for given Catenis node with the given index
     const sysOCMsgsSetlmtPayTxExpenseAddrPath = util.format('m/%d/0/6/0/%d', ctnNodeIndex, addrIndex);
-    let sysOCMsgsSetlmtPayTxExpenseAddrHDNode = retrieveHDNode.call(this, sysOCMsgsSetlmtPayTxExpenseAddrPath),
+    let sysOCMsgsSetlmtPayTxExpenseAddrHDNode = retrieveHDNode.call(this, sysOCMsgsSetlmtPayTxExpenseAddrPath, true),
         sysOCMsgsSetlmtPayTxExpenseAddrKeys = null;
 
     if (sysOCMsgsSetlmtPayTxExpenseAddrHDNode === null) {
@@ -2246,13 +2350,22 @@ KeyStore.prototype.getSystemOCMsgsSettlementPayTxExpenseAddressKeys = function (
             }
             else {
                 // Store created HD extended key
-                storeHDNode.call(this, 'sys_oc_msgs_setlmt_pay_tx_exp_addr', sysOCMsgsSetlmtPayTxExpenseAddrPath, sysOCMsgsSetlmtPayTxExpenseAddrHDNode, true, false, isObsolete);
+                storeHDNode.call(this, 'sys_oc_msgs_setlmt_pay_tx_exp_addr', sysOCMsgsSetlmtPayTxExpenseAddrPath, sysOCMsgsSetlmtPayTxExpenseAddrHDNode, {
+                    isLeaf: true,
+                    isReserved: false,
+                    isObsolete: isObsolete,
+                    btcAddressType: btcAddressType
+                });
             }
         }
     }
+    else {
+        btcAddressType = sysOCMsgsSetlmtPayTxExpenseAddrHDNode.btcAddressType;
+        sysOCMsgsSetlmtPayTxExpenseAddrHDNode = sysOCMsgsSetlmtPayTxExpenseAddrHDNode.hdNode;
+    }
 
     if (sysOCMsgsSetlmtPayTxExpenseAddrHDNode !== null) {
-        sysOCMsgsSetlmtPayTxExpenseAddrKeys = new CryptoKeys(sysOCMsgsSetlmtPayTxExpenseAddrHDNode);
+        sysOCMsgsSetlmtPayTxExpenseAddrKeys = new CryptoKeys(sysOCMsgsSetlmtPayTxExpenseAddrHDNode, btcAddressType);
     }
 
     return sysOCMsgsSetlmtPayTxExpenseAddrKeys;
@@ -2315,7 +2428,7 @@ KeyStore.prototype.listSystemOCMsgsSettlementPayTxExpenseAddressesInUse = functi
     return this.listSystemOCMsgsSettlementPayTxExpenseAddresses(ctnNodeIndex, fromAddrIndex, toAddrIndex);
 };
 
-KeyStore.prototype.getSystemDeviceAddressKeys = function (ctnNodeIndex, addrRootIndex, addrIndex, isObsolete = false) {
+KeyStore.prototype.getSystemDeviceAddressKeys = function (ctnNodeIndex, addrRootIndex, addrIndex, btcAddressType, isObsolete = false) {
     // Validate arguments
     const errArg = {};
 
@@ -2340,7 +2453,7 @@ KeyStore.prototype.getSystemDeviceAddressKeys = function (ctnNodeIndex, addrRoot
 
     // Try to retrieve system device address HD extended key for given Catenis node, address Root, and with the given index
     const sysDeviceAddrPath = util.format('m/%d/0/0/%d/%d', ctnNodeIndex, addrRootIndex, addrIndex);
-    let sysDeviceAddrHDNode = retrieveHDNode.call(this, sysDeviceAddrPath),
+    let sysDeviceAddrHDNode = retrieveHDNode.call(this, sysDeviceAddrPath, true),
         sysDeviceAddrKeys = null;
 
     if (sysDeviceAddrHDNode === null) {
@@ -2375,13 +2488,22 @@ KeyStore.prototype.getSystemDeviceAddressKeys = function (ctnNodeIndex, addrRoot
             }
             else {
                 // Store created HD extended key
-                storeHDNode.call(this, addrRootIndex === 0 ? 'sys_dev_main_addr' : 'sys_dev_rsrv_addr', sysDeviceAddrPath, sysDeviceAddrHDNode, true, addrRootIndex >= numUsedSysDeviceAddrRoots, isObsolete);
+                storeHDNode.call(this, addrRootIndex === 0 ? 'sys_dev_main_addr' : 'sys_dev_rsrv_addr', sysDeviceAddrPath, sysDeviceAddrHDNode, {
+                    isLeaf: true,
+                    isReserved: addrRootIndex >= numUsedSysDeviceAddrRoots,
+                    isObsolete: isObsolete,
+                    btcAddressType: btcAddressType
+                });
             }
         }
     }
+    else {
+        btcAddressType = sysDeviceAddrHDNode.btcAddressType;
+        sysDeviceAddrHDNode = sysDeviceAddrHDNode.hdNode;
+    }
 
     if (sysDeviceAddrHDNode !== null) {
-        sysDeviceAddrKeys = new CryptoKeys(sysDeviceAddrHDNode);
+        sysDeviceAddrKeys = new CryptoKeys(sysDeviceAddrHDNode, btcAddressType);
     }
 
     return sysDeviceAddrKeys;
@@ -2448,8 +2570,8 @@ KeyStore.prototype.listSystemDeviceAddressesInUse = function (ctnNodeIndex, addr
     return this.listSystemDeviceAddresses(ctnNodeIndex, addrRootIndex, fromAddrIndex, toAddrIndex, true);
 };
 
-KeyStore.prototype.getSystemDeviceMainAddressKeys = function (ctnNodeIndex, addrIndex, isObsolete = false) {
-    return this.getSystemDeviceAddressKeys(ctnNodeIndex, 0, addrIndex, isObsolete);
+KeyStore.prototype.getSystemDeviceMainAddressKeys = function (ctnNodeIndex, addrIndex, btcAddressType, isObsolete = false) {
+    return this.getSystemDeviceAddressKeys(ctnNodeIndex, 0, addrIndex, btcAddressType, isObsolete);
 };
 
 KeyStore.prototype.listSystemDeviceMainAddresses = function (ctnNodeIndex, fromAddrIndex, toAddrIndex, onlyInUse) {
@@ -2582,7 +2704,10 @@ KeyStore.prototype.initClientHDNodes = function (ctnNodeIndex, clientIndex) {
                                 if (clientSrvCreditRootHDNode !== null) {
                                     // Store all newly created HD extended keys, and indicate success
                                     hdNodesToStore.forEach((hdNodeToStore) => {
-                                        storeHDNode.call(this, hdNodeToStore.type, hdNodeToStore.path, hdNodeToStore.hdNode, hdNodeToStore.isLeaf, hdNodeToStore.isReserved);
+                                        storeHDNode.call(this, hdNodeToStore.type, hdNodeToStore.path, hdNodeToStore.hdNode, {
+                                            isLeaf: hdNodeToStore.isLeaf,
+                                            isReserved: hdNodeToStore.isReserved
+                                        });
                                     });
 
                                     success = true;
@@ -2603,7 +2728,7 @@ KeyStore.prototype.initClientHDNodes = function (ctnNodeIndex, clientIndex) {
     return success;
 };
 
-KeyStore.prototype.getClientServiceCreditAddressKeys = function (ctnNodeIndex, clientIndex, servCreditIndex, addrIndex, isObsolete = false) {
+KeyStore.prototype.getClientServiceCreditAddressKeys = function (ctnNodeIndex, clientIndex, servCreditIndex, addrIndex, btcAddressType, isObsolete = false) {
     // Validate arguments
     const errArg = {};
 
@@ -2632,7 +2757,7 @@ KeyStore.prototype.getClientServiceCreditAddressKeys = function (ctnNodeIndex, c
 
     // Try to retrieve address HD extended key for given Catenis node, client, and service credit, with given index
     const clientSrvCreditAddrPath = util.format('m/%d/%d/0/0/0/%d/%d', ctnNodeIndex, clientIndex, servCreditIndex, addrIndex);
-    let clientSrvCreditAddrHDNode = retrieveHDNode.call(this, clientSrvCreditAddrPath),
+    let clientSrvCreditAddrHDNode = retrieveHDNode.call(this, clientSrvCreditAddrPath, true),
         clientSrvCreditAddrKeys = null;
 
     if (clientSrvCreditAddrHDNode === null) {
@@ -2667,13 +2792,22 @@ KeyStore.prototype.getClientServiceCreditAddressKeys = function (ctnNodeIndex, c
             }
             else {
                 // Store created HD extended key
-                storeHDNode.call(this, servCreditIndex < numUsedClientServCredAddrRoots ? clientServCredAddrRootTypes[servCreditIndex].address : 'cln_srv_crd_rsrv_addr', clientSrvCreditAddrPath, clientSrvCreditAddrHDNode, true, servCreditIndex >= numUsedClientServCredAddrRoots, isObsolete);
+                storeHDNode.call(this, servCreditIndex < numUsedClientServCredAddrRoots ? clientServCredAddrRootTypes[servCreditIndex].address : 'cln_srv_crd_rsrv_addr', clientSrvCreditAddrPath, clientSrvCreditAddrHDNode, {
+                    isLeaf: true,
+                    isReserved: servCreditIndex >= numUsedClientServCredAddrRoots,
+                    isObsolete: isObsolete,
+                    btcAddressType: btcAddressType
+                });
             }
         }
     }
+    else {
+        btcAddressType = clientSrvCreditAddrHDNode.btcAddressType;
+        clientSrvCreditAddrHDNode = clientSrvCreditAddrHDNode.hdNode;
+    }
 
     if (clientSrvCreditAddrHDNode !== null) {
-        clientSrvCreditAddrKeys = new CryptoKeys(clientSrvCreditAddrHDNode);
+        clientSrvCreditAddrKeys = new CryptoKeys(clientSrvCreditAddrHDNode, btcAddressType);
     }
 
     return clientSrvCreditAddrKeys;
@@ -2744,8 +2878,8 @@ KeyStore.prototype.listClientServiceCreditAddressesInUse = function (ctnNodeInde
     return this.listClientServiceCreditAddresses(ctnNodeIndex, clientIndex, servCreditIndex, fromAddrIndex, toAddrIndex, true);
 };
 
-KeyStore.prototype.getClientServiceAccountCreditLineAddressKeys = function (ctnNodeIndex, clientIndex, addrIndex, isObsolete = false) {
-    return this.getClientServiceCreditAddressKeys(ctnNodeIndex, clientIndex, 2, addrIndex, isObsolete);
+KeyStore.prototype.getClientServiceAccountCreditLineAddressKeys = function (ctnNodeIndex, clientIndex, addrIndex, btcAddressType, isObsolete = false) {
+    return this.getClientServiceCreditAddressKeys(ctnNodeIndex, clientIndex, 2, addrIndex, btcAddressType, isObsolete);
 };
 
 KeyStore.prototype.listClientServiceAccountCreditLineAddresses = function (ctnNodeIndex, clientIndex, fromAddrIndex, toAddrIndex, onlyInUse) {
@@ -2781,8 +2915,8 @@ KeyStore.prototype.listAllClientServiceAccountCreditLineAddressesInUse = functio
     });
 };
 
-KeyStore.prototype.getClientServiceAccountDebitLineAddressKeys = function (ctnNodeIndex, clientIndex, addrIndex, isObsolete = false) {
-    return this.getClientServiceCreditAddressKeys(ctnNodeIndex, clientIndex, 3, addrIndex, isObsolete);
+KeyStore.prototype.getClientServiceAccountDebitLineAddressKeys = function (ctnNodeIndex, clientIndex, addrIndex, btcAddressType, isObsolete = false) {
+    return this.getClientServiceCreditAddressKeys(ctnNodeIndex, clientIndex, 3, addrIndex, btcAddressType, isObsolete);
 };
 
 KeyStore.prototype.listClientServiceAccountDebitLineAddresses = function (ctnNodeIndex, clientIndex, fromAddrIndex, toAddrIndex, onlyInUse) {
@@ -2793,8 +2927,8 @@ KeyStore.prototype.listClientServiceAccountDebitLineAddressesInUse = function (c
     return this.listClientServiceCreditAddressesInUse(ctnNodeIndex, clientIndex, 3, fromAddrIndex, toAddrIndex);
 };
 
-KeyStore.prototype.getClientBcotPaymentAddressKeys = function (ctnNodeIndex, clientIndex, addrIndex, isObsolete = false) {
-    return this.getClientServiceCreditAddressKeys(ctnNodeIndex, clientIndex, 4, addrIndex, isObsolete);
+KeyStore.prototype.getClientBcotPaymentAddressKeys = function (ctnNodeIndex, clientIndex, addrIndex, btcAddressType, isObsolete = false) {
+    return this.getClientServiceCreditAddressKeys(ctnNodeIndex, clientIndex, 4, addrIndex, btcAddressType, isObsolete);
 };
 
 KeyStore.prototype.listClientBcotPaymentAddresses = function (ctnNodeIndex, clientIndex, fromAddrIndex, toAddrIndex, onlyInUse) {
@@ -2972,7 +3106,10 @@ KeyStore.prototype.initDeviceHDNodes = function (ctnNodeIndex, clientIndex, devi
                             if (devicePubRootHDNode !== null) {
                                 // Store all newly created HD extended keys, and indicate success
                                 hdNodesToStore.forEach((hdNodeToStore) => {
-                                    storeHDNode.call(this, hdNodeToStore.type, hdNodeToStore.path, hdNodeToStore.hdNode, hdNodeToStore.isLeaf, hdNodeToStore.isReserved);
+                                    storeHDNode.call(this, hdNodeToStore.type, hdNodeToStore.path, hdNodeToStore.hdNode, {
+                                        isLeaf: hdNodeToStore.isLeaf,
+                                        isReserved: hdNodeToStore.isReserved
+                                    });
                                 });
 
                                 success = true;
@@ -2992,7 +3129,7 @@ KeyStore.prototype.initDeviceHDNodes = function (ctnNodeIndex, clientIndex, devi
     return success;
 };
 
-KeyStore.prototype.getDeviceInternalAddressKeys = function (ctnNodeIndex, clientIndex, deviceIndex, addrRootIndex, addrIndex, isObsolete = false) {
+KeyStore.prototype.getDeviceInternalAddressKeys = function (ctnNodeIndex, clientIndex, deviceIndex, addrRootIndex, addrIndex, btcAddressType, isObsolete = false) {
     // Validate arguments
     const errArg = {};
 
@@ -3025,7 +3162,7 @@ KeyStore.prototype.getDeviceInternalAddressKeys = function (ctnNodeIndex, client
 
     // Try to retrieve specified internal address HD extended key for device of given Catenis node and client, with given index
     const deviceIntAddrPath = util.format('m/%d/%d/0/%d/%d/%d', ctnNodeIndex, clientIndex, deviceIndex, addrRootIndex, addrIndex);
-    let deviceIntAddrHDNode = retrieveHDNode.call(this, deviceIntAddrPath),
+    let deviceIntAddrHDNode = retrieveHDNode.call(this, deviceIntAddrPath, true),
         deviceIntAddrKeys = null;
 
     if (deviceIntAddrHDNode === null) {
@@ -3060,13 +3197,22 @@ KeyStore.prototype.getDeviceInternalAddressKeys = function (ctnNodeIndex, client
             }
             else {
                 // Store created HD extended key
-                storeHDNode.call(this, addrRootIndex === 0 ? 'dev_read_conf_addr' : 'dev_int_rsrv_addr', deviceIntAddrPath, deviceIntAddrHDNode, true, addrRootIndex >= numUsedDeviceIntAddrRoots, isObsolete);
+                storeHDNode.call(this, addrRootIndex === 0 ? 'dev_read_conf_addr' : 'dev_int_rsrv_addr', deviceIntAddrPath, deviceIntAddrHDNode, {
+                    isLeaf: true,
+                    isReserved: addrRootIndex >= numUsedDeviceIntAddrRoots,
+                    isObsolete: isObsolete,
+                    btcAddressType: btcAddressType
+                });
             }
         }
     }
+    else {
+        btcAddressType = deviceIntAddrHDNode.btcAddressType;
+        deviceIntAddrHDNode = deviceIntAddrHDNode.hdNode;
+    }
 
     if (deviceIntAddrHDNode !== null) {
-        deviceIntAddrKeys = new CryptoKeys(deviceIntAddrHDNode);
+        deviceIntAddrKeys = new CryptoKeys(deviceIntAddrHDNode, btcAddressType);
     }
 
     return deviceIntAddrKeys;
@@ -3141,7 +3287,7 @@ KeyStore.prototype.listDeviceInternalAddressesInUse = function (ctnNodeIndex, cl
     return this.listDeviceInternalAddresses(ctnNodeIndex, clientIndex, deviceIndex, addrRootIndex, fromAddrIndex, toAddrIndex, true);
 };
 
-KeyStore.prototype.getDevicePublicAddressKeys = function (ctnNodeIndex, clientIndex, deviceIndex, addrRootIndex, addrIndex, isObsolete = false) {
+KeyStore.prototype.getDevicePublicAddressKeys = function (ctnNodeIndex, clientIndex, deviceIndex, addrRootIndex, addrIndex, btcAddressType, isObsolete = false) {
     // Validate arguments
     const errArg = {};
 
@@ -3174,7 +3320,7 @@ KeyStore.prototype.getDevicePublicAddressKeys = function (ctnNodeIndex, clientIn
 
     // Try to retrieve specified public address HD extended key for device of given Catenis node and client, with given index
     const devicePubAddrPath = util.format('m/%d/%d/1/%d/%d/%d', ctnNodeIndex, clientIndex, deviceIndex, addrRootIndex, addrIndex);
-    let devicePubAddrHDNode = retrieveHDNode.call(this, devicePubAddrPath),
+    let devicePubAddrHDNode = retrieveHDNode.call(this, devicePubAddrPath, true),
         devicePubAddrKeys = null;
 
     if (devicePubAddrHDNode === null) {
@@ -3247,13 +3393,23 @@ KeyStore.prototype.getDevicePublicAddressKeys = function (ctnNodeIndex, clientIn
                         break;
                 }
 
-                storeHDNode.call(this, hdNodeInfo.type, hdNodeInfo.path, hdNodeInfo.hdNode, hdNodeInfo.isLeaf, hdNodeInfo.isReserved, hdNodeInfo.isObsolete, hdNodeInfo.isOffChainAddr);
+                storeHDNode.call(this, hdNodeInfo.type, hdNodeInfo.path, hdNodeInfo.hdNode, {
+                    isLeaf: hdNodeInfo.isLeaf,
+                    isReserved: hdNodeInfo.isReserved,
+                    isObsolete: hdNodeInfo.isObsolete,
+                    isOffChainAddr: hdNodeInfo.isOffChainAddr,
+                    btcAddressType: btcAddressType
+                });
             }
         }
     }
+    else {
+        btcAddressType = devicePubAddrHDNode.btcAddressType;
+        devicePubAddrHDNode = devicePubAddrHDNode.hdNode;
+    }
 
     if (devicePubAddrHDNode !== null) {
-        devicePubAddrKeys = new CryptoKeys(devicePubAddrHDNode);
+        devicePubAddrKeys = new CryptoKeys(devicePubAddrHDNode, btcAddressType);
     }
 
     return devicePubAddrKeys;
@@ -3383,8 +3539,8 @@ KeyStore.prototype.latestDevicePublicAddressInUse = function (ctnNodeIndex, clie
     return this.latestDevicePublicAddress(ctnNodeIndex, clientIndex, deviceIndex, addrRootIndex, true);
 };
 
-KeyStore.prototype.getDeviceReadConfirmAddressKeys = function (ctnNodeIndex, clientIndex, deviceIndex, addrIndex, isObsolete = false) {
-    return this.getDeviceInternalAddressKeys(ctnNodeIndex, clientIndex, deviceIndex, 0, addrIndex, isObsolete);
+KeyStore.prototype.getDeviceReadConfirmAddressKeys = function (ctnNodeIndex, clientIndex, deviceIndex, addrIndex, btcAddressType, isObsolete = false) {
+    return this.getDeviceInternalAddressKeys(ctnNodeIndex, clientIndex, deviceIndex, 0, addrIndex, btcAddressType, isObsolete);
 };
 
 KeyStore.prototype.listDeviceReadConfirmAddresses = function (ctnNodeIndex, clientIndex, deviceIndex, fromAddrIndex, toAddrIndex, onlyInUse) {
@@ -3395,8 +3551,8 @@ KeyStore.prototype.listDeviceReadConfirmAddressesInUse = function (ctnNodeIndex,
     return this.listDeviceInternalAddresses(ctnNodeIndex, clientIndex, deviceIndex, 0, fromAddrIndex, toAddrIndex, true);
 };
 
-KeyStore.prototype.getDeviceMainAddressKeys = function (ctnNodeIndex, clientIndex, deviceIndex, addrIndex, isObsolete = false) {
-    return this.getDevicePublicAddressKeys(ctnNodeIndex, clientIndex, deviceIndex, 0, addrIndex, isObsolete);
+KeyStore.prototype.getDeviceMainAddressKeys = function (ctnNodeIndex, clientIndex, deviceIndex, addrIndex, btcAddressType, isObsolete = false) {
+    return this.getDevicePublicAddressKeys(ctnNodeIndex, clientIndex, deviceIndex, 0, addrIndex, btcAddressType, isObsolete);
 };
 
 KeyStore.prototype.listDeviceMainAddresses = function (ctnNodeIndex, clientIndex, deviceIndex, fromAddrIndex, toAddrIndex, onlyInUse) {
@@ -3407,8 +3563,8 @@ KeyStore.prototype.listDeviceMainAddressesInUse = function (ctnNodeIndex, client
     return this.listDevicePublicAddresses(ctnNodeIndex, clientIndex, deviceIndex, 0, fromAddrIndex, toAddrIndex, true);
 };
 
-KeyStore.prototype.getDeviceAssetAddressKeys = function (ctnNodeIndex, clientIndex, deviceIndex, addrIndex, isObsolete = false) {
-    return this.getDevicePublicAddressKeys(ctnNodeIndex, clientIndex, deviceIndex, 1, addrIndex, isObsolete);
+KeyStore.prototype.getDeviceAssetAddressKeys = function (ctnNodeIndex, clientIndex, deviceIndex, addrIndex, btcAddressType, isObsolete = false) {
+    return this.getDevicePublicAddressKeys(ctnNodeIndex, clientIndex, deviceIndex, 1, addrIndex, btcAddressType, isObsolete);
 };
 
 KeyStore.prototype.listDeviceAssetAddresses = function (ctnNodeIndex, clientIndex,  deviceIndex, fromAddrIndex, toAddrIndex, onlyInUse) {
@@ -3419,8 +3575,8 @@ KeyStore.prototype.listDeviceAssetAddressesInUse = function (ctnNodeIndex, clien
     return this.listDevicePublicAddresses(ctnNodeIndex, clientIndex,  deviceIndex, 1, fromAddrIndex, toAddrIndex, true);
 };
 
-KeyStore.prototype.getDeviceAssetIssuanceAddressKeys = function (ctnNodeIndex, clientIndex,  deviceIndex, addrIndex, isObsolete = false) {
-    return this.getDevicePublicAddressKeys(ctnNodeIndex, clientIndex,  deviceIndex, 2, addrIndex, isObsolete);
+KeyStore.prototype.getDeviceAssetIssuanceAddressKeys = function (ctnNodeIndex, clientIndex,  deviceIndex, addrIndex, btcAddressType, isObsolete = false) {
+    return this.getDevicePublicAddressKeys(ctnNodeIndex, clientIndex,  deviceIndex, 2, addrIndex, btcAddressType, isObsolete);
 };
 
 KeyStore.prototype.listDeviceAssetIssuanceAddresses = function (ctnNodeIndex, clientIndex,  deviceIndex, fromAddrIndex, toAddrIndex, onlyInUse) {
@@ -3440,7 +3596,7 @@ KeyStore.prototype.latestDeviceAssetIssuanceAddressInUse = function (ctnNodeInde
 };
 
 KeyStore.prototype.getDeviceOffChainAddressKeys = function (ctnNodeIndex, clientIndex,  deviceIndex, addrIndex) {
-    return this.getDevicePublicAddressKeys(ctnNodeIndex, clientIndex,  deviceIndex, 3, addrIndex, true);
+    return this.getDevicePublicAddressKeys(ctnNodeIndex, clientIndex,  deviceIndex, 3, addrIndex, BitcoinInfo.addressType.pubkeyhash, true);
 };
 
 
@@ -3464,29 +3620,46 @@ function purgeUnusedExtendedKeys() {
             {$and: [{isObsolete: true}, {'meta.revision': {$gt: 0}}, {'meta.updated': {$lt: obsoleteEarliestTimestamp}}]}]});
 }
 
-function storeHDNode(type, path, hdNode, isLeaf, isReserved, isObsolete, isOffChainAddr) {
-    if (isLeaf === undefined) {
-        isLeaf = false;
+// Arguments:
+//  type [String] - HD extended key type (from KeyStore.extKeyType)
+//  path [String] - The HD extended key node path
+//  hdNode [Object] - The HD extended key node object
+//  opts [Object] {
+//    isLeaf [Boolean],
+//    isReserved [Boolean],
+//    isObsolete [Boolean]
+//    isOffChainAddr [Boolean],
+//    btcAddressType [Object]
+//  }
+function storeHDNode(type, path, hdNode, opts) {
+    opts = opts || {};
+
+    if (opts.isLeaf === undefined) {
+        opts.isLeaf = false;
     }
 
-    if (isReserved === undefined) {
-        isReserved = false;
+    if (opts.isReserved === undefined) {
+        opts.isReserved = false;
     }
 
-    if (!isLeaf || isObsolete === undefined) {
-        isObsolete = false;
+    if (!opts.isLeaf || opts.isObsolete === undefined) {
+        opts.isObsolete = false;
     }
 
-    if (!isLeaf || isOffChainAddr === undefined) {
-        isOffChainAddr = false;
+    if (!opts.isLeaf || opts.isOffChainAddr === undefined) {
+        opts.isOffChainAddr = false;
     }
 
     // Make sure that off-chain address is always set as obsolete (so it can be purged at any time)
-    if (isOffChainAddr && !isObsolete) {
-        isObsolete = true;
+    if (opts.isOffChainAddr && !opts.isObsolete) {
+        opts.isObsolete = true;
     }
 
-    const addrAndPubKeyHash = new CryptoKeys(hdNode).getAddressAndPubKeyHash();
+    if (!opts.btcAddressType) {
+        opts.btcAddressType = BitcoinInfo.addressType.pubkeyhash;
+    }
+
+    const addrAndPubKeyHash = new CryptoKeys(hdNode, opts.btcAddressType).getAddressAndPubKeyHash();
     const docExtKey = {
         type: type,
         path: path,
@@ -3495,20 +3668,30 @@ function storeHDNode(type, path, hdNode, isLeaf, isReserved, isObsolete, isOffCh
         index: hdNode.index,
         strHDNode: hdNode.toBase58(),
         address: addrAndPubKeyHash.address,
+        btcAddressType: opts.btcAddressType.name,
         pubKeyHash: addrAndPubKeyHash.pubKeyHash.toString('base64'),
-        isLeaf: isLeaf,
-        isReserved: isReserved,
-        isObsolete: isObsolete,
-        isOffChainAddr: isOffChainAddr
+        isLeaf: opts.isLeaf,
+        isReserved: opts.isReserved,
+        isObsolete: opts.isObsolete,
+        isOffChainAddr: opts.isOffChainAddr
     };
 
     this.collExtKey.insert(docExtKey);
 }
 
-function retrieveHDNode(path) {
+function retrieveHDNode(path, returnObject = false) {
     const docExtKey = this.collExtKey.by('path', path);
 
-    return docExtKey !== undefined ? bitcoinLib.bip32.fromBase58(docExtKey.strHDNode, this.cryptoNetwork) : null;
+    let hdNode = docExtKey !== undefined ? bitcoinLib.bip32.fromBase58(docExtKey.strHDNode, this.cryptoNetwork) : null;
+
+    if (hdNode && returnObject) {
+        hdNode = {
+            hdNode,
+            btcAddressType: BitcoinInfo.getAddressTypeByName(docExtKey.btcAddressType)
+        };
+    }
+
+    return hdNode;
 }
 
 

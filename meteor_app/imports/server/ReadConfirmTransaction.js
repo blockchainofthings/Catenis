@@ -28,6 +28,8 @@ import { FundSource } from './FundSource';
 import { Util } from './Util';
 import { MalleabilityEventEmitter } from './MalleabilityEventEmitter';
 import { CatenisNode } from './CatenisNode';
+import { UtxoCounter } from './UtxoCounter';
+import { BitcoinInfo } from './BitcoinInfo';
 
 // Config entries
 /*const config_entryConfig = config.get('config_entry');
@@ -647,32 +649,34 @@ ReadConfirmTransaction.prototype.addSendMsgTxToConfirm = function (sendMsgTransa
             vout: readConfirmOutputPos,
             amount: readConfirmOutput.payInfo.amount,
         },
+        isWitness: readConfirmOutput.type.isWitness,
+        scriptPubKey: readConfirmOutput.scriptPubKey,
         address: readConfirmOutput.payInfo.address,
         addrInfo: readConfirmOutput.payInfo.addrInfo
     };
 
     // Add proper input and output according to the type of confirmation
-    let newOutputAdded = false;
+    let posOutputAdded;
 
     if (confirmType === ReadConfirmation.confirmationType.spendNotify) {
         // Spend notify
-        newOutputAdded = addReadConfirmAddrSpendNotify.call(this, readConfirmAddrInput, sendMsgTransact.originDevice.client.ctnNode);
+        posOutputAdded = addReadConfirmAddrSpendNotify.call(this, readConfirmAddrInput, sendMsgTransact.originDevice.client.ctnNode);
     }
     else if (confirmType === ReadConfirmation.confirmationType.spendOnly) {
         // Spend only
-        newOutputAdded = addReadConfirmAddrSpendOnly.call(this, readConfirmAddrInput);
+        posOutputAdded = addReadConfirmAddrSpendOnly.call(this, readConfirmAddrInput);
     }
     else if (confirmType === ReadConfirmation.confirmationType.spendNull) {
         // Spend null
-        newOutputAdded = addReadConfirmAddrSpendNull.call(this, readConfirmAddrInput);
+        posOutputAdded = addReadConfirmAddrSpendNull.call(this, readConfirmAddrInput);
     }
 
     if (this.readConfirmTxInfo) {
         // Update read confirmation tx info
-        this.readConfirmTxInfo.incrementNumTxInputs(1);
+        this.readConfirmTxInfo.addInputs(readConfirmAddrInput.isWitness, 1);
 
-        if (newOutputAdded) {
-            this.readConfirmTxInfo.incrementNumTxOutputs(1);
+        if (posOutputAdded !== undefined) {
+            this.readConfirmTxInfo.addOutputs(this.transact.getOutputAt(posOutputAdded).type.isWitness, 1);
         }
     }
 
@@ -689,15 +693,19 @@ ReadConfirmTransaction.prototype.mergeReadConfirmTransaction = function (readCon
     let newInputAdded = false;
 
     // Process read confirmation address to spend null
+    const readConfirmSpendNullOutput = readConfirmTransact.transact.getOutputAt(readConfirmTransact.readConfirmSpendNullOutputPos);
+    let outputAddress = readConfirmSpendNullOutput.payInfo.address;
+
     for (let inputPos = 0; inputPos < readConfirmTransact.nextReadConfirmAddrSpndNullInputPos; inputPos++) {
-        const newOutputAdded = addReadConfirmAddrSpendNull.call(this, readConfirmTransact.transact.getInputAt(inputPos), readConfirmTransact.transact.getOutputAt(readConfirmTransact.readConfirmSpendNullOutputPos).payInfo.address);
+        const input = readConfirmTransact.transact.getInputAt(inputPos);
+        const posOutputAdded = addReadConfirmAddrSpendNull.call(this, input, outputAddress);
 
         if (this.readConfirmTxInfo) {
             // Update read confirmation tx info
-            this.readConfirmTxInfo.incrementNumTxInputs(1);
+            this.readConfirmTxInfo.addInputs(input.isWitness, 1);
 
-            if (newOutputAdded) {
-                this.readConfirmTxInfo.incrementNumTxOutputs(1);
+            if (posOutputAdded !== undefined) {
+                this.readConfirmTxInfo.addOutputs(this.transact.getOutputAt(posOutputAdded).type.isWitness, 1);
             }
         }
 
@@ -705,15 +713,19 @@ ReadConfirmTransaction.prototype.mergeReadConfirmTransaction = function (readCon
     }
 
     // Process read confirmation address to spend only
+    const readConfirmSpendOnlyOutput = readConfirmTransact.transact.getOutputAt(readConfirmTransact.readConfirmSpendOnlyOutputPos);
+    outputAddress = readConfirmSpendOnlyOutput.payInfo.address;
+
     for (let inputPos = readConfirmTransact.nextReadConfirmAddrSpndNullInputPos; inputPos < readConfirmTransact.nextReadConfirmAddrSpndOnlyInputPos; inputPos++) {
-        const newOutputAdded = addReadConfirmAddrSpendOnly.call(this, readConfirmTransact.transact.getInputAt(inputPos), readConfirmTransact.transact.getOutputAt(readConfirmTransact.readConfirmSpendOnlyOutputPos).payInfo.address);
+        const input = readConfirmTransact.transact.getInputAt(inputPos);
+        const posOutputAdded = addReadConfirmAddrSpendOnly.call(this, input, outputAddress);
 
         if (this.readConfirmTxInfo) {
             // Update read confirmation tx info
-            this.readConfirmTxInfo.incrementNumTxInputs(1);
+            this.readConfirmTxInfo.addInputs(input.isWitness, 1);
 
-            if (newOutputAdded) {
-                this.readConfirmTxInfo.incrementNumTxOutputs(1);
+            if (posOutputAdded !== undefined) {
+                this.readConfirmTxInfo.addOutputs(this.transact.getOutputAt(posOutputAdded).type.isWitness, 1);
             }
         }
 
@@ -726,18 +738,19 @@ ReadConfirmTransaction.prototype.mergeReadConfirmTransaction = function (readCon
     for (let ctnNodeIdx of readConfirmTransact.ctnNdIdxReadConfirmSpndNtfyOutRelPos.keys()) {
         const ctnNode = CatenisNode.getCatenisNodeByIndex(ctnNodeIdx);
         const readConfirmSpendNotifyOutput = readConfirmTransact.transact.getOutputAt(getReadConfirmSpendNotifyOutputPos.call(readConfirmTransact, ctnNodeIdx));
+        outputAddress = readConfirmSpendNotifyOutput.payInfo.address;
         let amountLeft = readConfirmSpendNotifyOutput.payInfo.amount;
 
         do {
             const input = readConfirmTransact.transact.getInputAt(inputPos);
-            const newOutputAdded = addReadConfirmAddrSpendNotify.call(this, input, ctnNode, readConfirmSpendNotifyOutput.payInfo.address);
+            const posOutputAdded = addReadConfirmAddrSpendNotify.call(this, input, ctnNode, outputAddress);
 
             if (this.readConfirmTxInfo) {
                 // Update read confirmation tx info
-                this.readConfirmTxInfo.incrementNumTxInputs(1);
+                this.readConfirmTxInfo.addInputs(input.isWitness, 1);
 
-                if (newOutputAdded) {
-                    this.readConfirmTxInfo.incrementNumTxOutputs(1);
+                if (posOutputAdded !== undefined) {
+                    this.readConfirmTxInfo.addOutputs(this.transact.getOutputAt(posOutputAdded).type.isWitness, 1);
                 }
             }
 
@@ -764,7 +777,7 @@ ReadConfirmTransaction.prototype.fundTransaction = function () {
             initReadConfirmTxInfo.call(this);
         }
 
-        let numAddPayFeeInputs = 0;
+        let addPayFeeInputCounter = new UtxoCounter();
         let nothingToDo = false;
         let readConfirmPayTxExpenseFundSource;
 
@@ -774,13 +787,14 @@ ReadConfirmTransaction.prototype.fundTransaction = function () {
 
             if (txNewFee.fee > this.fee) {
                 let deltaFee = txNewFee.fee - this.fee;
+                const txChangeOutputType = BitcoinInfo.getOutputTypeByAddressType(Catenis.ctnHubNode.readConfirmPayTxExpenseAddr.btcAddressType);
 
                 // See if we can use current change to cover fee increase
                 if (this.change >= deltaFee) {
                     let newChange = this.change - deltaFee;
 
                     // Make sure that change amount is not below dust amount
-                    if (newChange > 0 && newChange < Transaction.txOutputDustAmount) {
+                    if (newChange > 0 && newChange < Transaction.dustAmountByOutputType(txChangeOutputType)) {
                         deltaFee += newChange;
                         newChange = 0;
                     }
@@ -792,7 +806,8 @@ ReadConfirmTransaction.prototype.fundTransaction = function () {
                         // Remove output to receive change
                         this.transact.revertOutputAddresses(this.lastReadConfirmSpendOutputPos + 1, this.lastReadConfirmSpendOutputPos + 1);
                         this.transact.removeOutputAt(this.lastReadConfirmSpendOutputPos + 1);
-                        this.readConfirmTxInfo.incrementNumTxOutputs(-1);
+
+                        this.readConfirmTxInfo.addOutputs(txChangeOutputType.isWitness, -1);
                     }
                     else {
                         // Reset amount of change output
@@ -808,17 +823,46 @@ ReadConfirmTransaction.prototype.fundTransaction = function () {
                 }
                 else {
                     // Change is not enough to cover fee increase
-                    if (numAddPayFeeInputs === 0) {
+
+                    // Already prepare to allocate UTXOs to pay for transaction additional fee
+                    //  Note: recall that txs that are to replace a previous tx as per RBF must NOT spend any new unconfirmed UTXOs
+                    if (readConfirmPayTxExpenseFundSource === undefined) {
+                        // Object used to allocate UTXOs is not instantiated yet. Instantiate it now,
+                        //  making sure that, if allocating funds for a tx that is to replace a previous one,
+                        //  unconfirmed UTXOs NOT be included, and that the change UTXO of last tx be excluded.
+                        //  NOTE: by avoiding that unconfirmed UTXOs be included, when allocating funds for
+                        //      a tx that is to replace a previous one, the change UTXO of last tx (if it exists)
+                        //      is automatically not included (since that change UTXO is obviously not yet confirmed,
+                        //      and we would be replacing a previous tx). However, we are keeping both conditions
+                        //      just as an additional precaution
+                        readConfirmPayTxExpenseFundSource = new FundSource(Catenis.ctnHubNode.readConfirmPayTxExpenseAddr.listAddressesInUse(), {
+                            useUnconfirmedUtxo: this.lastTxid === undefined,
+                            unconfUtxoInfo: this.lastTxid === undefined ? {
+                                initTxInputs: this.transact.inputs
+                            } : undefined,
+                            higherAmountUtxos: true,
+                            excludeUtxos: this.lastTxChangeOutputPos >= 0 ? Util.txoutToString({
+                                txid: this.lastTxid,
+                                vout: this.lastTxChangeOutputPos
+                            }) : undefined,
+                            useAllNonWitnessUtxosFirst: true,   // Default setting; could have been omitted
+                            useWitnessOutputForChange: txChangeOutputType.isWitness
+                        });
+                    }
+
+                    if (addPayFeeInputCounter.totalCount === 0) {
                         // Assume that tx will require an output for change. So make
                         //  sure that it has a change output
                         if (this.change === 0) {
-                            // Transaction did not have change output, so add one now
-                            this.readConfirmTxInfo.incrementNumTxOutputs(1);
+                            // Transaction did not have change output, so add one now.
+                            this.readConfirmTxInfo.addOutputs(txChangeOutputType.isWitness, 1);
                         }
 
                         // And add one more input to pay for tx fee
-                        this.readConfirmTxInfo.incrementNumTxInputs(1);
-                        numAddPayFeeInputs = 1;
+                        const useWitnessInput = !readConfirmPayTxExpenseFundSource.hasMixedUtxos && readConfirmPayTxExpenseFundSource.hasWitnessUtxos;
+
+                        this.readConfirmTxInfo.addInputs(useWitnessInput, 1);
+                        addPayFeeInputCounter.incrementCount(useWitnessInput);
 
                         // Do not indicate that tx has been funded so an new fee shall be recalculated
                     }
@@ -827,29 +871,6 @@ ReadConfirmTransaction.prototype.fundTransaction = function () {
                         deltaFee -= this.change;
 
                         // Try to allocate UTXOs to pay for transaction additional fee
-                        //  Note: recall that txs that are to replace a previous tx as per RBF must NOT spend any new unconfirmed UTXOs
-                        if (readConfirmPayTxExpenseFundSource === undefined) {
-                            // Object used to allocate UTXOs is not instantiated yet. Instantiate it now,
-                            //  making sure that, if allocating funds for a tx that is to replace a previous one,
-                            //  unconfirmed UTXOs NOT be included, and that the change UTXO of last tx be excluded.
-                            //  NOTE: by avoiding that unconfirmed UTXOs be included, when allocating funds for
-                            //      a tx that is to replace a previous one, the change UTXO of last tx (if it exists)
-                            //      is automatically not included (since that change UTXO is obviously not yet confirmed,
-                            //      and we would be replacing a previous tx). However, we are keeping both conditions
-                            //      just as an additional precaution
-                            readConfirmPayTxExpenseFundSource = new FundSource(Catenis.ctnHubNode.readConfirmPayTxExpenseAddr.listAddressesInUse(), {
-                                useUnconfirmedUtxo: this.lastTxid === undefined,
-                                unconfUtxoInfo: this.lastTxid === undefined ? {
-                                    initTxInputs: this.transact.inputs
-                                } : undefined,
-                                higherAmountUtxos: true,
-                                excludeUtxos: this.lastTxChangeOutputPos >= 0 ? Util.txoutToString({
-                                    txid: this.lastTxid,
-                                    vout: this.lastTxChangeOutputPos
-                                }) : undefined
-                            });
-                        }
-
                         const allocResult = readConfirmPayTxExpenseFundSource.allocateFund(deltaFee);
 
                         if (allocResult === null) {
@@ -858,12 +879,16 @@ ReadConfirmTransaction.prototype.fundTransaction = function () {
                             throw new Meteor.Error('ctn_read_confirm_no_utxo_pay_tx_expense', 'No UTXO available to be allocated to pay for expense of read confirmation transaction');
                         }
 
-                        if (allocResult.utxos.length === numAddPayFeeInputs) {
+                        const deltaPayFeeInputCounter = new UtxoCounter(allocResult, readConfirmPayTxExpenseFundSource).diff(addPayFeeInputCounter);
+
+                        if (deltaPayFeeInputCounter.totalCount === 0) {
                             // Number of allocated UTXOs matches number of additional inputs to pay for tx fee.
                             //  Add inputs spending the allocated UTXOs to the transaction
                             const inputs = allocResult.utxos.map((utxo) => {
                                 return {
                                     txout: utxo.txout,
+                                    isWitness: utxo.isWitness,
+                                    scriptPubKey: utxo.scriptPubKey,
                                     address: utxo.address,
                                     addrInfo: Catenis.keyStore.getAddressInfo(utxo.address)
                                 }
@@ -879,7 +904,7 @@ ReadConfirmTransaction.prototype.fundTransaction = function () {
                             let newChange = allocResult.changeAmount;
 
                             // Make sure that change amount is not below dust amount
-                            if (newChange > 0 && newChange < Transaction.txOutputDustAmount) {
+                            if (newChange > 0 && newChange < Transaction.dustAmountByOutputType(txChangeOutputType)) {
                                 deltaFee += newChange;
                                 newChange = 0;
                             }
@@ -893,13 +918,13 @@ ReadConfirmTransaction.prototype.fundTransaction = function () {
                                 }
 
                                 // Remove change output from RBF tx info object
-                                this.readConfirmTxInfo.incrementNumTxOutputs(-1);
+                                this.readConfirmTxInfo.addOutputs(txChangeOutputType.isWitness, -1);
                             }
                             else {
                                 // A change output is required
                                 if (this.change === 0) {
                                     // Transaction did not have a change output yet, so add a new one
-                                    this.transact.addP2PKHOutput(Catenis.ctnHubNode.readConfirmPayTxExpenseAddr.newAddressKeys().getAddress(), newChange);
+                                    this.transact.addPubKeyHashOutput(Catenis.ctnHubNode.readConfirmPayTxExpenseAddr.newAddressKeys().getAddress(), newChange);
                                 }
                                 else {
                                     // Transaction already had change output, so just reset its amount
@@ -918,11 +943,15 @@ ReadConfirmTransaction.prototype.fundTransaction = function () {
                             this.txFunded = true;
                         }
                         else {
-                            if (allocResult.utxos.length > numAddPayFeeInputs) {
+                            // Number of allocated UTXOs does not match number of additional inputs to pay for tx fee
+                            if ((deltaPayFeeInputCounter.nonWitnessCount === 0 && deltaPayFeeInputCounter.witnessCount > 0)
+                                    || deltaPayFeeInputCounter.nonWitnessCount > 0) {
                                 // Number of allocated UTXOs greater than number of additional inputs to pay for tx fee.
                                 //  Increment number of additional inputs to pay for tx fee
-                                this.readConfirmTxInfo.incrementNumTxInputs(1);
-                                numAddPayFeeInputs++;
+                                const useWitnessInput = deltaPayFeeInputCounter.nonWitnessCount === 0;
+
+                                this.readConfirmTxInfo.addInputs(useWitnessInput, 1);
+                                addPayFeeInputCounter.incrementCount(useWitnessInput);
 
                                 // Release current allocated UTXOs to start over
                                 readConfirmPayTxExpenseFundSource.clearAllocatedUtxos();
@@ -930,13 +959,14 @@ ReadConfirmTransaction.prototype.fundTransaction = function () {
                                 // Do not indicate that tx has been funded so an new fee shall be recalculated
                             }
                             else {
-                                // Number of allocated UTXOs less than number of additional inputs to pay for tx fee
-                                //  NOTE: this should NEVER happen
-                                Catenis.logger.ERROR('Number of allocated UTXOs less than number of additional inputs to pay for tx fee', {
+                                // Number of allocated UTXOs differs from additional inputs to pay for tx fee in
+                                //  an unexpected way
+                                Catenis.logger.ERROR('Number of allocated UTXOs differs from additional inputs to pay for tx fee in an unexpected way', {
                                     numAllocatedUtxos: allocResult.utxos.length,
-                                    numAddPayFeeInputs: numAddPayFeeInputs
+                                    addPayFeeInputCounter,
+                                    deltaPayFeeInputCounter
                                 });
-                                throw new Meteor.Error('ctn_read_confirm_fund_tx_error', 'Number of allocated UTXOs less than number of additional inputs to pay for tx fee');
+                                throw new Meteor.Error('ctn_read_confirm_fund_tx_error', 'Number of allocated UTXOs differs from additional inputs to pay for tx fee in an unexpected way');
                             }
                         }
                     }
@@ -977,7 +1007,7 @@ ReadConfirmTransaction.prototype.sendTransaction = function () {
             // Reset indication that tx had changed
             this.txChanged = false;
 
-            this.readConfirmTxInfo.setRealTxSize(this.transact.realSize(), this.transact.countInputs());
+            this.readConfirmTxInfo.updateTxInfo(this.transact);
 
             // Save sent transaction onto local database
             this.transact.saveSentTransaction(Transaction.type.read_confirmation, {
@@ -1071,14 +1101,15 @@ function setReadConfirmSpendNotifyOutputPos(ctnNodeIndex) {
     }
 }
 
+// Return:
+//  posAdded [Number]  Position of the new transaction output that has been added, or
+//                      `undefined` if no new transaction output has been added
 function addReadConfirmAddrSpendNull(input, readConfirmSpendAddress) {
     // Add input
     this.transact.addInputs(input, this.nextReadConfirmAddrSpndNullInputPos);
     this.readConfirmAddrSpndNullInputCount++;
 
     // Prepare to add output
-    let newOutputAdded = false;
-
     if (this.hasReadConfirmSpendNullOutput) {
         // Output is already present. Just increment its amount
         this.transact.incrementOutputAmount(this.readConfirmSpendNullOutputPos, input.txout.amount);
@@ -1087,21 +1118,20 @@ function addReadConfirmAddrSpendNull(input, readConfirmSpendAddress) {
         // Add new output
         this.hasReadConfirmSpendNullOutput = true;
         readConfirmSpendAddress = readConfirmSpendAddress !== undefined ? readConfirmSpendAddress : Catenis.ctnHubNode.readConfirmSpendNullAddr.newAddressKeys().getAddress();
-        this.transact.addP2PKHOutput(readConfirmSpendAddress, input.txout.amount, this.readConfirmSpendNullOutputPos);
-        newOutputAdded = true;
-    }
 
-    return newOutputAdded;
+        return this.transact.addPubKeyHashOutput(readConfirmSpendAddress, input.txout.amount, this.readConfirmSpendNullOutputPos);
+    }
 }
 
+// Return:
+//  posAdded [Number]  Position of the new transaction output that has been added, or
+//                      `undefined` if no new transaction output has been added
 function addReadConfirmAddrSpendOnly(input, readConfirmSpendAddress) {
     // Add input
     this.transact.addInputs(input, this.nextReadConfirmAddrSpndOnlyInputPos);
     this.readConfirmAddrSpndOnlyInputCount++;
 
     // Prepare to add output
-    let newOutputAdded = false;
-
     if (this.hasReadConfirmSpendOnlyOutput) {
         // Output is already present. Just increment its amount
         this.transact.incrementOutputAmount(this.readConfirmSpendOnlyOutputPos, input.txout.amount);
@@ -1110,21 +1140,20 @@ function addReadConfirmAddrSpendOnly(input, readConfirmSpendAddress) {
         // Add new output
         this.hasReadConfirmSpendOnlyOutput = true;
         readConfirmSpendAddress = readConfirmSpendAddress !== undefined ? readConfirmSpendAddress : Catenis.ctnHubNode.readConfirmSpendOnlyAddr.newAddressKeys().getAddress();
-        this.transact.addP2PKHOutput(readConfirmSpendAddress, input.txout.amount, this.readConfirmSpendOnlyOutputPos);
-        newOutputAdded = true;
-    }
 
-    return newOutputAdded;
+        return this.transact.addPubKeyHashOutput(readConfirmSpendAddress, input.txout.amount, this.readConfirmSpendOnlyOutputPos);
+    }
 }
 
+// Return:
+//  posAdded [Number]  Position of the new transaction output that has been added, or
+//                      `undefined` if no new transaction output has been added
 function addReadConfirmAddrSpendNotify(input, ctnNode, readConfirmSpendAddress) {
     // Add input
     this.transact.addInputs(input, this.nextReadConfirmAddrSpndNtfyInputPos);
     this.readConfirmAddrSpndNtfyInputCount++;
 
     // Prepare to add output
-    let newOutputAdded = false;
-
     if (this.ctnNdIdxReadConfirmSpndNtfyOutRelPos.has(ctnNode.ctnNodeIndex)) {
         // Output is already present. Just increment its amount
         this.transact.incrementOutputAmount(getReadConfirmSpendNotifyOutputPos.call(this, ctnNode.ctnNodeIndex), input.txout.amount);
@@ -1133,11 +1162,9 @@ function addReadConfirmAddrSpendNotify(input, ctnNode, readConfirmSpendAddress) 
         // Add new output
         setReadConfirmSpendNotifyOutputPos.call(this, ctnNode.ctnNodeIndex);
         readConfirmSpendAddress = readConfirmSpendAddress !== undefined ? input.txout : ctnNode.readConfirmSpendNotifyAddr.newAddressKeys().getAddress();
-        this.transact.addP2PKHOutput(readConfirmSpendAddress, input.txout.amount, getReadConfirmSpendNotifyOutputPos.call(this, ctnNode.ctnNodeIndex));
-        newOutputAdded = true;
-    }
 
-    return newOutputAdded;
+        return this.transact.addPubKeyHashOutput(readConfirmSpendAddress, input.txout.amount, getReadConfirmSpendNotifyOutputPos.call(this, ctnNode.ctnNodeIndex));
+    }
 }
 
 function TransactIdChanged(data) {
@@ -1158,9 +1185,6 @@ function TransactIdChanged(data) {
 function initReadConfirmTxInfo() {
     const opts = {
         paymentResolution: Service.readConfirmPaymentResolution,
-        initNumTxInputs: this.transact.countInputs(),
-        initNumTxOutputs: this.transact.countOutputs(),
-        initTxNullDataPayloadSize: Service.readConfirmTxNullDataPayloadSize,
         txFeeRateIncrement: Service.readConfirmTxFeeRateIncrement
     };
 
@@ -1171,7 +1195,7 @@ function initReadConfirmTxInfo() {
         opts.initTxFeeRate = Service.readConfirmInitTxFeeRate;
     }
 
-    this.readConfirmTxInfo = new RbfTransactionInfo(opts);
+    this.readConfirmTxInfo = new RbfTransactionInfo(this.transact, opts);
 }
 
 function retrieveReplacedTransactionIds() {

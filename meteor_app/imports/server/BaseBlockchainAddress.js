@@ -22,6 +22,7 @@ import { Catenis } from './Catenis';
 import { CriticalSection } from './CriticalSection';
 import { KeyStore } from './KeyStore';
 import { Util } from './Util';
+import { BitcoinInfo } from './BitcoinInfo';
 
 // Config entries
 const configBaseBcAddress = config.get('baseBlockchainAddress'),
@@ -72,6 +73,7 @@ export class BaseSystemDeviceMainAddress extends BaseBlockchainAddress {
         super();
         this.type = KeyStore.extKeyType.sys_dev_main_addr.name;
         this.parentPath = KeyStore.systemDeviceMainAddressRootPath(ctnNodeIndex);
+        // NOTE: `btcAddressType` defined as a getter property (see below)
 
         // Make sure that an object of this class has not been instantiated yet
         if (hasInstantiatedObject(this.parentPath)) {
@@ -90,6 +92,10 @@ export class BaseSystemDeviceMainAddress extends BaseBlockchainAddress {
 
         // Save this instance
         setInstantiatedObject(this.parentPath, this);
+    }
+
+    get btcAddressType() {
+        return Catenis.application.legacyDustFunding ? BitcoinInfo.addressType.pubkeyhash : BitcoinInfo.addressType.witness_v0_keyhash;
     }
 
     // Get instance of this class
@@ -120,6 +126,7 @@ export class BaseSystemFundingPaymentAddress extends BaseBlockchainAddress {
         super();
         this.type = KeyStore.extKeyType.sys_fund_pay_addr.name;
         this.parentPath = KeyStore.systemFundingPaymentRootPath(ctnNodeIndex);
+        this.btcAddressType = BitcoinInfo.addressType.witness_v0_keyhash;
 
         // Make sure that an object of this class has not been instantiated yet
         if (hasInstantiatedObject(this.parentPath)) {
@@ -168,6 +175,7 @@ export class BaseSystemFundingChangeAddress extends BaseBlockchainAddress {
         super();
         this.type = KeyStore.extKeyType.sys_fund_chg_addr.name;
         this.parentPath = KeyStore.systemFundingChangeRootPath(ctnNodeIndex);
+        this.btcAddressType = BitcoinInfo.addressType.witness_v0_keyhash;
 
         // Make sure that an object of this class has not been instantiated yet
         if (hasInstantiatedObject(this.parentPath)) {
@@ -216,6 +224,7 @@ export class BaseSystemPayTxExpenseAddress extends BaseBlockchainAddress {
         super();
         this.type = KeyStore.extKeyType.sys_pay_tx_exp_addr.name;
         this.parentPath = KeyStore.systemPayTxExpenseRootPath(ctnNodeIndex);
+        this.btcAddressType = BitcoinInfo.addressType.witness_v0_keyhash;
 
         // Make sure that an object of this class has not been instantiated yet
         if (hasInstantiatedObject(this.parentPath)) {
@@ -264,6 +273,7 @@ export class BaseSystemReadConfirmSpendNotifyAddress extends BaseBlockchainAddre
         super();
         this.type = KeyStore.extKeyType.sys_read_conf_spnd_ntfy_addr.name;
         this.parentPath = KeyStore.systemReadConfirmSpendNotifyRootPath(ctnNodeIndex);
+        this.btcAddressType = BitcoinInfo.addressType.witness_v0_keyhash;
 
         // Make sure that an object of this class has not been instantiated yet
         if (hasInstantiatedObject(this.parentPath)) {
@@ -312,6 +322,7 @@ export class BaseSystemReadConfirmSpendOnlyAddress extends BaseBlockchainAddress
         super();
         this.type = KeyStore.extKeyType.sys_read_conf_spnd_only_addr.name;
         this.parentPath = KeyStore.systemReadConfirmSpendOnlyRootPath(ctnNodeIndex);
+        this.btcAddressType = BitcoinInfo.addressType.witness_v0_keyhash;
 
         // Make sure that an object of this class has not been instantiated yet
         if (hasInstantiatedObject(this.parentPath)) {
@@ -360,6 +371,7 @@ export class BaseSystemReadConfirmSpendNullAddress extends BaseBlockchainAddress
         super();
         this.type = KeyStore.extKeyType.sys_read_conf_spnd_null_addr.name;
         this.parentPath = KeyStore.systemReadConfirmSpendNullRootPath(ctnNodeIndex);
+        this.btcAddressType = BitcoinInfo.addressType.witness_v0_keyhash;
 
         // Make sure that an object of this class has not been instantiated yet
         if (hasInstantiatedObject(this.parentPath)) {
@@ -408,6 +420,7 @@ export class BaseSystemReadConfirmPayTxExpenseAddress extends BaseBlockchainAddr
         super();
         this.type = KeyStore.extKeyType.sys_read_conf_pay_tx_exp_addr.name;
         this.parentPath = KeyStore.systemReadConfirmPayTxExpenseRootPath(ctnNodeIndex);
+        this.btcAddressType = BitcoinInfo.addressType.witness_v0_keyhash;
 
         // Make sure that an object of this class has not been instantiated yet
         if (hasInstantiatedObject(this.parentPath)) {
@@ -456,6 +469,7 @@ export class BaseSystemServiceCreditIssuingAddress extends BaseBlockchainAddress
         super();
         this.type = KeyStore.extKeyType.sys_serv_cred_issu_addr.name;
         this.parentPath = KeyStore.systemServiceCreditIssuingRootPath(ctnNodeIndex);
+        this.btcAddressType = BitcoinInfo.addressType.witness_v0_keyhash;
 
         // Make sure that an object of this class has not been instantiated yet
         if (hasInstantiatedObject(this.parentPath)) {
@@ -504,6 +518,7 @@ export class BaseSystemServicePaymentPayTxExpenseAddress extends BaseBlockchainA
         super();
         this.type = KeyStore.extKeyType.sys_serv_pymt_pay_tx_exp_addr.name;
         this.parentPath = KeyStore.systemServicePaymentPayTxExpenseRootPath(ctnNodeIndex);
+        this.btcAddressType = BitcoinInfo.addressType.witness_v0_keyhash;
 
         // Make sure that an object of this class has not been instantiated yet
         if (hasInstantiatedObject(this.parentPath)) {
@@ -552,6 +567,7 @@ export class BaseSystemMultiSigSigneeAddress extends BaseBlockchainAddress {
         super();
         this.type = KeyStore.extKeyType.sys_msig_sign_addr.name;
         this.parentPath = KeyStore.systemMultiSigSigneeRootPath(ctnNodeIndex);
+        this.btcAddressType = BitcoinInfo.addressType.pubkeyhash;
 
         // Make sure that an object of this class has not been instantiated yet
         if (hasInstantiatedObject(this.parentPath)) {
@@ -600,6 +616,7 @@ export class BaseSystemBcotSaleStockAddress extends BaseBlockchainAddress {
         super();
         this.type = KeyStore.extKeyType.sys_bcot_sale_stck_addr.name;
         this.parentPath = KeyStore.systemBcotSaleStockRootPath(ctnNodeIndex);
+        this.btcAddressType = BitcoinInfo.addressType.pubkeyhash;
 
         // Make sure that an object of this class has not been instantiated yet
         if (hasInstantiatedObject(this.parentPath)) {
@@ -659,6 +676,7 @@ export class BaseSystemOCMsgsSetlmtPayTxExpenseAddress extends BaseBlockchainAdd
         super();
         this.type = KeyStore.extKeyType.sys_oc_msgs_setlmt_pay_tx_exp_addr.name;
         this.parentPath = KeyStore.systemOCMsgsSetlmtPayTxExpenseRootPath(ctnNodeIndex);
+        this.btcAddressType = BitcoinInfo.addressType.witness_v0_keyhash;
 
         // Make sure that an object of this class has not been instantiated yet
         if (hasInstantiatedObject(this.parentPath)) {
@@ -707,6 +725,7 @@ export class BaseClientServiceAccountCreditLineAddress extends BaseBlockchainAdd
         super();
         this.type = KeyStore.extKeyType.cln_srv_acc_cred_ln_addr.name;
         this.parentPath = KeyStore.clientServiceAccountCreditLineAddressRootPath(ctnNodeIndex, clientIndex);
+        this.btcAddressType = BitcoinInfo.addressType.witness_v0_keyhash;
 
         // Make sure that an object of this class has not been instantiated yet
         if (hasInstantiatedObject(this.parentPath)) {
@@ -758,6 +777,7 @@ export class BaseClientServiceAccountDebitLineAddress extends BaseBlockchainAddr
         super();
         this.type = KeyStore.extKeyType.cln_srv_acc_debt_ln_addr.name;
         this.parentPath = KeyStore.clientServiceAccountDebitLineAddressRootPath(ctnNodeIndex, clientIndex);
+        this.btcAddressType = BitcoinInfo.addressType.witness_v0_keyhash;
 
         // Make sure that an object of this class has not been instantiated yet
         if (hasInstantiatedObject(this.parentPath)) {
@@ -809,6 +829,7 @@ export class BaseClientBcotPaymentAddress extends BaseBlockchainAddress {
         super();
         this.type = KeyStore.extKeyType.cln_bcot_pay_addr.name;
         this.parentPath = KeyStore.clientBcotPaymentAddressRootPath(ctnNodeIndex, clientIndex);
+        this.btcAddressType = BitcoinInfo.addressType.pubkeyhash;
 
         // Make sure that an object of this class has not been instantiated yet
         if (hasInstantiatedObject(this.parentPath)) {
@@ -871,6 +892,7 @@ export class BaseDeviceReadConfirmAddress extends BaseBlockchainAddress {
         super();
         this.type = KeyStore.extKeyType.dev_read_conf_addr.name;
         this.parentPath = KeyStore.deviceReadConfirmAddressRootPath(ctnNodeIndex, clientIndex, deviceIndex);
+        this.btcAddressType = BitcoinInfo.addressType.witness_v0_keyhash;
 
         // Make sure that an object of this class has not been instantiated yet
         if (hasInstantiatedObject(this.parentPath)) {
@@ -925,6 +947,7 @@ export class BaseDeviceMainAddress extends BaseBlockchainAddress {
         super();
         this.type = KeyStore.extKeyType.dev_main_addr.name;
         this.parentPath = KeyStore.deviceMainAddressRootPath(ctnNodeIndex, clientIndex, deviceIndex);
+        // NOTE: `btcAddressType` defined as a getter property (see below)
 
         // Make sure that an object of this class has not been instantiated yet
         if (hasInstantiatedObject(this.parentPath)) {
@@ -943,6 +966,10 @@ export class BaseDeviceMainAddress extends BaseBlockchainAddress {
 
         // Save this instance
         setInstantiatedObject(this.parentPath, this);
+    }
+
+    get btcAddressType() {
+        return Catenis.application.legacyDustFunding ? BitcoinInfo.addressType.pubkeyhash : BitcoinInfo.addressType.witness_v0_keyhash;
     }
 
     // Get instance of this class
@@ -979,6 +1006,7 @@ export class BaseDeviceAssetAddress extends BaseBlockchainAddress {
         super();
         this.type = KeyStore.extKeyType.dev_asst_addr.name;
         this.parentPath = KeyStore.deviceAssetAddressRootPath(ctnNodeIndex, clientIndex, deviceIndex);
+        this.btcAddressType = BitcoinInfo.addressType.witness_v0_keyhash;
 
         // Make sure that an object of this class has not been instantiated yet
         if (hasInstantiatedObject(this.parentPath)) {
@@ -1033,6 +1061,7 @@ export class BaseDeviceAssetIssuanceAddress extends BaseBlockchainAddress {
         super();
         this.type = KeyStore.extKeyType.dev_asst_issu_addr.name;
         this.parentPath = KeyStore.deviceAssetIssuanceAddressRootPath(ctnNodeIndex, clientIndex, deviceIndex);
+        // NOTE: `btcAddressType` defined as a getter property (see below)
 
         // Make sure that an object of this class has not been instantiated yet
         if (hasInstantiatedObject(this.parentPath)) {
@@ -1052,6 +1081,10 @@ export class BaseDeviceAssetIssuanceAddress extends BaseBlockchainAddress {
 
         // Save this instance
         setInstantiatedObject(this.parentPath, this);
+    }
+
+    get btcAddressType() {
+        return Catenis.application.legacyDustFunding ? BitcoinInfo.addressType.pubkeyhash : BitcoinInfo.addressType.witness_v0_keyhash;
     }
 
     // Get instance of this class
@@ -1086,6 +1119,7 @@ export class BaseDeviceAssetIssuanceAddress extends BaseBlockchainAddress {
 export function BaseBlockchainAddress() {
     this.type = undefined;
     this.parentPath = undefined;
+    this.btcAddressType = undefined;
     this.addressValidity = undefined;
     this.lastIssuedAddrIndex = undefined;
     this.lastInUseAddrIndex = undefined;
@@ -1123,7 +1157,7 @@ BaseBlockchainAddress.prototype.newAddressKeys = function () {
         const nonexistIndices = [];
 
         do {
-            if ((addrKeys = this._getAddressKeys(++this.lastIssuedAddrIndex)) === null) {
+            if ((addrKeys = this._getAddressKeys(++this.lastIssuedAddrIndex, this.btcAddressType)) === null) {
                 nonexistIndices.push(this.lastIssuedAddrIndex);
             }
         }
@@ -1163,6 +1197,7 @@ BaseBlockchainAddress.prototype.newAddressKeys = function () {
             parentPath: this.parentPath,
             path: util.format('%s/%d', this.parentPath, this.lastIssuedAddrIndex),
             addrIndex: this.lastIssuedAddrIndex,
+            btcAddressType: this.btcAddressType.name,
             addrHash: hashAddress(addrKeys.getAddress()),
             issuedDate: issuedDate,
             expirationDate: expirationDate,
@@ -1185,7 +1220,7 @@ BaseBlockchainAddress.prototype.listAddressesInUse = function () {
 };
 
 BaseBlockchainAddress.prototype.lastAddressKeys = function () {
-    return this.lastInUseAddrIndex >= 0 ? this._getAddressKeys(this.lastInUseAddrIndex) : this.newAddressKeys();
+    return this.lastInUseAddrIndex >= 0 ? this._getAddressKeys(this.lastInUseAddrIndex, this.btcAddressType) : this.newAddressKeys();
 };
 
 
@@ -1226,6 +1261,7 @@ function setBoundingIndices() {
             }, {
                 fields: {
                     addrIndex: 1,
+                    btcAddressType: 1,
                     status: 1
                 },
                 sort: {
@@ -1233,7 +1269,11 @@ function setBoundingIndices() {
                 }
             }).fetch().forEach((doc) => {
                 if (doc.status !== 'obsolete') {
-                    this._getAddressKeys(doc.addrIndex);
+                    // Get bitcoin address type making sure to set it to P2PKH for those issued blockchain address
+                    //  docs/recs that do not have a specific address type set
+                    const btcAddressType = doc.btcAddressType ? BitcoinInfo.getAddressTypeByName(doc.btcAddressType) : BitcoinInfo.addressType.pubkeyhash;
+
+                    this._getAddressKeys(doc.addrIndex, btcAddressType);
                 }
             });
         }
@@ -1372,11 +1412,15 @@ function resetObsoleteAddress(addr, docIssuedAddr) {
 // BaseBlockchainAddress function class (public) methods
 //
 
-BaseBlockchainAddress.initialize = function () {
+BaseBlockchainAddress.initialize = function (delayIssuedBlockchainAddressUpdate = false) {
     Catenis.logger.TRACE('BaseBlockchainAddress initialization');
     // Update issued blockchain addresses now, and set recurring timer
     //  to update issued blockchain addresses periodically later
-    updateIssuedAddresses();
+    if (!delayIssuedBlockchainAddressUpdate) {
+        Catenis.logger.TRACE('Delaying update of issued blockchain addresses');
+        updateIssuedAddresses();
+    }
+
     Catenis.logger.TRACE('Setting recurring timer to update issued blockchain addresses');
     updtIssuedAddrsIntervalHandle = Meteor.setInterval(updateIssuedAddresses, cfgSettings.updateIssuedAddressesInterval);
 
@@ -1497,7 +1541,12 @@ BaseBlockchainAddress.getAddressOfIssuedBlockchainAddress = function (docIssuedA
         if (classInstance !== null) {
             // Store address in local key storage setting it as obsolete accordingly,
             //  and get its corresponding crypto keys
-            addrKeys = classInstance._getAddressKeys(docIssuedAddr.addrIndex, docIssuedAddr.status === 'obsolete');
+
+            // Get bitcoin address type making sure to set it to P2PKH if issued blockchain address doc/rec
+            //  does not have a specific address type set
+            const btcAddressType = docIssuedAddr.btcAddressType ? BitcoinInfo.getAddressTypeByName(docIssuedAddr.btcAddressType) : BitcoinInfo.addressType.pubkeyhash;
+
+            addrKeys = classInstance._getAddressKeys(docIssuedAddr.addrIndex, btcAddressType, docIssuedAddr.status === 'obsolete');
         }
     }
 
@@ -1507,7 +1556,17 @@ BaseBlockchainAddress.getAddressOfIssuedBlockchainAddress = function (docIssuedA
 // Place obsolete address back onto local key storage
 BaseBlockchainAddress.retrieveObsoleteAddress = function (addr, checkAddressInUse = false) {
     // Try to retrieve obsolete address from database
-    let docIssuedAddrs = Catenis.db.collection.IssuedBlockchainAddress.find({addrHash: hashAddress(addr), status: 'obsolete'}, {fields: {type: 1, path: 1, addrIndex: 1}}).fetch();
+    let docIssuedAddrs = Catenis.db.collection.IssuedBlockchainAddress.find({
+        addrHash: hashAddress(addr),
+        status: 'obsolete'
+    }, {
+        fields: {
+            type: 1,
+            path: 1,
+            addrIndex: 1,
+            btcAddressType: 1
+        }
+    }).fetch();
     let result = false;
 
     if (docIssuedAddrs.length > 0) {
@@ -1523,7 +1582,12 @@ BaseBlockchainAddress.retrieveObsoleteAddress = function (addr, checkAddressInUs
                 if (classInstance !== null) {
                     // Store address in local key storage making sure that it is set as obsolete,
                     //  and get its corresponding crypto keys
-                    let addrKeys = classInstance._getAddressKeys(docIssuedAddr.addrIndex, true);
+
+                    // Get bitcoin address type making sure to set it to P2PKH if Issued Blockchain Address database
+                    //  doc/rec does not have a specific address type set
+                    const btcAddressType = docIssuedAddr.btcAddressType ? BitcoinInfo.getAddressTypeByName(docIssuedAddr.btcAddressType) : BitcoinInfo.addressType.pubkeyhash;
+
+                    let addrKeys = classInstance._getAddressKeys(docIssuedAddr.addrIndex, btcAddressType, true);
 
                     if (addrKeys !== null) {
                         // Make sure that this is the correct address (though unlikely, not impossible
@@ -1579,7 +1643,12 @@ BaseBlockchainAddress.retrieveObsoleteAddress = function (addr, checkAddressInUs
                     if (classInstance !== null) {
                         // Store address in local key storage making sure that it is set as obsolete,
                         //  and get its corresponding crypto keys
-                        let addrKeys = classInstance._getAddressKeys(docIssuedAddr.addrIndex, true);
+
+                        // Get bitcoin address type making sure to set it to P2PKH if issued blockchain address
+                        //  doc/rec does not have a specific address type set
+                        const btcAddressType = docIssuedAddr.btcAddressType ? BitcoinInfo.getAddressTypeByName(docIssuedAddr.btcAddressType) : BitcoinInfo.addressType.pubkeyhash;
+
+                        let addrKeys = classInstance._getAddressKeys(docIssuedAddr.addrIndex, btcAddressType, true);
 
                         if (addrKeys !== null) {
                             // Make sure that this is the correct address (though unlikely, not impossible
@@ -1683,7 +1752,8 @@ BaseBlockchainAddress.retrieveObsoleteAddressByPath = function (addrPath, checkA
         fields: {
             type: 1,
             path: 1,
-            addrIndex: 1
+            addrIndex: 1,
+            btcAddressType: 1
         }
     });
 
@@ -1697,7 +1767,12 @@ BaseBlockchainAddress.retrieveObsoleteAddressByPath = function (addrPath, checkA
             if (classInstance !== null) {
                 // Store address in local key storage making sure that it is set as obsolete,
                 //  and get its corresponding crypto keys
-                const addrKeys = classInstance._getAddressKeys(docIssuedAddr.addrIndex, true);
+
+                // Get bitcoin address type making sure to set it to P2PKH if Issued Blockchain Address database
+                //  doc/rec does not have a specific address type set
+                const btcAddressType = docIssuedAddr.btcAddressType ? BitcoinInfo.getAddressTypeByName(docIssuedAddr.btcAddressType) : BitcoinInfo.addressType.pubkeyhash;
+
+                const addrKeys = classInstance._getAddressKeys(docIssuedAddr.addrIndex, btcAddressType, true);
 
                 if (addrKeys !== null) {
                     result = true;
@@ -1844,7 +1919,6 @@ BaseBlockchainAddress.revertAddressList = function (addrList) {
 
 BaseBlockchainAddress.instantiatedObjects = new Map();
 
-
 // Definition of module (private) functions
 //
 
@@ -1898,6 +1972,7 @@ function updateIssuedAddresses() {
                         parentPath: 1,
                         path: 1,
                         addrIndex: 1,
+                        btcAddressType: 1,
                         status: 1
                     }
                 });
@@ -1971,6 +2046,7 @@ function updateIssuedAddressesPart2(error) {
                             parentPath: 1,
                             path: 1,
                             addrIndex: 1,
+                            btcAddressType: 1,
                             status: 1
                         }
                     });

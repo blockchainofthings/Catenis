@@ -12,7 +12,10 @@
   },
   // Parameters pertaining to the Startup module
   "startup": {
-    "fixMissingAddresses": false, // Indicate if issued blockchain addresses are missing from BitcoinCore wallet they should be automatically included
+    "fixMissingAddresses": false,  // Indicate if issued blockchain addresses are missing from BitcoinCore wallet they should be automatically included
+    legacyDustFunding: false,  // Indicates whether the system should use the legacy behavior when funding addresses that are funded with dust amount (service credit issuance, BCOT sale stock, system device main, device main, device asset issuance)
+                               //  NOTE: this option is intended to simulate the old scenario while working on the implementation of segregated witness support
+    fixDustFunding: false,  // Indicates whether addresses that are funded with dust amount (service credit issuance, BCOT sale stock, system device main, device main, device asset issuance) should be refunded to use the new, lower dust amount for segregated witness output
     "bypassProcessing": false     // NOTE: this option is for DEBUG ONLY. Bypass all processing, so the app starts but does not do anything. This allows
                                   //  for debugging via 'meteor shell' or 'meteor mongo'
   },

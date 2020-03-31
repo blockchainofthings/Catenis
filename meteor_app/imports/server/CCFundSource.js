@@ -26,6 +26,7 @@ import { BitcoinCore } from './BitcoinCore';
 import { cfgSettings } from './FundSource';
 import { CCTransaction } from './CCTransaction';
 import { AncestorTransactions } from './AncestorTransactions';
+import { BitcoinInfo } from './BitcoinInfo';
 
 
 // Definition of function classes
@@ -76,9 +77,11 @@ import { AncestorTransactions } from './AncestorTransactions';
 //      excludeUtxos: [string|Array(string)], - (optional) List of UTXOs (formatted as "txid:n") that should not be taken into account when allocating new UTXOs
 //                                               (because those UTXOs are associated with txs that use opt-in RBF (Replace By Fee) as such can be replaced by
 //                                               other txs and have their own outputs invalidated)
-//      addUtxoTxInputs: [Object|Array(Object)] - (optional) List of transaction input objects (the same as used by the inputs property of the Transaction object)
+//      addUtxoTxInputs: [Object|Array(Object)], - (optional) List of transaction input objects (the same as used by the inputs property of the Transaction object)
 //                                                  the UTXOs spent by them should be added to the list of available UTXOs. These inputs should belong to transactions
 //                                                  that use opt-in RBF that are being replaced
+//      useAllNonWitnessUtxosFirst: [Boolean], - (optional, default: true) Indicates whether all non-witness UTXOs should be used before using witness UTXOs when allocating funds.
+//                                                Note that this setting only applies when there are mixed (both non-witness and witness) UTXOs loaded
 //    }
 //
 // NOTE: make sure that objects of this function class are instantiated and used (their methods
@@ -90,6 +93,8 @@ export function CCFundSource(ccAssetId, addresses, options) {
     //      address: [string],              - Bitcoin address that holds the spent amount
     //      txid: [string],                 - ID/hash of the transaction that contains the UTXO (UTXO transaction)
     //      vout: [number],                 - Order/index of output of the UTXO transaction
+    //      type: [string],                 - Tx output type. Valid values (from BitcoinInfo.outputType): 'pubkeyhash', 'witness_v0_keyhash' (see note below)
+    //      isWitness: [boolean],           - Indicates whether tx output is of a segregated witness type
     //      scriptPubKey: [string],         - Public key script of the UTXO
     //      amount: [number],               - Bitcoin amount in satoshis
     //      ccAssetId: [string],            - Colored Coins attributed ID of asset
@@ -108,6 +113,9 @@ export function CCFundSource(ccAssetId, addresses, options) {
     //        vsize: [number]                   - Virtual size, in vbytes, of the ancestor transaction
     //      }]
     //  }
+    //  NOTE: the list of UTXOs should not include outputs of a script type (i.e. 'scripthash' and 'witness_v0_scripthash')
+    //      since Catenis does not handle such outputs. Also, 'multisig' outputs should not be listed due to a
+    //      Bitcoin Core's limitation where 'multisig' outputs are not listed by the listunspent RPC method.
     this.db = new Loki();
     // noinspection JSCheckFunctionSignatures
     this.collUtxo = this.db.addCollection('UTXO', {
@@ -117,6 +125,7 @@ export function CCFundSource(ccAssetId, addresses, options) {
         indices: [
             'address',
             'txid',
+            'isWitness',
             'assetAmount',
             'confirmations',
             'allocated',
@@ -133,9 +142,10 @@ export function CCFundSource(ccAssetId, addresses, options) {
     this.useUnconfirmedUtxo = false;
     this.smallestChange = false;
     this.higherAmountUtxos = false;
+    this.useAllNonWitnessUtxosFirst = true;
 
     if (options !== undefined) {
-        if (options.useUnconfirmedUtxo) {
+        if (options.useUnconfirmedUtxo !== undefined) {
             this.useUnconfirmedUtxo = !!options.useUnconfirmedUtxo;
         }
 
@@ -219,7 +229,14 @@ export function CCFundSource(ccAssetId, addresses, options) {
                 this.ancestorTxs = undefined;
             }
         }
+
+        if (options.useAllNonWitnessUtxosFirst !== undefined) {
+            this.useAllNonWitnessUtxosFirst = !!options.useAllNonWitnessUtxosFirst;
+        }
     }
+
+    this.hasWitnessUtxos = false;
+    this.hasNonWitnessUtxos = false;
 
     if (addresses.length > 0) {
         // Load UTXOs into local DB
@@ -227,6 +244,16 @@ export function CCFundSource(ccAssetId, addresses, options) {
 
         loadUtxos.call(this);
     }
+
+    Object.defineProperties(this, {
+        hasMixedUtxos: {
+            get: function () {
+                // noinspection JSPotentiallyInvalidUsageOfThis
+                return this.hasWitnessUtxos && this.hasNonWitnessUtxos;
+            },
+            enumerable: true
+        }
+    });
 }
 
 
@@ -316,6 +343,7 @@ CCFundSource.prototype.getBalance = function (includeUnconfirmed = true, include
 //        assetDivisibility: [Number], - Number of decimal places allowed for representing quantities of this asset
 //        isAggregatableAsset: [Boolean] - Indicates whether quantities of the asset from different UTXOs can be combined to allocate the necessary fund
 //      },
+//      isWitness: [Boolean],
 //      scriptPubKey: [String]
 //    }],
 //    changeAssetAmount: [Number]  - Only returned if there is change from the allocated asset amount, also represented as an
@@ -326,116 +354,208 @@ CCFundSource.prototype.allocateFund = function (amount) {
     let result = null;
 
     if (amount > 0) {
-        const utxoResultSets = [];
-        let maxUtxoResultSetLength = 0;
+        let allocateNonWitnessUtxosFirst = this.hasMixedUtxos && this.useAllNonWitnessUtxosFirst;
+        let allocatingNonWitnessUtxos = allocateNonWitnessUtxosFirst;
+        let allocatedNonWitnessDocUtxos;
+        let savedAncestorTxs;
+        let nonWitnessAmount;
+        let doItAgain;
 
-        // Retrieve only confirmed UTXOs sorting them by higher value, and higher confirmations
-        const confUtxoResultSet = this.collUtxo.chain().find({
-            $and: [{
-                allocated: false
-            }, {
-                confirmations: {
-                    $gt: 0
-                }
-            }]
-        }).compoundsort([
-            ['assetAmount', true],
-            ['confirmations', true]
-        ]).data();
+        do {
+            doItAgain = false;
 
-        if (confUtxoResultSet.length > 0) {
-            utxoResultSets.push(confUtxoResultSet);
-            maxUtxoResultSetLength = confUtxoResultSet.length;
-        }
+            const utxoResultSets = [];
+            let maxUtxoResultSetLength = 0;
 
-        if (this.loadedUnconfirmedUtxos) {
-            // Retrieve both confirmed and unconfirmed UTXOs sorting them by higher value, higher confirmations,
-            //  lower ancestors count (for unconfirmed UTXOs), lower ancestors size (for unconfirmed UTXOs),
-            //  lower descendants count (for unconfirmed UTXOs), lower descendants size (for unconfirmed UTXOs)
-            const conditions = [{allocated: false}];
+            // Retrieve only confirmed UTXOs sorting them by higher value, and higher confirmations
+            const query = {
+                $and: [{
+                    allocated: false
+                }, {
+                    confirmations: {
+                        $gt: 0
+                    }
+                }]
+            };
 
-            if (this.ancestorsCountUpperLimit !== undefined) {
-                conditions.push({ancestorsCount: {$lte: this.ancestorsCountUpperLimit}});
-            }
-
-            if (this.ancestorsSizeUpperLimit !== undefined) {
-                conditions.push({ancestorsSize: {$lte: this.ancestorsSizeUpperLimit}});
-            }
-
-            if (this.descendantsCountUpperLimit !== undefined) {
-                conditions.push({descendantsCount: {$lte: this.descendantsCountUpperLimit}});
-            }
-
-            if (this.descendantsSizeUpperLimit !== undefined) {
-                conditions.push({descendantsSize: {$lte: this.descendantsSizeUpperLimit}});
-            }
-
-            const query = conditions.length > 1 ? {$and: conditions} : conditions[0],
-                unconfUtxoResultSet = this.collUtxo.chain().find(query).compoundsort([
-                    ['assetAmount', true],
-                    ['confirmations', true],
-                    'ancestorsCount',
-                    'ancestorsSize',
-                    'descendantsCount',
-                    'descendantsSize'
-                ]).data();
-
-            if (unconfUtxoResultSet.length > 0) {
-                utxoResultSets.push(unconfUtxoResultSet);
-                maxUtxoResultSetLength = unconfUtxoResultSet.length > maxUtxoResultSetLength ? unconfUtxoResultSet.length : maxUtxoResultSetLength;
-            }
-        }
-
-        if (maxUtxoResultSetLength > 0) {
-            let allocatedUtxos = undefined;
-
-            // Try to allocate as little UTXOs as possible to fulfill requested amount, starting
-            //  with one UTXO, and going up to the number of UTXOs returned in result sets.
-            //  NOTE: for assets that cannot be aggregated, restrict that number of allocated UTXOs
-            //      to only ONE
-            for (let numWorkUtxos = 1, limitNumWorkUtxos = this.isAggregatableAsset ? maxUtxoResultSetLength : 1;
-                    numWorkUtxos <= limitNumWorkUtxos; numWorkUtxos++) {
-                if ((allocatedUtxos = allocateUtxos.call(this, amount, utxoResultSets, numWorkUtxos)) !== undefined) {
-                    // UTXOs successfully allocated. Stop trying
-                    break;
-                }
-            }
-
-            if (allocatedUtxos !== undefined) {
-                // UTXOs have been allocated. Prepare to return result
-                let allocatedAmount = 0;
-                result = {utxos: []};
-
-                allocatedUtxos.docUtxos.forEach((docUtxo) => {
-                    result.utxos.push({
-                        address: docUtxo.address,
-                        txout: {
-                            txid: docUtxo.txid,
-                            vout: docUtxo.vout,
-                            amount: docUtxo.amount,
-                            ccAssetId: docUtxo.ccAssetId,
-                            assetAmount: docUtxo.assetAmount,
-                            assetDivisibility: docUtxo.assetDivisibility,
-                            isAggregatableAsset: docUtxo.isAggregatableAsset
-                        },
-                        scriptPubKey: docUtxo.scriptPubKey
-                    });
-                    allocatedAmount += docUtxo.assetAmount;
-                    docUtxo.allocated = true;
+            if (allocateNonWitnessUtxosFirst) {
+                // Non-witness UTXOs should be allocated first, so set select condition appropriately
+                query.$and.push({
+                    isWitness: !allocatingNonWitnessUtxos
                 });
+            }
 
-                // Change asset amount (represented as an integer number of the asset's smallest division)
-                result.changeAssetAmount = allocatedAmount - amount;
+            const confUtxoResultSet = this.collUtxo.chain().find(query).compoundsort([
+                ['assetAmount', true],
+                ['confirmations', true]
+            ]).data();
 
-                // Update local DB setting UTXOs as allocated
-                // noinspection JSIgnoredPromiseFromCall
-                this.collUtxo.update(allocatedUtxos.docUtxos);
+            if (confUtxoResultSet.length > 0) {
+                utxoResultSets.push(confUtxoResultSet);
+                maxUtxoResultSetLength = confUtxoResultSet.length;
+            }
 
-                // NOTE: force the rebuild of the binary index on the 'allocated' property to work around
-                //  an issue found with Lokijs (https://github.com/techfort/LokiJS/issues/639)
-                this.collUtxo.ensureIndex('allocated', true);
+            if (this.loadedUnconfirmedUtxos) {
+                // Retrieve both confirmed and unconfirmed UTXOs sorting them by higher value, higher confirmations,
+                //  lower ancestors count (for unconfirmed UTXOs), lower ancestors size (for unconfirmed UTXOs),
+                //  lower descendants count (for unconfirmed UTXOs), lower descendants size (for unconfirmed UTXOs)
+                const conditions = [{allocated: false}];
+
+                if (this.ancestorsCountUpperLimit !== undefined) {
+                    conditions.push({ancestorsCount: {$lte: this.ancestorsCountUpperLimit}});
+                }
+
+                if (this.ancestorsSizeUpperLimit !== undefined) {
+                    conditions.push({ancestorsSize: {$lte: this.ancestorsSizeUpperLimit}});
+                }
+
+                if (this.descendantsCountUpperLimit !== undefined) {
+                    conditions.push({descendantsCount: {$lte: this.descendantsCountUpperLimit}});
+                }
+
+                if (this.descendantsSizeUpperLimit !== undefined) {
+                    conditions.push({descendantsSize: {$lte: this.descendantsSizeUpperLimit}});
+                }
+
+                if (allocateNonWitnessUtxosFirst) {
+                    // Non-witness UTXOs should be allocated first, so set select condition appropriately
+                    conditions.push({
+                        isWitness: !allocatingNonWitnessUtxos
+                    });
+                }
+
+                const query = conditions.length > 1 ? {$and: conditions} : conditions[0],
+                    unconfUtxoResultSet = this.collUtxo.chain().find(query).compoundsort([
+                        ['assetAmount', true],
+                        ['confirmations', true],
+                        'ancestorsCount',
+                        'ancestorsSize',
+                        'descendantsCount',
+                        'descendantsSize'
+                    ]).data();
+
+                if (unconfUtxoResultSet.length > 0) {
+                    utxoResultSets.push(unconfUtxoResultSet);
+                    maxUtxoResultSetLength = unconfUtxoResultSet.length > maxUtxoResultSetLength ? unconfUtxoResultSet.length : maxUtxoResultSetLength;
+                }
+            }
+
+            if (maxUtxoResultSetLength > 0) {
+                let allocatedUtxos = undefined;
+
+                // Try to allocate as little UTXOs as possible to fulfill requested amount, starting
+                //  with one UTXO, and going up to the number of UTXOs returned in result sets.
+                //  NOTE: for assets that cannot be aggregated, restrict that number of allocated UTXOs
+                //      to only ONE
+                for (let numWorkUtxos = 1, limitNumWorkUtxos = this.isAggregatableAsset ? maxUtxoResultSetLength : 1;
+                     numWorkUtxos <= limitNumWorkUtxos; numWorkUtxos++) {
+                    if ((allocatedUtxos = allocateUtxos.call(this, amount, utxoResultSets, numWorkUtxos)) !== undefined) {
+                        // UTXOs successfully allocated. Stop trying
+                        break;
+                    }
+                }
+
+                if (allocatedUtxos !== undefined) {
+                    // UTXOs have been allocated. Prepare to return result
+                    let allocatedAmount = 0;
+                    result = {utxos: []};
+
+                    if (allocatedNonWitnessDocUtxos) {
+                        // Append non-witness UTXOs that have been previously allocated
+                        //  and reset amount to its initial value
+                        allocatedUtxos.docUtxos = allocatedNonWitnessDocUtxos.concat(allocatedUtxos.docUtxos);
+                        // noinspection JSUnusedAssignment
+                        amount += nonWitnessAmount;
+                    }
+
+                    allocatedUtxos.docUtxos.forEach((docUtxo) => {
+                        result.utxos.push({
+                            address: docUtxo.address,
+                            txout: {
+                                txid: docUtxo.txid,
+                                vout: docUtxo.vout,
+                                amount: docUtxo.amount,
+                                ccAssetId: docUtxo.ccAssetId,
+                                assetAmount: docUtxo.assetAmount,
+                                assetDivisibility: docUtxo.assetDivisibility,
+                                isAggregatableAsset: docUtxo.isAggregatableAsset
+                            },
+                            isWitness: docUtxo.isWitness,
+                            scriptPubKey: docUtxo.scriptPubKey
+                        });
+                        allocatedAmount += docUtxo.assetAmount;
+                        docUtxo.allocated = true;
+                    });
+
+                    // Change asset amount (represented as an integer number of the asset's smallest division)
+                    result.changeAssetAmount = allocatedAmount - amount;
+
+                    // Update local DB setting UTXOs as allocated
+                    // noinspection JSIgnoredPromiseFromCall
+                    this.collUtxo.update(allocatedUtxos.docUtxos);
+
+                    // NOTE: force the rebuild of the binary index on the 'allocated' property to work around
+                    //  an issue found with Lokijs (https://github.com/techfort/LokiJS/issues/639)
+                    this.collUtxo.ensureIndex('allocated', true);
+                }
+                else {
+                    // Could not allocate UTXOs the amount of which would be enough to cover
+                    //  the required amount
+                    if (allocateNonWitnessUtxosFirst) {
+                        // Non-witness UTXOs should be allocated first
+                        if (allocatingNonWitnessUtxos) {
+                            // First pass to allocate non-witness UTXOs. Allocate all possible
+                            //  non-witness UTXOs, and continue to next pass
+                            if (this.ancestorTxs) {
+                                savedAncestorTxs = this.ancestorTxs.clone();
+                            }
+
+                            const _allocatedNonWitnessDocUtxos = [];
+                            nonWitnessAmount = 0;
+
+                            // Note: we only use the last UTXO result set, which is the one with most UTXOs
+                            utxoResultSets[utxoResultSets.length - 1].some(docUtxo => {
+                                if (!this.ancestorTxs || this.ancestorTxs.checkAddUtxo(docUtxo)) {
+                                    _allocatedNonWitnessDocUtxos.push(docUtxo);
+                                    nonWitnessAmount += docUtxo.amount;
+
+                                    // Safeguard: make sure that allocated non-witness UTXOs are not going to be
+                                    //      enough to pay for tx expense by themselves
+                                    if (nonWitnessAmount >= amount) {
+                                        Catenis.logger.WARN('Unexpected condition: allocated non-witness UTXOs (Colored Coins) should not be enough to pay for tx expense', '. Reverting last allocated non-witness UTXO');
+                                        // Revert allocation of last non-witness UTXO...
+                                        nonWitnessAmount -= docUtxo.amount;
+                                        _allocatedNonWitnessDocUtxos.pop();
+
+                                        // ... and stop iterating
+                                        return true;
+                                    }
+                                }
+
+                                // Continue iterating
+                                return false;
+                            });
+
+                            if (_allocatedNonWitnessDocUtxos.length > 0) {
+                                allocatedNonWitnessDocUtxos = _allocatedNonWitnessDocUtxos;
+                                // Adjust amount by discounting what have already been allocated
+                                amount -= nonWitnessAmount;
+                            }
+
+                            allocatingNonWitnessUtxos = false;
+                            doItAgain = true;
+                        }
+                        else {
+                            // Failed to allocate UTXOs. Just reset ancestor transactions (note: no need to reset amount)
+                            if (savedAncestorTxs) {
+                                this.ancestorTxs = savedAncestorTxs;
+                            }
+                        }
+                    }
+                }
             }
         }
+        while (doItAgain);
     }
     else {
         // Indicate that there is no need to allocated additional UTXOs
@@ -478,59 +598,69 @@ function isExcludedUtxo(utxo) {
 }
 
 function insertUtxo(utxo, assetUtxoInfo, unconfTxids) {
-    // Store relevant asset info
-    let inconsistentAssetUtxoInfo = false;
+    const outputType = BitcoinInfo.getOutputTypeByDescriptor(utxo.desc);
 
-    if (this.assetDivisibility === undefined) {
-        this.assetDivisibility = assetUtxoInfo.divisibility;
-    }
-    else if (this.assetDivisibility !== assetUtxoInfo.divisibility) {
-        // Asset divisibility info inconsistent amongst UTXOs.
-        //   Log warning condition and indicate that UTXO is inconsistent
-        Catenis.logger.WARN('Asset divisibility info inconsistent amongst UTXOs. Current UTXO being discarded', {
-            addresses: this.addresses,
-            expectedAssetDivisibility: this.assetDivisibility,
-            currentUtxo: utxo
-        });
-        inconsistentAssetUtxoInfo = true;
-    }
+    if (outputType && (outputType === BitcoinInfo.outputType.witness_v0_keyhash || outputType === BitcoinInfo.outputType.pubkeyhash)) {
+        // Store relevant asset info
+        let inconsistentAssetUtxoInfo = false;
 
-    const isAggregatableAsset = assetUtxoInfo.aggregationPolicy === CCTransaction.aggregationPolicy.aggregatable;
-
-    if (this.isAggregatableAsset === undefined) {
-        this.isAggregatableAsset = isAggregatableAsset;
-    }
-    else if (this.isAggregatableAsset !== isAggregatableAsset) {
-        // Asset aggregation info inconsistent amongst UTXOs.
-        //   Log warning condition and indicate that UTXO is inconsistent
-        Catenis.logger.WARN('Asset aggregation info inconsistent amongst UTXOs. Current UTXO being discarded', {
-            addresses: this.addresses,
-            expectedIsAggregatableAsset:this.isAggregatableAsset,
-            currentUtxo: utxo
-        });
-        inconsistentAssetUtxoInfo = true;
-    }
-
-    if (!inconsistentAssetUtxoInfo) {
-        this.collUtxo.insert({
-            txout: Util.txoutToString(utxo),
-            address: utxo.address,
-            txid: utxo.txid,
-            vout: utxo.vout,
-            scriptPubKey: utxo.scriptPubKey,
-            amount: new BigNumber(utxo.amount).times(100000000).toNumber(),
-            ccAssetId: this.ccAssetId,
-            assetAmount: assetUtxoInfo.amount,
-            assetDivisibility: assetUtxoInfo.divisibility,
-            isAggregatableAsset: isAggregatableAsset,
-            confirmations: utxo.confirmations,
-            allocated: false
-        });
-
-        if (utxo.confirmations === 0) {
-            // Store unconfirmed transaction ID
-            unconfTxids.add(utxo.txid);
+        if (this.assetDivisibility === undefined) {
+            this.assetDivisibility = assetUtxoInfo.divisibility;
         }
+        else if (this.assetDivisibility !== assetUtxoInfo.divisibility) {
+            // Asset divisibility info inconsistent amongst UTXOs.
+            //   Log warning condition and indicate that UTXO is inconsistent
+            Catenis.logger.WARN('Asset divisibility info inconsistent amongst UTXOs. Current UTXO being discarded', {
+                addresses: this.addresses,
+                expectedAssetDivisibility: this.assetDivisibility,
+                currentUtxo: utxo
+            });
+            inconsistentAssetUtxoInfo = true;
+        }
+
+        const isAggregatableAsset = assetUtxoInfo.aggregationPolicy === CCTransaction.aggregationPolicy.aggregatable;
+
+        if (this.isAggregatableAsset === undefined) {
+            this.isAggregatableAsset = isAggregatableAsset;
+        }
+        else if (this.isAggregatableAsset !== isAggregatableAsset) {
+            // Asset aggregation info inconsistent amongst UTXOs.
+            //   Log warning condition and indicate that UTXO is inconsistent
+            Catenis.logger.WARN('Asset aggregation info inconsistent amongst UTXOs. Current UTXO being discarded', {
+                addresses: this.addresses,
+                expectedIsAggregatableAsset:this.isAggregatableAsset,
+                currentUtxo: utxo
+            });
+            inconsistentAssetUtxoInfo = true;
+        }
+
+        if (!inconsistentAssetUtxoInfo) {
+            this.collUtxo.insert({
+                txout: Util.txoutToString(utxo),
+                address: utxo.address,
+                txid: utxo.txid,
+                vout: utxo.vout,
+                type: outputType.name,
+                isWitness: outputType.isWitness,
+                scriptPubKey: utxo.scriptPubKey,
+                amount: new BigNumber(utxo.amount).times(100000000).toNumber(),
+                ccAssetId: this.ccAssetId,
+                assetAmount: assetUtxoInfo.amount,
+                assetDivisibility: assetUtxoInfo.divisibility,
+                isAggregatableAsset: isAggregatableAsset,
+                confirmations: utxo.confirmations,
+                allocated: false
+            });
+
+            if (utxo.confirmations === 0) {
+                // Store unconfirmed transaction ID
+                unconfTxids.add(utxo.txid);
+            }
+        }
+    }
+    else {
+        // UTXO of an unexpected type.
+        Catenis.logger.WARN('Unexpected output type: UTXO NOT added to Colored Coins fund source list', utxo);
     }
 }
 
@@ -1024,7 +1154,6 @@ CCFundSource.utxoCS = new CriticalSection();
 
 function computeAdditionalUtxos(addUtxoTxInputs) {
     const txidUtxos = new Map();
-    const txidNoScriptPubKeyUtxos = new Map();
 
     if (!Array.isArray(addUtxoTxInputs)) {
         addUtxoTxInputs = [addUtxoTxInputs];
@@ -1035,26 +1164,19 @@ function computeAdditionalUtxos(addUtxoTxInputs) {
             txid: txInput.txout.txid,
             vout: txInput.txout.vout,
             address: txInput.address,
-            amount: new BigNumber(txInput.txout.amount).dividedBy(100000000).toNumber(),
-            assets: [{
-                assetId: txInput.txout.ccAssetId,
-                amount: txInput.txout.assetAmount,
-                divisibility: txInput.txout.assetDivisibility,
-                aggregationPolicy: txInput.txout.isAggregatableAsset ? CCTransaction.aggregationPolicy.aggregatable : CCTransaction.aggregationPolicy.dispersed,
-            }]
+            scriptPubKey: txInput.scriptPubKey
         };
 
-        if (txInput.scriptPubKey !== undefined) {
-            utxo.scriptPubKey = txInput.scriptPubKey;
+        if (txInput.txout.amount !== undefined) {
+            utxo.amount = new BigNumber(txInput.txout.amount).dividedBy(100000000).toNumber();
         }
-        else {
-            if (txidNoScriptPubKeyUtxos.has(txInput.txout.txid)) {
-                txidNoScriptPubKeyUtxos.get(txInput.txout.txid).push(utxo);
-            }
-            else {
-                txidNoScriptPubKeyUtxos.set(txInput.txout.txid, [utxo]);
-            }
-        }
+
+        utxo.assets = [{
+            assetId: txInput.txout.ccAssetId,
+            amount: txInput.txout.assetAmount,
+            divisibility: txInput.txout.assetDivisibility,
+            aggregationPolicy: txInput.txout.isAggregatableAsset ? CCTransaction.aggregationPolicy.aggregatable : CCTransaction.aggregationPolicy.dispersed,
+        }];
 
         if (txidUtxos.has(txInput.txout.txid)) {
             txidUtxos.get(txInput.txout.txid).push(utxo);
@@ -1064,34 +1186,36 @@ function computeAdditionalUtxos(addUtxoTxInputs) {
         }
     });
 
-    const txidRawTransaction = new Map();
     let hasUnconfirmedUtxo = false;
 
     for (let [txid, utxos] of txidUtxos) {
-        // Retrieve transaction info to get number of confirmations for its related UTXOs
-        const txInfo = Catenis.bitcoinCore.getTransaction(txid);
+        // Retrieve transaction info to get number of confirmations and descriptor
+        //  for their corresponding tx outputs
+        const txInfo = Catenis.bitcoinCore.getDecodedRawTransactionCheck(txid);
 
         utxos.forEach((utxo) => {
-            utxo.confirmations = txInfo.confirmations;
+            const txout = txInfo.vout[utxo.vout];
+            const scriptPubKey = txout.scriptPubKey;
+
+            // Make sure that UTXO is complete
+            if (!utxo.address) {
+                utxo.address = scriptPubKey.addresses[0];
+            }
+
+            if (!utxo.scriptPubKey) {
+                utxo.scriptPubKey = scriptPubKey.hex;
+            }
+
+            if (utxo.amount === undefined) {
+                utxo.amount = txout.value;
+            }
+
+            utxo.confirmations = txInfo.confirmations || 0;
+            utxo.desc = BitcoinInfo.getOutputTypeByName(scriptPubKey.type).descPrefix;
         });
 
         if (txInfo.confirmations === 0) {
             hasUnconfirmedUtxo = true;
-        }
-
-        if (txidNoScriptPubKeyUtxos.has(txid)) {
-            txidRawTransaction.set(txid, txInfo.hex);
-        }
-    }
-
-    if (txidRawTransaction.size > 0) {
-        for (let [txid, hexTx] of txidRawTransaction) {
-            // Decode raw transaction to get script pub key for its related UTXOs
-            const tx = Catenis.bitcoinCore.decodeRawTransaction(hexTx);
-
-            txidNoScriptPubKeyUtxos.get(txid).forEach((utxo) => {
-                utxo.scriptPubKey = tx.vout[utxo.vout].scriptPubKey.hex;
-            });
         }
     }
 

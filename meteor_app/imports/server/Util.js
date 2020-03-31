@@ -25,6 +25,7 @@ import { Meteor } from 'meteor/meteor';
 import { Catenis } from './Catenis';
 import { Transaction } from './Transaction';
 import { UtilShared } from '../both/UtilShared';
+import { BitcoinInfo } from './BitcoinInfo';
 
 
 // Definition of function classes
@@ -61,19 +62,37 @@ Util.formatCatenisServiceCredits = function (amount) {
 //    vout: [number],
 //    amount: [number]
 //  }
-//  origAddress: [string]
 //  destAddress: [string]
 //  fee: [number]
-Util.spendUtxo = function (txout, origAddress, destAddress, fee) {
-    fee = fee !== undefined && fee >= 1000 ? fee : 1000;
+Util.spendUtxo = function (txout, destAddress, fee) {
+    const txoutInfo = Catenis.bitcoinCore.getTxOut(txout.txid, txout.vout);
 
-    if (txout.amount !== undefined && txout.amount >= fee + 600) {
-        let tx = new Transaction();
+    if (txoutInfo) {
+        const outputType = BitcoinInfo.getOutputTypeByName(txoutInfo.scriptPubKey.type);
 
-        tx.addInput(txout, origAddress, Catenis.keyStore.getAddressInfo(origAddress, true));
-        tx.addP2PKHOutput(destAddress, txout.amount - fee);
+        if (txout.amount === undefined) {
+            txout.amount = new BigNumber(txoutInfo.value).times(100000000).toNumber()
+        }
 
-        return tx.sendTransaction();
+        fee = fee !== undefined ? fee : 1000;
+
+        if (txout.amount >= fee + 600) {
+            const tx = new Transaction();
+            const address = txoutInfo.scriptPubKey.addresses[0];
+
+            tx.addInput(txout, {
+                isWitness: outputType.isWitness,
+                scriptPubKey: txoutInfo.scriptPubKey.hex,
+                address: address,
+                addrInfo: Catenis.keyStore.getAddressInfo(address, true)
+            });
+            tx.addPubKeyHashOutput(destAddress, txout.amount - fee);
+
+            return tx.sendTransaction();
+        }
+    }
+    else {
+        throw new Error('Invalid unspent transaction output');
     }
 };
 
@@ -96,6 +115,8 @@ Util.spendAddresses = function (origAddresses, destAddress, fee) {
                 vout: utxo.vout,
                 amount: new BigNumber(utxo.amount).times(100000000).toNumber()
             },
+            isWitness: utxo.isWitness,
+            scriptPubKey: utxo.scriptPubKey,
             address: utxo.address
         };
 
@@ -109,13 +130,13 @@ Util.spendAddresses = function (origAddresses, destAddress, fee) {
         inputs.push(input);
     });
 
-    fee = fee !== undefined && fee >= 1000 ? fee : 1000;
+    fee = fee !== undefined ? fee : 1000;
 
     if (totalAmount >= fee + 600) {
         const tx = new Transaction();
 
         tx.addInputs(inputs);
-        tx.addP2PKHOutput(destAddress, totalAmount - fee);
+        tx.addPubKeyHashOutput(destAddress, totalAmount - fee);
 
         return tx.sendTransaction();
     }
@@ -230,15 +251,8 @@ Util.mergeArrays = function (ar1, ar2) {
 // This method is to be used in place of underscore.js's clone() method to overcome a limitation
 //  of that method where accessor type properties (getter/setter) are copied as data properties
 Util.cloneObj = function (obj) {
-    const cloneObj = {};
-
-    Object.getOwnPropertyNames(obj).forEach((propName) => {
-        Object.defineProperty(cloneObj, propName, Object.getOwnPropertyDescriptor(obj, propName));
-    });
-
-    Object.setPrototypeOf(cloneObj, Object.getPrototypeOf(obj));
-
-    return cloneObj;
+    // noinspection CommaExpressionJS
+    return  Object.create(obj, Object.getOwnPropertyNames(obj).reduce((o, n) => (o[n] = Object.getOwnPropertyDescriptor(obj, n), o), {}));
 };
 
 // Clone an object or an array. If the array contains objects, the objects are also cloned. If those objects
@@ -396,6 +410,10 @@ Util.isValidCid = function (cid) {
     }
 
     return isValid;
+};
+
+Util.isNonNullObject = function (obj) {
+    return typeof obj === 'object' && obj !== null;
 };
 
 

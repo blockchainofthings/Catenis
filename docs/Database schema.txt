@@ -47,6 +47,7 @@ IssuedBlockchainAddress {
   parentPath: [string],  // Path of the HD node from which this address is derived
   path: [string],  // The HD node path which identifies this address
   addrIndex: [integer],  // The position occupied by this address within the range of addresses of that type
+  btcAddressType: [string],  // Type of bitcoin address. Valid values (from BitcoinAddress.addressType): 'pubkeyhash', 'scripthash', 'witness_v0_keyhash', 'witness_v0_scripthash'
   addrHash: [string],  // Base-64 formatted SHA256 hash of blockchain address
   issuedDate: [date/time],  // Date and time when address has been issued (doc/rec created)
   expirationDate: [date/time],  // Date and time until when this address is considered to be valid to receive payments.

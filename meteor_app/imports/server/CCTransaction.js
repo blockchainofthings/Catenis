@@ -28,6 +28,7 @@ import {
 } from './Transaction';
 import { CCMetadata } from './CCMetadata';
 import { Util } from './Util';
+import { BitcoinInfo } from './BitcoinInfo';
 
 // Config entries
 const ccTransactConfig = config.get('ccTransaction');
@@ -73,8 +74,8 @@ const cfgSettings = {
 //  }
 //
 //  output: {
-//    type: [String],  - Either 'P2PKH', 'P2SH', 'nullData' or 'multisig'
-//    payInfo: {       - Should not exist for 'P2PKH', 'P2SH', or 'multisig' output types
+//    type: [Object],  - Object representing the type of the tx output. Valid values: any of the properties of BitcoinInfo.outputType
+//    payInfo: {       - Should exist for a paying output type (any type other than 'nulldata' or 'unknown')
 //      address: [String|Array(String)], - Blockchain address to where payment should be sent.
 //                                          NOTE: for 'multisig' outputs, this is actually a list of addresses
 //      nSigs: [Number], - Number of signatures required to spend multi-signature output. Should only exist for 'multisig' output type
@@ -166,13 +167,17 @@ export class CCTransaction extends Transaction {
 // Add input to be used for issuing a quantity of a given Colored Coins asset
 //
 // Arguments:
-//  txout: {  - Unspent output being spent
+//  txout: {  - Unspent tx output to spent
 //    txid: [String],
 //    vout: [Number],
 //    amount: [number]  - Amount, in satoshis
 //  }
-//  address: [String] - Blockchain address associated with the output being spent
-//  addrInfo: [Object] - Address Info of the blockchain address associated with the output being spent
+//  outputInfo: {
+//    isWitness: [Boolean],    - Indicates whether unspent tx output is of a (segregated) witness type
+//    scriptPubKey: [String],  - (not required for non-witness outputs) Hex-encoded public key script of unspent tx output
+//    address: [String],       - Blockchain address associated with unspent tx output
+//    addrInfo: [Object]       - Catenis address info including crypto key pair required to spend output
+//  }
 //  assetAmount: [Number] - Amount (quantity) of asset to be issued
 //  opts: {
 //    type: [String],  - (optional, default: 'locked') Issuing type of asset. Either 'locked' or 'unlocked' (a property of CCTransaction.issuingAssetType)
@@ -183,7 +188,7 @@ export class CCTransaction extends Transaction {
 //  Return:
 //   result: [Boolean|Object] - True if issuing input is successfully added, or false if it could not be added due to an error.
 //                               If a previous issuing input is replaced, the previous issuing input object is returned instead of true
-CCTransaction.prototype.addIssuingInput = function (txout, address, addrInfo, assetAmount, opts) {
+CCTransaction.prototype.addIssuingInput = function (txout, outputInfo, assetAmount, opts) {
     let result = true;
 
     if (!this.isBurnOutputSet()) {
@@ -197,7 +202,7 @@ CCTransaction.prototype.addIssuingInput = function (txout, address, addrInfo, as
 
         // Prepare info for new asset to be issued
         const newIssuingInfo = _und.extend({
-            ccAssetId: getAssetId(txout, address, issuingOpts),
+            ccAssetId: getAssetId(txout, outputInfo.address, issuingOpts),
             assetAmount: assetAmount,
         }, issuingOpts);
 
@@ -220,7 +225,7 @@ CCTransaction.prototype.addIssuingInput = function (txout, address, addrInfo, as
         this.issuingInfo = newIssuingInfo;
 
         // Make sure that this is the first input of the transaction
-        this.addInput(txout, address, addrInfo, 0);
+        this.addInput(txout, outputInfo, 0);
 
         if (result === true) {
             // Adjust start position of all input sequences only if not
@@ -343,8 +348,12 @@ CCTransaction.prototype.addTransferInputs = function (inputs, inputSeqStartPos, 
 //
 //  Arguments:
 //   txout: [Object] - UTXO containing Colored Coins asset to be used as inputs for Colored Coins transaction
-//   address: [String] - Blockchain address associated with UTXO
-//   addrInfo; [Object] - Object with info about blockchain address associated with UTXO
+//   outputInfo [Object] {
+//     isWitness: [Boolean],    Indicates whether unspent tx output is of a (segregated) witness type
+//     scriptPubKey: [String],  (not required for non-witness outputs) Hex-encoded public key script of unspent tx output
+//     address: [String],       Blockchain address associated with unspent tx output
+//     addrInfo: [Object]       Catenis address info including crypto key pair required to spend output
+//   }
 //   inputSeqStartPos: [Number] - (optional) Position of first input of transfer input sequence into which inputs should be added
 //   insertBefore: [Boolean] - (optional, default = false) Indicates that inputs should actually be added to a new transfer input sequence that
 //                              should be inserted before the one reference by the inputSeqStartPos argument
@@ -352,11 +361,10 @@ CCTransaction.prototype.addTransferInputs = function (inputs, inputSeqStartPos, 
 //  Return:
 //   inputSeqStartPos: [Number] - Input position of first input (startPos field) of transfer input sequence into which inputs have been added
 //   undefined - If input is not added (due to an error)
-CCTransaction.prototype.addTransferInput = function (txout, address, addrInfo, inputSeqStartPos, insertBefore = false) {
+CCTransaction.prototype.addTransferInput = function (txout, outputInfo, inputSeqStartPos, insertBefore = false) {
     return this.addTransferInputs({
         txout: txout,
-        address: address,
-        addrInfo: addrInfo
+        ...outputInfo
     }, inputSeqStartPos, insertBefore);
 };
 
@@ -1047,9 +1055,9 @@ CCTransaction.prototype.assemble = function (spendMultiSigOutputAddress) {
                         }
                     }
 
-                    this.addP2PKHOutputs(_und.extend({
+                    this.addPubKeyHashOutputs(_und.extend({
                         address: transferOutput.address,
-                        amount: txCfgSettings.txOutputDustAmount,
+                        amount: Transaction.dustAmountByAddress(transferOutput.address)
                     }, assetInfo), outputPos++);
 
                     this.numCcTransferOutputs++;
@@ -1214,8 +1222,7 @@ CCTransaction.prototype.totalOutputsAssetAmount = function (startPos = 0, endPos
     for (let pos = startPos, lastPos = endPos === undefined ? this.outputs.length - 1 : endPos; pos <= lastPos; pos++) {
         const output = this.outputs[pos];
 
-        if (output !== undefined && (output.type === Transaction.outputType.P2PKH || output.type === Transaction.outputType.P2SH || output.type === Transaction.outputType.multisig)
-                && output.payInfo.ccAssetId !== undefined) {
+        if (output !== undefined && Transaction.isPayingOutput(output.type) && output.payInfo.ccAssetId !== undefined) {
             if (output.payInfo.ccAssetId in result) {
                 result[output.payInfo.ccAssetId].assetAmount += output.payInfo.assetAmount;
             }
@@ -1396,7 +1403,7 @@ CCTransaction.fromTransaction = function (transact) {
     let ccData;
 
     // Check if transaction contains Colored Coins data and null data output is in the correct position
-    if (transact.hasNullDataOutput && ((nullDataOutputPos = transact.getNullDataOutputPosition()) === 0 || nullDataOutputPos === 1 && (multiSigTxOutput = transact.getOutputAt(0)).type === Transaction.outputType.multisig)
+    if (transact.hasNullDataOutput && ((nullDataOutputPos = transact.getNullDataOutputPosition()) === 0 || nullDataOutputPos === 1 && (multiSigTxOutput = transact.getOutputAt(0)).type === BitcoinInfo.outputType.multisig)
             && (ccData = checkColoredCoinsData(transact.getNullDataOutput().data)) !== undefined) {
         try {
             // Make sure that multi-signature tx output (if exists) is consistent
@@ -1794,7 +1801,7 @@ function getAssetId(txout, address, issuingOpts) {
             vout: txout.vout,
             address: address
         }]
-    });
+    }, Catenis.application.cryptoNetwork);
 }
 
 // Checks and returns decoded Colored Coins data if it is valid

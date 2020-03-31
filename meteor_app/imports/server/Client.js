@@ -489,6 +489,21 @@ Client.prototype.serviceAccountBalance = function (credFundSource, debtFundSourc
     return balance;
 };
 
+Client.prototype.listDevices = function (includeDeleted = true) {
+    // Retrieve Device docs/recs associated with this client
+    const query = {
+        client_id: this.doc_id
+    };
+
+    if (!includeDeleted) {
+        query.status = {
+            $ne: Device.status.deleted.name
+        };
+    }
+
+    return Catenis.db.collection.Device.find(query).map(doc => new Device(doc, this));
+};
+
 Client.prototype.getDeviceByIndex = function (deviceIndex, includeDeleted = true) {
     // Retrieve Device doc/rec
     const query = {

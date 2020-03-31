@@ -25,6 +25,7 @@ import { Transaction } from './Transaction';
 import { BufferMessageDuplex } from './BufferMessageDuplex';
 import { BufferMessageReadable } from './BufferMessageReadable';
 import { KeyStore } from './KeyStore';
+import { BitcoinInfo } from './BitcoinInfo';
 
 // Definition of function classes
 //
@@ -117,12 +118,15 @@ SettleOffChainMessagesTransaction.prototype.buildTransaction = function () {
         this.transact.addNullDataOutput(ctnMessage.getData());
 
         // Now, allocate UTXOs to pay for tx expense
+        const txChangeOutputType = BitcoinInfo.getOutputTypeByAddressType(Catenis.ctnHubNode.ocMsgsSetlmtPayTxExpenseAddr.btcAddressType);
         const payTxFundSource = new FundSource(Catenis.ctnHubNode.ocMsgsSetlmtPayTxExpenseAddr.listAddressesInUse(), {
             useUnconfirmedUtxo: true,
-            smallestChange: true
+            smallestChange: true,
+            useAllNonWitnessUtxosFirst: true,   // Default setting; could have been omitted
+            useWitnessOutputForChange: txChangeOutputType.isWitness
         });
         const payTxAllocResult = payTxFundSource.allocateFundForTxExpense({
-            txSize: this.transact.estimateSize(),
+            txSzStSnapshot: this.transact.txSize,
             inputAmount: this.transact.totalInputsAmount(),
             outputAmount: this.transact.totalOutputsAmount()
         }, false, Service.feeRateForOffChainMsgsSettlement);
@@ -137,6 +141,8 @@ SettleOffChainMessagesTransaction.prototype.buildTransaction = function () {
         const inputs = payTxAllocResult.utxos.map((utxo) => {
             return {
                 txout: utxo.txout,
+                isWitness: utxo.isWitness,
+                scriptPubKey: utxo.scriptPubKey,
                 address: utxo.address,
                 addrInfo: Catenis.keyStore.getAddressInfo(utxo.address)
             }
@@ -144,9 +150,9 @@ SettleOffChainMessagesTransaction.prototype.buildTransaction = function () {
 
         this.transact.addInputs(inputs);
 
-        if (payTxAllocResult.changeAmount >= Transaction.txOutputDustAmount) {
+        if (payTxAllocResult.changeAmount >= Transaction.dustAmountByOutputType(txChangeOutputType)) {
             // Add new output to receive change
-            this.transact.addP2PKHOutput(Catenis.ctnHubNode.ocMsgsSetlmtPayTxExpenseAddr.newAddressKeys().getAddress(), payTxAllocResult.changeAmount);
+            this.transact.addPubKeyHashOutput(Catenis.ctnHubNode.ocMsgsSetlmtPayTxExpenseAddr.newAddressKeys().getAddress(), payTxAllocResult.changeAmount);
         }
 
         // Indicate that transaction is already built

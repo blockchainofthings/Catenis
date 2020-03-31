@@ -24,6 +24,7 @@ import { Meteor } from 'meteor/meteor';
 import { Catenis } from './Catenis';
 import { ECCipher } from './ECCipher';
 import { ECDecipher } from './ECDecipher';
+import { BitcoinInfo } from './BitcoinInfo';
 
 
 // Definition of function classes
@@ -34,14 +35,32 @@ import { ECDecipher } from './ECDecipher';
 // Constructor
 //  keyPair [Object] - Object representing a ECDSA key pair. Should be either an ECPair or a BIP32 class instance
 //                      gotten from bitcoinjs-lib's ECPair.fromXXX() or bip32.fromXXX() methods
-export function CryptoKeys(keyPair) {
+//  btcAddressType [Object] - (optional) Object representing the type of bitcoin address that should be generated from the encapsulated
+//                             crypto key pair. Valid values: any of the properties of BitcoinInfo.addressType
+export function CryptoKeys(keyPair, btcAddressType) {
     this.keyPair = keyPair;
+
+    if (btcAddressType !== undefined && !BitcoinInfo.isValidAddressType(btcAddressType)) {
+        Catenis.logger.ERROR('CryptoKeys constructor called with an invalid \'btcAddressType\' argument', {btcAddressType});
+        throw new Error('CryptoKeys constructor called with an invalid \'btcAddressType\' argument');
+    }
+
+    this.btcAddressType = btcAddressType;
 
     // Make sure that `compressed` property is defined.
     //  Rationale: BIP32 instances only handle compressed keys even though they do not define a `compressed` property
     if (this.keyPair.compressed === undefined) {
         this.keyPair.compressed = true;
     }
+
+    // Make sure that generated bitcoin signatures are 71-bytes long (including the trailing SIGHASH byte)
+    //  or less. The probability for smaller signatures (< 71 bytes) is very small though, so we can
+    //  assume that signatures will take up exactly 71 bytes when estimating transaction size.
+    //  NOTE: there is a computational cost for doing it since, on average, the signature needs to be
+    //      calculated twice. This however is expected to be a transitional solution until bitcoin starts
+    //      using Schnorr signatures (BIP 340), which will have a fixed 64-byte length (65 bytes, when
+    //      including the trailing SIGHASH byte).
+    this.keyPair.lowR = true;
 }
 
 
@@ -85,7 +104,15 @@ CryptoKeys.prototype.getUncompressedPublicKey = function () {
 };
 
 CryptoKeys.prototype.getAddress = function () {
-    return bitcoinLib.payments.p2pkh({pubkey: this.keyPair.publicKey, network: this.keyPair.network}).address;
+    // Make sure that bitcoin address type is specified
+    if (!this.btcAddressType) {
+        throw new Error('Cannot generate address from crypto key pair; bitcoin address type not specified');
+    }
+
+    return this.btcAddressType.btcPayment({
+        pubkey: this.keyPair.publicKey,
+        network: this.keyPair.network
+    }).address;
 };
 
 CryptoKeys.prototype.getPubKeyHash = function () {
@@ -93,7 +120,15 @@ CryptoKeys.prototype.getPubKeyHash = function () {
 };
 
 CryptoKeys.prototype.getAddressAndPubKeyHash = function () {
-    const p2pkh = bitcoinLib.payments.p2pkh({pubkey: this.keyPair.publicKey, network: this.keyPair.network});
+    // Make sure that bitcoin address type is specified
+    if (!this.btcAddressType) {
+        throw new Error('Cannot generate address from crypto key pair; bitcoin address type not specified');
+    }
+
+    const p2pkh = this.btcAddressType.btcPayment({
+        pubkey: this.keyPair.publicKey,
+        network: this.keyPair.network
+    });
 
     return {
         address: p2pkh.address,

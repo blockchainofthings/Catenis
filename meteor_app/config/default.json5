@@ -18,9 +18,12 @@
   },
   // Parameters pertaining to the Startup module
   "startup": {
-    "fixMissingAddresses": false, // Indicate if issued blockchain addresses are missing from BitcoinCore wallet they should be automatically included
-    "bypassProcessing": false,     // NOTE: this option is for DEBUG ONLY. Bypass all processing, so the app starts but does not do anything. This allows
-                                  //  for debugging via 'meteor shell' or 'meteor mongo'
+    "fixMissingAddresses": false,  // Indicate if issued blockchain addresses are missing from BitcoinCore wallet they should be automatically included
+    legacyDustFunding: false,  // Indicates whether the system should use the legacy behavior when funding addresses that are funded with dust amount (service credit issuance, BCOT sale stock, system device main, device main, device asset issuance)
+                               //  NOTE: this option is intended to simulate an old scenario while working on the implementation of segregated witness support
+    fixDustFunding: false,  // Indicates whether addresses that are funded with dust amount (service credit issuance, BCOT sale stock, system device main, device main, device asset issuance) should be refunded to use the new, lower dust amount for segregated witness output
+    "bypassProcessing": false,  // NOTE: this option is for DEBUG ONLY. Bypass all processing, so the app starts but does not do anything. This allows
+                                //  for debugging via 'meteor shell' or 'meteor mongo'
     "dataToCipher": null,  // A text that should be ciphered by the application. If set, the Catenis application is started in "bypass processing" mode and will output the ciphered data
     "pidFilename": "catenis-pid"  // Name of the file containing the ID of the current process that is created/updated whenever that app starts
   },
@@ -219,7 +222,7 @@
       "multiplyFactor": 2  // Multiply factor to use when calculating total amount to fund
     },
     "serviceCreditIssueAddrFunding": {
-      "unitAmount": 600,  // Amount, in satoshis, equivalent to one unit of funding
+      // NOTE: unitAmount (amount, in satoshis, equivalent to one unit of funding) is dynamically calculated: `serviceCreditIssuanceAddrAmount` getter property
       "maxUnitsPerUtxo": 2,  // Maximum number of units of funding that should be accumulated into a single UTXO
       "minUtxosToFund": 10,  // Number of UTXOs that should be funded before start accumulating funding units into a single UTXO
       "unitsPerPrePaidClients": 0.1,  // Expected number of units of funding that there should exist per pre-paid clients
@@ -228,7 +231,7 @@
       "postPaidClientsToFund": 100  // Number of post-paid clients to consider when calculating total amount to fund
     },
     "bcotSaleStockAddrFunding": {
-      "unitAmount": 600,  // Amount, in satoshis, equivalent to one unit of funding
+      // NOTE: unitAmount (amount, in satoshis, equivalent to one unit of funding) is dynamically calculated: `bcotSaleStockAddrAmount` getter property
       "maxUnitsPerUtxo": 2,  // Maximum number of units of funding that should be accumulated into a single UTXO
       "minUtxosToFund": 10,  // Number of UTXOs that should be funded before start accumulating funding units into a single UTXO
       "unitsPerPrePaidClients": 0.1,  // Expected number of units of funding that there should exist per pre-paid clients
@@ -237,13 +240,13 @@
       "postPaidClientsToFund": 100  // Number of post-paid clients to consider when calculating total amount to fund
     },
     "serviceAccountFunding": {
-      // NOTE: unitAmount (amount, in Catenis service credit's lowest unit, equivalent to one unit of funding) is dynamically calculated
+      // NOTE: unitAmount (amount, in Catenis service credit's lowest unit, equivalent to one unit of funding) is dynamically calculated: `serviceCreditIssuanceAddrAmount` getter property
       "unitAmountSafetyFactor": 0.3,  // Safety factor to use when calculating funding unit amount
       "maxUnitsPerAddr": 100,  // Maximum number of units of funding that should be accumulated into a single UTXO/address (there should be a single UTXO per address)
       "minAddrsToFund": 4  // Number of UTXOs/addresses that should be funded before start accumulating funding units into a single UTXO/address (there should be a single UTXO per address)
     },
     "payTxExpenseFunding": {
-      // NOTE: unitAmount (amount, in satoshis, equivalent to one unit of funding) is dynamically calculated
+      // NOTE: unitAmount (amount, in satoshis, equivalent to one unit of funding) is dynamically calculated: `payTxExpFundUnitAmount` getter property
       "unitAmountSafetyFactor": 0.3,  // Safety factor to use when calculating funding unit amount
       "maxUnitsPerAddr": 10,  // Maximum number of units of funding that should be accumulated into a single UTXO/address (there should be a single UTXO per address)
       "minAddrsToFund": 10,  // Number of UTXOs/addresses that should be funded before start accumulating funding units into a single UTXO/address (there should be a single UTXO per address)
@@ -254,7 +257,7 @@
       "devicesToFund": 10  // Number of devices to consider when calculating total amount to fund
     },
     "readConfirmPayTxExpenseFunding": {
-      // NOTE: unitAmount (amount, in satoshis, equivalent to one unit of funding) is dynamically calculated
+      // NOTE: unitAmount (amount, in satoshis, equivalent to one unit of funding) is dynamically calculated: `readConfirmPayTxExpFundUnitAmount` getter property
       "unitAmountSafetyFactor": 0,  // Safety factor to use when calculating funding unit amount
       "maxUnitsPerAddr": 10,  // Maximum number of units of funding that should be accumulated into a single UTXO/address (there should be a single UTXO per address)
       "minAddrsToFund": 10,  // Number of UTXOs/addresses that should be funded before start accumulating funding units into a single UTXO/address (there should be a single UTXO per address)
@@ -263,7 +266,7 @@
       "messagesToConfirmToFund": 100  // Number of messages to confirm to consider when calculating total amount to fund
     },
     "servicePaymentPayTxExpenseFunding": {
-      // NOTE: unitAmount (amount, in satoshis, equivalent to one unit of funding) is dynamically calculated
+      // NOTE: unitAmount (amount, in satoshis, equivalent to one unit of funding) is dynamically calculated: `servicePaymentPayTxExpFundUnitAmount` getter property
       "unitAmountSafetyFactor": 0,  // Safety factor to use when calculating funding unit amount
       "maxUnitsPerAddr": 50,  // Maximum number of units of funding that should be accumulated into a single UTXO/address (there should be a single UTXO per address)
       "minAddrsToFund": 10,  // Number of UTXOs/addresses that should be funded before start accumulating funding units into a single UTXO/address (there should be a single UTXO per address)
@@ -273,7 +276,7 @@
       "servicesToPayToFund": 300  // Number of services to pay to consider when calculating total amount to fund
     },
     "ocMsgsSettlementPayTxExpenseFunding": {
-      // NOTE: unitAmount (amount, in satoshis, equivalent to one unit of funding) is dynamically calculated
+      // NOTE: unitAmount (amount, in satoshis, equivalent to one unit of funding) is dynamically calculated: `ocMsgsSetlmtPayTxExpFundUnitAmount` getter property
       "unitAmountSafetyFactor": 0.3,  // Safety factor to use when calculating funding unit amount
       "maxUnitsPerAddr": 5,  // Maximum number of units of funding that should be accumulated into a single UTXO/address (there should be a single UTXO per address)
       "minAddrsToFund": 5,  // Number of UTXOs/addresses that should be funded before start accumulating funding units into a single UTXO/address (there should be a single UTXO per address)
@@ -285,10 +288,13 @@
       "paymentResolution": 10,  // Resolution of amount, in satoshis, that should be allocated to pay for the expenses of transactions related to service payment. In other words, the allocated amount should be a multiple of this amount
       // To be used with pre-paid clients
       "spendServiceCredit": {
-        "initNumTxInputs": 2,         // Initial number of inputs of a spend service credit transaction (1 client service account credit line, 1 service payment pay tx expense)
-        "initNumTxOutputs": 2,        // Initial number of outputs of a spend service credit transaction (1 client service account credit line change, 1 service payment pay tx expense change)
+        // NOTE: the parameters below (next 4 lines) are for the best case where only segregated witness inputs and outputs are used (which is true in the long run for the sandbox environment and should be true for the production environment from inception)
+        "initNumTxWitnessInputs": 2,            // Initial number of segregated witness inputs of a spend service credit transaction (1 client service account credit line, 1 service payment pay tx expense)
+        "initNumTxNonWitnessInputs": 0,         // Initial number of non-segregated witness inputs of a spend service credit transaction
+        "initNumTxWitnessOutputs": 2,           // Initial number of segregated witness outputs of a spend service credit transaction (1 client service account credit line change, 1 service payment pay tx expense change)
+        "initNumTxNonWitnessOutputs": 0,        // Initial number of non-segregated witness outputs of a spend service credit transaction
         "initNumPubKeysMultiSigTxOutputs": [],  // List with initial number of public keys per multi-signatures outputs in spend service credit transaction
-        "txNullDataPayloadSize": 80,  // Size, in bytes, of payload of null data output in spend service credit transaction
+        "txNullDataPayloadSize": 80,            // Size, in bytes, of payload of null data output in spend service credit transaction
         "maxNumClients": 12,  // Maximum number of clients for which services are paid in a spend service credit transaction
         "servsDistribPerClient": 2,  // Number of services that should be assigned to same client before proceeding to next client
         "maxServsPerClientInput": 25,  // Maximum number of services that can be paid for each client service account credit line address input
@@ -299,10 +305,13 @@
       },
       // To be used with post-paid clients
       "debitServiceAccount": {
-        "initNumTxInputs": 2,         // Initial number of inputs of a debit service account transaction (1 service credit issuance, 1 service payment pay tx expense)
-        "initNumTxOutputs": 4,        // Initial number of outputs of a debit service account transaction (1 client service account debit line, 1 service credit issuance refund, 1 service credit issuance change, 1 service payment pay tx expense change)
+        // NOTE: the parameters below (next 4 lines) are for the best case where only segregated witness inputs and outputs are used (which is true in the long run for the sandbox environment and should be true for the production environment from inception)
+        "initNumTxWitnessInputs": 2,            // Initial number of segregated witness inputs of a debit service account transaction (1 service credit issuance, 1 service payment pay tx expense)
+        "initNumTxNonWitnessInputs": 0,         // Initial number of non-segregated witness inputs of a debit service account transaction
+        "initNumTxWitnessOutputs": 4,           // Initial number of segregated witness outputs of a debit service account transaction (1 client service account debit line, 1 service credit issuance refund, 1 service credit issuance change, 1 service payment pay tx expense change)
+        "initNumTxNonWitnessOutputs": 0,        // Initial number of non-segregated witness outputs of a debit service account transaction
         "initNumPubKeysMultiSigTxOutputs": [],  // List with initial number of public keys per multi-signatures outputs in debit service account transaction
-        "txNullDataPayloadSize": 80,  // Size, in bytes, of payload of null data output in debit service account transaction
+        "txNullDataPayloadSize": 80,            // Size, in bytes, of payload of null data output in debit service account transaction
         "maxNumClients": 11,  // Maximum number of clients for which services are paid in a debit service account transaction
         "servsDistribPerClient": 2,  // Number of services that should be assigned to same client before proceeding to next client
         "numClientsMultiSigOutput": 4,  // Required number of clients for (the only) multi-signature output to be added to debit service account transaction
@@ -316,7 +325,7 @@
       "minutesToConfirm": 300,  // (5 hours) Time, in minutes, within which send system message txs are expected to be confirmed
       "unconfMainAddrReuses": 10,  // Number of times an UTXO associated with a system main addr is expected to be reused
       "mainAddrFunding": {
-        "unitAmount": 600,  // Amount, in satoshis, equivalent to one unit of funding
+        // NOTE: unitAmount (amount, in satoshis, equivalent to one unit of funding) is dynamically calculated: `sysDevMainAddrAmount` getter property
         "maxUnitsPerAddr": 10,  // Maximum number of units of funding that should be accumulated into a single UTXO/address (there should be a single UTXO per address)
         "minAddrsToFund": 10  // Number of UTXOs/addresses that should be funded before start accumulating funding units into a single UTXO/address (there should be a single UTXO per address)
       },
@@ -327,13 +336,19 @@
     },
     "sysTxConfig": {
       "sendSysMessage": {  // Send system message transaction
-        "numInputs": 3,           // Number of inputs (that spend P2PKH outputs)
-        "numOutputs": 3,          // Number of (P2PKH) outputs
+        // NOTE: the parameters below (next 4 lines) are for the best case where only segregated witness inputs and outputs are used (which is true in the long run for the sandbox environment and should be true for the production environment from inception)
+        "numWitnessInputs": 3,      // Number of segregated witness inputs (that spend P2WPKH outputs)
+        "numNonWitnessInputs": 0,   // Number of non-segregated witness inputs (that spend P2PKH outputs)
+        "numWitnessOutputs": 3,     // Number of segregated witness (P2WPKH) outputs
+        "numNonWitnessOutputs": 0,  // Number of non-segregated witness (P2PKH) outputs
         "nullDataPayloadSize": 80 // Size, in bytes, of payload of null data output
       },
       "settleOffChainMessages": {  // Settle off-chain messages
-        "numInputs": 2,           // Number of inputs (that spend P2PKH outputs)
-        "numOutputs": 1,          // Number of (P2PKH) outputs
+        // NOTE: the parameters below (next 4 lines) are for the best case where only segregated witness inputs and outputs are used (which is true in the long run for the sandbox environment and should be true for the production environment from inception)
+        "numWitnessInputs": 2,      // Number of segregated witness inputs (that spend P2WPKH outputs)
+        "numNonWitnessInputs": 0,   // Number of non-segregated witness inputs (that spend P2PKH outputs)
+        "numWitnessOutputs": 1,     // Number of segregated witness (P2WPKH) outputs
+        "numNonWitnessOutputs": 0,  // Number of non-segregated witness (P2PKH) outputs
         "nullDataPayloadSize": 39 // Size, in bytes, of payload of null data output
       }
     },
@@ -341,17 +356,20 @@
       "messagesPerMinute": 4,  // Number of messages sent per minute that is expected to be sustained
       "minutesToConfirm": 300,  // (5 hours) Time, in minutes, within which send message txs are expected to be confirmed
       "unconfMainAddrReuses": 10,  // Number of times an UTXO associated with a device main addr is expected to be reused
-      "readConfirmAddrAmount": 600,  // Amount, in satoshis, that should be paid to read confirmation address output of send message tx
+      // NOTE: readConfirmAddrAmount (amount, in satoshis, that should be paid to read confirmation address output of send message tx) is dynamically calculated: `devReadConfirmAddrAmount` getter property
       "mainAddrFunding": {
-        "unitAmount": 600,  // Amount, in satoshis, equivalent to one unit of funding
+        // NOTE: unitAmount (amount, in satoshis, equivalent to one unit of funding) is dynamically calculated: `devMainAddrAmount` getter property
         "maxUnitsPerAddr": 10,  // Maximum number of units of funding that should be accumulated into a single UTXO/address (there should be a single UTXO per address)
         "minAddrsToFund": 10  // Number of UTXOs/addresses that should be funded before start accumulating funding units into a single UTXO/address (there should be a single UTXO per address)
       },
       "readConfirmation": {
         "paymentResolution": 10,  // Resolution of amount, in satoshis, that should be allocated to pay for read confirmation tx expenses. In other words, the allocated amount should be a multiple of this amount
-        "initNumTxInputs": 2,         // Initial number of inputs of a read confirmation transaction (1 to spend a read confirmation output, 1 to pay for tx expense)
-        "initNumTxOutputs": 2,        // Initial number of outputs of a read confirmation transaction (1 to receive payment of read confirmation output spent, 1 to receive change)
-        "txNullDataPayloadSize": 0,  // Size, in bytes, of payload of null data output in read confirmation transaction
+        // NOTE: the parameters below (next 4 lines) are for the best case where only segregated witness inputs and outputs are used (which is true in the long run for the sandbox environment and should be true for the production environment from inception)
+        "initNumTxWitnessInputs": 2,      // Initial number of segregated witness inputs of a read confirmation transaction (1 to spend a read confirmation output, 1 to pay for tx expense)
+        "initNumTxNonWitnessInputs": 0,   // Initial number of non-segregated witness inputs of a read confirmation transaction
+        "initNumTxWitnessOutputs": 2,     // Initial number of segregated witness outputs of a read confirmation transaction (1 to receive payment of read confirmation output spent, 1 to receive change)
+        "initNumTxNonWitnessOutputs": 0,  // Initial number of non-segregated witness outputs of a read confirmation transaction
+        "txNullDataPayloadSize": 0,       // Size, in bytes, of payload of null data output in read confirmation transaction
         "txInputOutputGrowthRatio": 10, // Number representing how many additional inputs needs to be added to the a read confirmation tx for a new output to be added
                                         // NOTE: these additional outputs should account for read confirmation outputs spent to notify devices that belong to a different Catenis node
         "percMaxUnitsPayTxExp": 0.5,  // Percentage of max units per pay tx expense address input that should be considered available
@@ -386,7 +404,7 @@
         "minutesToConfirm": 300,  // (5 hours) Time, in minutes, within which asset issuance txs are expected to be confirmed
         "unconfAssetIssueAddrReuses": 10,  // Number of times an UTXO associated with a device asset issuance addr is expected to be reused
         "assetIssueAddrFunding": {
-          "unitAmount": 600,  // Amount, in satoshis, equivalent to one unit of funding
+          // NOTE: unitAmount (amount, in satoshis, equivalent to one unit of funding) is dynamically calculated: `devAssetIssuanceAddrAmount` getter property
           "maxUnitsPerAddr": 10,  // Maximum number of units of funding that should be accumulated into a single UTXO/address (there should be a single UTXO per address)
           "minAddrsToFund": 10  // Number of UTXOs/addresses that should be funded before start accumulating funding units into a single UTXO/address (there should be a single UTXO per address)
         }
@@ -397,29 +415,44 @@
     },
     "serviceTxConfig": {
       "logMessage": {  // Log message
-        "numInputs": 3,           // Number of inputs (that spend P2PKH outputs)
-        "numOutputs": 2,          // Number of (P2PKH) outputs
-        "nullDataPayloadSize": 80 // Size, in bytes, of payload of null data output
+        // NOTE: the parameters below (next 4 lines) are for the best case where only segregated witness inputs and outputs are used (which is true in the long run for the sandbox environment and should be true for the production environment from inception)
+        "numWitnessInputs": 3,      // Number of segregated witness inputs (that spend P2WPKH outputs)
+        "numNonWitnessInputs": 0,   // Number of non-segregated witness inputs (that spend P2PKH outputs)
+        "numWitnessOutputs": 2,     // Number of segregated witness (P2WPKH) outputs
+        "numNonWitnessOutputs": 0,  // Number of non-segregated witness (P2PKH) outputs
+        "nullDataPayloadSize": 80   // Size, in bytes, of payload of null data output
       },
       "sendMessage": {  // Send message (without read confirmation)
-        "numInputs": 3,           // Number of inputs (that spend P2PKH outputs)
-        "numOutputs": 3,          // Number of (P2PKH) outputs
-        "nullDataPayloadSize": 80 // Size, in bytes, of payload of null data output
+        // NOTE: the parameters below (next 4 lines) are for the best case where only segregated witness inputs and outputs are used (which is true in the long run for the sandbox environment and should be true for the production environment from inception)
+        "numWitnessInputs": 3,      // Number of segregated witness inputs (that spend P2WPKH outputs)
+        "numNonWitnessInputs": 0,   // Number of non-segregated witness inputs (that spend P2PKH outputs)
+        "numWitnessOutputs": 3,     // Number of segregated witness (P2WPKH) outputs
+        "numNonWitnessOutputs": 0,  // Number of non-segregated witness (P2PKH) outputs
+        "nullDataPayloadSize": 80   // Size, in bytes, of payload of null data output
       },
       "sendMsgReadConfirm": {  // Send message with read confirmation
-        "numInputs": 3,           // Number of inputs (that spend P2PKH outputs)
-        "numOutputs": 4,          // Number of (P2PKH) outputs
-        "nullDataPayloadSize": 80 // Size, in bytes, of payload of null data output
+        // NOTE: the parameters below (next 4 lines) are for the best case where only segregated witness inputs and outputs are used (which is true in the long run for the sandbox environment and should be true for the production environment from inception)
+        "numWitnessInputs": 3,      // Number of segregated witness inputs (that spend P2WPKH outputs)
+        "numNonWitnessInputs": 0,   // Number of non-segregated witness inputs (that spend P2PKH outputs)
+        "numWitnessOutputs": 4,     // Number of segregated witness (P2WPKH) outputs
+        "numNonWitnessOutputs": 0,  // Number of non-segregated witness (P2PKH) outputs
+        "nullDataPayloadSize": 80   // Size, in bytes, of payload of null data output
       },
       "issueAsset": {  // Issue asset
-        "numInputs": 3,           // Number of inputs (that spend P2PKH outputs)
-        "numOutputs": 4,          // Number of (P2PKH) outputs
-        "nullDataPayloadSize": 68 // Size, in bytes, of payload of null data output
+        // NOTE: the parameters below (next 4 lines) are for the best case where only segregated witness inputs and outputs are used (which is true in the long run for the sandbox environment and should be true for the production environment from inception)
+        "numWitnessInputs": 3,      // Number of segregated witness inputs (that spend P2WPKH outputs)
+        "numNonWitnessInputs": 0,   // Number of non-segregated witness inputs (that spend P2PKH outputs)
+        "numWitnessOutputs": 4,     // Number of segregated witness (P2WPKH) outputs
+        "numNonWitnessOutputs": 0,  // Number of non-segregated witness (P2PKH) outputs
+        "nullDataPayloadSize": 68   // Size, in bytes, of payload of null data output
       },
       "transferAsset": {  // Transfer asset
-        "numInputs": 4,           // Number of inputs (that spend P2PKH outputs)
-        "numOutputs": 3,          // Number of (P2PKH) outputs
-        "nullDataPayloadSize": 10 // Size, in bytes, of payload of null data output
+        // NOTE: the parameters below (next 4 lines) are for the best case where only segregated witness inputs and outputs are used (which is true in the long run for the sandbox environment and should be true for the production environment from inception)
+        "numWitnessInputs": 4,      // Number of segregated witness inputs (that spend P2WPKH outputs)
+        "numNonWitnessInputs": 0,   // Number of non-segregated witness inputs (that spend P2PKH outputs)
+        "numWitnessOutputs": 3,     // Number of segregated witness (P2WPKH) outputs
+        "numNonWitnessOutputs": 0,  // Number of non-segregated witness (P2PKH) outputs
+        "nullDataPayloadSize": 10   // Size, in bytes, of payload of null data output
       }
     },
     "serviceUsageWeight": {
@@ -577,14 +610,10 @@
   },
   // Parameters pertaining to Transaction module
   "transaction": {
-    "txOutputDustAmount": 600,  // Minimum amount that should be allocated to a transaction output - (<output_size> + 148) * <dust_relay_fee>/1000 => (34+148)*3000/1000 = 546 satoshis/kb ~ 600
-    "txInputSize": 148, // Size, in bytes, of typical transaction input (spending a P2PKH UTXO)
-                        //  NOTE 1: IMPORTANT - this is an average size for such inputs. The actual size can vary from 147 up to 149 (in other words, the actual size is 148 +/- 1)
-                        //  NOTE 2: this value should be reviewed for segwit transactions
-    "txOutputSize": 34, // Size, in bytes, of a typical (P2PKH) transaction output
-                       //  NOTE: this value should be reviewed for segwit transactions
-    "maxTxSize": 100000,  // Maximum size, in bytes, of a transaction that is considered valid
-                         //  NOTE: this value should be reviewed for segwit transactions
+    witnessOutputDustAmount: 294,  // Minimum amount that should be allocated to a segregated witness (P2WPKH) tx output: (<output_size> + <input_size>) * <dust_relay_fee>/1000 => (34+148)*3000/1000 = 294 satoshis/KB
+    nonWitnessOutputDustAmount: 546,  // Minimum amount that should be allocated to a non-segregated witness (P2PKH) tx output: (<output_size> + <input_size>) * <dust_relay_fee>/1000 => (31+67)*3000/1000 = 546 satoshis/KB
+    legacyDustAmount: 600,  // Amount that was used by Catenis as the dust amount: rounded up non-segregated witness output dust amount
+    "maxTxVsize": 100000,  // Maximum virtual size, in vbytes, of a transaction that is considered valid
     "pubKeySize": 33,  // Size, in bytes, of blockchain key-pair public key
     "oneOf2MultiSigTxOutputDustAmount": 700,  // Minimum amount that should be allocated to a 1-of-2 multisig transaction output - (<output_size> + 148) * <dust_relay_fee>/1000 => (80+148)*3000/1000 = 684 satoshis/kb ~ 700
     "oneOf3multiSigTxOutputDustAmount": 800  // Minimum amount that should be allocated to a 1-of-3 multisig transaction output - (<output_size> + 148) * <dust_relay_fee>/1000 => (114+148)*3000/1000 = 786 satoshis/kb ~ 800
@@ -594,8 +623,10 @@
     "blockchainPollingInterval": 15000, // (15 sec.) Time interval, in milliseconds, for polling the blockchain for newly arrived transactions and blocks
     "mempoolExpiryHours": 336,  // (14 days) Time, in hours, after which transactions are evicted from Bitcoin Core' mempool
     "purgeFoundNewCtnTxsInterval": 3600000,  // (1 hour) Time interval, in milliseconds, for executing method to purge transactions from list of found new Catenis transactions
-    "limitTxConfirmTime": 60,  // (1 hour) Time, in minutes, after which it is expected for any Catenis issued transaction to have already been confirmed
+    "limitTxConfirmTime": 360,  // (6 hour) Time, in minutes, after which it is expected for any Catenis issued transaction to have already been confirmed
     "checkOldUnconfTxsInterval": 1800000,  // (30 min.) Time interval, in milliseconds, for checking if there are old transactions that have not yet been confirmed
+    checkOldUnconfTxsDelay: 300000,  // (5 min.) Time, in milliseconds, to wait before checking if there are old transactions that have not yet been confirmed
+    blocksBehindToFixUnconfTxs: 2,  // Number of blocks that old unconfirmed transactions should have been confirmed for they to be fixed
     "newTxsBatchProcDoneTimeout": 60000  // (1 min.) Timeout, in milliseconds, for waiting for a given new transactions batch to finish processing
   },
   // Parameters pertaining to CatenisMessage module
@@ -780,7 +811,6 @@
   },
   // Parameters pertaining to StoreBcotTransaction module
   "storeBcotTransaction": {
-    "bcotStoreAddrAmount": 600,  // Amount, in satoshis, to be paid to BCOT store address output
     "timeToConfirm": 300  // (5 hours) Time, in minutes, that is expected the store BCOT transaction to be confirmed
   },
   // Parameters pertaining to SpendServiceCreditTransaction module
@@ -1005,5 +1035,10 @@
   // Parameters pertaining to CatenisOffChainMonitor module
   catenisOffChainMonitor: {
     autoPollingTimeInterval: 15000  // (15 sec.) Time, in milliseconds, of interval to automatically polling for Catenis off-chain message data
+  },
+  // Parameters pertaining to TransactionCache module
+  transactionCache: {
+    transactTTL: 604800000,  // (7 dias) Time, in milliseconds, before cached transactions are considered aged
+    ttlEvaluationInterval: 3600000  // (1 hour) Period of time, in milliseconds, when cached transactions' time-to-live is evaluated (and transactions marked as aged as appropriate)
   }
 }
