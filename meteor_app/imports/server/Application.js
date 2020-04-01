@@ -626,22 +626,19 @@ function checkFixDustFunding(ctnNode) {
                     const utxosInfo = computeAddressUtxosInfo(allocResult).get(ctnNode.bcotSaleStockAddress);
 
                     if (utxosInfo.legacyDustUtxos.length > 0) {
-                        if (!utxosInfo.hasNonLegacyDustUtxos) {
-                            // Add UTXOs to be consolidated
-                            utxoCons.addUtxos(utxosInfo.legacyDustUtxos);
+                        // Note: we do not care to check whether there are no UTXOs with non-legacy dust amount
+                        //      since it is expected that BCOT tokens be sent to Catenis via UTXOs the amount of
+                        //      which is 546 satoshis, which is different than the legacy dust amount
 
-                            // Prepare to refund address with new dust amount
-                            fundTransact.addMultipleAddressesPayees(
-                                ctnNode.bcotSaleStockAddr.type,
-                                ctnNode.bcotSaleStockAddress,
-                                utxosInfo.legacyDustUnits.map(count => count * Service.bcotSaleStockAddrAmount)
-                            );
-                        }
-                        else {
-                            // Unexpected situation: address is funded with a mixture of legacy and non-legacy dust amount.
-                            //  Set error message
-                            errMessage = 'BCOT sale stock address is funded with a mixture of legacy and non-legacy dust amount; aborting procedure to fix dust funding';
-                        }
+                        // Add UTXOs to be consolidated
+                        utxoCons.addUtxos(utxosInfo.legacyDustUtxos);
+
+                        // Prepare to refund address with new dust amount
+                        fundTransact.addMultipleAddressesPayees(
+                            ctnNode.bcotSaleStockAddr.type,
+                            ctnNode.bcotSaleStockAddress,
+                            utxosInfo.legacyDustUnits.map(count => count * Service.bcotSaleStockAddrAmount)
+                        );
                     }
                 }
                 else {
