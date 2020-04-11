@@ -151,12 +151,12 @@ export class CatenisNode extends events.EventEmitter {
     }
 
     get serviceCreditIssuanceAddress() {
-        return this._serviceCreditIssuanceAddress ? this._serviceCreditIssuanceAddress : (this._serviceCreditIssuanceAddress = this.servCredIssueAddr.lastAddressKeys().getAddress());
+        return this.servCredIssueAddr.lastAddressKeys().getAddress();
     }
 
     get bcotSaleStockAddress() {
         if (this.bcotSaleStockAddr) {
-            return this._bcotSaleStockAddress ? this._bcotSaleStockAddress : (this._bcotSaleStockAddress = this.bcotSaleStockAddr.lastAddressKeys().getAddress());
+            return this.bcotSaleStockAddr.lastAddressKeys().getAddress();
         }
     }
 }
