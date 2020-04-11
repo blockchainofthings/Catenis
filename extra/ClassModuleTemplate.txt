@@ -1,0 +1,100 @@
+/**
+ * Created by claudio on 2016-05-30.
+ */
+
+//console.log('[Module_name.js]: This code just ran.');
+
+// Module variables
+//
+
+// References to external code
+//
+// Internal node modules
+import util from 'util';
+// Third-party node modules
+import config from 'config';
+// Meteor packages
+import { Meteor } from 'meteor/meteor';
+
+// References code in other (Catenis) modules
+import { variable_name } from './module_name';
+
+// Config entries
+const config_entryConfig = config.get('config_entry');
+
+// Configuration settings
+const cfgSettings = {
+    property: config_entryConfig.get('property_name')
+};
+
+
+// Definition of classes
+//
+
+// Class_name class
+export class Class_name {
+    // Class (public) properties
+    //
+
+    static prop = {};
+
+
+    // Constructor
+    //
+
+    constructor(arg) {
+        this.arg = arg;
+    }
+
+
+    // Public object properties (getters/setters)
+    //
+
+    get prop() {
+
+    }
+
+    set prop(val) {
+
+    }
+
+
+    // Public object methods
+    //
+
+    pub_func() {
+
+    }
+
+
+    // Class (public) methods
+    //
+
+    static class_func() {
+
+    }
+}
+
+
+// Module functions used to simulate private Class_name object methods
+//  NOTE: these functions need to be bound to a Class_name object reference (this) before
+//      they are called, by means of one of the predefined function methods .call(), .apply()
+//      or .bind().
+//
+
+function priv_func() {
+}
+
+
+// Definition of module (private) functions
+//
+
+function module_func() {
+}
+
+
+// Module code
+//
+
+// Lock class
+Object.freeze(Class_name);
