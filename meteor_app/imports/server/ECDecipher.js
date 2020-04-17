@@ -17,17 +17,10 @@ import crypto from 'crypto';
 //import { Meteor } from 'meteor/meteor';
 
 // References code in other (Catenis) modules
-//import { Catenis } from './Catenis';
-
-// Config entries
-/*const config_entryConfig = config.get('config_entry');
-
-// Configuration settings
-const cfgSettings = {
-    property: config_entryConfig.get('property_name')
-};*/
-
-const defaultIV = [128,54,254,30,235,181,211,89,160,214,109,196,40,175,106,102];
+import {
+    defaultIV,
+    sha512
+} from './ECCipher';
 
 
 // Definition of function classes
@@ -103,9 +96,8 @@ function createDecipher() {
 // Definition of module (private) functions
 //
 
-function sha512(data) {
-    return crypto.createHash('sha512').update(data).digest();
-}
+/*function module_func() {
+}*/
 
 
 // Module code

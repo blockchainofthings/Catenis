@@ -19,6 +19,7 @@ import bitcoinMessage from 'bitcoinjs-message';
 import bitcoinLib from 'bitcoinjs-lib';
 // Meteor packages
 import { Meteor } from 'meteor/meteor';
+import { Random } from 'meteor/random';
 
 // References code in other (Catenis) modules
 import { Catenis } from './Catenis';
@@ -37,7 +38,8 @@ import { BitcoinInfo } from './BitcoinInfo';
 //                      gotten from bitcoinjs-lib's ECPair.fromXXX() or bip32.fromXXX() methods
 //  btcAddressType [Object] - (optional) Object representing the type of bitcoin address that should be generated from the encapsulated
 //                             crypto key pair. Valid values: any of the properties of BitcoinInfo.addressType
-export function CryptoKeys(keyPair, btcAddressType) {
+//  encryptionScheme [Object] - Specify the encryption scheme to use. Valid values: any property of CryptoKeys.encryptionScheme
+export function CryptoKeys(keyPair, btcAddressType, encryptionScheme = CryptoKeys.encryptionScheme.pubKeyHashIV) {
     this.keyPair = keyPair;
 
     if (btcAddressType !== undefined && !BitcoinInfo.isValidAddressType(btcAddressType)) {
@@ -46,6 +48,7 @@ export function CryptoKeys(keyPair, btcAddressType) {
     }
 
     this.btcAddressType = btcAddressType;
+    this.encryptionScheme = encryptionScheme;
 
     // Make sure that `compressed` property is defined.
     //  Rationale: BIP32 instances only handle compressed keys even though they do not define a `compressed` property
@@ -143,6 +146,10 @@ CryptoKeys.prototype.getAddressAndPubKeyHash = function () {
 //
 //  (Math.floor(data.length / 16) + 1) * 16
 //
+// NOTE 2: when the `randomIV` encryption scheme is used, an extra 16 bytes block (containing
+//      the randomly generated initialization vector) is prepended to the encrypted data. So
+//      the formula above needs to be adjusted by adding 16 to the result.
+//
 CryptoKeys.prototype.encryptData = function (data, destKeys) {
     if (!this.hasPrivateKey()) {
         throw new Meteor.Error('ctn_crypto_no_priv_key', 'Cannot encrypt data; missing private key');
@@ -151,9 +158,21 @@ CryptoKeys.prototype.encryptData = function (data, destKeys) {
     destKeys = destKeys || this;
 
     try {
-        const ecCipher = new ECCipher(this.getPrivateKey(), destKeys.getUncompressedPublicKey());
+        // Determine the initialization vector to use according to the encryption
+        //  scheme of the source
+        const iv = this.encryptionScheme === CryptoKeys.encryptionScheme.randomIV
+            ? Buffer.from(Random.hexString(32), 'hex')
+            : (this.encryptionScheme === CryptoKeys.encryptionScheme.pubKeyHashIV
+                ? destKeys.getPubKeyHash().slice(0, 16) : undefined);
+        const ecCipher = new ECCipher(this.getPrivateKey(), destKeys.getUncompressedPublicKey(), iv);
 
-        return Buffer.concat([ecCipher.update(data), ecCipher.final()]);
+        const resultParts = [ecCipher.update(data), ecCipher.final()];
+
+        if (this.encryptionScheme === CryptoKeys.encryptionScheme.randomIV) {
+            resultParts.unshift(iv);
+        }
+
+        return Buffer.concat(resultParts);
     }
     catch (err) {
         throw new Error('Failure while encrypting data: ' + err.toString());
@@ -176,9 +195,17 @@ CryptoKeys.prototype.startEncryptData = function (data, destKeys) {
     destKeys = destKeys || this;
 
     try {
-        this.ecCipher = new ECCipher(this.getPrivateKey(), destKeys.getUncompressedPublicKey());
+        // Determine the initialization vector to use according to the encryption
+        //  scheme of the source
+        const iv = this.encryptionScheme === CryptoKeys.encryptionScheme.randomIV
+            ? Buffer.from(Random.hexString(32), 'hex')
+            : (this.encryptionScheme === CryptoKeys.encryptionScheme.pubKeyHashIV
+                ? destKeys.getPubKeyHash().slice(0, 16) : undefined);
+        this.ecCipher = new ECCipher(this.getPrivateKey(), destKeys.getUncompressedPublicKey(), iv);
 
-        return this.ecCipher.update(data);
+        const result = this.ecCipher.update(data);
+
+        return this.encryptionScheme === CryptoKeys.encryptionScheme.randomIV ? Buffer.concat([iv, result]) : result;
     }
     catch (err) {
         throw new Error('Failure while starting to encrypt data: ' + err.toString());
@@ -241,7 +268,19 @@ CryptoKeys.prototype.decryptData = function (data, sourceKeys) {
     sourceKeys = sourceKeys || this;
 
     try {
-        const ecDecipher = new ECDecipher(this.getPrivateKey(), sourceKeys.getUncompressedPublicKey());
+        // Determine the initialization vector to use according to the encryption
+        //  scheme of the source
+        let iv;
+
+        if (sourceKeys.encryptionScheme === CryptoKeys.encryptionScheme.randomIV) {
+            iv = data.slice(0, 16);
+            data = data.slice(16);
+        }
+        else if (sourceKeys.encryptionScheme === CryptoKeys.encryptionScheme.pubKeyHashIV) {
+            iv = this.getPubKeyHash().slice(0, 16);
+        }
+
+        const ecDecipher = new ECDecipher(this.getPrivateKey(), sourceKeys.getUncompressedPublicKey(), iv);
 
         return Buffer.concat([ecDecipher.update(data), ecDecipher.final()]);
     }
@@ -266,7 +305,19 @@ CryptoKeys.prototype.startDecryptData = function (data, sourceKeys) {
     sourceKeys = sourceKeys || this;
 
     try {
-        this.ecDecipher = new ECDecipher(this.getPrivateKey(), sourceKeys.getUncompressedPublicKey());
+        // Determine the initialization vector to use according to the encryption
+        //  scheme of the source
+        let iv;
+
+        if (sourceKeys.encryptionScheme === CryptoKeys.encryptionScheme.randomIV) {
+            iv = data.slice(0, 16);
+            data = data.slice(16);
+        }
+        else if (sourceKeys.encryptionScheme === CryptoKeys.encryptionScheme.pubKeyHashIV) {
+            iv = this.getPubKeyHash().slice(0, 16);
+        }
+
+        this.ecDecipher = new ECDecipher(this.getPrivateKey(), sourceKeys.getUncompressedPublicKey(), iv);
 
         return this.ecDecipher.update(data);
     }
@@ -358,6 +409,25 @@ CryptoKeys.toExportPrivateKeyList = function (listKeys) {
 
     return listPrivateKey;
 };
+
+
+// CryptoKeys function class (public) properties
+//
+
+CryptoKeys.encryptionScheme = Object.freeze({
+    fixedIV: Object.freeze({
+        name: 'fixedIV',
+        description: 'Make use of a fixed, predefined initialization vector'
+    }),
+    randomIV: Object.freeze({
+        name: 'randomIV',
+        description: 'A unique, randomly generated initialization vector is used each time (and that vector is returned along with the encrypted data)'
+    }),
+    pubKeyHashIV: Object.freeze({
+        name: 'pubKeyHashIV',
+        description: 'Use the hash of the public key to derive the initialization vector to use'
+    })
+});
 
 
 // Definitions of module (private) functions

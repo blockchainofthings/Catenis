@@ -186,7 +186,8 @@ const configKeyStore = config.get('keyStore');
 // Configuration settings
 const cfgSettings = {
     obsoleteExtKeyTimeToPurge: configKeyStore.get('obsoleteExtKeyTimeToPurge'),
-    purgeUnusedExtKeyInterval: configKeyStore.get('purgeUnusedExtKeyInterval')
+    purgeUnusedExtKeyInterval: configKeyStore.get('purgeUnusedExtKeyInterval'),
+    legacyEncryptScheme: configKeyStore.get('legacyEncryptScheme')
 };
 
 const clientServCredAddrRootTypes = [{
@@ -286,13 +287,13 @@ KeyStore.prototype.removeExtKeysByParentPath = function (parentPath) {
 KeyStore.prototype.getCryptoKeysByPath = function (path) {
     const docExtKey = this.collExtKey.by('path', path);
 
-    return docExtKey !== undefined ? new CryptoKeys(bitcoinLib.bip32.fromBase58(docExtKey.strHDNode, this.cryptoNetwork), BitcoinInfo.getAddressTypeByName(docExtKey.btcAddressType)) : null;
+    return docExtKey !== undefined ? new CryptoKeys(bitcoinLib.bip32.fromBase58(docExtKey.strHDNode, this.cryptoNetwork), BitcoinInfo.getAddressTypeByName(docExtKey.btcAddressType), addressEncryptionScheme(path)) : null;
 };
 
 KeyStore.prototype.getCryptoKeysByAddress = function (addr) {
     const docExtKey = this.collExtKey.by('address', addr);
 
-    return docExtKey !== undefined ? new CryptoKeys(bitcoinLib.bip32.fromBase58(docExtKey.strHDNode, this.cryptoNetwork), BitcoinInfo.getAddressTypeByName(docExtKey.btcAddressType)) : null;
+    return docExtKey !== undefined ? new CryptoKeys(bitcoinLib.bip32.fromBase58(docExtKey.strHDNode, this.cryptoNetwork), BitcoinInfo.getAddressTypeByName(docExtKey.btcAddressType), addressEncryptionScheme(docExtKey.path)) : null;
 };
 
 KeyStore.prototype.getTypeAndPathByAddress = function (addr) {
@@ -331,7 +332,7 @@ KeyStore.prototype.getAddressInfo = function (addr, retrieveObsolete = false, ch
             }
 
             addrInfo = {
-                cryptoKeys: new CryptoKeys(bitcoinLib.bip32.fromBase58(docExtKey.strHDNode, this.cryptoNetwork), BitcoinInfo.getAddressTypeByName(docExtKey.btcAddressType)),
+                cryptoKeys: new CryptoKeys(bitcoinLib.bip32.fromBase58(docExtKey.strHDNode, this.cryptoNetwork), BitcoinInfo.getAddressTypeByName(docExtKey.btcAddressType), addressEncryptionScheme(docExtKey.path)),
                 type: docExtKey.type,
                 path: docExtKey.path,
                 parentPath: docExtKey.parentPath,
@@ -374,7 +375,7 @@ KeyStore.prototype.getAddressInfoByPath = function (path, retrieveObsolete = fal
             }
 
             addrInfo = {
-                cryptoKeys: new CryptoKeys(bitcoinLib.bip32.fromBase58(docExtKey.strHDNode, this.cryptoNetwork), BitcoinInfo.getAddressTypeByName(docExtKey.btcAddressType)),
+                cryptoKeys: new CryptoKeys(bitcoinLib.bip32.fromBase58(docExtKey.strHDNode, this.cryptoNetwork), BitcoinInfo.getAddressTypeByName(docExtKey.btcAddressType), addressEncryptionScheme(path)),
                 type: docExtKey.type,
                 path: path,
                 parentPath: docExtKey.parentPath,
@@ -414,7 +415,7 @@ KeyStore.prototype.getOffChainAddressInfo = function (pubKeyHash) {
             // Make sure that this HD extended key is for an off-chain address
             if (docExtKey.isOffChainAddr) {
                 addrInfo = {
-                    cryptoKeys: new CryptoKeys(bitcoinLib.bip32.fromBase58(docExtKey.strHDNode, this.cryptoNetwork)),
+                    cryptoKeys: new CryptoKeys(bitcoinLib.bip32.fromBase58(docExtKey.strHDNode, this.cryptoNetwork), undefined, addressEncryptionScheme(docExtKey.path)),
                     type: docExtKey.type,
                     path: docExtKey.path,
                     parentPath: docExtKey.parentPath
@@ -1826,7 +1827,7 @@ KeyStore.prototype.getSystemServiceCreditIssuingAddressKeys = function (ctnNodeI
     }
 
     if (sysServCredIssueAddrHDNode !== null) {
-        sysServCredIssueAddrKeys = new CryptoKeys(sysServCredIssueAddrHDNode, btcAddressType);
+        sysServCredIssueAddrKeys = new CryptoKeys(sysServCredIssueAddrHDNode, btcAddressType, addressEncryptionScheme(sysServCredIssueAddrPath));
     }
 
     return sysServCredIssueAddrKeys;
@@ -2807,7 +2808,7 @@ KeyStore.prototype.getClientServiceCreditAddressKeys = function (ctnNodeIndex, c
     }
 
     if (clientSrvCreditAddrHDNode !== null) {
-        clientSrvCreditAddrKeys = new CryptoKeys(clientSrvCreditAddrHDNode, btcAddressType);
+        clientSrvCreditAddrKeys = new CryptoKeys(clientSrvCreditAddrHDNode, btcAddressType, addressEncryptionScheme(clientSrvCreditAddrPath));
     }
 
     return clientSrvCreditAddrKeys;
@@ -3409,7 +3410,7 @@ KeyStore.prototype.getDevicePublicAddressKeys = function (ctnNodeIndex, clientIn
     }
 
     if (devicePubAddrHDNode !== null) {
-        devicePubAddrKeys = new CryptoKeys(devicePubAddrHDNode, btcAddressType);
+        devicePubAddrKeys = new CryptoKeys(devicePubAddrHDNode, btcAddressType, addressEncryptionScheme(devicePubAddrPath));
     }
 
     return devicePubAddrKeys;
@@ -4763,6 +4764,25 @@ function isValidAddressIndex(index) {
 
 function isValidServiceCreditIndex(index) {
     return typeof index === 'number' && Number.isInteger(index) && index >= 0 && index < numClientServCredAddrRoots;
+}
+
+function addressEncryptionScheme(path) {
+    if (useLegacyEncryptionScheme(path)) {
+        return CryptoKeys.encryptionScheme.fixedIV;
+    }
+}
+
+function useLegacyEncryptionScheme(path) {
+    return cfgSettings.legacyEncryptScheme.some(entry => {
+        const matchResult = path.match(KeyStore.extKeyType[entry.addrType].pathRegEx);
+
+        if (matchResult) {
+            return entry.addrRanges.some(pathParts => pathParts.every((pathPart, idx) => parseInt(matchResult[idx + 1]) === pathPart));
+        }
+        else {
+            return false;
+        }
+    });
 }
 
 
