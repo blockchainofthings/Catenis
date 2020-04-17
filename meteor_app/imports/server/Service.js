@@ -702,7 +702,7 @@ Service.clientPaidService = Object.freeze({
     }),
     log_message: Object.freeze({
         name: 'log_message',
-        label: 'Log Message',
+        label: 'Log Standard Message',
         description: 'Record a message onto the blockchain',
         costFunction: estimatedLogMessageTxCost
     }),
@@ -714,7 +714,7 @@ Service.clientPaidService = Object.freeze({
     }),
     send_message: Object.freeze({
         name: 'send_message',
-        label: 'Send Message',
+        label: 'Send Standard Message',
         description: 'Record a message onto the blockchain addressing it to another device (with no read confirmation)',
         costFunction: estimatedSendMessageTxCost
     }),
