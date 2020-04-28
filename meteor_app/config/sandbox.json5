@@ -99,7 +99,84 @@
   // Parameters pertaining to KeyStore module
   "keyStore": {
     "obsoleteExtKeyTimeToPurge": 86400, // (24 hours) Time, in seconds, before an obsolete HD extended key is purged from local key storage
-    "purgeUnusedExtKeyInterval": 43200000  // (12 hours) Time interval, in milliseconds, for executing method to purge unused HD extended keys form local key storage
+    "purgeUnusedExtKeyInterval": 43200000,  // (12 hours) Time interval, in milliseconds, for executing method to purge unused HD extended keys form local key storage
+    legacyEncryptScheme: [{
+      addrType: 'sys_serv_cred_issu_addr',
+      addrRanges: [
+        [0]  // Path parts: ctnNodeIndex
+      ]
+    }, {
+      addrType: 'cln_srv_acc_cred_ln_addr',
+      addrRanges: [
+        [0, 1],  // Path parts: ctnNodeIndex, clientIndex
+        [0, 2],  // Path parts: ctnNodeIndex, clientIndex
+        [0, 3],  // Path parts: ctnNodeIndex, clientIndex
+        [0, 5],  // Path parts: ctnNodeIndex, clientIndex
+        [0, 6]  // Path parts: ctnNodeIndex, clientIndex
+      ]
+    }, {
+      addrType: 'cln_bcot_pay_addr',
+      addrRanges: [
+        [0, 1],  // Path parts: ctnNodeIndex, clientIndex
+        [0, 2],  // Path parts: ctnNodeIndex, clientIndex
+        [0, 4],  // Path parts: ctnNodeIndex, clientIndex
+        [0, 5]  // Path parts: ctnNodeIndex, clientIndex
+      ]
+    }, {
+      addrType: 'dev_main_addr',
+      addrRanges: [
+        [0, 1, 1],  // Path parts: ctnNodeIndex, clientIndex, deviceIndex
+        [0, 1, 2],  // Path parts: ctnNodeIndex, clientIndex, deviceIndex
+        [0, 1, 3],  // Path parts: ctnNodeIndex, clientIndex, deviceIndex
+        [0, 1, 4],  // Path parts: ctnNodeIndex, clientIndex, deviceIndex
+        [0, 2, 1],  // Path parts: ctnNodeIndex, clientIndex, deviceIndex
+        [0, 3, 1],  // Path parts: ctnNodeIndex, clientIndex, deviceIndex
+        [0, 3, 2],  // Path parts: ctnNodeIndex, clientIndex, deviceIndex
+        [0, 4, 1],  // Path parts: ctnNodeIndex, clientIndex, deviceIndex
+        [0, 4, 2],  // Path parts: ctnNodeIndex, clientIndex, deviceIndex
+        [0, 4, 3],  // Path parts: ctnNodeIndex, clientIndex, deviceIndex
+        [0, 4, 4],  // Path parts: ctnNodeIndex, clientIndex, deviceIndex
+        [0, 4, 5],  // Path parts: ctnNodeIndex, clientIndex, deviceIndex
+        [0, 5, 1],  // Path parts: ctnNodeIndex, clientIndex, deviceIndex
+        [0, 5, 2],  // Path parts: ctnNodeIndex, clientIndex, deviceIndex
+        [0, 6, 1],  // Path parts: ctnNodeIndex, clientIndex, deviceIndex
+        [0, 6, 2]  // Path parts: ctnNodeIndex, clientIndex, deviceIndex
+      ]
+    }, {
+      addrType: 'dev_asst_addr',
+      addrRanges: [
+        [0, 1, 1],  // Path parts: ctnNodeIndex, clientIndex, deviceIndex
+        [0, 1, 2],  // Path parts: ctnNodeIndex, clientIndex, deviceIndex
+        [0, 6, 1],  // Path parts: ctnNodeIndex, clientIndex, deviceIndex
+        [0, 6, 2]  // Path parts: ctnNodeIndex, clientIndex, deviceIndex
+      ]
+    }, {
+      addrType: 'dev_asst_issu_addr',
+      addrRanges: [
+        [0, 1, 1],  // Path parts: ctnNodeIndex, clientIndex, deviceIndex
+        [0, 1, 2],  // Path parts: ctnNodeIndex, clientIndex, deviceIndex
+        [0, 1, 3],  // Path parts: ctnNodeIndex, clientIndex, deviceIndex
+        [0, 1, 4],  // Path parts: ctnNodeIndex, clientIndex, deviceIndex
+        [0, 2, 1],  // Path parts: ctnNodeIndex, clientIndex, deviceIndex
+        [0, 3, 1],  // Path parts: ctnNodeIndex, clientIndex, deviceIndex
+        [0, 3, 2],  // Path parts: ctnNodeIndex, clientIndex, deviceIndex
+        [0, 4, 1],  // Path parts: ctnNodeIndex, clientIndex, deviceIndex
+        [0, 4, 2],  // Path parts: ctnNodeIndex, clientIndex, deviceIndex
+        [0, 4, 3],  // Path parts: ctnNodeIndex, clientIndex, deviceIndex
+        [0, 4, 4],  // Path parts: ctnNodeIndex, clientIndex, deviceIndex
+        [0, 4, 5],  // Path parts: ctnNodeIndex, clientIndex, deviceIndex
+        [0, 5, 1],  // Path parts: ctnNodeIndex, clientIndex, deviceIndex
+        [0, 5, 2],  // Path parts: ctnNodeIndex, clientIndex, deviceIndex
+        [0, 6, 1],  // Path parts: ctnNodeIndex, clientIndex, deviceIndex
+        [0, 6, 2]  // Path parts: ctnNodeIndex, clientIndex, deviceIndex
+      ]
+    }, {
+      addrType: 'dev_off_chain_addr',
+      addrRanges: [
+        [0, 1, 1],  // Path parts: ctnNodeIndex, clientIndex, deviceIndex
+        [0, 1, 2]  // Path parts: ctnNodeIndex, clientIndex, deviceIndex
+      ]
+    }]
   },
   // Parameters pertaining to BitcoinCore module
   "bitcoinCore": {
