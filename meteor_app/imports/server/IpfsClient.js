@@ -14,11 +14,13 @@ import util from 'util';
 // Third-party node modules
 import config from 'config';
 import ipfsHttpClient from 'ipfs-http-client';
+import toStream from 'it-to-stream';
 // Meteor packages
 import { Meteor } from 'meteor/meteor';
 
 // References code in other (Catenis) modules
 import { Catenis } from './Catenis';
+import { Util } from './Util';
 
 // Config entries
 const ipfsClientConfig = config.get('ipfsClient');
@@ -44,10 +46,10 @@ export function IpfsClient(host, port, protocol) {
 
     // noinspection JSUnresolvedVariable
     this.api = {
-        add: Meteor.wrapAsync(this.ipfs.add, this.ipfs),
-        cat: Meteor.wrapAsync(this.ipfs.cat, this.ipfs),
-        catReadableStream: this.ipfs.catReadableStream,
-        id: Meteor.wrapAsync(this.ipfs.id, this.ipfs)
+        add: Util.wrapAsyncIterable(this.ipfs.add, Util.asyncIterableToArray, this.ipfs),
+        cat: Util.wrapAsyncIterable(this.ipfs.cat, Util.asyncIterableToBuffer, this.ipfs),
+        catReadableStream: Util.wrapAsyncIterable(this.ipfs.cat, toStream.readable, this.ipfs),
+        id: Util.wrapAsyncPromise(this.ipfs.id, this.ipfs)
     };
 }
 

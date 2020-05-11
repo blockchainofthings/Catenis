@@ -42,16 +42,16 @@ export class IpfsMessageStorage extends MessageStorage {
             let msgHash = hashRipemd160(hashSha256(message));
 
             // Save message onto IPFS
-            let addResult = Catenis.ipfsClient.add(message)[0];
+            const ipfsHash = Catenis.ipfsClient.add(message)[0].cid.toString();
 
             // Prepare to return combined message reference
-            let msgRef = Buffer.allocUnsafe(addResult.hash.length + msgHash.length + 2);
+            let msgRef = Buffer.allocUnsafe(ipfsHash.length + msgHash.length + 2);
 
             // Write size of IPFS hash onto message reference
-            let bytesWritten = msgRef.writeUInt8(addResult.hash.length, 0);
+            let bytesWritten = msgRef.writeUInt8(ipfsHash.length, 0);
 
             // Write IPFS hash itself onto message reference
-            bytesWritten += msgRef.write(addResult.hash, bytesWritten);
+            bytesWritten += msgRef.write(ipfsHash, bytesWritten);
 
             // Now, write the size of the message hash onto message reference
             bytesWritten = msgRef.writeUInt8(msgHash.length, bytesWritten);

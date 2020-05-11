@@ -18,6 +18,7 @@ import bitcoinLib from 'bitcoinjs-lib';
 import _und from 'underscore';
 import moment from 'moment-timezone';
 import CID from 'cids';
+import Future from 'fibers/future';
 // Meteor packages
 import { Meteor } from 'meteor/meteor';
 
@@ -414,6 +415,46 @@ Util.isValidCid = function (cid) {
 
 Util.isNonNullObject = function (obj) {
     return typeof obj === 'object' && obj !== null;
+};
+
+Util.wrapAsyncPromise = function (fn, context) {
+    return function (/* arguments */) {
+        return Future.fromPromise(fn.apply(context || this, Array.from(arguments))).wait();
+    };
+};
+
+Util.wrapAsyncIterable = function (fn, sink, context) {
+    return function (/* arguments */) {
+        return sink(fn.apply(context || this, Array.from(arguments)));
+    };
+};
+
+// Note: this should be used as a `sink` to Util.wrapAsyncIterable()
+Util.asyncIterableToArray = function (it) {
+    const arr = [];
+    const fut = new Future();
+
+    (async function () {
+        for await (let el of it) {
+            arr.push(el);
+        }
+
+        fut.return(arr);
+    })()
+    .catch((err) => {
+        if (!fut.isResolved()) {
+            fut.throw(err);
+        }
+    });
+
+    fut.wait();
+
+    return arr;
+};
+
+// Note: this should be used as a `sink` to Util.wrapAsyncIterable()
+Util.asyncIterableToBuffer = function (it) {
+    return Buffer.concat(Util.asyncIterableToArray(it));
 };
 
 
