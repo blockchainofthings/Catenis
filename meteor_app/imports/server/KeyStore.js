@@ -2426,7 +2426,7 @@ KeyStore.prototype.listSystemOCMsgsSettlementPayTxExpenseAddresses = function (c
 };
 
 KeyStore.prototype.listSystemOCMsgsSettlementPayTxExpenseAddressesInUse = function (ctnNodeIndex, fromAddrIndex, toAddrIndex) {
-    return this.listSystemOCMsgsSettlementPayTxExpenseAddresses(ctnNodeIndex, fromAddrIndex, toAddrIndex);
+    return this.listSystemOCMsgsSettlementPayTxExpenseAddresses(ctnNodeIndex, fromAddrIndex, toAddrIndex, true);
 };
 
 KeyStore.prototype.getSystemDeviceAddressKeys = function (ctnNodeIndex, addrRootIndex, addrIndex, btcAddressType, isObsolete = false) {
