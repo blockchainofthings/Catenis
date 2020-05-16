@@ -125,6 +125,10 @@ SettleOffChainMessagesTransaction.prototype.buildTransaction = function () {
             useAllNonWitnessUtxosFirst: true,   // Default setting; could have been omitted
             useWitnessOutputForChange: txChangeOutputType.isWitness
         });
+        // DEBUG - Begin
+        Catenis.logger.DEBUG('>>>>>> Off-Chain messages settlement pay tx expense addresses in use:', Catenis.ctnHubNode.ocMsgsSetlmtPayTxExpenseAddr.listAddressesInUse());
+        Catenis.logger.DEBUG('>>>>>> Off-Chain messages settlement pay tx expense addresses balance:', payTxFundSource.getBalancePerAddress());
+        // DEBUG - End
         const payTxAllocResult = payTxFundSource.allocateFundForTxExpense({
             txSzStSnapshot: this.transact.txSize,
             inputAmount: this.transact.totalInputsAmount(),
