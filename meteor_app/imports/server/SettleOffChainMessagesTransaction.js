@@ -118,28 +118,43 @@ SettleOffChainMessagesTransaction.prototype.buildTransaction = function () {
         this.transact.addNullDataOutput(ctnMessage.getData());
 
         // Now, allocate UTXOs to pay for tx expense
+        let retryPayTxExpense;
+        let payTxExpAddrsRefunded = false;
         const txChangeOutputType = BitcoinInfo.getOutputTypeByAddressType(Catenis.ctnHubNode.ocMsgsSetlmtPayTxExpenseAddr.btcAddressType);
-        const payTxFundSource = new FundSource(Catenis.ctnHubNode.ocMsgsSetlmtPayTxExpenseAddr.listAddressesInUse(), {
-            useUnconfirmedUtxo: true,
-            smallestChange: true,
-            useAllNonWitnessUtxosFirst: true,   // Default setting; could have been omitted
-            useWitnessOutputForChange: txChangeOutputType.isWitness
-        });
-        // DEBUG - Begin
-        Catenis.logger.DEBUG('>>>>>> Off-Chain messages settlement pay tx expense addresses in use:', Catenis.ctnHubNode.ocMsgsSetlmtPayTxExpenseAddr.listAddressesInUse());
-        Catenis.logger.DEBUG('>>>>>> Off-Chain messages settlement pay tx expense addresses balance:', payTxFundSource.getBalancePerAddress());
-        // DEBUG - End
-        const payTxAllocResult = payTxFundSource.allocateFundForTxExpense({
-            txSzStSnapshot: this.transact.txSize,
-            inputAmount: this.transact.totalInputsAmount(),
-            outputAmount: this.transact.totalOutputsAmount()
-        }, false, Service.feeRateForOffChainMsgsSettlement);
+        let payTxAllocResult;
 
-        if (payTxAllocResult === null) {
-            // Unable to allocate UTXOs. Log error condition and throw exception
-            Catenis.logger.ERROR('No UTXO available to be allocated to pay for settle off-chain messages transaction expense');
-            throw new Meteor.Error('ctn_settle_oc_msgs_no_utxo_pay_tx_expense', 'No UTXO available to be allocated to pay for settle off-chain messages transaction expense');
+        do {
+            retryPayTxExpense = false;
+
+            const payTxFundSource = new FundSource(Catenis.ctnHubNode.ocMsgsSetlmtPayTxExpenseAddr.listAddressesInUse(), {
+                useUnconfirmedUtxo: true,
+                smallestChange: true,
+                useAllNonWitnessUtxosFirst: true,   // Default setting; could have been omitted
+                useWitnessOutputForChange: txChangeOutputType.isWitness
+            });
+
+            payTxAllocResult = payTxFundSource.allocateFundForTxExpense({
+                txSzStSnapshot: this.transact.txSize,
+                inputAmount: this.transact.totalInputsAmount(),
+                outputAmount: this.transact.totalOutputsAmount()
+            }, false, Service.feeRateForOffChainMsgsSettlement);
+
+            if (payTxAllocResult === null) {
+                // Unable to allocate UTXOs
+                if (!payTxExpAddrsRefunded && Catenis.ctnHubNode.checkOCMessagesSettlementPayTxExpenseFundingBalance()) {
+                    // Try to refund addresses used to pay to transaction expense
+                    Catenis.logger.WARN('Not enough UTXOs available to pay for settle off-chain messages tx expense. Refunding pay tx expense addresses to try again');
+                    payTxExpAddrsRefunded = true;
+                    retryPayTxExpense = true;
+                }
+                else {
+                    // Log error condition and throw exception
+                    Catenis.logger.ERROR('No UTXO available to be allocated to pay for settle off-chain messages tx expense');
+                    throw new Meteor.Error('ctn_settle_oc_msgs_no_utxo_pay_tx_expense', 'No UTXO available to be allocated to pay for settle off-chain messages tx expense');
+                }
+            }
         }
+        while (retryPayTxExpense);
 
         // Add inputs spending the allocated UTXOs to the transaction
         const inputs = payTxAllocResult.utxos.map((utxo) => {
