@@ -736,7 +736,12 @@ FundSource.prototype.allocateFund = function (amount) {
                                     // Safeguard: make sure that allocated non-witness UTXOs are not going to be
                                     //      enough to pay for tx expense by themselves
                                     if (nonWitnessAmount >= amount) {
-                                        Catenis.logger.WARN('Unexpected condition: allocated non-witness UTXOs should not be enough to pay for tx expense', '. Reverting last allocated non-witness UTXO');
+                                        Catenis.logger.WARN('Unexpected condition (allocateFund) allocated non-witness UTXOs should not be enough to pay for tx expense; reverting last allocated non-witness UTXO', {
+                                            utxoResultSets,
+                                            _allocatedNonWitnessDocUtxos,
+                                            nonWitnessAmount,
+                                            amount
+                                        });
                                         // Revert allocation of last non-witness UTXO...
                                         nonWitnessAmount -= docUtxo.amount;
                                         _allocatedNonWitnessDocUtxos.pop();
@@ -1109,15 +1114,30 @@ FundSource.prototype.allocateFundForTxExpense = function (txInfo, isFixedFeed, f
                                     _allocatedNonWitnessDocUtxos.push(docUtxo);
                                     nonWitnessAmount += docUtxo.amount;
 
-                                    // Adjust transaction size by adding one tx input of the corresponding type
-                                    txSize.addInputs(docUtxo.isWitness, 1);
+                                    if (!isFixedFeed) {
+                                        // Adjust transaction size by adding one tx input of the corresponding type
+                                        txSize.addInputs(docUtxo.isWitness, 1);
+
+                                        fee = Util.roundToResolution(txSize.getSizeInfo().vsize * feeRate, paymentResolution);
+                                        amount = fee - txDiffAmount;
+                                    }
 
                                     // Safeguard: make sure that allocated non-witness UTXOs are not going to be
                                     //      enough to pay for tx expense by themselves
                                     if (nonWitnessAmount >= amount) {
-                                        Catenis.logger.WARN('Unexpected condition: allocated non-witness UTXOs should not be enough to pay for tx expense', '. Reverting last allocated non-witness UTXO');
+                                        Catenis.logger.WARN('Unexpected condition (allocateFundForTxExpense) allocated non-witness UTXOs should not be enough to pay for tx expense; reverting last allocated non-witness UTXO', {
+                                            utxoResultSets,
+                                            _allocatedNonWitnessDocUtxos,
+                                            nonWitnessAmount,
+                                            amount,
+                                            txSize
+                                        });
+
                                         // Revert allocation of last non-witness UTXO...
-                                        txSize.addInputs(docUtxo.isWitness, -1);
+                                        if (!isFixedFeed) {
+                                            txSize.addInputs(docUtxo.isWitness, -1);
+                                        }
+
                                         nonWitnessAmount -= docUtxo.amount;
                                         _allocatedNonWitnessDocUtxos.pop();
 
