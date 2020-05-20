@@ -161,6 +161,27 @@ export function Client(docClient, ctnNode, initializeDevices, noClientLicense = 
                     : (this.clientLicense ? 0 : undefined);
             },
             enumerate: true
+        },
+        isNew: {
+            get: function () {
+                // noinspection JSPotentiallyInvalidUsageOfThis
+                return this.status === Client.status.new.name;
+            },
+            enumerable: true
+        },
+        isActive: {
+            get: function () {
+                // noinspection JSPotentiallyInvalidUsageOfThis
+                return this.status === Client.status.active.name;
+            },
+            enumerable: true
+        },
+        isDeleted: {
+            get: function () {
+                // noinspection JSPotentiallyInvalidUsageOfThis
+                return this.status === Client.status.deleted.name;
+            },
+            enumerable: true
         }
     });
 

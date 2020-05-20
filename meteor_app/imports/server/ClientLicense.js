@@ -539,7 +539,7 @@ function updateLicenses(docIdActvClientLicenseExpired) {
 
                 // Reset currently active client license
                 docActvClientLicense = docClientLicenseToActivate;
-                clientLicenseChanged = true;
+                clientLicenseChanged = !(this.client && this.client.isNew);
             }
 
             // Expire obsolete provisioned client licenses
