@@ -217,27 +217,46 @@ TransferAssetTransaction.prototype.buildTransaction = function () {
         // Add additional required outputs
 
         // Allocate UTXOs to pay for tx expense
+        let retryPayTxExpense;
+        let payTxExpAddrsRefunded = false;
         const txChangeOutputType = BitcoinInfo.getOutputTypeByAddressType(this.sendingDevice.client.ctnNode.payTxExpenseAddr.btcAddressType);
-        const payTxFundSource = new FundSource(this.sendingDevice.client.ctnNode.payTxExpenseAddr.listAddressesInUse(), {
-            useUnconfirmedUtxo: true,
-            unconfUtxoInfo: {
-                initTxInputs: this.ccTransact.inputs
-            },
-            smallestChange: true,
-            useAllNonWitnessUtxosFirst: true,   // Default setting; could have been omitted
-            useWitnessOutputForChange: txChangeOutputType.isWitness
-        });
-        const payTxAllocResult = payTxFundSource.allocateFundForTxExpense({
-            txSzStSnapshot: this.ccTransact.txSize,
-            inputAmount: this.ccTransact.totalInputsAmount(),
-            outputAmount: this.ccTransact.totalOutputsAmount()
-        }, false, Catenis.bitcoinFees.getFeeRateByTime(Service.minutesToConfirmAssetTransfer));
+        let payTxAllocResult;
 
-        if (payTxAllocResult === null) {
-            // Unable to allocate UTXOs. Log error condition and throw exception
-            Catenis.logger.ERROR('No UTXO available to be allocated to pay for transaction expense');
-            throw new Meteor.Error('ctn_transf_asset_no_utxo_pay_tx_expense', 'No UTXO available to be allocated to pay for transaction expense');
+        do {
+            retryPayTxExpense = false;
+
+            const payTxFundSource = new FundSource(this.sendingDevice.client.ctnNode.payTxExpenseAddr.listAddressesInUse(), {
+                useUnconfirmedUtxo: true,
+                unconfUtxoInfo: {
+                    initTxInputs: this.ccTransact.inputs
+                },
+                smallestChange: true,
+                useAllNonWitnessUtxosFirst: true,   // Default setting; could have been omitted
+                useWitnessOutputForChange: txChangeOutputType.isWitness
+            });
+
+            payTxAllocResult = payTxFundSource.allocateFundForTxExpense({
+                txSzStSnapshot: this.ccTransact.txSize,
+                inputAmount: this.ccTransact.totalInputsAmount(),
+                outputAmount: this.ccTransact.totalOutputsAmount()
+            }, false, Catenis.bitcoinFees.getFeeRateByTime(Service.minutesToConfirmAssetTransfer));
+
+            if (payTxAllocResult === null) {
+                // Unable to allocate UTXOs
+                if (!payTxExpAddrsRefunded && this.sendingDevice.client.ctnNode.checkPayTxExpenseFundingBalance()) {
+                    // Try to refund addresses used to pay to transaction expense
+                    Catenis.logger.WARN('Not enough UTXOs available to pay for transfer asset tx expense. Refunding pay tx expense addresses to try again');
+                    payTxExpAddrsRefunded = true;
+                    retryPayTxExpense = true;
+                }
+                else {
+                    // Log error condition and throw exception
+                    Catenis.logger.ERROR('No UTXO available to be allocated to pay for transfer asset tx expense');
+                    throw new Meteor.Error('ctn_transf_asset_no_utxo_pay_tx_expense', 'No UTXO available to be allocated to pay for transfer asset tx expense');
+                }
+            }
         }
+        while (retryPayTxExpense);
 
         // Add inputs spending the allocated UTXOs to the transaction
         this.ccTransact.addInputs(payTxAllocResult.utxos.map((utxo) => {
