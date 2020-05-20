@@ -282,7 +282,7 @@ FundSource.prototype.hasUtxoToAllocate = function() {
     return this.collUtxo.count({allocated: false}) > 0;
 };
 
-FundSource.prototype.getBalance = function (includeUnconfirmed = true, includeAllocated = false) {
+FundSource.prototype.getBalance = function (includeUnconfirmed = true, includeAllocated = false, txFeeRate) {
     const conditions = [];
     let filterResult = false;
 
@@ -313,6 +313,25 @@ FundSource.prototype.getBalance = function (includeUnconfirmed = true, includeAl
 
     if (!includeAllocated) {
         conditions.push({allocated: false});
+    }
+
+    if (txFeeRate) {
+        // Make sure that only UTXOs that can effectively be used to pay for a tx fee
+        //  are included. In other words, the UTXO's amount should be large enough to
+        //  compensate for the increase of the tx virtual size
+        conditions.push({
+            $or: [{
+                isWitness: true,
+                amount: {
+                    $gt: smallestWitnessInputVirtualSizeIncrement * txFeeRate
+                }
+            }, {
+                isWitness: false,
+                amount:{
+                    $gt: smallestNonWitnessInputVirtualSizeIncrement * txFeeRate
+                }
+            }]
+        });
     }
 
     const query = conditions.length > 1 ? {$and: conditions} : conditions[0];

@@ -231,6 +231,8 @@ CatenisNode.prototype.startNode = function () {
 
 // NOTE: make sure that this method is called from code executed from the FundSource.utxoCS
 //  critical section object
+// TODO: add procedure to consolidate UTXOs the amount of which is too low to effectively pay for the tx fee according to the required fee rate
+//  This should include pay tx expense and off-chain messages settlement pay tx expense addresses
 CatenisNode.prototype.checkFundDistribution = function () {
     // Make sure that system service credit issuance is properly provisioned
     this.checkServiceCreditIssuanceProvision();
@@ -309,8 +311,11 @@ CatenisNode.prototype.currentUnreadMessagesCount = function () {
 // NOTE: make sure that this method is called from code executed from the FundSource.utxoCS
 //  critical section object
 CatenisNode.prototype.checkPayTxExpenseFundingBalance = function () {
+    // Make sure to exclude from balance UTXOs that cannot effectively be used to pay for
+    //  the tx fee given the expected fee rate for the tx
     const payTxBalanceInfo = new BalanceInfo(Service.getMinimumPayTxExpenseBalance(), this.payTxExpenseAddr.listAddressesInUse(), {
-            safetyFactor: Service.payTxExpBalanceSafetyFactor
+        safetyFactor: Service.payTxExpBalanceSafetyFactor,
+        txFeeRate: Catenis.bitcoinFees.getFeeRateByTime(Service.minutesToConfirmMessage)
     });
 
     if (payTxBalanceInfo.hasLowBalance()) {
@@ -417,8 +422,11 @@ CatenisNode.prototype.checkReadConfirmPayTxExpenseFundingBalance = function () {
 // NOTE: make sure that this method is called from code executed from the FundSource.utxoCS
 //  critical section object
 CatenisNode.prototype.checkOCMessagesSettlementPayTxExpenseFundingBalance = function () {
+    // Make sure to exclude from balance UTXOs that cannot effectively be used to pay for
+    //  the tx fee given the expected fee rate for the tx
     const payTxBalanceInfo = new BalanceInfo(Service.getMinimumOCMsgsSetlmtPayTxExpenseBalance(), this.ocMsgsSetlmtPayTxExpenseAddr.listAddressesInUse(), {
-        safetyFactor: Service.ocMsgsSetlmtPayTxExpBalanceSafetyFactor
+        safetyFactor: Service.ocMsgsSetlmtPayTxExpBalanceSafetyFactor,
+        txFeeRate: Service.feeRateForOffChainMsgsSettlement
     });
 
     if (payTxBalanceInfo.hasLowBalance()) {

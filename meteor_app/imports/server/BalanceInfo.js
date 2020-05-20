@@ -44,11 +44,13 @@ export class BalanceInfo {
     //    includeUnconfirmedUtxos [boolean] - (optional, default: true) indicates whether unconfirmed UTXOs should be taken into consideration when checking current balance from blockchain address list
     //    useSafetyFactor [boolean] - (optional, default: true) indicates whether a safety factor should be used when checking for low balance condition
     //    safetyFactor [number] - (optional) a specific safety factor to be used in place of the system default
+    //    txFeeRate [number] - (optional) fee rate, in satoshis/byte, used to only include UTXOs that can effectively be used to pay for a tx fee
     //  }
     constructor (expectedMinimumBalance, addressList, opts) {
         let includeUnconfirmedUtxos = true;
         let useSafetyFactor = true;
         let safetyFactor = cfgSettings.defaultSafetyFactor;
+        let txFeeRate;
 
         if (typeof opts === 'object' && opts !== null) {
             if (typeof opts.includeUnconfirmedUtxos === 'boolean') {
@@ -62,10 +64,15 @@ export class BalanceInfo {
             if (useSafetyFactor && typeof opts.safetyFactor === 'number') {
                 safetyFactor = opts.safetyFactor;
             }
+
+            if (typeof opts.txFeeRate === 'number') {
+                txFeeRate = opts.txFeeRate;
+            }
         }
 
         this.minimumBalance = useSafetyFactor ? Util.roundToResolution(expectedMinimumBalance * (1 + safetyFactor), 1) : expectedMinimumBalance;
-        this.currentBalance = new FundSource(addressList, includeUnconfirmedUtxos ? {useUnconfirmedUtxo: true} : undefined).getBalance(includeUnconfirmedUtxos);
+        this.currentBalance = new FundSource(addressList, includeUnconfirmedUtxos ? {useUnconfirmedUtxo: true} : undefined)
+            .getBalance(includeUnconfirmedUtxos, undefined, txFeeRate);
     }
 
     hasLowBalance() {
