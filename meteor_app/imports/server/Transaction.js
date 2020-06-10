@@ -49,6 +49,8 @@ export const cfgSettings = {
 //  fixing transaction malleability
 const dbMalleabilityCS = new CriticalSection();
 
+const minimumTxBaseSize = 82;
+
 
 // Definition of function classes
 //
@@ -2291,6 +2293,12 @@ Object.defineProperties(Transaction, {
     maxTxVsize: {
         get: function () {
             return cfgSettings.maxTxVsize;
+        },
+        enumerable: true
+    },
+    minTxBaseSize: {
+        get: function () {
+            return minimumTxBaseSize;
         },
         enumerable: true
     }

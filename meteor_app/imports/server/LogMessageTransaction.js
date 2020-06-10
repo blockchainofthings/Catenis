@@ -32,6 +32,7 @@ import {
 import { MessageReadable } from './MessageReadable';
 import { BufferMessageDuplex } from './BufferMessageDuplex';
 import { BitcoinInfo } from './BitcoinInfo';
+import { BufferMessageReadable } from './BufferMessageReadable';
 
 // Definition of function classes
 //
@@ -197,6 +198,8 @@ LogMessageTransaction.prototype.buildTransaction = function () {
         let payTxExpAddrsRefunded = false;
         const txChangeOutputType = BitcoinInfo.getOutputTypeByAddressType(Catenis.ctnHubNode.payTxExpenseAddr.btcAddressType);
         let payTxAllocResult;
+        let forceAllocation = false;
+        let paddedCtnMessage;
 
         do {
             retryPayTxExpense = false;
@@ -215,7 +218,8 @@ LogMessageTransaction.prototype.buildTransaction = function () {
                 txSzStSnapshot: this.transact.txSize,
                 inputAmount: this.transact.totalInputsAmount(),
                 outputAmount: this.transact.totalOutputsAmount()
-            }, false, Catenis.bitcoinFees.getFeeRateByTime(Service.minutesToConfirmMessage));
+            }, false, Catenis.bitcoinFees.getFeeRateByTime(Service.minutesToConfirmMessage),
+            undefined, undefined, forceAllocation);
 
             if (payTxAllocResult === null) {
                 // Unable to allocate UTXOs
@@ -229,6 +233,40 @@ LogMessageTransaction.prototype.buildTransaction = function () {
                     // Log error condition and throw exception
                     Catenis.logger.ERROR('No UTXO available to be allocated to pay for log message tx expense');
                     throw new Meteor.Error('ctn_log_msg_no_utxo_pay_tx_expense', 'No UTXO available to be allocated to pay for log message tx expense');
+                }
+            }
+            else if (payTxAllocResult.utxos.length === 0) {
+                // No input is required to pay for transaction expense. Make sure
+                //  that transaction has minimum required size
+                if (this.transact.txSize.baseSize < Transaction.minTxBaseSize) {
+                    if (!paddedCtnMessage && ctnMessage.canBePadded() && ctnMessage.maxPaddingBytes() >= Transaction.minTxBaseSize - this.transact.txSize.baseSize) {
+                        // Pad message so minimum tx size is reached
+                        paddedCtnMessage = new CatenisMessage(new BufferMessageReadable(ctnMessage.msgPayload), CatenisMessage.functionByte.logMessage, {
+                            padding: Transaction.minTxBaseSize - this.transact.txSize.baseSize,
+                            ...this.options
+                        });
+
+                        // Reset null data output
+                        this.transact.resetNullDataOutput(paddedCtnMessage.getData());
+
+                        retryPayTxExpense = true;
+                    }
+                    else if (!forceAllocation) {
+                        // Minimum required size not met and tx cannot be padded.
+                        //  Try forcing allocation of UTXOs to pay for tx expense
+                        if (paddedCtnMessage) {
+                            // Message had been padded. Switch back to original, non-padded message first
+                            this.transact.resetNullDataOutput(ctnMessage.getData());
+                        }
+
+                        forceAllocation = true;
+                        retryPayTxExpense = true;
+                    }
+                    else {
+                        // Minimum transaction size constraint not met. Log warning condition
+                        //  Note: THIS SHOULD NEVER HAPPEN
+                        Catenis.logger.WARN('Minimum tx size constraint not met: no input required to pay for tx expense even after forcing allocation');
+                    }
                 }
             }
         }

@@ -36,6 +36,7 @@ const msgPrefix = 'CTN';
 const versionBits = 3;
 const versionMask =  ~(0xff >> versionBits);
 const versionNumber = 0;    // Current version in use. This number is limited to 2^3-1 (7)
+const headerLength = msgPrefix.length + 2;  // Prefix + version/function byte + options byte
 
 
 // Definition of function classes
@@ -50,6 +51,8 @@ const versionNumber = 0;    // Current version in use. This number is limited to
 //      encrypted: [Boolean], // Indicates whether message is encrypted or not
 //                            //  NOTE: if this option is true, it is expected that the message passed (arg #1) be already encrypted
 //      storageScheme: [String], // A field of the CatenisMessage.storageScheme property identifying how the message should be stored
+//      padding: [Number],  // (optional) Number of bytes that should be prepended to the message as padding.
+//                          //  NOTE: this option shall only be taken into account for embedded messages
 //      storageProvider: [Object] // (optional, default: defaultStorageProvider) A field of the CatenisMessage.storageProvider property identifying the type of external storage to be used to store the message that should not be embedded
 //    }
 //
@@ -104,6 +107,24 @@ export function CatenisMessage(messageReadable, funcByte, options) {
             this.options.embedded = false;
         }
 
+        if (options.padding != null) {
+            // Validate padding option
+            if (!this.options.embedded || !Number.isInteger(options.padding) || options.padding <= 0) {
+                Catenis.logger.WARN('Catenis message: inconsistent padding option; no padding shall be applied', {
+                    padding: options.padding,
+                    embedded: this.options.embedded
+                });
+                this.options.padded = false;
+            }
+            else {
+                this.options.padded = true;
+                optsByte += CatenisMessage.optionBit.padding;
+            }
+        }
+        else {
+            this.options.padded = false;
+        }
+
         // Write message options byte
         bytesWritten = this.data.writeUInt8(optsByte, bytesWritten);
 
@@ -117,6 +138,33 @@ export function CatenisMessage(messageReadable, funcByte, options) {
                 if (this.msgPayload === null) {
                     // Error reading message stream. Log error
                     throw new Meteor.Error('ctn_msg_read_error', 'Error reading message\'s contents while composing Catenis message');
+                }
+            }
+
+            if (this.options.padded) {
+                // Make sure that padding will fit
+                if (options.padding <= cfgSettings.nullDataMaxSize - bytesWritten - this.msgPayload.length) {
+                    // Add padding to message payload (first byte has the total number of padding bytes added)
+                    const adjustMsgPayload = Buffer.allocUnsafe(this.msgPayload.length + options.padding);
+
+                    adjustMsgPayload.writeUInt8(options.padding, 0);
+
+                    if (options.padding > 1) {
+                        adjustMsgPayload.fill(0x00, 1, options.padding);
+                    }
+
+                    this.msgPayload.copy(adjustMsgPayload, options.padding);
+                    this.msgPayload = adjustMsgPayload;
+                }
+                else {
+                    Catenis.logger.WARN('Catenis message: padding too large to fit in; no padding shall be applied', {
+                        padding: options.padding,
+                        nullDataBytesLeft: cfgSettings.nullDataMaxSize - bytesWritten - this.msgPayload.length
+                    });
+
+                    // Reset padding
+                    this.options.padded = false;
+                    this.data.writeUInt8(optsByte & ~CatenisMessage.optionBit.padding, bytesWritten - 1);
                 }
             }
         }
@@ -170,9 +218,9 @@ export function CatenisMessage(messageReadable, funcByte, options) {
 
             if (bytesWritten < this.data.length) {
                 // Trim data buffer
-                this.msgPayload = this.data;
+                const dataBuffer = this.data;
                 this.data = Buffer.allocUnsafe(bytesWritten);
-                this.msgPayload.copy(this.data, 0, 0, bytesWritten);
+                dataBuffer.copy(this.data, 0, 0, bytesWritten);
             }
         }
         else {
@@ -211,6 +259,10 @@ CatenisMessage.prototype.isEmbedded = function () {
     return this.options.embedded;
 };
 
+CatenisMessage.prototype.isPadded = function () {
+    return this.options.padded;
+};
+
 CatenisMessage.prototype.isSendSystemMessage = function () {
     return this.funcByte === CatenisMessage.functionByte.sendSystemMessage;
 };
@@ -225,6 +277,14 @@ CatenisMessage.prototype.isLogMessage = function () {
 
 CatenisMessage.prototype.isSettleOffChainMessages = function () {
     return this.funcByte === CatenisMessage.functionByte.settleOffChaiMessages;
+};
+
+CatenisMessage.prototype.canBePadded = function () {
+    return !this.isPadded() && this.isEmbedded() && this.msgPayload.length < cfgSettings.nullDataMaxSize - headerLength;
+};
+
+CatenisMessage.prototype.maxPaddingBytes = function () {
+    return this.canBePadded() ? cfgSettings.nullDataMaxSize - headerLength - this.msgPayload.length : 0;
 };
 
 
@@ -385,6 +445,11 @@ CatenisMessage.fromData = function (data, messageDuplex, logError = true) {
 
         const options = optionsFromOptionsByte(optsByte);
 
+        if (options.padded && !options.embedded) {
+            //noinspection ExceptionCaughtLocallyJS
+            throw new Error('Inconsistent padding option: padding only supported for embedded message');
+        }
+
         bytesRead++;
 
         // Read message payload
@@ -465,8 +530,23 @@ CatenisMessage.fromData = function (data, messageDuplex, logError = true) {
             messageDuplex.on('finish', messageDuplexFinishHandler);
 
             if (options.embedded) {
+                let msgContents = msgPayload;
+
+                if (options.padded) {
+                    // Bypass padding before reading message's contents
+                    const paddingBytes = msgPayload.readUInt8(0);
+
+                    // Make sure that padding is consistent
+                    if (paddingBytes > msgPayload.length) {
+                        //noinspection ExceptionCaughtLocallyJS
+                        throw new Error('Inconsistent padding option: too many padding bytes');
+                    }
+
+                    msgContents = msgPayload.slice(paddingBytes);
+                }
+
                 // Read the message's contents directly from the message payload into the message duplex stream
-                messageReadable = new BufferMessageReadable(msgPayload).pipe(messageDuplex);
+                messageReadable = new BufferMessageReadable(msgContents).pipe(messageDuplex);
             }
             else {
                 // Read the message's contents from external storage
@@ -556,7 +636,8 @@ CatenisMessage.functionByte = Object.freeze({
 
 CatenisMessage.optionBit = Object.freeze({
     embedding: 0x01,
-    encryption: 0x02
+    encryption: 0x02,
+    padding: 0x04
 });
 
 CatenisMessage.storageProvider = Object.freeze({
@@ -615,7 +696,8 @@ function optionsFromOptionsByte(optsByte) {
     // noinspection JSBitwiseOperatorUsage, RedundantConditionalExpressionJS
     return {
         encrypted: (optsByte & CatenisMessage.optionBit.encryption) ? true : false,
-        embedded: (optsByte & CatenisMessage.optionBit.embedding) ? true : false
+        embedded: (optsByte & CatenisMessage.optionBit.embedding) ? true : false,
+        padded: (optsByte & CatenisMessage.optionBit.padding) ? true : false
     }
 }
 

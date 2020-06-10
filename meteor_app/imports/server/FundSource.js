@@ -827,6 +827,9 @@ FundSource.prototype.allocateFund = function (amount) {
 //                                used). When a fee rate is passed, though, and no payment resolution is specified,
 //                                the standard payment resolution (as specified in the Service module) is used
 //   maxNumUtxos: [Number] - (optional) Maximum number of UTXOs that can be allocated
+//   forceAllocation: [Boolean] - (optional) Force UTXOs to be allocated even if the difference between the amount
+//                                 of the inputs and the amount of the outputs would be enough to pay for the expected
+//                                 tx fee
 //
 //  Result: {
 //    utxos: [{
@@ -842,7 +845,7 @@ FundSource.prototype.allocateFund = function (amount) {
 //    changeAmount: [Number]  // Optional
 //  }
 //
-FundSource.prototype.allocateFundForTxExpense = function (txInfo, isFixedFeed, fee, paymentResolution, maxNumUtxos) {
+FundSource.prototype.allocateFundForTxExpense = function (txInfo, isFixedFeed, fee, paymentResolution, maxNumUtxos, forceAllocation) {
     // Check arguments
     if (fee === undefined) {
         if (!isFixedFeed) {
@@ -886,7 +889,7 @@ FundSource.prototype.allocateFundForTxExpense = function (txInfo, isFixedFeed, f
 
     let result = null;
 
-    if (amount > 0) {
+    if (forceAllocation || amount > 0) {
         // Note: when not using a fixed fee (but a fee rate instead) force to allocated no-witness UTXOs first
         //      if there are mixed (both witness and non-witness) UTXOs
         let allocateNonWitnessUtxosFirst = this.hasMixedUtxos && (!isFixedFeed || this.useAllNonWitnessUtxosFirst);
@@ -999,6 +1002,10 @@ FundSource.prototype.allocateFundForTxExpense = function (txInfo, isFixedFeed, f
 
                         fee = Util.roundToResolution(txSize.getSizeInfo().vsize * feeRate, paymentResolution);
                         amount = fee - txDiffAmount;
+
+                        if (forceAllocation && amount < 0) {
+                            amount = 0;
+                        }
                     }
 
                     const work = {};
