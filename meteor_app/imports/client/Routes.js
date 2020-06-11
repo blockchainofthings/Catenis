@@ -213,6 +213,14 @@ FlowRouter.route('/devices/:deviceIndex/edit', {
     }
 });
 
+FlowRouter.route('/resources', {
+    action: function () {
+        BlazeLayout.render('clientLayout',{
+            page: 'clientResources'
+        });
+    }
+});
+
 // System administration routes
 //
 FlowRouter.route('/admin', {
@@ -540,6 +548,14 @@ FlowRouter.route('/admin/clients/:client_id/devices/:device_id/edit', {
                 client_id: params.client_id,
                 device_id: params.device_id
             }
+        });
+    }
+});
+
+FlowRouter.route('/admin/resources', {
+    action: function () {
+        BlazeLayout.render('adminLayout',{
+            page: 'resources'
         });
     }
 });
