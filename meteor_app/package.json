@@ -30,7 +30,7 @@
     "bitcoinjs-message": "^2.1.0",
     "body-parser": "^1.19.0",
     "catenis-colored-coins": "git+ssh://git@bitbucket.org/blockchainofthings/cateniscoloredcoins.git#semver:^0.3.1",
-    "catenis-off-chain-lib": "git+ssh://git@bitbucket.org/blockchainofthings/catenis-off-chain-lib.git#semver:^1.0.0",
+    "catenis-off-chain-lib": "git+ssh://git@bitbucket.org/blockchainofthings/catenis-off-chain-lib.git#semver:^1.2.0",
     "cids": "^0.7.1",
     "clipboard": "^2.0.1",
     "compression": "^1.7.4",
