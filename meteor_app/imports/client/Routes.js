@@ -175,6 +175,14 @@ FlowRouter.route('/serviceaccount/billing/:billing_id', {
     }
 });
 
+FlowRouter.route('/domains', {
+    action: function (params) {
+        BlazeLayout.render('clientLayout', {
+            page: 'clientOwnedDomains'
+        });
+    }
+});
+
 FlowRouter.route('/devices', {
     action: function () {
         BlazeLayout.render('clientLayout', {
@@ -501,6 +509,17 @@ FlowRouter.route('/admin/clients/:client_id/serviceaccount/billing/:billing_id',
                 client_id: params.client_id,
                 billing_id: params.billing_id,
                 retParams: queryParams.retparams
+            }
+        });
+    }
+});
+
+FlowRouter.route('/admin/clients/:client_id/domains', {
+    action: function (params) {
+        BlazeLayout.render('adminLayout', {
+            page: 'ownedDomains',
+            dataContext: {
+                client_id: params.client_id
             }
         });
     }

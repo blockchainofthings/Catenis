@@ -31,6 +31,7 @@ import './ClientDetailsTemplate.html';
 import './ClientLicensesTemplate.js';
 import './EditClientTemplate.js';
 import './ServiceAccountTemplate.js';
+import './OwnedDomainsTemplate.js';
 import './DevicesTemplate.js';
 
 // Module variables

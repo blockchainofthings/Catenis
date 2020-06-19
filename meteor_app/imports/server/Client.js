@@ -44,6 +44,7 @@ import { KeyStore } from './KeyStore';
 import { BcotSaleAllocation } from './BcotSaleAllocation';
 import { RedeemBcotTransaction } from './RedeemBcotTransaction';
 import { ServiceAccount } from './ServiceAccount';
+import { ClientOwnedDomain } from './ClientOwnedDomain';
 
 // Config entries
 const clientConfig = config.get('client');
@@ -98,6 +99,7 @@ export function Client(docClient, ctnNode, initializeDevices, noClientLicense = 
     this.clientIndex = docClient.index.clientIndex;
     this.props = docClient.props;
     this.apiAccessGenKey = docClient.apiAccessGenKey;
+    this.ownedDomain = new ClientOwnedDomain(this);
     this.timeZone = docClient.timeZone && moment.tz.zone(docClient.timeZone) ? docClient.timeZone : moment.tz.guess();
     this.billingMode = docClient.billingMode;
     this.status = docClient.status;

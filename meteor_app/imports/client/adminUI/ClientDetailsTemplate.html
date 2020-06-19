@@ -113,12 +113,15 @@
                                         <a id="lnkManageLicenses" href="/admin/clients/{{client_id}}/licenses" role="button" class="btn-login btn paddedBtn fullWidth">Manage Licenses</a>
                                     </div>
                                     <div class="col-md-4">
+                                        <a id="lnkOwnedDomains" href="/admin/clients/{{client_id}}/domains" role="button" class="btn-login btn paddedBtn fullWidth">Owned Domains</a>
+                                    </div>
+                                    <div class="col-md-4">
                                         <a id="lnkManageDevices" href="/admin/clients/{{client_id}}/devices" role="button" class="btn-login btn paddedBtn fullWidth">Manage Devices</a>
                                     </div>
                                     <div class="col-md-4">
                                         <a id="lnkServiceAccount" href="/admin/clients/{{client_id}}/serviceaccount" role="button" class="btn-login btn paddedBtn fullWidth">Service Account</a>
                                     </div>
-                                    <div class="col-md-4">
+                                    <div class="col-md-12">
                                         <button type="button" id="btnDeleteClient" class="btn-login btn paddedBtn btn-warn fullWidth" data-toggle="modal" data-target="#divDeleteClient">Delete Client</button>
                                     </div>
                                 {{/if}}

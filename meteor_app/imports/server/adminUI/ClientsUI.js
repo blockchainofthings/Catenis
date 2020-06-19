@@ -12,11 +12,12 @@
 // Internal node modules
 import util from 'util';
 // Third-party node modules
-//import config from 'config';
+import _und from 'underscore';
 // Meteor packages
 import { Meteor } from 'meteor/meteor';
 import { Accounts } from 'meteor/accounts-base'
 import { Roles } from 'meteor/alanning:roles';
+import { Random } from 'meteor/random'
 
 // References code in other (Catenis) modules
 import { Catenis } from '../Catenis';
@@ -26,6 +27,7 @@ import { ClientLicense } from '../ClientLicense';
 import { License } from '../License';
 import { CommonClientLicenseUI } from '../commonUI/CommonClientLicenseUI';
 import { CommonServiceAccountUI } from '../commonUI/CommonServiceAccountUI';
+import { CommonOwnedDomainsUI } from '../commonUI/CommonOwnedDomainsUI';
 import { KeyStore } from '../KeyStore';
 
 
@@ -117,6 +119,63 @@ ClientsUI.initialize = function () {
                 }
 
                 return clientId;
+            }
+            else {
+                // User not logged in or not a system administrator.
+                //  Throw exception
+                throw new Meteor.Error('ctn_admin_no_permission', 'No permission; must be logged in as a system administrator to perform this task');
+            }
+        },
+        addClientOwnedDomain: function (client_id, domainName) {
+            if (Roles.userIsInRole(this.userId, 'sys-admin')) {
+                try {
+                    const client = Client.getClientByDocId(client_id);
+
+                    client.ownedDomain.addDomain(domainName);
+                }
+                catch (err) {
+                    // Error trying to add new client owned domain. Log error and throw exception
+                    Catenis.logger.ERROR('Failure trying to add new client owned domain.', err);
+                    throw new Meteor.Error('client.owned.domain.add.failure', 'Failure trying to add new client owned domain: ' + err.toString());
+                }
+            }
+            else {
+                // User not logged in or not a system administrator.
+                //  Throw exception
+                throw new Meteor.Error('ctn_admin_no_permission', 'No permission; must be logged in as a system administrator to perform this task');
+            }
+        },
+        verifyClientOwnedDomain: function (client_id, domainName) {
+            if (Roles.userIsInRole(this.userId, 'sys-admin')) {
+                try {
+                    const client = Client.getClientByDocId(client_id);
+
+                    return client.ownedDomain.verifyDomain(domainName);
+                }
+                catch (err) {
+                    // Error trying to verify client owned domain. Log error and throw exception
+                    Catenis.logger.ERROR('Failure trying to verify client owned domain.', err);
+                    throw new Meteor.Error('client.owned.domain.verify.failure', 'Failure trying to verify client owned domain: ' + err.toString());
+                }
+            }
+            else {
+                // User not logged in or not a system administrator.
+                //  Throw exception
+                throw new Meteor.Error('ctn_admin_no_permission', 'No permission; must be logged in as a system administrator to perform this task');
+            }
+        },
+        deleteClientOwnedDomain: function (client_id, domainName) {
+            if (Roles.userIsInRole(this.userId, 'sys-admin')) {
+                try {
+                    const client = Client.getClientByDocId(client_id);
+
+                    client.ownedDomain.deleteDomain(domainName);
+                }
+                catch (err) {
+                    // Error trying to delete client owned domain. Log error and throw exception
+                    Catenis.logger.ERROR('Failure trying to delete client owned domain.', err);
+                    throw new Meteor.Error('client.owned.domain.delete.failure', 'Failure trying to delete client owned domain: ' + err.toString());
+                }
             }
             else {
                 // User not logged in or not a system administrator.
@@ -463,6 +522,18 @@ ClientsUI.initialize = function () {
                     emails: 1
                 }
             });
+        }
+        else {
+            // User not logged in or not a system administrator
+            //  Make sure that publication is not started and throw exception
+            this.stop();
+            throw new Meteor.Error('ctn_admin_no_permission', 'No permission; must be logged in as a system administrator to perform this task');
+        }
+    });
+
+    Meteor.publish('ownedDomains', function (client_id) {
+        if (Roles.userIsInRole(this.userId, 'sys-admin')) {
+            CommonOwnedDomainsUI.ownedDomains.call(this, client_id);
         }
         else {
             // User not logged in or not a system administrator

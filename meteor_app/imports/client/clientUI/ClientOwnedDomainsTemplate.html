@@ -1,0 +1,187 @@
+<template name="clientOwnedDomains">
+    <div>
+        <div class="panel panel-login minWidthElement noBoxShadow">
+            <div class="panel-body">
+                <div class="row">
+                    <div class="col-lg-12">
+                        {{#unless Template.subscriptionsReady}}
+                            <p style="color:lightgray; margin-top:1em">Loading...</p>
+                        {{else}}
+                            <h2>Owned Domains</h2>
+                            <div class="row">
+                                <div class="col-md-6">
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="pull-right">
+                                        <button type="button" id="btnAddDomain" class="btn-login btn paddedBtn fullWidth" data-toggle="modal" data-target="#divAddDomain">Add New Domain</button>
+                                    </div>
+                                </div>
+                            </div>
+                            <p style="margin:2rem">Owned domains are used to attest the ownership of virtual devices and thus prove the origin of Catenis messages.</p>
+                            {{#if hasInfoMessage}}
+                                <div class="alert alert-{{infoMessageType}}" role="alert">
+                                    <button type="button" id="btnDismissInfo" class="close" aria-label="Close">
+                                        <span aria-hidden="true">&times;</span>
+                                    </button>
+                                    {{infoMessage}}
+                                </div>
+                            {{/if}}
+                            {{#if hasErrorMessage}}
+                                <div class="alert alert-danger" role="alert">
+                                    <button type="button" id="btnDismissError" class="close" aria-label="Close">
+                                        <span aria-hidden="true">&times;</span>
+                                    </button>
+                                    {{{errorMessage}}}
+                                </div>
+                            {{/if}}
+                            <table class="table table-striped table-responsive text-left">
+                                <thead>
+                                <tr>
+                                    <th>Domain Name</th>
+                                    <th>Verification</th>
+                                    <th></th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                {{#each domain in domains}}
+                                    <tr>
+                                        <td>{{domain.name}}</td>
+                                        <td>{{#if domain.verified}}<span style="color:green">Verified</span>{{else}}<a id="lnkVerifyDomain" href="" role="button" data-toggle="modal" data-target="#divVerifyDomain" data-domain_id="{{domain._id}}">Verify now</a>{{/if}}</td>
+                                        <td><a id="lnkDeleteDomain" href="" role="button" data-toggle="modal" data-target="#divDeleteDomain" data-domain_id="{{domain._id}}">Delete</a></td>
+                                    </tr>
+                                {{/each}}
+                                </tbody>
+                            </table>
+                            {{!Modal panel containing form used to add a new domain}}
+                            <div id="divAddDomain" class="modal fade" tabindex="-1" role="dialog">
+                                <div class="modal-dialog" role="document">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <button id="btnCloseAddDomain1" type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                                            <h4 class="modal-title">Add Domain</h4>
+                                        </div>
+                                        <div class="modal-body">
+                                            {{#if hasAddDomainErrorMessage}}
+                                                <div class="alert alert-danger" role="alert">
+                                                    <button type="button" id="btnDismissAddDomainError" class="close" aria-label="Close">
+                                                        <span aria-hidden="true">&times;</span>
+                                                    </button>
+                                                    {{{addDomainErrorMessage}}}
+                                                </div>
+                                            {{/if}}
+                                            <p style="margin:2rem">Enter the name of an Internet domain that you or your organization own.</p>
+                                            <form id="frmAddDomain" autocomplete="off">
+                                                <div class="form-group">
+                                                    <input id='itxDomainName' name="domainName" type='text' placeholder="Domain name" autocomplete="off" />
+                                                </div>
+                                                <div class="row">
+                                                    <div class="col-xs-4"></div>
+                                                    <div class="col-xs-4">
+                                                        <button type="submit" class="btn btn-primary">Add Domain</button>
+                                                    </div>
+                                                </div>
+                                            </form>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button id="btnCloseAddDomain2" type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {{!Modal panel containing form used to delete a domain}}
+                            <div id="divDeleteDomain" class="modal fade" tabindex="-1" role="dialog">
+                                <div class="modal-dialog" role="document">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <button id="btnCloseDeleteDomain1" type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                                            <h4 class="modal-title">Delete Domain</h4>
+                                        </div>
+                                        <div class="modal-body">
+                                            <p class="h5" style="margin-bottom:2rem">{{targetDomain.name}}</p>
+                                            {{#if hasDeleteDomainErrorMessage}}
+                                                <div class="alert alert-danger" role="alert">
+                                                    <button type="button" id="btnDismissDeleteDomainError" class="close" aria-label="Close">
+                                                        <span aria-hidden="true">&times;</span>
+                                                    </button>
+                                                    {{{deleteDomainErrorMessage}}}
+                                                </div>
+                                            {{/if}}
+                                            <form id="frmDeleteDomain" autocomplete="off">
+                                                <input type="hidden" name="domainName" value="{{targetDomain.name}}"/>
+                                                <div id="divDeleteDomainConfirm" class="panel panel-default" style="padding:1em">
+                                                    <div style="margin-top:1em; margin-bottom:1em">
+                                                        <label>To confirm your action, please type the following text below: <b>yes, I do confirm it</b>
+                                                            <br><input id="itxDeleteConfirmation" type="text" size="20" maxlength="20" placeholder="confirmation" autocomplete="off"></label>
+                                                    </div>
+                                                    <div style="margin-top:1em">
+                                                        <button type="submit" class="btn btn-primary" style="display:{{displayDeleteDomainSubmitButton}}">Confirm</button>
+                                                    </div>
+                                                </div>
+                                            </form>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button id="btnCloseDeleteDomain2" type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {{!Modal panel containing form used to verify a domain}}
+                            <div id="divVerifyDomain" class="modal fade" tabindex="-1" role="dialog">
+                                <div class="modal-dialog" role="document">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <button id="btnCloseVerifyDomain1" type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                                            <h4 class="modal-title">Verify Domain</h4>
+                                        </div>
+                                        <div class="modal-body">
+                                            <p class="h5" style="margin-bottom:2rem">{{targetDomain.name}}</p>
+                                            {{#if hasVerifyDomainErrorMessage}}
+                                                <div class="alert alert-danger" role="alert">
+                                                    <button type="button" id="btnDismissVerifyDomainError" class="close" aria-label="Close">
+                                                        <span aria-hidden="true">&times;</span>
+                                                    </button>
+                                                    {{{verifyDomainErrorMessage}}}
+                                                </div>
+                                            {{/if}}
+                                            <p style="margin-bottom:2rem">To verify the domain, the following DNS <b>TXT</b> record must be created.</p>
+                                            <div class="alert alert-warning" role="alert">
+                                                <b>Note:</b> if you do not know or do not have permission to create a DNS record, ask your DNS administrator to do so.
+                                            </div>
+                                            <table class="table table-striped" style="width:90%; margin-left:auto; margin-right:auto">
+                                                <thead>
+                                                <tr>
+                                                    <th><label>Record Name</label></th>
+                                                    <th><label>Record Value</label></th>
+                                                </tr>
+                                                </thead>
+                                                <tbody>
+                                                <tr>
+                                                    <th style="font-family:'Courier New'">{{targetDomain.verification.dnsTextRecName}}&nbsp;<a id="lnkCopyRecName" href="" aria-label="Copy to clipboard" data-clipboard-text="{{targetDomain.verification.dnsTextRecName}}"><span class="glyphicon glyphicon-copy" aria-hidden="true"></span></a></th>
+                                                    <th style="font-family:'Courier New'">{{targetDomain.verification.text}}&nbsp;<a id="lnkCopyRecValue" href="" aria-label="Copy to clipboard" data-clipboard-text="{{targetDomain.verification.text}}"><span class="glyphicon glyphicon-copy" aria-hidden="true"></span></a></th>
+                                                </tr>
+                                                </tbody>
+                                            </table>
+                                            <p style="margin-bottom:2rem">After the verification is complete, the DNS record may be safely deleted.</p>
+                                            <form id="frmVerifyDomain" autocomplete="off">
+                                                <input type="hidden" name="domainName" value="{{targetDomain.name}}"/>
+                                                <div class="row">
+                                                    <div class="col-xs-4"></div>
+                                                    <div class="col-xs-4">
+                                                        <button type="submit" class="btn btn-primary">Verify</button>
+                                                    </div>
+                                                </div>
+                                            </form>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button id="btnCloseVerifyDomain2" type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        {{/unless}}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</template>

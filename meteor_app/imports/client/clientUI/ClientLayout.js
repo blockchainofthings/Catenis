@@ -35,6 +35,7 @@ import './ClientPaidServicesTemplate.js';
 import './ClientServiceAccountTemplate.js';
 import './ClientDevicesTemplate.js';
 import './ClientResourcesTemplate.js';
+import './ClientOwnedDomainsTemplate.js';
 
 
 // Definition of module (private) functions

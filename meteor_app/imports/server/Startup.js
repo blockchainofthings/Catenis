@@ -71,6 +71,7 @@ import { ClientLicensesUI } from './clientUI/ClientLicensesUI';
 import { ClientApiAccessUI } from './clientUI/ClientApiAccessUI';
 import { ClientPaidServicesUI } from './clientUI/ClientPaidServicesUI';
 import { ClientServiceAccountUI } from './clientUI/ClientServiceAccountUI';
+import { ClientOwnedDomainsUI } from './clientUI/ClientOwnedDomainsUI';
 import { ClientDevicesUI } from './clientUI/ClientDevicesUI';
 import { ServiceBillingUI } from './adminUI/ServiceBillingUI';
 import { ClientServiceBillingUI } from './clientUI/ClientServiceBillingUI';
@@ -239,6 +240,7 @@ Meteor.startup(function () {
             ClientPaidServicesUI.initialize();
             ClientServiceAccountUI.initialize();
             ClientServiceBillingUI.initialize();
+            ClientOwnedDomainsUI.initialize();
             ClientDevicesUI.initialize();
 
             Catenis.logger.INFO('Initialization ended.');

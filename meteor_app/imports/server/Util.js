@@ -27,6 +27,7 @@ import { Catenis } from './Catenis';
 import { Transaction } from './Transaction';
 import { UtilShared } from '../both/UtilShared';
 import { BitcoinInfo } from './BitcoinInfo';
+import dns from "dns";
 
 
 // Definition of function classes
@@ -456,6 +457,14 @@ Util.asyncIterableToArray = function (it) {
 Util.asyncIterableToBuffer = function (it) {
     return Buffer.concat(Util.asyncIterableToArray(it));
 };
+
+Util.syncDnsResolveTxt = (() => {
+    const futFunc = Future.wrap(dns.resolveTxt);
+
+    return function syncDnsResolveTxt() {
+        return futFunc.apply(this, arguments).wait();
+    }
+})();
 
 
 // Util function class (public) properties
