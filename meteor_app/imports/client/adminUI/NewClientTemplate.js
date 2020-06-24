@@ -79,6 +79,7 @@ function validateFormData(form, errMsgs, template) {
     }
 
     clientInfo.timeZone = form.timeZone.value;
+    clientInfo.public = form.public.checked;
 
     clientInfo.licenseInfo = {
         license_id: form.license.value

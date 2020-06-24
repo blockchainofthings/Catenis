@@ -130,8 +130,12 @@ Client {
   },
   props: {
     name: [string],  // Client name
+    firstName: [string],  // (optional) Contact first name
+    lastName: [string],  // (optional) Contact last name
+    company: [string],  // (optional) Company name
     accountNumber: [String],  // Catenis generated code used to uniquely identify a Catenis client outside the system.
                               //  Format: E-00000000, where E is 'S' for sandbox, and 'P' for production
+    public: [boolean],  // (optional) Indicates that the main properties of this client (contact/company name and verified owned domains) can be disclosed
     lastModifiedDate: [date/time]  // Date and time when one of the client's properties had been last modified
   },
   apiAccessGenKey: [string],  // Key used to generate shared secret key used for client's devices to access the Catenis API
@@ -166,8 +170,8 @@ Device {
   },
   props: {
     name: [string],  // Device name
-    prodUniqueId: [string],  // Proprietary ID that uniquely identifies the client's physical device/product that is associated to this logical device
-    public: [boolean],  // (optional) Indicates that the main properties of this device (name and prodUniqueId) can be disclosed
+    prodUniqueId: [string],  // (optional) Proprietary ID that uniquely identifies the client's physical device/product that is associated to this logical device
+    public: [boolean],  // (optional) Indicates whether third parties can identify this as being the device that issued a given message (via the "Retrieve Message Issuer" API method)
     lastModifiedDate: [date/time]  // Date and time when one of the device's properties had been last modified
   },
   apiAccessGenKey: [string],  // Key used to generate secret key used for accessing the Catenis API. If set to null, should use Client's default API access key

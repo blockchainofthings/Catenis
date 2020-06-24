@@ -2,7 +2,7 @@
  * Created by Claudio on 2018-10-3.
  */
 
-//console.log('[ClientAccountTemplate.js]: This code just ran.');
+//console.log('[ClientProfileTemplate.js]: This code just ran.');
 
 // Module variables
 //
@@ -23,9 +23,10 @@ import { Catenis } from '../ClientCatenis';
 import { ClientUtil } from '../ClientUtil';
 
 // Import template UI
-import './ClientAccountTemplate.html';
+import './ClientProfileTemplate.html';
 
 // Import dependent templates
+import './ClientEditProfileTemplate.js';
 import './ClientTwoFactorAuthenticationTemplate.js';
 
 
@@ -39,23 +40,23 @@ import './ClientTwoFactorAuthenticationTemplate.js';
 // Module code
 //
 
-Template.clientAccount.onCreated(function () {
+Template.clientProfile.onCreated(function () {
     this.state = new ReactiveDict();
 
     // Subscribe to receive database docs/recs updates
     this.currentClientSubs = this.subscribe('currentClient');
 });
 
-Template.clientAccount.onDestroyed(function () {
+Template.clientProfile.onDestroyed(function () {
     if (this.currentClientSubs) {
         this.currentClientSubs.stop();
     }
 });
 
-Template.clientAccount.events({
+Template.clientProfile.events({
 });
 
-Template.clientAccount.helpers({
+Template.clientProfile.helpers({
     client() {
         return Catenis.db.collection.Client.findOne();
     },
@@ -81,5 +82,8 @@ Template.clientAccount.helpers({
         const user = Meteor.users.findOne({_id: user_id});
 
         return ClientUtil.getUserEmail(user);
-    }
+    },
+    booleanValue(val) {
+        return typeof val === 'boolean' && val ? 'true' : 'false';
+    },
 });

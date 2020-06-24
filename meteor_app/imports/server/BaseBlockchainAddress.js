@@ -2146,6 +2146,7 @@ const classByType = {
     sys_serv_cred_issu_addr: BaseSystemServiceCreditIssuingAddress,
     sys_serv_pymt_pay_tx_exp_addr: BaseSystemServicePaymentPayTxExpenseAddress,
     sys_msig_sign_addr: BaseSystemMultiSigSigneeAddress,
+    sys_oc_msgs_setlmt_pay_tx_exp_addr: BaseSystemOCMsgsSetlmtPayTxExpenseAddress,
     cln_srv_acc_cred_ln_addr: BaseClientServiceAccountCreditLineAddress,
     cln_srv_acc_debt_ln_addr: BaseClientServiceAccountDebitLineAddress,
     cln_bcot_pay_addr: BaseClientBcotPaymentAddress,

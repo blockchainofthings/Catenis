@@ -2691,19 +2691,25 @@ Device.prototype.updateProperties = function (newProps) {
 };
 
 Device.prototype.getPublicProps = function () {
-    let result = {};
+    let pubProps = {};
 
     if (this.props.public) {
-        if (this.props.name !== undefined) {
-            result.name = this.props.name;
+        if (this.props.name) {
+            pubProps.name = this.props.name;
         }
 
-        if (this.props.prodUniqueId !== undefined) {
-            result.prodUniqueId = this.props.prodUniqueId;
+        if (this.props.prodUniqueId) {
+            pubProps.prodUniqueId = this.props.prodUniqueId;
         }
     }
 
-    return result;
+    const clientPubProps = this.client.getPublicProps();
+
+    if (clientPubProps) {
+        pubProps.ownedBy = clientPubProps;
+    }
+
+    return pubProps;
 };
 
 Device.prototype.discloseMainPropsTo = function (device) {
@@ -3940,107 +3946,6 @@ Device.checkDevicesAddrFunding = function () {
             Catenis.logger.ERROR(util.format('Error checking/fixing funding of main and asset issuance addresses of device (deviceId: %s).', doc.deviceId), err);
         }
     });
-};
-
-// Get Catenis message proof or origin
-//
-// Arguments:
-//  txid: [string] - Internal blockchain ID of Catenis transaction to prove
-//  deviceId: [string] - Catenis ID of device that supposedly issued the message (the origin device)
-//  textToSign: [string] - A text to be signed
-//
-Device.getMessageProofOfOrigin = function (txid, deviceId, textToSign) {
-    let transact = undefined;
-
-    try {
-        transact = Transaction.fromTxid(txid);
-    }
-    catch (err) {
-        if ((err instanceof Meteor.Error) && err.error === 'ctn_btcore_rpc_error' && err.details !== undefined && typeof err.details.code === 'number'
-                && (err.details.code === BitcoinCore.rpcErrorCode.RPC_INVALID_PARAMETER || err.details.code === BitcoinCore.rpcErrorCode.RPC_INVALID_ADDRESS_OR_KEY)) {
-            // Error indicating that transaction id is not valid.
-            //  Throws local error
-            throw new Meteor.Error('ctn_msg_poof_invalid_txid', util.format('This is not a valid transaction id: %s', txid));
-        }
-        else {
-            // An error other than invalid transaction id.
-            //  Just re-throws it
-            throw err;
-        }
-    }
-
-    // First, check if this is a send message transaction
-    const sendMsgTransact = SendMessageTransaction.checkTransaction(transact, null);
-    let result = undefined;
-
-    if (sendMsgTransact !== undefined) {
-        // Make sure that designated origin device matches the actual origin device
-        if (sendMsgTransact.originDevice.deviceId === deviceId) {
-            // noinspection JSValidateTypes
-            result = {
-                tx: {
-                    txid: txid,
-                    input1: {
-                        address: sendMsgTransact.originDeviceMainAddrKeys.getAddress()
-                    }
-                },
-                Text: {
-                    original: textToSign,
-                    signed: sendMsgTransact.originDeviceMainAddrKeys.signText(textToSign).toString('base64')
-                },
-                originDevice: {
-                    deviceId: deviceId
-                }
-            };
-
-            // Add public properties of origin device
-            _und.extend(result.originDevice, sendMsgTransact.originDevice.getPublicProps());
-        }
-        else {
-            // Throw exception indicating generic error condition (no Catenis tx ou device mismatch)
-            Catenis.logger.DEBUG('Specified device for getting message proof of origin does not match actual message origin device', {txid: txid, deviceId: deviceId, actualOriginDeviceId: sendMsgTransact.originDevice.deviceId});
-            throw new Meteor.Error('ctn_msg_proof_invalid_tx_device_mismatch', 'Not a Catenis message transaction or specified device does not match actual message origin device');
-        }
-    }
-    else {
-        // If not, then check if this is a log message transaction
-        const logMsgTransact = LogMessageTransaction.checkTransaction(transact, null);
-
-        if (logMsgTransact === undefined) {
-            // Throw exception indicating generic error condition (no Catenis tx ou device mismatch)
-            Catenis.logger.DEBUG('Specified transaction for getting message proof of origin  is not a valid Catenis message transaction', {txid: txid});
-            throw new Meteor.Error('ctn_msg_proof_invalid_tx_device_mismatch', 'Not a Catenis message transaction or specified device does not match actual message origin device');
-        }
-        // Make sure that designated origin device matches the actual origin device
-        else if (logMsgTransact.device.deviceId === deviceId) {
-            // noinspection JSValidateTypes
-            result = {
-                tx: {
-                    txid: txid,
-                    input1: {
-                        address: logMsgTransact.deviceMainAddrKeys.getAddress()
-                    }
-                },
-                Text: {
-                    original: textToSign,
-                    signed: logMsgTransact.deviceMainAddrKeys.signText(textToSign).toString('base64')
-                },
-                originDevice: {
-                    deviceId: deviceId
-                }
-            };
-
-            // Add public properties of origin device
-            _und.extend(result.originDevice, logMsgTransact.device.getPublicProps());
-        }
-        else {
-            // Throw exception indicating generic error condition (no Catenis tx ou device mismatch)
-            Catenis.logger.DEBUG('Specified device for getting message proof of origin does not match actual message origin device', {txid: txid, deviceId: deviceId, actualOriginDeviceId: logMsgTransact.device.deviceId});
-            throw new Meteor.Error('ctn_msg_proof_invalid_tx_device_mismatch', 'Not a Catenis message transaction or specified device does not match actual message origin device');
-        }
-    }
-
-    return result;
 };
 
 // Check if a given device exists

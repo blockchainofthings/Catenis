@@ -68,15 +68,23 @@ FlowRouter.route('/', {
     }
 });
 
-FlowRouter.route('/clientaccount', {
+FlowRouter.route('/profile', {
     action: function () {
         BlazeLayout.render('clientLayout', {
-            page: 'clientAccount'
+            page: 'clientProfile'
         });
     }
 });
 
-FlowRouter.route('/clientaccount/2fa', {
+FlowRouter.route('/profile/edit', {
+    action: function () {
+        BlazeLayout.render('clientLayout',{
+            page: 'editClientProfile'
+        });
+    }
+});
+
+FlowRouter.route('/profile/2fa', {
     action: function () {
         BlazeLayout.render('clientLayout',{
             page: 'clientTwoFactorAuthentication'

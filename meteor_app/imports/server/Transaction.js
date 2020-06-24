@@ -2018,11 +2018,13 @@ Transaction.type = Object.freeze({
     }),
     send_message: Object.freeze({
         name: 'send_message',
+        title: 'Send Message',
         description: 'Transaction used to send a message from origin device to target device',
         dbInfoEntryName: 'sendMessage'
     }),
     log_message: Object.freeze({
         name: 'log_message',
+        title: 'Log Message',
         description: 'Transaction used to log a message of a device',
         dbInfoEntryName: 'logMessage'
     }),
@@ -2043,6 +2045,7 @@ Transaction.type = Object.freeze({
     }),
     settle_off_chain_messages: Object.freeze({
         name: 'settle_off_chain_messages',
+        title: 'Settle Off-Chain Messages',
         description: 'Transaction used to settle Catenis off-chain messages to the blockchain',
         dbInfoEntryName: 'settleOffChainMessages'
     })

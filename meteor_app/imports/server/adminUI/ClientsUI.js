@@ -82,6 +82,8 @@ ClientsUI.initialize = function () {
                     props.company = clientInfo.company;
                 }
 
+                props.public = clientInfo.public;
+
                 // Try to create Catenis client
                 let clientId;
 
@@ -193,7 +195,8 @@ ClientsUI.initialize = function () {
                         name: clientInfo.name,
                         firstName: clientInfo.firstName ? clientInfo.firstName : undefined,
                         lastName: clientInfo.lastName ? clientInfo.lastName : undefined,
-                        company: clientInfo.company ? clientInfo.company : undefined
+                        company: clientInfo.company ? clientInfo.company : undefined,
+                        public: clientInfo.public
                     };
 
                     client.updateProperties(props);

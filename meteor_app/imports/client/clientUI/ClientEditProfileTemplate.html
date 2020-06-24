@@ -1,4 +1,4 @@
-<template name="editClient">
+<template name="editClientProfile">
     <div>
         <div class="panel panel-login minWidthElement noBoxShadow">
             <div class="panel-body">
@@ -7,7 +7,7 @@
                         {{#unless Template.subscriptionsReady}}
                             <p style="color:lightgray; margin-top:1em">Loading...</p>
                         {{else}}
-                            <h2>Edit CLIENT</h2>
+                            <h2>Edit PROFILE</h2>
                             {{#if hasErrorMessage}}
                                 <div class="alert alert-danger" role="alert">
                                     <button type="button" id="btnDismissError" class="close" aria-label="Close">
@@ -24,10 +24,7 @@
                                     {{infoMessage}}
                                 </div>
                             {{/if}}
-                            <form id="frmEditClient" autocomplete="off">
-                                <div class="form-group">
-                                    <input type="text" value="{{clientData.name}}" maxlength="80" id="txtClientName" name="clientName" placeholder="Client Name" autocomplete="off" autocapitalize="none" autocorrect="off">
-                                </div>
+                            <form id="frmEditProfile" autocomplete="off">
                                 <div class="row">
                                     <div class="col-md-6">
                                         <div class="form-group">
@@ -106,12 +103,12 @@
                                 <div class="row">
                                     <div class="col-xs-6 form-group pull-left">
                                         <button id="btnCancel" type="button" class="form-control btn btn-login at-btn">{{#if isClientUpdated}}Back{{else}}Cancel{{/if}}</button>
-                                        <a id="lnkCancel" href="/admin/clients/{{client_id}}" style="display:none"></a>
+                                        <a id="lnkCancel" href="/profile" style="display:none"></a>
                                     </div>
                                     {{#if showUpdateButton}}
-                                    <div class="col-xs-6 form-group pull-right">
-                                        <button type="submit" id="btnUpdate" class="form-control btn btn-login at-btn submit">Update</button>
-                                    </div>
+                                        <div class="col-xs-6 form-group pull-right">
+                                            <button type="submit" id="btnUpdate" class="form-control btn btn-login at-btn submit">Update</button>
+                                        </div>
                                     {{/if}}
                                 </div>
                             </form>

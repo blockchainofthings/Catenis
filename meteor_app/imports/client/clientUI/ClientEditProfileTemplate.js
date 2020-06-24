@@ -1,8 +1,8 @@
 /**
- * Created by Claudio on 2018-08-28.
+ * Created by claudio on 2020-06-22
  */
 
-//console.log('[EditClientTemplate.js]: This code just ran.');
+//console.log('[ClientEditProfileTemplate.js]: This code just ran.');
 
 // Module variables
 //
@@ -23,7 +23,7 @@ import { Catenis } from '../ClientCatenis';
 import { ClientUtil } from '../ClientUtil';
 
 // Import template UI
-import './EditClientTemplate.html';
+import './ClientEditProfileTemplate.html';
 import moment from 'moment-timezone';
 
 // Import dependent templates
@@ -33,7 +33,7 @@ import moment from 'moment-timezone';
 //
 
 function loadClientData(template) {
-    const client = Catenis.db.collection.Client.findOne({_id: template.data.client_id});
+    const client = Catenis.db.collection.Client.findOne();
 
     template.state.set('clientName', client.props.name);
     template.state.set('clientFirstName', client.props.firstName);
@@ -50,14 +50,6 @@ function loadClientData(template) {
 function validateFormData(form, errMsgs, template) {
     const clientInfo = {};
     let hasError = false;
-
-    clientInfo.name = form.clientName.value ? form.clientName.value.trim() : '';
-
-    if (clientInfo.name.length === 0) {
-        // Client name not supplied. Report error
-        errMsgs.push('Please enter a client name');
-        hasError = true;
-    }
 
     clientInfo.firstName = form.firstName.value ? form.firstName.value.trim() : undefined;
     clientInfo.lastName = form.lastName.value ? form.lastName.value.trim() : undefined;
@@ -94,7 +86,7 @@ function validateFormData(form, errMsgs, template) {
 // Module code
 //
 
-Template.editClient.onCreated(function () {
+Template.editClientProfile.onCreated(function () {
     this.state = new ReactiveDict();
 
     this.state.set('errMsgs', []);
@@ -108,7 +100,6 @@ Template.editClient.onCreated(function () {
     this.state.set('emailConfirmed', false);
     this.state.set('emailMismatch', false);
 
-    this.state.set('clientName', undefined);
     this.state.set('clientFirstName', undefined);
     this.state.set('clientLastName', undefined);
     this.state.set('clientCompany', undefined);
@@ -120,7 +111,7 @@ Template.editClient.onCreated(function () {
     let clientRecLoaded = false;
     let clientUserRecLoaded = false;
 
-    this.clientRecordSubs = this.subscribe('clientRecord', this.data.client_id, () => {
+    this.clientRecordSubs = this.subscribe('currentClient', () => {
         // Indicate that client record has been loaded
         clientRecLoaded = true;
 
@@ -129,7 +120,7 @@ Template.editClient.onCreated(function () {
         }
     });
 
-    this.clientUserSubs = this.subscribe('clientUser', this.data.client_id, () => {
+    this.clientUserSubs = this.subscribe('currentClientUser', () => {
         // Indicate that client user record has been loaded
         clientUserRecLoaded = true;
 
@@ -139,7 +130,7 @@ Template.editClient.onCreated(function () {
     });
 });
 
-Template.editClient.onDestroyed(function () {
+Template.editClientProfile.onDestroyed(function () {
     if (this.clientRecordSubs) {
         this.clientRecordSubs.stop();
     }
@@ -149,7 +140,7 @@ Template.editClient.onDestroyed(function () {
     }
 });
 
-Template.editClient.events({
+Template.editClientProfile.events({
     'click #btnDismissInfo'(event, template) {
         // Clear info message
         template.state.set('infoMsg', undefined);
@@ -158,10 +149,6 @@ Template.editClient.events({
     'click #btnDismissError'(event, template) {
         // Clear error message
         template.state.set('errMsgs', []);
-    },
-    'change #txtClientName'(event, template) {
-        // Indicate that form field has changed
-        template.state.set('fieldsChanged', true);
     },
     'change #txtFirstName'(event, template) {
         // Indicate that form field has changed
@@ -233,7 +220,7 @@ Template.editClient.events({
         //      both solutions cause a page reload, whilst clicking on th link does not)
         template.find('#lnkCancel').click();
     },
-    'submit #frmEditClient'(event, template) {
+    'submit #frmEditProfile'(event, template) {
         event.preventDefault();
 
         const form = event.target;
@@ -254,7 +241,7 @@ Template.editClient.events({
             btnUpdate.disabled = true;
 
             // Call remote method to update client
-            Meteor.call('updateClient', template.data.client_id, clientInfo, (error) => {
+            Meteor.call('updateCurrentClient', clientInfo, (error) => {
                 // Reenable buttons
                 btnCancel.disabled = false;
                 btnUpdate.disabled = false;
@@ -267,7 +254,7 @@ Template.editClient.events({
                 else {
                     // Indicate that client has been successfully updated
                     template.state.set('clientUpdated', true);
-                    template.state.set('infoMsg', 'Client data successfully update.');
+                    template.state.set('infoMsg', 'Profile successfully update.');
                     template.state.set('infoMsgType', 'success');
                 }
             });
@@ -278,7 +265,7 @@ Template.editClient.events({
     }
 });
 
-Template.editClient.helpers({
+Template.editClientProfile.helpers({
     client() {
         return Catenis.db.collection.Client.findOne({_id: Template.instance().data.client_id});
     },

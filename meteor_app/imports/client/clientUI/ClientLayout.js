@@ -28,7 +28,7 @@ import './ClientLayout.html';
 
 // Import dependent templates
 import './ClientHomeTemplate.js';
-import './ClientAccountTemplate.js';
+import './ClientProfileTemplate.js';
 import './ClientClientLicensesTemplate.js';
 import './ClientApiAccessTemplate.js';
 import './ClientPaidServicesTemplate.js';
