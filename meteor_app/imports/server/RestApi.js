@@ -57,6 +57,7 @@ import { retrieveAssetIssuanceHistory } from './ApiAssetIssuance';
 import { retrieveAssetIssuanceHistory2 } from './ApiAssetIssuance2';
 import { listAssetHolders } from './ApiAssetHolders';
 import { retrieveMessageProgress } from './ApiMessageProgress';
+import { retrieveMessageOrigin } from './ApiMessageOrigin';
 
 // Config entries
 const restApiConfig = config.get('restApi');
@@ -314,6 +315,18 @@ export function RestApi(apiVersion) {
             //  Refer to the source file where the action function is defined for a detailed description of the endpoint
             get: {
                 action: retrieveMessageProgress
+            }
+        });
+    }
+
+    if (this.apiVer.gte('0.10')) {
+        // noinspection JSUnresolvedFunction
+        this.api.addRoute('messages/:messageId/origin', {authRequired: false}, {
+            // Retrieve message origin (public method)
+            //
+            //  Refer to the source file where the action function is defined for a detailed description of the endpoint
+            get: {
+                action: retrieveMessageOrigin
             }
         });
     }

@@ -169,9 +169,9 @@ Device {
     deviceIndex: [integer]  // HD node index associated with this client's device 
   },
   props: {
-    name: [string],  // Device name
+    name: [string],  // (optional) Device name
     prodUniqueId: [string],  // (optional) Proprietary ID that uniquely identifies the client's physical device/product that is associated to this logical device
-    public: [boolean],  // (optional) Indicates whether third parties can identify this as being the device that issued a given message (via the "Retrieve Message Issuer" API method)
+    public: [boolean],  // (optional) Indicates whether third parties can identify this as being the device that issued a given message (via the "Retrieve Message Origin" API method)
     lastModifiedDate: [date/time]  // Date and time when one of the device's properties had been last modified
   },
   apiAccessGenKey: [string],  // Key used to generate secret key used for accessing the Catenis API. If set to null, should use Client's default API access key

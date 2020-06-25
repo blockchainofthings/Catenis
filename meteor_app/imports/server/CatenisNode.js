@@ -63,6 +63,8 @@ import { LogMessageTransaction } from './LogMessageTransaction';
 import { SettleOffChainMessagesTransaction } from './SettleOffChainMessagesTransaction';
 import { LogOffChainMessage } from './LogOffChainMessage';
 import { SendOffChainMessage } from './SendOffChainMessage';
+import { Message } from './Message';
+import { Device } from './Device';
 
 // Config entries
 const ctnNodeConfig = config.get('catenisNode');
@@ -1394,215 +1396,244 @@ CatenisNode.checkExistMany = function (ctnNodeIndices, selfReferenceAccepted = f
     return result;
 };
 
-// Get Catenis message proof or origin
+// Get Catenis message origin info
 //
-//  txid: [string] - ID of the blockchain transaction where the Catenis message the origin of which needs to be proven
-//                    is recorded
-//  deviceId: [string] - Catenis ID of device that supposedly issued the message (the origin device)
-//  msgToSign: [string] - A message (any text) to be signed using the origin device's private. The resulting signature
-//                         can then later be independently verified to prove the Catenis message's origin
-//  offChainCid: [string] - (optional) IPFS CID of Catenis off-chain message envelope data structure that holds the
-//                           off-chain message's contents. Only required for off-chain messages. In this case, `txid`
-//                           should reference a Settle Off-Chain Messages transaction
+//  Arguments:
+//    messageId [string] - ID of Catenis message the origin info of which should be retrieved
+//    msgToSign: [string] - (optional) A message (any text) to be signed using the message origin device's private
+//                           key. The resulting signature can then later be independently verified to prove the Catenis
+//                           message origin
 //
-CatenisNode.getMessageProofOfOrigin = function (txid, deviceId, msgToSign, offChainCid) {
-    let transact = undefined;
+//  Result: {
+//    tx: { - (optional) Information about the blockchain transaction used to record the Catenis message to the
+//                        blockchain (the Catenis message transaction)
+//      txid: [string], - ID of Catenis message transaction
+//      type: [string], - The type of Catenis message transaction. One of: 'Send Message', 'Log Message', 'Settle Off-Chain Message'
+//      batchDoc: { - Information about the batch document used to settle off-chain messages on the blockchain.
+//                     Note: only present for off-chain messages
+//        cid: [string] - Content ID (CID) of batch document on IPFS
+//      },
+//      originDevice: {  - (optional) Information about the device that logged/sent the message (the origin device).
+//                          Note: not present for off-chain messages
+//        address: [string], - Origin device's blockchain address that was used to generate the Catenis message transaction
+//        deviceId: [string] - ID of the origin device
+//        name: [string] - (optional) The origin device's name
+//        uniqueProdId: [string] - (optional) The origin device's unique product ID
+//        ownedBy : {
+//          company: [string] - (optional) The name of the company that owns the origin device
+//          contact: [string] - (optional) Name of contact of the company responsible for the origin device
+//          name: [string] - (optional) The name of the person who owns the origin device
+//          domain: [Array(string)] - (optional) List of internet domains owned by this company/person
+//        }
+//      }
+//    },
+//    offChainMsgEnvelope { - (optional) Information about the Catenis off-chain message envelope data structure used
+//                             to record the Catenis message on IPFS.
+//                             Note: only present for Catenis off-chain messages
+//      cid: [string], - Content ID (CID) of the off-chain message envelope on IPFS
+//      type: [string], - The type of Catenis off-chain message. One of: 'Send Message', 'Log Message'
+//      originDevice: {  - Information about the device that logged/sent the message (the origin device)
+//        pubKeyHash: [string], - Hex-encode hash of origin device's public key that was used to generate the off-chain
+//                                 message envelope
+//        deviceId: [string] - ID of the origin device
+//        name: [string] - (optional) The origin device's name
+//        uniqueProdId: [string] - (optional) The origin device's unique product ID
+//        ownedBy : {
+//          company: [string] - (optional) The name of the company that owns the origin device
+//          contact: [string] - (optional) Name of contact of the company responsible for the origin device
+//          name: [string] - (optional) The name of the person who owns the origin device
+//          domain: [Array(string)] - (optional) List of internet domains owned by this company/person
+//        }
+//      }
+//    },
+//    proof {
+//      message: [string], - Message for which the signature was generated
+//      signature: [string], - Hex-encoded signature of the message generated using origin device's private key
+//    }
+//  }
+//
+CatenisNode.getMessageOriginInfo = function (messageId, msgToSign) {
+    const message = Message.getMessageByMessageId(messageId);
 
-    try {
-        transact = Transaction.fromTxid(txid);
-    }
-    catch (err) {
-        if ((err instanceof Meteor.Error) && err.error === 'ctn_btcore_rpc_error' && err.details !== undefined && typeof err.details.code === 'number'
-            && (err.details.code === BitcoinCore.rpcErrorCode.RPC_INVALID_PARAMETER || err.details.code === BitcoinCore.rpcErrorCode.RPC_INVALID_ADDRESS_OR_KEY)) {
-            // Error indicating that transaction id is not valid.
-            //  Throws local error
-            throw new Meteor.Error('ctn_msg_poof_invalid_txid', 'Invalid transaction id');
-        }
-        else {
-            // An error other than invalid transaction id.
-            //  Just re-throws it
-            throw err;
-        }
+    // Make sure that only local messages (issued by this Catenis node) are considered
+    if (message.source !== Message.source.local) {
+        // This is not a local message. Throw exception
+        throw new Meteor.Error('ctn_msg_origin_not_local', 'Message has not been issued by this Catenis node');
     }
 
-    // First, check if this is a send message transaction
-    //const sendMsgTransact = SendMessageTransaction.checkTransaction(transact, null);
+    // Make sure that the message origin can be disclosed
+    const originDevice = Device.getDeviceByDeviceId(message.originDeviceId);
+
+    if (!originDevice.props.public) {
+        // Message origin cannot be disclosed. Throw exception
+        throw new Meteor.Error('ctn_msg_origin_not_public', 'Message origin cannot be disclosed');
+    }
+
+    let transact;
+
+    if (message.isRecordedToBlockchain) {
+        transact = Transaction.fromTxid(message.txid);
+    }
 
     let result;
-    const msgTransact = SendMessageTransaction.checkTransaction(transact, null)
-        || LogMessageTransaction.checkTransaction(transact, null)
-        || SettleOffChainMessagesTransaction.checkTransaction(transact);
 
-    if (msgTransact instanceof SendMessageTransaction) {
-        // Send message transaction. Make sure that designated origin device matches
-        //  the actual origin device
-        if (msgTransact.originDevice.deviceId === deviceId) {
-            // noinspection JSValidateTypes
+    if (!message.isOffChain) {
+        // Standard message
+        if (message.action === Message.action.send) {
+            // Send standard message
+            const msgTransact = SendMessageTransaction.checkTransaction(transact, null);
+
+            if (!msgTransact) {
+                // Invalid Catenis send message transaction. Log error and throw exception
+                Catenis.logger.ERROR('Invalid Catenis send message transaction when retrieving message origin', {
+                    message
+                });
+                throw new Error('Invalid Catenis send message transaction when retrieving message origin');
+            }
+
             result = {
                 tx: {
-                    txid: txid,
+                    txid: message.txid,
                     type: Transaction.type.send_message.title,
                     originDevice: {
                         address: msgTransact.originDeviceMainAddrKeys.getAddress(),
-                        deviceId
+                        deviceId: msgTransact.originDevice.deviceId
                     }
-                },
-                Proof: {
-                    message: msgToSign,
-                    signature: msgTransact.originDeviceMainAddrKeys.signText(msgToSign).toString('hex')
                 }
             };
+
+            if (msgToSign) {
+                result.proof = {
+                    message: msgToSign,
+                    signature: msgTransact.originDeviceMainAddrKeys.signText(msgToSign).toString('hex')
+                };
+            }
 
             // Add public properties of origin device
             _und.extend(result.tx.originDevice, msgTransact.originDevice.getPublicProps());
         }
-        else {
-            // Throw exception indicating generic error condition (no Catenis tx ou device mismatch)
-            throw new Meteor.Error('ctn_msg_proof_device_mismatch', 'Invalid device ID or device does not match actual message\'s origin device');
-        }
-    }
-    else if (msgTransact instanceof LogMessageTransaction) {
-        // Log message transaction. Make sure that designated origin device matches
-        //  the actual origin device
-        if (msgTransact.device.deviceId === deviceId) {
-            // noinspection JSValidateTypes
+        else if (message.action === Message.action.log) {
+            // Log standard message
+            const msgTransact = LogMessageTransaction.checkTransaction(transact, null);
+
+            if (!msgTransact) {
+                // Invalid Catenis log message transaction. Log error and throw exception
+                Catenis.logger.ERROR('Invalid Catenis log message transaction when retrieving message origin', {
+                    message
+                });
+                throw new Error('Invalid Catenis log message transaction when retrieving message origin');
+            }
+
             result = {
                 tx: {
-                    txid: txid,
+                    txid: message.txid,
                     type: Transaction.type.log_message.title,
                     originDevice: {
                         address: msgTransact.deviceMainAddrKeys.getAddress(),
-                        deviceId
+                        deviceId: msgTransact.device.deviceId
                     }
-                },
-                Proof: {
-                    message: msgToSign,
-                    signature: msgTransact.deviceMainAddrKeys.signText(msgToSign).toString('hex')
                 }
             };
+
+            if (msgToSign) {
+                result.proof = {
+                    message: msgToSign,
+                    signature: msgTransact.deviceMainAddrKeys.signText(msgToSign).toString('hex')
+                };
+            }
 
             // Add public properties of origin device
             _und.extend(result.tx.originDevice, msgTransact.device.getPublicProps());
         }
         else {
-            // Throw exception indicating generic error condition (no Catenis tx ou device mismatch)
-            throw new Meteor.Error('ctn_msg_proof_device_mismatch', 'Invalid device ID or device does not match actual message\'s origin device');
-        }
-    }
-    else if (msgTransact instanceof SettleOffChainMessagesTransaction) {
-        // Settle off-chain messages transaction
-        if (offChainCid == null) {
-            // Off-chain CID not provided. Throw exception
-            throw new Meteor.Error('ctn_msg_proof_missing_oc_cid', 'Missing IPFS CID of Catenis off-chain message envelope');
-        }
-
-        let msgDataInBatch;
-
-        try {
-            msgDataInBatch = msgTransact.batchDocument.isMessageDataInBatch(offChainCid);
-        }
-        catch (err) {}
-
-        if (!msgDataInBatch) {
-            // Invalid CID or CID does not referer to an off-chain message data contained in batch document. Throw exception
-            throw new Meteor.Error('ctn_msg_proof_invalid_oc_cid', 'Invalid IPFS CID or it is not included in settled transaction');
-        }
-
-        let offChainMsgTransact;
-
-        // Check if IPFS CID refers to an off-chain message envelope of send message type
-        try {
-            offChainMsgTransact = SendOffChainMessage.fromMsgEnvelopeCid(offChainCid);
-        }
-        catch (err) {}
-
-        if (!offChainMsgTransact) {
-            // If not, then check if IPFS CID refers to an off-chain message envelope of log message type
-            try {
-                offChainMsgTransact = LogOffChainMessage.fromMsgEnvelopeCid(offChainCid);
-            }
-            catch (err) {}
-        }
-
-        if (offChainMsgTransact instanceof SendOffChainMessage) {
-            // Off-chain message envelope of send message type. Make sure that designated origin
-            //  device matches the actual origin device
-            if (offChainMsgTransact.originDevice.deviceId === deviceId) {
-                // noinspection JSValidateTypes
-                result = {
-                    tx: {
-                        txid: txid,
-                        type: Transaction.type.settle_off_chain_messages.title,
-                        batchDoc: {
-                            cid: new CID(msgTransact.extMsgRef).toString()
-                        }
-                    },
-                    offChainMsgEnvelope: {
-                        cid: offChainCid,
-                        type: Transaction.type.send_message.title,
-                        originDevice: {
-                            pubKeyHash: offChainMsgTransact.ocMsgEnvelope.msgData.senderPubKeyHash.toString('hex'),
-                            deviceId
-                        }
-                    },
-                    Proof: {
-                        message: msgToSign,
-                        signature: offChainMsgTransact.originDeviceMainAddrKeys.signText(msgToSign).toString('hex')
-                    }
-                };
-
-                // Add public properties of origin device
-                _und.extend(result.offChainMsgEnvelope.originDevice, offChainMsgTransact.originDevice.getPublicProps());
-            }
-            else {
-                // Throw exception indicating generic error condition (no Catenis tx ou device mismatch)
-                throw new Meteor.Error('ctn_msg_proof_device_mismatch', 'Invalid device ID or device does not match actual message\'s origin device');
-            }
-        }
-        else if (offChainMsgTransact instanceof LogOffChainMessage) {
-            // Off-chain message envelope of log message type. Make sure that designated origin
-            //  device matches the actual origin device
-            if (offChainMsgTransact.device.deviceId === deviceId) {
-                // noinspection JSValidateTypes
-                result = {
-                    tx: {
-                        txid: txid,
-                        type: Transaction.type.settle_off_chain_messages.title,
-                        batchDoc: {
-                            cid: new CID(msgTransact.extMsgRef).toString()
-                        }
-                    },
-                    offChainMsgEnvelope: {
-                        cid: offChainCid,
-                        type: Transaction.type.log_message.title,
-                        originDevice: {
-                            pubKeyHash: offChainMsgTransact.ocMsgEnvelope.msgData.senderPubKeyHash.toString('hex'),
-                            deviceId
-                        }
-                    },
-                    Proof: {
-                        message: msgToSign,
-                        signature: offChainMsgTransact.devOffChainAddrKeys.signText(msgToSign).toString('hex')
-                    }
-                };
-
-                // Add public properties of origin device
-                _und.extend(result.offChainMsgEnvelope.originDevice, offChainMsgTransact.device.getPublicProps());
-            }
-            else {
-                // Throw exception indicating generic error condition (no Catenis tx ou device mismatch)
-                throw new Meteor.Error('ctn_msg_proof_device_mismatch', 'Invalid device ID or device does not match actual message\'s origin device');
-            }
-        }
-        else {
-            // Invalid off-chain message envelope. Throw exception
-            throw new Meteor.Error('ctn_msg_proof_invalid_oc_msg_env', 'Invalid off-chain message envelope');
+            // Unexpected message action. Log error and throw exception
+            Catenis.logger.ERROR('Unexpected message action (%s) when retrieving standard message origin', message.action);
+            throw new Error('Unexpected message action when retrieving standard message origin');
         }
     }
     else {
-        // Throw exception indicating generic error condition (no Catenis tx ou device mismatch)
-        Catenis.logger.DEBUG('Specified transaction for getting message proof of origin is not a valid Catenis message transaction', {txid: txid});
-        throw new Meteor.Error('ctn_msg_proof_invalid_tx', 'Not a valid Catenis message transaction');
+        // Off-chain message
+        const msgTransact = transact ? SettleOffChainMessagesTransaction.checkTransaction(transact) : undefined;
+
+        if (!msgTransact) {
+            // Invalid Catenis settle off-chain messages transaction. Log error and throw exception
+            Catenis.logger.ERROR('Invalid Catenis settle off-chain messages transaction when retrieving message origin', {
+                message
+            });
+            throw new Error('Invalid Catenis settle off-chain messages transaction when retrieving message origin');
+        }
+
+        if (message.action === Message.action.send) {
+            // Send off-chain message
+            const offChainMsgTransact = SendOffChainMessage.fromMsgEnvelopeCid(message.ocMsgEnvCid);
+
+            result = msgTransact ? {
+                tx: {
+                    txid: message.txid,
+                    type: Transaction.type.settle_off_chain_messages.title,
+                    batchDoc: {
+                        cid: new CID(msgTransact.extMsgRef).toString()
+                    }
+                }
+            } : {};
+
+            result.offChainMsgEnvelope = {
+                cid: message.ocMsgEnvCid,
+                type: Transaction.type.send_message.title,
+                originDevice: {
+                    pubKeyHash: offChainMsgTransact.ocMsgEnvelope.msgData.senderPubKeyHash.toString('hex'),
+                    deviceId: offChainMsgTransact.originDevice.deviceId
+                }
+            };
+
+            if (msgToSign) {
+                result.proof = {
+                    message: msgToSign,
+                    signature: offChainMsgTransact.origDevOffChainAddrKeys.signText(msgToSign).toString('hex')
+                };
+            }
+
+            // Add public properties of origin device
+            _und.extend(result.offChainMsgEnvelope.originDevice, offChainMsgTransact.originDevice.getPublicProps());
+        }
+        else if (message.action === Message.action.log) {
+            // Log off-chain message
+            const offChainMsgTransact = LogOffChainMessage.fromMsgEnvelopeCid(message.ocMsgEnvCid);
+
+            result = msgTransact ? {
+                tx: {
+                    txid: message.txid,
+                    type: Transaction.type.settle_off_chain_messages.title,
+                    batchDoc: {
+                        cid: new CID(msgTransact.extMsgRef).toString()
+                    }
+                }
+            } : {};
+
+            result.offChainMsgEnvelope = {
+                cid: message.ocMsgEnvCid,
+                type: Transaction.type.log_message.title,
+                originDevice: {
+                    pubKeyHash: offChainMsgTransact.ocMsgEnvelope.msgData.senderPubKeyHash.toString('hex'),
+                    deviceId: offChainMsgTransact.device.deviceId
+                }
+            };
+
+            if (msgToSign) {
+                result.proof = {
+                    message: msgToSign,
+                    signature: offChainMsgTransact.devOffChainAddrKeys.signText(msgToSign).toString('hex')
+                };
+            }
+
+            // Add public properties of origin device
+            _und.extend(result.offChainMsgEnvelope.originDevice, offChainMsgTransact.device.getPublicProps());
+        }
+        else {
+            // Unexpected message action. Log error and throw exception
+            Catenis.logger.ERROR('Unexpected message action (%s) when retrieving off-chain message origin', message.action);
+            throw new Error('Unexpected message action when retrieving off-chain message origin');
+        }
     }
 
     return result;

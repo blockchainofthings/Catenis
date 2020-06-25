@@ -491,9 +491,6 @@ Template.clientDetails.helpers({
 
         return color;
     },
-    booleanValue(val) {
-        return typeof val === 'boolean' && val ? 'true' : 'false';
-    },
     clientLicenseName(client_id) {
         const docClientLicense = Catenis.db.collection.ClientLicense.findOne({
             client_id: client_id,

@@ -86,16 +86,13 @@
                                         </div>
                                     </div>
                                 </div>
-                                <div class="form-group" style="text-align:left; margin-bottom:25px">
+                                <div class="form-group" style="text-align:left; margin-bottom:30px">
                                     <label for="selTimeZone" class="input">Time Zone</label><br>
                                     <select id="selTimeZone" name="timeZone" class="input">
                                         {{#each timeZone in (timeZones clientData.timeZone)}}
                                             <option value="{{timeZone.value}}" {{timeZone.selected}}>{{timeZone.name}}</option>
                                         {{/each}}
                                     </select>
-                                </div>
-                                <div class="form-group" style="text-align:left; margin-top:25px; margin-bottom:30px">
-                                    <span><input type="checkbox" id="cbxPublic" name="public" {{publicChecked clientData}}/>&nbsp;&nbsp;<label for="cbxPublic" class="input">Public</label></span>
                                 </div>
                                 <div class="form-group">
                                     <input type="hidden" id="emailConfirmation" name="emailConfirmation" value="notConfirmed">

@@ -40,7 +40,6 @@ function loadClientData(template) {
     template.state.set('clientLastName', client.props.lastName);
     template.state.set('clientCompany', client.props.company);
     template.state.set('clientTimeZone', client.timeZone);
-    template.state.set('public', client.props.public);
 
     const clientUser = Meteor.users.findOne({_id: client.user_id});
 
@@ -77,7 +76,6 @@ function validateFormData(form, errMsgs, template) {
     }
 
     clientInfo.timeZone = form.timeZone.value;
-    clientInfo.public = form.public.checked;
 
     return !hasError ? clientInfo : undefined;
 }
@@ -105,7 +103,6 @@ Template.editClientProfile.onCreated(function () {
     this.state.set('clientCompany', undefined);
     this.state.set('clientEmail', undefined);
     this.state.set('clientTimeZone', undefined);
-    this.state.set('public', undefined);
 
     // Subscribe to receive database docs/recs updates
     let clientRecLoaded = false;
@@ -171,10 +168,6 @@ Template.editClientProfile.events({
         template.state.set('emailConfirmed', false);
     },
     'change #txtCompanyName'(event, template) {
-        // Indicate that form field has changed
-        template.state.set('fieldsChanged', true);
-    },
-    'change #cbxPublic'(event, template) {
         // Indicate that form field has changed
         template.state.set('fieldsChanged', true);
     },
@@ -278,12 +271,8 @@ Template.editClientProfile.helpers({
             lastName: template.state.get('clientLastName'),
             company: template.state.get('clientCompany'),
             email: template.state.get('clientEmail'),
-            timeZone: template.state.get('clientTimeZone'),
-            public: template.state.get('public')
+            timeZone: template.state.get('clientTimeZone')
         };
-    },
-    publicChecked(clientData) {
-        return clientData.public ? 'checked' : undefined;
     },
     isClientUpdated() {
         return Template.instance().state.get('clientUpdated');

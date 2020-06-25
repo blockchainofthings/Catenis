@@ -2693,14 +2693,12 @@ Device.prototype.updateProperties = function (newProps) {
 Device.prototype.getPublicProps = function () {
     let pubProps = {};
 
-    if (this.props.public) {
-        if (this.props.name) {
-            pubProps.name = this.props.name;
-        }
+    if (this.props.name) {
+        pubProps.name = this.props.name;
+    }
 
-        if (this.props.prodUniqueId) {
-            pubProps.prodUniqueId = this.props.prodUniqueId;
-        }
+    if (this.props.prodUniqueId) {
+        pubProps.prodUniqueId = this.props.prodUniqueId;
     }
 
     const clientPubProps = this.client.getPublicProps();

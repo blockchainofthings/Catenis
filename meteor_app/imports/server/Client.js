@@ -897,11 +897,6 @@ Client.prototype.updateProperties = function (newProps) {
             errProp.name = newProps.name;
         }
 
-        // Allow this property to be undefined so it can be deleted
-        if ('public' in newProps && (typeof newProps.public !== 'boolean' && typeof newProps.public !== 'undefined')) {
-            errProp.public = newProps.public;
-        }
-
         if (Object.keys(errProp).length > 0) {
             const errProps = Object.keys(errProp);
 
@@ -951,34 +946,30 @@ Client.prototype.updateProperties = function (newProps) {
 //   domains: [Array(String)]
 // }
 Client.prototype.getPublicProps = function () {
-    let pubProps = null;
+    const pubProps = {};
 
-    if (this.props.public) {
-        pubProps = {};
+    if (this.props.company) {
+        pubProps.company = this.props.company;
+    }
 
-        if (this.props.company) {
-            pubProps.company = this.props.company;
-        }
+    if (this.props.firstName || this.props.lastName) {
+        let contactName = this.props.firstName;
 
-        if (this.props.firstName || this.props.lastName) {
-            let contactName = this.props.firstName;
-
-            if (this.props.lastName) {
-                if (contactName) {
-                    contactName += ' ';
-                }
-
-                contactName += this.props.lastName;
+        if (this.props.lastName) {
+            if (contactName) {
+                contactName += ' ';
             }
 
-            pubProps[pubProps.company ? 'contact' : 'name'] = contactName;
+            contactName += this.props.lastName;
         }
 
-        const verifiedOwnedDomains = this.ownedDomain.verifiedDomainList;
+        pubProps[pubProps.company ? 'contact' : 'name'] = contactName;
+    }
 
-        if (verifiedOwnedDomains.length > 0) {
-            pubProps.domains = verifiedOwnedDomains.map(domain => domain.name);
-        }
+    const verifiedOwnedDomains = this.ownedDomain.verifiedDomainList;
+
+    if (verifiedOwnedDomains.length > 0) {
+        pubProps.domains = verifiedOwnedDomains.map(domain => domain.name);
     }
 
     return pubProps;
