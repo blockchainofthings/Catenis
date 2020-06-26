@@ -1418,29 +1418,29 @@ CatenisNode.checkExistMany = function (ctnNodeIndices, selfReferenceAccepted = f
 //        address: [string], - Origin device's blockchain address that was used to generate the Catenis message transaction
 //        deviceId: [string] - ID of the origin device
 //        name: [string] - (optional) The origin device's name
-//        uniqueProdId: [string] - (optional) The origin device's unique product ID
+//        prodUniqueId: [string] - (optional) The origin device's product unique ID
 //        ownedBy : {
 //          company: [string] - (optional) The name of the company that owns the origin device
-//          contact: [string] - (optional) Name of contact of the company responsible for the origin device
+//          contact: [string] - (optional) Name of company's contact
 //          name: [string] - (optional) The name of the person who owns the origin device
 //          domain: [Array(string)] - (optional) List of internet domains owned by this company/person
 //        }
 //      }
 //    },
-//    offChainMsgEnvelope { - (optional) Information about the Catenis off-chain message envelope data structure used
-//                             to record the Catenis message on IPFS.
+//    offChainMsgEnvelope { - (optional) Information about the off-chain message envelope data structure used to record
+//                             the Catenis message on IPFS.
 //                             Note: only present for Catenis off-chain messages
 //      cid: [string], - Content ID (CID) of the off-chain message envelope on IPFS
 //      type: [string], - The type of Catenis off-chain message. One of: 'Send Message', 'Log Message'
 //      originDevice: {  - Information about the device that logged/sent the message (the origin device)
-//        pubKeyHash: [string], - Hex-encode hash of origin device's public key that was used to generate the off-chain
+//        pubKeyHash: [string], - Hex-encoded hash of origin device's public key that was used to generate the off-chain
 //                                 message envelope
 //        deviceId: [string] - ID of the origin device
 //        name: [string] - (optional) The origin device's name
-//        uniqueProdId: [string] - (optional) The origin device's unique product ID
+//        prodUniqueId: [string] - (optional) The origin device's product unique ID
 //        ownedBy : {
 //          company: [string] - (optional) The name of the company that owns the origin device
-//          contact: [string] - (optional) Name of contact of the company responsible for the origin device
+//          contact: [string] - (optional) Name of company's contact
 //          name: [string] - (optional) The name of the person who owns the origin device
 //          domain: [Array(string)] - (optional) List of internet domains owned by this company/person
 //        }
@@ -1448,7 +1448,7 @@ CatenisNode.checkExistMany = function (ctnNodeIndices, selfReferenceAccepted = f
 //    },
 //    proof {
 //      message: [string], - Message for which the signature was generated
-//      signature: [string], - Hex-encoded signature of the message generated using origin device's private key
+//      signature: [string], - Hex-encoded message's signature generated using origin device's private key
 //    }
 //  }
 //
