@@ -1553,14 +1553,18 @@ CatenisNode.getMessageOriginInfo = function (messageId, msgToSign) {
     }
     else {
         // Off-chain message
-        const msgTransact = transact ? SettleOffChainMessagesTransaction.checkTransaction(transact) : undefined;
+        let msgTransact;
 
-        if (!msgTransact) {
-            // Invalid Catenis settle off-chain messages transaction. Log error and throw exception
-            Catenis.logger.ERROR('Invalid Catenis settle off-chain messages transaction when retrieving message origin', {
-                message
-            });
-            throw new Error('Invalid Catenis settle off-chain messages transaction when retrieving message origin');
+        if (transact) {
+            msgTransact = SettleOffChainMessagesTransaction.checkTransaction(transact);
+
+            if (!msgTransact) {
+                // Invalid Catenis settle off-chain messages transaction. Log error and throw exception
+                Catenis.logger.ERROR('Invalid Catenis settle off-chain messages transaction when retrieving message origin', {
+                    message
+                });
+                throw new Error('Invalid Catenis settle off-chain messages transaction when retrieving message origin');
+            }
         }
 
         if (message.action === Message.action.send) {
