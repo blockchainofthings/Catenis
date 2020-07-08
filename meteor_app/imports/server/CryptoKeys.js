@@ -379,7 +379,20 @@ CryptoKeys.prototype.signText = function (textToSign) {
         throw new Meteor.Error('ctn_crypto_no_priv_key', 'Cannot sign message; missing private key');
     }
 
-    return bitcoinMessage.sign(textToSign, this.getPrivateKey(), this.keyPair.compressed);
+    let signOpts;
+
+    if (this.btcAddressType === BitcoinInfo.addressType.witness_v0_keyhash) {
+        signOpts = {
+            segwitType: 'p2wpkh'
+        };
+    }
+    else if (this.btcAddressType === BitcoinInfo.addressType.witness_v0_scripthash) {
+        signOpts = {
+            segwitType: 'p2sh(p2wpkh)'
+        };
+    }
+
+    return bitcoinMessage.sign(textToSign, this.getPrivateKey(), this.keyPair.compressed, signOpts);
 };
 
 
