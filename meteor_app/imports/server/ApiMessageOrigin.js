@@ -90,7 +90,7 @@ const cfgSettings = {
 //    },
 //    proof {
 //      message: [string], - Message for which the signature was generated
-//      signature: [string], - Hex-encoded message's signature generated using origin device's private key
+//      signature: [string], - Base64-encoded message's signature generated using origin device's private key
 //    }
 //  }
 export function retrieveMessageOrigin() {

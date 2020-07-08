@@ -1448,7 +1448,7 @@ CatenisNode.checkExistMany = function (ctnNodeIndices, selfReferenceAccepted = f
 //    },
 //    proof {
 //      message: [string], - Message for which the signature was generated
-//      signature: [string], - Hex-encoded message's signature generated using origin device's private key
+//      signature: [string], - Base64-encoded message's signature generated using origin device's private key
 //    }
 //  }
 //
@@ -1505,7 +1505,7 @@ CatenisNode.getMessageOriginInfo = function (messageId, msgToSign) {
             if (msgToSign) {
                 result.proof = {
                     message: msgToSign,
-                    signature: msgTransact.originDeviceMainAddrKeys.signText(msgToSign).toString('hex')
+                    signature: msgTransact.originDeviceMainAddrKeys.signText(msgToSign).toString('base64')
                 };
             }
 
@@ -1538,7 +1538,7 @@ CatenisNode.getMessageOriginInfo = function (messageId, msgToSign) {
             if (msgToSign) {
                 result.proof = {
                     message: msgToSign,
-                    signature: msgTransact.deviceMainAddrKeys.signText(msgToSign).toString('hex')
+                    signature: msgTransact.deviceMainAddrKeys.signText(msgToSign).toString('base64')
                 };
             }
 
@@ -1593,7 +1593,7 @@ CatenisNode.getMessageOriginInfo = function (messageId, msgToSign) {
             if (msgToSign) {
                 result.proof = {
                     message: msgToSign,
-                    signature: offChainMsgTransact.origDevOffChainAddrKeys.signText(msgToSign).toString('hex')
+                    signature: offChainMsgTransact.origDevOffChainAddrKeys.signText(msgToSign).toString('base64')
                 };
             }
 
@@ -1626,7 +1626,7 @@ CatenisNode.getMessageOriginInfo = function (messageId, msgToSign) {
             if (msgToSign) {
                 result.proof = {
                     message: msgToSign,
-                    signature: offChainMsgTransact.devOffChainAddrKeys.signText(msgToSign).toString('hex')
+                    signature: offChainMsgTransact.devOffChainAddrKeys.signText(msgToSign).toString('base64')
                 };
             }
 
