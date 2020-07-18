@@ -93,6 +93,7 @@ import { OffChainMessagesSettlement } from './OffChainMessagesSettlement';
 import { CatenisOffChainMonitor } from './CatenisOffChainMonitor';
 import { BitcoinInfo } from './BitcoinInfo';
 import { TransactionCache } from './TransactionCache';
+import { ReCaptcha } from './ReCaptcha';
 // TEST - begin
 //import { TestCatenisColoredCoins } from './test/TestCatenisColoredCoins';
 // TEST - end
@@ -201,6 +202,7 @@ Meteor.startup(function () {
             SpendServiceCredit.initialize();
             TransactionMonitor.initialize();
             CatenisOffChainMonitor.initialize();
+            ReCaptcha.initialize();
             TwoFactorAuthEventEmitter.initialize();
             ClientTwoFactorAuthenticationUI.initialize();
 

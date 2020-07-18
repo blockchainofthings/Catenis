@@ -153,6 +153,9 @@ function monitorState() {
                 $verifyCodeField.css('display', 'none');
 
                 $('#at-field-user_json').val('');
+
+                // Make sure that form is enabled
+                AccountsTemplates.setDisabled(false);
             }
         });
 
@@ -160,38 +163,155 @@ function monitorState() {
     }
 }
 
+let monitoringDisabled = false;
+
+function monitorDisabled() {
+    if (Meteor.isClient && !monitoringDisabled) {
+        Tracker.autorun(() => {
+            // Enable/disable form fields as the disabled state changes
+            const disabled = !!AccountsTemplates.disabled();
+
+            $('#at-field-username_and_email')[0].disabled = disabled;
+            $('#at-field-password')[0].disabled = disabled;
+        });
+
+        monitoringDisabled = true;
+    }
+}
+
+function returnLoginError(error) {
+    if (!error) {
+        error = new Meteor.Error(403, 'Something went wrong. Please check your credentials.');
+    }
+
+    AccountsTemplates.submitCallback(error, 'singIn');
+}
+
+let loginCredentials;
+
 function twoFactorAuthLogin(user, password, formData) {
     monitorState();
+    monitorDisabled();
 
     if (!formData.user_json) {
-        return Meteor.loginWithPassword(user, password, function (error) {
-            if (error && (error instanceof Meteor.Error) && error.error === 'verify-code-required') {
-                // Error indicating that a verification code should be provided for
-                //  two-factor authentication
+        // User logging in. Store credentials
+        loginCredentials = {user, password};
 
-                // Morph form to enter two-factor authentication verification code
+        function processReCaptchaResponse(token) {
+            Meteor.call('checkReCaptcha', token, (error) => {
+                if (error) {
+                    // Failed validating reCAPTCHA. Return error
+                    returnLoginError(error);
+                }
+                else {
+                    processLogin();
+                }
+            });
+        }
 
-                // Hide username and password input fields, and show verification code input field
-                $('#at-field-username_and_email').css('display', 'none');
-                $('#at-field-password').css('display', 'none');
+        function activateReCaptcha() {
+            grecaptcha.execute().catch((err) => {
+                console.error('Error trying to execute reCAPTCHA:', err);
+                // Return error
+                returnLoginError();
+            });
+        }
 
-                // Change title and button label
-                AccountsTemplates.state.form.set("2faVerify", true);
+        function processLogin() {
+            Meteor.loginWithPassword(loginCredentials.user, loginCredentials.password, (error) => {
+                // Clear stored credentials
+                loginCredentials = undefined;
 
-                // Display verification code field
-                const $verifyCodeField = $('#at-field-verify_code');
-                $verifyCodeField.css('display', 'inline');
-                $verifyCodeField.focus();
+                if (error && (error instanceof Meteor.Error) && error.error === 'verify-code-required') {
+                    // Error indicating that a verification code should be provided for
+                    //  two-factor authentication
 
-                // Save user info
-                $('#at-field-user_json').val(error.details);
+                    // Morph form to enter two-factor authentication verification code
 
-                return;
+                    // Hide username and password input fields, and show verification code input field
+                    $('#at-field-username_and_email').css('display', 'none');
+                    $('#at-field-password').css('display', 'none');
+
+                    // Change title and button label
+                    AccountsTemplates.state.form.set("2faVerify", true);
+
+                    // Display verification code field
+                    const $verifyCodeField = $('#at-field-verify_code');
+                    $verifyCodeField.css('display', 'inline');
+                    $verifyCodeField.focus();
+
+                    // Save user info
+                    $('#at-field-user_json').val(error.details);
+
+                    return;
+                }
+
+                // Process return from regular sign-in (with no two-factory authentication)
+                AccountsTemplates.submitCallback(error, 'singIn');
+            });
+        }
+
+        // Disable form
+        AccountsTemplates.setDisabled(true);
+
+        if ($('#ctn-login-recaptcha').length > 0) {
+            // reCAPTCHA is enabled for login
+            let reloadReCaptcha = false;
+
+            try {
+                grecaptcha.reset();
+            }
+            catch (err) {
+                if ((err instanceof Error) && err.message === 'No reCAPTCHA clients exist.') {
+                    reloadReCaptcha = true;
+                }
+                else {
+                    console.error('Error resetting reCAPTCHA:', err);
+                    // Return error
+                    returnLoginError();
+                }
             }
 
-            // Process return from regular sign-in (with no two-factory authentication)
-            AccountsTemplates.submitCallback(error, 'singIn');
-        });
+            if (reloadReCaptcha) {
+                function loadReCaptcha(siteKey) {
+                    // Render reCAPTCHA
+                    grecaptcha.render('ctn-login-recaptcha', {
+                        sitekey: siteKey,
+                        size: 'invisible',
+                        callback: processReCaptchaResponse
+                    });
+
+                    activateReCaptcha();
+                }
+
+                if (!AccountsTemplates.state.form.get('reCaptchaSiteKey')) {
+                    // Retrieve reCAPTCHA site key
+                    Meteor.call('getReCaptchaSiteKey', (error, siteKey) => {
+                        if (error) {
+                            console.error('Error calling \'getReCaptchaSiteKey\' remote method:', error);
+                            // Return error
+                            returnLoginError();
+                        }
+                        else {
+                            // Save reCAPTCHA site key, and load reCAPTCHA
+                            AccountsTemplates.state.form.set('reCaptchaSiteKey', siteKey);
+                            loadReCaptcha(siteKey);
+                        }
+                    });
+                }
+                else {
+                    // Load reCAPTCHA
+                    loadReCaptcha(AccountsTemplates.state.form.get('reCaptchaSiteKey'));
+                }
+            }
+            else {
+                activateReCaptcha();
+            }
+        }
+        else {
+            // No reCAPTCHA. Go on with login processing
+            processLogin();
+        }
     }
     else if (formData.verify_code) {
         // Verification code has been provided. Call custom two-factor authentication
@@ -346,10 +466,17 @@ function onSubmitFunc(error, state) {
             // Client account successfully enrolled. Activate client
             Meteor.call('activateClient', Meteor.userId(), (error) => {
                 if (error) {
-                    console.log('Error calling \'activateClient\' remote method: ' + error);
+                    console.error('Error calling \'activateClient\' remote method:', error);
                     AccountsTemplates.logout();
                 }
             });
+        }
+    }
+    else {
+        // Error
+        if (state === 'signIn') {
+            // Make sure that login form is enabled
+            AccountsTemplates.setDisabled(false);
         }
     }
 }

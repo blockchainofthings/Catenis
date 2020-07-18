@@ -7,6 +7,9 @@
                     {{> atInput}}
                 </div>
             {{/each}}
+            {{#if useReCaptcha}}
+                <div id="ctn-login-recaptcha"></div>
+            {{/if}}
             <div class="col-xs-12 tabs">
                 {{> atPwdFormBtn}}
             </div>

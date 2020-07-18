@@ -1042,5 +1042,12 @@
   transactionCache: {
     transactTTL: 604800000,  // (7 dias) Time, in milliseconds, before cached transactions are considered aged
     ttlEvaluationInterval: 3600000  // (1 hour) Period of time, in milliseconds, when cached transactions' time-to-live is evaluated (and transactions marked as aged as appropriate)
+  },
+  // Parameters pertaining to reCaptcha module
+  reCaptcha: {
+    verifyUrl: 'https://www.google.com/recaptcha/api/siteverify',  // URL of Web service used to verify the result of Google reCAPTCHA
+    siteKey: '',  // (Public) Site key assigned to the Google reCAPTCHA account in use
+    secretKey: '??????',  // Secret key assigned to the Google reCAPTCHA account in use
+    useForLogin: true  // Indicates whether reCAPTCHA should be used when logging Catenis users in
   }
 }

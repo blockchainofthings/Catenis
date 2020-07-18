@@ -203,5 +203,9 @@
     cyclesPerDay: 144,//96,  // Number of settlement cycles in a day (24 hour period). Note that a value less than one can be used to designate a period
                        //  (time between cycles) greater than 24 hours. In that case, the period shall be rounded to the nearest full hour
     maxCyclesToPostpone: 0  // Maximum settlement cycles that can be postponed before a settle off-chain messages transaction is sent when there not enough off-chain messages to pay for tx cost
+  },
+  // Parameters pertaining to reCaptcha module
+  reCaptcha: {
+    useForLogin: true  // Indicates whether reCAPTCHA should be used when logging Catenis users in
   }
 }

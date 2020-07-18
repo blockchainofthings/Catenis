@@ -10,14 +10,14 @@
 // References to external code
 //
 // Internal node modules
-import util from 'util';
-import { ClientsUI } from './ClientsUI';
-import { Catenis } from '../Catenis';
-import { Meteor } from "meteor/meteor";
+//import util from 'util';
 // Third-party node modules
 //import config from 'config';
 // Meteor packages
-//import { Meteor } from 'meteor/meteor';
+import { Meteor } from "meteor/meteor";
+
+// References code in other (Catenis) modules
+import { Catenis } from '../Catenis';
 
 
 // Definition of function classes
@@ -50,6 +50,37 @@ export function LoginUI() {
 
 LoginUI.initialize = function () {
     Catenis.logger.TRACE('LoginUI initialization');
+    // Declaration of RPC methods to be called from client
+
+    // NOTE: the access to these (remote) methods MUST not be restricted since
+    //      they need to be accessed from the login form
+    Meteor.methods({
+        getReCaptchaSiteKey: function () {
+            return Catenis.reCaptcha.siteKey;
+        },
+        checkReCaptcha: function (token) {
+            let result;
+            let error;
+
+            try {
+                result = Catenis.reCaptcha.verify(token, this.connection.clientAddress);
+            }
+            catch (err) {
+                error = err;
+            }
+
+            if (error || !result.success) {
+                // Throw generic error message indicating login failed
+                throw new Meteor.Error(403, 'Something went wrong. Please check your credentials.');
+            }
+        },
+        useReCaptchaForLogin: function () {
+            return Catenis.reCaptcha.useForLogin;
+        }
+    });
+
+    // Declaration of publications
+
     // NOTE: the access to this publication MUST not be restricted since it needs
     //      to be accessed from the login form
     Meteor.publish('currentUser', function () {
