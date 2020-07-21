@@ -95,7 +95,6 @@ AccountsTemplates.configure({
         title: {
             // Get rid of their titles
             signIn: '',
-            signUp: '',
             forgotPwd: '',
             enrollAccount: '',
             resetPwd: ''
@@ -105,8 +104,7 @@ AccountsTemplates.configure({
             enrollAccount: 'Enroll Account',
             forgotPwd: 'Send Email Link',
             resetPwd: 'Reset Password',
-            signIn: 'Sign In',
-            signUp: 'Register'
+            signIn: 'Sign In'
         }
     },
 });
@@ -494,8 +492,8 @@ function twoFactorAuthResetPassword(token, newPassword, formData) {
 //
 //  Arguments:
 //   error: [Object] - Error object containing information about the error that took place, if any
-//   state: [String] - Current internal state of accounts template. Valid values: 'changePwd', 'enrollAccount',
-//                      'forgotPwd', 'resetPwd', 'signIn', 'signUp', 'verifyEmail', 'resendVerificationEmail'
+//   state: [String] - Current internal state of accounts template. Valid values: 'changePwd', 'enrollAccount', 'forgotPwd'
+//                      'resetPwd', 'signIn', 'signUp' (not currently in use), 'verifyEmail', 'resendVerificationEmail'
 function onSubmitFunc(error, state) {
     //runs on successful at-pwd-form submit. Use this to allow for client activation and banning disabled users
     if (!error) {
