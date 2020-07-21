@@ -58,22 +58,6 @@ LoginUI.initialize = function () {
         getReCaptchaSiteKey: function () {
             return Catenis.reCaptcha.siteKey;
         },
-        checkReCaptcha: function (token) {
-            let result;
-            let error;
-
-            try {
-                result = Catenis.reCaptcha.verify(token, this.connection.clientAddress);
-            }
-            catch (err) {
-                error = err;
-            }
-
-            if (error || !result.success) {
-                // Throw generic error message indicating login failed
-                throw new Meteor.Error(403, 'Something went wrong. Please check your credentials.');
-            }
-        },
         useReCaptchaForLogin: function () {
             return Catenis.reCaptcha.useForLogin;
         }

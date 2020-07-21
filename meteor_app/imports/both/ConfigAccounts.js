@@ -21,6 +21,10 @@ import { FlowRouter } from 'meteor/kadira:flow-router';
 import { Roles } from 'meteor/alanning:roles';
 import { Tracker } from 'meteor/tracker';
 
+// References code in other (Catenis) modules on the client
+import { LoginChallenge } from './LoginChallenge';
+
+
 // Module code
 //
 
@@ -56,7 +60,7 @@ AccountsTemplates.addFields([{
     required: false,
     visible: ['signIn', 'resetPwd']
 }, {
-    _id: 'user_json',
+    _id: 'user_id',
     type: 'hidden',
     visible: ['signIn', 'resetPwd']
 }, {
@@ -152,7 +156,7 @@ function monitorState() {
                 $verifyCodeField.val('');
                 $verifyCodeField.css('display', 'none');
 
-                $('#at-field-user_json').val('');
+                $('#at-field-user_id').val('');
 
                 // Make sure that form is enabled
                 AccountsTemplates.setDisabled(false);
@@ -187,26 +191,66 @@ function returnLoginError(error) {
     AccountsTemplates.submitCallback(error, 'singIn');
 }
 
+function setUpTwoFactorAuthentication(userId) {
+    // Morph form to enter two-factor authentication verification code
+
+    // Hide username and password input fields, and show verification code input field
+    $('#at-field-username_and_email').css('display', 'none');
+    $('#at-field-password').css('display', 'none');
+
+    // Change title and button label
+    AccountsTemplates.state.form.set("2faVerify", true);
+
+    // Display verification code field
+    const $verifyCodeField = $('#at-field-verify_code');
+    $verifyCodeField.css('display', 'inline');
+    $verifyCodeField.focus();
+
+    // Save user info
+    $('#at-field-user_id').val(userId);
+}
+
 let loginCredentials;
 
 function twoFactorAuthLogin(user, password, formData) {
     monitorState();
     monitorDisabled();
 
-    if (!formData.user_json) {
-        // User logging in. Store credentials
-        loginCredentials = {user, password};
-
+    if (!formData.user_id) {
+        // User logging in
         function processReCaptchaResponse(token) {
-            Meteor.call('checkReCaptcha', token, (error) => {
-                if (error) {
-                    // Failed validating reCAPTCHA. Return error
-                    returnLoginError(error);
-                }
-                else {
-                    processLogin();
+            // Call custom reCAPTCHA login method
+            Accounts.callLoginMethod({
+                methodArguments: [{
+                    userId: loginCredentials.userId,
+                    pswHash: Accounts._hashPassword(loginCredentials.password),
+                    reCaptchaToken: token
+                }],
+                userCallback: (error) => {
+                    if (error && (error instanceof Meteor.Error) && error.error === 'challenge-user') {
+                        // Error indicating that user should be challenged
+                        const challengeInfo = JSON.parse(error.details);
+
+                        if (challengeInfo.challengeType === LoginChallenge.type.twoFAuth) {
+                            // Challenge user with two-factor authentication
+                            setUpTwoFactorAuthentication(challengeInfo.userId);
+
+                            return;
+                        }
+                        else {
+                            // Unexpected login challenge type
+                            console.error('Unexpected login challenge type processing reCAPTCHA response');
+                            error = new Meteor.Error(500, 'Internal server error');
+                        }
+                    }
+
+                    // Process return from regular sign-in (with no two-factory authentication)
+                    AccountsTemplates.submitCallback(error, 'singIn');
                 }
             });
+
+            // Clear login credentials
+            loginCredentials = undefined;
         }
 
         function activateReCaptcha() {
@@ -217,44 +261,7 @@ function twoFactorAuthLogin(user, password, formData) {
             });
         }
 
-        function processLogin() {
-            Meteor.loginWithPassword(loginCredentials.user, loginCredentials.password, (error) => {
-                // Clear stored credentials
-                loginCredentials = undefined;
-
-                if (error && (error instanceof Meteor.Error) && error.error === 'verify-code-required') {
-                    // Error indicating that a verification code should be provided for
-                    //  two-factor authentication
-
-                    // Morph form to enter two-factor authentication verification code
-
-                    // Hide username and password input fields, and show verification code input field
-                    $('#at-field-username_and_email').css('display', 'none');
-                    $('#at-field-password').css('display', 'none');
-
-                    // Change title and button label
-                    AccountsTemplates.state.form.set("2faVerify", true);
-
-                    // Display verification code field
-                    const $verifyCodeField = $('#at-field-verify_code');
-                    $verifyCodeField.css('display', 'inline');
-                    $verifyCodeField.focus();
-
-                    // Save user info
-                    $('#at-field-user_json').val(error.details);
-
-                    return;
-                }
-
-                // Process return from regular sign-in (with no two-factory authentication)
-                AccountsTemplates.submitCallback(error, 'singIn');
-            });
-        }
-
-        // Disable form
-        AccountsTemplates.setDisabled(true);
-
-        if ($('#ctn-login-recaptcha').length > 0) {
+        function processReCaptcha() {
             // reCAPTCHA is enabled for login
             let reloadReCaptcha = false;
 
@@ -308,24 +315,46 @@ function twoFactorAuthLogin(user, password, formData) {
                 activateReCaptcha();
             }
         }
-        else {
-            // No reCAPTCHA. Go on with login processing
-            processLogin();
-        }
+
+        // Disable form
+        AccountsTemplates.setDisabled(true);
+
+        Meteor.loginWithPassword(user, password, (error) => {
+            if (error && (error instanceof Meteor.Error) && error.error === 'challenge-user') {
+                // Error indicating that user should be challenged
+                const challengeInfo = JSON.parse(error.details);
+
+                if (challengeInfo.challengeType === LoginChallenge.type.reCaptcha) {
+                    // Challenge user with reCAPTCHA
+
+                    // Save login credentials
+                    loginCredentials = {
+                        userId: challengeInfo.userId,
+                        password: password
+                    };
+
+                    processReCaptcha();
+                }
+                else if (challengeInfo.challengeType === LoginChallenge.type.twoFAuth) {
+                    // Challenge user with two-factor authentication
+                    setUpTwoFactorAuthentication(challengeInfo.userId);
+                }
+
+                return;
+            }
+
+            // Process return from regular sign-in (with no user challenge)
+            AccountsTemplates.submitCallback(error, 'singIn');
+        });
     }
     else if (formData.verify_code) {
         // Verification code has been provided. Call custom two-factor authentication
         //  login method
-
-        // Note: we get the user from the error message so we do not need to check whether
-        //      the passed in user parameter is an object (with either a username or email)
-        //      or a string (being either a username or email too), and do the proper
-        //      conversion if the latter case
         Accounts.callLoginMethod({
             methodArguments: [{
-                user: JSON.parse(formData.user_json),
-                twoFactorAuthPassword: Accounts._hashPassword(password),
-                verifyCode: formData.verify_code
+                userId: formData.user_id,
+                pswHash: Accounts._hashPassword(password),
+                twoFAVerifyCode: formData.verify_code
             }],
             userCallback: (error) => {
                 if (error) {
@@ -340,7 +369,7 @@ function twoFactorAuthLogin(user, password, formData) {
                 else {
                     // Code successfully verified. Clear verification code and saved fields
                     $('#at-field-verify_code').val('');
-                    $('#at-field-user_json').val('');
+                    $('#at-field-user_id').val('');
 
                     // Clear two-factor verification indication
                     AccountsTemplates.state.form.set("2faVerify", false);
@@ -356,53 +385,61 @@ function twoFactorAuthLogin(user, password, formData) {
 function twoFactorAuthResetPassword(token, newPassword, formData) {
     monitorState();
 
-    if (!formData.user_json) {
+    if (!formData.user_id) {
         // First (original) call. Process password reset
         return Accounts.resetPassword(token, newPassword, function (error) {
-            if (error && (error instanceof Meteor.Error) && error.error === 'verify-code-required') {
-                // Error indicating that a verification code should be provided for
-                //  two-factor authentication
+            if (error && (error instanceof Meteor.Error) && error.error === 'challenge-user') {
+                // Error indicating that user should be challenged
+                const challengeInfo = JSON.parse(error.details);
 
-                // Indicate that password had been successfully reset
-                AccountsTemplates.state.form.set("result", AccountsTemplates.texts.info.pwdReset);
+                if (challengeInfo.challengeType === LoginChallenge.type.twoFAuth) {
+                    // Challenge user with two-factor authentication
 
-                const $passwordField = $('#at-field-password');
-                const $passwordAgainField = $('#at-field-password_again');
+                    // Indicate that password had been successfully reset
+                    AccountsTemplates.state.form.set("result", AccountsTemplates.texts.info.pwdReset);
 
-                $passwordField.val('');
-                $passwordField.prop('disabled', true);
+                    const $passwordField = $('#at-field-password');
+                    const $passwordAgainField = $('#at-field-password_again');
 
-                $passwordAgainField.val('');
-                $passwordAgainField.prop('disabled', true);
+                    $passwordField.val('');
+                    $passwordField.prop('disabled', true);
 
+                    $passwordAgainField.val('');
+                    $passwordAgainField.prop('disabled', true);
 
-                setTimeout(() => {
-                    // Morph form to enter two-factor authentication verification code
+                    setTimeout(() => {
+                        // Morph form to enter two-factor authentication verification code
 
-                    // Clear result (password reset) message
-                    AccountsTemplates.state.form.set("result", null);
+                        // Clear result (password reset) message
+                        AccountsTemplates.state.form.set("result", null);
 
-                    $passwordField.prop('disabled', false);
-                    $passwordAgainField.prop('disabled', false);
+                        $passwordField.prop('disabled', false);
+                        $passwordAgainField.prop('disabled', false);
 
-                    // Hide password and password again input fields, and show verification code input field
-                    $passwordField.css('display', 'none');
-                    $passwordAgainField.css('display', 'none');
+                        // Hide password and password again input fields, and show verification code input field
+                        $passwordField.css('display', 'none');
+                        $passwordAgainField.css('display', 'none');
 
-                    // Change title and button label
-                    AccountsTemplates.state.form.set("2faVerify", true);
+                        // Change title and button label
+                        AccountsTemplates.state.form.set("2faVerify", true);
 
-                    // Display verification code field
-                    const $verifyCodeField = $('#at-field-verify_code');
-                    $verifyCodeField.css('display', 'inline');
-                    $verifyCodeField.focus();
+                        // Display verification code field
+                        const $verifyCodeField = $('#at-field-verify_code');
+                        $verifyCodeField.css('display', 'inline');
+                        $verifyCodeField.focus();
 
-                    // Save user info and password hash
-                    $('#at-field-user_json').val(error.details);
-                    $('#at-field-pwd_hash_json').val(JSON.stringify(Accounts._hashPassword(newPassword)));
-                }, AccountsTemplates.options.redirectTimeout);
+                        // Save user info and password hash
+                        $('#at-field-user_id').val(challengeInfo.userId);
+                        $('#at-field-pwd_hash_json').val(JSON.stringify(Accounts._hashPassword(newPassword)));
+                    }, AccountsTemplates.options.redirectTimeout);
 
-                return;
+                    return;
+                }
+                else {
+                    // Unexpected login challenge type
+                    console.error('Unexpected login challenge type processing password reset');
+                    error = new Meteor.Error(500, 'Internal server error');
+                }
             }
 
             // Process return from regular password reset (with no two-factory authentication)
@@ -419,9 +456,9 @@ function twoFactorAuthResetPassword(token, newPassword, formData) {
         //  login method
         Accounts.callLoginMethod({
             methodArguments: [{
-                user: JSON.parse(formData.user_json),
-                twoFactorAuthPassword: JSON.parse(formData.pwd_hash_json),
-                verifyCode: formData.verify_code
+                userId: formData.user_id,
+                pswHash: JSON.parse(formData.pwd_hash_json),
+                twoFAVerifyCode: formData.verify_code
             }],
             userCallback: (error) => {
                 if (error) {
@@ -436,7 +473,7 @@ function twoFactorAuthResetPassword(token, newPassword, formData) {
                 else {
                     // Code successfully verified. Clear verification code and saved fields
                     $('#at-field-verify_code').val('');
-                    $('#at-field-user_json').val('');
+                    $('#at-field-user_id').val('');
                     $('#at-field-pwd_hash_json').val('');
 
                     // Clear two-factor verification indication
