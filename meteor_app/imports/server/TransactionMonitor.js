@@ -106,6 +106,7 @@ export class TransactionMonitor extends events.EventEmitter {
         //    fee: [number],
         //    confirmations: [number],
         //    blockhash: [string],              // Only exists if confirmations > 0
+        //    blockheight: [string],            // Only exists if confirmations > 0
         //    blockindex: [number],             // Only exists if confirmations > 0
         //    blocktime: [number],              // Only exists if confirmations > 0
         //    txid: [string],
@@ -261,6 +262,7 @@ export class TransactionMonitor extends events.EventEmitter {
                     _.extend(txEntry, _.pick(tx, [
                         'confirmations',
                         'blockhash',
+                        'blockheight',
                         'blockindex',
                         'blocktime',
                         'txid',
@@ -375,6 +377,7 @@ export class TransactionMonitor extends events.EventEmitter {
                     lastBlockHash = doc.blockhash;
 
                     result[lastBlockHash] = {
+                        blockheight: doc.blockheight,
                         blocktime: doc.blocktime,
                         ctnTxs: {}
                     };
@@ -549,10 +552,9 @@ function pollBlockchain() {
 
                             do {
                                 currBlock.hash = ctnTxBlockHashes[currCtnTxBlockHashIdx];
-                                currBlock.height = getBlockHeight(currBlock.hash);
-                                Catenis.logger.TRACE(util.format('Processing block #%d, which contains Catenis transactions', currBlock.height));
-
                                 const ctnTxBlock = ctnTxBlocks[currBlock.hash];
+                                currBlock.height = ctnTxBlock.blockheight;
+                                Catenis.logger.TRACE(util.format('Processing block #%d, which contains Catenis transactions', currBlock.height));
 
                                 // Prepare new Catenis block info to send in new blocks event
                                 const newCtnTxBlock = {
@@ -1389,6 +1391,7 @@ function fixOldUnconfirmedTxs(docTxs, source) {
 
                 blockInfo = {
                     hash: txInfo.blockhash,
+                    height: txInfo.blockheight,
                     time: txInfo.blocktime
                 };
             }
@@ -1412,6 +1415,7 @@ function fixOldUnconfirmedTxs(docTxs, source) {
 
                         blockInfo = {
                             hash: cnfltTxInfo.blockhash,
+                            height: cnfltTxid.blockheight,
                             time: cnfltTxInfo.blocktime
                         };
 
@@ -1423,7 +1427,7 @@ function fixOldUnconfirmedTxs(docTxs, source) {
                 });
             }
 
-            if (isConfirmed && getBlockHeight(blockInfo.hash) <= this.lastBlock.height - cfgSettings.blocksBehindToFixUnconfTxs) {
+            if (isConfirmed && blockInfo.height <= this.lastBlock.height - cfgSettings.blocksBehindToFixUnconfTxs) {
                 // Process confirmed transaction
                 Catenis.logger.TRACE('Old unconfirmed transaction (txid: %s) already confirmed; process it now', docTx.txid);
                 (source === Transaction.source.sent_tx ? processConfirmedSentTransactions : processConfirmedReceivedTransactions)(docTx, eventsToEmit);
