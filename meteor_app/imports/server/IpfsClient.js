@@ -46,7 +46,7 @@ export function IpfsClient(host, port, protocol) {
 
     // noinspection JSUnresolvedVariable
     this.api = {
-        add: Util.wrapAsyncIterable(this.ipfs.add, Util.asyncIterableToArray, this.ipfs),
+        add: Util.wrapAsyncPromise(this.ipfs.add, this.ipfs),
         cat: Util.wrapAsyncIterable(this.ipfs.cat, Util.asyncIterableToBuffer, this.ipfs),
         catReadableStream: Util.wrapAsyncIterable(this.ipfs.cat, toStream.readable, this.ipfs),
         id: Util.wrapAsyncPromise(this.ipfs.id, this.ipfs)
@@ -59,7 +59,7 @@ export function IpfsClient(host, port, protocol) {
 
 IpfsClient.prototype.add = function (data, options) {
     try {
-        return fixIpfsClusterAddResults(this.api.add(data, options));
+        return this.api.add(data, options);
     }
     catch (err) {
         handleError('add', err);
@@ -136,35 +136,6 @@ function handleError(methodName, err, callback) {
     else {
         throw error;
     }
-}
-
-// This is a workaround for an issue with IPFS Cluster ver. 0.6.0. This issue
-//  is expected to be resolved in the next release of IPFS Cluster though
-function fixIpfsClusterAddResults(results) {
-    return results.map((result) => {
-        if (result.code === 0 && result.message === '') {
-            // Extraneous properties added by IPFS Cluster. Fix result
-            const fixedResult = {};
-
-            if (result.Name) {
-                fixedResult.path = result.Name;
-            }
-
-            // noinspection JSUnresolvedVariable
-            if (result.Hash) {
-                fixedResult.hash = result.Hash;
-            }
-
-            // noinspection JSUnresolvedVariable
-            if (result.Size) {
-                fixedResult.size = parseInt(result.Size);
-            }
-
-            return fixedResult;
-        }
-
-        return result;
-    });
 }
 
 

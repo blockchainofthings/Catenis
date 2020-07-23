@@ -357,7 +357,7 @@ CCMetadata.prototype.store = function () {
             // Special case for the Catenis Colored Coins protocol
             try {
                 // Save metadata onto IPFS
-                const cidObj = Catenis.ipfsClient.add(Buffer.from(JSON.stringify(metadata)))[0].cid;
+                const cidObj = Catenis.ipfsClient.add(Buffer.from(JSON.stringify(metadata))).cid;
 
                 this.storeResult = {
                     cid: cidObj.buffer.toString('hex')
