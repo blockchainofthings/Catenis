@@ -2,6 +2,9 @@
 {
   // Parameters pertaining to the Catenis application
   "application": {
+    ctnNode: {  // Catenis node to which this instance of the application corresponds
+      pubKey: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDO9sMMj/gwfPAJHYh9WLV2zVmzH2+vghKx5qzdknCZcuCvWGZ9IQRXbt5YZZNZyDhad13UVxQkkM8fYjGnUoyg/P3z1rK9ZOSCxnmM5oae7883QeBWjNsfVL2/zBwSmE7aU+piQQsh74gQ+ItJ1w9RyqBaQH1tJBm6rIHU7oebNgyqOcEHDZ+EVG4TiuI1ueTvkcQ07d6QFD7HTYElq+zAtWt1LuP+cwRFHiFR5gLAIWsyfl9n9v+MzAU+bGt/TMH/Ftav8mc2QL4Lo8dAx4v19ReirO78azvj2JDcbxjgIbqZURkKa6GESKBzFgXYScgqEFiYjVN3WLjdJGyVO4y9"
+    },
     "cryptoNetwork": "bitcoin",  // Available values: 'bitcoin' (for Bitcoin's production blockchain), 'testnet' (for Bitcoin's test blockchain)
     "shutdownTimeout": 30000   // (30 sec.) Time, in milliseconds, that the application should wait after it receives a terminate request before it actually terminates
   },
