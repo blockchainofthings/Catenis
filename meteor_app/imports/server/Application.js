@@ -33,6 +33,7 @@ import { makeCtnNodeId } from './CatenisNode';
 import { UtxoConsolidation } from './UtxoConsolidation';
 import { FundTransaction } from './FundTransaction';
 import { Service } from './Service';
+import util from "util";
 
 // Config entries
 const appConfig = config.get('application');
@@ -50,8 +51,12 @@ const cfgSettings = {
     cryptoNetwork: appConfig.get('cryptoNetwork'),
     shutdownTimeout: appConfig.get('shutdownTimeout'),
     adminRole: appConfig.get('adminRole'),
-    defaultAdminUser: appConfig.has('defaultAdminUser') ? appConfig.get('defaultAdminUser') : undefined,
-    defaultAdminPsw: appConfig.has('defaultAdminPsw') ? appConfig.get('defaultAdminPsw') : undefined
+    defaultAdminUser: {
+        username: appConfig.has('defaultAdminUser.username') ? appConfig.get('defaultAdminUser.username') : undefined,
+        psw: appConfig.has('defaultAdminUser.psw') ? appConfig.get('defaultAdminUser.psw') : undefined,
+        email: appConfig.has('defaultAdminUser.email') ? appConfig.get('defaultAdminUser.email') : undefined
+    }
+        
 };
 
 // Catenis Hub node index
@@ -314,21 +319,52 @@ Application.prototype.cipherData = function (data, decipher = false) {
 
 // Note this method must be called ONLY AFTER the KeyStore module is initialized
 Application.prototype.checkAdminUser = function () {
-    if (Roles.getUsersInRole(cfgSettings.adminRole).count() === 0 && cfgSettings.defaultAdminUser && cfgSettings.defaultAdminPsw) {
+    if (Roles.getUsersInRole(cfgSettings.adminRole).count() === 0 && cfgSettings.defaultAdminUser.username && cfgSettings.defaultAdminUser.psw) {
         Catenis.logger.INFO('Creating default admin user');
         // No admin user defined. Create default admin user
-        this.createAdminUser(cfgSettings.defaultAdminUser, this.cipherData(cfgSettings.defaultAdminPsw, true).toString(), 'Catenis default admin user');
+        this.createAdminUser(cfgSettings.defaultAdminUser.username, this.cipherData(cfgSettings.defaultAdminUser.psw, true).toString(), cfgSettings.defaultAdminUser.email, 'Catenis default admin user');
     }
 };
 
-Application.prototype.createAdminUser = function (username, password, description) {
-    const adminUserId = Accounts.createUser({
-        username: username,
-        password: password,
-        profile: {
-            name: description
+Application.prototype.createAdminUser = function (username, password, email, description) {
+    let adminUserId;
+
+    try {
+        adminUserId = Accounts.createUser({
+            username: username,
+            password: password,
+            email: email,
+            profile: {
+                name: description
+            }
+        });
+    }
+    catch (err) {
+        Catenis.logger.ERROR('Error creating new admin user.', err);
+
+        let errorToThrow;
+
+        if ((err instanceof Meteor.Error) && err.error === 403) {
+            if (err.reason === 'Username already exists.') {
+                errorToThrow = new Meteor.Error('ctn_duplicate_username', 'Error creating new user: username already exists');
+            }
+            else if (err.reason === 'Email already exists.') {
+                errorToThrow = new Meteor.Error('ctn_duplicate_email', 'Error creating new user: email already exists');
+            }
+            else if (err.reason === 'Something went wrong. Please check your credentials.') {
+                // Generic credentials error. Try to identify what was wrong
+                if (username && Meteor.users.findOne({username: username}, {fields:{_id: 1}})) {
+                    errorToThrow = new Meteor.Error('ctn_duplicate_username', 'Error creating new user: username already exists');
+                }
+                else if (email && Meteor.users.findOne({emails: {$elemMatch: {address: email}}}, {fields:{_id: 1}})) {
+                    errorToThrow = new Meteor.Error('ctn_duplicate_email', 'Error creating new user: duplicate email address');
+                }
+            }
         }
-    });
+
+        throw errorToThrow ? errorToThrow : new Meteor.Error('ctn_new_user_failure', util.format('Error creating new user: %s', err.toString()));
+    }
+
     Roles.addUsersToRoles(adminUserId, cfgSettings.adminRole);
 
     return adminUserId;

@@ -1349,7 +1349,7 @@ Client.createNewUserForClient = function (username, email, deviceName) {
                     errorToThrow = new Meteor.Error('ctn_client_duplicate_username', 'Error creating new user for client: username already exists');
                 }
                 else if (opts.email && Meteor.users.findOne({emails: {$elemMatch: {address: opts.email}}}, {fields:{_id: 1}})) {
-                    errorToThrow = new Meteor.Error('ctn_client_duplicate_email', 'Error creating new user for client: email already exists');
+                    errorToThrow = new Meteor.Error('ctn_client_duplicate_email', 'Error creating new user for client: duplicate email address');
                 }
             }
         }

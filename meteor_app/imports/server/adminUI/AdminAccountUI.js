@@ -51,10 +51,10 @@ AdminAccountUI.initialize = function () {
     Catenis.logger.TRACE('AdminAccountUI initialization');
     // Declaration of RPC methods to be called from client
     Meteor.methods({
-        createAdminAccount: function (username, password, description) {
+        createAdminAccount: function (username, password, email, description) {
             if (Roles.userIsInRole(this.userId, 'sys-admin')) {
                 try {
-                    return Catenis.application.createAdminUser(username, password, description);
+                    return Catenis.application.createAdminUser(username, password, email, description);
                 }
                 catch (err) {
                     // Error trying to create Catenis admin user account. Log error and throw exception

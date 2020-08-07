@@ -13,8 +13,11 @@
     "cryptoNetwork": "testnet",  // Available values: 'bitcoin' (for Bitcoin's production blockchain), 'testnet' (for Bitcoin's test blockchain)
     "shutdownTimeout": 30000,   // (30 sec.) Time, in milliseconds, that the application should wait after it receives a terminate request before it actually terminates
     "adminRole": "sys-admin",  // User role for application administration
-    "defaultAdminUser": null,  // (optional) Username of application default admin user
-    "defaultAdminPsw": null  // (optional) Ciphered, base64 encoded password for application default admin user
+    defaultAdminUser: {
+      username: null,  // (optional) Username of application default admin user
+      psw: null,  // (optional) Ciphered, base64 encoded password for application default admin user
+      email: null  // (optional) Email address of application default admin user
+    }
   },
   // Parameters pertaining to the Startup module
   "startup": {

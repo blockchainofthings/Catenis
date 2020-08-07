@@ -46,6 +46,19 @@ function validateFormData(form, errMsgs) {
         hasError = true;
     }
 
+    accountInfo.email = form.email.value ? form.email.value.trim() : '';
+
+    if (accountInfo.email.length === 0) {
+        // Email address not supplied. Report error
+        errMsgs.push('Please enter an email address');
+        hasError = true;
+    }
+    else if (!/^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/.test(accountInfo.email)) {
+        // An invalid email address was entered. Report error
+        errMsgs.push('Please enter a valid email address');
+        hasError = true;
+    }
+
     accountInfo.description = form.description.value ? form.description.value.trim() : '';
 
     if (accountInfo.description.length === 0) {
@@ -114,7 +127,7 @@ Template.newAdminAccount.events({
             template.state.set('infoMsg', 'Your request is being processed. Please wait.');
 
             // Call remote method to create new admin account
-            Meteor.call('createAdminAccount', accountInfo.username, accountInfo.password, accountInfo.description, (error, adminUserId) => {
+            Meteor.call('createAdminAccount', accountInfo.username, accountInfo.password, accountInfo.email, accountInfo.description, (error, adminUserId) => {
                 // Reenable buttons
                 btnCancel.disabled = false;
                 btnCreate.disabled = false;
