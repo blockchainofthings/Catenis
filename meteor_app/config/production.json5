@@ -64,7 +64,7 @@
   },
   // Parameters pertaining to BitcoinFees module
   "bitcoinFees": {
-    "retrieveFeesInterval": 86400000,  // (24 hours) Time interval, in milliseconds, for executing method to retrieve latest bitcoin fees
+    "retrieveFeesInterval": 900000,  // (15 min) Time interval, in milliseconds, for executing method to retrieve latest bitcoin fees
     "numDbRecsToMaintain": 2000,  // Number of database docs/recs used to store latest fees that should be maintained when purging the database
     "dbPurgeHours": 2,  // Hours component of time when database purge should take place
     "dbPurgeMinutes": 0,  // Minutes component of time when database purge should take place
