@@ -26,6 +26,7 @@ import './PaidServicesTemplate.html';
 
 // Import dependent templates
 import './PaidServiceDetailsTemplate.js';
+import './PaidServicesHistoryTemplate.js';
 
 
 // Definition of module (private) functions

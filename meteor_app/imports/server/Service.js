@@ -697,48 +697,56 @@ Service.clientPaidService = Object.freeze({
     log_off_chain_message: Object.freeze({
         name: 'log_off_chain_message',
         label: 'Log Off-Chain Message',
+        abbreviation: 'LOM',
         description: 'Record a message off-chain and later settle it to the blockchain',
         costFunction: estimatedLogOffChainMessageCost
     }),
     log_message: Object.freeze({
         name: 'log_message',
         label: 'Log Standard Message',
+        abbreviation: 'LM',
         description: 'Record a message onto the blockchain',
         costFunction: estimatedLogMessageTxCost
     }),
     send_off_chain_message: Object.freeze({
         name: 'send_off_chain_message',
         label: 'Send Off-Chain Message',
+        abbreviation: 'SOM',
         description: 'Record a message off-chain addressing it to another device (with no read confirmation) and later settle it to the blockchain',
         costFunction: estimatedSendOffChainMessageCost
     }),
     send_message: Object.freeze({
         name: 'send_message',
         label: 'Send Standard Message',
+        abbreviation: 'SM',
         description: 'Record a message onto the blockchain addressing it to another device (with no read confirmation)',
         costFunction: estimatedSendMessageTxCost
     }),
     send_off_chain_msg_read_confirm: Object.freeze({
         name: 'send_off_chain_msg_read_confirm',
         label: 'Send Off-Chain Message w/Read Confirmation',
+        abbreviation: 'SOMR',
         description: 'Record a message off-chain addressing it to another device, requesting to receive a read confirm, and later settle it to the blockchain',
         costFunction: estimatedSendOffChainMessageReadConfirmCost
     }),
     send_msg_read_confirm: Object.freeze({
         name: 'send_msg_read_confirm',
-        label: 'Send Message w/Read Confirmation',
+        label: 'Send Standard Message w/Read Confirmation',
+        abbreviation: 'SMR',
         description: 'Record a message onto the blockchain addressing it to another device, requesting to receive a read confirm',
         costFunction: estimatedSendMessageReadConfirmTxCost
     }),
     issue_asset: Object.freeze({
         name: 'issue_asset',
         label: 'Issue Asset',
+        abbreviation: 'IA',
         description: 'Issue an amount of a new Catenis asset',
         costFunction: estimatedIssueAssetTxCost
     }),
     transfer_asset: Object.freeze({
         name: 'transfer_asset',
         label: 'Transfer Asset',
+        abbreviation: 'TA',
         description: 'Transfer an amount of a Catenis asset to another device',
         costFunction: estimatedTransferAssetTxCost
     })

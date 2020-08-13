@@ -1,0 +1,71 @@
+<template name="paidServiceHistoryDetails">
+    <div>
+        <div class="panel panel-login minWidthElement noBoxShadow">
+            <div class="panel-body">
+                <div class="row">
+                    <div class="col-lg-12">
+                        {{#unless Template.subscriptionsReady}}
+                            <p style="color:lightgray; margin-top:1em">Loading...</p>
+                        {{else}}
+                            <h2>SERVICE COST HISTORY
+                                <br><span style="color:dimgray">{{paidService.label}}</span>
+                                <br><br><span style="color:dimgray">{{formatDate historyEntry.date}}</span>
+                            </h2>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="pull-left">
+                                        <a href="/admin/paidservices/history{{backQueryString}}" role="button" class="btn-login btn paddedBtn">Back to Service Cost History</a>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                </div>
+                            </div>
+                            <div class="row" style="padding-top:1em">
+                                <div class="col-lg-12">
+                                    <table class="table table-striped text-left">
+                                        <tbody>
+                                        <tr>
+                                            <th><label class="noMargin">Description:</label></th>
+                                            <td>{{paidService.description}}</td>
+                                        </tr>
+                                        {{#let serviceCost=(objProperty historyEntry.servicesCost paidService._id)}}
+                                        <tr>
+                                            <th><label class="noMargin">Service Cost:</label></th>
+                                            <td>BTC {{formatCoins serviceCost.estimatedServiceCost}}</td>
+                                        </tr>
+                                        <tr>
+                                            <th><label class="noMargin">Price Markup:</label></th>
+                                            <td>{{serviceCost.priceMarkup}}</td>
+                                        </tr>
+                                        <tr>
+                                            <th><label class="noMargin">Service Price (Bitcoin):</label></th>
+                                            <td>BTC {{formatCoins serviceCost.btcServicePrice}}</td>
+                                        </tr>
+                                        <tr>
+                                            <th><label class="noMargin">Bitcoin Price:</label></th>
+                                            <td>USD {{formatCurrency serviceCost.bitcoinPrice}}</td>
+                                        </tr>
+                                        <tr>
+                                            <th><label class="noMargin">BCOT Token Price:</label></th>
+                                            <td>USD {{formatCurrency serviceCost.bcotPrice}}</td>
+                                        </tr>
+                                        <tr>
+                                            <th><label class="noMargin">Exchange Rate (1 BTC = <i>x</i> BCOT):</label></th>
+                                            <td>{{serviceCost.exchangeRate}}</td>
+                                        </tr>
+                                        <tr>
+                                            <th><label class="noMargin">Service Price (Catenis Credit):</label></th>
+                                            <td>{{formatServiceCredits serviceCost.finalServicePrice}}</td>
+                                        </tr>
+                                        {{/let}}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        {{/unless}}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</template>

@@ -94,6 +94,7 @@ import { CatenisOffChainMonitor } from './CatenisOffChainMonitor';
 import { BitcoinInfo } from './BitcoinInfo';
 import { TransactionCache } from './TransactionCache';
 import { ReCaptcha } from './ReCaptcha';
+import { PaidService } from './PaidService';
 // TEST - begin
 //import { TestCatenisColoredCoins } from './test/TestCatenisColoredCoins';
 // TEST - end
@@ -159,6 +160,7 @@ Meteor.startup(function () {
             BitcoinTicker.initialize();
             BitcoinPrice.initialize();
             BcotPrice.initialize();
+            PaidService.initialize();
             KeyStore.initialize();
             BitcoinCore.initialize();
             OmniCore.initialize();

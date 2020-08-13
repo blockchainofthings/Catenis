@@ -207,5 +207,14 @@
   // Parameters pertaining to reCaptcha module
   reCaptcha: {
     useForLogin: true  // Indicates whether reCAPTCHA should be used when logging Catenis users in
+  },
+  // Parameters pertaining to PaidService module
+  paidService: {
+    refTimeZone: "UTC-03:00",  // Reference time zone expressed as a time difference from UTC (in the UTC+/-HH:mm format). Used to determine earliest date to keep history docs/recs
+    daysToKeepHistory: 15,  // (15 days) Period of time, in days, that services cost history records should be kept. After that time, records are subject to being purged
+    historyPurgeHours: 0,  // Hours component of time when purging of PaidServicesHistory database records should take place
+    historyPurgeMinutes: 0,  // Minutes component of time when purging of PaidServicesHistory database records should take place
+    historyPurgeSeconds: 0,  // Seconds component of time when purging of PaidServicesHistory database records should take place
+    historyPurgeInterval: 86400000  // (24 hours) Time interval, in milliseconds, for executing process to purge old PaidServicesHistory database records
   }
 }

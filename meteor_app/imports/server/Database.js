@@ -175,6 +175,17 @@ Database.initialize = function() {
                 }
             }]
         },
+        PaidServicesHistory: {
+            indices: [{
+                fields: {
+                    date: 1
+                },
+                opts: {
+                    background: true,
+                    w: 1
+                }
+            }]
+        },
         IssuedBlockchainAddress: {
             indices: [{
                 fields: {

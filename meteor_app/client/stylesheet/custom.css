@@ -991,3 +991,7 @@ ul.recoveyCode {
     display: table-cell
 }
 /* End: Tooltip style settings */
+
+.pointer-cursor {
+    cursor: default;
+}

@@ -12,13 +12,14 @@
 // Internal node modules
 //import util from 'util';
 // Third-party node modules
-//import config from 'config';
+import _und from 'underscore';
 // Meteor packages
 import { Meteor } from 'meteor/meteor';
 import { Roles } from 'meteor/alanning:roles';
 
 // References code in other (Catenis) modules
 import { Catenis } from '../Catenis';
+import { PaidService } from '../PaidService';
 import { CommonPaidServicesUI } from '../commonUI/CommonPaidServicesUI';
 
 
@@ -57,6 +58,89 @@ PaidServicesUI.initialize = function () {
     Meteor.publish('paidServices', function () {
         if (Roles.userIsInRole(this.userId, 'sys-admin')) {
             CommonPaidServicesUI.paidServices.call(this);
+        }
+        else {
+            // User not logged in or not a system administrator.
+            //  Make sure that publication is not started and throw exception
+            this.stop();
+            throw new Meteor.Error('ctn_admin_no_permission', 'No permission; must be logged in as a system administrator to perform this task');
+        }
+    });
+
+    Meteor.publish('paidServicesHistory', function (startDate, endDate) {
+        if (Roles.userIsInRole(this.userId, 'sys-admin')) {
+            const result = Catenis.paidService.servicesCostHistoryForPeriod(startDate, endDate);
+
+            result.servicesCostHistory.forEach(historyEntry => {
+                this.added('ServicesCostHistory', historyEntry.date.getTime(), {
+                    date: historyEntry.date,
+                    servicesCost: historyEntry.servicesCost
+                });
+            });
+
+            // Add average cost record
+            this.added('ServicesCostHistory', -1, {
+                servicesAverageCost: result.servicesAverageCost
+            });
+
+            this.ready();
+        }
+        else {
+            // User not logged in or not a system administrator.
+            //  Make sure that publication is not started and throw exception
+            this.stop();
+            throw new Meteor.Error('ctn_admin_no_permission', 'No permission; must be logged in as a system administrator to perform this task');
+        }
+    });
+
+    Meteor.publish('singlePaidServiceHistory', function (serviceName, date) {
+        if (Roles.userIsInRole(this.userId, 'sys-admin')) {
+            const result = Catenis.paidService.servicesCostHistoryForPeriod(date, date, false);
+
+            if (result.servicesCostHistory.length > 0) {
+                const historyEntry = result.servicesCostHistory[0];
+
+                this.added('ServicesCostHistory', historyEntry.date.getTime(), {
+                    date: historyEntry.date,
+                    servicesCost: _und.pick(historyEntry.servicesCost, serviceName)
+                });
+            }
+
+            this.ready();
+        }
+        else {
+            // User not logged in or not a system administrator.
+            //  Make sure that publication is not started and throw exception
+            this.stop();
+            throw new Meteor.Error('ctn_admin_no_permission', 'No permission; must be logged in as a system administrator to perform this task');
+        }
+    });
+
+    Meteor.publish('paidServicesInfo', function () {
+        if (Roles.userIsInRole(this.userId, 'sys-admin')) {
+            Object.keys(PaidService.servicesInfo).forEach(serviceName => {
+                this.added('PaidService', serviceName, PaidService.servicesInfo[serviceName]);
+            });
+
+            this.ready();
+        }
+        else {
+            // User not logged in or not a system administrator.
+            //  Make sure that publication is not started and throw exception
+            this.stop();
+            throw new Meteor.Error('ctn_admin_no_permission', 'No permission; must be logged in as a system administrator to perform this task');
+        }
+    });
+
+    Meteor.publish('singlePaidServiceInfo', function (serviceName) {
+        if (Roles.userIsInRole(this.userId, 'sys-admin')) {
+            const serviceInfo = PaidService.serviceInfo(serviceName);
+
+            if (serviceInfo) {
+                this.added('PaidService', serviceName, serviceInfo);
+            }
+
+            this.ready();
         }
         else {
             // User not logged in or not a system administrator.

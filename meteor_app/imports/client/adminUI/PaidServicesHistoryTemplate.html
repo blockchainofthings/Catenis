@@ -1,0 +1,139 @@
+<template name="paidServicesHistory">
+    <div>
+        <div class="panel panel-login minWidthElement noBoxShadow">
+            <div class="panel-body">
+                <div class="row">
+                    <div class="col-lg-12">
+                        {{#unless Template.subscriptionsReady}}
+                            <p style="color:lightgray; margin-top:1em">Loading...</p>
+                        {{else}}
+                            <h2>SERVICE COST HISTORY</h2>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="pull-left">
+                                        <a href="/admin/paidservices" role="button" class="btn-login btn paddedBtn">Back to Service Cost</a>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row" style="margin-bottom:1em">
+                                <div class="col-md-12">
+                                    <div class="left" style="text-align:left; margin-left:1em">
+                                        <label>Filter:</label>
+                                        <div style="margin-left:2em">
+                                            <table class="table simpleTable" style="margin-bottom:0">
+                                                <tbody>
+                                                <tr>
+                                                    <td><label>Services:</label></td>
+                                                    <td>{{{filterServices}}}</td>
+                                                </tr>
+                                                <tr>
+                                                    <td><label>Period:</label></td>
+                                                    <td>{{{filterPeriod}}}</td>
+                                                </tr>
+                                                </tbody>
+                                            </table>
+                                            <a href="" id="lnkResetFilter" data-toggle="modal" data-target="#divResetFilter">Reset Filter</a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {{#unless historyLoaded}}
+                                <p style="color:lightgray; margin-top:1em">Loading history...</p>
+                            {{else}}
+                                <div class="row">
+                                    <div class="col-xs-4 form-group">
+                                        <a href="" id="lnkHistoryRecs">{{linkHistoryRecsLabel}}</a>
+                                    </div>
+                                    <div class="col-xs-4 form-group">
+                                    </div>
+                                    <div class="col-xs-4 form-group">
+                                        {{#if hasLessServiceColumnSets}}<a href="" id="lnkPrevCols" class="show-tooltip" aria-label="Previous services">&lt;&lt;</a>{{/if}}
+                                        {{#if logicalOr hasLessServiceColumnSets hasMoreServiceColumnSets}}&nbsp;Services&nbsp;{{/if}}
+                                        {{#if hasMoreServiceColumnSets}}<a href="" id="lnkNextCols" class="show-tooltip" aria-label="Next services">&gt;&gt;</a>{{/if}}
+                                    </div>
+                                </div>
+                                <table class="table table-striped table-responsive text-left">
+                                    <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        {{#each serviceName in selectedServices}}
+                                            <th class="pointer-cursor">{{#let serv=(service serviceName)}}<span class="show-tooltip" aria-label="{{serv.label}}">{{serv.abbreviation}}</span>{{/let}}</th>
+                                        {{/each}}
+                                    </tr>
+                                    </thead>
+                                    <tbody>
+                                    {{#if showHistoryRecords}}
+                                    {{#let retQS=returnQueryString}}
+                                        {{#each entry in historyEntries}}
+                                            <tr>
+                                                <td>{{formatDate entry.date}}</td>
+                                                {{#each serviceName in selectedServices}}
+                                                    <td><a href="/admin/paidservices/{{serviceName}}/history/{{entry._id}}{{retQS}}">{{#let servCost=(objProperty entry.servicesCost serviceName)}}{{formatServiceCredits servCost.finalServicePrice}}{{/let}}</a></td>
+                                                {{/each}}
+                                            </tr>
+                                        {{/each}}
+                                    {{/let}}
+                                    {{/if}}
+                                    </tbody>
+                                    <tfoot>
+                                    <tr>
+                                        <th>Average</th>
+                                        {{#each serviceName in selectedServices}}
+                                            <th>{{formatServiceCredits (objProperty averageCost serviceName)}}</th>
+                                        {{/each}}
+                                    </tr>
+                                    </tfoot>
+                                </table>
+                            {{/unless}}
+                            {{!Modal panel containing form used to reset history filter}}
+                            <div id="divResetFilter" class="modal fade" tabindex="-1" role="dialog">
+                                <div class="modal-dialog" role="document">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <button id="btnCloseResetFilter1" type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                                            <h4 class="modal-title">Reset History Filter</h4>
+                                        </div>
+                                        <div class="modal-body">
+                                            <form id="frmResetFilter" autocomplete="off">
+                                                <div class="form-group text-left">
+                                                    <label for="selServices" class="input">Services</label><br>
+                                                    <select id="selServices" name="services" class="input" multiple>
+                                                        {{#each servicesOption in servicesOptions}}
+                                                            <option value="{{servicesOption.value}}" {{servicesOption.selected}}>{{servicesOption.label}}</option>
+                                                        {{/each}}
+                                                    </select>
+                                                </div>
+                                                <div class="form-group text-left">
+                                                    <label for="selPeriod" class="input">Period</label><br>
+                                                    <select id="selPeriod" name="period" class="input">
+                                                        {{#each periodOption in periodOptions}}
+                                                            <option value="{{periodOption.value}}" {{periodOption.selected}}>{{periodOption.label}}</option>
+                                                        {{/each}}
+                                                    </select>
+                                                </div>
+                                                <div class="form-group" style="position:relative; display:{{displayFilterStartDate}}">
+                                                    <input id='dtpkrStartDate' name="startDate" type='text' placeholder="Start Date (YYYY-MM-DD HH:mm)" autocomplete="off" />
+                                                </div>
+                                                <div class="form-group" style="position:relative; display:{{displayFilterEndDate}}">
+                                                    <input id='dtpkrEndDate' name="endDate" type='text' placeholder="End Date (YYYY-MM-DD HH:mm)" autocomplete="off" />
+                                                </div>
+                                                <div class="row" style="margin-top:2.5em">
+                                                    <div class="center">
+                                                        <button type="submit" class="btn btn-primary">Reset Filter</button>
+                                                    </div>
+                                                </div>
+                                            </form>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button id="btnCloseResetFilter2" type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        {{/unless}}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</template>

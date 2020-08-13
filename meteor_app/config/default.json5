@@ -1052,5 +1052,14 @@
     siteKey: '',  // (Public) Site key assigned to the Google reCAPTCHA account in use
     secretKey: '??????',  // Secret key assigned to the Google reCAPTCHA account in use
     useForLogin: true  // Indicates whether reCAPTCHA should be used when logging Catenis users in
+  },
+  // Parameters pertaining to PaidService module
+  paidService: {
+    refTimeZone: "UTC+00:00",  // Reference time zone expressed as a time difference from UTC (in the UTC+/-HH:mm format). Used to determine earliest date to keep history docs/recs
+    daysToKeepHistory: 366,  // (1 (leap) year) Period of time, in days, that services cost history records should be kept. After that time, records are subject to being purged
+    historyPurgeHours: 2,  // Hours component of time when purging of PaidServicesHistory database docs/recs should take place
+    historyPurgeMinutes: 0,  // Minutes component of time when purging of PaidServicesHistory database docs/recs should take place
+    historyPurgeSeconds: 0,  // Seconds component of time when purging of PaidServicesHistory database docs/recs should take place
+    historyPurgeInterval: 86400000  // (24 hours) Time interval, in milliseconds, for executing process to purge old PaidServicesHistory database docs/recs
   }
 }

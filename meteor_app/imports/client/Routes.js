@@ -394,6 +394,37 @@ FlowRouter.route('/admin/paidservices', {
     }
 });
 
+FlowRouter.route('/admin/paidservices/history', {
+    action: function (params, queryParams) {
+        BlazeLayout.render('adminLayout', {
+            page: 'paidServicesHistory',
+            dataContext: {
+                showRecs: queryParams.showrecs,
+                svcColSetIdx: queryParams.svccolsetidx,
+                services: queryParams.services,
+                periodId: queryParams.periodid,
+                startDate: queryParams.startdate,
+                endDate: queryParams.enddate
+            }
+        });
+    }
+});
+
+FlowRouter.route('/admin/paidservices/:service_id/history/:timestamp', {
+    action: function (params, queryParams) {
+        queryParams = getQueryParams();
+
+        BlazeLayout.render('adminLayout', {
+            page: 'paidServiceHistoryDetails',
+            dataContext: {
+                service_id: params.service_id,
+                timestamp: params.timestamp,
+                retParams: queryParams.retparams
+            }
+        });
+    }
+});
+
 FlowRouter.route('/admin/paidservices/:service_id', {
     action: function (params) {
         BlazeLayout.render('adminLayout', {
