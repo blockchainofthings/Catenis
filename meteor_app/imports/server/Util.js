@@ -321,7 +321,7 @@ Util.timeReferenceTimeZone = function (time, date, timeZone, returnMoment = fals
 //   date [Date|Object(moment)] - The date, in reference to the local time zone, to convert
 //   timeZone [String] - Reference time zone expressed as a time difference from UTC (in the UTC+/-HH:mm format)
 //   retMoment [Boolean] - Indicates whether a moment Object should be returned instead of a Date object
-Util.dateReferenceTimeZone = function (time, date, timeZone, returnMoment = false) {
+Util.dateReferenceTimeZone = function (date, timeZone, returnMoment = false) {
     const mt = moment(date).utcOffset(timeZone, true);
 
     return returnMoment ? mt : mt.toDate();
