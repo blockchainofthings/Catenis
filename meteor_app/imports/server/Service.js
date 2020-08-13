@@ -1299,7 +1299,7 @@ function numPrePaidServices () {
 // Returns price data for given service
 //
 //  Arguments:
-//   paidService: [String] - Catenis client paid service. One of the properties of Service.clientPaidService
+//   paidService: [Object] - Catenis client paid service. One of the properties of Service.clientPaidService
 //
 //  Return: {
 //    estimatedServiceCost: [Number], - Estimated cost, in satoshis, of the service
