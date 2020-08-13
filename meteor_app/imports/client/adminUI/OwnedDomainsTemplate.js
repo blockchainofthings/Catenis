@@ -269,7 +269,6 @@ Template.ownedDomains.events({
             }
         });
     },
-
     'click #lnkCopyRecName'(event, template) {
         const $button = $(event.currentTarget);
 
