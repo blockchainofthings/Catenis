@@ -30,14 +30,14 @@ BitcoinFees {
 
 BitcoinPrice {
   _id: [string],  // MongoDB internal document ID provided by Meteor
-  price: [numeric],  // Current bitcoin price expressed in USD
+  price: [number],  // Current bitcoin price expressed in USD
   referenceDate: [date/time],  // Date and time when price had been observed
   createdDate: [date/time]  // Date and time when doc/rec has been created
 }
 
 BcotPrice {
   _id: [string],  // MongoDB internal document ID provided by Meteor
-  price: [numeric],  // Current BCOT token price (as set by BCoT) expressed in USD
+  price: [number],  // Current BCOT token price (as set by BCoT) expressed in USD
   createdDate: [date/time]  // Date and time when doc/rec has been created
 }
 
