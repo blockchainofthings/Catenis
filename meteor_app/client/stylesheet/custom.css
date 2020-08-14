@@ -571,6 +571,12 @@ label {
     text-decoration: underline;
     color: #666;
 }
+.panel-heading .bottom-line {
+    margin:1rem;
+}
+.panel-heading .bottom-line a:hover {
+    text-decoration: underline;
+}
 
 .btn-register {
     background-color: #E8E9EC;

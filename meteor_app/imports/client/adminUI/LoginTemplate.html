@@ -3,7 +3,7 @@
         <div class="row paddingTop90px">
             <div class="col-md-6 col-md-offset-3">
                 <div class="panel panel-login">
-                    <div class="panel-body">
+                    <div class="panel-body" style="margin-bottom:1rem">
                         <div class="row">
                             <div class="col-lg-12">
                                 <!--this is where the page title goes-->
@@ -19,28 +19,28 @@
                             <!--1. Login page-->
                             {{#if (equals atFormTitle "SIGN IN")}}
                                 <div class="col-xs-6 tabs">
-                                    <a href="#" class="active" id="forgotPwd-form-link"><div class="login">FORGOT PASSWORD?</div></a>
+                                    <div class="bottom-line"><a href="#" id="forgotPwd-form-link">Forgot password?</a></div>
                                 </div>
                             {{/if}}
 
                             <!--2. Forgot Password Page-->
                             {{#if (equals atFormTitle "RESET PASSWORD")}}
                                 <div class="col-xs-6 tabs">
-                                    <a href="#" class="active" id="login-form-link"><div class="login">SIGN IN</div></a>
+                                    <div class="bottom-line"><a href="#" id="login-form-link">Sign in</a></div>
                                 </div>
                             {{/if}}
 
                             <!--3. Enroll Account Page-->
                             {{#if (equals atFormTitle "ENROLL ACCOUNT")}}
                                 <div class="col-xs-6 tabs">
-                                    <a href="/admin" class="active" id="SIGN IN-form-link"><div class="login">SIGN IN</div></a>
+                                    <div class="bottom-line"><a href="/" id="signin-form-link">Sign in</a></div>
                                 </div>
                             {{/if}}
 
                             <!--4. Two-factor Verification page-->
                             {{#if (equals atFormTitle "TWO-FACTOR VERIFICATION")}}
                                 <div class="col-xs-6 tabs">
-                                    <a href="#" class="active" id="cancel-2fa-link"><div class="login">CANCEL</div></a>
+                                    <div class="bottom-line"><a href="#" id="cancel-2fa-link">Cancel</a></div>
                                 </div>
                             {{/if}}
                             <!--here to add more pages-->
