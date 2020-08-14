@@ -78,9 +78,9 @@ ClientPaidServicesUI.initialize = function () {
         }
     });
 
-    Meteor.publish('clientSinglePaidService', function (serviceId) {
+    Meteor.publish('clientSinglePaidService', function (serviceName) {
         if (Roles.userIsInRole(this.userId, 'ctn-client')) {
-            CommonPaidServicesUI.singlePaidService.call(this, serviceId);
+            CommonPaidServicesUI.singlePaidService.call(this, serviceName);
         }
         else {
             // User not logged in or not a Catenis client.

@@ -18,15 +18,8 @@ import _und from 'underscore';
 
 // References code in other (Catenis) modules
 import { Catenis } from '../Catenis';
-import {
-    getServicePrice,
-    Service
-} from '../Service';
-import { BcotPrice } from '../BcotPrice';
-import { BitcoinPrice } from '../BitcoinPrice';
-import { BitcoinFees } from '../BitcoinFees';
 import { Billing } from '../Billing';
-
+import { PaidService } from '../PaidService';
 
 // Definition of function classes
 //
@@ -61,7 +54,7 @@ export function CommonPaidServicesUI() {
 //  NOTE: this method should be called via the predefined function method .call() passing the context (this)
 //      of the caller publication function (i.e. method.call(this, ...))
 CommonPaidServicesUI.paidServices = function () {
-    let paidServices = retrieveCurrentPaidServices();
+    let paidServices = retrieveAllPaidServices();
 
     // Set initial service price docs/recs
     paidServices.forEach((doc) => {
@@ -71,7 +64,7 @@ CommonPaidServicesUI.paidServices = function () {
     this.ready();
 
     const checkPaidServiceChanged = () => {
-        const currPaidServices = retrieveCurrentPaidServices();
+        const currPaidServices = retrieveAllPaidServices();
 
         for (let idx = 0, limit = currPaidServices.length; idx < limit; idx++) {
             const origDoc = paidServices[idx];
@@ -86,15 +79,11 @@ CommonPaidServicesUI.paidServices = function () {
         paidServices = currPaidServices;
     };
 
-    // Set up listeners to monitor changes in values that are used to calculate service price
-    Catenis.bcotPrice.on(BcotPrice.notifyEvent.new_bcot_price.name, checkPaidServiceChanged);
-    Catenis.btcPrice.on(BitcoinPrice.notifyEvent.new_bitcoin_price.name, checkPaidServiceChanged);
-    Catenis.bitcoinFees.on(BitcoinFees.notifyEvent.bitcoin_fees_changed.name, checkPaidServiceChanged);
+    // Set up listener to monitor changes in paid services cost
+    Catenis.paidService.on(PaidService.notifyEvent.services_cost_changed.name, checkPaidServiceChanged);
 
     this.onStop(() => {
-        Catenis.bcotPrice.removeListener(BcotPrice.notifyEvent.new_bcot_price.name, checkPaidServiceChanged);
-        Catenis.btcPrice.removeListener(BitcoinPrice.notifyEvent.new_bitcoin_price.name, checkPaidServiceChanged);
-        Catenis.bitcoinFees.removeListener(BitcoinFees.notifyEvent.bitcoin_fees_changed.name, checkPaidServiceChanged);
+        Catenis.paidService.removeListener(PaidService.notifyEvent.services_cost_changed.name, checkPaidServiceChanged);
     });
 };
 
@@ -117,19 +106,17 @@ CommonPaidServicesUI.paidServiceNames = function () {
 //
 //  NOTE: this method should be called via the predefined function method .call() passing the context (this)
 //      of the caller publication function (i.e. method.call(this, ...))
-CommonPaidServicesUI.singlePaidService = function (serviceId) {
-    const clientPaidService = Service.clientPaidService[serviceId];
+CommonPaidServicesUI.singlePaidService = function (serviceName) {
+    let paidServiceDoc = retrieveSinglePaidService(serviceName);
 
-    if (clientPaidService) {
-        let paidServiceDoc = getCurrentPaidServiceDoc(clientPaidService);
-
+    if (paidServiceDoc) {
         // Set initial service price docs/recs
         this.added('PaidService', paidServiceDoc.id, paidServiceDoc.fields);
 
         this.ready();
 
         const checkPaidServiceChanged = () => {
-            const currPaidServiceDoc = getCurrentPaidServiceDoc(clientPaidService);
+            const currPaidServiceDoc = retrieveSinglePaidService(serviceName);
 
             const changedFields = paidServiceChangedFields(paidServiceDoc, currPaidServiceDoc);
 
@@ -140,15 +127,11 @@ CommonPaidServicesUI.singlePaidService = function (serviceId) {
             paidServiceDoc = currPaidServiceDoc;
         };
 
-        // Set up listeners to monitor changes in values that are used to calculate service price
-        Catenis.bcotPrice.on(BcotPrice.notifyEvent.new_bcot_price.name, checkPaidServiceChanged);
-        Catenis.btcPrice.on(BitcoinPrice.notifyEvent.new_bitcoin_price.name, checkPaidServiceChanged);
-        Catenis.bitcoinFees.on(BitcoinFees.notifyEvent.bitcoin_fees_changed.name, checkPaidServiceChanged);
+        // Set up listener to monitor changes in paid services cost
+        Catenis.paidService.on(PaidService.notifyEvent.services_cost_changed.name, checkPaidServiceChanged);
 
         this.onStop(() => {
-            Catenis.bcotPrice.removeListener(BcotPrice.notifyEvent.new_bcot_price.name, checkPaidServiceChanged);
-            Catenis.btcPrice.removeListener(BitcoinPrice.notifyEvent.new_bitcoin_price.name, checkPaidServiceChanged);
-            Catenis.bitcoinFees.removeListener(BitcoinFees.notifyEvent.bitcoin_fees_changed.name, checkPaidServiceChanged);
+            Catenis.paidService.removeListener(PaidService.notifyEvent.services_cost_changed.name, checkPaidServiceChanged);
         });
     }
     else {
@@ -170,10 +153,14 @@ CommonPaidServicesUI.billingPaidServiceName = function (billing_id) {
         }
     });
 
-    if (docBilling && docBilling.service in Service.clientPaidService) {
-        this.added('PaidService', docBilling.service, {
-            service: Service.clientPaidService[docBilling.service].label
-        });
+    if (docBilling) {
+        const serviceInfo = PaidService.serviceInfo(docBilling.service);
+
+        if (serviceInfo) {
+            this.added('PaidService', docBilling.service, {
+                service: serviceInfo.label
+            });
+        }
     }
 
     this.ready();
@@ -189,43 +176,44 @@ CommonPaidServicesUI.billingPaidServiceName = function (billing_id) {
 // Definition of module (private) functions
 //
 
-function getCurrentPaidServiceDoc(clientPaidService) {
-    const doc = {
-        id: clientPaidService.name,
+function paidServiceDoc(serviceName, serviceCost) {
+    const serviceInfo = PaidService.serviceInfo(serviceName);
+
+    return {
+        id: serviceName,
         fields: {
-            service: clientPaidService.label,
-            description: clientPaidService.description
+            service: serviceInfo.label,
+            description: serviceInfo.description,
+            ...serviceCost
         }
-    };
-
-    _und.extend(doc.fields, getServicePrice(clientPaidService));
-
-    return doc;
+    }
 }
 
-function retrieveCurrentPaidServices() {
-    const docs = [];
+function retrieveAllPaidServices() {
+    const servicesCost = Catenis.paidService.servicesCost();
 
-    Object.values(Service.clientPaidService).forEach((clientPaidService) => {
-        docs.push(getCurrentPaidServiceDoc(clientPaidService));
-    });
+    return Object.keys(servicesCost).reduce((docs, serviceName) => {
+        docs.push(paidServiceDoc(serviceName, servicesCost[serviceName]));
 
-    return docs;
+        return docs;
+    }, []);
+}
+
+function retrieveSinglePaidService(serviceName) {
+    return paidServiceDoc(serviceName, Catenis.paidService.serviceCost(serviceName));
 }
 
 function retrievePaidServiceNames() {
-    const docs = [];
-
-    Object.values(Service.clientPaidService).forEach((clientPaidService) => {
+    return Object.keys(PaidService.servicesInfo).reduce((docs, serviceName) => {
         docs.push({
-            id: clientPaidService.name,
+            id: serviceName,
             fields: {
-                service: clientPaidService.label
+                service: PaidService.servicesInfo[serviceName].label
             }
         });
-    });
 
-    return docs;
+        return docs;
+    }, []);
 }
 
 function paidServiceChangedFields(origDoc, newDoc) {

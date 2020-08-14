@@ -162,9 +162,9 @@ PaidServicesUI.initialize = function () {
         }
     });
 
-    Meteor.publish('singlePaidService', function (serviceId) {
+    Meteor.publish('singlePaidService', function (serviceName) {
         if (Roles.userIsInRole(this.userId, 'sys-admin')) {
-            CommonPaidServicesUI.singlePaidService.call(this, serviceId);
+            CommonPaidServicesUI.singlePaidService.call(this, serviceName);
         }
         else {
             // User not logged in or not a system administrator.
