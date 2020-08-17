@@ -44,7 +44,7 @@ Accounts.config({
 });
 
 // Change accounts templates settings
-const pwd = AccountsTemplates.removeField('password');
+const pwdField = AccountsTemplates.removeField('password');
 
 AccountsTemplates.addFields([{
     _id: 'username',
@@ -52,7 +52,7 @@ AccountsTemplates.addFields([{
     displayName: 'Username',
     required: true,
     minLength: 5,
-}, pwd, {
+}, pwdField, {
     _id: 'verify_code',
     type: 'text',
     displayName: 'Verification code',
@@ -101,12 +101,15 @@ AccountsTemplates.configure({
         },
         button: {
             changePwd: 'Change Password',
-            enrollAccount: 'Enroll Account',
-            forgotPwd: 'Send Email Link',
+            enrollAccount: 'Activate Account',
+            forgotPwd: 'Send Email',
             resetPwd: 'Reset Password',
             signIn: 'Sign In'
+        },
+        info: {
+            pwdSet: 'Password set'
         }
-    },
+    }
 });
 
 // Configure special routes for accounts templates
@@ -130,12 +133,31 @@ AccountsTemplates.configureRoute('enrollAccount', {
     }
 });
 
+if (Meteor.isClient) {
+    Meteor.startup(function () {
+        // Reset placeholder text for password fields used in enroll account form
+        //  NOTE: we need to do it here (at meteor startup) because the password_again field
+        //      is only added during the initialization of the accounts templates which takes
+        //      place at meteor startup (on the client)
+        const pwdField = AccountsTemplates.getField('password');
+        const pwdAgainField = AccountsTemplates.getField('password_again');
+
+        if (typeof pwdField.placeholder === 'object') {
+            pwdField.placeholder.enrollAccount = pwdField.placeholder.resetPwd;
+        }
+
+        if (typeof pwdAgainField.placeholder === 'object') {
+            pwdAgainField.placeholder.enrollAccount = pwdAgainField.placeholder.resetPwd;
+        }
+    });
+}
+
 let monitoringState = false;
 
 function monitorState() {
     if (Meteor.isClient && !monitoringState) {
         Tracker.autorun(() => {
-            const state = AccountsTemplates.state.form.get('state');
+            const state = AccountsTemplates.getState();
 
             // Clear two-factor verification indication whenever state changes
             AccountsTemplates.state.form.set("2faVerify", false);

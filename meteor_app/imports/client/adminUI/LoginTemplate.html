@@ -8,6 +8,7 @@
                             <div class="col-lg-12">
                                 <!--this is where the page title goes-->
                                 <h2>{{atFormTitle}}</h2>
+                                <div class="instruction">{{atFormInstruction}}</div>
                                 {{>atForm}}
                             </div>
                         </div>
@@ -24,20 +25,13 @@
                             {{/if}}
 
                             <!--2. Forgot Password Page-->
-                            {{#if (equals atFormTitle "RESET PASSWORD")}}
+                            {{#if (equals atFormTitle "REQUEST PASSWORD RESET")}}
                                 <div class="col-xs-6 tabs">
                                     <div class="bottom-line"><a href="#" id="login-form-link">Sign in</a></div>
                                 </div>
                             {{/if}}
 
-                            <!--3. Enroll Account Page-->
-                            {{#if (equals atFormTitle "ENROLL ACCOUNT")}}
-                                <div class="col-xs-6 tabs">
-                                    <div class="bottom-line"><a href="/" id="signin-form-link">Sign in</a></div>
-                                </div>
-                            {{/if}}
-
-                            <!--4. Two-factor Verification page-->
+                            <!--3. Two-factor Verification page-->
                             {{#if (equals atFormTitle "TWO-FACTOR VERIFICATION")}}
                                 <div class="col-xs-6 tabs">
                                     <div class="bottom-line"><a href="#" id="cancel-2fa-link">Cancel</a></div>

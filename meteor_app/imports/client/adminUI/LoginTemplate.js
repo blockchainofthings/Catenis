@@ -62,21 +62,38 @@ Template.login.events({
 
 Template.login.helpers({
     atFormTitle() {
-        if (AccountsTemplates.getState() === 'signIn') {
+        const state = AccountsTemplates.getState();
+
+        if (state === 'signIn') {
             return AccountsTemplates.state.form.get("2faVerify") ? "TWO-FACTOR VERIFICATION" : "SIGN IN";
         }
-        else if (AccountsTemplates.getState() === 'forgotPwd') {
-            return "RESET PASSWORD";
+        else if (state === 'forgotPwd') {
+            return "REQUEST PASSWORD RESET";
         }
-        else if (AccountsTemplates.getState() === 'enrollAccount') {
-            return "ENROLL ACCOUNT";
+        else if (state === 'enrollAccount') {
+            return "ACTIVATE NEW ACCOUNT";
         }
-        else if (AccountsTemplates.getState() === 'resetPwd') {
-            return AccountsTemplates.state.form.get("2faVerify") ? "TWO-FACTOR VERIFICATION" : "RESET PASSWORD NOW";
+        else if (state === 'resetPwd') {
+            return AccountsTemplates.state.form.get("2faVerify") ? "TWO-FACTOR VERIFICATION" : "RESET PASSWORD";
         }
         else {
             return "Something went wrong";
         }
+    },
+    atFormInstruction() {
+        let instruction;
+
+        switch (AccountsTemplates.getState()) {
+            case 'enrollAccount':
+                instruction = 'Set the password to active your account';
+                break;
+
+            case 'forgotPwd':
+                instruction = 'Enter your email address to receive instructions on how to reset your password';
+                break;
+        }
+
+        return instruction;
     },
     equals(v1, v2) {
         return v1 === v2;

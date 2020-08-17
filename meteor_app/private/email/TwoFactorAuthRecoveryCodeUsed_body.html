@@ -10,18 +10,30 @@
             font-size: 10.5pt;
             color: #333333
         }
-        p.session_start {
-            margin-top: 1.5em
+        div#div-catenis-email-body {
+            margin: 0;
+            padding: 0;
+            border: none;
+        }
+        div#div-catenis-email-body p {
+            line-height: normal;
+            margin-top: 0;
+            margin-bottom: 1em;
+        }
+        div#div-catenis-email-body p.session_start {
+            margin-top: 1.5em;
         }
     </style>
 </head>
 <body>
+<div id="div-catenis-email-body">
 <p>Dear customer,<p>
 <p class="session_start">This is to let you know that one of your two-factor authentication recovery codes has just been used to gain access to your Catenis Enterprise client account.<p>
 <p>If it was not you who used the recovery code, it is possible that your account credentials have been compromised. In that case, we advise that you immediately reset your password by following the link below:<p>
-<p>{!url}</p>
+<p><a href="{!url}">{!url}</a></p>
 <p>If you have trouble accessing your account, please contact us, and we will assist you.</p>
 <p>Otherwise, no action is required.</p>
 <p class="session_start">The Blockchain of Things team</p>
+</div>
 </body>
 </html>

@@ -19,6 +19,8 @@ import { Accounts } from 'meteor/accounts-base';
 // References code in other (Catenis) modules
 import { Catenis } from './Catenis';
 import { EmailContents } from './EmailContents';
+import { Client } from './Client';
+import { Util } from './Util';
 
 // Config entries
 const accountsEmailConfig = config.get('accountsEmail');
@@ -72,15 +74,23 @@ AccountsEmail.initialize = function () {
     };
 
     Accounts.emailTemplates.enrollAccount.text = (user, url) => {
+        const client = Client.getClientByUserId(user._id);
+
         return enrollAccEmailContents.textBody({
             username: user.username,
+            accountNumber: client && client.props.accountNumber ? client.props.accountNumber : undefined,
+            licenseType: client && client.clientLicense && client.clientLicense.hasLicense() ? licenseName(client.clientLicense.license) : undefined,
             url: url
         });
     };
 
     Accounts.emailTemplates.enrollAccount.html = (user, url) => {
+        const client = Client.getClientByUserId(user._id);
+
         return enrollAccEmailContents.htmlBody({
             username: user.username,
+            accountNumber: client && client.props.accountNumber ? client.props.accountNumber : undefined,
+            licenseType: client && client.clientLicense && client.clientLicense.hasLicense() ? licenseName(client.clientLicense.license) : undefined,
             url: url
         });
     };
@@ -114,8 +124,15 @@ AccountsEmail.initialize = function () {
 // Definition of module (private) functions
 //
 
-/*function module_func() {
-}*/
+function licenseName(license) {
+    let licName = Util.capitalize(license.level);
+
+    if (license.type) {
+        licName += ' (' + docLicense.type + ')';
+    }
+
+    return licName;
+}
 
 
 // Module code

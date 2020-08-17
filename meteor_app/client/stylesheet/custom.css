@@ -474,6 +474,9 @@ label {
     font-weight: 300;
     margin: 30px;
 }
+.panel-login .instruction {
+    margin: -20px 30px 10px 30px
+}
 .panel-login>.panel-heading {
     color: #848c9d;
     background-color: #e8e9ec;

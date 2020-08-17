@@ -1,6 +1,18 @@
-Dear customer,
+Welcome!
 
-We are glad to announce that your Catenis Enterprise client account ({!username}) has successfully been create. To activate it, please follow the link below:
+Your Catenis Enterprise client account has been successfully created.
+
+Account information:
+
+  Username: {!username} *
+
+  Account number: {!accountNumber}
+
+  License type: {!licenseType}
+
+* The username is case sensitive and cannot be changed.
+
+Follow the link below to set the password for your new account and activate it:
 
 {!url}
 
