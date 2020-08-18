@@ -226,6 +226,34 @@
   "bcotToken": {
     "bcotOmniPropertyId": 2147484804  // BCOT token Omni property ID
   },
+  // Parameters pertaining to AccountsEmail module
+  accountsEmail: {
+    fromAddress: "Catenis Enterprise [Sandbox] <noreply@blockchainofthings.com>"  // E-mail address used to send accounts related e-mail messages
+  },
+  // Parameters pertaining to LicenseExpireEmailNotify module
+  licenseExpireEmailNotify: {
+    fromAddress: "Catenis Enterprise [Sandbox] <noreply@blockchainofthings.com>"  // E-mail address of sender of e-mail notification message
+  },
+  // Parameters pertaining to LicenseOverdueEmailNotify module
+  licenseOverdueEmailNotify: {
+    fromAddress: "Catenis Enterprise [Sandbox] <noreply@blockchainofthings.com>"  // E-mail address of sender of e-mail notification message
+  },
+  // Parameters pertaining to LicenseExpireRemindEmailNotify module
+  licenseExpireRemindEmailNotify: {
+    fromAddress: "Catenis Enterprise [Sandbox] <noreply@blockchainofthings.com>"  // E-mail address of sender of e-mail notification message
+  },
+  // Parameters pertaining to DevicesDisableEmailNotify module
+  devicesDisabledEmailNotify: {
+    fromAddress: "Catenis Enterprise [Sandbox] <noreply@blockchainofthings.com>"  // E-mail address of sender of e-mail notification message
+  },
+  // Parameters pertaining to TwoFactorAuthentication module
+  twoFactorAuthentication: {
+    recoveryCode: {
+      usageNotifyEmail: {
+        fromAddress: "Catenis Enterprise [Sandbox] <noreply@blockchainofthings.com>"  // E-mail address used to send recovery code used notification e-mail
+      }
+    }
+  },
   // Parameters pertaining to OffChainMessagesSettlement module
   offChainMessagesSettlement: {
     refTimeZone: "UTC-05:00",  // Reference time zone expressed as a time difference from UTC (in the UTC+/-HH:mm format)

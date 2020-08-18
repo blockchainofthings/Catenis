@@ -168,9 +168,29 @@
     "unconfirmedTxTimeout": 10080,  // (7 days) Timeout, in minutes, for waiting for latest sent spend service credit tx to be confirmed (set to 7 days, which is half the default mempool tx eviction time of 14 days)
     "txSizeThresholdRatio": 0.9  // Ratio that should be applied to maximum tx size to calculate threshold for spend service credit tx size. Above that size the tx fee rate should be reset so that is is confirmed as soon as possible
   },
+  // Parameters pertaining to AccountsEmail module
+  accountsEmail: {
+    fromAddress: "Catenis Enterprise [Development] <noreply@blockchainofthings.com>"  // E-mail address used to send accounts related e-mail messages
+  },
   // Parameters pertaining to ClientLicense module
   "clientLicense": {
     "licenseMonitorInterval": 5  // Time interval, in minutes, used to monitor client licenses for update and expiration reminder.
+  },
+  // Parameters pertaining to LicenseExpireEmailNotify module
+  licenseExpireEmailNotify: {
+    fromAddress: "Catenis Enterprise [Development] <noreply@blockchainofthings.com>"  // E-mail address of sender of e-mail notification message
+  },
+  // Parameters pertaining to LicenseOverdueEmailNotify module
+  licenseOverdueEmailNotify: {
+    fromAddress: "Catenis Enterprise [Development] <noreply@blockchainofthings.com>"  // E-mail address of sender of e-mail notification message
+  },
+  // Parameters pertaining to LicenseExpireRemindEmailNotify module
+  licenseExpireRemindEmailNotify: {
+    fromAddress: "Catenis Enterprise [Development] <noreply@blockchainofthings.com>"  // E-mail address of sender of e-mail notification message
+  },
+  // Parameters pertaining to DevicesDisableEmailNotify module
+  devicesDisabledEmailNotify: {
+    fromAddress: "Catenis Enterprise [Development] <noreply@blockchainofthings.com>"  // E-mail address of sender of e-mail notification message
   },
   // Parameters pertaining to ProvisionalMessage module
   "provisionalMessage": {
@@ -188,8 +208,13 @@
     "purgeOldMessagesInterval": 43200000  // (12 hours) Time interval, in milliseconds, for executing method to purge old cached messages
   },
   // Parameters pertaining to TwoFactorAuthentication module
-  "twoFactorAuthentication": {
-    "userVerificationInterval": 3600  // (1 hour) Time, in seconds, within which it is expected that the user verifies a newly issued secret key
+  twoFactorAuthentication: {
+    userVerificationInterval: 3600,  // (1 hour) Time, in seconds, within which it is expected that the user verifies a newly issued secret key
+    recoveryCode: {
+      usageNotifyEmail: {
+        fromAddress: "Catenis Enterprise [Development] <noreply@blockchainofthings.com>"  // E-mail address used to send recovery code used notification e-mail
+      }
+    }
   },
   // Parameters pertaining to CatenisOffChainClient module
   catenisOffChainClient: {
