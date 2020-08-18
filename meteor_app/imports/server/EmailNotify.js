@@ -12,7 +12,7 @@
 // Internal node modules
 //import util from 'util';
 // Third-party node modules
-import Future from 'fibers/Future';
+import Future from 'fibers/future';
 // Meteor packages
 //import { Meteor } from 'meteor/meteor';
 import { Email } from 'meteor/email';
