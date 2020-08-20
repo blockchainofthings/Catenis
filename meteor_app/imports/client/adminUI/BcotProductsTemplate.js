@@ -94,6 +94,9 @@ function validateCreateProductFormData(form, errMsgs) {
                 focusSet = true;
             }
         }
+        else {
+            productInfo.sku = value;
+        }
     }
 
     return !hasError ? productInfo : undefined;
