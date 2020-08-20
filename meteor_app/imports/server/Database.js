@@ -2605,7 +2605,7 @@ function initLicense() {
         // No license rec/docs exist yet. Add default license entries
         const now = new Date();
 
-        cfgSettings.defaultLicenses.forEach((license) => {
+        config.util.cloneDeep(cfgSettings.defaultLicenses).forEach((license) => {
             license.level = conformStrIdField(license.level);
 
             if (license.type) {
@@ -2652,7 +2652,7 @@ function initBcotProduct() {
         // No BCOT token product rec/docs exist yet. Add default products
         const now = new Date();
 
-        cfgSettings.defaultBcotProducts.forEach((bcotProduct) => {
+        config.util.cloneDeep(cfgSettings.defaultBcotProducts).forEach((bcotProduct) => {
             bcotProduct.active = true;
             bcotProduct.createdDate = now;
 
