@@ -71,7 +71,7 @@
                                         </tr>
                                         {{#let actualCost=(actualServiceCost billing)}}
                                             <tr>
-                                                <th><label class="noMargin">Actual Cost (*):</label></th>
+                                                <th><label class="noMargin">Actual Cost *:</label></th>
                                                 <td>{{#if actualCost}}BTC {{formatCoins actualCost}}{{/if}}</td>
                                             </tr>
                                         {{/let}}
@@ -109,7 +109,7 @@
                             </div>
                             <div class="row">
                                 <div class="col-md-12 text-left">
-                                    <p style="margin-left:2em">(*) Includes cost of service payment transaction (after its confirmation).</p>
+                                    <p style="margin-left:2em">* Includes cost of service payment transaction (after its confirmation).</p>
                                 </div>
                             </div>
                         {{/unless}}
