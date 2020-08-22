@@ -37,12 +37,15 @@ const addStandbyVouchersInitialState = true;
 function validateFormData(form, template, callback) {
     const clientInfo = {};
     const errMsgs = [];
+    let focusSet = false;
 
     clientInfo.name = form.clientName.value ? form.clientName.value.trim() : '';
 
     if (clientInfo.name.length === 0) {
         // Client name not supplied. Report error
         errMsgs.push('Please enter a client name');
+        form.clientName.focus();
+        focusSet = true;
     }
 
     clientInfo.username = form.username.value ? form.username.value.trim() : '';
@@ -50,6 +53,11 @@ function validateFormData(form, template, callback) {
     if (clientInfo.username.length === 0) {
         // Username not supplied. Report error
         errMsgs.push('Please enter a username');
+
+        if (!focusSet) {
+            form.username.focus();
+            focusSet = true;
+        }
     }
 
     clientInfo.firstName = form.firstName.value ? form.firstName.value.trim() : undefined;
@@ -60,6 +68,21 @@ function validateFormData(form, template, callback) {
         || clientInfo.lastName.length === 0) && (!clientInfo.company || clientInfo.company.length === 0)) {
         // Neither first name, last name nor company name supplied. Report error
         errMsgs.push('Please enter at least one of: first name, last name, or company');
+
+        if (!focusSet) {
+            if (!clientInfo.firstName || clientInfo.firstName.length === 0) {
+                form.firstName.focus();
+                focusSet = true;
+            }
+            else if (!clientInfo.lastName || clientInfo.lastName.length === 0) {
+                form.lastName.focus();
+                focusSet = true;
+            }
+            else {
+                form.companyName.focus();
+                focusSet = true;
+            }
+        }
     }
 
     clientInfo.email = form.email.value ? form.email.value.trim() : '';
@@ -67,6 +90,11 @@ function validateFormData(form, template, callback) {
     if (clientInfo.email.length === 0) {
         // Email not supplied. Report error
         errMsgs.push('Please enter an email address');
+
+        if (!focusSet) {
+            form.email.focus();
+            focusSet = true;
+        }
     }
     else {
         if (template.state.get('needsConfirmEmail') && !template.state.get('emailConfirmed')) {
@@ -83,6 +111,11 @@ function validateFormData(form, template, callback) {
     if (clientInfo.licenseInfo.license_id.length === 0) {
         // No license selected. Report error
         errMsgs.push('Please select a license.');
+
+        if (!focusSet) {
+            form.license.focus();
+            focusSet = true;
+        }
     }
 
     const startDate = $(form.licenseStartDate).data('DateTimePicker').date();
@@ -97,6 +130,11 @@ function validateFormData(form, template, callback) {
         if (!endDate) {
             // No license end date to override validity. Report error
             errMsgs.push('Please enter a license end date.');
+
+            if (!focusSet) {
+                form.licenseEndDate.focus();
+                focusSet = true;
+            }
         }
         else {
             clientInfo.licenseInfo.endDate = endDate.format('YYYY-MM-DD');
@@ -123,6 +161,11 @@ function validateFormData(form, template, callback) {
             // Purchase codes not supplied. Report error
             errMsgs.push('Please enter at least one Catenis voucher ID');
 
+            if (!focusSet) {
+                form.purchaseCodes.focus();
+                focusSet = true;
+            }
+
             // Return error
             callback(errMsgs);
         }
@@ -137,6 +180,11 @@ function validateFormData(form, template, callback) {
                 if (!isValid) {
                     // Supplied purchase codes are not valid. Report error
                     errMsgs.push('At least one of Catenis voucher IDs are not valid');
+
+                    if (!focusSet) {
+                        form.purchaseCodes.focus();
+                        focusSet = true;
+                    }
                 }
                 else {
                     clientInfo.standbyPurchasedCodes = enteredPurchaseCodes;
@@ -399,6 +447,9 @@ Template.newClient.events({
                 template.state.set('infoMsg', util.format('New client (client ID: %s) successfully created.', clientId));
                 template.state.set('infoMsgType', 'success');
             }
+
+            // Force page to scroll to top so user can see result message
+            $(window).scrollTop(0);
         });
     },
     'submit #frmNewClient'(event, template) {
@@ -414,6 +465,8 @@ Template.newClient.events({
         validateFormData(form, template, (errMsgs, clientInfo) => {
             if (errMsgs) {
                 template.state.set('errMsgs', errMsgs);
+                // Force page to scroll to top so user can see error message
+                $(window).scrollTop(0);
             }
             else {
                 template.state.set('validatedClientInfo', clientInfo);
