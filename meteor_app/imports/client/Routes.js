@@ -616,3 +616,15 @@ FlowRouter.route('/admin/resources', {
         });
     }
 });
+
+FlowRouter.route('/admin/clients/:client_id/standbyvouchers', {
+    action: function (params) {
+        BlazeLayout.render('adminLayout', {
+            page: 'standbyPurchasedBcot',
+            dataContext: {
+                client_id: params.client_id
+            }
+        });
+    }
+});
+

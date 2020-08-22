@@ -1,0 +1,201 @@
+<template name="standbyPurchasedBcot">
+    <div>
+        <div class="panel panel-login minWidthElement noBoxShadow">
+            <div class="panel-body">
+                <div class="row">
+                    <div class="col-lg-12">
+                        {{#unless Template.subscriptionsReady}}
+                            <p style="color:lightgray; margin-top:1em">Loading...</p>
+                        {{else}}
+                            <h2>CLIENT<br><span style="color:dimgray">{{clientTitle client}}</span>
+                                <br><br>Standby Vouchers</h2>
+                            <div class="row" style="margin-bottom:1em">
+                                <div class="col-md-6">
+                                    <div class="pull-left">
+                                        <a href="/admin/clients/{{client_id}}" role="button" class="btn-login btn paddedBtn">Back to Client</a>
+                                    </div>
+                                </div>
+                            </div>
+                            {{#if hasInfoMessage}}
+                                <div class="alert alert-{{infoMessageType}}" role="alert">
+                                    <button type="button" id="btnDismissInfo" class="close" aria-label="Close">
+                                        <span aria-hidden="true">&times;</span>
+                                    </button>
+                                    {{infoMessage}}
+                                </div>
+                            {{/if}}
+                            {{#if hasErrorMessage}}
+                                <div class="alert alert-danger" role="alert">
+                                    <button type="button" id="btnDismissError" class="close" aria-label="Close">
+                                        <span aria-hidden="true">&times;</span>
+                                    </button>
+                                    {{{errorMessage}}}
+                                </div>
+                            {{/if}}
+                            <table class="table table-striped" style="width:80%; margin-left:auto; margin-right:auto">
+                                <thead>
+                                <tr>
+                                    <th><label>Date</label></th>
+                                    <th><label>Voucher IDs</label></th>
+                                    <th><label>Status</label></th>
+                                    <th><label>Outcome</label></th>
+                                    <th><label></label></th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                {{#each doc in standbyPurchasedBcotDocs}}
+                                <tr>
+                                    <td>{{formatDate doc.addedDate}}</td>
+                                    <td>{{{listArray doc.purchaseCodes true}}}</td>
+                                    <td>{{doc.status}}</td>
+                                    <td>{{{outcome doc}}}</td>
+                                    <td>
+                                        {{#if hasOutcome doc}}
+                                            <a id="lnkOutcomeDetails" href="" role="button" data-toggle="modal" data-target="#divOutcomeDetails" data-doc_id="{{doc._id}}">Details</a>
+                                        {{else}}
+                                            <a id="lnkRemoveVouchers" href="" role="button" data-toggle="modal" data-target="#divRemoveVouchers" data-doc_id="{{doc._id}}">Remove</a>
+                                        {{/if}}
+                                    </td>
+                                </tr>
+                                {{/each}}
+                                </tbody>
+                            </table>
+                            {{#if isNewClient client}}
+                            <div class="row" style="margin-top:2em">
+                                <div class="col-md-4">
+                                </div>
+                                <div class="col-md-4">
+                                    <button type="button" id="btnAddVouchers" class="btn-login btn paddedBtn fullWidth" data-toggle="modal" data-target="#divAddVouchers">Add Vouchers</button>
+                                </div>
+                                <div class="col-md-4">
+                                </div>
+                            </div>
+                            {{/if}}
+                            {{!Modal panel containing form used to display details of processing of standby Catenis vouchers}}
+                            <div id="divOutcomeDetails" class="modal fade" data-backdrop="static" tabindex="-1" role="dialog">
+                                <div class="modal-dialog" role="document">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                                            <h4 class="modal-title">Outcome Details</h4>
+                                        </div>
+                                        <div class="modal-body">
+                                            <p class="h5" style="margin-bottom:2rem">{{listArray targetDoc.purchaseCodes false}}</p>
+                                            <table class="table table-striped" style="width:80%; margin-left:auto; margin-right:auto">
+                                                <tbody>
+                                                    <tr>
+                                                        <th><label>Processing Date</label></th>
+                                                        <td>{{formatDate targetDoc.processedDate}}</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <th><label>Outcome</label></th>
+                                                        <td>{{#if targetDoc.processingResult.success}}success{{else}}error{{/if}}</td>
+                                                    </tr>
+                                                    {{#unless targetDoc.processingResult.success}}
+                                                    <tr>
+                                                        <th><label>Error Message</label></th>
+                                                        <td>{{targetDoc.processingResult.error}}</td>
+                                                    </tr>
+                                                    {{/unless}}
+                                                </tbody>
+                                            </table>
+                                            <div style="margin-top:1em">
+                                                <button type="button" class="btn btn-primary btn" data-dismiss="modal">&nbsp;&nbsp;OK&nbsp;&nbsp;</button>&nbsp;&nbsp;
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {{!Modal panel containing form used to add standby Catenis vouchers}}
+                            <div id="divAddVouchers" class="modal fade" tabindex="-1" role="dialog">
+                                <div class="modal-dialog" role="document">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <button id="btnCloseAddVouchers1" type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                                            <h4 class="modal-title">Add Catenis Vouchers</h4>
+                                        </div>
+                                        <div class="modal-body">
+                                            {{#if hasAddVouchersErrorMessage}}
+                                                <div class="alert alert-danger" role="alert">
+                                                    <button type="button" id="btnDismissAddVouchersError" class="close" aria-label="Close">
+                                                        <span aria-hidden="true">&times;</span>
+                                                    </button>
+                                                    {{{addVouchersErrorMessage}}}
+                                                </div>
+                                            {{/if}}
+                                            <p>Enter the Catenis voucher IDs one per line or separated by comma</p>
+                                            <form id="frmAddVouchers" autocomplete="off">
+                                                <div class="form-group">
+                                                    <textarea id='txtPurchaseCodes' name="purchaseCodes" rows="5" cols="40" placeholder="Catenis voucher IDs" autocomplete="off"></textarea>
+                                                </div>
+                                                <div class="row" style="margin-top:2.5em">
+                                                    <div class="col-xs-4 form-group"></div>
+                                                    <div class="col-xs-4 form-group">
+                                                        <button id="btnDoAddVouchers" type="button" class="btn btn-login paddedBtn" style="display:{{displayDoAddVouchersButton}}">Add Vouchers</button>
+                                                    </div>
+                                                </div>
+                                                <div id="divAddVouchersConfirm" class="panel panel-default" style="padding:1em; display:{{displayAddVouchersConfirm}}">
+                                                    <div style="margin-top:1em; margin-bottom:1em">
+                                                        <label>To confirm your action, please type the following text below: <b>yes, I do confirm it</b>
+                                                            <br><input id="itxAddVouchersConfirmation" type="text" size="20" maxlength="20" placeholder="confirmation" autocomplete="off"></label>
+                                                    </div>
+                                                    <div style="margin-top:1em">
+                                                        <button id="btnCancelAddVouchersConfirm" type="button" class="btn btn-default">Cancel</button>&nbsp;&nbsp;
+                                                        <button type="submit" class="btn btn-primary" style="display:{{displayAddVouchersSubmitButton}}">Confirm</button>
+                                                    </div>
+                                                </div>
+                                            </form>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button id="btnCloseAddVouchers2" type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {{!Modal panel containing form used to remove standby Catenis vouchers}}
+                            <div id="divRemoveVouchers" class="modal fade" tabindex="-1" role="dialog">
+                                <div class="modal-dialog" role="document">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <button id="btnCloseRemoveVouchers1" type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                                            <h4 class="modal-title">Remove Vouchers</h4>
+                                        </div>
+                                        <div class="modal-body">
+                                            <p class="h5" style="margin-bottom:2rem">{{listArray targetDoc.purchaseCodes false}}</p>
+                                            {{#if hasRemoveVouchersErrorMessage}}
+                                                <div class="alert alert-danger" role="alert">
+                                                    <button type="button" id="btnDismissRemoveVouchersError" class="close" aria-label="Close">
+                                                        <span aria-hidden="true">&times;</span>
+                                                    </button>
+                                                    {{{removeVouchersErrorMessage}}}
+                                                </div>
+                                            {{/if}}
+                                            <form id="frmRemoveVouchers" autocomplete="off">
+                                                <input type="hidden" name="doc_id" value="{{targetDoc._id}}"/>
+                                                <div id="divRemoveVouchersConfirm" class="panel panel-default" style="padding:1em">
+                                                    <div style="margin-top:1em; margin-bottom:1em">
+                                                        <label>To confirm your action, please type the following text below: <b>yes, I do confirm it</b>
+                                                            <br><input id="itxRemoveConfirmation" type="text" size="20" maxlength="20" placeholder="confirmation" autocomplete="off"></label>
+                                                    </div>
+                                                    <div style="margin-top:1em">
+                                                        <button type="submit" class="btn btn-primary" style="display:{{displayRemoveVouchersSubmitButton}}">Confirm</button>
+                                                    </div>
+                                                </div>
+                                            </form>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button id="btnCloseRemoveVouchers2" type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        {{/unless}}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</template>

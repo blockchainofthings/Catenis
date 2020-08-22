@@ -15,8 +15,6 @@
 //import config from 'config';
 // Meteor packages
 //import { Meteor } from 'meteor/meteor';
-import { FlowRouter } from 'meteor/kadira:flow-router';
-import { BlazeLayout } from 'meteor/kadira:blaze-layout';
 
 // References code in other (Catenis) modules on the client
 import { Catenis } from './ClientCatenis';
@@ -46,6 +44,7 @@ Catenis.db = {
         BcotSaleStockInfo: new Mongo.Collection('BcotSaleStockInfo'),
         BcotSaleStockReplenishedAmount: new Mongo.Collection('BcotSaleStockReplenishedAmount'),
         TwoFactorAuthInfo: new Mongo.Collection('TwoFactorAuthInfo'),
-        ClientOwnedDomain: new Mongo.Collection('ClientOwnedDomain')
+        ClientOwnedDomain: new Mongo.Collection('ClientOwnedDomain'),
+        StandbyPurchasedBcot: new Mongo.Collection('StandbyPurchasedBcot')
     }
 };

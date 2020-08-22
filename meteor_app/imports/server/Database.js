@@ -2164,6 +2164,49 @@ Database.initialize = function() {
                     w: 1
                 }
             }]
+        },
+        StandbyPurchasedBcot: {
+            indices: [{
+                fields: {
+                    client_id: 1
+                },
+                opts: {
+                    background: true,
+                    w: 1
+                }
+            }, {
+                fields: {
+                    status: 1
+                },
+                opts: {
+                    background: true,
+                    w: 1
+                }
+            }, {
+                fields: {
+                    'processingResult.success': 1
+                },
+                opts: {
+                    background: true,
+                    w: 1
+                }
+            }, {
+                fields: {
+                    addedDate: 1
+                },
+                opts: {
+                    background: true,
+                    w: 1
+                }
+            }, {
+                fields: {
+                    processedDate: 1
+                },
+                opts: {
+                    background: true,
+                    w: 1
+                }
+            }]
         }
     };
 

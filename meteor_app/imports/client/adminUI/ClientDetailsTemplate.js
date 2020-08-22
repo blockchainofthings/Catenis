@@ -33,6 +33,7 @@ import './EditClientTemplate.js';
 import './ServiceAccountTemplate.js';
 import './OwnedDomainsTemplate.js';
 import './DevicesTemplate.js';
+import './StandbyPurchasedBcotTemplate.js';
 
 // Module variables
 const confirmPhrase = 'yes, i do confirm it';
@@ -353,7 +354,7 @@ Template.clientDetails.events({
             template.state.set('infoMsg', undefined);
             template.state.set('infoMsgType', 'info');
 
-            Meteor.call('resetClientApiAccessSecret', Template.instance().data.client_id , form.resetAllDevices.checked, (error, key) => {
+            Meteor.call('resetClientApiAccessSecret', Template.instance().data.client_id , form.resetAllDevices.checked, (error) => {
                 if (error) {
                     const errMsgs = template.state.get('errMsgs');
                     errMsgs.push('Error resetting shared API access secret: ' + error.toString());

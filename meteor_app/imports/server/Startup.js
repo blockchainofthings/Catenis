@@ -95,6 +95,7 @@ import { BitcoinInfo } from './BitcoinInfo';
 import { TransactionCache } from './TransactionCache';
 import { ReCaptcha } from './ReCaptcha';
 import { PaidService } from './PaidService';
+import { StandbyPurchasedBcotUI } from './adminUI/StandbyPurchasedBcotUI';
 // TEST - begin
 //import { TestCatenisColoredCoins } from './test/TestCatenisColoredCoins';
 // TEST - end
@@ -236,6 +237,7 @@ Meteor.startup(function () {
             ClientsUI.initialize();
             ServiceBillingUI.initialize();
             DevicesUI.initialize();
+            StandbyPurchasedBcotUI.initialize();
             TwoFactorAuthenticationUI.initialize();
 
             ClientUI.initialize();

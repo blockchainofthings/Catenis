@@ -29,20 +29,20 @@ import { minValidityDays } from './ClientLicensesTemplate';
 
 // Module variables
 const confirmPhrase = 'yes, i do confirm it';
+const addStandbyVouchersInitialState = true;
 
 
 // Definition of module (private) functions
 
-function validateFormData(form, errMsgs, template) {
+function validateFormData(form, template, callback) {
     const clientInfo = {};
-    let hasError = false;
+    const errMsgs = [];
 
     clientInfo.name = form.clientName.value ? form.clientName.value.trim() : '';
 
     if (clientInfo.name.length === 0) {
         // Client name not supplied. Report error
         errMsgs.push('Please enter a client name');
-        hasError = true;
     }
 
     clientInfo.username = form.username.value ? form.username.value.trim() : '';
@@ -50,7 +50,6 @@ function validateFormData(form, errMsgs, template) {
     if (clientInfo.username.length === 0) {
         // Username not supplied. Report error
         errMsgs.push('Please enter a username');
-        hasError = true;
     }
 
     clientInfo.firstName = form.firstName.value ? form.firstName.value.trim() : undefined;
@@ -61,7 +60,6 @@ function validateFormData(form, errMsgs, template) {
         || clientInfo.lastName.length === 0) && (!clientInfo.company || clientInfo.company.length === 0)) {
         // Neither first name, last name nor company name supplied. Report error
         errMsgs.push('Please enter at least one of: first name, last name, or company');
-        hasError = true;
     }
 
     clientInfo.email = form.email.value ? form.email.value.trim() : '';
@@ -69,12 +67,10 @@ function validateFormData(form, errMsgs, template) {
     if (clientInfo.email.length === 0) {
         // Email not supplied. Report error
         errMsgs.push('Please enter an email address');
-        hasError = true;
     }
     else {
         if (template.state.get('needsConfirmEmail') && !template.state.get('emailConfirmed')) {
             errMsgs.push('Please confirm email address');
-            hasError =true;
         }
     }
 
@@ -87,7 +83,6 @@ function validateFormData(form, errMsgs, template) {
     if (clientInfo.licenseInfo.license_id.length === 0) {
         // No license selected. Report error
         errMsgs.push('Please select a license.');
-        hasError = true;
     }
 
     const startDate = $(form.licenseStartDate).data('DateTimePicker').date();
@@ -102,14 +97,70 @@ function validateFormData(form, errMsgs, template) {
         if (!endDate) {
             // No license end date to override validity. Report error
             errMsgs.push('Please enter a license end date.');
-            hasError = true;
         }
         else {
             clientInfo.licenseInfo.endDate = endDate.format('YYYY-MM-DD');
         }
     }
-    
-    return !hasError ? clientInfo : undefined;
+
+    if (form.addStandbyVouchers.checked) {
+        const enteredPurchaseCodes = [];
+        const value = form.purchaseCodes.value ? form.purchaseCodes.value.trim() : '';
+
+        if (value.length > 0) {
+            value.split('\n').forEach((line) => {
+                line.split(',').forEach((purchaseCode) => {
+                    purchaseCode = purchaseCode.trim();
+
+                    if (purchaseCode.length > 0) {
+                        enteredPurchaseCodes.push(purchaseCode);
+                    }
+                })
+            });
+        }
+
+        if (enteredPurchaseCodes.length === 0) {
+            // Purchase codes not supplied. Report error
+            errMsgs.push('Please enter at least one Catenis voucher ID');
+
+            // Return error
+            callback(errMsgs);
+        }
+        else {
+            // Validate entered purchase codes (Catenis voucher IDs)
+            Meteor.call('validatePurchasedBcot', enteredPurchaseCodes, (error, isValid) => {
+                if (error) {
+                    console.error('Error calling \'validatedPurchasedBcot\' remote method:', error);
+                    isValid = false;
+                }
+
+                if (!isValid) {
+                    // Supplied purchase codes are not valid. Report error
+                    errMsgs.push('At least one of Catenis voucher IDs are not valid');
+                }
+                else {
+                    clientInfo.standbyPurchasedCodes = enteredPurchaseCodes;
+                }
+
+                // Return validation result
+                if (errMsgs.length > 0) {
+                    callback(errMsgs);
+                }
+                else {
+                    callback(null, clientInfo);
+                }
+            });
+        }
+    }
+    else {
+        // Return validation result
+        if (errMsgs.length > 0) {
+            callback(errMsgs);
+        }
+        else {
+            callback(null, clientInfo);
+        }
+    }
 }
 
 
@@ -132,6 +183,8 @@ Template.newClient.onCreated(function () {
     this.state.set('needsConfirmEmail', false);
     this.state.set('emailConfirmed', false);
     this.state.set('emailMismatch', false);
+
+    this.state.set('addStandbyVouchers', addStandbyVouchersInitialState);
 
     // Subscribe to receive database docs/recs updates
     this.allLicensesSubs = this.subscribe('allLicenses');
@@ -257,6 +310,11 @@ Template.newClient.events({
             template.state.set('showAddLicenseEndDate', false);
         }
     },
+    'change #cbxAddStandbyVouchers'(event, template) {
+        event.stopPropagation();
+
+        template.state.set('addStandbyVouchers', event.target.checked);
+    },
     'click #btnCancel'(event, template) {
         // Note: we resource to this unconventional solution so we can disable the Cancel button and,
         //      at the same time, make it behave the same way as when a link is clicked (which we
@@ -319,7 +377,7 @@ Template.newClient.events({
             btnCancel.disabled = false;
             btnCreate.disabled = false;
 
-            if (error && error.error !== 'client.create.addLicense.failure') {
+            if (error && error.error !== 'client.create.postCreateFailure') {
                 // Clear info alert message, and display error message
                 template.state.set('infoMsg', undefined);
 
@@ -328,12 +386,10 @@ Template.newClient.events({
                 ]);
             }
             else {
-                // Check if there was an error adding a license to the newly created client, and
+                // Check if there was an error after the client had been successfully created, and
                 //  display it if so
                 if (error) {
-                    template.state.set('errMsgs', [
-                        error.toString()
-                    ]);
+                    template.state.set('errMsgs', error.details.errMsgs);
 
                     clientId = error.details.clientId;
                 }
@@ -354,15 +410,15 @@ Template.newClient.events({
         template.state.set('errMsgs', []);
         template.state.set('infoMsg', undefined);
         template.state.set('infoMsgType', 'info');
-        let errMsgs = [];
-        let clientInfo;
 
-        if ((clientInfo = validateFormData(form, errMsgs, template))) {
-            template.state.set('validatedClientInfo', clientInfo);
-        }
-        else {
-            template.state.set('errMsgs', errMsgs);
-        }
+        validateFormData(form, template, (errMsgs, clientInfo) => {
+            if (errMsgs) {
+                template.state.set('errMsgs', errMsgs);
+            }
+            else {
+                template.state.set('validatedClientInfo', clientInfo);
+            }
+        });
     }
 });
 
@@ -447,5 +503,11 @@ Template.newClient.helpers({
     },
     validatedClientInfo() {
         return Template.instance().state.get('validatedClientInfo');
+    },
+    addStandbyVouchersInitialState() {
+        return addStandbyVouchersInitialState;
+    },
+    addStandbyVouchers() {
+        return Template.instance().state.get('addStandbyVouchers');
     }
 });

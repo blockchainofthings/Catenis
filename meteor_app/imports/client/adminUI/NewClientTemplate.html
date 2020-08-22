@@ -112,18 +112,31 @@
                                 <div class="form-group" style="position:relative">
                                     <input id="dtpkrLicenseStartDate" name="licenseStartDate" type='text' placeholder="Start Date * (YYYY-MM-DD)" autocomplete="off" />
                                 </div>
-                                <div class="form-group text-left">
+                                <div class="form-group text-left" style="margin-bottom:-0.5em">
                                     <table style="margin-top:30px">
                                         <tr>
                                             <td class="text-right" style="vertical-align:text-top; padding-right:10px"><input id='cbxOverrideValidity' name="overrideValidity" type='checkbox' /></td>
-                                            <td><label for="cbxOverrideValidity" class="input">Override Validity</label></td>
+                                            <td><label for="cbxOverrideValidity" class="input">Override License Validity</label></td>
                                         </tr>
                                     </table>
                                 </div>
                                 <div class="form-group" style="position:relative; display:{{displayAddLicenseEndDate}}">
                                     <input id='dtpkrLicenseEndDate' name="licenseEndDate" type='text' placeholder="End Date * (YYYY-MM-DD)" autocomplete="off" />
                                 </div>
-                                <div class="text-left" style="font-size:10pt; margin-bottom:20px; color:gray">
+                                <div class="form-group text-left">
+                                    <table style="margin-top:30px">
+                                        <tr>
+                                            <td class="text-right" style="vertical-align:text-top; padding-right:10px"><input id='cbxAddStandbyVouchers' name="addStandbyVouchers" type='checkbox' checked="{{addStandbyVouchersInitialState}}" /></td>
+                                            <td><label for="cbxAddStandbyVouchers" class="input">Add Standby Vouchers</label></td>
+                                        </tr>
+                                    </table>
+                                </div>
+                                {{#if addStandbyVouchers}}
+                                <div class="form-group text-left" style="margin-bottom:1em">
+                                    <textarea id='txtPurchaseCodes' name="purchaseCodes" rows="5" cols="40" style="border-color:lightgray" placeholder="Catenis voucher IDs (one per line or separated by comma)" autocomplete="off"></textarea>
+                                </div>
+                                {{/if}}
+                                <div class="text-left" style="font-size:10pt; margin-bottom:2em; color:gray">
                                     * Date/time in reference to client's time zone
                                 </div>
                                 <div class="form-group">

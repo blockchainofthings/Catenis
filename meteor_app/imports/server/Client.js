@@ -45,6 +45,7 @@ import { BcotSaleAllocation } from './BcotSaleAllocation';
 import { RedeemBcotTransaction } from './RedeemBcotTransaction';
 import { ServiceAccount } from './ServiceAccount';
 import { ClientOwnedDomain } from './ClientOwnedDomain';
+import { StandbyPurchasedBcot } from './StandbyPurchasedBcot';
 
 // Config entries
 const clientConfig = config.get('client');
@@ -333,6 +334,9 @@ Client.prototype.activate = function () {
                     // Make sure that system BCOT token sale stock is properly provisioned
                     this.ctnNode.checkBcotSaleStockProvision();
                 });
+
+                // Redeem any purchased BCOT tokens on standby
+                Meteor.defer(redeemStandbyBcot.bind(this));
 
                 result = true;
             }
@@ -1223,11 +1227,11 @@ Client.prototype.redeemBcot = function (purchaseCodes) {
             const redeemBcotInfo = BcotSaleAllocation.getRedeemBcotInfo(purchaseCodes);
 
             if (!redeemBcotInfo) {
-                // Invalid redeem code. Log error and throw exception
+                // Invalid purchase code. Log error and throw exception
                 Catenis.logger.ERROR('Catenis credits cannot be redeemed: one or more of the purchase codes are invalid or have already been redeemed', {
                     purchaseCodes: purchaseCodes
                 });
-                throw new Meteor.Error('client_bcot_redeem_invalid_codes', 'Catenis vouchers cannot be redeemed: one or more of the voucher IDs are invalid or have already been redeemed');
+                throw new Meteor.Error('client_bcot_redeem_invalid_codes', 'One or more of the voucher IDs are invalid or have already been redeemed');
             }
 
             // Execute code in critical section to avoid UTXOs concurrency
@@ -1275,11 +1279,50 @@ Client.prototype.redeemBcot = function (purchaseCodes) {
         }
         else {
             // Translate any other error into a more generic one
-            Catenis.logger.ERROR('Error while redeeming Catenis credits', err);
-            throw new Meteor.Error('client_bcot_redeem_error', 'Error while redeeming purchased Catenis credits');
+            Catenis.logger.ERROR('Error while redeeming purchased Catenis credits', err);
+            throw new Meteor.Error('client_bcot_redeem_error', 'Error allocating Catenis credits while redeeming Catenis vouchers');
         }
     }
 };
+
+// Add purchased Catenis credits (BCOT tokens that get converted into Catenis credits) to standby (to be redeemed later)
+//
+//  Arguments:
+//   purchaseCodes [String|Array(String)] - Purchase codes received after purchase of Catenis credits to be added to standby
+Client.prototype.addStandbyBcot = function (purchaseCodes) {
+    try {
+        new StandbyPurchasedBcot(this).addPurchasedCodes(purchaseCodes);
+    }
+    catch (err) {
+        // Error while adding purchased BCOT tokens to standby. Log error and throw exception
+        if ((err instanceof Meteor.Error) && err.error === 'standby_bcot_invalid_codes') {
+            // Invalid purchase codes. Just rethrow error
+            throw err;
+        }
+        else {
+            // Translate any other error into a more generic one
+            Catenis.logger.ERROR('Error while adding purchased Catenis credits to standby', err);
+            throw new Meteor.Error('client_standby_bcot_add_error', 'Error while adding purchased Catenis credits to standby');
+        }
+    }
+}
+
+// Remove set of purchased Catenis credits (BCOT tokens that get converted into Catenis credits) that are on standby
+//  (to be redeemed later)
+//
+//  Arguments:
+//   doc_id [string] - ID of Standby Purchased BCOT database rec/doc to remove
+Client.prototype.removeStandbyBcot = function (doc_id) {
+    try {
+        new StandbyPurchasedBcot(this).removeBatch(doc_id);
+    }
+    catch (err) {
+        // Error while removing purchased BCOT tokens from standby. Log error and throw exception
+        Catenis.logger.ERROR('Error while removing purchased Catenis credits from standby', err);
+        throw new Meteor.Error('client_standby_bcot_remove_error', 'Error while removing purchased Catenis credits from standby');
+    }
+}
+
 
 // Module functions used to simulate private Client object methods
 //  NOTE: these functions need to be bound to a Client object reference (this) before
@@ -1300,6 +1343,20 @@ function getUser() {
                 emails: 1
             }
         });
+    }
+}
+
+// Redeem all purchased Catenis credits (BCOT tokens that get converted into Catenis credits) that are on standby
+function redeemStandbyBcot() {
+    try {
+        const standbyBcot = new StandbyPurchasedBcot(this);
+
+        if (standbyBcot.hasBatchesToProcess) {
+            standbyBcot.processBatches();
+        }
+    }
+    catch (err) {
+        Catenis.logger.ERROR('Error redeeming purchased Catenis credits on standby for client (clientId: %s).', this.clientId, err);
     }
 }
 

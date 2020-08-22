@@ -655,3 +655,16 @@ BcotSaleAllocationItem {
     redeemBcotTxid: [string]  // Blockchain attributed ID (hash) of transaction used to redeem purchased BCOT tokens for Catenis service credits
   }
 }
+
+StandbyPurchasedBcot {
+  _id: [string],  // MongoDB internal document ID provided by Meteor
+  client_id: [string],  // MongoDB internal ID of Client doc/rec for which the purchased BCOT tokens are standing by (and shall be automatically redeemed when the client is activated)
+  purchaseCodes: [Array(string)],  // List of codes to be used to redeem the purchased BCOT tokens for Catenis service credits (referred in the UI as `voucher ID`)
+  status: [string],  // Processing status. Valid values (from StandbyPurchasedBcot.status): 'new' (BCOT tokens awaiting to be processed for redemption); 'processed' (BCOT tokens have already been processed for redemption)
+  processingResult: {  // This field should only exist after the purchased BCOT token have been processed for redemption
+    success: [boolean],  // Indicates whether purchased BCOT tokens have been successfully redeemed
+    error: [string]  // Description of error that took place when trying to redeem purchased BCOT tokens. Note that this field is only available if processing was not successful
+  },
+  addedDate: [date/time],  // Date and time when purchased BCOT tokens have been added to standby
+  processedDate: [date/time]  // Date and time when purchased BCOT tokens have been processed to be redeemed
+}

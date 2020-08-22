@@ -12,12 +12,11 @@
 // Internal node modules
 import util from 'util';
 // Third-party node modules
-import _und from 'underscore';
+//import _und from 'underscore';
 // Meteor packages
 import { Meteor } from 'meteor/meteor';
 import { Accounts } from 'meteor/accounts-base'
 import { Roles } from 'meteor/alanning:roles';
-import { Random } from 'meteor/random'
 
 // References code in other (Catenis) modules
 import { Catenis } from '../Catenis';
@@ -29,6 +28,7 @@ import { CommonClientLicenseUI } from '../commonUI/CommonClientLicenseUI';
 import { CommonServiceAccountUI } from '../commonUI/CommonServiceAccountUI';
 import { CommonOwnedDomainsUI } from '../commonUI/CommonOwnedDomainsUI';
 import { KeyStore } from '../KeyStore';
+import { StandbyPurchasedBcot } from '../StandbyPurchasedBcot';
 
 
 // Definition of function classes
@@ -101,8 +101,11 @@ ClientsUI.initialize = function () {
                 }
 
                 // Add license to newly created client
+                let client;
+                const postCreateErrMsgs = [];
+
                 try {
-                    const client = Client.getClientByClientId(clientId);
+                    client = Client.getClientByClientId(clientId);
 
                     if (!clientInfo.licenseInfo.startDate) {
                         clientInfo.licenseInfo.startDate = new Date();
@@ -113,7 +116,23 @@ ClientsUI.initialize = function () {
                 catch (err) {
                     // Error trying to add license to newly created client. Log error and throw exception
                     Catenis.logger.ERROR('Failure trying to add license to newly created client (clientId: %s).', clientId, util.inspect({clientLicenseInfo: clientInfo.licenseInfo}), err);
-                    throw new Meteor.Error('client.create.addLicense.failure', util.format('Failure trying to add license to newly created client (clientId: %s): %s', clientId, err.toString()), {
+                    postCreateErrMsgs.push(util.format('Failure trying to add license to newly created client: %s', err.toString()));
+                }
+
+                if (clientInfo.standbyPurchasedCodes) {
+                    // Add purchased Catenis credits to standby
+                    try {
+                        new StandbyPurchasedBcot(client).addPurchasedCodes(clientInfo.standbyPurchasedCodes);
+                    }
+                    catch (err) {
+                        Catenis.logger.ERROR('Failure trying to add purchased Catenis credits to standby for newly created client (clientId: %s).', clientId, err);
+                        postCreateErrMsgs.push(util.format('Failure trying to add purchased Catenis credits to standby for newly created client: %s', err.toString()));
+                    }
+                }
+
+                if (postCreateErrMsgs.length > 0) {
+                    throw new Meteor.Error('client.create.postCreateFailure', 'Error after client had been successfully created', {
+                        errMsgs: postCreateErrMsgs,
                         clientId: clientId
                     });
                 }
@@ -434,6 +453,40 @@ ClientsUI.initialize = function () {
                     // Error trying to redeem purchased BCOT tokens. Log error and throw exception
                     Catenis.logger.ERROR('Failure redeeming purchased Catenis credits (purchase codes: %s).', purchaseCodes, err);
                     throw new Meteor.Error('client.redeemBcot.failure', 'Failure redeeming Catenis vouchers: ' + err.toString());
+                }
+            }
+            else {
+                // User not logged in or not a system administrator.
+                //  Throw exception
+                throw new Meteor.Error('ctn_admin_no_permission', 'No permission; must be logged in as a system administrator to perform this task');
+            }
+        },
+        addStandbyBcot: function (client_id, purchaseCodes) {
+            if (Roles.userIsInRole(this.userId, 'sys-admin')) {
+                try {
+                    return Client.getClientByDocId(client_id).addStandbyBcot(purchaseCodes);
+                }
+                catch (err) {
+                    // Error trying to add purchased BCOT tokens to standby. Log error and throw exception
+                    Catenis.logger.ERROR('Failure adding purchased Catenis credits to standby (purchase codes: %s).', purchaseCodes, err);
+                    throw new Meteor.Error('client.addStandbyBcot.failure', 'Failure adding Catenis vouchers to standby: ' + err.toString());
+                }
+            }
+            else {
+                // User not logged in or not a system administrator.
+                //  Throw exception
+                throw new Meteor.Error('ctn_admin_no_permission', 'No permission; must be logged in as a system administrator to perform this task');
+            }
+        },
+        removeStandbyBcot: function (client_id, doc_id) {
+            if (Roles.userIsInRole(this.userId, 'sys-admin')) {
+                try {
+                    return Client.getClientByDocId(client_id).removeStandbyBcot(doc_id);
+                }
+                catch (err) {
+                    // Error trying to remove purchased BCOT tokens from standby. Log error and throw exception
+                    Catenis.logger.ERROR('Failure removing purchased Catenis credits from standby (doc_id: %s).', doc_id, err);
+                    throw new Meteor.Error('client.addStandbyBcot.failure', 'Failure removing Catenis vouchers from standby: ' + err.toString());
                 }
             }
             else {
