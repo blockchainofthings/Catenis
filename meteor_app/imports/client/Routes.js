@@ -152,7 +152,6 @@ FlowRouter.route('/serviceaccount', {
     }
 });
 
-
 FlowRouter.route('/serviceaccount/billing', {
     action: function (params, queryParams) {
         BlazeLayout.render('clientLayout', {

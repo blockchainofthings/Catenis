@@ -188,7 +188,6 @@ Template.ownedDomains.events({
             template.state.set('addDomainErrMsgs', errMsgs);
         }
     },
-
     'click #lnkDeleteDomain'(event, template) {
         event.preventDefault();
 
