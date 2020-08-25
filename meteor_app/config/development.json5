@@ -241,5 +241,9 @@
     historyPurgeMinutes: 0,  // Minutes component of time when purging of PaidServicesHistory database records should take place
     historyPurgeSeconds: 0,  // Seconds component of time when purging of PaidServicesHistory database records should take place
     historyPurgeInterval: 86400000  // (24 hours) Time interval, in milliseconds, for executing process to purge old PaidServicesHistory database records
+  },
+  // Parameters pertaining to AdminEmailNotify module
+  adminEmailNotify: {
+    fromAddress: "Catenis Enterprise [Development] <noreply@blockchainofthings.com>"  // E-mail address used to send notification e-mail messages to administrators
   }
 }

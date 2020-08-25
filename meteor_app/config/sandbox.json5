@@ -265,5 +265,9 @@
   // Parameters pertaining to reCaptcha module
   reCaptcha: {
     siteKey: '6LdrKbQZAAAAAOySIun207M9zUjoKFJiNjVCoabk'  // (Public) Site key assigned to the Google reCAPTCHA account in use
+  },
+  // Parameters pertaining to AdminEmailNotify module
+  adminEmailNotify: {
+    fromAddress: "Catenis Enterprise [Sandbox] <noreply@blockchainofthings.com>"  // E-mail address used to send notification e-mail messages to administrators
   }
 }

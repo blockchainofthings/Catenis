@@ -46,6 +46,7 @@ import { RedeemBcotTransaction } from './RedeemBcotTransaction';
 import { ServiceAccount } from './ServiceAccount';
 import { ClientOwnedDomain } from './ClientOwnedDomain';
 import { StandbyPurchasedBcot } from './StandbyPurchasedBcot';
+import { AdminEmailNotify } from './AdminEmailNotify';
 
 // Config entries
 const clientConfig = config.get('client');
@@ -337,6 +338,12 @@ Client.prototype.activate = function () {
 
                 // Redeem any purchased BCOT tokens on standby
                 Meteor.defer(redeemStandbyBcot.bind(this));
+
+                // Notify system administrators that client account has been activated
+                AdminEmailNotify.sendAsync(AdminEmailNotify.notifyMessage.clientAccountActivated, (err) => {
+                    // Error sending notification message. Log error condition
+                    Catenis.logger.ERROR('Error sending email to system administrators notifying that client account (clientId: %s) has been activated.', this.clientId, err);
+                }, this);
 
                 result = true;
             }

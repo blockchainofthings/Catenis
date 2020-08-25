@@ -52,7 +52,7 @@ export function EmailNotify(emailContents, fromAddress, replyAddress) {
 //
 
 // Arguments:
-//  toAddress [String] - E-mail address of recipient of e-mail notification message
+//  toAddress [String|Array(String)] - E-mail address of recipient of e-mail notification message
 //  subjectVars [Object] - (optional) Object with key-pair dictionary containing variables to be merged with e-mail subject template
 //  bodyVars [Object] - (optional) Object with key-pair dictionary containing variables to be merged with e-mail body template
 EmailNotify.prototype.send = function (toAddress, subjectVars, bodyVars) {

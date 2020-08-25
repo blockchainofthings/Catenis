@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Welcome to Catenis Enterprise</title>
+    <style>
+        body {
+            margin-left: 2em;
+            font-family: Arial;
+            font-size: 10.5pt;
+            color: #333333
+        }
+        div#div-catenis-email-body {
+            margin: 0;
+            padding: 0;
+            border: none;
+        }
+        div#div-catenis-email-body div.list-items {
+            margin: 0;
+            padding: 0 0 0 1em;
+            border: none;
+        }
+        div#div-catenis-email-body p {
+            line-height: normal;
+            margin-top: 0;
+            margin-bottom: 1em;
+        }
+        div#div-catenis-email-body p.list-header {
+            margin-bottom: 0;
+            line-height: 2;
+        }
+        div#div-catenis-email-body p.list-items {
+            line-height: 2;
+        }
+        div#div-catenis-email-body p.session_start {
+            margin-top: 1.5em;
+        }
+    </style>
+</head>
+<body>
+<div id="div-catenis-email-body">
+    <p class="list-header">The following Catenis client account has been activated:</p>
+    <div class="list-items">
+        <p class="list-items">Client name: {!name}<br>
+            Client ID: {!clientId}<br>
+            Account number: {!accountNumber}<br>
+            Username: {!username}<br>
+            Contact name: {!contactName}<br>
+            Company: {!company}<br>
+            Email: {!email}</p>
+    </div>
+    <p class="session_start">Activation time: {!activationDate}</p>
+    <p class="session_start">The Blockchain of Things team</p>
+</div>
+</body>
+</html>

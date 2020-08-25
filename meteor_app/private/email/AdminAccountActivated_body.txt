@@ -1,0 +1,19 @@
+The following Catenis client account has been activated:
+
+  Client name: {!name}
+
+  Client ID: {!clientId}
+
+  Account number: {!accountNumber}
+
+  Username: {!username}
+
+  Contact name: {!contactName}
+
+  Company: {!company}
+
+  Email: {!email}
+
+Activation time: {!activationDate}
+
+The Blockchain of Things team
