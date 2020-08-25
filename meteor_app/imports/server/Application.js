@@ -199,6 +199,7 @@ Application.prototype.startProcessing = function (fixDustFunding = false) {
 
         // Change status to indicate that application has started
         this.status = Catenis.txMonitor.syncingBlocks ? Application.processingStatus.started_syncing_blocks : Application.processingStatus.started;
+        Catenis.logger.INFO('Application successfully started.');
 
         // Check if any devices still need to have their addresses funded
         Device.checkDevicesToFund();
@@ -409,7 +410,7 @@ function pauseNoFunds() {
 
 function shutdownHandler() {
     if (this.isRunning() || (this.isPaused() && this.status !== Application.processingStatus.paused_terminating)) {
-        Catenis.logger.INFO('Preparing to shutdown the application. Please wait.');
+        Catenis.logger.INFO('Shutting down application. Please wait.');
 
         // Stop blockchain transaction monitoring
         Catenis.txMonitor.stopMonitoring();
@@ -559,10 +560,10 @@ function generateCommonSeed(testPrefix) {
 }
 
 function shutdown() {
-    Catenis.logger.TRACE('Shutting down application');
     // Remove process ID file
     removeProcessId();
 
+    Catenis.logger.INFO('Shutdown completed. Exiting application gracefully.');
     process.exit(Application.exitCode.terminated);
 }
 
