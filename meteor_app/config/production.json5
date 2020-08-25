@@ -27,11 +27,11 @@
     "exitOnError": true,
     "console": {
       "active": true,
-      "logLevel": "TRACE"
+      "logLevel": "INFO"
     },
     "file": {
       "active": true,
-      "logLevel": "DEBUG"
+      "logLevel": "INFO"
     },
     "email": {
       "active": true,
