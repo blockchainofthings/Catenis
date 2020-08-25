@@ -963,6 +963,9 @@ Client.prototype.getPublicProps = function () {
             if (contactName) {
                 contactName += ' ';
             }
+            else if (contactName === undefined) {
+                contactName = '';
+            }
 
             contactName += this.props.lastName;
         }

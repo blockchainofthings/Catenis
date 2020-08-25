@@ -72,6 +72,9 @@ Template.clientProfile.helpers({
             if (contactName) {
                 contactName += ' ';
             }
+            else if (contactName === undefined) {
+                contactName = '';
+            }
 
             contactName += client.props.lastName;
         }
