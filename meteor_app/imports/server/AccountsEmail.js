@@ -128,7 +128,7 @@ function licenseName(license) {
     let licName = Util.capitalize(license.level);
 
     if (license.type) {
-        licName += ' (' + docLicense.type + ')';
+        licName += ' (' + license.type + ')';
     }
 
     return licName;
