@@ -77,13 +77,23 @@ LoginUI.initialize = function () {
                 fields: {
                     _id: 1,
                     username: 1,
-                    profile: 1,
-                    roles: 1
+                    profile: 1
                 }
             });
         }
         else {
             this.ready();
+        }
+    });
+
+    // Note: this will automatically publish the necessary role-assignment collection docs
+    //  for the currently logged in user
+    Meteor.publish(null, function () {
+        if (this.userId) {
+            return Meteor.roleAssignment.find({'user._id': this.userId});
+        }
+        else {
+            this.ready()
         }
     });
 };

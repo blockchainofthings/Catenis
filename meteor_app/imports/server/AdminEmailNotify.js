@@ -17,6 +17,7 @@ import Future from 'fibers/future';
 import _und from 'underscore';
 // Meteor packages
 import { Meteor } from 'meteor/meteor';
+import { Roles } from 'meteor/alanning:roles';
 
 // References code in other (Catenis) modules
 import { Catenis } from './Catenis';
@@ -24,6 +25,7 @@ import { EmailNotify } from './EmailNotify';
 import { Client } from './Client';
 
 // Config entries
+const appAdminRole = config.get('application.adminRole');
 const adminEmailNotifyConfig = config.get('adminEmailNotify');
 
 // Configuration settings
@@ -231,12 +233,13 @@ export class AdminEmailNotify extends EmailNotify {
 function getSysAdminEmails() {
     const adminEmails = [];
 
-    Meteor.users.find({
-        roles: 'sys-admin'
-    }, {
-        fields: {
-            username: 1,
-            emails: 1
+    // noinspection JSCheckFunctionSignatures
+    Roles.getUsersInRole(appAdminRole, {}, {
+        queryOptions: {
+            fields: {
+                username: 1,
+                emails: 1
+            }
         }
     }).forEach(doc => {
         // Make sure that admin account has an email address

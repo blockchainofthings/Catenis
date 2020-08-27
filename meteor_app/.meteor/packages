@@ -25,7 +25,6 @@ useraccounts:unstyled@1.14.2
 kadira:flow-router@2.12.1
 kadira:blaze-layout@2.3.0
 reactive-dict@1.3.0
-alanning:roles@1.2.16
 dynamic-import@0.5.2
 webapp@1.9.1
 twbs:bootstrap@3.3.6
@@ -38,3 +37,4 @@ meteortesting:mocha
 meteortesting:mocha-core@6.1.2
 msavin:mongol
 msavin:jetsetter@4.0.0
+alanning:roles
