@@ -56,7 +56,6 @@ const cfgSettings = {
         psw: appConfig.has('defaultAdminUser.psw') ? appConfig.get('defaultAdminUser.psw') : undefined,
         email: appConfig.has('defaultAdminUser.email') ? appConfig.get('defaultAdminUser.email') : undefined
     }
-        
 };
 
 // Catenis Hub node index
