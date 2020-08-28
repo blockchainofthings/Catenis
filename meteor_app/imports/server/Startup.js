@@ -143,6 +143,7 @@ Meteor.startup(function () {
             }
 
             Database.initialize();
+            Database.migrateRoles();
             Database.removeInconsistentAssetIndices();
             Database.fixBillingExchangeRate();
             Database.removeBcotExchangeRateColl();

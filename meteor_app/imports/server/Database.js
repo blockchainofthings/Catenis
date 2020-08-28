@@ -2584,6 +2584,27 @@ Database.addMissingOmniTxValidityField = function () {
     }
 };
 
+//** Temporary method used to migrate database collections used by alanning:roles package ver. 3
+import { Roles } from 'meteor/alanning:roles';
+
+Database.migrateRoles = function () {
+    const docUserWithRoles = Meteor.users.findOne({roles: {$exists: true}}, {fields: {_id: 1}});
+
+    if (docUserWithRoles) {
+        if (Roles._forwardMigrate) {
+            Catenis.logger.INFO('Migrating database collections used by alanning:roles package from ver. 1 to ver. 2');
+
+            Roles._forwardMigrate();
+        }
+
+        if (Roles._forwardMigrate2) {
+            Catenis.logger.INFO('Migrating database collections used by alanning:roles package from ver. 2 to ver. 3');
+
+            Roles._forwardMigrate2();
+        }
+    }
+}
+
 
 // Module functions used to simulate private Database object methods
 //  NOTE: these functions need to be bound to a Database object reference (this) before
