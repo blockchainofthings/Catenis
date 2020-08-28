@@ -2,6 +2,14 @@
  * Created by Claudio on 2016-06-29.
  */
 
+// TODO: check if web service is back up. If not, consider deleting this module for good
+//*** NOTE ***
+// This module is not currently in use and should possibly be removed in the future.
+//  It has been replaced by the BitcoinCoreFees module, since the web service upon
+//  which this module is built (bitcoinfees.earn.com) has been taken down (as of
+//  2020-08-27).
+//*************
+
 //console.log('[BitcoinFees.js]: This code just ran.');
 
 // Module variables

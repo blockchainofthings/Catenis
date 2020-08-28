@@ -23,7 +23,7 @@ import moment from 'moment';
 import { Catenis } from './Catenis';
 import { BcotPrice } from './BcotPrice';
 import { BitcoinPrice } from './BitcoinPrice';
-import { BitcoinFees } from './BitcoinFees';
+import { BitcoinCoreFees as BitcoinFees } from './BitcoinCoreFees';
 import {
     getServicePrice,
     Service

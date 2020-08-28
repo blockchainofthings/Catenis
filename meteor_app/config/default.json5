@@ -120,6 +120,14 @@
     "dbPurgeSeconds": 0,  // Seconds component of time when database purge should take place
     "dbPurgeInterval": 86400000  // (24 hours) Time interval, in milliseconds, for executing process to purge database (delete oldest fees docs/recs)
   },
+  // Parameter pertaining to BitcoinCoreFees module
+  bitcoinCoreFees: {
+    getFeeRatesInterval: 900000,  // (15 min.) Time interval, in milliseconds, for executing method to get current bitcoin fee rates
+    initMonitorBlocksToConfirm: [  // List of initial target blocks to confirm for which fee rates should be monitored (periodically get current fee rates)
+      2,    // Minimum number of blocks returned by Bitcoin Core's estimate fee RPC method
+      30    // Number of blocks expected to confirm Catenis message transactions (300 min. -> 30 blocks)
+    ]
+  },
   // Parameters pertaining to BitcoinTicker module
   bitcoinTicker: {
     mainImplementation: 'bitcoinAverage',  // Name of bitcoin ticker implementation that should be normally used over the others (the backup ones)

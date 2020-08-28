@@ -65,6 +65,7 @@ export function BitcoinCore(network, host, username, password, timeout) {
         //  - 'abandontransaction'
         //  - 'getmempoolancestors'
         //  - 'getaddressesbylabel'     // USE IT AS JUST GET_ADDRESSES (LABEL = "")
+        //  - 'estimatesmartfee'
         command: Meteor.wrapAsync(this.btcClient.cmd, this.btcClient),
         getnetworkinfo: Meteor.wrapAsync(this.btcClient.getNetworkInfo, this.btcClient),
         getblockchaininfo: Meteor.wrapAsync(this.btcClient.getBlockchainInfo, this.btcClient),
@@ -630,6 +631,22 @@ BitcoinCore.prototype.getMempoolAncestors = function (txid, verbose, logError = 
     }
     catch (err) {
         handleError('getmempoolancestors', err, logError);
+    }
+};
+
+BitcoinCore.prototype.estimateSmartFee = function (confTarget, economical = false, logError = true) {
+    try {
+        const result = this.rpcApi.command('estimatesmartfee', confTarget, economical ? 'ECONOMICAL' : 'CONSERVATIVE');
+
+        if (result.errors) {
+            // noinspection ExceptionCaughtLocallyJS
+            throw new Error('Processing error: ' + result.errors.join('; '));
+        }
+
+        return result;
+    }
+    catch (err) {
+        handleError('estimatesmartfee', err, logError);
     }
 };
 
