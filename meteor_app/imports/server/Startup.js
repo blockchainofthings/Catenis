@@ -25,7 +25,7 @@ import { BitcoinCore } from './BitcoinCore';
 import { IpfsClient } from './IpfsClient';
 import { IpfsClusterClient } from './IpfsClusterClient';
 import { IpfsServerMonitor } from './IpfsServerMonitor';
-import { BitcoinCoreFees as BitcoinFees } from './BitcoinCoreFees';
+import { BitcoinFees } from './BitcoinFees'
 import { BaseBlockchainAddress } from './BaseBlockchainAddress';
 import { BaseOffChainAddress } from './BaseOffChainAddress';
 import { CatenisNode } from './CatenisNode';

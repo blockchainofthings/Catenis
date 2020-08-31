@@ -52,7 +52,7 @@ import { FundTransaction } from './FundTransaction';
 import { Service } from './Service';
 import { Transaction } from './Transaction';
 import { Util } from './Util';
-import { BitcoinCoreFees as BitcoinFees } from './BitcoinCoreFees'
+import { BitcoinFees } from './BitcoinFees'
 import { BalanceInfo } from './BalanceInfo';
 import { Permission } from './Permission';
 import { TransactionMonitor } from './TransactionMonitor';

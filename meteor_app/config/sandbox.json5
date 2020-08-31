@@ -67,8 +67,12 @@
       "amount": 100000000000
     }]
   },
-  // Parameters pertaining to BitcoinFees module
-  "bitcoinFees": {
+  // Parameters pertaining do BitcoinFees module
+  bitcoinFees: {
+    implementationInUse: 'earnBitcoinFees'  // Name of bitcoin fees implementation that should be used. Available values: 'earnBitcoinFees', 'bitcoinCoreFees'
+  },
+  // Parameters pertaining to EarnBitcoinFees module
+  "earnBitcoinFees": {
     "retrieveFeesInterval": 900000,  // (15 min) Time interval, in milliseconds, for executing method to retrieve latest bitcoin fees
     "numDbRecsToMaintain": 2000,  // Number of database docs/recs used to store latest fees that should be maintained when purging the database
     "dbPurgeHours": 2,  // Hours component of time when database purge should take place

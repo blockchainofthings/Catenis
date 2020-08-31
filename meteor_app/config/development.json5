@@ -65,8 +65,12 @@
     "useCompression": true,   // Indicate whether response body should be compressed
     "compressThreshold": 1024   // Minimum size, in bytes, of response body for it to be compressed
   },
-  // Parameters pertaining to BitcoinFees module
-  "bitcoinFees": {
+  // Parameters pertaining do BitcoinFees module
+  bitcoinFees: {
+    implementationInUse: 'earnBitcoinFees'  // Name of bitcoin fees implementation that should be used. Available values: 'earnBitcoinFees', 'bitcoinCoreFees'
+  },
+  // Parameters pertaining to EarnBitcoinFees module
+  "earnBitcoinFees": {
     "retrieveFeesInterval": 86400000,  // (24 hours) Time interval, in milliseconds, for executing method to retrieve latest bitcoin fees
     "numDbRecsToMaintain": 2000,  // Number of database docs/recs used to store latest fees that should be maintained when purging the database
     "dbPurgeHours": 2,  // Hours component of time when database purge should take place

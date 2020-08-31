@@ -19,6 +19,7 @@ import config from 'config';
 // References code in other (Catenis) modules
 import { Catenis } from './Catenis';
 import { Meteor } from "meteor/meteor";
+import { BitcoinFees } from './BitcoinFees';
 
 // Config entries
 const btcCoreFeesConfig = config.get('bitcoinCoreFees');
@@ -37,17 +38,6 @@ const averageTimeBetweenBlocks = 10;    // Average time, in minutes, between con
 
 // BitcoinCoreFees class
 export class BitcoinCoreFees extends EventEmitter {
-    // Class (public) properties
-    //
-
-    static notifyEvent = Object.freeze({
-        bitcoin_fees_changed: Object.freeze({
-            name: 'bitcoin_fees_changed',
-            description: 'Estimate bitcoin fee rates for transactions have changed'
-        })
-    });
-
-
     // Constructor
     //
 
@@ -87,7 +77,7 @@ export class BitcoinCoreFees extends EventEmitter {
 
         if (feeRateChanged) {
             // Emit event notifying that bitcoin fee rates have changed
-            this.emit(BitcoinCoreFees.notifyEvent.bitcoin_fees_changed.name, this.feeRateByBlocksToConfirm);
+            this.emit(BitcoinFees.notifyEvent.bitcoin_fees_changed.name);
         }
     }
     
@@ -125,7 +115,7 @@ export class BitcoinCoreFees extends EventEmitter {
 
             if (this._checkFeeRateChanged(estimateResult.blocks, feeRate)) {
                 // Emit event notifying that bitcoin fee rates have changed
-                this.emit(BitcoinCoreFees.notifyEvent.bitcoin_fees_changed.name, this.feeRateByBlocksToConfirm);
+                this.emit(BitcoinFees.notifyEvent.bitcoin_fees_changed.name);
             }
 
             return feeRate;
@@ -143,15 +133,6 @@ export class BitcoinCoreFees extends EventEmitter {
 
     getOptimumFeeRate() {
         return this.getFeeRateForBlocksToConfirm(2);
-    }
-
-
-    // Class (public) methods
-    //
-
-    static initialize() {
-        Catenis.logger.TRACE('BitcoinCoreFees initialization');
-        Catenis.bitcoinFees = new BitcoinCoreFees();
     }
 }
 

@@ -108,8 +108,12 @@
     "useCompression": true,   // Indicate whether response body should be compressed
     "compressThreshold": 1024   // Minimum size, in bytes, of response body for it to be compressed
   },
-  // Parameters pertaining to BitcoinFees module
-  "bitcoinFees": {
+  // Parameters pertaining do BitcoinFees module
+  bitcoinFees: {
+    implementationInUse: 'earnBitcoinFees'  // Name of bitcoin fees implementation that should be used. Available values: 'earnBitcoinFees', 'bitcoinCoreFees'
+  },
+  // Parameters pertaining to EarnBitcoinFees module
+  "earnBitcoinFees": {
     "apiVer1Url": "https://bitcoinfees.earn.com/api/v1/fees/",  // URL of version 1 of BitcoinFees API provided by Earn.com (former 21.co)
     "recommendedFeesEndPoint": "recommended",  // Endpoint of BitcoinFees API method for retrieving recommended fees
     "listFeesEndPoint": "list",  // Endpoint of BitcoinFees API method for retrieving complete list of fees

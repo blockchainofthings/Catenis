@@ -58,6 +58,9 @@ export function Database(collections) {
         if (!this.mongoDb) {
             // noinspection JSUnfilteredForInLoop
             this.mongoDb = this.collection[collName].rawDatabase();
+
+            // Process renaming of collections (if any)
+            renameCollections(this.mongoDb);
         }
 
         let createIndex;
@@ -133,7 +136,7 @@ Database.initialize = function() {
         Application: {
             initFunc: initApplication
         },
-        BitcoinFees: {
+        EarnBitcoinFees: {
             indices: [{
                 fields: {
                     createdDate: 1
@@ -2728,6 +2731,52 @@ function initBcotProduct() {
 
 // Definition of module (private) functions
 //
+
+//** Temporary method used to rename certain database collections
+function renameCollections(mongoDb) {
+    const collectionNameNewName = new Map([
+        ['BitcoinFees', 'EarnBitcoinFees']
+    ]);
+
+    const collectionsCursor = mongoDb.listCollections({
+        name: {
+            $in: Array.from(collectionNameNewName.keys())
+        }
+    }, {
+        nameOnly: true
+    });
+
+    const collectionsCursorToArray = Meteor.wrapAsync(collectionsCursor.toArray, collectionsCursor);
+    let collectionsToRename;
+
+    try {
+        collectionsToRename = collectionsCursorToArray();
+    }
+    catch (err) {
+        // Error converting cursor to array
+        Catenis.logger.ERROR('Error getting array of database collections from collections cursor.', err);
+    }
+
+    if (collectionsToRename && collectionsToRename.length > 0) {
+        const renameCollection = Meteor.wrapAsync(mongoDb.renameCollection, mongoDb);
+
+        collectionsToRename.forEach(collection => {
+            const collectionName = collection.name;
+            const collectionNewName = collectionNameNewName.get(collectionName);
+
+            try {
+                renameCollection(collectionName, collectionNewName, {
+                    dropTarget: true
+                });
+                Catenis.logger.INFO('****** Successfully renamed database collection \'%s\' to \'%s\'.', collectionName, collectionNewName);
+            }
+            catch (err) {
+                // Error renaming database collection
+                Catenis.logger.ERROR('Error renaming database collection \'%s\'.', collectionName, err);
+            }
+        });
+    }
+}
 
 //** Temporary method used to drop any index of a given collection if the 'safe' property is present
 import Future from 'fibers/future';
