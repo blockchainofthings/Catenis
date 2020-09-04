@@ -962,9 +962,24 @@ function licenseExpired(clientLicense_id, client) {
 
             if (diffDays >= 0 && diffDays < 1) {
                 // Provision provisional renewal license
-                clientLicense.provision(expiredClientLicense.license.level, expiredClientLicense.license.type, expiredClientLicense.validity.endDate, {
-                    provisionalRenewal: true
-                });
+                try {
+                    clientLicense.provision(expiredClientLicense.license.level, expiredClientLicense.license.type, expiredClientLicense.validity.endDate, {
+                        provisionalRenewal: true
+                    });
+                }
+                catch (err) {
+                    if ((err instanceof Meteor.Error) && err.error === 'ctn_license_not_found') {
+                        // Provisional renewal not provisioned because license is not currently active.
+                        //  Log warning condition
+                        Catenis.logger.WARN('Provisional renewal not provisioned because license is not currently active', {
+                            expiredClientLicense: expiredClientLicense
+                        });
+                    }
+                    else {
+                        throw err;
+                    }
+                }
+
                 provisionalRenewalProvisioned = true;
             }
             else {
