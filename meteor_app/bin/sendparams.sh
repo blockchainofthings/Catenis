@@ -47,9 +47,9 @@ if [ $hasPswOption -ne 1 ]; then
   extParams[idx]="$psw"
 fi
 
+# Wait for Unix domain socket used to input parameters to be created (by Catenis)
 tmout=60
 
-# Wait for Unix domain socket used to input parameters to be created (by Catenis)
 while [ ! -S ./inputparams ]; do
   if [ $tmout -eq 0 ]; then
     echo "Timeout waiting for input parameters socket"
