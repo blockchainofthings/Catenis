@@ -4,6 +4,8 @@
 
 // Load startup modules
 import '/imports/server/ConfigEnv';
+import '../imports/server/ReadCommandLineArgs';
+import '../imports/server/SetUpCipherFunctions';
 import '/imports/server/ConfigEmail';
 import { Logger } from '../imports/server/Logger';
 Logger.initialize();

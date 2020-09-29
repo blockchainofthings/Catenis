@@ -6,7 +6,7 @@
       pubKey: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDKqZ82mcs8IQ+ZCkEkCKwkgW5hno7Rte2XNOKuwPYXNRDtkvIQiNbmy7wJBn7Fmq+mUsaZAtf++yYsD6vbgEz4/Q2+5qCnQIebUMP4JzoWRt+qJgIcS9HdKAt/j6hlVrLzb7AhV+jLBEZ+vv9Jj7x+MIWK0qTjvWngpWrvne4S1OtuDRXbH5TY+l0UqtqlyPD/P8or1evjx5RnmzMJSde0OghfbnwqfDgQIqIW+n+Ig5Df0MR4rrelCxzPodMvjXxB6+OcK8AAAJJ+AsRGzSS3rVnviDhxPcMOm3b2LWNehKgmTuIgg6VYLhGix/BdsfyXKxnoFDG4KyriKoaE+C+X"
     },
     "environment": "development",
-    "seedFilename": "seed.test2.dat",
+    testPrefix: "test2",  // (optional) A prefix used to differentiate non-production environments,
     "cryptoNetwork": "regtest",  // Available values: 'bitcoin' (for Bitcoin's production blockchain), 'testnet' (for Bitcoin's test blockchain)
     "shutdownTimeout": 30000   // (30 sec.) Time, in milliseconds, that the application should wait after it receives a terminate request before it actually terminates
   },

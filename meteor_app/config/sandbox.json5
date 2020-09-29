@@ -6,9 +6,15 @@
       pubKey: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDJ2d7ctsjpeK1z9tD1NFCs/vOJ+WPaDHgKSh5ftU5ASBUH/fwl3R8vN1TLc1kmjJ7SA8K9BnmmNkU71eWhTutYdhL6O5MLumB+wu/nVmrmD4dgnEf9MKbJt49azJfvI5tVbjB+L6lHqBgJGz40LWhbkYvnceY1yL0ONkx6EYdotBjB/P4xVCFDH6nKhtUj+FKA1D8Ma508klUgAtBWLEdLAbhjSOm5aCVlZzs5EmqemmHJByGr/ewFRbG3iAKEiv6oElgkSSCsco4nx1aLzPc46wR4HbHO7Yke0C0DMmZCn/ptP7MvV40eIZ95hh7+WjuIJCIQrQE5aKJ/yhDmk61X"
     },
     "environment": "sandbox",
-    "seedFilename": "seed.beta2.dat",
+    testPrefix: "beta2",  // (optional) A prefix used to differentiate non-production environments,
     "cryptoNetwork": "testnet",  // Available values: 'bitcoin' (for Bitcoin's production blockchain), 'testnet' (for Bitcoin's test blockchain)
     "shutdownTimeout": 30000   // (30 sec.) Time, in milliseconds, that the application should wait after it receives a terminate request before it actually terminates
+  },
+  // Parameters pertaining to the SetUpCipherFunctions module
+  setUpCipherFunctions: {
+    cipherProbe: {
+      hash: "OvPwk3MsSfwYVzcLCrAK7DF92XSahr4+fWjfhfix7ss="  // Base64 encoded, SHA256 hash of deciphered text
+    }
   },
   // Parameters pertaining to the Startup module
   "startup": {
@@ -25,7 +31,7 @@
     "secureProto": "tls",  // (optional, can be set to null) Secure protocol that should be used with SMTP server. Valid options: 'ssl' or 'tls'
     "smtpPort": null,  // (optional, can be set to null) To be set only if different than default (depending on secureProto): none/null (25), ssl (465), tls (587)
     "username": "???????",  // (optional, can be set to null) To be set only if required by SMTP host
-    "password": "???????"   // (optional, can be set to null) To be set only if required by SMTP host
+    "password": "???????"  // (optional, can be set to null) Base64 encoded, ciphered password to access the SMTP host (if required)
   },
   // Parameters pertaining to logging mechanism
   "logging": {

@@ -262,8 +262,8 @@ function setUpTransports() {
     }
 
     if (emailCfgSettings.password) {
-        transportOptions.email.password = emailCfgSettings.password;
-        transportOptions.internEmail.password = emailCfgSettings.password;
+        transportOptions.email.password = Catenis.decipherData(emailCfgSettings.password);
+        transportOptions.internEmail.password = Catenis.decipherData(emailCfgSettings.password);
     }
 
     // Instantiate logging transports

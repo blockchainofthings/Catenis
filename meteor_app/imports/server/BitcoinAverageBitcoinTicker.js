@@ -48,7 +48,7 @@ export class BitcoinAverageBitcoinTicker extends BitcoinTickerBase {
 
         if (apiKey) {
             this.callOptions.headers = {
-                'X-ba-key': apiKey
+                'X-ba-key': Catenis.decipherData(apiKey)
             }
         }
 

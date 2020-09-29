@@ -123,13 +123,22 @@ Meteor.startup(function () {
         // Record ID of current process
         saveProcessId();
 
-        if (cfgSettings.bypassProcessing || cfgSettings.dataToCipher) {
+        const bypassProcessing = ('bypass-processing' in Catenis.cmdLineOpts) ? Catenis.cmdLineOpts['bypass-processing'] : cfgSettings.bypassProcessing;
+        const dataToCipher = ('cipher-data' in Catenis.cmdLineOpts) ? Catenis.cmdLineOpts['cipher-data'] : [];
+
+        if (cfgSettings.dataToCipher) {
+            dataToCipher.push(cfgSettings.dataToCipher);
+        }
+
+        if (bypassProcessing || dataToCipher.length > 0) {
             Catenis.logger.INFO('Bypassing processing...');
 
-            if (cfgSettings.dataToCipher) {
+            if (dataToCipher.length > 0) {
                 Application.initialize(true);
-                KeyStore.initialize(true);
-                Catenis.logger.INFO('*** Ciphered data (base64): %s', Catenis.application.cipherData(cfgSettings.dataToCipher).toString('base64'));
+
+                dataToCipher.forEach((data, idx) => {
+                    Catenis.logger.INFO('*** Ciphered data #%d (base64): %s', idx + 1, Catenis.cipherData(data).toString('base64'));
+                })
             }
         }
         else {

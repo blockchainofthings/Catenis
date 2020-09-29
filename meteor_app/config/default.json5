@@ -5,18 +5,27 @@
     "appName": "Catenis",
     ctnNode: {  // Catenis node to which this instance of the application corresponds
       index: 0,
-      privKey: "????",
+      privKey: "????",  // Base64 encoded, ciphered key
       pubKey: ""
     },
     "environment": "production",
-    "seedFilename": "seed.dat",
+    testPrefix: null,  // (optional) A prefix used to differentiate non-production environments
+    masterSeed: "????",  // Base64 encoded, ciphered Catenis master seed
+    commonSeed: "????",  // Base64 encoded, ciphered Catenis common seed
     "cryptoNetwork": "testnet",  // Available values: 'bitcoin' (for Bitcoin's production blockchain), 'testnet' (for Bitcoin's test blockchain)
     "shutdownTimeout": 30000,   // (30 sec.) Time, in milliseconds, that the application should wait after it receives a terminate request before it actually terminates
     "adminRole": "sys-admin",  // User role for application administration
     defaultAdminUser: {
       username: null,  // (optional) Username of application default admin user
-      psw: null,  // (optional) Ciphered, base64 encoded password for application default admin user
+      psw: null,  // (optional) Base64 encoded, ciphered password for application default admin user
       email: null  // (optional) Email address of application default admin user
+    }
+  },
+  // Parameters pertaining to the SetUpCipherFunctions module
+  setUpCipherFunctions: {
+    cipherProbe: {
+      data: "????",  // Base64 encoded, ciphered text used to validate cipher/decipher functions
+      hash: "????"  // Base64 encoded, SHA256 hash of deciphered text
     }
   },
   // Parameters pertaining to the Startup module
@@ -36,7 +45,7 @@
     "secureProto": null,  // (optional, can be set to null) Secure protocol that should be used with SMTP server. Valid options: 'ssl' or 'tls'
     "smtpPort": null,  // (optional, can be set to null) To be set only if different than default (depending on secureProto): none/null (25), ssl (465), tls (587)
     "username": null,  // (optional, can be set to null) To be set only if required by SMTP host
-    "password": null   // (optional, can be set to null) To be set only if required by SMTP host
+    "password": null  // (optional, can be set to null) Base64 encoded, ciphered password to access the SMTP host (if required)
   },
   // Parameters pertaining to logging mechanism
   "logging": {
@@ -142,7 +151,7 @@
   bitcoinAverageBitcoinTicker: {
     apiUrl: "https://apiv2.bitcoinaverage.com/indices/global/",  // URL of API (from BitcoinAverage) used to retrieve current market info on different crypto currencies
     bitcoinTickerEndPoint: "ticker/short?crypto=BTC&fiat=USD",  // API endpoint used to retrieve bitcoin market price
-    apiKey: "?????",  // (optional, can be set to null) Public key of the API key pair provided by the service (required for certain API services)
+    apiKey: "?????",  // (optional, can be set to null) Base64 encoded, ciphered public key of the API key pair provided by the service (required for certain API services)
     localAddress: null,  // (optional, can be set to null) IP address of local network interface to use to issue requests to the Web service
     timeout: 20000  // (20 sec.) Timeout, in milliseconds, for connection/request with API server
   },

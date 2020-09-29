@@ -3,9 +3,9 @@
 /meteor_app/node_modules
 /meteor_app/config/development-*.json5
 /meteor_app/config/local-*.json5
-/meteor_app/seed*.dat
 /meteor_app/packages/
 /mongodb_dump/
 /build/
 Debug.js
 catenis-pid
+nohup.out

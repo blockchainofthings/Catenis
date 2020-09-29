@@ -11,12 +11,12 @@
 //
 // Internal node modules
 import crypto from 'crypto';
-import path from 'path';
-import fs from 'fs';
+import util from "util";
 // Third-party node modules
 import config from 'config';
 import bitcoinLib from 'bitcoinjs-lib';
 import BigNumber from 'bignumber.js';
+import _und from 'underscore';
 // Meteor packages
 import { Meteor } from 'meteor/meteor';
 import { Roles } from 'meteor/alanning:roles';
@@ -28,12 +28,10 @@ import { Device } from './Device';
 import { Transaction } from './Transaction';
 import { FundSource } from './FundSource';
 import { removeProcessId } from './Startup';
-import { CryptoKeys } from './CryptoKeys';
 import { makeCtnNodeId } from './CatenisNode';
 import { UtxoConsolidation } from './UtxoConsolidation';
 import { FundTransaction } from './FundTransaction';
 import { Service } from './Service';
-import util from "util";
 
 // Config entries
 const appConfig = config.get('application');
@@ -47,7 +45,9 @@ const cfgSettings = {
         pubKey: appConfig.get('ctnNode.pubKey')
     },
     environment: appConfig.get('environment'),
-    seedFilename: appConfig.get('seedFilename'),
+    masterSeed: appConfig.get('masterSeed'),
+    commonSeed: appConfig.get('commonSeed'),
+    testPrefix: appConfig.get('testPrefix'),
     cryptoNetwork: appConfig.get('cryptoNetwork'),
     shutdownTimeout: appConfig.get('shutdownTimeout'),
     adminRole: appConfig.get('adminRole'),
@@ -76,31 +76,26 @@ const statusRegEx = {
 
 // Application function class
 export function Application(cipherOnly = false, legacyDustFunding = false) {
-    // Get application seed
-    const appSeedPath = path.join(process.env.PWD, cfgSettings.seedFilename),
-        encData = fs.readFileSync(appSeedPath, {encoding: 'utf8'});
-
-    //  NOTE: arrow functions should NOT be used for the getter/setter of the defined properties.
-    //      This is to avoid that, if `this` is referred from within the getter/setter body, it
-    //      refers to the object from where the properties have been defined rather than to the
-    //      object from where the property is being accessed. Normally, this does not represent
-    //      an issue (since the object from where the property is accessed is the same object
-    //      from where the property has been defined), but it is especially dangerous if the
-    //      object can be cloned.
-    Object.defineProperty(this, 'masterSeed', {
-        get: function () {
-            return conformSeed(Buffer.from(encData, 'base64'));
-        }
-    });
-
     if (!cipherOnly) {
+        //  NOTE: arrow functions should NOT be used for the getter/setter of the defined properties.
+        //      This is to avoid that, if `this` is referred from within the getter/setter body, it
+        //      refers to the object from where the properties have been defined rather than to the
+        //      object from where the property is being accessed. Normally, this does not represent
+        //      an issue (since the object from where the property is accessed is the same object
+        //      from where the property has been defined), but it is especially dangerous if the
+        //      object can be cloned.
+        Object.defineProperty(this, 'masterSeed', {
+            get: function () {
+                return Catenis.decipherData(cfgSettings.masterSeed);
+            }
+        });
+
         if (!isSeedValid(this.masterSeed)) {
             throw new Error('Application (master) seed does not match seed currently recorded onto the database');
         }
 
         this.legacyDustFunding = legacyDustFunding;
 
-        // Save environment and Catenis node index associated with application
         //  NOTE: arrow functions should NOT be used for the getter/setter of the defined properties.
         //      This is to avoid that, if `this` is referred from within the getter/setter body, it
         //      refers to the object from where the properties have been defined rather than to the
@@ -109,11 +104,18 @@ export function Application(cipherOnly = false, legacyDustFunding = false) {
         //      from where the property has been defined), but it is especially dangerous if the
         //      object can be cloned.
         Object.defineProperties(this, {
+            commonSeed: {
+                get: function () {
+                    return Catenis.decipherData(cfgSettings.commonSeed);
+                }
+            },
             ctnNode: {
                 get: function () {
                     return {
                         id: makeCtnNodeId(cfgSettings.ctnNode.index),
-                        ...cfgSettings.ctnNode
+                        ..._und.extend(config.util.cloneDeep(cfgSettings.ctnNode), {
+                            privKey: Catenis.decipherData(cfgSettings.ctnNode.privKey).toString()
+                        })
                     }
                 },
                 enumerable: true
@@ -133,26 +135,9 @@ export function Application(cipherOnly = false, legacyDustFunding = false) {
         });
 
         // Identify test prefix if present
-        const matchResult = cfgSettings.seedFilename.match(/^seed(?:\.(\w+))?\.dat$/);
-
-        if (matchResult && matchResult.length > 1) {
-            this.testPrefix = matchResult[1];
+        if (cfgSettings.testPrefix) {
+            this.testPrefix = cfgSettings.testPrefix;
         }
-
-        const encCommonSeed = generateCommonSeed(this.testPrefix);
-
-        //  NOTE: arrow functions should NOT be used for the getter/setter of the defined properties.
-        //      This is to avoid that, if `this` is referred from within the getter/setter body, it
-        //      refers to the object from where the properties have been defined rather than to the
-        //      object from where the property is being accessed. Normally, this does not represent
-        //      an issue (since the object from where the property is accessed is the same object
-        //      from where the property has been defined), but it is especially dangerous if the
-        //      object can be cloned.
-        Object.defineProperty(this, 'commonSeed', {
-            get: function () {
-                return conformSeed(encCommonSeed, true, false);
-            }
-        });
 
         // Get crypto network
         this.cryptoNetworkName = cfgSettings.cryptoNetwork;
@@ -297,32 +282,12 @@ Application.prototype.isOmniCoreRescanning = function () {
     return statusRegEx.omni_rescan.test(this.status.name);
 };
 
-Application.prototype.cipherData = function (data, decipher = false) {
-    const masterKeys = new CryptoKeys(Catenis.keyStore.masterHDNode, undefined, CryptoKeys.encryptionScheme.randomIV);
-
-    if (decipher) {
-        if (!Buffer.isBuffer(data)) {
-            // Assume data is base64 encoded string
-            data = Buffer.from(data, 'base64');
-        }
-
-        return masterKeys.decryptData(data);
-    }
-    else {
-        if (!Buffer.isBuffer(data)) {
-            data = Buffer.from(data);
-        }
-
-        return masterKeys.encryptData(data);
-    }
-};
-
 // Note this method must be called ONLY AFTER the KeyStore module is initialized
 Application.prototype.checkAdminUser = function () {
     if (Roles.getUsersInRole(cfgSettings.adminRole).count() === 0 && cfgSettings.defaultAdminUser.username && cfgSettings.defaultAdminUser.psw) {
         Catenis.logger.INFO('Creating default admin user');
         // No admin user defined. Create default admin user
-        this.createAdminUser(cfgSettings.defaultAdminUser.username, this.cipherData(cfgSettings.defaultAdminUser.psw, true).toString(), cfgSettings.defaultAdminUser.email, 'Catenis default admin user');
+        this.createAdminUser(cfgSettings.defaultAdminUser.username, Catenis.decipherData(cfgSettings.defaultAdminUser.psw).toString(), cfgSettings.defaultAdminUser.email, 'Catenis default admin user');
     }
 };
 
@@ -512,22 +477,6 @@ Application.processingStatus = Object.freeze({
 // Definition of module (private) functions
 //
 
-// Method used to cipher/decipher application seed (both master and common seed)
-//
-//  Arguments:
-//   data [Object(Buffer)] - Buffer containing the plain/ciphered seed
-//   decrypt [Boolean] - True if seed should be deciphered, false if seed should be ciphered
-//   master [Boolean] - True if master seed, false if common seed
-//
-//  Return: [Object(Buffer)] - Buffer with ciphered/deciphered seed
-function conformSeed(data, decrypt = true, master = true) {
-    const x = [ 78, 87, 108, 79, 77, 49, 82, 65, 89, 122, 69, 122, 75, 71, 103, 104, 84, 121, 115, 61],
-        y = [97, 69, 65, 120, 77, 50, 77, 119, 75, 121, 104, 48, 100, 48, 53, 120, 74, 106, 85, 61],
-        cryptoObj = (decrypt ? crypto.createDecipher : crypto.createCipher)('des-ede3-cbc', Buffer.from(Buffer.from(master ? x : y).toString(), 'base64').toString());
-
-    return Buffer.concat([cryptoObj.update(data), cryptoObj.final()]);
-}
-
 function isSeedValid(seed) {
     // Calculate seed HMAC
     const seedHmac = crypto.createHmac('sha256', seed).update('This is it: Catenis App seed', 'utf8').digest('base64');
@@ -551,11 +500,6 @@ function isSeedValid(seed) {
     }
 
     return isValid;
-}
-
-function generateCommonSeed(testPrefix) {
-    return conformSeed(Random.createWithSeeds(this.masterSeed + ': This is the seed to be used by all Catenis Hubs').id(36) +
-        (testPrefix ? ':' + testPrefix.toUpperCase() : ''), false, false);
 }
 
 function shutdown() {

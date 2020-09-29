@@ -1,40 +1,44 @@
-const crypto = require('crypto');
-const path = require('path');
-const fs = require('fs');
-const bitcoinLib = require('bitcoinjs-lib')
+// Helper module used to show the Catenis bitcoin address associated to an HD path
+//  for a given environment
+//
+// Usage:
+//  . start Node.js REPL and load this file (.load <path-to-this-file>)
+//  . call the revealAddrInit() function passing the password and environment
+//  . then call the addressFromPath() function as many times as needed
 
-let seedFilename;
+const crypto = require('crypto');
+const bitcoinLib = require('bitcoinjs-lib')
+const CatenisCipher = require('catenis-cipher');
+
 let cryptoNetwork;
 let appMasterSeed;
 let masterHDNode;
 
-revealAddrInit();
+function revealAddrInit(password, environment = 'dev') {
+    let cipheredSeed;
 
-function revealAddrInit(environment = 'dev') {
-    if (environment === 'dev') {
-        seedFilename = 'seed.test2.dat';
-        cryptoNetwork = bitcoinLib.networks['regtest'];
-    }
-    else if (environment === 'sandbox') {
-        seedFilename = 'seed.beta2.dat';
-        cryptoNetwork = bitcoinLib.networks['testnet'];
-    }
-    else {
-        throw Error('Invalid environment');
+    switch (environment) {
+        case 'dev':
+            cipheredSeed = 'xxSeY1rSHtXifVbYQT8G/MhpNjhmYmsVjf8c74VMUDxO5kwbTZHR9RwVZxJhLW5toglCfA9xNEqoA+cFkHmGfQ==';
+            cryptoNetwork = bitcoinLib.networks['regtest'];
+            break;
+
+        case 'sandbox':
+            cipheredSeed = '6MeMQss0K8Z8GtrFXBZVh7DKsUxSxoGdn9aG18K1v6TXRRw6iKfk2coemsx7dMjgfzFWIOqxB0UUUHWdq1cPig==';
+            cryptoNetwork = bitcoinLib.networks['testnet'];
+            break;
+
+        case 'prod':
+            cipheredSeed = 'SV9DTzGYj1RyBwgDr55C9HGkNF5D6V4QZL01pQN9teSyGBGZmBU/AD+FYK8PCkADHb23YQxbdEl3lV5+GNl7ZQ==';
+            cryptoNetwork = bitcoinLib.networks['bitcoin'];
+            break;
+
+        default:
+            throw Error('Invalid environment');
     }
 
-    const appSeedPath = path.join(process.env.PWD, seedFilename);
-    const encData = fs.readFileSync(appSeedPath, {encoding: 'utf8'});
-    appMasterSeed = conformSeed(Buffer.from(encData, 'base64'));
+    appMasterSeed = new CatenisCipher().genCipherFunctions(password).decipher(cipheredSeed);
     masterHDNode = bitcoinLib.bip32.fromSeed(appMasterSeed, cryptoNetwork);
-}
-
-function conformSeed(data, decrypt = true, master = true) {
-    const x = [ 78, 87, 108, 79, 77, 49, 82, 65, 89, 122, 69, 122, 75, 71, 103, 104, 84, 121, 115, 61],
-        y = [97, 69, 65, 120, 77, 50, 77, 119, 75, 121, 104, 48, 100, 48, 53, 120, 74, 106, 85, 61],
-        cryptoObj = (decrypt ? crypto.createDecipher : crypto.createCipher)('des-ede3-cbc', Buffer.from(Buffer.from(master ? x : y).toString(), 'base64').toString());
-
-    return Buffer.concat([cryptoObj.update(data), cryptoObj.final()]);
 }
 
 function addressFromPath(path, isWitness = false) {

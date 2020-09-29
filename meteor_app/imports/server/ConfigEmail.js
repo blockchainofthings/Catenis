@@ -17,7 +17,7 @@ import config from 'config';
 //import { Meteor } from 'meteor/meteor';
 
 // References code in other (Catenis) modules
-//import { variable_name } from './module_name';
+import { Catenis } from './Catenis';
 
 // Config entries
 const emailConfig = config.get('email');
@@ -41,7 +41,7 @@ if (cfgSettings.username) {
     credentials = cfgSettings.username;
 
     if (cfgSettings.password) {
-        credentials += ':' + cfgSettings.password;
+        credentials += ':' + Catenis.decipherData(cfgSettings.password);
     }
 }
 
