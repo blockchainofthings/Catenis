@@ -1,6 +1,6 @@
 {
   "name": "catenis",
-  "version": "0.5.22",
+  "version": "0.5.23",
   "description": "Catenis Enterprise application",
   "main": "server/main.js",
   "scripts": {
