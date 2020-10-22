@@ -17,7 +17,7 @@ import { expect } from 'chai';
 import { Meteor } from 'meteor/meteor';
 
 // References code in other (Catenis) modules
-import { Catenis } from '../Catenis';
+//import { Catenis } from '../Catenis';
 import { BitcoinCore } from '../BitcoinCore';
 import { FundSource } from '../FundSource';
 import { AncestorTransactions } from '../AncestorTransactions';

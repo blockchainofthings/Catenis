@@ -30,6 +30,7 @@ import { Message } from './Message';
 import { Device } from './Device';
 import { Billing } from './Billing';
 import { CatenisOffChainMonitor } from './CatenisOffChainMonitor';
+import { BitcoinInfo } from './BitcoinInfo';
 
 // Config entries
 const readConfirmConfig = config.get('readConfirmation');

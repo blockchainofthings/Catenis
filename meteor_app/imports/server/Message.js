@@ -15,6 +15,7 @@ import util from 'util';
 import config from 'config';
 // Meteor packages
 import { Meteor } from 'meteor/meteor';
+import { Random } from 'meteor/random';
 
 // References code in other (Catenis) modules
 import { Catenis } from './Catenis';
@@ -725,7 +726,7 @@ Message.query = function (issuerDeviceId, filter, limit, skip) {
         };
 
         // Date filter
-        if (filter.startDate instanceof Date) {
+        if (hasFilter && (filter.startDate instanceof Date)) {
             sentSelector.sentDate = {
                 $gte: filter.startDate
             };
@@ -734,7 +735,7 @@ Message.query = function (issuerDeviceId, filter, limit, skip) {
             };
         }
 
-        if (filter.endDate instanceof Date) {
+        if (hasFilter && (filter.endDate instanceof Date)) {
             if (sentSelector.sentDate !== undefined) {
                 sentSelector.$and = [
                     {sentDate: sentSelector.sentDate},
@@ -759,7 +760,7 @@ Message.query = function (issuerDeviceId, filter, limit, skip) {
         }
 
         // Read state filter
-        if (filter.readState === Message.readState.read || filter.readState === Message.readState.unread) {
+        if (hasFilter && (filter.readState === Message.readState.read || filter.readState === Message.readState.unread)) {
             sentSelector.$and = [{
                 $or: [{
                     action: Message.action.log

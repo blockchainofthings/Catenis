@@ -16,6 +16,7 @@ import config from 'config';
 import BigNumber from 'bignumber.js';
 // Meteor packages
 import { Meteor } from 'meteor/meteor';
+import { Random } from 'meteor/random';
 
 // References code in other (Catenis) modules
 import { Catenis } from './Catenis';

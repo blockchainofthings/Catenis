@@ -333,7 +333,7 @@ function initAncestors(txInputs) {
         }
     });
 
-    for ([txid, count] of txIdCount) {
+    for (const [txid, count] of txIdCount) {
         let mempoolTxInfo;
 
         try {

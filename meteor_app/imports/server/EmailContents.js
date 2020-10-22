@@ -15,7 +15,7 @@ import path from 'path';
 // Third-party node modules
 import config from 'config';
 // Meteor packages
-import { Meteor } from 'meteor/meteor';
+//import { Meteor } from 'meteor/meteor';
 
 // References code in other (Catenis) modules
 import { Catenis } from './Catenis';

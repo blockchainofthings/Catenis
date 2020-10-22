@@ -16,7 +16,7 @@ import config from 'config';
 import Future from 'fibers/future';
 import _und from 'underscore';
 // Meteor packages
-import { Meteor } from 'meteor/meteor';
+//import { Meteor } from 'meteor/meteor';
 import { Roles } from 'meteor/alanning:roles';
 
 // References code in other (Catenis) modules

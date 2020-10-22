@@ -72,7 +72,7 @@ export class ApiVersion {
     ne(ver) {
         ver = ApiVersion.checkVersion(ver);
 
-        return this.major != ver.major || (this.minor !== ver.minor && (!isNaN(this.minor) || !isNaN(ver.minor)))
+        return this.major !== ver.major || (this.minor !== ver.minor && (!isNaN(this.minor) || !isNaN(ver.minor)))
     }
 
     // Test if this version is greater than another version

@@ -57,7 +57,6 @@ import { BalanceInfo } from './BalanceInfo';
 import { Permission } from './Permission';
 import { TransactionMonitor } from './TransactionMonitor';
 import { Asset } from './Asset';
-import { BitcoinCore } from './BitcoinCore';
 import { SendMessageTransaction } from './SendMessageTransaction';
 import { LogMessageTransaction } from './LogMessageTransaction';
 import { SettleOffChainMessagesTransaction } from './SettleOffChainMessagesTransaction';

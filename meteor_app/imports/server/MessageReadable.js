@@ -17,7 +17,7 @@ import { Readable } from 'stream';
 //import { Meteor } from 'meteor/meteor';
 
 // References code in other (Catenis) modules
-//import { Catenis } from './Catenis';
+import { Catenis } from './Catenis';
 
 // Config entries
 /*const config_entryConfig = config.get('config_entry');

@@ -272,7 +272,7 @@ MessageChunk.getMessageChunksForProvisionalMessage = function (provisionalMessag
     }
     catch (err) {
         // Error retrieving message chunks of provisional message. Log error and throw exception
-        Catenis.logger.ERROR(util.format('Error retrieving message chunks of provisional message (doc_id: %s).', provisionalMessage_id), error);
+        Catenis.logger.ERROR(util.format('Error retrieving message chunks of provisional message (doc_id: %s).', provisionalMessage_id), err);
         throw new Meteor.Error('ctn_msg_chunk_load_error', util.format('Error retrieving message chunks of provisional message (doc_id: %s).', provisionalMessage_id));
     }
 

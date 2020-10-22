@@ -11,7 +11,6 @@
 //
 // Internal node modules
 import util from 'util';
-import crypto from 'crypto';
 // Third-party node modules
 import config from 'config';
 // Meteor packages

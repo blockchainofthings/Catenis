@@ -17,7 +17,7 @@ import _und from 'underscore';
 //import { Meteor } from 'meteor/meteor';
 
 // References code in other (Catenis) modules
-import { Catenis } from './Catenis';
+//import { Catenis } from './Catenis';
 import {
     TransactionSizeState,
     fixClone as baseFixClone
