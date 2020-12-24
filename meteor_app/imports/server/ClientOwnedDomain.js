@@ -243,7 +243,7 @@ function dnsTxtRecNameSuffix() {
             break;
 
         case 'sandbox':
-            prefix = '.sandbox.';
+            prefix = '.sandbox';
             break;
 
         case 'development':
