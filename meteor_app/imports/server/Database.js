@@ -143,7 +143,9 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }]
         },
@@ -154,7 +156,9 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -162,7 +166,9 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }]
         },
@@ -174,7 +180,9 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }]
         },
@@ -185,7 +193,9 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }]
         },
@@ -196,7 +206,9 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             },
             {
@@ -207,7 +219,9 @@ Database.initialize = function() {
                 opts: {
                     unique: true,
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             },
             {
@@ -216,7 +230,9 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             },
             {
@@ -226,7 +242,9 @@ Database.initialize = function() {
                 opts: {
                     unique: true,
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             },
             {
@@ -235,7 +253,9 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             },
             {
@@ -245,7 +265,9 @@ Database.initialize = function() {
                 opts: {
                     sparse: true,
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             },
             {
@@ -254,7 +276,9 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             },
             {
@@ -263,7 +287,9 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             },
             {
@@ -272,7 +298,9 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             },
             {
@@ -281,7 +309,9 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }]
         },
@@ -292,7 +322,9 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -302,7 +334,9 @@ Database.initialize = function() {
                 opts: {
                     unique: true,
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -310,7 +344,9 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -319,7 +355,9 @@ Database.initialize = function() {
                 opts: {
                     unique: true,
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -327,7 +365,9 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -336,7 +376,9 @@ Database.initialize = function() {
                 opts: {
                     sparse: true,
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -344,7 +386,9 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -352,7 +396,9 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }]
         },
@@ -367,7 +413,9 @@ Database.initialize = function() {
                 opts: {
                     unique: true,
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -375,7 +423,9 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -383,7 +433,9 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -391,7 +443,9 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -399,7 +453,9 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -407,7 +463,9 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -415,7 +473,9 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -424,7 +484,9 @@ Database.initialize = function() {
                 opts: {
                     sparse: 1,
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -433,7 +495,9 @@ Database.initialize = function() {
                 opts: {
                     sparse: 1,
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }],
             validator: {
@@ -464,7 +528,9 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -472,7 +538,9 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -480,7 +548,9 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -489,7 +559,9 @@ Database.initialize = function() {
                 opts: {
                     sparse: 1,
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -497,7 +569,9 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -505,7 +579,9 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -513,7 +589,9 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -522,7 +600,9 @@ Database.initialize = function() {
                 opts: {
                     sparse: 1,
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -531,7 +611,9 @@ Database.initialize = function() {
                 opts: {
                     sparse: 1,
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }]
         },
@@ -543,7 +625,9 @@ Database.initialize = function() {
                 opts: {
                     unique: true,
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             },
             {
@@ -552,7 +636,9 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             },
             {
@@ -561,7 +647,9 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             },
             {
@@ -570,7 +658,9 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }],
             initFunc: initCatenisNode
@@ -584,7 +674,9 @@ Database.initialize = function() {
                     unique: true,
                     sparse: true,
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -592,7 +684,9 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -601,7 +695,9 @@ Database.initialize = function() {
                 opts: {
                     unique: true,
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -611,7 +707,9 @@ Database.initialize = function() {
                 opts: {
                     unique: true,
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -620,7 +718,9 @@ Database.initialize = function() {
                 opts: {
                     unique: true,
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -628,7 +728,9 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -636,7 +738,9 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -644,7 +748,9 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -652,7 +758,9 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -660,7 +768,9 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -668,7 +778,9 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }]
         },
@@ -679,7 +791,9 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             },
             {
@@ -689,7 +803,9 @@ Database.initialize = function() {
                 opts: {
                     unique: true,
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             },
             {
@@ -701,7 +817,9 @@ Database.initialize = function() {
                 opts: {
                     unique: true,
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             },
             {
@@ -712,7 +830,9 @@ Database.initialize = function() {
                     unique: true,
                     sparse: true,
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             },
             {
@@ -721,7 +841,9 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             },
             {
@@ -730,7 +852,9 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             },
             {
@@ -739,7 +863,9 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             },
             {
@@ -748,7 +874,9 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             },
             {
@@ -757,7 +885,9 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }]
         },
@@ -769,7 +899,9 @@ Database.initialize = function() {
                 opts: {
                     unique: true,
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             },
             {
@@ -778,7 +910,9 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             },
             {
@@ -787,7 +921,9 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             },
             {
@@ -796,7 +932,9 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             },
             {
@@ -806,7 +944,9 @@ Database.initialize = function() {
                 opts: {
                     sparse: true,
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             },
             {
@@ -817,7 +957,9 @@ Database.initialize = function() {
                     unique: true,
                     sparse: true,
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             },
             {
@@ -827,7 +969,9 @@ Database.initialize = function() {
                 opts: {
                     sparse: true,
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             },
             {
@@ -838,7 +982,9 @@ Database.initialize = function() {
                 opts: {
                     unique: true,
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             },
             {
@@ -847,7 +993,9 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             },
             {
@@ -858,7 +1006,9 @@ Database.initialize = function() {
                 opts: {
                     sparse: true,
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             },
             {
@@ -867,7 +1017,9 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             },
             {
@@ -877,7 +1029,9 @@ Database.initialize = function() {
                 opts: {
                     sparse: true,
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             },
             {
@@ -887,7 +1041,9 @@ Database.initialize = function() {
                 opts: {
                     sparse: true,
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             },
             {
@@ -897,7 +1053,9 @@ Database.initialize = function() {
                 opts: {
                     sparse: true,
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             },
             {
@@ -907,7 +1065,9 @@ Database.initialize = function() {
                 opts: {
                     sparse: true,
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             },
             {
@@ -917,7 +1077,9 @@ Database.initialize = function() {
                 opts: {
                     sparse: true,
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }]
         },
@@ -929,7 +1091,9 @@ Database.initialize = function() {
                 opts: {
                     unique: true,
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -937,7 +1101,9 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -946,7 +1112,9 @@ Database.initialize = function() {
                 opts: {
                     background: true,
                     sparse: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -955,7 +1123,9 @@ Database.initialize = function() {
                 opts: {
                     background: true,
                     sparse: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -964,7 +1134,9 @@ Database.initialize = function() {
                 opts: {
                     background: true,
                     sparse: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -973,7 +1145,9 @@ Database.initialize = function() {
                 opts: {
                     background: true,
                     sparse: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -982,7 +1156,9 @@ Database.initialize = function() {
                 opts: {
                     background: true,
                     sparse: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -991,7 +1167,9 @@ Database.initialize = function() {
                 opts: {
                     background: true,
                     sparse: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -999,7 +1177,9 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }]
         },
@@ -1011,7 +1191,9 @@ Database.initialize = function() {
                 opts: {
                     unique: true,
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -1019,7 +1201,9 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -1027,7 +1211,9 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -1036,7 +1222,9 @@ Database.initialize = function() {
                 opts: {
                     background: true,
                     sparse: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -1045,7 +1233,9 @@ Database.initialize = function() {
                 opts: {
                     background: true,
                     sparse: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -1054,7 +1244,9 @@ Database.initialize = function() {
                 opts: {
                     background: true,
                     sparse: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -1063,7 +1255,9 @@ Database.initialize = function() {
                 opts: {
                     background: true,
                     sparse: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -1072,7 +1266,9 @@ Database.initialize = function() {
                 opts: {
                     background: true,
                     sparse: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -1081,7 +1277,9 @@ Database.initialize = function() {
                 opts: {
                     background: true,
                     sparse: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -1090,7 +1288,9 @@ Database.initialize = function() {
                 opts: {
                     background: true,
                     sparse: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -1098,7 +1298,9 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }]
         },
@@ -1110,7 +1312,9 @@ Database.initialize = function() {
                 opts: {
                     unique: true,
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -1118,7 +1322,9 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -1128,7 +1334,9 @@ Database.initialize = function() {
                 opts: {
                     unique: true,
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -1136,7 +1344,9 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -1144,7 +1354,9 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -1152,7 +1364,9 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -1160,7 +1374,9 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }]
         },
@@ -1171,7 +1387,9 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -1180,7 +1398,9 @@ Database.initialize = function() {
                 opts: {
                     unique: true,
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -1188,7 +1408,9 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -1196,7 +1418,9 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -1205,7 +1429,9 @@ Database.initialize = function() {
                 opts: {
                     sparse: true,
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -1214,7 +1440,9 @@ Database.initialize = function() {
                 opts: {
                     sparse: true,
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -1223,7 +1451,9 @@ Database.initialize = function() {
                 opts: {
                     sparse: true,
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -1232,7 +1462,9 @@ Database.initialize = function() {
                 opts: {
                     sparse: true,
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -1241,7 +1473,9 @@ Database.initialize = function() {
                 opts: {
                     sparse: true,
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -1250,7 +1484,9 @@ Database.initialize = function() {
                 opts: {
                     sparse: true,
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -1259,7 +1495,9 @@ Database.initialize = function() {
                 opts: {
                     sparse: true,
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -1268,7 +1506,9 @@ Database.initialize = function() {
                 opts: {
                     sparse: true,
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -1277,7 +1517,9 @@ Database.initialize = function() {
                 opts: {
                     sparse: true,
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -1286,7 +1528,9 @@ Database.initialize = function() {
                 opts: {
                     sparse: true,
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -1295,7 +1539,9 @@ Database.initialize = function() {
                 opts: {
                     sparse: true,
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -1304,7 +1550,9 @@ Database.initialize = function() {
                 opts: {
                     sparse: true,
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -1313,7 +1561,9 @@ Database.initialize = function() {
                 opts: {
                     sparse: true,
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -1322,7 +1572,9 @@ Database.initialize = function() {
                 opts: {
                     sparse: true,
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -1332,7 +1584,9 @@ Database.initialize = function() {
                     unique: true,
                     sparse: true,
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }]
         },
@@ -1343,7 +1597,9 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -1352,7 +1608,9 @@ Database.initialize = function() {
                 opts: {
                     unique: true,
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -1360,7 +1618,9 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -1369,7 +1629,9 @@ Database.initialize = function() {
                 opts: {
                     sparse: true,
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -1378,7 +1640,9 @@ Database.initialize = function() {
                 opts: {
                     sparse: true,
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -1387,7 +1651,9 @@ Database.initialize = function() {
                 opts: {
                     sparse: true,
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -1396,7 +1662,9 @@ Database.initialize = function() {
                 opts: {
                     sparse: true,
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -1405,7 +1673,9 @@ Database.initialize = function() {
                 opts: {
                     sparse: true,
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -1414,7 +1684,9 @@ Database.initialize = function() {
                 opts: {
                     sparse: true,
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -1423,7 +1695,9 @@ Database.initialize = function() {
                 opts: {
                     sparse: true,
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -1432,7 +1706,9 @@ Database.initialize = function() {
                 opts: {
                     sparse: true,
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -1441,7 +1717,9 @@ Database.initialize = function() {
                 opts: {
                     sparse: true,
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -1450,7 +1728,9 @@ Database.initialize = function() {
                 opts: {
                     sparse: true,
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -1459,7 +1739,9 @@ Database.initialize = function() {
                 opts: {
                     sparse: true,
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -1468,7 +1750,9 @@ Database.initialize = function() {
                 opts: {
                     sparse: true,
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -1477,7 +1761,9 @@ Database.initialize = function() {
                 opts: {
                     sparse: true,
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -1486,7 +1772,9 @@ Database.initialize = function() {
                 opts: {
                     sparse: true,
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -1495,7 +1783,9 @@ Database.initialize = function() {
                 opts: {
                     sparse: true,
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -1504,7 +1794,9 @@ Database.initialize = function() {
                 opts: {
                     sparse: true,
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -1513,7 +1805,9 @@ Database.initialize = function() {
                 opts: {
                     sparse: true,
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -1523,7 +1817,9 @@ Database.initialize = function() {
                     unique: true,
                     sparse: true,
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }]
         },
@@ -1534,7 +1830,9 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -1543,7 +1841,9 @@ Database.initialize = function() {
                 opts: {
                     sparse: true,
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -1552,7 +1852,9 @@ Database.initialize = function() {
                 opts: {
                     unique: true,
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -1560,7 +1862,9 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -1568,7 +1872,9 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -1576,7 +1882,9 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -1585,7 +1893,9 @@ Database.initialize = function() {
                 opts: {
                     sparse: true,
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -1594,7 +1904,9 @@ Database.initialize = function() {
                 opts: {
                     sparse: true,
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -1603,7 +1915,9 @@ Database.initialize = function() {
                 opts: {
                     sparse: true,
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -1613,7 +1927,9 @@ Database.initialize = function() {
                     unique: true,
                     sparse: true,
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }]
         },
@@ -1624,7 +1940,9 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -1633,7 +1951,9 @@ Database.initialize = function() {
                 opts: {
                     sparse: true,
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -1642,7 +1962,9 @@ Database.initialize = function() {
                 opts: {
                     unique: true,
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -1650,7 +1972,9 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -1658,7 +1982,9 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -1668,7 +1994,9 @@ Database.initialize = function() {
                     unique: true,
                     sparse: true,
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -1677,7 +2005,9 @@ Database.initialize = function() {
                 opts: {
                     sparse: true,
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -1686,7 +2016,9 @@ Database.initialize = function() {
                 opts: {
                     sparse: true,
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -1695,7 +2027,9 @@ Database.initialize = function() {
                 opts: {
                     sparse: true,
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -1705,7 +2039,9 @@ Database.initialize = function() {
                     unique: true,
                     sparse: true,
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }]
         },
@@ -1716,7 +2052,9 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             },
             {
@@ -1726,7 +2064,9 @@ Database.initialize = function() {
                 opts: {
                     unique: true,
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             },
             {
@@ -1736,7 +2076,9 @@ Database.initialize = function() {
                 opts: {
                     unique: true,
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }]
         },
@@ -1753,7 +2095,9 @@ Database.initialize = function() {
                     unique: true,
                     sparse: true,
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -1761,7 +2105,9 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -1769,7 +2115,9 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -1777,7 +2125,9 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -1785,7 +2135,9 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -1794,7 +2146,9 @@ Database.initialize = function() {
                 opts: {
                     sparse: true,
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }]
         },
@@ -1806,7 +2160,9 @@ Database.initialize = function() {
                 opts: {
                     unique: true,
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -1815,7 +2171,9 @@ Database.initialize = function() {
                 opts: {
                     unique: true,
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -1823,7 +2181,9 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -1832,7 +2192,9 @@ Database.initialize = function() {
                 opts: {
                     sparse: true,
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -1840,7 +2202,9 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -1848,7 +2212,9 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -1858,7 +2224,9 @@ Database.initialize = function() {
                     unique: true,
                     sparse: true,
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -1866,7 +2234,9 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }]
         },
@@ -1877,7 +2247,9 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -1885,7 +2257,9 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -1893,7 +2267,9 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -1901,7 +2277,9 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -1909,7 +2287,9 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -1917,7 +2297,9 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -1927,7 +2309,9 @@ Database.initialize = function() {
                     unique: true,
                     sparse: true,
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -1936,7 +2320,9 @@ Database.initialize = function() {
                 opts: {
                     sparse: true,
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -1946,7 +2332,9 @@ Database.initialize = function() {
                     unique: true,
                     sparse: true,
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -1955,7 +2343,9 @@ Database.initialize = function() {
                 opts: {
                     sparse: true,
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -1965,7 +2355,9 @@ Database.initialize = function() {
                     unique: true,
                     sparse: true,
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -1974,7 +2366,9 @@ Database.initialize = function() {
                 opts: {
                     sparse: true,
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -1982,7 +2376,9 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -1990,7 +2386,9 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -1998,7 +2396,9 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }]
         },
@@ -2010,7 +2410,9 @@ Database.initialize = function() {
                 opts: {
                     unique: true,
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -2019,7 +2421,9 @@ Database.initialize = function() {
                 opts: {
                     unique: true,
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }]
         },
@@ -2033,7 +2437,9 @@ Database.initialize = function() {
                     unique: true,
                     sparse: true,
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -2041,7 +2447,9 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -2049,7 +2457,9 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -2057,7 +2467,9 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }]
         },
@@ -2068,7 +2480,9 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -2076,7 +2490,9 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -2084,7 +2500,9 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -2092,7 +2510,9 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }]
         },
@@ -2103,7 +2523,9 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -2111,7 +2533,9 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -2120,7 +2544,9 @@ Database.initialize = function() {
                 opts: {
                     unique: true,
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -2128,7 +2554,9 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -2137,7 +2565,9 @@ Database.initialize = function() {
                 opts: {
                     sparse: true,
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -2146,7 +2576,9 @@ Database.initialize = function() {
                 opts: {
                     sparse: true,
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -2155,7 +2587,9 @@ Database.initialize = function() {
                 opts: {
                     sparse: true,
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -2164,7 +2598,9 @@ Database.initialize = function() {
                 opts: {
                     sparse: true,
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }]
         },
@@ -2175,7 +2611,9 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -2183,7 +2621,9 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -2191,7 +2631,9 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -2199,7 +2641,9 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }, {
                 fields: {
@@ -2207,7 +2651,9 @@ Database.initialize = function() {
                 },
                 opts: {
                     background: true,
-                    w: 1
+                    writeConcern: {
+                        w: 1
+                    }
                 }
             }]
         }
