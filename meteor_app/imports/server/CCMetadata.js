@@ -19,9 +19,10 @@ import config from 'config';
 import openssl from 'openssl-wrapper';
 import moment from 'moment';
 import CID from 'cids';
+import got from 'got';
 // Meteor packages
 import { Meteor } from 'meteor/meteor';
-import { HTTP } from 'meteor/http';
+import { Promise } from 'meteor/promise';
 
 // References code in other (Catenis) modules
 import { Catenis } from './Catenis';
@@ -568,17 +569,26 @@ function retrieveUrlContentInfo(url) {
     let contentInfo;
 
     try {
-        const result = HTTP.get(url.url, {timeout: cfgSettings.urlContentTimeout});
+        const response = Promise.await(
+            got(url.url, {
+                retry: 0,
+                responseType: 'buffer',
+                timeout: {
+                    socket: cfgSettings.urlContentTimeout,
+                    response: cfgSettings.urlContentTimeout
+                }
+            })
+        );
 
-        if (result.content) {
+        if (response.body) {
             // Calculate SHA256 hash of content
             contentInfo = {
-                dataHash: crypto.createHash('sha256').update(result.content).digest('hex')
+                dataHash: crypto.createHash('sha256').update(response.body).digest('hex')
             };
 
             // Get content type if specified
-            if (result.headers && result.headers.hasOwnProperty('content-type')) {
-                contentInfo.contentType = result.headers['content-type'];
+            if (response.headers && response.headers.hasOwnProperty('content-type')) {
+                contentInfo.contentType = response.headers['content-type'];
             }
         }
         else {

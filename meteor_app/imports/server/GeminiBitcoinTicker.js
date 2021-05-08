@@ -13,8 +13,9 @@
 //import util from 'util';
 // Third-party node modules
 import config from 'config';
+import got from 'got';
 // Meteor packages
-import { HTTP } from 'meteor/http';
+import { Promise } from 'meteor/promise';
 
 // References code in other (Catenis) modules
 import { Catenis } from './Catenis';
@@ -43,16 +44,19 @@ export class GeminiBitcoinTicker extends BitcoinTickerBase {
         // Prepare for request
         this.baseApiUrl = cfgSettings.apiUrl;
         this.btcTickerEndPointUrl = this.baseApiUrl + cfgSettings.bitcoinTickerEndPoint;
-        this.callOptions = {};
+        this.callOptions = {
+            retry: 0
+        };
 
         if (localAddress) {
-            this.callOptions.npmRequestOptions = {
-                localAddress: localAddress
-            };
+            this.callOptions.localAddress = localAddress;
         }
 
         if (timeout) {
-            this.callOptions.timeout = timeout;
+            this.callOptions.timeout = {
+                socket: timeout,
+                response: timeout
+            };
         }
     }
 
@@ -67,10 +71,13 @@ export class GeminiBitcoinTicker extends BitcoinTickerBase {
     //  }
     //
     getTicker(logError = true) {
-        let getResponse;
+        let body;
 
         try {
-            getResponse = HTTP.get(this.btcTickerEndPointUrl, this.callOptions);
+            body = Promise.await(
+                got(this.btcTickerEndPointUrl, this.callOptions)
+                .json()
+            );
         }
         catch (err) {
             if (logError) {
@@ -90,8 +97,8 @@ export class GeminiBitcoinTicker extends BitcoinTickerBase {
 
         // Successful response
         return {
-            price: getResponse.data.last,
-            referenceDate: new Date(getResponse.data.volume.timestamp)
+            price: body.last,
+            referenceDate: new Date(body.volume.timestamp)
         };
     }
 

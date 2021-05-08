@@ -13,9 +13,10 @@
 //import util from 'util';
 // Third-party node modules
 import config from 'config';
+import got from 'got';
 // Meteor packages
 import { Meteor } from 'meteor/meteor';
-import { HTTP } from 'meteor/http';
+import { Promise } from 'meteor/promise';
 
 // References code in other (Catenis) modules
 import { Catenis } from './Catenis';
@@ -39,17 +40,18 @@ const cfgSettings = {
 export function IpfsClusterClient(apiUrl, localAddress, timeout) {
     this.apiUrl = apiUrl;
     this.httpOptions = {
-        npmRequestOptions: {
-            json: true
-        }
+        retry: 0
     };
 
     if (localAddress) {
-        this.httpOptions.npmRequestOptions.localAddress = localAddress;
+        this.httpOptions.localAddress = localAddress;
     }
 
     if (timeout) {
-        this.httpOptions.timeout = timeout;
+        this.httpOptions.timeout = {
+            socket: timeout,
+            response: timeout
+        };
     }
 }
 
@@ -61,7 +63,10 @@ IpfsClusterClient.prototype.getPeers = function () {
     const methodPath = 'peers';
 
     try {
-        return HTTP.get(this.apiUrl + methodPath, this.httpOptions).content;
+        return Promise.await(
+            got(this.apiUrl + methodPath, this.httpOptions)
+            .json()
+        );
     }
     catch (err) {
         handleError('getPeers', err);

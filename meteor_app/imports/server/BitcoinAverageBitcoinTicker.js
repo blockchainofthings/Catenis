@@ -13,8 +13,9 @@
 //import util from 'util';
 // Third-party node modules
 import config from 'config';
+import got from 'got';
 // Meteor packages
-import { HTTP } from 'meteor/http';
+import { Promise } from 'meteor/promise';
 
 // References code in other (Catenis) modules
 import { Catenis } from './Catenis';
@@ -44,7 +45,9 @@ export class BitcoinAverageBitcoinTicker extends BitcoinTickerBase {
         // Prepare for request
         this.baseApiUrl = cfgSettings.apiUrl;
         this.btcTickerEndPointUrl = this.baseApiUrl + cfgSettings.bitcoinTickerEndPoint;
-        this.callOptions = {};
+        this.callOptions = {
+            retry: 0
+        };
 
         if (apiKey) {
             this.callOptions.headers = {
@@ -53,13 +56,14 @@ export class BitcoinAverageBitcoinTicker extends BitcoinTickerBase {
         }
 
         if (localAddress) {
-            this.callOptions.npmRequestOptions = {
-                localAddress: localAddress
-            };
+            this.callOptions.localAddress = localAddress;
         }
 
         if (timeout) {
-            this.callOptions.timeout = timeout;
+            this.callOptions.timeout = {
+                socket: timeout,
+                response: timeout
+            };
         }
     }
 
@@ -74,10 +78,13 @@ export class BitcoinAverageBitcoinTicker extends BitcoinTickerBase {
     //  }
     //
     getTicker(logError = true) {
-        let getResponse;
+        let body;
 
         try {
-            getResponse = HTTP.get(this.btcTickerEndPointUrl, this.callOptions);
+            body = Promise.await(
+                got(this.btcTickerEndPointUrl, this.callOptions)
+                .json()
+            );
         }
         catch (err) {
             if (logError) {
@@ -97,8 +104,8 @@ export class BitcoinAverageBitcoinTicker extends BitcoinTickerBase {
 
         // Successful response
         return {
-            price: getResponse.data.BTCUSD.last,
-            referenceDate: new Date(getResponse.data.BTCUSD.timestamp * 1000)
+            price: body.BTCUSD.last,
+            referenceDate: new Date(body.BTCUSD.timestamp * 1000)
         };
     }
 

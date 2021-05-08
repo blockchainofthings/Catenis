@@ -13,10 +13,10 @@
 import events from 'events';
 // Third-party node modules
 import config from 'config';
+import got from 'got';
 // Meteor packages
 import { Meteor } from 'meteor/meteor';
 import { _ } from 'meteor/underscore';
-import {HTTP} from 'meteor/http';
 
 // References code in other (Catenis) modules
 import { Catenis } from './Catenis';
@@ -133,20 +133,20 @@ EarnBitcoinFees.prototype.getOptimumFeeRate = function () {
 function recommendedFees() {
     const endpointUrl = this.apiUrl + cfgSettings.recommendedFeesEndPoint;
 
-    return HTTP.get(endpointUrl, {json: true});
+    return Promise.await(got(endpointUrl, {retry: 0}).json());
 }
 
 function listFees() {
     const endpointUrl = this.apiUrl + cfgSettings.listFeesEndPoint;
 
-    return HTTP.get(endpointUrl, {json: true});
+    return Promise.await(got(endpointUrl, {retry: 0}).json());
 }
 
 function retrieveFees() {
     Catenis.logger.TRACE('Executing process to retrieve current bitcoin fees');
     try {
-        this.recommended = recommendedFees.call(this).data;
-        this.list = fixListFees(listFees.call(this).data);
+        this.recommended = recommendedFees.call(this);
+        this.list = fixListFees(listFees.call(this));
 
         // Get latest recorded fees
         const docEarnBtcFees = Catenis.db.collection.EarnBitcoinFees.findOne({}, {sort: {createdDate: -1}});

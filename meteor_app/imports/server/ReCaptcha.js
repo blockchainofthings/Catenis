@@ -13,8 +13,9 @@
 //import util from 'util';
 // Third-party node modules
 import config from 'config';
+import got from 'got';
 // Meteor packages
-import { HTTP } from 'meteor/http';
+import { Promise } from 'meteor/promise';
 
 // References code in other (Catenis) modules
 import { Catenis } from './Catenis';
@@ -69,19 +70,25 @@ export class ReCaptcha {
      * @param {String} [clientIP] The client IP address
      */
     verify(resToken, clientIP) {
-        const params = {
+        const form = {
             secret: this.secretKey,
             response: resToken
         };
 
         if (clientIP) {
-            params.remoteip = clientIP;
+            form.remoteip = clientIP;
         }
 
-        let postResponse;
+        let body;
 
         try {
-            postResponse = HTTP.post(this.verifyUrl, {params});
+            body = Promise.await(
+                got.post(this.verifyUrl, {
+                    retry: 0,
+                    form
+                })
+                .json()
+            );
         }
         catch (err) {
             //  Log error condition and throw exception
@@ -97,14 +104,12 @@ export class ReCaptcha {
             throw err;
         }
 
-        const result = postResponse.data;
-
-        if (!result.success && result['error-codes']) {
+        if (!body.success && body['error-codes']) {
             // Google reCAPTCHA verification failed
-            Catenis.logger.ERROR('Google reCAPTCHA verification failed', {'error-codes': result['error-codes']});
+            Catenis.logger.ERROR('Google reCAPTCHA verification failed', {'error-codes': body['error-codes']});
         }
 
-        return result;
+        return body;
     }
 
 
