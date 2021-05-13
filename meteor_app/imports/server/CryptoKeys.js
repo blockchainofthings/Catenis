@@ -392,7 +392,7 @@ CryptoKeys.prototype.signText = function (textToSign) {
         };
     }
 
-    return bitcoinMessage.sign(textToSign, this.getPrivateKey(), this.keyPair.compressed, signOpts);
+    return bitcoinMessage.sign(textToSign, this.getPrivateKey(), this.keyPair.compressed, Catenis.application.cryptoNetwork.messagePrefix, signOpts);
 };
 
 
