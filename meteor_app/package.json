@@ -39,7 +39,7 @@
     "fibers": "^5.0.0",
     "got": "^11.8.2",
     "http-signature": "^1.3.5",
-    "ipfs-http-client": "^45.0.0",
+    "ipfs-http-client": "^49.0.4",
     "it-to-stream": "^1.0.0",
     "lokijs": "^1.5.12",
     "meteor-node-stubs": "^1.0.3",
