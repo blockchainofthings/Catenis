@@ -46,7 +46,7 @@ export class Ipfs2MessageStorage extends MessageStorage {
         try {
             // Save message onto IPFS and return its CID
             // noinspection JSUnresolvedVariable
-            return Catenis.ipfsClient.add(message).cid.buffer;
+            return Buffer.from(Catenis.ipfsClient.add(message).cid.bytes);
         }
         catch (err) {
             // Error storing message onto external message storage.

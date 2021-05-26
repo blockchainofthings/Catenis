@@ -32,7 +32,7 @@
     "catenis-cipher": "git+ssh://git@bitbucket.org/blockchainofthings/catenis-cipher.git#semver:^1.0.1",
     "catenis-colored-coins": "git+ssh://git@bitbucket.org/blockchainofthings/cateniscoloredcoins.git#semver:^0.3.3",
     "catenis-off-chain-lib": "git+ssh://git@bitbucket.org/blockchainofthings/catenis-off-chain-lib.git#semver:^1.2.2",
-    "cids": "^0.7.5",
+    "cids": "^1.1.6",
     "clipboard": "^2.0.8",
     "compression": "^1.7.4",
     "config": "^3.3.6",

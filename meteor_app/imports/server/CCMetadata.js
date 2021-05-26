@@ -361,7 +361,7 @@ CCMetadata.prototype.store = function () {
                 const cidObj = Catenis.ipfsClient.add(Buffer.from(JSON.stringify(metadata))).cid;
 
                 this.storeResult = {
-                    cid: cidObj.buffer.toString('hex')
+                    cid: Buffer.from(cidObj.bytes).toString('hex')
                 };
             }
             catch (err) {
