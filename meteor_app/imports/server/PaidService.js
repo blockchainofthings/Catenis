@@ -83,17 +83,6 @@ export class PaidService extends EventEmitter {
     }
 
 
-    // Public object properties (getters/setters)
-    //
-
-    get prop() {
-
-    }
-
-    set prop(val) {
-
-    }
-
     // Private object methods
     //
 
@@ -155,6 +144,7 @@ export class PaidService extends EventEmitter {
             Catenis.logger.ERROR('Error inserting new record to PaidServicesHistory database collection.', err);
         }
     }
+
 
     // Public object methods
     //
