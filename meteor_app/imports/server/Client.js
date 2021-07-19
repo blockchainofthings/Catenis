@@ -47,6 +47,7 @@ import { ServiceAccount } from './ServiceAccount';
 import { ClientOwnedDomain } from './ClientOwnedDomain';
 import { StandbyPurchasedBcot } from './StandbyPurchasedBcot';
 import { AdminEmailNotify } from './AdminEmailNotify';
+import { ForeignBlockchain } from './ForeignBlockchain';
 
 // Config entries
 const clientConfig = config.get('client');
@@ -68,6 +69,7 @@ export const cfgSettings = {
 };
 
 const accNumberRegEx = /^[A-Z]-(\d{8})$/;
+const defaultForeignBlockchainConsumptionProfile = ForeignBlockchain.consumptionProfile.average;
 
 
 // Definition of function classes
@@ -188,6 +190,8 @@ export function Client(docClient, ctnNode, initializeDevices, noClientLicense = 
             enumerable: true
         }
     });
+
+    loadForeignBlockchainConsumptionProfile.call(this, docClient);
 
     // Instantiate objects to manage blockchain addresses for client
     this.servAccCreditLineAddr = new ClientServiceAccountCreditLineAddress(this.ctnNode.ctnNodeIndex, this.clientIndex);
@@ -492,6 +496,14 @@ Client.prototype.isValidBcotPaymentAddress = function (address, isAddrTypeAndPat
             && (addrPathParts = KeyStore.getPathParts(addrTypeAndPath)).ctnNodeIndex === this.ctnNode.ctnNodeIndex
             && addrPathParts.clientIndex === this.clientIndex;
 };
+
+Client.prototype.assetExportAdminForeignBcAccount = function (blockchainKey) {
+    return Catenis.foreignBlockchains.get(blockchainKey).client.privateKeyToAccount(
+        '0x' + Catenis.keyStore.getClientAssetExportAdminAddressKeys(this.ctnNode.ctnNodeIndex, this.clientIndex)
+        .getPrivateKey()
+        .toString('hex')
+    );
+}
 
 // Returns current balance of client's service account
 //
@@ -1333,6 +1345,14 @@ Client.prototype.removeStandbyBcot = function (doc_id) {
     }
 }
 
+Client.prototype.updateForeignBlockchainConsumptionProfile = function (blockchainKey, profileName) {
+    if (ForeignBlockchain.isValidKey(blockchainKey)
+            && ForeignBlockchain.isValidConsumptionProfileName(profileName)) {
+        this.foreignBcConsumptionProfile.set(blockchainKey, ForeignBlockchain.consumptionProfile[profileName]);
+        saveForeignBlockchainConsumptionProfile.call(this);
+    }
+}
+
 
 // Module functions used to simulate private Client object methods
 //  NOTE: these functions need to be bound to a Client object reference (this) before
@@ -1367,6 +1387,56 @@ function redeemStandbyBcot() {
     }
     catch (err) {
         Catenis.logger.ERROR('Error redeeming purchased Catenis credits on standby for client (clientId: %s).', this.clientId, err);
+    }
+}
+
+function loadForeignBlockchainConsumptionProfile(docClient) {
+    this.foreignBcConsumptionProfile = new Map();
+    let needToSave = false;
+
+    if (Array.isArray(docClient.foreignBlockchainConsumptionProfile)) {
+        for (const entry of docClient.foreignBlockchainConsumptionProfile) {
+            if (ForeignBlockchain.isValidKey(entry.blockchainKey)
+                    && ForeignBlockchain.isValidConsumptionProfileName(entry.profileName)
+                    && !this.foreignBcConsumptionProfile.has(entry.blockchainKey)) {
+                this.foreignBcConsumptionProfile.set(entry.blockchainKey, ForeignBlockchain.consumptionProfile[entry.profileName]);
+            }
+            else {
+                needToSave = true;
+            }
+        }
+    }
+
+    // Add any missing foreign blockchain entries
+    for (const blockchainKey of ForeignBlockchain._keys) {
+        if (!this.foreignBcConsumptionProfile.has(blockchainKey)) {
+            this.foreignBcConsumptionProfile.set(blockchainKey, defaultForeignBlockchainConsumptionProfile);
+            needToSave = true;
+        }
+    }
+
+    if (needToSave) {
+        saveForeignBlockchainConsumptionProfile.call(this);
+    }
+}
+
+function saveForeignBlockchainConsumptionProfile() {
+    try {
+        Catenis.db.collection.Client.update({
+            _id: this.doc_id
+        }, {
+            $set: {
+                foreignBlockchainConsumptionProfile: Array.from(this.foreignBcConsumptionProfile.keys())
+                    .map(blockchainKey => ({
+                        blockchainKey,
+                        profileName: this.foreignBcConsumptionProfile.get(blockchainKey).name
+                    }))
+            }
+        });
+    }
+    catch (err) {
+        Catenis.logger.ERROR(util.format('Error trying to update client\'s (doc Id: %s) foreign blockchain consumption profile list.', this.doc_id), err);
+        throw new Meteor.Error('ctn_client_update_error', util.format('Error trying to update client\'s (doc Id: %s) foreign blockchain consumption profile list', this.doc_id), err.stack);
     }
 }
 

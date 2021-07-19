@@ -36,7 +36,7 @@ es5-shim@4.8.0
 fetch@0.1.1
 geojson-utils@1.0.10
 hot-code-push@1.0.4
-hot-module-replacement@0.2.0
+hot-module-replacement@0.2.1
 html-tools@1.1.1
 htmljs@1.1.0
 http@1.4.3

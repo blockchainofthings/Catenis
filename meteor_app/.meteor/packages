@@ -37,6 +37,6 @@ meteortesting:mocha-core@8.1.2
 msavin:mongol
 msavin:jetsetter@4.0.0
 alanning:roles
-hot-module-replacement
 dev-error-overlay
 promise
+hot-module-replacement

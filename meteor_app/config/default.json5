@@ -215,6 +215,7 @@
       "clientServAccDebitLine": 900,  // (15 min.)
       "clientBcotPayment": 14400,  // (4 hours)
       "deviceReadConfirm": 900,  // (15 min.)
+      "deviceMigratedAsset": 900,  // (15 min.)
       "deviceMain": 900,  // (15 min.)
       "deviceAsset": 900,  // (15 min.)
       "deviceAssetIssuance": 900  // (15 min.)
@@ -435,7 +436,13 @@
         }
       },
       "transfer": {
-        "minutesToConfirm": 300  // (5 hours) Time, in minutes, within which asset transfer txs are expected to be confirmed
+        "minutesToConfirm": 300  // (5 hours) Time, in minutes, within which transfer asset txs are expected to be confirmed
+      },
+      "outMigrate": {
+        "minutesToConfirm": 300  // (5 hours) Time, in minutes, within which out-migrate asset txs are expected to be confirmed
+      },
+      "inMigrate": {
+        "minutesToConfirm": 300  // (5 hours) Time, in minutes, within which in-migrate asset txs are expected to be confirmed
       }
     },
     "serviceTxConfig": {
@@ -478,6 +485,22 @@
         "numWitnessOutputs": 3,     // Number of segregated witness (P2WPKH) outputs
         "numNonWitnessOutputs": 0,  // Number of non-segregated witness (P2PKH) outputs
         "nullDataPayloadSize": 10   // Size, in bytes, of payload of null data output
+      },
+      "outMigrateAsset": {  // Out-migrate asset
+        // NOTE: the parameters below (next 4 lines) are for the best case where only segregated witness inputs and outputs are used (which is true in the long run for the sandbox environment and should be true for the production environment from inception)
+        "numWitnessInputs": 4,      // Number of segregated witness inputs (that spend P2WPKH outputs)
+        "numNonWitnessInputs": 0,   // Number of non-segregated witness inputs (that spend P2PKH outputs)
+        "numWitnessOutputs": 3,     // Number of segregated witness (P2WPKH) outputs
+        "numNonWitnessOutputs": 0,  // Number of non-segregated witness (P2PKH) outputs
+        "nullDataPayloadSize": 10   // Size, in bytes, of payload of null data output
+      },
+      "inMigrateAsset": {  // In-migrate asset
+        // NOTE: the parameters below (next 4 lines) are for the best case where only segregated witness inputs and outputs are used (which is true in the long run for the sandbox environment and should be true for the production environment from inception)
+        "numWitnessInputs": 4,      // Number of segregated witness inputs (that spend P2WPKH outputs)
+        "numNonWitnessInputs": 0,   // Number of non-segregated witness inputs (that spend P2PKH outputs)
+        "numWitnessOutputs": 3,     // Number of segregated witness (P2WPKH) outputs
+        "numNonWitnessOutputs": 0,  // Number of non-segregated witness (P2PKH) outputs
+        "nullDataPayloadSize": 10   // Size, in bytes, of payload of null data output
       }
     },
     "serviceUsageWeight": {
@@ -488,7 +511,9 @@
       "sendOffChainMessage": 91,        // Send off-chain message (without read confirmation) usage weight
       "sendOffChainMsgReadConfirm": 91, // Send off-chain message with read confirmation usage weight
       "issueAsset": 10,                 // Issue asset usage weight
-      "transferAsset": 100              // Transfer asset usage weight
+      "transferAsset": 90,              // Transfer asset usage weight
+      "outMigrateAsset": 7,             // Migrate asset usage weight
+      "inMigrateAsset": 3               // Migrate asset usage weight
     }
   },
   // Parameters pertaining to BalanceInfo module
@@ -708,7 +733,8 @@
       "0.7",
       "0.8",
       "0.9",
-      "0.10"
+      "0.10",
+      "0.11"
     ]
   },
   // Parameters pertaining to Authentication module
@@ -738,6 +764,9 @@
     }, {
       "ver": "0.3",
       "apiVer": "0.7"
+    }, {
+      "ver": "0.4",
+      "apiVer": "0.11"
     }]
   },
   // Parameters pertaining to WebSocketNotifyMsgDispatcher module
@@ -1087,5 +1116,125 @@
   adminEmailNotify: {
     fromAddress: "Catenis Enterprise <noreply@blockchainofthings.com>",  // E-mail address used to send notification e-mail messages to administrators
     replyAddress: "donotreply@blockchainofthings.com"  // (optional) E-mail address to be used as the address to be used when replying to notification e-mail message
+  },
+  // Parameters pertaining to ForeignBlockchain module
+  foreignBlockchain: [
+    {
+      key: 'ethereum',
+      name: 'Ethereum',
+      prefix: 'eth',
+      nativeCoin: {
+        name: 'ether',
+        symbol: 'ETH'
+      }
+    },
+    {
+      key: 'binance',
+      name: 'Binance Smart Chain',
+      prefix: 'bsc',
+      nativeCoin: {
+        name: 'Binance coin',
+        symbol: 'BNB'
+      }
+    },
+    {
+      key: 'polygon',
+      name: 'Polygon PoS Chain',
+      prefix: 'pps',
+      nativeCoin: {
+        name: 'MATIC',
+        symbol: 'MATIC'
+      }
+    }
+  ],
+  // Parameters pertaining to EthereumClient module
+  ethereumClient: {
+    nodeHost: '',  // Ethereum node client API hostname
+    nodePath:  null,  // (optional, can be set to null) Ethereum node client API endpoint path
+    nodePort: null,  // (optional, can be set to null) Ethereum node client API port. If null, the default port (8545) is used
+    nodeProtocol: 'wss', // Ethereum node client API protocol. Expected values: 'http', 'https', 'ws' our 'wss'
+    apiUsername: '??????',  // (optional, can be set to null) Base64 encoded, ciphered username for accessing Ethereum node client API
+    apiPassword: '??????'  // (optional, can be set to null) Base64 encoded, ciphered password for accessing Ethereum node client API
+  },
+  // Parameters pertaining to BinanceSCClient module
+  binanceSCClient: {
+    nodeHost: '',  // Binance Smart Chain node client API hostname
+    nodePath:  null,  // (optional, can be set to null) Binance Smart Chain node client API endpoint path
+    nodePort: null,  // (optional, can be set to null) Binance Smart Chain node client API port. If null, the default port (8545) is used
+    nodeProtocol: 'wss', // Binance Smart Chain node client API protocol. Expected values: 'http', 'https', 'ws' our 'wss'
+    apiUsername: '??????',  // (optional, can be set to null) Base64 encoded, ciphered username for accessing Binance Smart Chain node client API
+    apiPassword: '??????'  // (optional, can be set to null) Base64 encoded, ciphered password for accessing Binance Smart Chain node client API
+  },
+  // Parameters pertaining to PolygonPSClient module
+  polygonPSClient: {
+    nodeHost: '',  // Polygon PoS Chain node client API hostname
+    nodePath:  null,  // (optional, can be set to null) Polygon PoS Chain node client API endpoint path
+    nodePort: null,  // (optional, can be set to null) Polygon PoS Chain node client API port. If null, the default port (8545) is used
+    nodeProtocol: 'wss', // Polygon PoS Chain node client API protocol. Expected values: 'http', 'https', 'ws' our 'wss'
+    apiUsername: '??????',  // (optional, can be set to null) Base64 encoded, ciphered username for accessing Polygon PoS Chain node client API
+    apiPassword: '??????'  // (optional, can be set to null) Base64 encoded, ciphered password for accessing Polygon PoS Chain node client API
+  },
+  // Parameters pertaining to ForeignSmartContract module
+  foreignSmartContract: {
+    updateNonceMaxRetries: 10  // Maximum number of retries for sending transaction with an updated nonce
+  },
+  // Parameters pertaining to CatenisErc20Token module
+  catenisErc20Token: {
+    resourcePath: 'asset_export/ethereum/',  // Path (from private/ directory) from where associated Ethereum contract compilation output should be loaded
+    compiledOutputFilename: 'CatenisERC20Token.json',  // Filename of Ethereum contract compilation output
+    updateNonceMaxRetries: 10  // Maximum number of retries for sending transaction with an updated nonce
+  },
+  // Parameters pertaining to EthereumGasPrices module
+  ethereumGasPrices: {
+    apiUrl: "https://api.blocknative.com/",  // Blocknative API URL
+    blockPricesEndPoint: "gasprices/blockprices",  // API endpoint for retrieving Ethereum gas price estimates
+    localAddress: null,  // (optional, can be set to null) IP address of local network interface to use to issue requests to the Web service
+    timeout: 20000,  // (20 sec.) Timeout, in milliseconds, for connection/request with API server
+    apiKey: '??????',  // Base64 encoded, ciphered Blocknative API key used for service authentication
+    confidenceLevels: [  // List indicating the price estimates that should be returned for different probabilities for making to the next block
+      99,                //  Each value must be a percentage (1-99), and the list can have no more than 5 values
+      95,
+      90,
+      80,
+      70
+    ]
+  },
+  // Parameters pertaining to BinanceSCGasPrices module
+  binanceSCGasPrices: {
+    apiUrl: "https://bscgas.info/",  // BSCGas.info API URL
+    gasPricesEndPoint: "gas",  // API endpoint for retrieving Binance Smart Chain gas price estimates
+    localAddress: null,  // (optional, can be set to null) IP address of local network interface to use to issue requests to the Web service
+    timeout: 20000  // (20 sec.) Timeout, in milliseconds, for connection/request with API server
+  },
+  // Parameters pertaining to PolygonPSGasPrices module
+  polygonPSGasPrices: {
+    apiUrl: "https://gasstation-mainnet.matic.network/",  // Matic (Polygon) Gas Station API URL
+    gasPricesEndPoint: "",  // API endpoint for retrieving Polygon PoS Chain gas price estimates
+    localAddress: null,  // (optional, can be set to null) IP address of local network interface to use to issue requests to the Web service
+    timeout: 20000  // (20 sec.) Timeout, in milliseconds, for connection/request with API server
+  },
+  // Parameters pertaining to ExportedAsset module
+  exportedAsset: {
+    checkPendingExportRetryInterval: 300000,  // (5 sec.) Time interval, in milliseconds, for retrying check for pending exported asset
+    reprocessFailedTxReceipts: {
+      tickInterval: 300000,  // (5 sec.) Time interval, in milliseconds, equivalent to a reprocessing tick
+      ticksToReprocessFactor: 2,  // Factor used for calculating the next value for the ticks to reprocess according
+                                  //  to the following formula: ticks = ratio ^ (reprocessCounter - 1)
+      maxTicksToReprocess: 1024,  // Maximum value for the ticks to reprocess
+      maxReprocessCounter: 10  // Maximum times for reprocessing failed tx receipt (and try again to retrieve tx receipt)
+    },
+    maxQueryCount: 500  // Maximum number of entries that can be returned when querying for exported assets
+  },
+  // Parameters pertaining to AssetMigration module
+  assetMigration: {
+    checkPendingMigrationRetryInterval: 300000,  // (5 sec.) Time interval, in milliseconds, for retrying check for pending asset migration
+    reprocessFailedTxReceipts: {
+      tickInterval: 300000,  // (5 sec.) Time interval, in milliseconds, equivalent to a reprocessing tick
+      ticksToReprocessFactor: 2,  // Factor used for calculating the next value for the ticks to reprocess according
+      //  to the following formula: ticks = ratio ^ (reprocessCounter - 1)
+      maxTicksToReprocess: 1024,  // Maximum value for the ticks to reprocess
+      maxReprocessCounter: 10  // Maximum times for reprocessing failed tx receipt (and try again to retrieve tx receipt)
+    },
+    maxQueryCount: 500  // Maximum number of entries that can be returned when querying for asset migrations
   }
 }

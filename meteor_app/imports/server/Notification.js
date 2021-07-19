@@ -74,7 +74,7 @@ export function Notification(notifyMsgDispatcherInfos) {
 
 Notification.prototype.dispatchNotifyMessage = function (deviceId, eventName, data) {
     try {
-        // Try to dispatch message though one of the available dispatchers until one succeeds
+        // Try to dispatch message through one of the available dispatchers until one succeeds
         //  (or none succeeds)
         this.notifyMsgDispatchers.some((dispatcher) => {
             return dispatcher.instance.dispatchNotifyMessage(deviceId, eventName, data);
@@ -226,6 +226,16 @@ Notification.event = Object.freeze({
         name: 'final-msg-progress',
         description: 'Progress of asynchronous message processing has come to an end',
         minNotifyServiceVer: '0.3'
+    }),
+    asset_export_outcome: Object.freeze({
+        name: 'asset_export_outcome',
+        description: 'Asset export has been finalized',
+        minNotifyServiceVer: '0.4'
+    }),
+    asset_migration_outcome: Object.freeze({
+        name: 'asset_migration_outcome',
+        description: 'Asset migration has been finalized',
+        minNotifyServiceVer: '0.4'
     })
 });
 

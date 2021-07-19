@@ -34,6 +34,7 @@ import './ServiceAccountTemplate.js';
 import './OwnedDomainsTemplate.js';
 import './DevicesTemplate.js';
 import './StandbyPurchasedBcotTemplate.js';
+import './ForeignBlockchainsTemplate.js';
 
 // Module variables
 const confirmPhrase = 'yes, i do confirm it';

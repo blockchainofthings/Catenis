@@ -30,6 +30,8 @@ import { LogOffChainMessage } from './LogOffChainMessage';
 import { SendOffChainMessage } from './SendOffChainMessage';
 import { Transaction } from './Transaction';
 import { SettleOffChainMessagesTransaction } from './SettleOffChainMessagesTransaction';
+import { OutMigrateAssetTransaction } from './OutMigrateAssetTransaction';
+import { InMigrateAssetTransaction } from './InMigrateAssetTransaction';
 
 // Config entries
 /*const config_entryConfig = config.get('config_entry');
@@ -231,6 +233,11 @@ Billing.createNew = function (device, serviceData, servicePriceInfo, servicePaym
 
         docBilling.service = offChainMessage.options.readConfirmation ? Service.clientPaidService.send_off_chain_msg_read_confirm.name
                 : Service.clientPaidService.send_off_chain_message.name;
+    }
+    else if ((serviceData instanceof OutMigrateAssetTransaction) || (serviceData instanceof InMigrateAssetTransaction)) {
+        serviceTransact = serviceData;
+
+        docBilling.service = Service.clientPaidService.migrate_asset.name;
     }
     else {
         // Not specified or unknown service for billing.

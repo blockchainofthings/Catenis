@@ -215,6 +215,12 @@ const cfgSettings = {
         },
         transfer: {
             minutesToConfirm: serviceConfig.get('asset.transfer.minutesToConfirm'),
+        },
+        outMigrate: {
+            minutesToConfirm: serviceConfig.get('asset.outMigrate.minutesToConfirm'),
+        },
+        inMigrate: {
+            minutesToConfirm: serviceConfig.get('asset.inMigrate.minutesToConfirm'),
         }
     },
     serviceTxConfig: {
@@ -252,6 +258,20 @@ const cfgSettings = {
             numWitnessOutputs: serviceConfig.get('serviceTxConfig.transferAsset.numWitnessOutputs'),
             numNonWitnessOutputs: serviceConfig.get('serviceTxConfig.transferAsset.numNonWitnessOutputs'),
             nullDataPayloadSize: serviceConfig.get('serviceTxConfig.transferAsset.nullDataPayloadSize')
+        },
+        outMigrateAsset: {
+            numWitnessInputs: serviceConfig.get('serviceTxConfig.outMigrateAsset.numWitnessInputs'),
+            numNonWitnessInputs: serviceConfig.get('serviceTxConfig.outMigrateAsset.numNonWitnessInputs'),
+            numWitnessOutputs: serviceConfig.get('serviceTxConfig.outMigrateAsset.numWitnessOutputs'),
+            numNonWitnessOutputs: serviceConfig.get('serviceTxConfig.outMigrateAsset.numNonWitnessOutputs'),
+            nullDataPayloadSize: serviceConfig.get('serviceTxConfig.outMigrateAsset.nullDataPayloadSize')
+        },
+        inMigrateAsset: {
+            numWitnessInputs: serviceConfig.get('serviceTxConfig.inMigrateAsset.numWitnessInputs'),
+            numNonWitnessInputs: serviceConfig.get('serviceTxConfig.inMigrateAsset.numNonWitnessInputs'),
+            numWitnessOutputs: serviceConfig.get('serviceTxConfig.inMigrateAsset.numWitnessOutputs'),
+            numNonWitnessOutputs: serviceConfig.get('serviceTxConfig.inMigrateAsset.numNonWitnessOutputs'),
+            nullDataPayloadSize: serviceConfig.get('serviceTxConfig.inMigrateAsset.nullDataPayloadSize')
         }
     },
     serviceUsageWeight: {
@@ -262,7 +282,9 @@ const cfgSettings = {
         sendOffChainMessage: serviceConfig.get('serviceUsageWeight.sendOffChainMessage'),
         sendOffChainMsgReadConfirm: serviceConfig.get('serviceUsageWeight.sendOffChainMsgReadConfirm'),
         issueAsset: serviceConfig.get('serviceUsageWeight.issueAsset'),
-        transferAsset: serviceConfig.get('serviceUsageWeight.transferAsset')
+        transferAsset: serviceConfig.get('serviceUsageWeight.transferAsset'),
+        outMigrateAsset: serviceConfig.get('serviceUsageWeight.outMigrateAsset'),
+        inMigrateAsset: serviceConfig.get('serviceUsageWeight.inMigrateAsset')
     }
 };
 
@@ -308,6 +330,11 @@ Service.testFunctions = function () {
         typicalIssueAssetTxVsize: typicalIssueAssetTxVsize(),
         estimatedTransferAssetTxCost: estimatedTransferAssetTxCost(),
         typicalTransferAssetTxVsize: typicalTransferAssetTxVsize(),
+        estimatedOutMigrateAssetTxCost: estimatedOutMigrateAssetTxCost(),
+        typicalOutMigrateAssetTxVsize: typicalOutMigrateAssetTxVsize(),
+        estimatedInMigrateAssetTxCost: estimatedInMigrateAssetTxCost(),
+        typicalInMigrateAssetTxVsize: typicalInMigrateAssetTxVsize(),
+        estimatedMigrateAssetAverageTxCost: estimatedMigrateAssetAverageTxCost(),
         highestEstimatedReadConfirmTxCostPerMessage: highestEstimatedReadConfirmTxCostPerMessage(),
         averageEstimatedReadConfirmTxCostPerMessage: averageEstimatedReadConfirmTxCostPerMessage(),
         estimatedTerminalReadConfirmTxCostPerMessage: estimatedTerminalReadConfirmTxCostPerMessage(),
@@ -664,6 +691,21 @@ Service.transferAssetServicePrice = function () {
     return getServicePrice(Service.clientPaidService.transfer_asset);
 };
 
+// Returns price data for Migrate Asset service
+//
+//  Return: {
+//    estimatedServiceCost: [Number], - Estimated cost, in satoshis, of the service
+//    priceMarkup: [Number], - Markup used to calculate the price of the service
+//    btcServicePrice: [Number], - Price of the service expressed in (bitcoin) satoshis
+//    bitcoinPrice: [Number] - Bitcoin price, in USD, used to calculate exchange rate
+//    bcotPrice: [Number] - BCOT token price, in USD, used to calculate exchange rate
+//    exchangeRate: [Number], - Bitcoin to BCOT token (1 BTC = x BCOT) exchange rate used to calculate final price
+//    finalServicePrice: [Number] - Price charged for the service expressed in Catenis service credit's lowest units
+//  }
+Service.migrateAssetServicePrice = function () {
+    return getServicePrice(Service.clientPaidService.migrate_asset);
+};
+
 Service.devAssetIssuanceAddrAmount = function (address) {
         return Catenis.application.legacyDustFunding ? Transaction.legacyDustAmount
             : (address ? Transaction.dustAmountByAddress(address) : Transaction.witnessOutputDustAmount);
@@ -749,6 +791,13 @@ Service.clientPaidService = Object.freeze({
         abbreviation: 'TA',
         description: 'Transfer an amount of a Catenis asset to another device',
         costFunction: estimatedTransferAssetTxCost
+    }),
+    migrate_asset: Object.freeze({
+        name: 'migrate_asset',
+        label: 'Migrate Asset',
+        abbreviation: 'MA',
+        description: 'Migrate an amount of a (previously exported) Catenis asset to or from a foreign blockchain',
+        costFunction: estimatedMigrateAssetAverageTxCost
     })
 });
 
@@ -818,7 +867,8 @@ function highestEstimatedServiceTxCost() {
         estimatedSendOffChainMessageCost(),
         estimatedSendOffChainMessageReadConfirmCost(),
         estimatedIssueAssetTxCost(),
-        estimatedTransferAssetTxCost()
+        estimatedTransferAssetTxCost(),
+        estimatedMigrateAssetAverageTxCost()
     ]);
 }
 
@@ -831,7 +881,8 @@ function averageEstimatedServiceTxCost() {
         estimatedSendOffChainMessageCost(),
         estimatedSendOffChainMessageReadConfirmCost(),
         estimatedIssueAssetTxCost(),
-        estimatedTransferAssetTxCost()
+        estimatedTransferAssetTxCost(),
+        estimatedMigrateAssetAverageTxCost()
     ], [
         cfgSettings.serviceUsageWeight.logMessage,
         cfgSettings.serviceUsageWeight.sendMessage,
@@ -840,7 +891,8 @@ function averageEstimatedServiceTxCost() {
         cfgSettings.serviceUsageWeight.sendOffChainMessage,
         cfgSettings.serviceUsageWeight.sendOffChainMsgReadConfirm,
         cfgSettings.serviceUsageWeight.issueAsset,
-        cfgSettings.serviceUsageWeight.transferAsset
+        cfgSettings.serviceUsageWeight.transferAsset,
+        cfgSettings.serviceUsageWeight.outMigrateAsset + cfgSettings.serviceUsageWeight.inMigrateAsset
     ]), cfgSettings.paymentResolution);
 }
 
@@ -932,6 +984,44 @@ function typicalTransferAssetTxVsize() {
         numNonWitnessOutputs: cfgSettings.serviceTxConfig.transferAsset.numNonWitnessOutputs,
         nullDataPayloadSize: cfgSettings.serviceTxConfig.transferAsset.nullDataPayloadSize
     }).savedSizeInfo.vsize;
+}
+
+function estimatedOutMigrateAssetTxCost() {
+    return Util.roundToResolution(typicalOutMigrateAssetTxVsize() * Catenis.bitcoinFees.getFeeRateByTime(cfgSettings.asset.outMigrate.minutesToConfirm), cfgSettings.paymentResolution);
+}
+
+function typicalOutMigrateAssetTxVsize() {
+    return new TransactionSize({
+        numWitnessInputs: cfgSettings.serviceTxConfig.outMigrateAsset.numWitnessInputs,
+        numNonWitnessInputs: cfgSettings.serviceTxConfig.outMigrateAsset.numNonWitnessInputs,
+        numWitnessOutputs: cfgSettings.serviceTxConfig.outMigrateAsset.numWitnessOutputs,
+        numNonWitnessOutputs: cfgSettings.serviceTxConfig.outMigrateAsset.numNonWitnessOutputs,
+        nullDataPayloadSize: cfgSettings.serviceTxConfig.outMigrateAsset.nullDataPayloadSize
+    }).savedSizeInfo.vsize;
+}
+
+function estimatedInMigrateAssetTxCost() {
+    return Util.roundToResolution(typicalInMigrateAssetTxVsize() * Catenis.bitcoinFees.getFeeRateByTime(cfgSettings.asset.inMigrate.minutesToConfirm), cfgSettings.paymentResolution);
+}
+
+function typicalInMigrateAssetTxVsize() {
+    return new TransactionSize({
+        numWitnessInputs: cfgSettings.serviceTxConfig.inMigrateAsset.numWitnessInputs,
+        numNonWitnessInputs: cfgSettings.serviceTxConfig.inMigrateAsset.numNonWitnessInputs,
+        numWitnessOutputs: cfgSettings.serviceTxConfig.inMigrateAsset.numWitnessOutputs,
+        numNonWitnessOutputs: cfgSettings.serviceTxConfig.inMigrateAsset.numNonWitnessOutputs,
+        nullDataPayloadSize: cfgSettings.serviceTxConfig.inMigrateAsset.nullDataPayloadSize
+    }).savedSizeInfo.vsize;
+}
+
+function estimatedMigrateAssetAverageTxCost() {
+    return Util.roundToResolution(Util.weightedAverage([
+        estimatedOutMigrateAssetTxCost(),
+        estimatedInMigrateAssetTxCost()
+    ], [
+        cfgSettings.serviceUsageWeight.outMigrateAsset,
+        cfgSettings.serviceUsageWeight.inMigrateAsset
+    ]), cfgSettings.paymentResolution);
 }
 
 function highestEstimatedReadConfirmTxCostPerMessage() {
@@ -1091,7 +1181,8 @@ function averageServicePrice() {
         getServicePrice(Service.clientPaidService.send_off_chain_message).finalServicePrice,
         getServicePrice(Service.clientPaidService.send_off_chain_msg_read_confirm).finalServicePrice,
         getServicePrice(Service.clientPaidService.issue_asset).finalServicePrice,
-        getServicePrice(Service.clientPaidService.transfer_asset).finalServicePrice
+        getServicePrice(Service.clientPaidService.transfer_asset).finalServicePrice,
+        getServicePrice(Service.clientPaidService.migrate_asset).finalServicePrice
     ], [
         cfgSettings.serviceUsageWeight.logMessage,
         cfgSettings.serviceUsageWeight.sendMessage,
@@ -1100,7 +1191,8 @@ function averageServicePrice() {
         cfgSettings.serviceUsageWeight.sendOffChainMessage,
         cfgSettings.serviceUsageWeight.sendOffChainMsgReadConfirm,
         cfgSettings.serviceUsageWeight.issueAsset,
-        cfgSettings.serviceUsageWeight.transferAsset
+        cfgSettings.serviceUsageWeight.transferAsset,
+        cfgSettings.serviceUsageWeight.outMigrateAsset + cfgSettings.serviceUsageWeight.inMigrateAsset
     ]), cfgSettings.servicePriceResolution);
 }
 
@@ -1423,6 +1515,18 @@ Object.defineProperties(Service, {
     minutesToConfirmAssetTransfer: {
         get: function () {
             return cfgSettings.asset.transfer.minutesToConfirm;
+        },
+        enumerable: true
+    },
+    minutesToConfirmAssetOutMigration: {
+        get: function () {
+            return cfgSettings.asset.outMigrate.minutesToConfirm;
+        },
+        enumerable: true
+    },
+    minutesToConfirmAssetInMigrate: {
+        get: function () {
+            return cfgSettings.asset.inMigrate.minutesToConfirm;
         },
         enumerable: true
     },

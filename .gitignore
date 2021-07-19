@@ -4,6 +4,8 @@
 /meteor_app/config/development-*.json5
 /meteor_app/config/local-*.json5
 /meteor_app/packages/
+/meteor_app/asset_export/ethereum/build
+/meteor_app/private/asset_export/ethereum
 /mongodb_dump/
 /build/
 Debug.js

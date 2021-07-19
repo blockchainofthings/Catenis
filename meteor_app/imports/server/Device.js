@@ -32,7 +32,8 @@ import {
     DeviceMainAddress,
     DeviceReadConfirmAddress,
     DeviceAssetAddress,
-    DeviceAssetIssuanceAddress
+    DeviceAssetIssuanceAddress,
+    DeviceMigratedAssetAddress
 } from './BlockchainAddress';
 import { DeviceOffChainAddress } from './OffChainAddress';
 import { CatenisNode } from './CatenisNode';
@@ -73,6 +74,9 @@ import { procCS as spendServCredProcCS } from './SpendServiceCredit';
 import { LogOffChainMessage } from './LogOffChainMessage';
 import { SendOffChainMessage } from './SendOffChainMessage';
 import { OffChainMsgReceipt } from './OffChainMsgReceipt';
+import { ExportedAsset } from './ExportedAsset';
+import { ForeignBlockchain } from './ForeignBlockchain';
+import { AssetMigration } from './AssetMigration';
 
 
 // Definition of function classes
@@ -146,6 +150,7 @@ export function Device(docDevice, client) {
     // Instantiate objects to manage blockchain addresses for device
     this.mainAddr = new DeviceMainAddress(this.client.ctnNode.ctnNodeIndex, this.client.clientIndex, this.deviceIndex);
     this.readConfirmAddr = new DeviceReadConfirmAddress(this.client.ctnNode.ctnNodeIndex, this.client.clientIndex, this.deviceIndex);
+    this.migratedAssetAddr = new DeviceMigratedAssetAddress(this.client.ctnNode.ctnNodeIndex, this.client.clientIndex, this.deviceIndex);
     this.assetAddr = new DeviceAssetAddress(this.client.ctnNode.ctnNodeIndex, this.client.clientIndex, this.deviceIndex);
     this.assetIssuanceAddr = new DeviceAssetIssuanceAddress(this.client.ctnNode.ctnNodeIndex, this.client.clientIndex, this.deviceIndex);
     this.offChainAddr = new DeviceOffChainAddress(this.client.ctnNode.ctnNodeIndex, this.client.clientIndex, this.deviceIndex);
@@ -2608,6 +2613,317 @@ Device.prototype.transferAsset = function (receivingDeviceId, amount, assetId) {
     return remainingBalance;
 };
 
+/**
+ * Export an asset to a foreign blockchain
+ * @param {string} assetId The ID of the asset to export
+ * @param {string} foreignBlockchain Name of the foreign blockchain
+ * @param {Object} token
+ * @param {string} token.name The name of the token to be created on the foreign blockchain
+ * @param {string} token.symbol The symbol of the token to be created on the foreign blockchain
+ * @param {Object} [options]
+ * @param {string} [options.consumptionProfile] Name of foreign blockchain native coin consumption profile to use
+ * @param {boolean} [options.estimateOnly] Indicates that no asset export should be done. Instead, only the estimated
+ *                                          price (in the foreign blockchain's native coin) to fulfill the operation
+ *                                          should be returned
+ * @return {(ExportedAssetOutcome|string)} Current outcome state of the asset export, or the estimated price (formatted
+ *                                          as string value expressed in the foreign blockchain's native coin smallest
+ *                                          denomination)
+ */
+Device.prototype.exportAsset = function (assetId, foreignBlockchain, token, options) {
+    // Make sure that device is not deleted
+    if (this.status === Device.status.deleted.name) {
+        // Cannot export asset for a deleted device. Log error and throw exception
+        Catenis.logger.DEBUG('Cannot export asset for a deleted device', {deviceId: this.deviceId});
+        throw new Meteor.Error('ctn_device_deleted', `Cannot export asset for a deleted device (deviceId: ${this.deviceId})`);
+    }
+
+    // Make sure that device is active
+    if (this.status !== Device.status.active.name) {
+        // Cannot export asset for a device that is not active. Log error and throw exception
+        Catenis.logger.DEBUG('Cannot export asset for a device that is not active', {deviceId: this.deviceId});
+        throw new Meteor.Error('ctn_device_not_active', `Cannot export asset for a device that is not active (deviceId: ${this.deviceId})`);
+    }
+
+    options = options || {};
+
+    // Get asset to export.
+    //  Note: this will throw 'ctn_asset_not_found' if no asset with that asset ID can be found
+    const asset = Asset.getAssetByAssetId(assetId, true);
+
+    // Make sure that this asset has been issued by the current device
+    if (asset.issuingDevice.deviceId !== this.deviceId) {
+        // Device trying to export the asset is not the same as the device that issued the asset
+        Catenis.logger.DEBUG('Device trying to export the asset is not the same as the device that issued the asset', {
+            assetId,
+            assetIssuingDeviceId: asset.issuingDevice.deviceId,
+            deviceId: this.deviceId
+        });
+        throw new Meteor.Error('ctn_device_not_asset_issuer', `Device (deviceId: ${this.deviceId}) trying to export the asset (assetId: ${assetId}) is not the same as the device (deviceId: ${asset.issuingDevice.deviceId}) that issued the asset`);
+    }
+
+    // Instantiate asset export
+    const expAsset = ExportedAsset.getExportedAsset(asset, foreignBlockchain, this.deviceId);
+
+    let consumptionProfile;
+
+    if (options.consumptionProfile) {
+        consumptionProfile = ForeignBlockchain.consumptionProfile[options.consumptionProfile];
+    }
+
+    // Note: this will throw 'ctn_exp_asset_already_exported' if asset is already exported
+    return options.estimateOnly
+        ? expAsset.estimateExportPrice(token.name, token.symbol, consumptionProfile).toString()
+        : expAsset.export(token.name, token.symbol, consumptionProfile);
+};
+
+/**
+ * Get the current outcome state of an exported asset
+ * @param {string} assetId The ID of the exported asset
+ * @param {string} foreignBlockchain Name of the foreign blockchain
+ * @return {ExportedAssetOutcome} Current outcome state of asset export
+ */
+Device.prototype.getAssetExportOutcome = function (assetId, foreignBlockchain) {
+    // Make sure that device is not deleted
+    if (this.status === Device.status.deleted.name) {
+        // Cannot get asset export outcome for a deleted device. Log error and throw exception
+        Catenis.logger.DEBUG('Cannot get asset export outcome for a deleted device', {deviceId: this.deviceId});
+        throw new Meteor.Error('ctn_device_deleted', `Cannot get asset export outcome for a deleted device (deviceId: ${this.deviceId})`);
+    }
+
+    // Make sure that device is active
+    if (this.status !== Device.status.active.name) {
+        // Cannot get asset export outcome for a device that is not active. Log error and throw exception
+        Catenis.logger.DEBUG('Cannot get asset export outcome for a device that is not active', {deviceId: this.deviceId});
+        throw new Meteor.Error('ctn_device_not_active', `Cannot get asset export outcome for a device that is not active (deviceId: ${this.deviceId})`);
+    }
+
+    // Get asset that was exported.
+    //  Note: this will throw 'ctn_asset_not_found' if no asset with that asset ID can be found
+    const asset = Asset.getAssetByAssetId(assetId, true);
+
+    // Instantiate asset export.
+    //  Note: this will throw 'ctn_exp_asset_not_found' if asset was not yet exported
+    const expAsset = ExportedAsset.getExportedAsset(asset, foreignBlockchain);
+
+    // Make sure that the asset has been exported by the current device
+    if (expAsset.owningDevice.deviceId !== this.deviceId) {
+        // Device trying to get asset export outcome is not the same as the device that exported the asset
+        Catenis.logger.DEBUG('Device trying to get asset export outcome is not the same as the device that exported the asset', {
+            assetId,
+            foreignBlockchain,
+            expAssetOwningDeviceId: expAsset.owningDevice.deviceId,
+            deviceId: this.deviceId
+        });
+        throw new Meteor.Error('ctn_device_not_exp_asset_owner', `Device (deviceId: ${this.deviceId}) trying to get asset export (assetId: ${assetId}, foreignBlockchain: ${foreignBlockchain}) outcome is not the same as the device (deviceId: ${expAsset.owningDevice.deviceId}) that exported the asset`);
+    }
+
+    return expAsset.getOutcome();
+};
+
+/**
+ * List assets exported by the current device, and adhering to the specified filtering criteria
+ * @param {Object} [filter]
+ * @param {string} [filter.assetId] ID of exported Asset
+ * @param {string} [filter.foreignBlockchain] Name of foreign blockchain
+ * @param {(string|string[])} [filter.status] A single status or a list of statuses to include
+ * @param {boolean} [filter.negateStatus] Indicates whether the specified statuses should be excluded instead
+ * @param {Date} [filter.startDate] Date and time specifying the lower bound of the time frame within which the
+ *                                   asset has been exported
+ * @param {Date} [filter.endDate] Date and time specifying the upper bound of the time frame within which the asset
+ *                                 has been exported
+ * @param {number} [limit] Maximum number of exported assets that should be returned
+ * @param {number} [skip] Number of exported assets that should be skipped (from beginning of list of matching
+ *                         exported assets) and not returned
+ * @return {{exportedAssets: ExportedAssetOutcome[], hasMore: boolean}}
+ */
+Device.prototype.listExportedAssets = function (filter, limit, skip) {
+    // Make sure that device is not deleted
+    if (this.status === Device.status.deleted.name) {
+        // Cannot list exported assets for a deleted device. Log error and throw exception
+        Catenis.logger.DEBUG('Cannot list exported assets for a deleted device', {deviceId: this.deviceId});
+        throw new Meteor.Error('ctn_device_deleted', `Cannot list exported assets for a deleted device (deviceId: ${this.deviceId})`);
+    }
+
+    // Make sure that device is active
+    if (this.status !== Device.status.active.name) {
+        // Cannot list exported assets for a device that is not active. Log error and throw exception
+        Catenis.logger.DEBUG('Cannot list exported assets for a device that is not active', {deviceId: this.deviceId});
+        throw new Meteor.Error('ctn_device_not_active', `Cannot list exported assets for a device that is not active (deviceId: ${this.deviceId})`);
+    }
+
+    return ExportedAsset.query(this.deviceId, filter, limit, skip);
+};
+
+/**
+ * Migrate an amount of a previously exported asset to/from a foreign blockchain
+ * @param {string} assetId The ID of the asset to migrate
+ * @param {string} foreignBlockchain Name of the foreign blockchain
+ * @param {(Object|string)} migration Object describing the asset migration to be performed, or the ID of an existing
+ *                                     asset migration
+ * @param {string} migration.direction The migration direction
+ * @param {number} migration.amount The amount (expressed as a decimal number) of the asset to be migrated
+ * @param {string} [migration.destAddress] The address of the account on the foreign blockchain that should received
+ *                                          the migrated amount (of the corresponding foreign token)
+ * @param {Object} [options]
+ * @param {string} [options.consumptionProfile] Name of foreign blockchain native coin consumption profile to use
+ * @param {boolean} [options.estimateOnly] Indicates that no asset migration should be done. Instead, only the estimated
+ *                                          price (in the foreign blockchain's native coin) to fulfill the operation
+ *                                          should be returned
+ * @return {(AssetMigrationOutcome|string)} Current outcome state of the asset migration, or the estimated price
+ *                                           (formatted as string value expressed in the foreign blockchain's native
+ *                                           coin smallest denomination)
+ */
+Device.prototype.migrateAsset = function (assetId, foreignBlockchain, migration, options) {
+    // Make sure that device is not deleted
+    if (this.status === Device.status.deleted.name) {
+        // Cannot migrate asset for a deleted device. Log error and throw exception
+        Catenis.logger.DEBUG('Cannot migrate asset for a deleted device', {deviceId: this.deviceId});
+        throw new Meteor.Error('ctn_device_deleted', `Cannot migrate asset for a deleted device (deviceId: ${this.deviceId})`);
+    }
+
+    // Make sure that device is active
+    if (this.status !== Device.status.active.name) {
+        // Cannot migrate asset for a device that is not active. Log error and throw exception
+        Catenis.logger.DEBUG('Cannot migrate asset for a device that is not active', {deviceId: this.deviceId});
+        throw new Meteor.Error('ctn_device_not_active', `Cannot migrate asset for a device that is not active (deviceId: ${this.deviceId})`);
+    }
+
+    // Get asset to migrate.
+    //  Note: this will throw 'ctn_asset_not_found' if no asset with that asset ID can be found
+    const asset = Asset.getAssetByAssetId(assetId, true);
+
+    let assetMgr;
+
+    if (typeof migration === 'string') {
+        // Try to retrieve existing asset migration.
+        //  Note: this will throw 'ctn_asset_mgr_not_found' if no asset migration with that migration ID can be found
+        assetMgr = AssetMigration.getAssetMigrationByMigrationId(migration);
+
+        // Make sure that this asset migration corresponds to the asset and foreign blockchain specified
+        if (assetMgr.expAsset.asset.assetId !== assetId) {
+            Catenis.logger.DEBUG(`Asset migration (migrationId: ${migration}) does not correspond to the specified asset (assetId: ${assetId})`);
+            throw new Meteor.Error('ctn_device_mismatched_asset_migration', `Asset migration (migrationId: ${migration}) does not correspond to the specified asset (assetId: ${assetId})`);
+        }
+
+        if (assetMgr.expAsset.blockchainKey !== foreignBlockchain) {
+            Catenis.logger.DEBUG(`Asset migration (migrationId: ${migration}) does not correspond to the specified foreign blockchain (${foreignBlockchain})`);
+            throw new Meteor.Error('ctn_device_mismatched_asset_migration', `Asset migration (migrationId: ${migration}) does not correspond to the specified foreign blockchain (${foreignBlockchain})`);
+        }
+    }
+    else {
+        // Instantiate new asset migration.
+        //  Note: this will throw 'ctn_exp_asset_not_found' if asset was not yet exported
+        //        this will throw 'ctn_asset_mgr_not_exported' if asset is not yet (successfully) exported
+        //        this will throw 'ctn_asset_mgr_amount_too_large' if asset to migrate is too large
+        assetMgr = AssetMigration.newAssetMigration(
+            migration.direction,
+            asset,
+            foreignBlockchain,
+            this.deviceId,
+            direction.amount,
+            direction.destAddress
+        );
+    }
+
+    // Make sure that asset has been exported by the current device
+    if (assetMgr.expAsset.owningDevice.deviceId !== this.deviceId) {
+        // Device trying to migrate the asset is not the same as the device that exported the asset
+        Catenis.logger.DEBUG('Device trying to migrate the asset is not the same as the device that exported the asset', {
+            assetId,
+            foreignBlockchain: assetMgr.expAsset.blockchainKey,
+            expAssetOwningDevice: assetMgr.expAsset.owningDevice.deviceId,
+            deviceId: this.deviceId
+        });
+        throw new Meteor.Error('ctn_device_not_exp_asset_owner', `Device (deviceId: ${this.deviceId}) trying to migrate the asset (assetId: ${assetId}, foreignBlockchain: ${assetMgr.expAsset.blockchainKey}) is not the same as the device (deviceId: ${assetMgr.expAsset.owningDevice.deviceId}) that exported the asset`);
+    }
+
+    options = options || {};
+
+    let consumptionProfile;
+
+    if (options.consumptionProfile) {
+        consumptionProfile = ForeignBlockchain.consumptionProfile[options.consumptionProfile];
+    }
+
+    // Note: this will throw 'ctn_asset_mgr_already_migrated' if asset amount is already migrated
+    return options.estimateOnly
+        ? assetMgr.estimateMigrationPrice(consumptionProfile).toString()
+        : assetMgr.migrate(consumptionProfile);
+};
+
+/**
+ * Get the current outcome state of an exported asset
+ * @param {string} migrationId The ID of the asset migration
+ * @return {AssetMigrationOutcome} Current outcome state of asset migration
+ */
+Device.prototype.getAssetMigrationOutcome = function (migrationId) {
+    // Make sure that device is not deleted
+    if (this.status === Device.status.deleted.name) {
+        // Cannot get asset migration outcome for a deleted device. Log error and throw exception
+        Catenis.logger.DEBUG('Cannot get asset migration outcome for a deleted device', {deviceId: this.deviceId});
+        throw new Meteor.Error('ctn_device_deleted', `Cannot get asset migration outcome for a deleted device (deviceId: ${this.deviceId})`);
+    }
+
+    // Make sure that device is active
+    if (this.status !== Device.status.active.name) {
+        // Cannot get asset migration outcome for a device that is not active. Log error and throw exception
+        Catenis.logger.DEBUG('Cannot get asset migration outcome for a device that is not active', {deviceId: this.deviceId});
+        throw new Meteor.Error('ctn_device_not_active', `Cannot get asset migration outcome for a device that is not active (deviceId: ${this.deviceId})`);
+    }
+
+    // Try to retrieve existing asset migration.
+    //  Note: this will throw 'ctn_asset_mgr_not_found' if no asset migration with that migration ID can be found
+    const assetMgr = AssetMigration.getAssetMigrationByMigrationId(migrationId);
+
+    // Make sure that the asset has been migrated by the current device
+    if (assetMgr.owningDevice.deviceId !== this.deviceId) {
+        // Device trying to get asset migration outcome is not the same as the device that migrated the asset
+        Catenis.logger.DEBUG('Device trying to get asset migration outcome is not the same as the device that migrated the asset', {
+            migrationId,
+            assetMgrOwningDeviceId: assetMgr.owningDevice.deviceId,
+            deviceId: this.deviceId
+        });
+        throw new Meteor.Error('ctn_device_not_asset_mgr_owner', `Device (deviceId: ${this.deviceId}) trying to get asset migration (assetId: ${migrationId}) outcome is not the same as the device (deviceId: ${assetMgr.owningDevice.deviceId}) that migrated the asset`);
+    }
+
+    return assetMgr.getOutcome();
+};
+
+/**
+ * List asset migrations done by the current device, and adhering to the specified filtering criteria
+ * @param {Object} [filter]
+ * @param {string} [filter.assetId] Asset ID
+ * @param {string} [filter.foreignBlockchain] Name of foreign blockchain
+ * @param {string} [filter.direction] The migration direction
+ * @param {(string|string[])} [filter.status] A single status or a list of statuses to include
+ * @param {boolean} [filter.negateStatus] Indicates whether the specified statuses should be excluded instead
+ * @param {Date} [filter.startDate] Date and time specifying the lower bound of the time frame within which the
+ *                                   asset amount has been migrated
+ * @param {Date} [filter.endDate] Date and time specifying the upper bound of the time frame within which the asset
+ *                                 amount has been migrated
+ * @param {number} [limit] Maximum number of exported assets that should be returned
+ * @param {number} [skip] Number of exported assets that should be skipped (from beginning of list of matching
+ *                         exported assets) and not returned
+ * @return {{assetMigrations: AssetMigrationOutcome[], hasMore: boolean}}
+ */
+Device.prototype.listAssetMigrations = function (filter, limit, skip) {
+    // Make sure that device is not deleted
+    if (this.status === Device.status.deleted.name) {
+        // Cannot list asset migrations for a deleted device. Log error and throw exception
+        Catenis.logger.DEBUG('Cannot list asset migrations for a deleted device', {deviceId: this.deviceId});
+        throw new Meteor.Error('ctn_device_deleted', `Cannot list asset migrations for a deleted device (deviceId: ${this.deviceId})`);
+    }
+
+    // Make sure that device is active
+    if (this.status !== Device.status.active.name) {
+        // Cannot list asset migrations for a device that is not active. Log error and throw exception
+        Catenis.logger.DEBUG('Cannot list asset migrations for a device that is not active', {deviceId: this.deviceId});
+        throw new Meteor.Error('ctn_device_not_active', `Cannot list asset migrations for a device that is not active (deviceId: ${this.deviceId})`);
+    }
+
+    return AssetMigration.query(this.deviceId, filter, limit, skip);
+}
+
 // Update device properties
 //
 // Arguments:
@@ -2956,6 +3272,16 @@ Device.prototype.notifyFinalMessageProgress = function (ephemeralMessageId, msgP
         ...msgProgress
     }));
 };
+
+Device.prototype.notifyAssetExportOutcome = function (outcome) {
+    // Dispatch notification message
+    Catenis.notification.dispatchNotifyMessage(this.deviceId, Notification.event.asset_export_outcome.name, JSON.stringify(outcome));
+};
+
+Device.prototype.notifyAssetMigrationOutcome = function (outcome) {
+    // Dispatch notification message
+    Catenis.notification.dispatchNotifyMessage(this.deviceId, Notification.event.asset_migration_outcome.name, JSON.stringify(outcome));
+};
 /** End of notification related methods **/
 
 /** Asset related methods **/
@@ -2998,7 +3324,6 @@ Device.prototype.getUnlockedAssetIssuanceAddresses = function () {
     }).filter(addr => addr !== undefined);
 };
 
-
 // Retrieve the current balance of a given asset held by this device
 //
 //  Arguments:
@@ -3029,6 +3354,43 @@ Device.prototype.assetBalance = function (asset, convertAmount = true) {
     else {
         // Unable to retrieve Colored Coins asset balance. Log error condition and throw exception
         Catenis.logger.ERROR('Unable to retrieve Colored Coins asset balance', {
+            ccAssetId: asset.ccAssetId
+        });
+    }
+
+    return balance;
+};
+
+// Retrieve the current migrated balance (held in custody) of a given asset
+//
+//  Arguments:
+//    asset: [Object(Asset)|String] - An object of type Asset or the asset ID
+//    convertAmount: [Boolean] - Indicate whether balance amount should be converted from a fractional amount to an
+//                                an integer number of the asset's smallest division (according to the asset divisibility)
+//
+//  Return:
+//    balance: {
+//      total: [Number], - Total asset balance represented as an integer number of the asset's smallest division (according to the asset divisibility)
+//      unconfirmed: [Number] - The unconfirmed asset balance represented as an integer number of the asset's smallest division (according to the asset divisibility)
+//    }
+Device.prototype.migratedAssetBalance = function (asset, convertAmount = true) {
+    if (typeof asset === 'string') {
+        // Asset ID passed instead, so to retrieve asset
+        asset = Asset.getAssetByAssetId(asset, true);
+    }
+
+    const balance = Catenis.c3NodeClient.getAssetBalance(asset.ccAssetId, this.migratedAssetAddr.listAddressesInUse());
+
+    if (balance !== undefined) {
+        if (convertAmount) {
+            // Convert amounts into asset's smallest division
+            balance.total = asset.amountToSmallestDivisionAmount(balance.total);
+            balance.unconfirmed = asset.amountToSmallestDivisionAmount(balance.unconfirmed);
+        }
+    }
+    else {
+        // Unable to retrieve Colored Coins asset balance. Log error condition and throw exception
+        Catenis.logger.ERROR('Unable to retrieve Colored Coins asset balance for migrated asset', {
             ccAssetId: asset.ccAssetId
         });
     }
@@ -3543,6 +3905,7 @@ Device.prototype.listAssetHolders = function (assetId, limit, skip) {
     const deviceAssetHolder = new Map();
     const skippedDevices = new Set();
     const discardedDevices = new Set();
+    let migratedBalance;
 
     if (addressAssetBalance !== undefined) {
         Object.keys(addressAssetBalance).forEach((address) => {
@@ -3595,6 +3958,22 @@ Device.prototype.listAssetHolders = function (assetId, limit, skip) {
                     balance.unconfirmed = balance.unconfirmed.plus(assetBalance.unconfirmedBalance);
                 }
             }
+            else if (addrInfo !== null && addrInfo.type === KeyStore.extKeyType.dev_migr_asst_addr.name) {
+                // This is actually an amount that had been migrated. So report it separately
+                if (!migratedBalance) {
+                    // noinspection JSUnresolvedVariable
+                    migratedBalance = {
+                        total: new BigNumber(assetBalance.totalBalance),
+                        unconfirmed: new BigNumber(assetBalance.unconfirmedBalance)
+                    };
+                }
+                else {
+                    // noinspection JSUnresolvedVariable
+                    migratedBalance.total = migratedBalance.total.plus(assetBalance.totalBalance);
+                    // noinspection JSUnresolvedVariable
+                    migratedBalance.unconfirmed = migratedBalance.unconfirmed.plus(assetBalance.unconfirmedBalance);
+                }
+            }
             else {
                 // Unrecognized asset holding address. Log error condition
                 Catenis.logger.ERROR('Unrecognized asset holding address', {
@@ -3613,7 +3992,7 @@ Device.prototype.listAssetHolders = function (assetId, limit, skip) {
     }
 
     // Prepare to return result
-    if (deviceAssetHolder.size > 0) {
+    if (deviceAssetHolder.size > 0 || migratedBalance) {
         deviceAssetHolder.forEach((assetHolder) => {
             // Convert balance amount to number
             assetHolder.balance.total = assetHolder.balance.total.toNumber();
@@ -3623,6 +4002,24 @@ Device.prototype.listAssetHolders = function (assetId, limit, skip) {
         });
 
         result.hasMore = discardedDevices.size > 0;
+
+        if (migratedBalance) {
+            if (deviceAssetHolder.size < limit) {
+                // Add special entry with the asset amount that had been migrated
+                result.assetHolders.push({
+                    migrated: true,
+                    balance: {
+                        total: migratedBalance.total.toNumber(),
+                        unconfirmed: migratedBalance.unconfirmed.toNumber()
+                    }
+                });
+            }
+            else {
+                // Special entry will not fit. So make sure that it indicates
+                //  that some entries were left out
+                result.hasMore = true;
+            }
+        }
     }
 
     return result;

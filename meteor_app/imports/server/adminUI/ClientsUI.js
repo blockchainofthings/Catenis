@@ -29,6 +29,8 @@ import { CommonServiceAccountUI } from '../commonUI/CommonServiceAccountUI';
 import { CommonOwnedDomainsUI } from '../commonUI/CommonOwnedDomainsUI';
 import { KeyStore } from '../KeyStore';
 import { StandbyPurchasedBcot } from '../StandbyPurchasedBcot';
+import { CommonClientForeignBlockchainsUI } from '../commonUI/CommonClientForeignBlockchainsUI';
+import { ForeignBlockchain } from '../ForeignBlockchain';
 
 
 // Definition of function classes
@@ -487,6 +489,23 @@ ClientsUI.initialize = function () {
                     // Error trying to remove purchased BCOT tokens from standby. Log error and throw exception
                     Catenis.logger.ERROR('Failure removing purchased Catenis credits from standby (doc_id: %s).', doc_id, err);
                     throw new Meteor.Error('client.addStandbyBcot.failure', 'Failure removing Catenis vouchers from standby: ' + err.toString());
+                }
+            }
+            else {
+                // User not logged in or not a system administrator.
+                //  Throw exception
+                throw new Meteor.Error('ctn_admin_no_permission', 'No permission; must be logged in as a system administrator to perform this task');
+            }
+        },
+        updateForeignBcConsumptionProfile: function (client_id, blockchainKey, profileName) {
+            if (Roles.userIsInRole(this.userId, 'sys-admin')) {
+                try {
+                    return Client.getClientByDocId(client_id).updateForeignBlockchainConsumptionProfile(blockchainKey, profileName);
+                }
+                catch (err) {
+                    // Error trying to update client's foreign blockchain consumption profile. Log error and throw exception
+                    Catenis.logger.ERROR('Failure updating client\'s (doc_id: %s) foreign blockchain (%s) consumption profile (%s).', client_id, blockchainKey, profileName, err);
+                    throw new Meteor.Error('client.updateForeignBcConsumptionProfile.failure', 'Failure updating client\'s foreign blockchain consumption profile: ' + err.toString());
                 }
             }
             else {
@@ -1137,6 +1156,88 @@ ClientsUI.initialize = function () {
             }
 
             CommonServiceAccountUI.bcotPayment.call(this, typeAndPath);
+        }
+        else {
+            // User not logged in or not a system administrator
+            //  Make sure that publication is not started and throw exception
+            this.stop();
+            throw new Meteor.Error('ctn_admin_no_permission', 'No permission; must be logged in as a system administrator to perform this task');
+        }
+    });
+
+    Meteor.publish('foreignBcConsumptionProfiles', function () {
+        if (Roles.userIsInRole(this.userId, 'sys-admin')) {
+            for (const key of Object.keys(ForeignBlockchain.consumptionProfile)) {
+                // Add record
+                this.added('ForeignBcConsumptionProfile', key, {
+                    name: ForeignBlockchain.consumptionProfile[key].name
+                });
+            }
+
+            this.ready();
+        }
+        else {
+            // User not logged in or not a system administrator
+            //  Make sure that publication is not started and throw exception
+            this.stop();
+            throw new Meteor.Error('ctn_admin_no_permission', 'No permission; must be logged in as a system administrator to perform this task');
+        }
+    });
+
+    Meteor.publish('foreignBlockchains', function (client_id) {
+        if (Roles.userIsInRole(this.userId, 'sys-admin')) {
+            // Get client object
+            let client;
+
+            try {
+                client = Client.getClientByDocId(client_id);
+            }
+            catch (err) {
+                // Subscription made with an invalid Client doc/rec ID.
+                //  Make sure that publication is not started, log error and throw exception
+                this.stop();
+                Catenis.logger.ERROR('Subscription to method \'foreignBlockchains\' made with an invalid client', {client_id: client_id});
+                throw new Meteor.Error('clients.subscribe.foreign-blockchains.invalid-param', 'Subscription to method \'foreignBlockchains\' made with an invalid client');
+            }
+
+            CommonClientForeignBlockchainsUI.foreignBlockchains.call(this, client);
+        }
+        else {
+            // User not logged in or not a system administrator
+            //  Make sure that publication is not started and throw exception
+            this.stop();
+            throw new Meteor.Error('ctn_admin_no_permission', 'No permission; must be logged in as a system administrator to perform this task');
+        }
+    });
+
+    Meteor.publish('foreignBlockchainRecord', function (client_id, blockchainKey) {
+        if (Roles.userIsInRole(this.userId, 'sys-admin')) {
+            // Get client object
+            let client;
+
+            try {
+                client = Client.getClientByDocId(client_id);
+            }
+            catch (err) {
+                // Subscription made with an invalid Client doc/rec ID.
+                //  Make sure that publication is not started, log error and throw exception
+                this.stop();
+                Catenis.logger.ERROR('Subscription to method \'foreignBlockchainRecord\' made with an invalid client', {client_id: client_id});
+                throw new Meteor.Error('clients.subscribe.foreign-blockchain-record.invalid-param', 'Subscription to method \'foreignBlockchainRecord\' made with an invalid client');
+            }
+
+            // Get foreign blockchain
+            const blockchain = Catenis.foreignBlockchains.get(blockchainKey);
+
+            if (!blockchain) {
+                // Subscription made with an invalid foreign blockchain key.
+                //  Make sure that publication is not started, log error and throw exception
+                this.stop();
+                Catenis.logger.ERROR('Subscription to method \'foreignBlockchainRecord\' made with an invalid foreign blockchain key', {key: blockchainKey});
+                throw new Meteor.Error('clients.subscribe.foreign-blockchain-record.invalid-param', 'Subscription to method \'foreignBlockchainRecord\' made with an invalid foreign blockchain');
+            }
+
+            CommonClientForeignBlockchainsUI.foreignBlockchainRecord.call(this, client, blockchain);
         }
         else {
             // User not logged in or not a system administrator

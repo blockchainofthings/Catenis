@@ -2040,7 +2040,7 @@ Transaction.type = Object.freeze({
     }),
     transfer_asset: Object.freeze({
         name: 'transfer_asset',
-        description: 'Transaction used to transfer an amount of Catenis asset owned by a device to another device',
+        description: 'Transaction used to transfer an amount of a Catenis asset owned by a device to another device',
         dbInfoEntryName: 'transferAsset'
     }),
     settle_off_chain_messages: Object.freeze({
@@ -2048,6 +2048,16 @@ Transaction.type = Object.freeze({
         title: 'Settle Off-Chain Messages',
         description: 'Transaction used to settle Catenis off-chain messages to the blockchain',
         dbInfoEntryName: 'settleOffChainMessages'
+    }),
+    out_migrate_asset: Object.freeze({
+        name: 'out_migrate_asset',
+        description: 'Transaction used to out-migrate an amount of an exported Catenis asset to a foreign blockchain',
+        dbInfoEntryName: 'outMigrateAsset'
+    }),
+    in_migrate_asset: Object.freeze({
+        name: 'in_migrate_asset',
+        description: 'Transaction used to in-migrate an amount of an exported Catenis asset from a foreign blockchain back to Catenis',
+        dbInfoEntryName: 'inMigrateAsset'
     })
 });
 
@@ -2156,6 +2166,11 @@ Transaction.ioToken = Object.freeze({
         name: 'p2_dev_read_conf_addr',
         token: '<p2_dev_read_conf_addr>',
         description: 'Output (or input spending such output) paying to a device read confirmation address'
+    }),
+    p2_dev_migr_asst_addr: Object.freeze({
+        name: 'p2_dev_migr_asst_addr',
+        token: '<p2_dev_migr_asst_addr>',
+        description: 'Output (or input spending such output) paying to a device migrated asset address'
     }),
     p2_dev_main_addr: Object.freeze({
         name: 'p2_dev_main_addr',

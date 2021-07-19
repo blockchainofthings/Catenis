@@ -228,10 +228,34 @@ FlowRouter.route('/devices/:deviceIndex/edit', {
     }
 });
 
-FlowRouter.route('/resources', {
+/*FlowRouter.route('/resources', {
     action: function () {
         BlazeLayout.render('clientLayout',{
             page: 'clientResources'
+        });
+    }
+});
+
+
+FlowRouter.route('/foreignblockchains', {
+    action: function (params) {
+        BlazeLayout.render('clientLayout', {
+            page: 'clientForeignBlockchains',
+            dataContext: {
+                client_id: params.client_id
+            }
+        });
+    }
+});*/
+
+FlowRouter.route('/foreignblockchains/:blockchainKey', {
+    action: function (params) {
+        BlazeLayout.render('clientLayout', {
+            page: 'clientForeignBlockchainDetails',
+            dataContext: {
+                client_id: params.client_id,
+                blockchainKey: params.blockchainKey
+            }
         });
     }
 });
@@ -628,3 +652,25 @@ FlowRouter.route('/admin/clients/:client_id/standbyvouchers', {
     }
 });
 
+FlowRouter.route('/admin/clients/:client_id/foreignblockchains', {
+    action: function (params) {
+        BlazeLayout.render('adminLayout', {
+            page: 'foreignBlockchains',
+            dataContext: {
+                client_id: params.client_id
+            }
+        });
+    }
+});
+
+FlowRouter.route('/admin/clients/:client_id/foreignblockchains/:blockchainKey', {
+    action: function (params) {
+        BlazeLayout.render('adminLayout', {
+            page: 'foreignBlockchainDetails',
+            dataContext: {
+                client_id: params.client_id,
+                blockchainKey: params.blockchainKey
+            }
+        });
+    }
+});

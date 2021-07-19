@@ -35,6 +35,7 @@ import {
     BaseClientServiceAccountDebitLineAddress,
     BaseClientBcotPaymentAddress,
     BaseDeviceReadConfirmAddress,
+    BaseDeviceMigratedAssetAddress,
     BaseDeviceMainAddress,
     BaseDeviceAssetAddress,
     BaseDeviceAssetIssuanceAddress, BaseSystemOCMsgsSetlmtPayTxExpenseAddress
@@ -325,6 +326,22 @@ export class DeviceReadConfirmAddress extends BlockchainAddress {
     }
 }
 
+// DeviceMigratedAssetAddress derived class
+export class DeviceMigratedAssetAddress extends BlockchainAddress {
+    constructor (ctnNodeIndex, clientIndex, deviceIndex) {
+        super();
+
+        const parentPath = KeyStore.deviceMigratedAssetAddressRootPath(ctnNodeIndex, clientIndex, deviceIndex);
+
+        this._getBaseInstance = () => BaseDeviceMigratedAssetAddress.getInstance(ctnNodeIndex, clientIndex, deviceIndex, parentPath);
+
+        // Reference base blockchain address object so existing addresses are immediately
+        //  loaded onto local key storage
+        // noinspection BadExpressionStatementJS
+        this._baseAddr;
+    }
+}
+
 // DeviceMainAddress derived class
 export class DeviceMainAddress extends BlockchainAddress {
     constructor (ctnNodeIndex, clientIndex, deviceIndex) {
@@ -511,6 +528,7 @@ Object.freeze(ClientServiceAccountCreditLineAddress);
 Object.freeze(ClientServiceAccountDebitLineAddress);
 Object.freeze(ClientBcotPaymentAddress);
 Object.freeze(DeviceReadConfirmAddress);
+Object.freeze(DeviceMigratedAssetAddress);
 Object.freeze(DeviceMainAddress);
 Object.freeze(DeviceAssetAddress);
 Object.freeze(DeviceAssetIssuanceAddress);

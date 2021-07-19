@@ -2240,6 +2240,319 @@ Database.initialize = function() {
                 }
             }]
         },
+        ExportedAsset: {
+            indices: [{
+                fields: {
+                    foreignBlockchain: 1,
+                    assetId: 1
+                },
+                opts: {
+                    unique: true,
+                    background: true,
+                    writeConcern: {
+                        w: 1
+                    }
+                }
+            }, {
+                fields: {
+                    assetId: 1
+                },
+                opts: {
+                    background: true,
+                    writeConcern: {
+                        w: 1
+                    }
+                }
+            }, {
+                fields: {
+                    owningDeviceId: 1
+                },
+                opts: {
+                    background: true,
+                    writeConcern: {
+                        w: 1
+                    }
+                }
+            }, {
+                fields: {
+                    'foreignTransaction.txid': 1
+                },
+                opts: {
+                    background: true,
+                    writeConcern: {
+                        w: 1
+                    }
+                }
+            }, {
+                fields: {
+                    'foreignTransaction.isPending': 1
+                },
+                opts: {
+                    background: true,
+                    writeConcern: {
+                        w: 1
+                    }
+                }
+            }, {
+                fields: {
+                    'foreignTransaction.success': 1
+                },
+                opts: {
+                    sparse: true,
+                    background: true,
+                    writeConcern: {
+                        w: 1
+                    }
+                }
+            }, {
+                fields: {
+                    'foreignTransaction.previousTxids': 1
+                },
+                opts: {
+                    sparse: true,
+                    background: true,
+                    writeConcern: {
+                        w: 1
+                    }
+                }
+            }, {
+                fields: {
+                    'token.name': 1
+                },
+                opts: {
+                    background: true,
+                    writeConcern: {
+                        w: 1
+                    }
+                }
+            }, {
+                fields: {
+                    'token.symbol': 1
+                },
+                opts: {
+                    background: true,
+                    writeConcern: {
+                        w: 1
+                    }
+                }
+            }, {
+                fields: {
+                    foreignBlockchain: 1,
+                    'token.id': 1
+                },
+                opts: {
+                    unique: true,
+                    sparse: true,
+                    background: true,
+                    writeConcern: {
+                        w: 1
+                    }
+                }
+            }, {
+                fields: {
+                    'token.id': 1
+                },
+                opts: {
+                    sparse: true,
+                    background: true,
+                    writeConcern: {
+                        w: 1
+                    }
+                }
+            }, {
+                fields: {
+                    status: 1
+                },
+                opts: {
+                    background: true,
+                    writeConcern: {
+                        w: 1
+                    }
+                }
+            }, {
+                fields: {
+                    createdDate: 1
+                },
+                opts: {
+                    background: true,
+                    writeConcern: {
+                        w: 1
+                    }
+                }
+            }, {
+                fields: {
+                    lastStatusChangedDate: 1
+                },
+                opts: {
+                    sparse: true,
+                    background: true,
+                    writeConcern: {
+                        w: 1
+                    }
+                }
+            }]
+        },
+        AssetMigration: {
+            indices: [{
+                fields: {
+                    migrationId: 1
+                },
+                opts: {
+                    unique: true,
+                    background: true,
+                    writeConcern: {
+                        w: 1
+                    }
+                }
+            }, {
+                fields: {
+                    direction: 1
+                },
+                opts: {
+                    background: true,
+                    writeConcern: {
+                        w: 1
+                    }
+                }
+            }, {
+                fields: {
+                    assetId: 1
+                },
+                opts: {
+                    background: true,
+                    writeConcern: {
+                        w: 1
+                    }
+                }
+            }, {
+                fields: {
+                    foreignBlockchain: 1
+                },
+                opts: {
+                    background: true,
+                    writeConcern: {
+                        w: 1
+                    }
+                }
+            }, {
+                fields: {
+                    owningDeviceId: 1
+                },
+                opts: {
+                    background: true,
+                    writeConcern: {
+                        w: 1
+                    }
+                }
+            }, {
+                fields: {
+                    destAddress: 1
+                },
+                opts: {
+                    background: true,
+                    writeConcern: {
+                        w: 1
+                    }
+                }
+            }, {
+                fields: {
+                    'catenisService.status': 1
+                },
+                opts: {
+                    sparse: true,
+                    background: true,
+                    writeConcern: {
+                        w: 1
+                    }
+                }
+            }, {
+                fields: {
+                    'catenisService.txid': 1
+                },
+                opts: {
+                    sparse: true,
+                    background: true,
+                    writeConcern: {
+                        w: 1
+                    }
+                }
+            }, {
+                fields: {
+                    'foreignTransaction.txid': 1
+                },
+                opts: {
+                    sparse: true,
+                    background: true,
+                    writeConcern: {
+                        w: 1
+                    }
+                }
+            }, {
+                fields: {
+                    'foreignTransaction.isPending': 1
+                },
+                opts: {
+                    sparse: true,
+                    background: true,
+                    writeConcern: {
+                        w: 1
+                    }
+                }
+            }, {
+                fields: {
+                    'foreignTransaction.success': 1
+                },
+                opts: {
+                    sparse: true,
+                    background: true,
+                    writeConcern: {
+                        w: 1
+                    }
+                }
+            }, {
+                fields: {
+                    'foreignTransaction.previousTxids': 1
+                },
+                opts: {
+                    sparse: true,
+                    background: true,
+                    writeConcern: {
+                        w: 1
+                    }
+                }
+            }, {
+                fields: {
+                    status: 1
+                },
+                opts: {
+                    background: true,
+                    writeConcern: {
+                        w: 1
+                    }
+                }
+            }, {
+                fields: {
+                    createdDate: 1
+                },
+                opts: {
+                    background: true,
+                    writeConcern: {
+                        w: 1
+                    }
+                }
+            }, {
+                fields: {
+                    lastStatusChangedDate: 1
+                },
+                opts: {
+                    sparse: true,
+                    background: true,
+                    writeConcern: {
+                        w: 1
+                    }
+                }
+            }]
+        },
         Billing: {
             indices: [{
                 fields: {
