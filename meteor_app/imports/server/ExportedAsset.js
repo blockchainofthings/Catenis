@@ -116,10 +116,10 @@ export class ExportedAsset {
 
         this.ctnErc20Token = new CatenisErc20Token(
             this.blockchainKey,
-            this.owningDevice.client.assetExportAdminForeignBcAccount(blockchainKey),
+            this.owningDevice.client.assetExportAdminForeignBcAccount(this.blockchainKey),
             {
                 contractAddress: this.token.id,
-                consumptionProfile: this.owningDevice.client.foreignBcConsumptionProfile.get(blockchainKey)
+                consumptionProfile: this.owningDevice.client.foreignBcConsumptionProfile.get(this.blockchainKey)
             }
         );
     }
