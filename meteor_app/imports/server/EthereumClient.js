@@ -59,7 +59,7 @@ export class EthereumClient {
     ) {
         this.apiUrl = assembleApiUrl(host, path, port, protocol, username, password);
         this.web3 = new Web3(this.apiUrl);
-        // Note: this field must be initialized only after the class its is initialized
+        // Note: this field must be initialized only after the class itself is initialized
         this._blockchain = undefined;
     }
 
