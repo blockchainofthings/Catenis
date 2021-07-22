@@ -1153,6 +1153,21 @@
     nodePath:  null,  // (optional, can be set to null) Ethereum node client API endpoint path
     nodePort: null,  // (optional, can be set to null) Ethereum node client API port. If null, the default port (8545) is used
     nodeProtocol: 'wss', // Ethereum node client API protocol. Expected values: 'http', 'https', 'ws' our 'wss'
+    connectionOptions: {
+      timeout: 15000,  // (15 sec.) Timeout (in milliseconds) after which a connection/request will fail
+      http: {
+        keepAlive: true
+      },
+      webSocket: {
+        heartbeatInterval: 30000,  // (30 sec.) (optional, can be set to null) Time interval (in milliseconds) for sending ping to server to indicate that client is still alive
+        reconnect: {
+          auto: false,  // Indicates whether reconnection should be automatically attempted
+          delay: 500,  // (0.5 sec.) Timeout (in milliseconds) to try to reconnect
+          maxAttempts: 1,  // (optional, can be set to null) Maximum reconnection attempts, after which an error is issued
+          onTimeout: true   // Try to reconnect after a connection/request timeout
+        }
+      }
+    },
     apiUsername: '??????',  // (optional, can be set to null) Base64 encoded, ciphered username for accessing Ethereum node client API
     apiPassword: '??????'  // (optional, can be set to null) Base64 encoded, ciphered password for accessing Ethereum node client API
   },
@@ -1162,6 +1177,21 @@
     nodePath:  null,  // (optional, can be set to null) Binance Smart Chain node client API endpoint path
     nodePort: null,  // (optional, can be set to null) Binance Smart Chain node client API port. If null, the default port (8545) is used
     nodeProtocol: 'wss', // Binance Smart Chain node client API protocol. Expected values: 'http', 'https', 'ws' our 'wss'
+    connectionOptions: {
+      timeout: 15000,  // (15 sec.) Timeout (in milliseconds) after which a connection/request will fail
+      http: {
+        keepAlive: true
+      },
+      webSocket: {
+        heartbeatInterval: 30000,  // (30 sec.) (optional, can be set to null) Time interval (in milliseconds) for sending ping to server to indicate that client is still alive
+        reconnect: {
+          auto: false,  // Indicates whether reconnection should be automatically attempted
+          delay: 500,  // (0.5 sec.) Timeout (in milliseconds) to try to reconnect
+          maxAttempts: 1,  // (optional, can be set to null) Maximum reconnection attempts, after which an error is issued
+          onTimeout: true   // Try to reconnect after a connection/request timeout
+        }
+      }
+    },
     apiUsername: '??????',  // (optional, can be set to null) Base64 encoded, ciphered username for accessing Binance Smart Chain node client API
     apiPassword: '??????'  // (optional, can be set to null) Base64 encoded, ciphered password for accessing Binance Smart Chain node client API
   },
@@ -1171,6 +1201,21 @@
     nodePath:  null,  // (optional, can be set to null) Polygon PoS Chain node client API endpoint path
     nodePort: null,  // (optional, can be set to null) Polygon PoS Chain node client API port. If null, the default port (8545) is used
     nodeProtocol: 'wss', // Polygon PoS Chain node client API protocol. Expected values: 'http', 'https', 'ws' our 'wss'
+    connectionOptions: {
+      timeout: 15000,  // (15 sec.) Timeout (in milliseconds) after which a connection/request will fail
+      http: {
+        keepAlive: true
+      },
+      webSocket: {
+        heartbeatInterval: 30000,  // (30 sec.) (optional, can be set to null) Time interval (in milliseconds) for sending ping to server to indicate that client is still alive
+        reconnect: {
+          auto: false,  // Indicates whether reconnection should be automatically attempted
+          delay: 500,  // (0.5 sec.) Timeout (in milliseconds) to try to reconnect
+          maxAttempts: 1,  // (optional, can be set to null) Maximum reconnection attempts, after which an error is issued
+          onTimeout: true   // Try to reconnect after a connection/request timeout
+        }
+      }
+    },
     apiUsername: '??????',  // (optional, can be set to null) Base64 encoded, ciphered username for accessing Polygon PoS Chain node client API
     apiPassword: '??????'  // (optional, can be set to null) Base64 encoded, ciphered password for accessing Polygon PoS Chain node client API
   },

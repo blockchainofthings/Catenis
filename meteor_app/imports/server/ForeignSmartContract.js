@@ -157,9 +157,31 @@ export class ForeignSmartContract {
                 arguments: contractArgs
             }));
 
-        deployCall.gasEstimate = Promise.await(deployCall.tx.estimateGas({
-            from: this.ownerAccount.address
-        }));
+        let tryAgain;
+        let wsDisconnectRetried = false;
+
+        do {
+            tryAgain = false;
+
+            try {
+                deployCall.gasEstimate = Promise.await(
+                    deployCall.tx.estimateGas({
+                        from: this.ownerAccount.address
+                    })
+                );
+            }
+            catch (err) {
+                if (!wsDisconnectRetried && this._blockchain.client.checkRetryWSDisconnectError(err)) {
+                    // WebSocket connection has been reopened. Try calling remote method again
+                    wsDisconnectRetried = tryAgain = true;
+                }
+                else {
+                    // Just rethrow error
+                    throw err;
+                }
+            }
+        }
+        while (tryAgain);
 
         return this._blockchain.gasPrices.getPriceEstimate(consumptionProfile.confidenceLevel).times(deployCall.gasEstimate);
     }
@@ -191,9 +213,31 @@ export class ForeignSmartContract {
             }));
 
         if (!deployCall.gasEstimate) {
-            deployCall.gasEstimate = Promise.await(deployCall.tx.estimateGas({
-                from: this.ownerAccount.address
-            }));
+            let tryAgain;
+            let wsDisconnectRetried = false;
+
+            do {
+                tryAgain = false;
+
+                try {
+                    deployCall.gasEstimate = Promise.await(
+                        deployCall.tx.estimateGas({
+                            from: this.ownerAccount.address
+                        })
+                    );
+                }
+                catch (err) {
+                    if (!wsDisconnectRetried && this._blockchain.client.checkRetryWSDisconnectError(err)) {
+                        // WebSocket connection has been reopened. Try calling remote method again
+                        wsDisconnectRetried = tryAgain = true;
+                    }
+                    else {
+                        // Just rethrow error
+                        throw err;
+                    }
+                }
+            }
+            while (tryAgain);
         }
 
         const gas = deployCall.gasEstimate;
@@ -212,6 +256,7 @@ export class ForeignSmartContract {
         let nonce;
         let numRetries = 0;
         let tryAgain;
+        let wsDisconnectRetried = false;
 
         do {
             tryAgain = false;
@@ -253,6 +298,10 @@ export class ForeignSmartContract {
                         // Not trying again. Throw error
                         throw new Error('Failed to send foreign blockchain transaction: nonce already used');
                     }
+                }
+                else if (!wsDisconnectRetried && this._blockchain.client.checkRetryWSDisconnectError(err)) {
+                    // WebSocket connection has been reopened. Try calling remote method again
+                    wsDisconnectRetried = tryAgain = true;
                 }
 
                 if (!tryAgain) {

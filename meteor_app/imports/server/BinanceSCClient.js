@@ -29,6 +29,21 @@ const cfgSettings = {
     nodePath: bscClientConfig.get('nodePath'),
     nodePort: bscClientConfig.get('nodePort'),
     nodeProtocol: bscClientConfig.get('nodeProtocol'),
+    connectionOptions: {
+        timeout: bscClientConfig.get('connectionOptions.timeout'),
+        http: {
+            keepAlive: bscClientConfig.get('connectionOptions.http.keepAlive')
+        },
+        webSocket: {
+            heartbeatInterval: bscClientConfig.get('connectionOptions.webSocket.heartbeatInterval'),
+            reconnect: {
+                auto: bscClientConfig.get('connectionOptions.webSocket.reconnect.auto'),
+                delay: bscClientConfig.get('connectionOptions.webSocket.reconnect.delay'),
+                maxAttempts: bscClientConfig.get('connectionOptions.webSocket.reconnect.maxAttempts'),
+                onTimeout: bscClientConfig.get('connectionOptions.webSocket.reconnect.onTimeout')
+            }
+        }
+    },
     apiUsername: bscClientConfig.get('apiUsername'),
     apiPassword: bscClientConfig.get('apiPassword')
 };
@@ -45,11 +60,20 @@ export class BinanceSCClient extends EthereumClient {
      * @param {string} path
      * @param {number} port
      * @param {string} protocol
+     * @param {ClientConnectionOptions} connectionOptions
      * @param {string} username
      * @param {string} password
      */
-    constructor(host, path, port, protocol, username, password) {
-        super(host, path, port, protocol, username, password);
+    constructor(
+        host,
+        path,
+        port,
+        protocol,
+        connectionOptions,
+        username,
+        password
+    ) {
+        super(host, path, port, protocol, connectionOptions, username, password);
     }
 
 
@@ -79,6 +103,7 @@ export class BinanceSCClient extends EthereumClient {
             cfgSettings.nodePath,
             cfgSettings.nodePort,
             cfgSettings.nodeProtocol,
+            cfgSettings.connectionOptions,
             cfgSettings.apiUsername,
             cfgSettings.apiPassword
         );

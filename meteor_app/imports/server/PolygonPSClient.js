@@ -29,6 +29,21 @@ const cfgSettings = {
     nodePath: ppsClientConfig.get('nodePath'),
     nodePort: ppsClientConfig.get('nodePort'),
     nodeProtocol: ppsClientConfig.get('nodeProtocol'),
+    connectionOptions: {
+        timeout: ppsClientConfig.get('connectionOptions.timeout'),
+        http: {
+            keepAlive: ppsClientConfig.get('connectionOptions.http.keepAlive')
+        },
+        webSocket: {
+            heartbeatInterval: ppsClientConfig.get('connectionOptions.webSocket.heartbeatInterval'),
+            reconnect: {
+                auto: ppsClientConfig.get('connectionOptions.webSocket.reconnect.auto'),
+                delay: ppsClientConfig.get('connectionOptions.webSocket.reconnect.delay'),
+                maxAttempts: ppsClientConfig.get('connectionOptions.webSocket.reconnect.maxAttempts'),
+                onTimeout: ppsClientConfig.get('connectionOptions.webSocket.reconnect.onTimeout')
+            }
+        }
+    },
     apiUsername: ppsClientConfig.get('apiUsername'),
     apiPassword: ppsClientConfig.get('apiPassword')
 };
@@ -45,11 +60,20 @@ export class PolygonPSClient extends EthereumClient {
      * @param {string} path
      * @param {number} port
      * @param {string} protocol
+     * @param {ClientConnectionOptions} connectionOptions
      * @param {string} username
      * @param {string} password
      */
-    constructor(host, path, port, protocol, username, password) {
-        super(host, path, port, protocol, username, password);
+    constructor(
+        host,
+        path,
+        port,
+        protocol,
+        connectionOptions,
+        username,
+        password
+    ) {
+        super(host, path, port, protocol, connectionOptions, username, password);
     }
 
 
@@ -79,6 +103,7 @@ export class PolygonPSClient extends EthereumClient {
             cfgSettings.nodePath,
             cfgSettings.nodePort,
             cfgSettings.nodeProtocol,
+            cfgSettings.connectionOptions,
             cfgSettings.apiUsername,
             cfgSettings.apiPassword
         );

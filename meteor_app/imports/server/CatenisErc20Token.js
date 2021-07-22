@@ -75,11 +75,31 @@ export class CatenisErc20Token extends ForeignSmartContract {
             throw new Error('Smart contract is not yet deployed');
         }
 
-        return Promise.await(
-            this.contract.methods.name().call({
-                from: this.ownerAccount.address
-            })
-        );
+        let tryAgain;
+        let wsDisconnectRetried = false;
+
+        do {
+            tryAgain = false;
+
+            try {
+                return Promise.await(
+                    this.contract.methods.name().call({
+                        from: this.ownerAccount.address
+                    })
+                );
+            }
+            catch (err) {
+                if (!wsDisconnectRetried && this._blockchain.client.checkRetryWSDisconnectError(err)) {
+                    // WebSocket connection has been reopened. Try calling remote method again
+                    wsDisconnectRetried = tryAgain = true;
+                }
+                else {
+                    // Just rethrow error
+                    throw err;
+                }
+            }
+        }
+        while (tryAgain);
     }
 
     /**
@@ -91,11 +111,31 @@ export class CatenisErc20Token extends ForeignSmartContract {
             throw new Error('Smart contract is not yet deployed');
         }
 
-        return Promise.await(
-            this.contract.methods.symbol().call({
-                from: this.ownerAccount.address
-            })
-        );
+        let tryAgain;
+        let wsDisconnectRetried = false;
+
+        do {
+            tryAgain = false;
+
+            try {
+                return Promise.await(
+                    this.contract.methods.symbol().call({
+                        from: this.ownerAccount.address
+                    })
+                );
+            }
+            catch (err) {
+                if (!wsDisconnectRetried && this._blockchain.client.checkRetryWSDisconnectError(err)) {
+                    // WebSocket connection has been reopened. Try calling remote method again
+                    wsDisconnectRetried = tryAgain = true;
+                }
+                else {
+                    // Just rethrow error
+                    throw err;
+                }
+            }
+        }
+        while (tryAgain);
     }
 
     /**
@@ -107,11 +147,31 @@ export class CatenisErc20Token extends ForeignSmartContract {
             throw new Error('Smart contract is not yet deployed');
         }
 
-        const strValue = Promise.await(
-            this.contract.methods.decimals().call({
-                from: this.ownerAccount.address
-            })
-        );
+        let tryAgain;
+        let wsDisconnectRetried = false;
+
+        do {
+            tryAgain = false;
+
+            try {
+                const strValue = Promise.await(
+                    this.contract.methods.decimals().call({
+                        from: this.ownerAccount.address
+                    })
+                );
+            }
+            catch (err) {
+                if (!wsDisconnectRetried && this._blockchain.client.checkRetryWSDisconnectError(err)) {
+                    // WebSocket connection has been reopened. Try calling remote method again
+                    wsDisconnectRetried = tryAgain = true;
+                }
+                else {
+                    // Just rethrow error
+                    throw err;
+                }
+            }
+        }
+        while (tryAgain);
 
         return Number.parseInt(strValue);
     }
@@ -125,11 +185,32 @@ export class CatenisErc20Token extends ForeignSmartContract {
             throw new Error('Smart contract is not yet deployed');
         }
 
-        const supply = Promise.await(
-            this.contract.methods.totalSupply().call({
-                from: this.ownerAccount.address
-            })
-        );
+        let supply;
+        let tryAgain;
+        let wsDisconnectRetried = false;
+
+        do {
+            tryAgain = false;
+
+            try {
+                supply = Promise.await(
+                    this.contract.methods.totalSupply().call({
+                        from: this.ownerAccount.address
+                    })
+                );
+            }
+            catch (err) {
+                if (!wsDisconnectRetried && this._blockchain.client.checkRetryWSDisconnectError(err)) {
+                    // WebSocket connection has been reopened. Try calling remote method again
+                    wsDisconnectRetried = tryAgain = true;
+                }
+                else {
+                    // Just rethrow error
+                    throw err;
+                }
+            }
+        }
+        while (tryAgain);
 
         return new BigNumber(supply);
     }
@@ -156,11 +237,32 @@ export class CatenisErc20Token extends ForeignSmartContract {
             throw new Error('Smart contract is not yet deployed');
         }
 
-        const balance = Promise.await(
-            this.contract.methods.balanceOf(address).call({
-                from: this.ownerAccount.address
-            })
-        );
+        let balance;
+        let tryAgain;
+        let wsDisconnectRetried = false;
+
+        do {
+            tryAgain = false;
+
+            try {
+                balance = Promise.await(
+                    this.contract.methods.balanceOf(address).call({
+                        from: this.ownerAccount.address
+                    })
+                );
+            }
+            catch (err) {
+                if (!wsDisconnectRetried && this._blockchain.client.checkRetryWSDisconnectError(err)) {
+                    // WebSocket connection has been reopened. Try calling remote method again
+                    wsDisconnectRetried = tryAgain = true;
+                }
+                else {
+                    // Just rethrow error
+                    throw err;
+                }
+            }
+        }
+        while (tryAgain);
 
         return new BigNumber(balance);
     }
@@ -187,9 +289,31 @@ export class CatenisErc20Token extends ForeignSmartContract {
             ? this.getMethodCall('mint', toAddress, amount)
             : this.setMethodCall('mint', toAddress, amount, this.contract.methods.mint(toAddress, amount));
 
-        mintCall.gasEstimate = Promise.await(mintCall.tx.estimateGas({
-            from: this.ownerAccount.address
-        }));
+        let tryAgain;
+        let wsDisconnectRetried = false;
+
+        do {
+            tryAgain = false;
+
+            try {
+                mintCall.gasEstimate = Promise.await(
+                    mintCall.tx.estimateGas({
+                        from: this.ownerAccount.address
+                    })
+                );
+            }
+            catch (err) {
+                if (!wsDisconnectRetried && this._blockchain.client.checkRetryWSDisconnectError(err)) {
+                    // WebSocket connection has been reopened. Try calling remote method again
+                    wsDisconnectRetried = tryAgain = true;
+                }
+                else {
+                    // Just rethrow error
+                    throw err;
+                }
+            }
+        }
+        while (tryAgain);
 
         return this._blockchain.gasPrices.getPriceEstimate(consumptionProfile.confidenceLevel).times(mintCall.gasEstimate);
     }
@@ -218,9 +342,31 @@ export class CatenisErc20Token extends ForeignSmartContract {
             : this.setMethodCall('mint', toAddress, amount, this.contract.methods.mint(toAddress, amount));
         
         if (!mintCall.gasEstimate) {
-            mintCall.gasEstimate = Promise.await(mintCall.tx.estimateGas({
-                from: this.ownerAccount.address
-            }));
+            let tryAgain;
+            let wsDisconnectRetried = false;
+
+            do {
+                tryAgain = false;
+
+                try {
+                    mintCall.gasEstimate = Promise.await(
+                        mintCall.tx.estimateGas({
+                            from: this.ownerAccount.address
+                        })
+                    );
+                }
+                catch (err) {
+                    if (!wsDisconnectRetried && this._blockchain.client.checkRetryWSDisconnectError(err)) {
+                        // WebSocket connection has been reopened. Try calling remote method again
+                        wsDisconnectRetried = tryAgain = true;
+                    }
+                    else {
+                        // Just rethrow error
+                        throw err;
+                    }
+                }
+            }
+            while (tryAgain);
         }
 
         const gas = mintCall.gasEstimate;
@@ -239,6 +385,7 @@ export class CatenisErc20Token extends ForeignSmartContract {
         let nonce;
         let numRetries = 0;
         let tryAgain;
+        let wsDisconnectRetried = false;
 
         do {
             tryAgain = false;
@@ -281,6 +428,10 @@ export class CatenisErc20Token extends ForeignSmartContract {
                         throw new Error('Failed to send foreign blockchain transaction: nonce already used');
                     }
                 }
+                else if (!wsDisconnectRetried && this._blockchain.client.checkRetryWSDisconnectError(err)) {
+                    // WebSocket connection has been reopened. Try calling remote method again
+                    wsDisconnectRetried = tryAgain = true;
+                }
 
                 if (!tryAgain) {
                     // Just rethrow error
@@ -316,9 +467,31 @@ export class CatenisErc20Token extends ForeignSmartContract {
             ? this.getMethodCall('burn', amount)
             : this.setMethodCall('burn', amount, this.contract.methods.burn(amount));
 
-        burnCall.gasEstimate = Promise.await(burnCall.tx.estimateGas({
-            from: this.ownerAccount.address
-        }));
+        let tryAgain;
+        let wsDisconnectRetried = false;
+
+        do {
+            tryAgain = false;
+
+            try {
+                burnCall.gasEstimate = Promise.await(
+                    burnCall.tx.estimateGas({
+                        from: this.ownerAccount.address
+                    })
+                );
+            }
+            catch (err) {
+                if (!wsDisconnectRetried && this._blockchain.client.checkRetryWSDisconnectError(err)) {
+                    // WebSocket connection has been reopened. Try calling remote method again
+                    wsDisconnectRetried = tryAgain = true;
+                }
+                else {
+                    // Just rethrow error
+                    throw err;
+                }
+            }
+        }
+        while (tryAgain);
 
         return this._blockchain.gasPrices.getPriceEstimate(consumptionProfile.confidenceLevel).times(burnCall.gasEstimate);
     }
@@ -350,9 +523,31 @@ export class CatenisErc20Token extends ForeignSmartContract {
             : this.setMethodCall('burn', amount, this.contract.methods.burn(amount));
 
         if (!burnCall.gasEstimate) {
-            burnCall.gasEstimate = Promise.await(burnCall.tx.estimateGas({
-                from: this.ownerAccount.address
-            }));
+            let tryAgain;
+            let wsDisconnectRetried = false;
+
+            do {
+                tryAgain = false;
+
+                try {
+                    burnCall.gasEstimate = Promise.await(
+                        burnCall.tx.estimateGas({
+                            from: this.ownerAccount.address
+                        })
+                    );
+                }
+                catch (err) {
+                    if (!wsDisconnectRetried && this._blockchain.client.checkRetryWSDisconnectError(err)) {
+                        // WebSocket connection has been reopened. Try calling remote method again
+                        wsDisconnectRetried = tryAgain = true;
+                    }
+                    else {
+                        // Just rethrow error
+                        throw err;
+                    }
+                }
+            }
+            while (tryAgain);
         }
 
         const gas = burnCall.gasEstimate;
@@ -371,6 +566,7 @@ export class CatenisErc20Token extends ForeignSmartContract {
         let nonce;
         let numRetries = 0;
         let tryAgain;
+        let wsDisconnectRetried = false;
 
         do {
             tryAgain = false;
@@ -411,6 +607,10 @@ export class CatenisErc20Token extends ForeignSmartContract {
                         // Not trying again. Throw error
                         throw new Error('Failed to send foreign blockchain transaction: nonce already used');
                     }
+                }
+                else if (!wsDisconnectRetried && this._blockchain.client.checkRetryWSDisconnectError(err)) {
+                    // WebSocket connection has been reopened. Try calling remote method again
+                    wsDisconnectRetried = tryAgain = true;
                 }
 
                 if (!tryAgain) {
