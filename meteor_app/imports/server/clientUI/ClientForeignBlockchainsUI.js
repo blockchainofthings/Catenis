@@ -20,6 +20,7 @@ import { Meteor } from 'meteor/meteor';
 import { Catenis } from '../Catenis';
 import { Client } from '../Client';
 import { CommonClientForeignBlockchainsUI } from '../commonUI/CommonClientForeignBlockchainsUI';
+import { ForeignBlockchain } from '../ForeignBlockchain';
 
 
 // Definition of function classes
@@ -51,7 +52,7 @@ ClientForeignBlockchainUI.initialize = function () {
 
                 if (docCurrentClient) {
                     try {
-                        return Client.getClientByDocId(client_id).updateForeignBlockchainConsumptionProfile(blockchainKey, profileName);
+                        return Client.getClientByDocId(docCurrentClient._id).updateForeignBlockchainConsumptionProfile(blockchainKey, profileName);
                     }
                     catch (err) {
                         // Error trying to update current client's foreign blockchain consumption profile. Log error and throw exception
@@ -90,24 +91,10 @@ ClientForeignBlockchainUI.initialize = function () {
             });
 
             if (docCurrentClient) {
-                let client;
-
-                try {
-                    client = Client.getClientByDocId(docCurrentClient._id);
-                }
-                catch (err) {
-                    // Subscription made with an invalid Client doc/rec ID.
-                    //  Make sure that publication is not started, log error and throw exception.
-                    //  Note: this should never happen
-                    this.stop();
-                    Catenis.logger.ERROR('Subscription to method \'currentClientForeignBcConsumptionProfile\' made with an invalid client', {client_id: docCurrentClient._id});
-                    throw new Meteor.Error('client-foreign-bc.subscribe.foreign-bc-consumption-prof.invalid-param', 'Subscription to method \'currentClientForeignBcConsumptionProfile\' made with an invalid client');
-                }
-
-                for (const [key, profileName] of client.foreignBcConsumptionProfile) {
+                for (const key of Object.keys(ForeignBlockchain.consumptionProfile)) {
                     // Add record
-                    this.added('ClientFBConsumptionProfile', key, {
-                        profileName
+                    this.added('ForeignBcConsumptionProfile', key, {
+                        name: ForeignBlockchain.consumptionProfile[key].name
                     });
                 }
 
@@ -131,7 +118,6 @@ ClientForeignBlockchainUI.initialize = function () {
         }
     });
 
-    // Declaration of publications
     Meteor.publish('currentClientForeignBlockchains', function() {
         if (Roles.userIsInRole(this.userId, 'ctn-client')) {
             // Retrieve database doc/rec of client associated with currently logged in user
@@ -179,7 +165,6 @@ ClientForeignBlockchainUI.initialize = function () {
         }
     });
 
-    // Declaration of publications
     Meteor.publish('currentClientForeignBlockchainRecord', function(blockchainKey) {
         if (Roles.userIsInRole(this.userId, 'ctn-client')) {
             // Retrieve database doc/rec of client associated with currently logged in user
