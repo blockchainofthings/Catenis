@@ -339,7 +339,7 @@ export function RestApi(apiVersion) {
 
     if (this.apiVer.gte('0.11')) {
         // noinspection JSUnresolvedFunction
-        this.api.addRoute('assets/:assetId/export/:foreignBlockchain', {authRequired: false}, {
+        this.api.addRoute('assets/:assetId/export/:foreignBlockchain', {authRequired: true}, {
             // Export an asset to a foreign blockchain (public method)
             //
             //  Refer to the source file where the action function is defined for a detailed description of the endpoint
@@ -355,7 +355,7 @@ export function RestApi(apiVersion) {
         });
 
         // noinspection JSUnresolvedFunction
-        this.api.addRoute('assets/exported', {authRequired: false}, {
+        this.api.addRoute('assets/exported', {authRequired: true}, {
             // List exported assets (public method)
             //
             //  Refer to the source file where the action function is defined for a detailed description of the endpoint
@@ -365,7 +365,7 @@ export function RestApi(apiVersion) {
         });
 
         // noinspection JSUnresolvedFunction
-        this.api.addRoute('assets/:assetId/migrate/:foreignBlockchain', {authRequired: false}, {
+        this.api.addRoute('assets/:assetId/migrate/:foreignBlockchain', {authRequired: true}, {
             // Migrate an amount of an exported asset to the foreign blockchain (public method)
             //
             //  Refer to the source file where the action function is defined for a detailed description of the endpoint
@@ -375,7 +375,7 @@ export function RestApi(apiVersion) {
         });
 
         // noinspection JSUnresolvedFunction
-        this.api.addRoute('assets/migrations/:migrationId', {authRequired: false}, {
+        this.api.addRoute('assets/migrations/:migrationId', {authRequired: true}, {
             // Retrieve the outcome of an asset migration (public method)
             //
             //  Refer to the source file where the action function is defined for a detailed description of the endpoint
@@ -385,7 +385,7 @@ export function RestApi(apiVersion) {
         });
 
         // noinspection JSUnresolvedFunction
-        this.api.addRoute('assets/migrations', {authRequired: false}, {
+        this.api.addRoute('assets/migrations', {authRequired: true}, {
             // List asset migrations (public method)
             //
             //  Refer to the source file where the action function is defined for a detailed description of the endpoint
