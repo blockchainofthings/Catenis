@@ -82,10 +82,12 @@ export class ClientForeignBcAccount extends events.EventEmitter {
         // Subscribe to be notified of blockchain state changes
         this.subscription = this.blockchain.client.web3.eth.subscribe('newBlockHeaders')
         .on('error', err => {
-            Catenis.logger.ERROR(`Error while subscribing to get notifications of changed ${this.blockchain.name} blockchain state.`, err);
-            if (this.subscriptionId) {
-                // Unsubscribe
-                this.subscription.unsubscribe(this.subscriptionId);
+            if (!this.subscription.id) {
+                Catenis.logger.ERROR(`Error while subscribing to get notifications of changed ${this.blockchain.name} blockchain state.`, err);
+                this.stopMonitoring();
+            }
+            else {
+                Catenis.logger.ERROR(`Error receiving notification of changed ${this.blockchain.name} blockchain state.`, err);
             }
         })
         .on('data', Meteor.bindEnvironment(() => {
