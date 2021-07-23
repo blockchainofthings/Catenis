@@ -171,9 +171,12 @@ export class ExportedAsset {
      * @param {string} symbol Token symbol
      * @param {NativeCoinConsumptionProfile} [consumptionProfile] Foreign blockchain native coin consumption profile to
      *                                          be used for calculating the estimate
-     * @return {BigNumber} Amount of foreign blockchain native coin, in its smallest denomination (wei, 10 e-18)
+     * @param {boolean} [inNativeCoin=false] Indicates whether the returned amount should be expressed in the native
+     *                                        coin's natural/unit denomination instead
+     * @return {BigNumber} Amount of foreign blockchain native coin in its smallest denomination (wei, 10 e-18) unless
+     *                      the 'inNativeCoin' parameter is set
      */
-    estimateExportPrice(name, symbol, consumptionProfile) {
+    estimateExportPrice(name, symbol, consumptionProfile, inNativeCoin = false) {
         if (this.exported) {
             throw new Meteor.Error('ctn_exp_asset_already_exported', 'Asset already exported');
         }
@@ -184,12 +187,16 @@ export class ExportedAsset {
             params.push(consumptionProfile);
         }
 
+        let amount;
+
         try {
-            return this.ctnErc20Token.deployEstimate(...params);
+            amount = this.ctnErc20Token.deployEstimate(...params);
         }
         catch (err) {
             throw translateForeignTxError(err, 'deploy (estimate)')
         }
+
+        return inNativeCoin ? this.ctnErc20Token.toNativeCoin(amount) : amount;
     }
 
     /**

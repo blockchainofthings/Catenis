@@ -2626,8 +2626,7 @@ Device.prototype.transferAsset = function (receivingDeviceId, amount, assetId) {
  *                                          price (in the foreign blockchain's native coin) to fulfill the operation
  *                                          should be returned
  * @return {(ExportedAssetOutcome|string)} Current outcome state of the asset export, or the estimated price (formatted
- *                                          as string value expressed in the foreign blockchain's native coin smallest
- *                                          denomination)
+ *                                          as string value expressed in the foreign blockchain's native coin)
  */
 Device.prototype.exportAsset = function (assetId, foreignBlockchain, token, options) {
     // Make sure that device is not deleted
@@ -2672,7 +2671,7 @@ Device.prototype.exportAsset = function (assetId, foreignBlockchain, token, opti
 
     // Note: this will throw 'ctn_exp_asset_already_exported' if asset is already exported
     return options.estimateOnly
-        ? expAsset.estimateExportPrice(token.name, token.symbol, consumptionProfile).toString()
+        ? expAsset.estimateExportPrice(token.name, token.symbol, consumptionProfile, true).toString()
         : expAsset.export(token.name, token.symbol, consumptionProfile);
 };
 
@@ -2771,7 +2770,7 @@ Device.prototype.listExportedAssets = function (filter, limit, skip) {
  *                                          should be returned
  * @return {(AssetMigrationOutcome|string)} Current outcome state of the asset migration, or the estimated price
  *                                           (formatted as string value expressed in the foreign blockchain's native
- *                                           coin smallest denomination)
+ *                                           coin)
  */
 Device.prototype.migrateAsset = function (assetId, foreignBlockchain, migration, options) {
     // Make sure that device is not deleted
@@ -2847,7 +2846,7 @@ Device.prototype.migrateAsset = function (assetId, foreignBlockchain, migration,
 
     // Note: this will throw 'ctn_asset_mgr_already_migrated' if asset amount is already migrated
     return options.estimateOnly
-        ? assetMgr.estimateMigrationPrice(consumptionProfile).toString()
+        ? assetMgr.estimateMigrationPrice(consumptionProfile, true).toString()
         : assetMgr.migrate(consumptionProfile);
 };
 

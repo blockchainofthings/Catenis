@@ -233,16 +233,21 @@ export class AssetMigration {
      *  (mint/burn a token amount)
      * @param {NativeCoinConsumptionProfile} [consumptionProfile] Foreign blockchain native coin consumption profile to
      *                                          be used for calculating the estimate
-     * @return {BigNumber} Amount of foreign blockchain native coin, in its smallest denomination (wei, 10 e-18)
+     * @param {boolean} [inNativeCoin=false] Indicates whether the returned amount should be expressed in the native
+     *                                        coin's natural/unit denomination instead
+     * @return {BigNumber} Amount of foreign blockchain native coin in its smallest denomination (wei, 10 e-18) unless
+     *                      the 'inNativeCoin' parameter is set
      */
-    estimateMigrationPrice(consumptionProfile) {
+    estimateMigrationPrice(consumptionProfile, inNativeCoin = false) {
         if (this.migrated) {
             throw new Meteor.Error('ctn_asset_mgr_already_migrated', 'Asset amount already migrated');
         }
 
-        return this.direction === AssetMigration.migrationDirection.outward
+        const amount = this.direction === AssetMigration.migrationDirection.outward
             ? this._estimateOutMigrationPrice(consumptionProfile)
             : this._estimateInMigrationPrice(consumptionProfile);
+
+        return inNativeCoin ? this.expAsset.ctnErc20Token.toNativeCoin(amount) : amount;
     }
 
     /**

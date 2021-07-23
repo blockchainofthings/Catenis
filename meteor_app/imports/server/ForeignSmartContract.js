@@ -13,6 +13,7 @@
 //import util from 'util';
 // Third-party node modules
 import config from 'config';
+import BigNumber from 'bignumber.js';
 // Meteor packages
 import { Promise } from 'meteor/promise';
 
@@ -397,6 +398,16 @@ export class ForeignSmartContract {
      */
     hasMethodCall(methodName, ...args) {
         return this._methodCalls.has(`${methodName}_${JSON.stringify(args)}`);
+    }
+
+    /**
+     * Converts an amount of foreign blockchain native coin expressed in its lowest denomination
+     *  into its natural/unit denomination
+     * @param {(BigNumber|string)} amount Native coin amount expressed in its lowest denomination
+     * @return {BigNumber} The native coin amount expressed in its natural/unit denomination
+     */
+    toNativeCoin(amount) {
+        return new BigNumber(this._blockchain.nativeCoin.fromLowestDenomination(amount));
     }
 }
 
