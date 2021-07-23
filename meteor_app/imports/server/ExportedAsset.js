@@ -681,7 +681,7 @@ export class ExportedAsset {
         });
 
         // Sort list of exported assets by date (ascending)
-        exportedAssets.sort((expAsset1, expAsset2) => expAsset1.date > expAsset2.date ? -1 : 0);
+        exportedAssets.sort((expAsset1, expAsset2) => expAsset1.date > expAsset2.date ? 1 : 0);
 
         return {
             exportedAssets,

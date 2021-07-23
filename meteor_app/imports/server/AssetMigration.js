@@ -443,7 +443,7 @@ export class AssetMigration {
         });
 
         // Sort list of asset migrations by date (ascending)
-        assetMigrations.sort((assetMgr1, assetMgr2) => assetMgr1.date > assetMgr2.date ? -1 : 0);
+        assetMigrations.sort((assetMgr1, assetMgr2) => assetMgr1.date > assetMgr2.date ? 1 : 0);
 
         return {
             assetMigrations,
