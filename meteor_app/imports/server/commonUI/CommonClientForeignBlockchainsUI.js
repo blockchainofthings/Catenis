@@ -67,6 +67,7 @@ CommonClientForeignBlockchainsUI.foreignBlockchains = function (client, includeA
                 // Update record
                 this.changed('ClientForeignBlockchain', key, {
                     adminAccount: {
+                        address: clForeignBcAcc.address,
                         balance: blockchain.nativeCoin.fromLowestDenomination(newBalance)
                     }
                 });
@@ -159,6 +160,7 @@ CommonClientForeignBlockchainsUI.foreignBlockchainRecord = function (client, blo
         // Update record
         this.changed('ClientForeignBlockchain', blockchain.key, {
             adminAccount: {
+                address: clForeignBcAcc.address,
                 balance: blockchain.nativeCoin.fromLowestDenomination(newBalance)
             }
         });
