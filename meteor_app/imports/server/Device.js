@@ -2819,9 +2819,9 @@ Device.prototype.migrateAsset = function (assetId, foreignBlockchain, migration,
             migration.direction,
             asset,
             foreignBlockchain,
-            this.deviceId,
-            direction.amount,
-            direction.destAddress
+            this,
+            migration.amount,
+            migration.destAddress
         );
     }
 
