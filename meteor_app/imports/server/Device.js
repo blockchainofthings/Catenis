@@ -2661,7 +2661,7 @@ Device.prototype.exportAsset = function (assetId, foreignBlockchain, token, opti
     }
 
     // Instantiate asset export
-    const expAsset = ExportedAsset.getExportedAsset(asset, foreignBlockchain, this.deviceId);
+    const expAsset = ExportedAsset.getExportedAsset(asset, foreignBlockchain, this);
 
     let consumptionProfile;
 
