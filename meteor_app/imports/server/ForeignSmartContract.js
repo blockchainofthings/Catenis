@@ -249,7 +249,7 @@ export class ForeignSmartContract {
         //  before trying to send the transaction
         if (this.ownerNativeCoinBalance.lt(txExecPrice)) {
             const err = new Error('Operation not allowed: insufficient funds for gas * price + value');
-            err.txExecPrice = txExecPrice;
+            err.txExecPrice = this.toNativeCoin(txExecPrice);
 
             throw err;
         }
@@ -278,7 +278,7 @@ export class ForeignSmartContract {
                 if ((err instanceof Error) && (err.message === 'Returned error: insufficient funds for gas * price + value'
                         || err.message.startsWith('Returned error: sender doesn\'t have enough funds to send tx'))) {
                     // Low native coin balance. Add tx execution price to error object
-                    err.txExecPrice = txExecPrice;
+                    err.txExecPrice = this.toNativeCoin(txExecPrice);
                 }
                 else if ((err instanceof Error) && (err.message === 'Returned error: replacement transaction underpriced'
                         || err.message === 'Returned error: already known')) {

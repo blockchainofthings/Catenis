@@ -918,7 +918,7 @@ export class AssetMigration {
             // Foreign blockchain account balance too low
             throw new Meteor.Error(
                 'ctn_asset_mgr_low_foreign_bc_funds',
-                `Foreign blockchain funds not enough to cover transaction execution price (${txExecPrice})`
+                `Foreign blockchain funds not enough to cover transaction execution price (${this.expAsset.ctnErc20Token.toNativeCoin(txExecPrice).toString()})`
             );
         }
 
