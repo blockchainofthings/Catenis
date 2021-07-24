@@ -164,6 +164,12 @@ export class AssetMigration {
             throw new Meteor.Error('ctn_asset_mgr_amount_too_large', 'Amount to be migrated is larger than maximum allowed total asset amount');
         }
 
+        if (this.direction === AssetMigration.migrationDirection.outward
+                && !this.expAsset.ctnErc20Token.isValidAccountAddress(this.destAddress)) {
+            // Invalid destination address
+            throw new Meteor.Error('ctn_asset_mgr_invalid_dest_address', 'Invalid destination address');
+        }
+
         if (this.owningDevice.client.clientId !== this.expAsset.owningDevice.client.clientId) {
             Catenis.logger.ERROR(`Inconsistent asset migration: owning device (deviceId: ${this.owningDevice.deviceId}) does not belong to the same Catenis client as exported asset owning device (deviceId: ${this.expAsset.owningDevice.deviceId})`);
             throw new Error('Inconsistent asset migration: owning device does not belong to the same Catenis client as exported asset owning device');

@@ -101,7 +101,8 @@ export function migrateAsset() {
             }
             
             // migration.destAddress param
-            if (!(this.bodyParams.migration.destAddress === undefined
+            if (!((this.bodyParams.migration.direction !== AssetMigration.migrationDirection.outward
+                    && this.bodyParams.migration.destAddress === undefined)
                     || (typeof this.bodyParams.migration.destAddress === 'string'
                     && this.bodyParams.migration.destAddress.length > 0))) {
                 Catenis.logger.DEBUG('Invalid \'migration.destAddress\' parameter POST for \'assets/:assetId/migrate/:foreignBlockchain\' API request', this.bodyParams);
@@ -177,6 +178,9 @@ export function migrateAsset() {
                 }
                 else if (err.error === 'ctn_asset_mgr_not_found') {
                     error = errorResponse.call(this, 400, 'Invalid asset migration ID');
+                }
+                else if (err.error === 'ctn_asset_mgr_invalid_dest_address') {
+                    error = errorResponse.call(this, 400, 'Invalid foreign blockchain destination address');
                 }
                 else if (err.error === 'ctn_exp_asset_not_found' || err.error === 'ctn_asset_mgr_not_exported') {
                     error = errorResponse.call(this, 400, 'Asset is not yet exported');

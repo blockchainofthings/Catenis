@@ -251,6 +251,15 @@ export class EthereumClient {
     }
 
     /**
+     * Checks if a given address is a valid foreign blockchain account address
+     * @param {string} address Account address to be validated
+     * @return {boolean}
+     */
+    isValidAccountAddress(address) {
+        return this.web3.utils.isAddress(address);
+    }
+
+    /**
      * Get current ETH balance for a given account
      * @param {string} address Account address for getting balance
      * @param {boolean} [usePendingState] Indicates whether balance should take into consideration not yet confirmed

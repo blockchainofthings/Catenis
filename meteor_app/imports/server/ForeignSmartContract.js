@@ -409,6 +409,15 @@ export class ForeignSmartContract {
     toNativeCoin(amount) {
         return new BigNumber(this._blockchain.nativeCoin.fromLowestDenomination(amount));
     }
+
+    /**
+     * Checks if a given address is a valid foreign blockchain account address
+     * @param {string} address Account address to be validated
+     * @return {boolean}
+     */
+    isValidAccountAddress(address) {
+        return this._blockchain.client.isValidAccountAddress(address);
+    }
 }
 
 
