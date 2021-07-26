@@ -53,6 +53,7 @@ import {
  * @property {string} [queryParams.status] A single status or a comma separated list of statuses to include
  * @property {string} [queryParams.negateStatus='false'] Boolean value that indicates whether the specified statuses
  *                                              should be excluded instead
+ * @property {string} [queryParams.tokenSymbol] Symbol of exported asset's associated foreign token
  * @property {string} [queryParams.startDate] ISO 8601 formatted date and time specifying the lower bound of the time
  *                                             frame within which the asset has been exported
  * @property {string} [queryParams.endDate] ISO 8601 formatted date and time specifying the upper bound of the time
@@ -105,6 +106,15 @@ export function listExportedAssets() {
                 && (filter.negateStatus = parseBoolean(this.queryParams.negateStatus)) !== null))) {
             Catenis.logger.DEBUG('Invalid \'negateStatus\' parameter for GET \'assets/exported\' API request', this.queryParams);
             invalidParams.push('negateStatus');
+        }
+
+        // tokenSymbol param
+        if (typeof this.queryParams.tokenSymbol === 'string' && this.queryParams.tokenSymbol.length > 0) {
+                filter.tokenSymbol = this.queryParams.tokenSymbol;
+        }
+        else if (this.queryParams.tokenSymbol !== undefined) {
+            Catenis.logger.DEBUG('Invalid \'tokenSymbol\' parameter for GET \'assets/exported\' API request', this.queryParams);
+            invalidParams.push('tokenSymbol');
         }
 
         // startDate param

@@ -574,6 +574,7 @@ export class ExportedAsset {
      * @param {string} [filter.foreignBlockchain] Name of foreign blockchain
      * @param {(string|string[])} [filter.status] A single status or a list of statuses to include
      * @param {boolean} [filter.negateStatus=false] Indicates whether the specified statuses should be excluded instead
+     * @param {string} [filter.tokenSymbol] Symbol of exported asset's associated foreign token
      * @param {Date} [filter.startDate] Date and time specifying the lower bound of the time frame within which the
      *                                   asset has been exported
      * @param {Date} [filter.endDate] Date and time specifying the upper bound of the time frame within which the asset
@@ -604,6 +605,10 @@ export class ExportedAsset {
                 selector.status = filter.negateStatus
                     ? {$nin: statuses}
                     : {$in: statuses};
+            }
+
+            if (filter.tokenSymbol) {
+                selector['token.symbol'] = filter.tokenSymbol;
             }
 
             // Date filter
