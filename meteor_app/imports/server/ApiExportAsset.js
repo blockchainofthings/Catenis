@@ -118,7 +118,7 @@ export function exportAsset() {
                 invalidParams.push('options.estimateOnly');
             }
         }
-        else {
+        else if (this.bodyParams.options !== undefined) {
             Catenis.logger.DEBUG('Invalid \'options\' parameter POST for \'assets/:assetId/export/:foreignBlockchain\' API request', this.bodyParams);
             invalidParams.push('options');
         }
@@ -191,7 +191,7 @@ export function exportAsset() {
         }
 
         // Return success
-        const data = this.bodyParams.options.estimateOnly
+        const data = this.bodyParams.options && this.bodyParams.options.estimateOnly
             ? {estimatedPrice: exportResult}
             : {exportedAsset: exportResult};
 

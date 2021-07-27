@@ -132,7 +132,7 @@ export function migrateAsset() {
                 invalidParams.push('options.estimateOnly');
             }
         }
-        else {
+        else if (this.bodyParams.options !== undefined) {
             Catenis.logger.DEBUG('Invalid \'options\' parameter POST for \'assets/:assetId/migrate/:foreignBlockchain\' API request', this.bodyParams);
             invalidParams.push('options');
         }
@@ -232,7 +232,7 @@ export function migrateAsset() {
         }
 
         // Return success
-        const data = this.bodyParams.options.estimateOnly
+        const data = this.bodyParams.options && this.bodyParams.options.estimateOnly
             ? {estimatedPrice: migrationResult}
             : {assetMigration: migrationResult};
 
