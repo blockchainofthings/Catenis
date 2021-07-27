@@ -131,22 +131,36 @@ export function Logger() {
 //
 
 Logger.prototype._log = function (transport, level, message, ...args) {
-    const info = {
-        level: level,
-        message: message
-    };
+    try {
+        const info = {
+            level: level,
+            message: message
+        };
 
-    if (args.length > 0) {
-        info.metaArgs = args;
-    }
+        if (args.length > 0) {
+            info.metaArgs = args;
+        }
 
-    if (transport) {
-        // Make sure to add level symbol entry and to include dummy callback
-        info[LEVEL] = level;
-        transport._write(info, 'utf8', () => {});
+        if (transport) {
+            // Make sure to add level symbol entry and to include dummy callback
+            info[LEVEL] = level;
+            transport._write(info, 'utf8', () => {
+            });
+        }
+        else {
+            this._logger.log(info);
+        }
     }
-    else {
-        this._logger.log(info);
+    catch (err) {
+        if (typeof err === 'object' && err !== null) {
+            err.logInfo = {
+                level,
+                message,
+                args
+            };
+        }
+
+        console.error(`${new Date().toISOString()} - ****** Error logging message.`, err);
     }
 };
 
