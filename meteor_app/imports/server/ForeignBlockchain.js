@@ -10,10 +10,9 @@
 // References to external code
 //
 // Internal node modules
-import util from 'util';
+//import util from 'util';
 // Third-party node modules
 import config from 'config';
-import BigNumber from 'bignumber.js';
 import web3 from 'web3';
 // Meteor packages
 //import { Meteor } from 'meteor/meteor';

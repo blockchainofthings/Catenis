@@ -10,7 +10,7 @@
 // References to external code
 //
 // Internal node modules
-import util from 'util';
+//import util from 'util';
 // Third-party node modules
 import config from 'config';
 import got from 'got';

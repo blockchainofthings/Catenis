@@ -33,7 +33,6 @@ import {
 } from './SendMessageTransaction';
 import { Service } from './Service';
 import { BitcoinInfo } from './BitcoinInfo';
-import { TransferAssetTransaction } from './TransferAssetTransaction';
 
 
 // Definition of classes
