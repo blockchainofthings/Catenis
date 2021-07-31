@@ -285,29 +285,32 @@
     {
       key: 'ethereum',
       name: 'Ethereum (Ropsten testnet)',
-      prefix: 'eth',
+      classPrefix: 'Ethereum',
       nativeCoin: {
         name: 'ether',
         symbol: 'ETH'
-      }
+      },
+      blockTime: 15  // Theoretical block time (in seconds)
     },
     {
       key: 'binance',
       name: 'Binance Smart Chain (testnet)',
-      prefix: 'bsc',
+      classPrefix: 'BinanceSC',
       nativeCoin: {
         name: 'Binance coin',
         symbol: 'BNB'
-      }
+      },
+      blockTime: 3  // Theoretical block time (in seconds)
     },
     {
       key: 'polygon',
       name: 'Polygon PoS Chain (Mumbai testnet)',
-      prefix: 'pps',
+      classPrefix: 'PolygonPS',
       nativeCoin: {
         name: 'MATIC',
         symbol: 'MATIC'
-      }
+      },
+      blockTime: 2  // Theoretical block time (in seconds)
     }
   ],
   // Parameters pertaining to EthereumClient module

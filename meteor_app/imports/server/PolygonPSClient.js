@@ -17,7 +17,7 @@ import config from 'config';
 //import { Meteor } from 'meteor/meteor';
 
 // References code in other (Catenis) modules
-import { Catenis } from './Catenis';
+//import { Catenis } from './Catenis';
 import { EthereumClient } from './EthereumClient';
 
 // Config entries
@@ -45,7 +45,10 @@ const cfgSettings = {
         }
     },
     apiUsername: ppsClientConfig.get('apiUsername'),
-    apiPassword: ppsClientConfig.get('apiPassword')
+    apiPassword: ppsClientConfig.get('apiPassword'),
+    web3Settings: {
+        txBlockTimeout: ppsClientConfig.get('web3Settings.txBlockTimeout')
+    }
 };
 
 
@@ -63,6 +66,9 @@ export class PolygonPSClient extends EthereumClient {
      * @param {ClientConnectionOptions} connectionOptions
      * @param {string} username
      * @param {string} password
+     * @param {Object} web3Settings
+     * @property {number} web3Settings.txBlockTimeout
+     * @param {ForeignBlockchain} blockchain
      */
     constructor(
         host,
@@ -71,41 +77,34 @@ export class PolygonPSClient extends EthereumClient {
         protocol,
         connectionOptions,
         username,
-        password
+        password,
+        web3Settings,
+        blockchain
     ) {
-        super(host, path, port, protocol, connectionOptions, username, password);
-    }
-
-
-    // Private object properties (getters/setters)
-    //
-
-    /**
-     * Foreign blockchain key
-     * Note: this property should be overridden on derived classes, and its value should match one of the keys defined
-     *        in the ForeignBlockchain module
-     * @return {string}
-     * @private
-     */
-    get _blockchainKey() {
-        return 'polygon';
+        super(host, path, port, protocol, connectionOptions, username, password, web3Settings, blockchain);
     }
 
 
     // Class (public) methods
     //
 
-    static initialize() {
-        Catenis.logger.TRACE('PolygonPSClient initialization');
+    /**
+     * Create a new instance of the PolygonPSClient class
+     * @param {ForeignBlockchain} blockchain Foreign blockchain instance
+     * @return {PolygonPSClient}
+     */
+    static instantiate(blockchain) {
         // Instantiate PolygonPSClient object
-        Catenis.ppsClient = new PolygonPSClient(
+        return new PolygonPSClient(
             cfgSettings.nodeHost,
             cfgSettings.nodePath,
             cfgSettings.nodePort,
             cfgSettings.nodeProtocol,
             cfgSettings.connectionOptions,
             cfgSettings.apiUsername,
-            cfgSettings.apiPassword
+            cfgSettings.apiPassword,
+            cfgSettings.web3Settings,
+            blockchain
         );
     }
 }

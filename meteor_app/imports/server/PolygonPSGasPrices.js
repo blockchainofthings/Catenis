@@ -147,10 +147,13 @@ export class PolygonPSGasPrices {
     // Class (public) methods
     //
 
-    static initialize() {
-        Catenis.logger.TRACE('PolygonPSGasPrices initialization');
+    /**
+     * Create a new instance of the PolygonPSGasPrices class
+     * @return {PolygonPSGasPrices}
+     */
+    static instantiate() {
         // Instantiate PolygonPSGasPrices object
-        Catenis.ppsGasPrices = new PolygonPSGasPrices(cfgSettings.localAddress, cfgSettings.timeout);
+        return new PolygonPSGasPrices(cfgSettings.localAddress, cfgSettings.timeout);
     }
 }
 

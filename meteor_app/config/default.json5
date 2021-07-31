@@ -1122,29 +1122,32 @@
     {
       key: 'ethereum',
       name: 'Ethereum',
-      prefix: 'eth',
+      classPrefix: 'Ethereum',
       nativeCoin: {
         name: 'ether',
         symbol: 'ETH'
-      }
+      },
+      blockTime: 15  // Theoretical block time (in seconds)
     },
     {
       key: 'binance',
       name: 'Binance Smart Chain',
-      prefix: 'bsc',
+      classPrefix: 'BinanceSC',
       nativeCoin: {
         name: 'Binance coin',
         symbol: 'BNB'
-      }
+      },
+      blockTime: 3  // Theoretical block time (in seconds)
     },
     {
       key: 'polygon',
       name: 'Polygon PoS Chain',
-      prefix: 'pps',
+      classPrefix: 'PolygonPS',
       nativeCoin: {
         name: 'MATIC',
         symbol: 'MATIC'
-      }
+      },
+      blockTime: 2  // Theoretical block time (in seconds)
     }
   ],
   // Parameters pertaining to EthereumClient module
@@ -1169,7 +1172,10 @@
       }
     },
     apiUsername: '??????',  // (optional, can be set to null) Base64 encoded, ciphered username for accessing Ethereum node client API
-    apiPassword: '??????'  // (optional, can be set to null) Base64 encoded, ciphered password for accessing Ethereum node client API
+    apiPassword: '??????',  // (optional, can be set to null) Base64 encoded, ciphered password for accessing Ethereum node client API
+    web3Settings: {
+      txBlockTimeout: 50  // (number of blocks) 'transactionBlockTimeout' setting for web3.js client library (used for WebSocket connections)
+    }
   },
   // Parameters pertaining to BinanceSCClient module
   binanceSCClient: {
@@ -1193,7 +1199,10 @@
       }
     },
     apiUsername: '??????',  // (optional, can be set to null) Base64 encoded, ciphered username for accessing Binance Smart Chain node client API
-    apiPassword: '??????'  // (optional, can be set to null) Base64 encoded, ciphered password for accessing Binance Smart Chain node client API
+    apiPassword: '??????',  // (optional, can be set to null) Base64 encoded, ciphered password for accessing Binance Smart Chain node client API
+    web3Settings: {
+      txBlockTimeout: 50  // (number of blocks) 'transactionBlockTimeout' setting for web3.js client library (used for WebSocket connections)
+    }
   },
   // Parameters pertaining to PolygonPSClient module
   polygonPSClient: {
@@ -1217,7 +1226,10 @@
       }
     },
     apiUsername: '??????',  // (optional, can be set to null) Base64 encoded, ciphered username for accessing Polygon PoS Chain node client API
-    apiPassword: '??????'  // (optional, can be set to null) Base64 encoded, ciphered password for accessing Polygon PoS Chain node client API
+    apiPassword: '??????',  // (optional, can be set to null) Base64 encoded, ciphered password for accessing Polygon PoS Chain node client API
+    web3Settings: {
+      txBlockTimeout: 50  // (number of blocks) 'transactionBlockTimeout' setting for web3.js client library (used for WebSocket connections)
+    }
   },
   // Parameters pertaining to ForeignSmartContract module
   foreignSmartContract: {
@@ -1268,6 +1280,9 @@
       maxTicksToReprocess: 1024,  // Maximum value for the ticks to reprocess
       maxReprocessCounter: 10  // Maximum times for reprocessing failed tx receipt (and try again to retrieve tx receipt)
     },
+    checkOldPendingTxInterval: 1800000,  // (30 min.) Time interval, in milliseconds, for checking if there are old foreign blockchain transactions that are still pending
+    oldPendingTxTimeFactor: 2,  // Multiplication factor (over web3.js' tx pooling timeout) for defining time to considering a pending foreign blockchain transactions as old
+    txExecEventsTimeoutFactor: 1.5,  // Multiplication factor (over web3.js' tx pooling timeout) for defining the timeout for waiting for foreign blockchain transaction execution outcome events
     maxQueryCount: 500  // Maximum number of entries that can be returned when querying for exported assets
   },
   // Parameters pertaining to AssetMigration module
@@ -1280,6 +1295,9 @@
       maxTicksToReprocess: 1024,  // Maximum value for the ticks to reprocess
       maxReprocessCounter: 10  // Maximum times for reprocessing failed tx receipt (and try again to retrieve tx receipt)
     },
+    checkOldPendingTxInterval: 1800000,  // (30 min.) Time interval, in milliseconds, for checking if there are old foreign blockchain transactions that are still pending
+    oldPendingTxTimeFactor: 2,  // Multiplication factor (over web3.js' tx pooling timeout) for defining time to considering a pending foreign blockchain transactions as old
+    txExecEventsTimeoutFactor: 1.5,  // Multiplication factor (over web3.js' tx pooling timeout) for defining the timeout for waiting for foreign blockchain transaction execution outcome events
     maxQueryCount: 500  // Maximum number of entries that can be returned when querying for asset migrations
   }
 }

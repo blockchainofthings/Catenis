@@ -147,10 +147,13 @@ export class BinanceSCGasPrices {
     // Class (public) methods
     //
 
-    static initialize() {
-        Catenis.logger.TRACE('BinanceSCGasPrices initialization');
+    /**
+     * Create a new instance of the BinanceSCGasPrices class
+     * @return {BinanceSCGasPrices}
+     */
+    static instantiate() {
         // Instantiate BinanceSCGasPrices object
-        Catenis.bscGasPrices = new BinanceSCGasPrices(cfgSettings.localAddress, cfgSettings.timeout);
+        return new BinanceSCGasPrices(cfgSettings.localAddress, cfgSettings.timeout);
     }
 }
 

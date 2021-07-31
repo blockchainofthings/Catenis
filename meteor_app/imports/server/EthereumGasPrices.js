@@ -145,10 +145,13 @@ export class EthereumGasPrices {
     // Class (public) methods
     //
 
-    static initialize() {
-        Catenis.logger.TRACE('EthereumGasPrices initialization');
+    /**
+     * Create a new instance of the EthereumGasPrices class
+     * @return {EthereumGasPrices}
+     */
+    static instantiate() {
         // Instantiate EthereumGasPrices object
-        Catenis.ethGasPrices = new EthereumGasPrices(cfgSettings.apiKey, cfgSettings.localAddress, cfgSettings.timeout);
+        return new EthereumGasPrices(cfgSettings.apiKey, cfgSettings.localAddress, cfgSettings.timeout);
     }
 }
 

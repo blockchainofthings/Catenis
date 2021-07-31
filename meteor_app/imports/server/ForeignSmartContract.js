@@ -90,8 +90,7 @@ export class ForeignSmartContract {
          */
         this._methodCalls = new Map();
 
-        // Instantiate contract object
-        this.contract = this._blockchain.client.newContract(this.compiledOutput.abi, this.options.contractAddress);
+        this.resetContractInstance(false);
     }
 
 
@@ -130,8 +129,47 @@ export class ForeignSmartContract {
         return this._blockchain.client.getBalance(this.ownerAccount.address);
     }
 
+    /**
+     * Web3.js client library's transaction polling timeout
+     * @return {number}
+     */
+    get transactionPollingTimeout() {
+        return this._blockchain.client.transactionPollingTimeout;
+    }
+
     // Public object methods
     //
+
+    /**
+     * Set up a new foreign blockchain contract instance
+     * @param {boolean} [resetClient=true] Indicates whether a new foreign blockchain client instance should also be
+     *                                      set up
+     * @param {number} [thresholdTimestamp] Only reset client instance if it has not yet been reset after this timestamp
+     * @return {boolean} Indicates whether the client instance was reset
+     */
+    resetContractInstance(resetClient = true, thresholdTimestamp) {
+        let clientReset = false;
+
+        if (resetClient) {
+            clientReset = this.resetClientInstance(thresholdTimestamp);
+        }
+
+        const contractAddress = this.contract ? this.contract.options.address : this.options.contractAddress;
+
+        // Instantiate contract object
+        this.contract = this._blockchain.client.newContract(this.compiledOutput.abi, contractAddress);
+
+        return clientReset;
+    }
+
+    /**
+     * Set up a new foreign blockchain client instance
+     * @param {number} [thresholdTimestamp] Only reset client instance if it has not yet been reset after this timestamp
+     * @return {boolean} Indicates whether the client instance was in fact reset
+     */
+    resetClientInstance(thresholdTimestamp) {
+        return this._blockchain.client.resetClientInstance(thresholdTimestamp);
+    }
 
     /**
      * Estimate required foreign blockchain native coin amount to deploy smart contract
@@ -344,6 +382,15 @@ export class ForeignSmartContract {
      */
     getTransactions(txHashes) {
         return this._blockchain.client.getTransactions(txHashes);
+    }
+
+    /**
+     * Retrieve the receipt of a single transaction
+     * @param {string} txHash The transaction hash
+     * @return {Object} The retrieved transaction receipt or null if the tx is still pending
+     */
+    getTransactionReceipt(txHash) {
+        return this._blockchain.client.getTransactionReceipt(txHash);
     }
 
     /**

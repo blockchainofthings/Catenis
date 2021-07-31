@@ -17,7 +17,7 @@ import config from 'config';
 //import { Meteor } from 'meteor/meteor';
 
 // References code in other (Catenis) modules
-import { Catenis } from './Catenis';
+//import { Catenis } from './Catenis';
 import { EthereumClient } from './EthereumClient';
 
 // Config entries
@@ -45,7 +45,10 @@ const cfgSettings = {
         }
     },
     apiUsername: bscClientConfig.get('apiUsername'),
-    apiPassword: bscClientConfig.get('apiPassword')
+    apiPassword: bscClientConfig.get('apiPassword'),
+    web3Settings: {
+        txBlockTimeout: bscClientConfig.get('web3Settings.txBlockTimeout')
+    }
 };
 
 
@@ -63,6 +66,9 @@ export class BinanceSCClient extends EthereumClient {
      * @param {ClientConnectionOptions} connectionOptions
      * @param {string} username
      * @param {string} password
+     * @param {Object} web3Settings
+     * @property {number} web3Settings.txBlockTimeout
+     * @param {ForeignBlockchain} blockchain
      */
     constructor(
         host,
@@ -71,41 +77,34 @@ export class BinanceSCClient extends EthereumClient {
         protocol,
         connectionOptions,
         username,
-        password
+        password,
+        web3Settings,
+        blockchain
     ) {
-        super(host, path, port, protocol, connectionOptions, username, password);
-    }
-
-
-    // Private object properties (getters/setters)
-    //
-
-    /**
-     * Foreign blockchain key
-     * Note: this property should be overridden on derived classes, and its value should match one of the keys defined
-     *        in the ForeignBlockchain module
-     * @return {string}
-     * @private
-     */
-    get _blockchainKey() {
-        return 'binance';
+        super(host, path, port, protocol, connectionOptions, username, password, web3Settings, blockchain);
     }
 
 
     // Class (public) methods
     //
 
-    static initialize() {
-        Catenis.logger.TRACE('BinanceSCClient initialization');
+    /**
+     * Create a new instance of the BinanceSCClient class
+     * @param {ForeignBlockchain} blockchain Foreign blockchain instance
+     * @return {BinanceSCClient}
+     */
+    static instantiate(blockchain) {
         // Instantiate BinanceSCClient object
-        Catenis.bscClient = new BinanceSCClient(
+        return new BinanceSCClient(
             cfgSettings.nodeHost,
             cfgSettings.nodePath,
             cfgSettings.nodePort,
             cfgSettings.nodeProtocol,
             cfgSettings.connectionOptions,
             cfgSettings.apiUsername,
-            cfgSettings.apiPassword
+            cfgSettings.apiPassword,
+            cfgSettings.web3Settings,
+            blockchain
         );
     }
 }

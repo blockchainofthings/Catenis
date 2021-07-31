@@ -35,6 +35,9 @@ export const cfgSettings = {
         maxTicksToReprocess: expAssetConfig.get('reprocessFailedTxReceipts.maxTicksToReprocess'),
         maxReprocessCounter: expAssetConfig.get('reprocessFailedTxReceipts.maxReprocessCounter')
     },
+    checkOldPendingTxInterval: expAssetConfig.get('checkOldPendingTxInterval'),
+    oldPendingTxTimeFactor: expAssetConfig.get('oldPendingTxTimeFactor'),
+    txExecEventsTimeoutFactor: expAssetConfig.get('txExecEventsTimeoutFactor'),
     maxQueryCount: expAssetConfig.get('maxQueryCount')
 };
 
@@ -44,6 +47,7 @@ const requiredFields = [
     'token.name',
     'token.symbol'
 ];
+let checkOldPendingTxInterval;
 
 
 // Definition of classes
@@ -71,9 +75,9 @@ export class ExportedAsset {
 
     static failedTxReceipts = {
         /**
-         * @type {Set<{exportedAsset: ExportedAsset, ticksToReprocess: number, reprocessCounter: number}>}
+         * @type {Map<string,{exportedAsset: ExportedAsset, ticksToReprocess: number, reprocessCounter: number}>}
          */
-        set: new Set(),
+        map: new Map(),
         reprocessingInterval: undefined,
         reprocessing: false
     };
@@ -232,6 +236,9 @@ export class ExportedAsset {
                 throw translateForeignTxError(err, 'deploy');
             }
 
+            // Record foreign blockchain API method call timestamp
+            const callTimestamp = Date.now();
+
             // Save processing result
             this.foreignTransaction.txid = result.txHash;
             this.foreignTransaction.isPending = true;
@@ -242,9 +249,75 @@ export class ExportedAsset {
             this._saveToDb();
 
             // Prepare to track transaction execution
+            let txExecEventsTimedOut = false;
+            const txExecEventsTimeout = Meteor.setTimeout(() => {
+                try {
+                    // No transaction execution outcome events received for too long.
+                    //  Indicate that timeout has been triggered, and unset event handlers
+                    txExecEventsTimedOut = true;
+                    result.txOutcome.removeAllListeners();
+
+                    let txReceipt;
+
+                    try {
+                        // Now, check the foreign transaction execution state
+                        txReceipt = this.ctnErc20Token.getTransactionReceipt(result.txHash);
+                    }
+                    catch (error) {
+                        Catenis.logger.WARN('Failure retrieving exported asset foreign transaction receipt. Retrying...', {
+                            exportedAsset: this,
+                            error
+                        });
+                        this._setFailedTxReceipt();
+                    }
+
+                    if (txReceipt !== null) {
+                        // Transaction execution has been finalized. So, consider that foreign blockchain client
+                        //  library has stopped sending tx execution outcome events, and try to revert it by
+                        //  resetting the contract and the client library instances
+                        Catenis.logger.WARN(
+                            'Execution of export asset foreign blockchain tx has been finalized but no tx execution event has been received.',
+                            '\n\nAssume that foreign blockchain client library has stopped sending tx execution outcome events, and try to revert it by resetting the contract instance, and the client library instance too (if needed).'
+                        );
+                        if (!this.ctnErc20Token.resetContractInstance(true, callTimestamp)) {
+                            Catenis.logger.DEBUG('No need to reset the foreign blockchain client library instance now as it had already been reset since the API method was called');
+                        }
+
+                        // Now, check if tx has failed...
+                        let error;
+
+                        if (!txReceipt.status) {
+                            // TODO: get transaction revert reason (see article: https://medium.com/authereum/getting-ethereum-transaction-revert-reasons-the-easy-way-24203a4d1844)
+                            error = new Error('Unknown error while processing foreign blockchain transaction');
+                        }
+
+                        // and process tx outcome
+                        this._processForeignTxOutcome(error, txReceipt);
+                    }
+                    else {
+                        // Transaction still pending (or is not valid), so monitor its outcome
+                        this._monitorTxOutcome();
+                    }
+                }
+                catch (err) {
+                    Catenis.logger.ERROR('Error processing foreign blockchain tx execution outcome events timeout for export asset.', err);
+                }
+            }, this.ctnErc20Token.transactionPollingTimeout * cfgSettings.txExecEventsTimeoutFactor * 1000);
+
             result.txOutcome
             .once('receipt', Meteor.bindEnvironment(receipt => {
                 try {
+                    if (txExecEventsTimedOut) {
+                        Catenis.logger.WARN(
+                            'Export asset foreign blockchain tx execution outcome \'receipt\' event received after tx execution timeout has been triggered.',
+                            'Aborting processing.'
+                        );
+                        return;
+                    }
+
+                    // Stop foreign blockchain transaction execution events timeout
+                    Meteor.clearTimeout(txExecEventsTimeout);
+
                     this._processForeignTxOutcome(null, receipt);
                 }
                 catch (err) {
@@ -253,6 +326,17 @@ export class ExportedAsset {
             }))
             .once('error', Meteor.bindEnvironment((error, receipt) => {
                 try {
+                    if (txExecEventsTimedOut) {
+                        Catenis.logger.WARN(
+                            'Export asset foreign blockchain tx execution outcome \'error\' event received after tx execution timeout has been triggered.',
+                            'Aborting processing.'
+                        );
+                        return;
+                    }
+
+                    // Stop foreign blockchain transaction execution events timeout
+                    Meteor.clearTimeout(txExecEventsTimeout);
+
                     if ((error instanceof Error) && error.message.startsWith('Failed to check for transaction receipt:')) {
                         // Failure retrieving receipt of foreign transaction.
                         //  Set it up for its reprocessing
@@ -494,13 +578,14 @@ export class ExportedAsset {
 
     /**
      * Start monitoring outcome of pending exported asset foreign transaction
-     * @private
      */
     _monitorTxOutcome() {
-        ExportedAsset.pendingExportedAssets.map.set(this.foreignTransaction.txid, this);
+        if (!ExportedAsset.pendingExportedAssets.map.has(this.foreignTransaction.txid)) {
+            ExportedAsset.pendingExportedAssets.map.set(this.foreignTransaction.txid, this);
 
-        if (!ExportedAsset.pendingExportedAssets.checking) {
-            ExportedAsset._checkPendingExportedAssets();
+            if (!ExportedAsset.pendingExportedAssets.checking) {
+                ExportedAsset._checkPendingExportedAssets();
+            }
         }
     }
 
@@ -509,13 +594,18 @@ export class ExportedAsset {
      * @private
      */
     _setFailedTxReceipt() {
-        ExportedAsset.failedTxReceipts.set.add({
-            exportedAsset: this,
-            ticksToReprocess: 0,
-            reprocessCounter: 0
-        });
+        if (!ExportedAsset.failedTxReceipts.map.has(this.foreignTransaction.txid)) {
+            ExportedAsset.failedTxReceipts.map.set(
+                this.foreignTransaction.txid,
+                {
+                    exportedAsset: this,
+                    ticksToReprocess: 0,
+                    reprocessCounter: 0
+                }
+            );
 
-        ExportedAsset._startReprocessingFailedTxReceipts();
+            ExportedAsset._startReprocessingFailedTxReceipts();
+        }
     }
 
 
@@ -525,6 +615,9 @@ export class ExportedAsset {
     static initialize() {
         Catenis.logger.TRACE('ExportedAsset initialization');
         this._checkPendingExportedAssets();
+
+        // Set recurring timer to check for old pending foreign blockchain transactions...
+        checkOldPendingTxInterval = Meteor.setInterval(checkOldPendingTransaction, cfgSettings.checkOldPendingTxInterval);
     }
 
     /**
@@ -802,6 +895,7 @@ export class ExportedAsset {
                                 let error;
 
                                 if (!txReceipt.status) {
+                                    // TODO: get transaction revert reason (see article: https://medium.com/authereum/getting-ethereum-transaction-revert-reasons-the-easy-way-24203a4d1844)
                                     error = new Error('Unknown error while processing foreign blockchain transaction');
                                 }
 
@@ -878,9 +972,9 @@ export class ExportedAsset {
                 // Identify entries that need to be reprocessed now
                 const entriesToReprocess = new Map();
 
-                for (const entry of this.failedTxReceipts.set) {
+                for (const [txHash, entry] of this.failedTxReceipts.map) {
                     if (entry.ticksToReprocess === 0) {
-                        entriesToReprocess.set(entry.exportedAsset.foreignTransaction.txid, entry);
+                        entriesToReprocess.set(txHash, entry);
                     }
                     else {
                         entry.ticksToReprocess--;
@@ -918,10 +1012,11 @@ export class ExportedAsset {
                         else if (!txs[idx]) {
                             // Transaction not valid any more.
                             //  Abort reprocessing and report error
-                            const entry = entriesToReprocess.get(txHash);
-                            this.failedTxReceipts.set.delete(entry);
+                            this.failedTxReceipts.map.delete(txHash);
 
-                            entry.exportedAsset._processForeignTxOutcome(new Error('No transaction found with the given transaction hash'));
+                            entriesToReprocess.get(txHash).exportedAsset._processForeignTxOutcome(
+                                new Error('No transaction found with the given transaction hash')
+                            );
                             return false;
                         }
 
@@ -966,7 +1061,7 @@ export class ExportedAsset {
                                         exportedAsset: entry.exportedAsset,
                                         error
                                     });
-                                    this.failedTxReceipts.set.delete(entry);
+                                    this.failedTxReceipts.map.delete(txHash);
                                     entry.exportedAsset._processForeignTxOutcome(new Error(`Failure retrieving exported asset foreign transaction receipt: ${error}`));
                                 }
                             }
@@ -977,21 +1072,21 @@ export class ExportedAsset {
                                     let error;
 
                                     if (!txReceipt.status) {
+                                        // TODO: get transaction revert reason (see article: https://medium.com/authereum/getting-ethereum-transaction-revert-reasons-the-easy-way-24203a4d1844)
                                         error = new Error('Unknown error while processing foreign blockchain transaction');
                                     }
 
                                     // Exclude entry from reprocessing set, and process transaction outcome
-                                    const entry = entriesToReprocess.get(txHash);
-                                    this.failedTxReceipts.set.delete(entry);
+                                    this.failedTxReceipts.map.delete(txHash);
 
-                                    entry.exportedAsset._processForeignTxOutcome(error, txReceipt);
+                                    entriesToReprocess.get(txHash).exportedAsset._processForeignTxOutcome(error, txReceipt);
                                 }
                             }
                         });
                     }
                 }
 
-                if (this.failedTxReceipts.set.size === 0) {
+                if (this.failedTxReceipts.map.size === 0) {
                     // Stop reprocessing
                     this._stopReprocessingFailedTxReceipts();
                 }
@@ -1048,6 +1143,53 @@ function translateForeignTxError(error, method) {
     }
 
     return translatedError;
+}
+
+function checkOldPendingTransaction() {
+    Catenis.logger.TRACE('Checking for old pending asset export foreign blockchain transactions');
+    try {
+        const selector = {
+            'foreignTransaction.isPending': true,
+            $and: [{
+                'foreignTransaction.txid': {
+                    $exists: true
+                }
+            }, {
+                'foreignTransaction.txid': {
+                    $nin: Array.from(ExportedAsset.pendingExportedAssets.map.keys())
+                }
+            }]
+        };
+        const dateClauses = [];
+        const now = new Date();
+
+        for (const [key, blockchain] of Catenis.foreignBlockchains) {
+            const seconds = blockchain.client.transactionPollingTimeout * cfgSettings.oldPendingTxTimeFactor;
+            const dt = new Date(now);
+            dt.setSeconds(now.getSeconds() - seconds);
+
+            dateClauses.push({
+                foreignBlockchain: key,
+                createdDate: {
+                    $lte: dt
+                }
+            });
+        }
+
+        selector.$or = dateClauses;
+        Catenis.logger.DEBUG('>>>>>> Asset export: checkOldPendingTransaction: selector:', selector);
+
+        const exportedAssetDocs = Catenis.db.collection.ExportedAsset.find(selector).fetch();
+
+        if (exportedAssetDocs.length > 0) {
+            Catenis.logger.WARN('Found old pending asset export foreign blockchain transactions:', exportedAssetDocs);
+            // Prepare to monitor execution outcome of old pending asset export foreign blockchain transactions
+            exportedAssetDocs.forEach(doc => new ExportedAsset(doc)._monitorTxOutcome());
+        }
+    }
+    catch (err) {
+        Catenis.logger.ERROR('Error while checking for old pending asset export foreign blockchain transactions.', err);
+    }
 }
 
 

@@ -19,6 +19,18 @@ import web3 from 'web3';
 
 // References code in other (Catenis) modules
 import { Catenis } from './Catenis';
+// noinspection ES6UnusedImports
+import { EthereumClient } from './EthereumClient';
+// noinspection ES6UnusedImports
+import { EthereumGasPrices } from './EthereumGasPrices';
+// noinspection ES6UnusedImports
+import { BinanceSCClient } from './BinanceSCClient';
+// noinspection ES6UnusedImports
+import { BinanceSCGasPrices } from './BinanceSCGasPrices';
+// noinspection ES6UnusedImports
+import { PolygonPSClient } from './PolygonPSClient';
+// noinspection ES6UnusedImports
+import { PolygonPSGasPrices } from './PolygonPSGasPrices';
 
 // Config entries
 const foreignBcConfig = config.get('foreignBlockchain');
@@ -101,20 +113,23 @@ export class ForeignBlockchain {
 
     /**
      * Class constructor
-     * @param {{key: string, name: string, prefix: string, nativeCoin: {name: string, symbol: string}}} blockchainInfo
+     * @param {{key: string, name: string, classPrefix: string, nativeCoin: {name: string, symbol: string}, blockTime: number}} blockchainInfo
      */
     constructor(blockchainInfo) {
         this.key = blockchainInfo.key;
         this.name = blockchainInfo.name;
         this.nativeCoin = new NativeCoin(blockchainInfo.nativeCoin.name, blockchainInfo.nativeCoin.symbol);
-        this._prefix = blockchainInfo.prefix;
-        this.client = Catenis[`${this._prefix}Client`];
-        this.gasPrices = Catenis[`${this._prefix}GasPrices`];
+        this.blockTime = blockchainInfo.blockTime;
+        this.client = getClass(`${blockchainInfo.classPrefix}Client`).instantiate(this);
+        this.gasPrices = getClass(`${blockchainInfo.classPrefix}GasPrices`).instantiate();
     }
 
     static initialize() {
         Catenis.logger.TRACE('ForeignBlockchain initialization');
         // Instantiate ForeignBlockchain objects
+        /**
+         * @type {Map<string, ForeignBlockchain>}
+         */
         Catenis.foreignBlockchains = new Map();
 
         for (const cfgEntry of foreignBcConfig) {
@@ -139,6 +154,22 @@ export class ForeignBlockchain {
 
 // Module code
 //
+
+/**
+ * Get a class by name
+ * @param {string} className The class name
+ * @return {function}
+ */
+function getClass(className) {
+    const _class = eval(className);
+
+    // Make sure that executed code is made up of only the class name
+    if (typeof _class !== 'function' || _class.name !== className) {
+        throw new TypeError(`Inconsistent class name: ${className}`);
+    }
+
+    return _class;
+}
 
 // Lock class
 Object.freeze(ForeignBlockchain);

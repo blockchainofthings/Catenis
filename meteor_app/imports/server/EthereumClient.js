@@ -46,7 +46,10 @@ const cfgSettings = {
         }
     },
     apiUsername: ethClientConfig.get('apiUsername'),
-    apiPassword: ethClientConfig.get('apiPassword')
+    apiPassword: ethClientConfig.get('apiPassword'),
+    web3Settings: {
+        txBlockTimeout: ethClientConfig.get('web3Settings.txBlockTimeout')
+    }
 };
 
 
@@ -78,6 +81,9 @@ export class EthereumClient {
      * @param {ClientConnectionOptions} connectionOptions
      * @param {string} username
      * @param {string} password
+     * @param {Object} web3Settings
+     * @property {number} web3Settings.txBlockTimeout
+     * @param {ForeignBlockchain} blockchain
      */
     constructor(
         host,
@@ -86,50 +92,65 @@ export class EthereumClient {
         protocol,
         connectionOptions,
         username,
-        password
+        password,
+        web3Settings,
+        blockchain
     ) {
         this.apiUrl = assembleApiUrl(host, path, port, protocol, username, password);
+        this.web3Settings = web3Settings;
+        this._blockchain = blockchain;
 
-        if (protocol.startsWith('http')) {
-            // Use HTTP provider
-            this.web3 = new Web3(new Web3.providers.HttpProvider(this.apiUrl, {
-                timeout: connectionOptions.timeout,
-                keepAlive: connectionOptions.http.keepAlive
-            }));
-        }
-        else if (protocol.startsWith('ws')) {
-            // Use WebSocket provider
-            const wsOptions = {
-                timeout: connectionOptions.timeout,
-                reconnect: {
-                    auto: connectionOptions.webSocket.reconnect.auto
-                }
-            };
-
-            if (wsOptions.reconnect.auto) {
-                wsOptions.reconnect.delay = connectionOptions.webSocket.reconnect.delay;
-                wsOptions.reconnect.maxAttempts = connectionOptions.webSocket.reconnect.maxAttempts
-                    ? connectionOptions.webSocket.reconnect.maxAttempts
-                    : false;
-                wsOptions.reconnect.onTimeout = connectionOptions.webSocket.reconnect.onTimeout;
-            }
-
-            if (connectionOptions.webSocket.heartbeatInterval) {
-                wsOptions.clientConfig = {
-                    keepalive: true,
-                    keepaliveInterval: connectionOptions.webSocket.heartbeatInterval
+        /**
+         * Function used to instantiate web3.js client library
+         * @type {function(): Web3}
+         */
+        this.newWeb3 = (() => {
+            if (protocol.startsWith('http')) {
+                // Use HTTP provider
+                return () => {
+                    return new Web3(new Web3.providers.HttpProvider(this.apiUrl, {
+                        timeout: connectionOptions.timeout,
+                        keepAlive: connectionOptions.http.keepAlive
+                    }));
                 };
             }
+            else if (protocol.startsWith('ws')) {
+                // Use WebSocket provider
+                const wsOptions = {
+                    timeout: connectionOptions.timeout,
+                    reconnect: {
+                        auto: connectionOptions.webSocket.reconnect.auto
+                    }
+                };
 
-            this.web3 = new Web3(new Web3.providers.WebsocketProvider(this.apiUrl, wsOptions));
-        }
-        else {
-            // Unknown provider. Let the library handle it
-            this.web3 = new Web3(this.apiUrl);
-        }
+                if (wsOptions.reconnect.auto) {
+                    wsOptions.reconnect.delay = connectionOptions.webSocket.reconnect.delay;
+                    wsOptions.reconnect.maxAttempts = connectionOptions.webSocket.reconnect.maxAttempts
+                        ? connectionOptions.webSocket.reconnect.maxAttempts
+                        : false;
+                    wsOptions.reconnect.onTimeout = connectionOptions.webSocket.reconnect.onTimeout;
+                }
 
-        // Note: this field must be initialized only after the class itself is initialized
-        this._blockchain = undefined;
+                if (connectionOptions.webSocket.heartbeatInterval) {
+                    wsOptions.clientConfig = {
+                        keepalive: true,
+                        keepaliveInterval: connectionOptions.webSocket.heartbeatInterval
+                    };
+                }
+
+                return () => {
+                    return new Web3(new Web3.providers.WebsocketProvider(this.apiUrl, wsOptions));
+                }
+            }
+            else {
+                // Unknown provider. Let the library handle it
+                return () => {
+                    return new Web3(this.apiUrl);
+                }
+            }
+        })();
+
+        this.resetClientInstance();
     }
 
 
@@ -144,36 +165,67 @@ export class EthereumClient {
         return this.web3.currentProvider instanceof Web3.providers.WebsocketProvider;
     }
 
+    /**
+     * Web3.js client library's transaction polling timeout
+     * @return {number}
+     */
+    get transactionPollingTimeout() {
+        return this.web3.eth.transactionPollingTimeout;
+    }
+
 
     // Private object properties (getters/setters)
     //
-
-    /**
-     * Foreign blockchain key
-     * Note: this property should be overridden on derived classes, and its value should match one of the keys defined
-     *        in the ForeignBlockchain module
-     * @return {string}
-     * @private
-     */
-    get _blockchainKey() {
-        return 'ethereum';
-    }
 
     /**
      * @return {NativeCoin}
      * @private
      */
     get _nativeCoin() {
-        if (!this._blockchain) {
-            this._blockchain = Catenis.foreignBlockchains.get(this._blockchainKey);
-        }
-
         return this._blockchain.nativeCoin;
     }
 
 
     // Public object methods
     //
+
+    /**
+     * Set up a new foreign blockchain client instance
+     * @param {number} [thresholdTimestamp] Only reset client instance if it has not yet been reset after this timestamp
+     * @return {boolean} Indicates whether the client instance was in fact reset
+     */
+    resetClientInstance(thresholdTimestamp) {
+        let reset = false;
+
+        if (!thresholdTimestamp || this.clientInstanceResetTimestamp <= thresholdTimestamp) {
+            let oldWeb3;
+
+            if ((oldWeb3 = this.web3) && this.isWebSocket) {
+                // Stop (old) WebSocket connection
+                this.web3.currentProvider.disconnect();
+            }
+
+            // Instantiate web3.js client library
+            this.web3 = this.newWeb3();
+            this.clientInstanceResetTimestamp = Date.now();
+
+            // Apply web3 settings
+            this.web3.eth.transactionBlockTimeout = this.web3Settings.txBlockTimeout;
+            this.web3.eth.transactionPollingTimeout = this.web3Settings.txBlockTimeout * this._blockchain.blockTime;
+
+            if (oldWeb3) {
+                // Initialize wallet of new instance (with accounts from old instance's wallet)
+                for (let idx = 0; idx < oldWeb3.eth.accounts.wallet.length; idx++) {
+                    this.web3.eth.accounts.wallet.add(oldWeb3.eth.accounts.wallet[idx]);
+                }
+            }
+
+            // Indicate that client instance was reset
+            reset = true;
+        }
+
+        return reset;
+    }
 
     /**
      * Check if error was due to a not open WebSocket connection, and try to reopen the connection
@@ -189,7 +241,7 @@ export class EthereumClient {
             const ws = this.web3.currentProvider;
 
             // Make sure that WebSocket connection is not open
-            if (!ws.connected) {
+            if (!(ws.connected || (ws.connection && ws.connection.readyState === ws.connection.CONNECTING))) {
                 // Try to open WebSocket connection
                 retry = Promise.await(
                     (async function() {
@@ -233,7 +285,7 @@ export class EthereumClient {
                 );
             }
             else {
-                // WebSocket connection already open. Jut retry
+                // WebSocket connection already open (or in the process of being open). Jut retry
                 retry = true;
             }
         }
@@ -442,6 +494,41 @@ export class EthereumClient {
     }
 
     /**
+     * Retrieve the receipt of a single transaction
+     * @param {string} txHash The transaction hash
+     * @return {Object} The retrieved transaction receipt or null if the tx is still pending
+     */
+    getTransactionReceipt(txHash) {
+        let receipt;
+        let tryAgain;
+        let wsDisconnectRetried = false;
+
+        do {
+            tryAgain = false;
+
+            try {
+                receipt = Promise.await(
+                    this.web3.eth.getTransactionReceipt(txHash)
+                );
+            }
+            catch (err) {
+                if (!wsDisconnectRetried && this.checkRetryWSDisconnectError(err)) {
+                    // WebSocket connection has been reopened. Try calling remote method again
+                    wsDisconnectRetried = tryAgain = true;
+                }
+                else {
+                    // Error retrieving transaction
+                    Catenis.logger.ERROR(`Error trying to retrieve transaction receipt (txHash: ${txHash}).`, err);
+                    throw new Error(`Error trying to retrieve transaction receipt (txHash: ${txHash}): ${err}`);
+                }
+            }
+        }
+        while (tryAgain);
+
+        return receipt;
+    }
+
+    /**
      * Retrieve the receipts of multiple transactions
      * @param {[string]} txHashes A list of transaction hashes
      * @return {[Object]} List with the retrieved tx receipts
@@ -580,17 +667,23 @@ export class EthereumClient {
     // Class (public) methods
     //
 
-    static initialize() {
-        Catenis.logger.TRACE('EthereumClient initialization');
+    /**
+     * Create a new instance of the EthereumClient class
+     * @param {ForeignBlockchain} blockchain Foreign blockchain instance
+     * @return {EthereumClient}
+     */
+    static instantiate(blockchain) {
         // Instantiate EthereumClient object
-        Catenis.ethClient = new EthereumClient(
+        return new EthereumClient(
             cfgSettings.nodeHost,
             cfgSettings.nodePath,
             cfgSettings.nodePort,
             cfgSettings.nodeProtocol,
             cfgSettings.connectionOptions,
             cfgSettings.apiUsername,
-            cfgSettings.apiPassword
+            cfgSettings.apiPassword,
+            cfgSettings.web3Settings,
+            blockchain
         );
     }
 }
