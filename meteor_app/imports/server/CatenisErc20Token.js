@@ -147,6 +147,7 @@ export class CatenisErc20Token extends ForeignSmartContract {
             throw new Error('Smart contract is not yet deployed');
         }
 
+        let strValue;
         let tryAgain;
         let wsDisconnectRetried = false;
 
@@ -154,7 +155,7 @@ export class CatenisErc20Token extends ForeignSmartContract {
             tryAgain = false;
 
             try {
-                const strValue = Promise.await(
+                strValue = Promise.await(
                     this.contract.methods.decimals().call({
                         from: this.ownerAccount.address
                     })
