@@ -88,10 +88,11 @@ export function retrieveMessageProgress() {
 
             if (err instanceof Meteor.Error) {
                 if (err.error === 'ctn_device_deleted') {
-                    // This should never happen
+                    // This should never happen (deleted devices are not authenticated)
                     error = errorResponse.call(this, 400, 'Device is deleted');
                 }
                 else if (err.error === 'ctn_device_not_active') {
+                    // This should never happen (inactive devices are not authenticated)
                     error = errorResponse.call(this, 400, 'Device is not active');
                 }
                 else if (err.error === 'ctn_ephem_msg_not_found' || err.error === 'ctn_prov_msg_wrong_device' || err.error === 'ctn_cach_msg_wrong_device' || err.error === 'ctn_cach_msg_read_already_started') {
