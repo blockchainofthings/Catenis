@@ -45,6 +45,7 @@ const cfgSettings = {
         systemBcotSaleStock: configBaseBcAddrValidity.get('systemBcotSaleStock'),
         systemOCMsgsSetlmtPayTxExpense: configBaseBcAddrValidity.get('systemOCMsgsSetlmtPayTxExpense'),
         deviceReadConfirm: configBaseBcAddrValidity.get('deviceReadConfirm'),
+        deviceMigratedAsset: configBaseBcAddrValidity.get('deviceMigratedAsset'),
         clientServAccCreditLine: configBaseBcAddrValidity.get('clientServAccCreditLine'),
         clientServAccDebitLine: configBaseBcAddrValidity.get('clientServAccDebitLine'),
         clientBcotPayment: configBaseBcAddrValidity.get('clientBcotPayment'),
@@ -938,6 +939,61 @@ export class BaseDeviceReadConfirmAddress extends BaseBlockchainAddress {
 
         return hasInstantiatedObject(parentPath) ? getInstantiatedObject(parentPath)
             : new BaseDeviceReadConfirmAddress(ctnNodeIndex, clientIndex, deviceIndex);
+    }
+}
+
+// BaseDeviceMigratedAssetAddress derived class
+export class BaseDeviceMigratedAssetAddress extends BaseBlockchainAddress {
+    constructor (ctnNodeIndex, clientIndex, deviceIndex) {
+        super();
+        this.type = KeyStore.extKeyType.dev_migr_asst_addr.name;
+        this.parentPath = KeyStore.deviceMigratedAssetAddressRootPath(ctnNodeIndex, clientIndex, deviceIndex);
+        this.btcAddressType = BitcoinInfo.addressType.witness_v0_keyhash;
+
+        // Make sure that an object of this class has not been instantiated yet
+        if (hasInstantiatedObject(this.parentPath)) {
+            Catenis.logger.ERROR(util.format('BaseDeviceMigratedAssetAddress object for the given Catenis node, client and device indices (%d, %d and %d, respectively) has already been instantiated', ctnNodeIndex, clientIndex, deviceIndex));
+            throw new Error(util.format('BaseDeviceMigratedAssetAddress object for the given Catenis node, client and device indices (%d, %d and %d, respectively) has already been instantiated', ctnNodeIndex, clientIndex, deviceIndex));
+        }
+
+        this.addressValidity = cfgSettings.addressValidity.deviceMigratedAsset;
+
+        // Assign address manipulation functions
+        this._getAddressKeys = Catenis.keyStore.getDeviceMigratedAssetAddressKeys.bind(Catenis.keyStore, ctnNodeIndex, clientIndex, deviceIndex);
+        this._listAddressesInUse = Catenis.keyStore.listDeviceMigratedAssetAddressesInUse.bind(Catenis.keyStore, ctnNodeIndex, clientIndex, deviceIndex);
+
+        // Initialize bounding indices
+        setBoundingIndices.call(this);
+
+        // Save this instance
+        setInstantiatedObject(this.parentPath, this);
+    }
+
+    // Get instance of this class
+    //
+    //  ctnNodeIndex: [integer]
+    //                or
+    //                {  // Options object
+    //      ctnNodeIndex: [integer],
+    //      clientIndex: [integer],
+    //      deviceIndex: [integer]
+    //  },
+    //  clientIndex: [integer],
+    //  deviceIndex: [integer]
+    //
+    static getInstance(ctnNodeIndex, clientIndex, deviceIndex, parentPath) {
+        if (typeof ctnNodeIndex === 'object') {
+            // Options object passed instead of plain arguments
+            deviceIndex = ctnNodeIndex.deviceIndex;
+            clientIndex = ctnNodeIndex.clientIndex;
+            ctnNodeIndex = ctnNodeIndex.ctnNodeIndex;
+        }
+
+        // Check if an instance of this class has already been instantiated
+        parentPath = parentPath || KeyStore.deviceMigratedAssetAddressRootPath(ctnNodeIndex, clientIndex, deviceIndex);
+
+        return hasInstantiatedObject(parentPath) ? getInstantiatedObject(parentPath)
+            : new BaseDeviceMigratedAssetAddress(ctnNodeIndex, clientIndex, deviceIndex);
     }
 }
 
@@ -2151,6 +2207,7 @@ const classByType = {
     cln_srv_acc_debt_ln_addr: BaseClientServiceAccountDebitLineAddress,
     cln_bcot_pay_addr: BaseClientBcotPaymentAddress,
     dev_read_conf_addr: BaseDeviceReadConfirmAddress,
+    dev_migr_asst_addr: BaseDeviceMigratedAssetAddress,
     dev_main_addr: BaseDeviceMainAddress,
     dev_asst_addr: BaseDeviceAssetAddress,
     dev_asst_issu_addr: BaseDeviceAssetIssuanceAddress
@@ -2189,6 +2246,7 @@ Object.freeze(BaseClientServiceAccountCreditLineAddress);
 Object.freeze(BaseClientServiceAccountDebitLineAddress);
 Object.freeze(BaseClientBcotPaymentAddress);
 Object.freeze(BaseDeviceReadConfirmAddress);
+Object.freeze(BaseDeviceMigratedAssetAddress);
 Object.freeze(BaseDeviceMainAddress);
 Object.freeze(BaseDeviceAssetAddress);
 Object.freeze(BaseDeviceAssetIssuanceAddress);

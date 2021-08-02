@@ -249,5 +249,72 @@
   // Parameters pertaining to AdminEmailNotify module
   adminEmailNotify: {
     fromAddress: "Catenis Enterprise [Development] <noreply@blockchainofthings.com>"  // E-mail address used to send notification e-mail messages to administrators
+  },
+  // Parameters pertaining to ForeignBlockchain module
+  foreignBlockchain: [
+    {
+      key: 'ethereum',
+      name: 'Simulated Ethereum (on Ganache)',
+      classPrefix: 'Ethereum',
+      nativeCoin: {
+        name: 'ether',
+        symbol: 'ETH'
+      },
+      blockTime: 15  // Theoretical block time (in seconds)
+    },
+    {
+      key: 'binance',
+      name: 'Simulated Binance Smart Chain (on Ganache)',
+      classPrefix: 'BinanceSC',
+      nativeCoin: {
+        name: 'Binance coin',
+        symbol: 'BNB'
+      },
+      blockTime: 3  // Theoretical block time (in seconds)
+    },
+    {
+      key: 'polygon',
+      name: 'Simulated Polygon PoS Chain (on Ganache)',
+      classPrefix: 'PolygonPS',
+      nativeCoin: {
+        name: 'MATIC',
+        symbol: 'MATIC'
+      },
+      blockTime: 2  // Theoretical block time (in seconds)
+    }
+  ],
+  // Parameters pertaining to EthereumClient module
+  ethereumClient: {
+    nodeHost: '127.0.0.1',  // Ethereum node (on Ganache) client API hostname
+    nodePath:  null,  // (optional, can be set to null) Ethereum node client API endpoint path
+    nodePort: 7545,  // (optional, can be set to null) Ethereum node client API port. If null, the default port (8545) is used
+    nodeProtocol: 'ws', // Ethereum node client API protocol. Expected values: 'http', 'https', 'ws' our 'wss'
+    apiUsername: null,  // (optional, can be set to null) Base64 encoded, ciphered username for accessing Ethereum node client API
+    apiPassword: null  // (optional, can be set to null) Base64 encoded, ciphered password for accessing Ethereum node client API
+  },
+  // Parameters pertaining to BinanceSCClient module
+  binanceSCClient: {
+    nodeHost: '127.0.0.1',  // Simulated Binance Smart Chain node (on Ganache) client API hostname
+    nodePath:  null,  // (optional, can be set to null) Binance Smart Chain node client API endpoint path
+    nodePort: 7545,  // (optional, can be set to null) Binance Smart Chain node client API port. If null, the default port (8545) is used
+    nodeProtocol: 'ws', // Binance Smart Chain node client API protocol. Expected values: 'http', 'https', 'ws' our 'wss'
+    apiUsername: null,  // (optional, can be set to null) Base64 encoded, ciphered username for accessing Binance Smart Chain node client API
+    apiPassword: null  // (optional, can be set to null) Base64 encoded, ciphered password for accessing Binance Smart Chain node client API
+  },
+  // Parameters pertaining to PolygonPSClient module
+  polygonPSClient: {
+    nodeHost: '127.0.0.1',  // Simulated Polygon PoS Chain node (on Ganache) client API hostname
+    nodePath:  null,  // (optional, can be set to null) Polygon PoS Chain node client API endpoint path
+    nodePort: 7545,  // (optional, can be set to null) Polygon PoS Chain node client API port. If null, the default port (8545) is used
+    nodeProtocol: 'ws', // Polygon PoS Chain node client API protocol. Expected values: 'http', 'https', 'ws' our 'wss'
+    apiUsername: null,  // (optional, can be set to null) Base64 encoded, ciphered username for accessing Polygon PoS Chain node client API
+    apiPassword: null  // (optional, can be set to null) Base64 encoded, ciphered password for accessing Polygon PoS Chain node client API
+  },
+  // Parameters pertaining to PolygonPSGasPrices module
+  polygonPSGasPrices: {
+    apiUrl: " https://gasstation-mumbai.matic.today/",  // Matic (Polygon) Gas Station API URL (for Mumbai testnet)
+    gasPricesEndPoint: "",  // API endpoint for retrieving Polygon PoS Chain gas price estimates
+    localAddress: null,  // (optional, can be set to null) IP address of local network interface to use to issue requests to the Web service
+    timeout: 20000  // (20 sec.) Timeout, in milliseconds, for connection/request with API server
   }
 }

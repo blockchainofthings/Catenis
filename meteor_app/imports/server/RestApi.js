@@ -58,6 +58,12 @@ import { retrieveAssetIssuanceHistory2 } from './ApiAssetIssuance2';
 import { listAssetHolders } from './ApiAssetHolders';
 import { retrieveMessageProgress } from './ApiMessageProgress';
 import { retrieveMessageOrigin } from './ApiMessageOrigin';
+import { exportAsset } from './ApiExportAsset';
+import { assetExportOutcome } from './ApiAssetExportOutcome';
+import { listExportedAssets } from './ApiListExportedAssets';
+import { migrateAsset } from './ApiMigrateAsset';
+import { assetMigrationOutcome } from './ApiAssetMigrationOutcome';
+import { listAssetMigrations } from './ApiListAssetMigrations';
 
 // Config entries
 const restApiConfig = config.get('restApi');
@@ -327,6 +333,64 @@ export function RestApi(apiVersion) {
             //  Refer to the source file where the action function is defined for a detailed description of the endpoint
             get: {
                 action: retrieveMessageOrigin
+            }
+        });
+    }
+
+    if (this.apiVer.gte('0.11')) {
+        // noinspection JSUnresolvedFunction
+        this.api.addRoute('assets/:assetId/export/:foreignBlockchain', {authRequired: true}, {
+            // Export an asset to a foreign blockchain (public method)
+            //
+            //  Refer to the source file where the action function is defined for a detailed description of the endpoint
+            post: {
+                action: exportAsset
+            },
+            // Retrieve the outcome of an asset export (public method)
+            //
+            //  Refer to the source file where the action function is defined for a detailed description of the endpoint
+            get: {
+                action: assetExportOutcome
+            }
+        });
+
+        // noinspection JSUnresolvedFunction
+        this.api.addRoute('assets/exported', {authRequired: true}, {
+            // List exported assets (public method)
+            //
+            //  Refer to the source file where the action function is defined for a detailed description of the endpoint
+            get: {
+                action: listExportedAssets
+            }
+        });
+
+        // noinspection JSUnresolvedFunction
+        this.api.addRoute('assets/:assetId/migrate/:foreignBlockchain', {authRequired: true}, {
+            // Migrate an amount of an exported asset to the foreign blockchain (public method)
+            //
+            //  Refer to the source file where the action function is defined for a detailed description of the endpoint
+            post: {
+                action: migrateAsset
+            }
+        });
+
+        // noinspection JSUnresolvedFunction
+        this.api.addRoute('assets/migrations/:migrationId', {authRequired: true}, {
+            // Retrieve the outcome of an asset migration (public method)
+            //
+            //  Refer to the source file where the action function is defined for a detailed description of the endpoint
+            get: {
+                action: assetMigrationOutcome
+            }
+        });
+
+        // noinspection JSUnresolvedFunction
+        this.api.addRoute('assets/migrations', {authRequired: true}, {
+            // List asset migrations (public method)
+            //
+            //  Refer to the source file where the action function is defined for a detailed description of the endpoint
+            get: {
+                action: listAssetMigrations
             }
         });
     }

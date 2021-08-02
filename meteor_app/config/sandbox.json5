@@ -279,5 +279,72 @@
   // Parameters pertaining to AdminEmailNotify module
   adminEmailNotify: {
     fromAddress: "Catenis Enterprise [Sandbox] <noreply@blockchainofthings.com>"  // E-mail address used to send notification e-mail messages to administrators
+  },
+  // Parameters pertaining to ForeignBlockchain module
+  foreignBlockchain: [
+    {
+      key: 'ethereum',
+      name: 'Ethereum (Ropsten testnet)',
+      classPrefix: 'Ethereum',
+      nativeCoin: {
+        name: 'ether',
+        symbol: 'ETH'
+      },
+      blockTime: 15  // Theoretical block time (in seconds)
+    },
+    {
+      key: 'binance',
+      name: 'Binance Smart Chain (testnet)',
+      classPrefix: 'BinanceSC',
+      nativeCoin: {
+        name: 'Binance coin',
+        symbol: 'BNB'
+      },
+      blockTime: 3  // Theoretical block time (in seconds)
+    },
+    {
+      key: 'polygon',
+      name: 'Polygon PoS Chain (Mumbai testnet)',
+      classPrefix: 'PolygonPS',
+      nativeCoin: {
+        name: 'MATIC',
+        symbol: 'MATIC'
+      },
+      blockTime: 2  // Theoretical block time (in seconds)
+    }
+  ],
+  // Parameters pertaining to EthereumClient module
+  ethereumClient: {
+    nodeHost: 'ws-nd-644-088-742.p2pify.com',  // Ethereum node client API hostname
+    nodePath:  null,  // (optional, can be set to null) Ethereum node client API endpoint path
+    nodePort: null,  // (optional, can be set to null) Ethereum node client API port. If null, the default port (8545) is used
+    nodeProtocol: 'wss', // Ethereum node client API protocol. Expected values: 'http', 'https', 'ws' our 'wss'
+    apiUsername: '??????',  // (optional, can be set to null) Base64 encoded, ciphered username for accessing Ethereum node client API
+    apiPassword: '??????'  // (optional, can be set to null) Base64 encoded, ciphered password for accessing Ethereum node client API
+  },
+  // Parameters pertaining to BinanceSCClient module
+  binanceSCClient: {
+    nodeHost: 'ws-nd-459-885-532.p2pify.com',  // Binance Smart Chain node client API hostname
+    nodePath:  null,  // (optional, can be set to null) Binance Smart Chain node client API endpoint path
+    nodePort: null,  // (optional, can be set to null) Binance Smart Chain node client API port. If null, the default port (8545) is used
+    nodeProtocol: 'wss', // Binance Smart Chain node client API protocol. Expected values: 'http', 'https', 'ws' our 'wss'
+    apiUsername: '??????',  // (optional, can be set to null) Base64 encoded, ciphered username for accessing Binance Smart Chain node client API
+    apiPassword: '??????'  // (optional, can be set to null) Base64 encoded, ciphered password for accessing Binance Smart Chain node client API
+  },
+  // Parameters pertaining to PolygonPSClient module
+  polygonPSClient: {
+    nodeHost: 'ws-nd-548-797-119.p2pify.com',  // Polygon PoS Chain node client API hostname
+    nodePath:  null,  // (optional, can be set to null) Polygon PoS Chain node client API endpoint path
+    nodePort: null,  // (optional, can be set to null) Polygon PoS Chain node client API port. If null, the default port (8545) is used
+    nodeProtocol: 'wss', // Polygon PoS Chain node client API protocol. Expected values: 'http', 'https', 'ws' our 'wss'
+    apiUsername: '??????',  // (optional, can be set to null) Base64 encoded, ciphered username for accessing Polygon PoS Chain node client API
+    apiPassword: '??????'  // (optional, can be set to null) Base64 encoded, ciphered password for accessing Polygon PoS Chain node client API
+  },
+  // Parameters pertaining to PolygonPSGasPrices module
+  polygonPSGasPrices: {
+    apiUrl: " https://gasstation-mumbai.matic.today/",  // Matic (Polygon) Gas Station API URL (for Mumbai testnet)
+    gasPricesEndPoint: "",  // API endpoint for retrieving Polygon PoS Chain gas price estimates
+    localAddress: null,  // (optional, can be set to null) IP address of local network interface to use to issue requests to the Web service
+    timeout: 20000  // (20 sec.) Timeout, in milliseconds, for connection/request with API server
   }
 }

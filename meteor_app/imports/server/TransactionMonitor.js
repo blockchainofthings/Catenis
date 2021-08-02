@@ -1574,6 +1574,14 @@ TransactionMonitor.notifyEvent = Object.freeze({
         name: 'settle_off_chain_messages_tx_conf',
         description: 'Transaction used to settle Catenis off-chain messages to the blockchain has been confirmed'
     }),
+    out_migrate_asset_tx_conf: Object.freeze({
+        name: 'out_migrate_asset_tx_conf',
+        description: 'Transaction used to out-migrate an amount of an exported Catenis asset to a foreign blockchain has been confirmed'
+    }),
+    in_migrate_asset_tx_conf: Object.freeze({
+        name: 'in_migrate_asset_tx_conf',
+        description: 'Transaction used to in-migrate an amount of an exported Catenis asset from a foreign blockchain back to Catenis has been confirmed'
+    }),
     // Events used to notify when a transaction of a given type is received
     sys_funding_tx_rcvd: Object.freeze({
         name: 'sys_funding_tx_rcvd',
@@ -1693,6 +1701,22 @@ function processConfirmedSentTransactions(doc, eventsToEmit) {
 
                 case Transaction.type.settle_off_chain_messages.name:
                     eventData.offChainMsgDataCids = txInfo.offChainMsgDataCids;
+
+                    break;
+
+                case Transaction.type.out_migrate_asset.name:
+                    eventData.assetId = txInfo.assetId;
+                    eventData.owningDeviceId = txInfo.owningDeviceId;
+                    eventData.amount = txInfo.amount;
+                    eventData.changeAmount = txInfo.changeAmount;
+
+                    break;
+
+                case Transaction.type.in_migrate_asset.name:
+                    eventData.assetId = txInfo.assetId;
+                    eventData.owningDeviceId = txInfo.owningDeviceId;
+                    eventData.amount = txInfo.amount;
+                    eventData.changeAmount = txInfo.changeAmount;
 
                     break;
             }

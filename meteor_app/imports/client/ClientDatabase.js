@@ -45,6 +45,8 @@ Catenis.db = {
         BcotSaleStockReplenishedAmount: new Mongo.Collection('BcotSaleStockReplenishedAmount'),
         TwoFactorAuthInfo: new Mongo.Collection('TwoFactorAuthInfo'),
         ClientOwnedDomain: new Mongo.Collection('ClientOwnedDomain'),
-        StandbyPurchasedBcot: new Mongo.Collection('StandbyPurchasedBcot')
+        StandbyPurchasedBcot: new Mongo.Collection('StandbyPurchasedBcot'),
+        ClientForeignBlockchain: new Mongo.Collection('ClientForeignBlockchain'),
+        ForeignBcConsumptionProfile: new Mongo.Collection('ForeignBcConsumptionProfile')
     }
 };

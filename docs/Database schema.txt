@@ -161,6 +161,10 @@ Client {
     verified: [boolean],  // Indicates whether this domain has already been verified or not
     verificationDate: [date/time]  // Date and time when verification took place
   }],
+  foreignBlockchainConsumptionProfile: [{  // Profile for consumption of foreign blockchain native coin to pay for gas required to process transactions
+    blockchainKey: [string],  // Foreign blockchain key. Valid values (from ForeignAssetBlockchain): 'ethereum', 'binance', 'polygon'
+    profileName: [string]     // Consumption profile name. Valid values (from ForeignAssetBlockchain): 'fastest', 'fast', 'average', 'slow'
+  }],
   timeZone: [string],  // The name of time zone (as defined by IANA, https://www.iana.org/time-zones) attributed to this client. This time zone is used amongst other things to determine the start and end date of licenses assigned to clients
   billingMode: [string],  // Identifies the billing mode used for this client. Valid values (from Client.billingMode): 'pre-paid', 'post-paid'
   status: [string],  // Valid values: 'new' (newly created client awaiting activation); 'active' (client is in normal use mode); 'deleted' (client has been logically deleted)
@@ -297,7 +301,7 @@ MessageChunk {
 
 SentTransaction {
   _id: [string], // MongoDB internal document ID provided by Meteor
-  type: [string], // Identifies the type of transaction that was sent. Valid values (from Catenis.Transaction.type): 'funding', 'credit_service_account', 'store_bcot', 'redeem_bcot', 'spend_service_credit', 'send_message', 'log_message', 'read_confirmation', 'issue_asset', 'transfer_asset', 'settle_off_chain_messages'
+  type: [string], // Identifies the type of transaction that was sent. Valid values (from Catenis.Transaction.type): 'funding', 'credit_service_account', 'store_bcot', 'redeem_bcot', 'spend_service_credit', 'send_message', 'log_message', 'read_confirmation', 'issue_asset', 'transfer_asset', 'settle_off_chain_messages', 'out_migrate_asset', 'in_migrate_asset'
   txid: [string], // Blockchain attributed ID (hash) of the sent transaction
   sentDate: [date/time], // Date and time when transaction was sent to the blockchain network
   confirmation: {
@@ -336,7 +340,7 @@ SentTransaction {
     },
     spendServiceCredit: { // Information for spend service credit transaction
       clientIds: [Array(string)],  // External ID of clients that are the owners of the service account from where Catenis service credits are spent
-      serviceTxids: [Array(string)],  // Blockchain assigned ID of transactions used to convey service that are paid by this tx
+      serviceTxids: [Array(string)],  // Blockchain assigned ID of transactions used to execute service that are paid by this tx
       ocMsgServiceCids: [Array(string)]  // IPFS CID of Catenis off-chain message envelopes used to convey off-chain message related services (log/send off-chain messages)
     },
     sendMessage: { // Information for send message transactions
@@ -380,6 +384,18 @@ SentTransaction {
     },
     settleOffChainMessages: {
       offChainMsgDataCids: [Array(string)]  // List of IPFS CIDs of Catenis off-chain message data (either envelope or receipt) that have been settled to the blockchain
+    },
+    outMigrateAsset: {
+      assetId: [string],         // ID that uniquely identifies the Catenis asset that is out-migrated
+      owningDeviceId: [string],  // External ID of device that owns the out-migrated asset amount
+      amount: [number],          // Amount of asset out-migrated
+      changeAmount: [number]     // Amount of asset sent back to owning device as change
+    },
+    inMigrateAsset: {
+      assetId: [string],         // ID that uniquely identifies the Catenis asset that is in-migrated
+      owningDeviceId: [string],  // External ID of device that owns the in-migrated asset amount
+      amount: [number],          // Amount of asset in-migrated
+      changeAmount: [number]     // Amount of asset sent back to owning device's migrated asset address as change
     }
   },
   originalTxid: [string]  // Blockchain attributed ID (hash) that had been originally assigned to the transaction. If this field exists, it means that this transaction's ID had been modified due to malleability, and the txid field has the modified tx id.
@@ -552,6 +568,67 @@ Asset {
   createdDate: [date/time],  // Date and time when doc/rec has been created
 }
 
+ExportedAsset {
+  _id: [string],  // MongoDB internal document ID provided by Meteor
+  assetId: [string],  // ID of Catenis asset that has been exported
+  foreignBlockchain: [string],  // Key identifying the blockchain to where the asset is exported. Valid values (from ForeignAssetBlockchain): 'ethereum', 'binance', 'polygon'
+  owningDeviceId: [string],  // ID of the device that owns the exported asset. It should be the same device that issued the Catenis asset
+  foreignTransaction: {
+    txid: [string], // ID (hash) of the transaction on the foreign blockchain used to issue (create) the new token (associated with the exported asset) on the foreign blockchain. For EVM (Ethereum Virtual Machine) compatible blockchains, it is the tx hash of the tx used to deploy the token smart contract
+    isPending: [boolean],  // Indicates whether the foreign blockchain transaction is still waiting to be confirmed (processed)
+    success: [boolean],  // Indicates whether the foreign blockchain transaction has been successfully processed. Note that this field will only be present after the transaction has been confirmed (processed)
+    error: {
+      original: [string],  // Description of error that took place while processing foreign blockchain transaction
+      endUser: [string]    // Error message to be presented to the end user
+    },
+    txReceipt: [object],  // Object with information about the foreign blockchain transaction outcome. Note that this field will only be present after the transaction has been confirmed (processed)
+    previousTxids: [Array(string)]  // List of IDs of foreign blockchain transactions that had been previously issued to executed the asset export but have not succeeded
+  },
+  token: {
+    name: [string],    // The token name
+    symbol: [string],  // The token symbol
+    id: [string],      // ID of the token on the foreign blockchain associated with the exported Catenis asset. For EVM compatible blockchains, it is the token smart contract address.
+                       //  Note that this field will only be available after the foreign transaction has been successfully processed
+  },
+  status: [string],  // Current status of asset export. Valid values (from ExportedAsset.exportStatus): 'pending', 'success', 'error'
+  createdDate: [date/time],  // Date and time when doc/rec has been created
+  lastStatusChangedDate: [date/time]  // Date and time when status has been last modified
+}
+
+AssetMigration {
+  _id: [string],  // MongoDB internal document ID provided by Meteor
+  migrationId: [string],  // External ID used to uniquely identify this asset migration
+  direction: [string],  // Identify the direction of the migration. Valid values (from AssetMigration.migrationDirection): 'outward', 'inward'
+  assetId: [string],  // ID of Catenis asset the amount of which is migrated
+  foreignBlockchain: [string],  // Key identifying the blockchain to where the asset amount is migrated. Valid values (from ForeignAssetBlockchain): 'ethereum', 'binance', 'polygon'
+  owningDeviceId: [string],  // ID of the device that owns the migrated asset amount
+  amount: [number],  // Migrated asset amount
+  destAddress: [string],  // Foreign blockchain address that should receive migrated asset amount (as the same amount of the associated foreign blockchain token).
+                          //  This field should only exist for outward migrations
+  catenisService: {
+    status: [string],  // Current Catenis service status. Valid values (from AssetMigration.serviceStatus): 'awaiting', 'failure', 'fulfilled'
+    error: [string],  // Description of error that took place while executing service. Note that this field will only be present when status equals 'failure'
+    txid: [string]  // Blockchain attributed ID (hash) of the Catenis transaction used to execute the service (either Out-Migrate Asset or In-Migrate Asset transaction).
+                    //  Note that this field will only be present if the service is successfully executed (status equals 'fulfilled')
+  },
+  foreignTransaction: {
+    txid: [string], // ID (hash) of the transaction on the foreign blockchain used to mint/burn the amount of the token (associated with the exported asset) on the foreign blockchain. For EVM (Ethereum Virtual Machine) compatible blockchains, it is the tx hash
+    isPending: [boolean],  // Indicates whether the foreign blockchain transaction is still waiting to be confirmed (processed)
+    success: [boolean],  // Indicates whether the foreign blockchain transaction has been successfully processed.
+                         //  Note that this field will only be present when the process for sending the transaction has come to an end, including the case where
+                         //  an error takes place before the transaction is actually sent; in this case, the fields 'txid' and 'isPending' will NOT be present
+    error: {
+      original: [string],  // Description of error that took place while processing foreign blockchain transaction
+      endUser: [string]    // Error message to be presented to the end user
+    },
+    txReceipt: [object],  // Object with information about the foreign blockchain transaction outcome. Note that this field will only be present after the transaction has been confirmed (processed)
+    previousTxids: [Array(string)]  // List of IDs of foreign blockchain transactions that had been previously issued to executed the asset export but have not succeeded
+  },
+  status: [string],  // Current status of asset migration. Valid values (from AssetMigration.migrationStatus): 'pending', 'success', 'error'
+  createdDate: [date/time],  // Date and time when doc/rec has been created
+  lastStatusChangedDate: [date/time]  // Date and time when status has been last modified
+}
+
 BcotExchangeRate {
   _id: [string],  // MongoDB internal document ID provided by Meteor
   exchangeRate: [number],  // Bitcoin to BCOT token exchange rate
@@ -567,7 +644,7 @@ Billing {
   billingMode: [string],  // Billing mode used for charging the service. Available values (from Client.billingMode): 'pre-paid', 'post-paid'
   service: [string],  // Name of the consumed service. Available values (from Service.clientPaidService): 'log_message', 'send_message', 'send_msg_read_confirm', 'issue_asset', 'transfer_asset'
   serviceDate: [date/time],  // Date and time when service has been consumed
-  serviceTx: {  // Catenis transaction used to convey the consumed service
+  serviceTx: {  // Catenis transaction used to execute the consumed service
     txid: [string],  // Blockchain attributed ID (hash) of service transaction
     fee: [number],   // Amount, in satoshis, paid as fee for the service transaction
     complementaryTx: {  // Catenis transaction that complements the service transaction. This field should only exist if the service transaction requires a complementary transaction, which is currently only true for 'send_msg_read_confirm' service.

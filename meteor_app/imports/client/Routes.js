@@ -236,6 +236,25 @@ FlowRouter.route('/resources', {
     }
 });
 
+FlowRouter.route('/foreignblockchains', {
+    action: function () {
+        BlazeLayout.render('clientLayout', {
+            page: 'clientForeignBlockchains'
+        });
+    }
+});
+
+FlowRouter.route('/foreignblockchains/:blockchainKey', {
+    action: function (params) {
+        BlazeLayout.render('clientLayout', {
+            page: 'clientForeignBlockchainDetails',
+            dataContext: {
+                blockchainKey: params.blockchainKey
+            }
+        });
+    }
+});
+
 // System administration routes
 //
 FlowRouter.route('/admin', {
@@ -628,3 +647,25 @@ FlowRouter.route('/admin/clients/:client_id/standbyvouchers', {
     }
 });
 
+FlowRouter.route('/admin/clients/:client_id/foreignblockchains', {
+    action: function (params) {
+        BlazeLayout.render('adminLayout', {
+            page: 'foreignBlockchains',
+            dataContext: {
+                client_id: params.client_id
+            }
+        });
+    }
+});
+
+FlowRouter.route('/admin/clients/:client_id/foreignblockchains/:blockchainKey', {
+    action: function (params) {
+        BlazeLayout.render('adminLayout', {
+            page: 'foreignBlockchainDetails',
+            dataContext: {
+                client_id: params.client_id,
+                blockchainKey: params.blockchainKey
+            }
+        });
+    }
+});

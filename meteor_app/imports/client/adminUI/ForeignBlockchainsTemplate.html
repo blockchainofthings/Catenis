@@ -1,0 +1,45 @@
+<template name="foreignBlockchains">
+    <div>
+        <div class="panel panel-login minWidthElement noBoxShadow">
+            <div class="panel-body">
+                <div class="row">
+                    <div class="col-lg-12">
+                        {{#unless Template.subscriptionsReady}}
+                            <p style="color:lightgray; margin-top:1em">Loading...</p>
+                        {{else}}
+                            <h2>CLIENT<br><span style="color:dimgray">{{clientTitle client}}</span>
+                                <br><br>Foreign Blockchains</h2>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="pull-left">
+                                        <a href="/admin/clients/{{client_id}}" role="button" class="btn-login btn paddedBtn">Back to Client</a>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row" style="padding-top:1em">
+                                <div class="col-lg-12">
+                                    <table class="table table-striped table-responsive text-left">
+                                        <thead>
+                                        <tr>
+                                            <th>Blockchain</th>
+                                            <th>Consumption profile</th>
+                                        </tr>
+                                        </thead>
+                                        <tbody>
+                                        {{#each blockchain in foreignBlockchains}}
+                                            <tr>
+                                                <td><a href="/admin/clients/{{client._id}}/foreignblockchains/{{blockchain._id}}">{{blockchain.name}}</a></td>
+                                                <td>{{blockchain.consumptionProfile}}</td>
+                                            </tr>
+                                        {{/each}}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        {{/unless}}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</template>

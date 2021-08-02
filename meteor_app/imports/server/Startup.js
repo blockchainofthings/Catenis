@@ -96,6 +96,10 @@ import { TransactionCache } from './TransactionCache';
 import { ReCaptcha } from './ReCaptcha';
 import { PaidService } from './PaidService';
 import { StandbyPurchasedBcotUI } from './adminUI/StandbyPurchasedBcotUI';
+import { ForeignBlockchain } from './ForeignBlockchain';
+import { ExportedAsset } from './ExportedAsset';
+import { AssetMigration } from './AssetMigration';
+import { ClientForeignBlockchainUI } from './clientUI/ClientForeignBlockchainsUI';
 // TEST - begin
 //import { TestCatenisColoredCoins } from './test/TestCatenisColoredCoins';
 // TEST - end
@@ -183,6 +187,7 @@ Meteor.startup(function () {
             BcotSaleStock.initialize();
             ProvisionalMessage.initialize();
             CachedMessage.initialize();
+            ForeignBlockchain.initialize();
             CatenisNode.initialize();
             CatenisOffChainClient.initialize();
 
@@ -224,6 +229,9 @@ Meteor.startup(function () {
             // Then the notification module itself
             Notification.initialize();
 
+            ExportedAsset.initialize();
+            AssetMigration.initialize();
+
             // TEST - Begin
             //TestCatenisColoredCoins.init();
             // TEST - End
@@ -258,6 +266,7 @@ Meteor.startup(function () {
             ClientServiceBillingUI.initialize();
             ClientOwnedDomainsUI.initialize();
             ClientDevicesUI.initialize();
+            ClientForeignBlockchainUI.initialize();
 
             Catenis.logger.INFO('Initialization ended.');
 
@@ -360,7 +369,10 @@ function CheckImportAddresses(fixMissingAddresses) {
         }
         else {
             // Throw error indicating that some blockchain addresses are missing
-            Catenis.logger.FATAL('There are blockchain addresses missing (not currently imported) from Bitcoin Core and/or Omni Core');
+            Catenis.logger.FATAL('There are blockchain addresses missing (not currently imported) from Bitcoin Core and/or Omni Core', {
+                notImportedAddresses,
+                notImportedOmniAddresses
+            });
             throw new Meteor.Error('There are blockchain addresses missing (not currently imported) from Bitcoin Core and/or Omni Core');
         }
     }

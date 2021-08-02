@@ -121,10 +121,12 @@
 //      m/k/i/0/0/0/3/* (i>=1) -> client #i service account debit line addresses HD extended key
 //      m/k/i/0/0/0/4/* (i>=1) -> client #i BCOT token payment addresses HD extended key
 //
+//      m/k/i/0/0/1 (i>=1) -> client #i asset export admin (foreign) address HD extended key
+//
 //      m/k/i/0/j (i,j>=1) -> device #j of client #i internal root HD extended key
 //
 //      m/k/i/0/j/0 (i,j>=1) -> device #j of client #i read confirmation addresses root HD extended key
-//      m/k/i/0/j/1 (i,j>=1) -> device #j of client #i internal (reserved) addresses #2 root HD extended key
+//      m/k/i/0/j/1 (i,j>=1) -> device #j of client #i migrated asset addresses root HD extended key
 //      m/k/i/0/j/2 (i,j>=1) -> device #j of client #i internal (reserved) addresses #3 root HD extended key
 //      m/k/i/0/j/3 (i,j>=1) -> device #j of client #i internal (reserved) addresses #4 root HD extended key
 //      m/k/i/0/j/4 (i,j>=1) -> device #j of client #i internal (reserved) addresses #5 root HD extended key
@@ -135,6 +137,7 @@
 //      m/k/i/0/j/9 (i,j>=1) -> device #j of client #i internal (reserved) addresses #10 root HD extended key
 //
 //      m/k/i/0/j/0/* (i,j>=1) -> device #j of client #i read confirmation addresses HD extended key
+//      m/k/i/0/j/1/* (i,j>=1) -> device #j of client #i migrated asset addresses root HD extended key
 //
 //      m/k/i/1/j (i,j>=1) -> device #j of client #i public root HD extended key
 //
@@ -2703,15 +2706,30 @@ KeyStore.prototype.initClientHDNodes = function (ctnNodeIndex, clientIndex) {
                                 }
 
                                 if (clientSrvCreditRootHDNode !== null) {
-                                    // Store all newly created HD extended keys, and indicate success
-                                    hdNodesToStore.forEach((hdNodeToStore) => {
-                                        storeHDNode.call(this, hdNodeToStore.type, hdNodeToStore.path, hdNodeToStore.hdNode, {
-                                            isLeaf: hdNodeToStore.isLeaf,
-                                            isReserved: hdNodeToStore.isReserved
-                                        });
-                                    });
+                                    // Create client asset export admin (foreign) address HD extended key
+                                    path = clientRootPath + '/0/0/1';
+                                    let clientAsstExpAdmAddrHDNode = clientIntRootHDNode.derive(1);
 
-                                    success = true;
+                                    if (clientAsstExpAdmAddrHDNode.index !== 1) {
+                                        Catenis.logger.WARN(util.format('Client asset export admin (foreign) address HD extended key (%s) derived with an unexpected index', path), {expectedIndex: 1, returnedIndex: clientAsstExpAdmAddrHDNode.index});
+                                    }
+                                    else {
+                                        // Save newly created HD extended key to store it later.
+                                        //  Note: we mark this HD extended key as NOT being a leaf so it is not treated
+                                        //         as a regular bitcoin address and is never purged from the local key
+                                        //         store
+                                        hdNodesToStore.push({type: 'cln_asst_exp_adm_addr', path: path, hdNode: clientAsstExpAdmAddrHDNode, isLeaf: false, isReserved: false});
+
+                                        // Store all newly created HD extended keys, and indicate success
+                                        hdNodesToStore.forEach((hdNodeToStore) => {
+                                            storeHDNode.call(this, hdNodeToStore.type, hdNodeToStore.path, hdNodeToStore.hdNode, {
+                                                isLeaf: hdNodeToStore.isLeaf,
+                                                isReserved: hdNodeToStore.isReserved
+                                            });
+                                        });
+
+                                        success = true;
+                                    }
                                 }
                             }
                         }
@@ -2946,6 +2964,53 @@ KeyStore.prototype.listAllClientBcotPaymentAddressesInUse = function () {
     });
 };
 
+KeyStore.prototype.getClientAssetExportAdminAddressKeys = function (ctnNodeIndex, clientIndex) {
+    // Validate arguments
+    const errArg = {};
+
+    if (!isValidCatenisNodeIndex(ctnNodeIndex)) {
+        errArg.ctnNodeIndex = ctnNodeIndex;
+    }
+
+    if (!isValidClientIndex(clientIndex)) {
+        errArg.clientIndex = clientIndex;
+    }
+
+    if (Object.keys(errArg).length > 0) {
+        const errArgs = Object.keys(errArg);
+
+        Catenis.logger.ERROR(util.format('KeyStore.getClientAssetExportAdminAddressKeys method called with invalid argument%s', errArgs.length > 1 ? 's' : ''), errArg);
+        throw Error(util.format('Invalid %s argument%s', errArgs.join(', '), errArgs.length > 1 ? 's' : ''));
+    }
+
+    // Try to retrieve asset export admin (foreign) address HD extended key for given Catenis node and client
+    const path = util.format('m/%d/%d/0/0/1', ctnNodeIndex, clientIndex);
+    let clientAsstExpAdmAddrHDNode = retrieveHDNode.call(this, path, true),
+        clientAsstExpAdmAddrKeys = null;
+
+    if (clientAsstExpAdmAddrHDNode === null) {
+        // Client asset export admin (foreign) address HD extended key does not exist yet.
+        //  Try to initialize client HD extended keys
+        if (! this.initClientHDNodes(ctnNodeIndex, clientIndex)) {
+            Catenis.logger.ERROR(util.format('HD extended keys for client with index %d of Catenis node with index %d could not be initialized', clientIndex, ctnNodeIndex));
+        }
+        else {
+            // Client HD extended keys successfully initialized.
+            //  Try to retrieve client asset export admin (foreign) address HD extend key again
+            clientAsstExpAdmAddrHDNode = retrieveHDNode.call(this, path);
+        }
+    }
+
+    if (clientAsstExpAdmAddrHDNode === null) {
+        Catenis.logger.ERROR(util.format('Assert export admin (foreign) address HD extended key (%s) for client with index %d of Catenis node with index %d not found', path, clientIndex, ctnNodeIndex));
+    }
+    else {
+        clientAsstExpAdmAddrKeys = new CryptoKeys(clientAsstExpAdmAddrHDNode.hdNode, clientAsstExpAdmAddrHDNode.btcAddressType);
+    }
+
+    return clientAsstExpAdmAddrKeys;
+}
+
 KeyStore.prototype.initDeviceHDNodes = function (ctnNodeIndex, clientIndex, deviceIndex) {
     // Validate arguments
     const errArg = {};
@@ -3032,7 +3097,32 @@ KeyStore.prototype.initDeviceHDNodes = function (ctnNodeIndex, clientIndex, devi
                         }
                         else {
                             // Save newly created HD extended key to store it later
-                            hdNodesToStore.push({type: idx === 0 ? 'dev_read_conf_addr_root' : 'dev_int_rsrv_addr_root', path: deviceIntAddrRootPath, hdNode: deviceIntAddrRootHDNode, isLeaf: false, isReserved: idx >= numUsedDeviceIntAddrRoots});
+                            const hdNodeInfo = {
+                                path: deviceIntAddrRootPath,
+                                hdNode: deviceIntAddrRootHDNode,
+                                isLeaf: false,
+                                isReserved: false
+                            };
+
+                            switch (idx) {
+                                case 0:
+                                    // Device read confirmation addresses root
+                                    hdNodeInfo.type = 'dev_read_conf_addr_root';
+                                    break;
+
+                                case 1:
+                                    // Device migrated asset addresses root
+                                    hdNodeInfo.type = 'dev_migr_asst_addr_root';
+                                    break;
+
+                                default:
+                                    // Reserved
+                                    hdNodeInfo.type = 'dev_int_rsrv_addr_root';
+                                    hdNodeInfo.isReserved = true;
+                                    break;
+                            }
+
+                            hdNodesToStore.push(hdNodeInfo);
                         }
                     }
 
@@ -3198,10 +3288,36 @@ KeyStore.prototype.getDeviceInternalAddressKeys = function (ctnNodeIndex, client
             }
             else {
                 // Store created HD extended key
-                storeHDNode.call(this, addrRootIndex === 0 ? 'dev_read_conf_addr' : 'dev_int_rsrv_addr', deviceIntAddrPath, deviceIntAddrHDNode, {
+                const hdNodeInfo = {
+                    path: deviceIntAddrPath,
+                    hdNode: deviceIntAddrHDNode,
                     isLeaf: true,
-                    isReserved: addrRootIndex >= numUsedDeviceIntAddrRoots,
-                    isObsolete: isObsolete,
+                    isReserved: false,
+                    isObsolete: isObsolete
+                };
+
+                switch (addrRootIndex) {
+                    case 0:
+                        // Device read confirmation address
+                        hdNodeInfo.type = 'dev_read_conf_addr';
+                        break;
+
+                    case 1:
+                        // Device migrated asset address
+                        hdNodeInfo.type = 'dev_migr_asst_addr';
+                        break;
+
+                    default:
+                        // Reserved
+                        hdNodeInfo.type = 'dev_int_rsrv_addr';
+                        hdNodeInfo.isReserved = true;
+                        break;
+                }
+
+                storeHDNode.call(this, hdNodeInfo.type, hdNodeInfo.path, hdNodeInfo.hdNode, {
+                    isLeaf: hdNodeInfo.isLeaf,
+                    isReserved: hdNodeInfo.isReserved,
+                    isObsolete: hdNodeInfo.isObsolete,
                     btcAddressType: btcAddressType
                 });
             }
@@ -3550,6 +3666,18 @@ KeyStore.prototype.listDeviceReadConfirmAddresses = function (ctnNodeIndex, clie
 
 KeyStore.prototype.listDeviceReadConfirmAddressesInUse = function (ctnNodeIndex, clientIndex, deviceIndex, fromAddrIndex, toAddrIndex) {
     return this.listDeviceInternalAddresses(ctnNodeIndex, clientIndex, deviceIndex, 0, fromAddrIndex, toAddrIndex, true);
+};
+
+KeyStore.prototype.getDeviceMigratedAssetAddressKeys = function (ctnNodeIndex, clientIndex, deviceIndex, addrIndex, btcAddressType, isObsolete = false) {
+    return this.getDeviceInternalAddressKeys(ctnNodeIndex, clientIndex, deviceIndex, 1, addrIndex, btcAddressType, isObsolete);
+};
+
+KeyStore.prototype.listDeviceMigratedAssetAddresses = function (ctnNodeIndex, clientIndex, deviceIndex, fromAddrIndex, toAddrIndex, onlyInUse) {
+    return this.listDeviceInternalAddresses(ctnNodeIndex, clientIndex, deviceIndex, 1, fromAddrIndex, toAddrIndex, onlyInUse);
+};
+
+KeyStore.prototype.listDeviceMigratedAssetAddressesInUse = function (ctnNodeIndex, clientIndex, deviceIndex, fromAddrIndex, toAddrIndex) {
+    return this.listDeviceInternalAddresses(ctnNodeIndex, clientIndex, deviceIndex, 1, fromAddrIndex, toAddrIndex, true);
 };
 
 KeyStore.prototype.getDeviceMainAddressKeys = function (ctnNodeIndex, clientIndex, deviceIndex, addrIndex, btcAddressType, isObsolete = false) {
@@ -3937,6 +4065,32 @@ KeyStore.deviceReadConfirmAddressRootPath = function (ctnNodeIndex, clientIndex,
     }
 
     return util.format('m/%d/%d/0/%d/0', ctnNodeIndex, clientIndex, deviceIndex);
+};
+
+KeyStore.deviceMigratedAssetAddressRootPath = function (ctnNodeIndex, clientIndex, deviceIndex) {
+    // Validate arguments
+    const errArg = {};
+
+    if (!isValidCatenisNodeIndex(ctnNodeIndex)) {
+        errArg.ctnNodeIndex = ctnNodeIndex;
+    }
+
+    if (!isValidClientIndex(clientIndex)) {
+        errArg.clientIndex = clientIndex;
+    }
+
+    if (!isValidDeviceIndex(deviceIndex)) {
+        errArg.deviceIndex = deviceIndex;
+    }
+
+    if (Object.keys(errArg).length > 0) {
+        const errArgs = Object.keys(errArg);
+
+        Catenis.logger.ERROR(util.format('KeyStore.deviceMigratedAssetAddressRootPath method called with invalid argument%s', errArgs.length > 1 ? 's' : ''), errArg);
+        throw Error(util.format('Invalid %s argument%s', errArgs.join(', '), errArgs.length > 1 ? 's' : ''));
+    }
+
+    return util.format('m/%d/%d/0/%d/1', ctnNodeIndex, clientIndex, deviceIndex);
 };
 
 KeyStore.deviceMainAddressRootPath = function (ctnNodeIndex, clientIndex, deviceIndex) {
@@ -4554,6 +4708,15 @@ KeyStore.extKeyType = Object.freeze({
             4: 'addrIndex'
         }
     }),
+    cln_asst_exp_adm_addr: Object.freeze({
+        name: 'cln_asst_exp_adm_addr',
+        description: 'client asset export admin (foreign) address',
+        pathRegEx: /^m\/(\d+)\/(\d+)\/0\/0\/1$/,
+        pathParts: {
+            1: 'ctnNodeIndex',
+            2: 'clientIndex'
+        }
+    }),
     dev_int_root: Object.freeze({
         name: 'dev_int_root',
         description: 'device internal root',
@@ -4568,6 +4731,16 @@ KeyStore.extKeyType = Object.freeze({
         name: 'dev_read_conf_addr_root',
         description: 'device read confirmation addresses root',
         pathRegEx: /^m\/(\d+)\/(\d+)\/0\/(\d+)\/0$/,
+        pathParts: {
+            1: 'ctnNodeIndex',
+            2: 'clientIndex',
+            3: 'deviceIndex'
+        }
+    }),
+    dev_migr_asst_addr_root: Object.freeze({
+        name: 'dev_migr_asst_addr_root',
+        description: 'device migrated asset addresses root',
+        pathRegEx: /^m\/(\d+)\/(\d+)\/0\/(\d+)\/1$/,
         pathParts: {
             1: 'ctnNodeIndex',
             2: 'clientIndex',
@@ -4589,6 +4762,17 @@ KeyStore.extKeyType = Object.freeze({
         name: 'dev_read_conf_addr',
         description: 'device read confirmation address',
         pathRegEx: /^m\/(\d+)\/(\d+)\/0\/(\d+)\/0\/(\d+)$/,
+        pathParts: {
+            1: 'ctnNodeIndex',
+            2: 'clientIndex',
+            3: 'deviceIndex',
+            4: 'addrIndex'
+        }
+    }),
+    dev_migr_asst_addr: Object.freeze({
+        name: 'dev_migr_asst_addr',
+        description: 'device migrated asset address',
+        pathRegEx: /^m\/(\d+)\/(\d+)\/0\/(\d+)\/1\/(\d+)$/,
         pathParts: {
             1: 'ctnNodeIndex',
             2: 'clientIndex',
