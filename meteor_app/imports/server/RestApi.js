@@ -26,38 +26,58 @@ import { Authentication } from './Authentication';
 import { logMessage } from './ApiLogMessage';
 import { logMessage2 } from './ApiLogMessage2';
 import { logMessage3 } from './ApiLogMessage3';
+import { logMessage4 } from './ApiLogMessage4';
 import { sendMessage } from './ApiSendMessage';
 import { sendMessage2 } from './ApiSendMessage2';
 import { sendMessage3 } from './ApiSendMessage3';
 import { sendMessage4 } from './ApiSendMessage4';
+import { sendMessage5 } from './ApiSendMessage5';
 import { readMessage } from './ApiReadMessage';
 import { readMessage2 } from './ApiReadMessage2';
 import { readMessage3 } from './ApiReadMessage3';
 import { readMessage4 } from './ApiReadMessage4';
+import { readMessage5 } from './ApiReadMessage5';
 import { retrieveMessageContainer } from './ApiMessageContainer';
 import { retrieveMessageContainer2 } from './ApiMessageContainer2';
 import { retrieveMessageContainer3 } from './ApiMessageContainer3';
+import { retrieveMessageContainer4 } from './ApiMessageContainer4';
 import { listMessages } from './ApiListMessages';
 import { listMessages2 } from './ApiListMessages2';
 import { listMessages3 } from './ApiListMessages3';
+import { listMessages4 } from './ApiListMessages4';
 import { listPermissionEvents } from './ApiListPermissionEvents';
 import { retrievePermissionRights } from './ApiGetPermissionRights';
+import { retrievePermissionRights2 } from './ApiGetPermissionRights2';
 import { setPermissionRights } from './ApiPostPermissionRights';
+import { setPermissionRights2 } from './ApiPostPermissionRights2';
 import { listNotificationEvents } from './ApiListNotificationEvents';
 import { checkEffectivePermissionRight } from './ApiEffectivePermissionRight';
+import { checkEffectivePermissionRight2 } from './ApiEffectivePermissionRight2';
 import { retrieveDeviceIdentifyInfo } from './ApiDeviceIdentityInfo';
+import { retrieveDeviceIdentifyInfo2 } from './ApiDeviceIdentityInfo2';
 import { issueAsset } from './ApiIssueAsset';
+import { issueAsset2 } from './ApiIssueAsset2';
 import { reissueAsset } from './ApiReissueAsset';
+import { reissueAsset2 } from './ApiReissueAsset2';
 import { transferAsset } from './ApiTransferAsset';
+import { transferAsset2 } from './ApiTransferAsset2';
 import { retrieveAssetInfo } from './ApiAssetInfo';
+import { retrieveAssetInfo2 } from './ApiAssetInfo2';
 import { getAssetBalance } from './ApiAssetBalance';
+import { getAssetBalance2 } from './ApiAssetBalance2';
 import { listOwnedAssets } from './ApiOwnedAssets';
+import { listOwnedAssets2 } from './ApiOwnedAssets2';
 import { listIssuedAssets } from './ApiIssuedAssets';
+import { listIssuedAssets2 } from './ApiIssuedAssets2';
 import { retrieveAssetIssuanceHistory } from './ApiAssetIssuance';
 import { retrieveAssetIssuanceHistory2 } from './ApiAssetIssuance2';
+import { retrieveAssetIssuanceHistory3 } from './ApiAssetIssuance3';
 import { listAssetHolders } from './ApiAssetHolders';
+import { listAssetHolders2 } from './ApiAssetHolders2';
 import { retrieveMessageProgress } from './ApiMessageProgress';
+import { retrieveMessageProgress2 } from './ApiMessageProgress2';
 import { retrieveMessageOrigin } from './ApiMessageOrigin';
+import { retrieveMessageOrigin2 } from './ApiMessageOrigin2';
 import { exportAsset } from './ApiExportAsset';
 import { assetExportOutcome } from './ApiAssetExportOutcome';
 import { listExportedAssets } from './ApiListExportedAssets';
@@ -115,7 +135,7 @@ export function RestApi(apiVersion) {
             //
             //  Refer to the source file where the action function is defined for a detailed description of the endpoint
             post: {
-                action: this.apiVer.gt('0.6') ? (this.apiVer.gt('0.8') ? logMessage3 : logMessage2) : logMessage
+                action: this.apiVer.gt('0.6') ? (this.apiVer.gt('0.8') ? (this.apiVer.gt('0.10') ? logMessage4 : logMessage3) : logMessage2) : logMessage
             }
         });
 
@@ -125,7 +145,7 @@ export function RestApi(apiVersion) {
             //
             //  Refer to the source file where the action function is defined for a detailed description of the endpoint
             post: {
-                action: this.apiVer.gt('0.4') ? (this.apiVer.gt('0.6') ? (this.apiVer.gt('0.8') ? sendMessage4 : sendMessage3) : sendMessage2) : sendMessage
+                action: this.apiVer.gt('0.4') ? (this.apiVer.gt('0.6') ? (this.apiVer.gt('0.8') ? (this.apiVer.gt('0.10') ? sendMessage5 : sendMessage4) : sendMessage3) : sendMessage2) : sendMessage
             }
         });
 
@@ -136,7 +156,7 @@ export function RestApi(apiVersion) {
             //  Refer to the source file where the action function is defined for a detailed description of the endpoint
             get: {
                 // Different implementations depending on the version of the API
-                action: this.apiVer.gt('0.2') ? (this.apiVer.gt('0.6') ? (this.apiVer.gt('0.8') ? readMessage4 : readMessage3): readMessage2) : readMessage
+                action: this.apiVer.gt('0.2') ? (this.apiVer.gt('0.6') ? (this.apiVer.gt('0.8') ? (this.apiVer.gt('0.10') ? readMessage5 : readMessage4) : readMessage3): readMessage2) : readMessage
             }
         });
 
@@ -146,7 +166,7 @@ export function RestApi(apiVersion) {
             //
             //  Refer to the source file where the action function is defined for a detailed description of the endpoint
             get: {
-                action: this.apiVer.gt('0.7') ? (this.apiVer.gt('0.8') ? retrieveMessageContainer3 : retrieveMessageContainer2) : retrieveMessageContainer
+                action: this.apiVer.gt('0.7') ? (this.apiVer.gt('0.8') ? (this.apiVer.gt('0.10') ? retrieveMessageContainer4 : retrieveMessageContainer3) : retrieveMessageContainer2) : retrieveMessageContainer
             }
         });
     }
@@ -158,7 +178,7 @@ export function RestApi(apiVersion) {
             //
             //  Refer to the source file where the action function is defined for a detailed description of the endpoint
             get: {
-                action: this.apiVer.gt('0.4') ? (this.apiVer.gt('0.7') ? listMessages3 : listMessages2) : listMessages
+                action: this.apiVer.gt('0.4') ? (this.apiVer.gt('0.7') ? (this.apiVer.gt('0.10') ? listMessages4 : listMessages3) : listMessages2) : listMessages
             }
         });
     }
@@ -180,13 +200,13 @@ export function RestApi(apiVersion) {
             //
             //  Refer to the source file where the action function is defined for a detailed description of the endpoint
             get: {
-                action: retrievePermissionRights
+                action: this.apiVer.gt('0.10') ? retrievePermissionRights2 : retrievePermissionRights
             },
             // Set permission rights for the specified event
             //
             //  Refer to the source file where the action function is defined for a detailed description of the endpoint
             post: {
-                action: setPermissionRights
+                action: this.apiVer.gt('0.10') ? setPermissionRights2 : setPermissionRights
             }
         });
 
@@ -196,7 +216,7 @@ export function RestApi(apiVersion) {
             //
             //  Refer to the source file where the action function is defined for a detailed description of the endpoint
             get: {
-                action: checkEffectivePermissionRight
+                action: this.apiVer.gt('0.10') ? checkEffectivePermissionRight2 : checkEffectivePermissionRight
             }
         });
 
@@ -216,7 +236,7 @@ export function RestApi(apiVersion) {
             //
             //  Refer to the source file where the action function is defined for a detailed description of the endpoint
             get: {
-                action: retrieveDeviceIdentifyInfo
+                action: this.apiVer.gt('0.10') ? retrieveDeviceIdentifyInfo2 : retrieveDeviceIdentifyInfo
             }
         });
     }
@@ -228,7 +248,7 @@ export function RestApi(apiVersion) {
             //
             //  Refer to the source file where the action function is defined for a detailed description of the endpoint
             post: {
-                action: issueAsset
+                action: this.apiVer.gt('0.10') ? issueAsset2 : issueAsset
             }
         });
 
@@ -238,7 +258,7 @@ export function RestApi(apiVersion) {
             //
             //  Refer to the source file where the action function is defined for a detailed description of the endpoint
             post: {
-                action: reissueAsset
+                action: this.apiVer.gt('0.10') ? reissueAsset2 : reissueAsset
             }
         });
 
@@ -248,7 +268,7 @@ export function RestApi(apiVersion) {
             //
             //  Refer to the source file where the action function is defined for a detailed description of the endpoint
             post: {
-                action: transferAsset
+                action: this.apiVer.gt('0.10') ? transferAsset2 : transferAsset
             }
         });
 
@@ -258,7 +278,7 @@ export function RestApi(apiVersion) {
             //
             //  Refer to the source file where the action function is defined for a detailed description of the endpoint
             get: {
-                action: retrieveAssetInfo
+                action: this.apiVer.gt('0.10') ? retrieveAssetInfo2 : retrieveAssetInfo
             }
         });
 
@@ -268,7 +288,7 @@ export function RestApi(apiVersion) {
             //
             //  Refer to the source file where the action function is defined for a detailed description of the endpoint
             get: {
-                action: getAssetBalance
+                action: this.apiVer.gt('0.10') ? getAssetBalance2 : getAssetBalance
             }
         });
 
@@ -278,7 +298,7 @@ export function RestApi(apiVersion) {
             //
             //  Refer to the source file where the action function is defined for a detailed description of the endpoint
             get: {
-                action: listOwnedAssets
+                action: this.apiVer.gt('0.10') ? listOwnedAssets2 : listOwnedAssets
             }
         });
 
@@ -288,7 +308,7 @@ export function RestApi(apiVersion) {
             //
             //  Refer to the source file where the action function is defined for a detailed description of the endpoint
             get: {
-                action: listIssuedAssets
+                action: this.apiVer.gt('0.10') ? listIssuedAssets2 : listIssuedAssets
             }
         });
 
@@ -298,7 +318,7 @@ export function RestApi(apiVersion) {
             //
             //  Refer to the source file where the action function is defined for a detailed description of the endpoint
             get: {
-                action: this.apiVer.gt('0.7') ? retrieveAssetIssuanceHistory2 : retrieveAssetIssuanceHistory
+                action: this.apiVer.gt('0.7') ? (this.apiVer.gt('0.10') ? retrieveAssetIssuanceHistory3 : retrieveAssetIssuanceHistory2) : retrieveAssetIssuanceHistory
             }
         });
 
@@ -308,7 +328,7 @@ export function RestApi(apiVersion) {
             //
             //  Refer to the source file where the action function is defined for a detailed description of the endpoint
             get: {
-                action: listAssetHolders
+                action: this.apiVer.gt('0.10') ? listAssetHolders2 : listAssetHolders
             }
         });
     }
@@ -320,7 +340,7 @@ export function RestApi(apiVersion) {
             //
             //  Refer to the source file where the action function is defined for a detailed description of the endpoint
             get: {
-                action: retrieveMessageProgress
+                action: this.apiVer.gt('0.10') ? retrieveMessageProgress2 : retrieveMessageProgress
             }
         });
     }
@@ -332,7 +352,7 @@ export function RestApi(apiVersion) {
             //
             //  Refer to the source file where the action function is defined for a detailed description of the endpoint
             get: {
-                action: retrieveMessageOrigin
+                action: this.apiVer.gt('0.10') ? retrieveMessageOrigin2 : retrieveMessageOrigin
             }
         });
     }
