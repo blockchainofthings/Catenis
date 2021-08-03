@@ -1291,7 +1291,7 @@
     reprocessFailedTxReceipts: {
       tickInterval: 300000,  // (5 sec.) Time interval, in milliseconds, equivalent to a reprocessing tick
       ticksToReprocessFactor: 2,  // Factor used for calculating the next value for the ticks to reprocess according
-      //  to the following formula: ticks = ratio ^ (reprocessCounter - 1)
+                                  //  to the following formula: ticks = ratio ^ (reprocessCounter - 1)
       maxTicksToReprocess: 1024,  // Maximum value for the ticks to reprocess
       maxReprocessCounter: 10  // Maximum times for reprocessing failed tx receipt (and try again to retrieve tx receipt)
     },
