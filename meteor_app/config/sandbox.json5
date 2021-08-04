@@ -320,7 +320,10 @@
     nodePort: null,  // (optional, can be set to null) Ethereum node client API port. If null, the default port (8545) is used
     nodeProtocol: 'wss', // Ethereum node client API protocol. Expected values: 'http', 'https', 'ws' our 'wss'
     apiUsername: '??????',  // (optional, can be set to null) Base64 encoded, ciphered username for accessing Ethereum node client API
-    apiPassword: '??????'  // (optional, can be set to null) Base64 encoded, ciphered password for accessing Ethereum node client API
+    apiPassword: '??????',  // (optional, can be set to null) Base64 encoded, ciphered password for accessing Ethereum node client API
+    web3Settings: {
+      txBlockTimeout: 25  // (number of blocks) 'transactionBlockTimeout' setting for web3.js client library (used for WebSocket connections)
+    }
   },
   // Parameters pertaining to BinanceSCClient module
   binanceSCClient: {
