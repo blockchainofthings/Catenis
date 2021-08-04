@@ -169,5 +169,35 @@
   // Parameters pertaining to reCaptcha module
   reCaptcha: {
     siteKey: '6LdrKbQZAAAAAOySIun207M9zUjoKFJiNjVCoabk'  // (Public) Site key assigned to the Google reCAPTCHA account in use
+  },
+  // Parameters pertaining to EthereumClient module
+  ethereumClient: {
+    nodeHost: 'ws-nd-640-119-810.p2pify.com',  // Ethereum node client API hostname
+    nodePath:  null,  // (optional, can be set to null) Ethereum node client API endpoint path
+    nodePort: null,  // (optional, can be set to null) Ethereum node client API port. If null, the default port (8545) is used
+    nodeProtocol: 'wss', // Ethereum node client API protocol. Expected values: 'http', 'https', 'ws' our 'wss'
+    apiUsername: '??????',  // (optional, can be set to null) Base64 encoded, ciphered username for accessing Ethereum node client API
+    apiPassword: '??????',  // (optional, can be set to null) Base64 encoded, ciphered password for accessing Ethereum node client API
+    web3Settings: {
+      txBlockTimeout: 25  // (number of blocks) 'transactionBlockTimeout' setting for web3.js client library (used for WebSocket connections)
+    }
+  },
+  // Parameters pertaining to BinanceSCClient module
+  binanceSCClient: {
+    nodeHost: 'ws-nd-622-903-200.p2pify.com',  // Binance Smart Chain node client API hostname
+    nodePath:  null,  // (optional, can be set to null) Binance Smart Chain node client API endpoint path
+    nodePort: null,  // (optional, can be set to null) Binance Smart Chain node client API port. If null, the default port (8545) is used
+    nodeProtocol: 'wss', // Binance Smart Chain node client API protocol. Expected values: 'http', 'https', 'ws' our 'wss'
+    apiUsername: '??????',  // (optional, can be set to null) Base64 encoded, ciphered username for accessing Binance Smart Chain node client API
+    apiPassword: '??????'  // (optional, can be set to null) Base64 encoded, ciphered password for accessing Binance Smart Chain node client API
+  },
+  // Parameters pertaining to PolygonPSClient module
+  polygonPSClient: {
+    nodeHost: 'ws-nd-164-278-430.p2pify.com',  // Polygon PoS Chain node client API hostname
+    nodePath:  null,  // (optional, can be set to null) Polygon PoS Chain node client API endpoint path
+    nodePort: null,  // (optional, can be set to null) Polygon PoS Chain node client API port. If null, the default port (8545) is used
+    nodeProtocol: 'wss', // Polygon PoS Chain node client API protocol. Expected values: 'http', 'https', 'ws' our 'wss'
+    apiUsername: '??????',  // (optional, can be set to null) Base64 encoded, ciphered username for accessing Polygon PoS Chain node client API
+    apiPassword: '??????'  // (optional, can be set to null) Base64 encoded, ciphered password for accessing Polygon PoS Chain node client API
   }
 }
