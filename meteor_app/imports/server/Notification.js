@@ -228,12 +228,12 @@ Notification.event = Object.freeze({
         minNotifyServiceVer: '0.3'
     }),
     asset_export_outcome: Object.freeze({
-        name: 'asset_export_outcome',
+        name: 'asset-export-outcome',
         description: 'Asset export has been finalized',
         minNotifyServiceVer: '0.4'
     }),
     asset_migration_outcome: Object.freeze({
-        name: 'asset_migration_outcome',
+        name: 'asset-migration-outcome',
         description: 'Asset migration has been finalized',
         minNotifyServiceVer: '0.4'
     })
