@@ -1,6 +1,6 @@
 Dear customer,
 
-We are sorry to inform that the license associated with your Catenis Enterprise client account has been expired.
+We are sorry to inform that the license associated with your Catenis client account has been expired.
 
 Client account: username '{!username}' (client ID: {!clientId})
 

@@ -1,6 +1,6 @@
 Dear customer,
 
-This is to remind you that the license associated with your Catenis Enterprise client account will expire soon.
+This is to remind you that the license associated with your Catenis client account will expire soon.
 
 Client account: username '{!username}' (client ID: {!clientId})
 

@@ -238,29 +238,29 @@
   },
   // Parameters pertaining to AccountsEmail module
   accountsEmail: {
-    fromAddress: "Catenis Enterprise [Sandbox] <noreply@blockchainofthings.com>"  // E-mail address used to send accounts related e-mail messages
+    fromAddress: "Catenis [Sandbox] <noreply@blockchainofthings.com>"  // E-mail address used to send accounts related e-mail messages
   },
   // Parameters pertaining to LicenseExpireEmailNotify module
   licenseExpireEmailNotify: {
-    fromAddress: "Catenis Enterprise [Sandbox] <noreply@blockchainofthings.com>"  // E-mail address of sender of e-mail notification message
+    fromAddress: "Catenis [Sandbox] <noreply@blockchainofthings.com>"  // E-mail address of sender of e-mail notification message
   },
   // Parameters pertaining to LicenseOverdueEmailNotify module
   licenseOverdueEmailNotify: {
-    fromAddress: "Catenis Enterprise [Sandbox] <noreply@blockchainofthings.com>"  // E-mail address of sender of e-mail notification message
+    fromAddress: "Catenis [Sandbox] <noreply@blockchainofthings.com>"  // E-mail address of sender of e-mail notification message
   },
   // Parameters pertaining to LicenseExpireRemindEmailNotify module
   licenseExpireRemindEmailNotify: {
-    fromAddress: "Catenis Enterprise [Sandbox] <noreply@blockchainofthings.com>"  // E-mail address of sender of e-mail notification message
+    fromAddress: "Catenis [Sandbox] <noreply@blockchainofthings.com>"  // E-mail address of sender of e-mail notification message
   },
   // Parameters pertaining to DevicesDisableEmailNotify module
   devicesDisabledEmailNotify: {
-    fromAddress: "Catenis Enterprise [Sandbox] <noreply@blockchainofthings.com>"  // E-mail address of sender of e-mail notification message
+    fromAddress: "Catenis [Sandbox] <noreply@blockchainofthings.com>"  // E-mail address of sender of e-mail notification message
   },
   // Parameters pertaining to TwoFactorAuthentication module
   twoFactorAuthentication: {
     recoveryCode: {
       usageNotifyEmail: {
-        fromAddress: "Catenis Enterprise [Sandbox] <noreply@blockchainofthings.com>"  // E-mail address used to send recovery code used notification e-mail
+        fromAddress: "Catenis [Sandbox] <noreply@blockchainofthings.com>"  // E-mail address used to send recovery code used notification e-mail
       }
     }
   },
@@ -278,7 +278,7 @@
   },
   // Parameters pertaining to AdminEmailNotify module
   adminEmailNotify: {
-    fromAddress: "Catenis Enterprise [Sandbox] <noreply@blockchainofthings.com>"  // E-mail address used to send notification e-mail messages to administrators
+    fromAddress: "Catenis [Sandbox] <noreply@blockchainofthings.com>"  // E-mail address used to send notification e-mail messages to administrators
   },
   // Parameters pertaining to ForeignBlockchain module
   foreignBlockchain: [

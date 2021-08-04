@@ -1,7 +1,7 @@
 {
   "name": "catenis",
   "version": "0.5.28",
-  "description": "Catenis Enterprise application",
+  "description": "Catenis application",
   "main": "server/main.js",
   "scripts": {
     "test-fundSource": "TEST_CLIENT=0 MOCHA_GREP=\"^FundSource module\" NODE_APP_INSTANCE=claudio meteor test --once --driver-package meteortesting:mocha",

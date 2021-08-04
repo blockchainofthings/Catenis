@@ -1,10 +1,10 @@
 Dear customer,
 
-The validity period of the license associated with your Catenis Enterprise client account has terminated.
+The validity period of the license associated with your Catenis client account has terminated.
 
 Client account: username '{!username}' (client ID: {!clientId})
 
-However, as a valued customer, we are granting you a provisional license, so you may continue using Catenis Enterprise's service while you arrange for the renewal of your license.
+However, as a valued customer, we are granting you a provisional license, so you may continue using Catenis' service while you arrange for the renewal of your license.
 
 Please note that your provisional license will expire in {!provisionalRenewalDays} days. After that time, all your existing Catenis virtual devices will be disabled.
 

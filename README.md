@@ -1,11 +1,11 @@
-# Catenis Enterprise
+# Catenis
 
-Catenis Enterprise is an integration layer to the Bitcoin blockchain that allows for rapid blockchain-based application
+Catenis is an integration layer to the Bitcoin blockchain that allows for rapid blockchain-based application
  development.
 
 ## Development environment
 
-Catenis Enterprise is developed using [Meteor](https://www.meteor.com), a [JavaScript/Node.js](https://nodejs.org/en/)
+Catenis is developed using [Meteor](https://www.meteor.com), a [JavaScript/Node.js](https://nodejs.org/en/)
  framework for rapid web/mobile application development.
 
 The IDE used for development is [WebStorm](https://www.jetbrains.com/webstorm/) from JetBrains.

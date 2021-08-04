@@ -1,6 +1,6 @@
 Dear customer,
 
-Some of the Catenis virtual devices associated with your Catenis Enterprise client account have been disabled.
+Some of the Catenis virtual devices associated with your Catenis client account have been disabled.
 
 Client account: username '{!username}' (client ID: {!clientId})
 
