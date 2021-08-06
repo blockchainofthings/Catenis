@@ -49,13 +49,14 @@ import {
 //
 //  Success data returned: {
 //    "assetHolders": [{ - A list of asset holder objects
-//      "holder": {
+//      "holder": {      - (not returned for the special entry reporting the migrated asset amount)
 //        "deviceId": [String]     - ID of device that holds an amount of the asset
 //        "name": [String],        - (only returned if defined and device that issued the request has permission to access this device's main props) The name of the device
 //        "prodUniqueId": [String] - (only returned if defined and device that issued the request has permission to access this device's main props) The product unique ID of the device
 //      },
+//      "migrated": true,          - (only returned for the special entry reporting the migrated asset amount) Indicates that this is the special entry reporting the migrated asset amount
 //      "balance": {
-//        "total": [Number],      - The current balance of that asset held by this device (expressed as a decimal number)
+//        "total": [Number],      - The current balance of that asset held by this device or that had been migrated (expressed as a decimal number)
 //        "unconfirmed": [Number] - The amount from of the balance that is not yet confirmed
 //      }
 //    }],

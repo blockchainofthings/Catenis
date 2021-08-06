@@ -3852,13 +3852,15 @@ Device.prototype.retrieveAssetIssuanceHistory = function (assetId, startDate, en
 //  Return values:
 //   result: {
 //     assetHolders: [{ - A list of asset holder objects
-//       holder: {
+//       holder: {      - (optional; not returned for the special entry reporting the migrated asset amount)
 //         deviceId: [String]   - ID of device that holds an amount of the asset
 //         name: [String],        - (optional) The name of the device
 //         prodUniqueId: [String] - (optional) The product unique ID of the device
 //       },
+//       migrated: true,          - (optional) Indicates that this is the special entry reporting the migrated asset amount
 //       balance: {
-//         total: [Number],      - The current balance of that asset held by this device, expressed as a decimal number
+//         total: [Number],      - The current balance of that asset held by this device or that had been migrated,
+//                                  expressed as a decimal number
 //         unconfirmed: [Number] - The amount from of the balance that is not yet confirmed
 //       }
 //     }],
