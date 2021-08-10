@@ -104,7 +104,7 @@ export function assetExportOutcome() {
                     error = errorResponse.call(this, 403, 'No permission to retrieve asset export outcome');
                 }
                 else if (err.error === 'ctn_exp_asset_not_found') {
-                    error = errorResponse.call(this, 400, 'Asset not yet exported');
+                    error = errorResponse.call(this, 400, 'Asset is not yet exported');
                 }
                 else {
                     error = errorResponse.call(this, 500, 'Internal server error');
