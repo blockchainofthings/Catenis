@@ -189,7 +189,7 @@ export function migrateAsset() {
                     error = errorResponse.call(this, 400, 'Asset is not yet exported');
                 }
                 else if (err.error === 'ctn_asset_mgr_amount_too_large') {
-                    error = errorResponse.call(this, 400, 'Amount to transfer is too large');
+                    error = errorResponse.call(this, 400, 'Amount to migrate is too large');
                 }
                 else if (err.error === 'ctn_device_mismatched_asset_migration') {
                     error = errorResponse.call(this, 400, 'Mismatched asset migration');
