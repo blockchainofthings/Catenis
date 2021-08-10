@@ -29,14 +29,13 @@ import { ForeignBlockchain } from './ForeignBlockchain';
 //
 
 /**
- * @typedef {Object} assetExportOutcomeAPIResponse
+ * @typedef {Object} AssetExportOutcomeAPIResponse
  * @property {number} statusCode
  * @property {Object} headers
  * @property {Object} body
  * @property {string} body.status
  * @property {string} [body.message]
- * @property {Object} [body.data]
- * @property {ExportedAssetOutcome} [body.data.exportedAsset]
+ * @property {ExportedAssetOutcome} [body.data]
  */
 
 /**
@@ -45,7 +44,7 @@ import { ForeignBlockchain } from './ForeignBlockchain';
  * @property {Object} urlParams
  * @property {string} urlParam.assetId ID of the exported asset
  * @property {string} urlParam.foreignBlockchain Name of the foreign blockchain
- * @return {assetExportOutcomeAPIResponse}
+ * @return {AssetExportOutcomeAPIResponse}
  */
 export function assetExportOutcome() {
     try {
@@ -78,10 +77,10 @@ export function assetExportOutcome() {
         }
 
         // Execute method to get asset export outcome
-        let exportedAsset;
+        let exportOutcome;
 
         try {
-            exportedAsset = this.user.device.getAssetExportOutcome(
+            exportOutcome = this.user.device.getAssetExportOutcome(
                 this.urlParams.assetId,
                 this.urlParams.foreignBlockchain
             );
@@ -122,9 +121,7 @@ export function assetExportOutcome() {
             return error;
         }
 
-        return successResponse.call(this, {
-            exportedAsset
-        });
+        return successResponse.call(this, exportOutcome);
     }
     catch (err) {
         Catenis.logger.ERROR('Error processing GET \'assets/:assetId/export/:foreignBlockchain\' API request.', err);

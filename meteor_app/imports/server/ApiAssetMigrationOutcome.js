@@ -28,14 +28,13 @@ import {
 //
 
 /**
- * @typedef {Object} assetMigrationOutcomeAPIResponse
+ * @typedef {Object} AssetMigrationOutcomeAPIResponse
  * @property {number} statusCode
  * @property {Object} headers
  * @property {Object} body
  * @property {string} body.status
  * @property {string} [body.message]
- * @property {Object} [body.data]
- * @property {AssetMigrationOutcome} [body.data.assetMigration]
+ * @property {AssetMigrationOutcome} [body.data]
  */
 
 /**
@@ -43,7 +42,7 @@ import {
  * @this {Object}
  * @property {Object} urlParams
  * @property {string} urlParam.migrationId ID of the asset migration
- * @return {assetMigrationOutcomeAPIResponse}
+ * @return {AssetMigrationOutcomeAPIResponse}
  */
 export function assetMigrationOutcome() {
     try {
@@ -69,10 +68,10 @@ export function assetMigrationOutcome() {
         }
 
         // Execute method to get asset migration outcome
-        let assetMigration;
+        let migrationOutcome;
 
         try {
-            assetMigration = this.user.device.getAssetMigrationOutcome(this.urlParams.migrationId);
+            migrationOutcome = this.user.device.getAssetMigrationOutcome(this.urlParams.migrationId);
         }
         catch (err) {
             let error;
@@ -107,9 +106,7 @@ export function assetMigrationOutcome() {
             return error;
         }
 
-        return successResponse.call(this, {
-            assetMigration
-        });
+        return successResponse.call(this, migrationOutcome);
     }
     catch (err) {
         Catenis.logger.ERROR('Error processing GET \'assets/migrations/:migrationId\' API request.', err);

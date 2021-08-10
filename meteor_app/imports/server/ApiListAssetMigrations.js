@@ -37,7 +37,7 @@ import {
 //
 
 /**
- * @typedef {Object} listAssetMigrationsAPIResponse
+ * @typedef {Object} ListAssetMigrationsAPIResponse
  * @property {number} statusCode
  * @property {Object} headers
  * @property {Object} body
@@ -64,7 +64,7 @@ import {
  * @property {string} [queryParams.limit='500'] Maximum number of exported assets that should be returned
  * @property {string} [queryParams.skip='0'] Number of exported assets that should be skipped (from beginning of list of
  *                                            matching exported assets) and not returned
- * @return {listAssetMigrationsAPIResponse}
+ * @return {ListAssetMigrationsAPIResponse}
  */
 export function listAssetMigrations() {
     try {

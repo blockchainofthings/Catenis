@@ -30,15 +30,18 @@ import { Util } from './Util';
 //
 
 /**
- * @typedef {Object} exportAssetAPIResponse
+ * @typedef {Object} ExportAssetPriceEstimate
+ * @property {string} estimatedPrice
+ */
+
+/**
+ * @typedef {Object} ExportAssetAPIResponse
  * @property {number} statusCode
  * @property {Object} headers
  * @property {Object} body
  * @property {string} body.status
  * @property {string} [body.message]
- * @property {Object} [body.data]
- * @property {ExportedAssetOutcome} [body.data.exportedAsset]
- * @property {string} [body.data.estimatedPrice]
+ * @property {(ExportedAssetOutcome|ExportAssetPriceEstimate)} [body.data]
  */
 
 /**
@@ -57,7 +60,7 @@ import { Util } from './Util';
  * @property {boolean} [bodyParams.options.estimateOnly] Indicates that no asset export should be done. Instead, only
  *                                          the estimated price (in the foreign blockchain's native coin) to fulfill the
  *                                          operation should be returned
- * @return {exportAssetAPIResponse}
+ * @return {ExportAssetAPIResponse}
  */
 export function exportAsset() {
     try {
@@ -193,7 +196,7 @@ export function exportAsset() {
         // Return success
         const data = this.bodyParams.options && this.bodyParams.options.estimateOnly
             ? {estimatedPrice: exportResult}
-            : {exportedAsset: exportResult};
+            : exportResult;
 
         return successResponse.call(this, data);
     }

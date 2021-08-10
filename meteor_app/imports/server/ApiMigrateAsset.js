@@ -31,15 +31,18 @@ import { Util } from './Util';
 //
 
 /**
- * @typedef {Object} migrateAssetAPIResponse
+ * @typedef {Object} MigrateAssetPriceEstimate
+ * @property {string} estimatedPrice
+ */
+
+/**
+ * @typedef {Object} MigrateAssetAPIResponse
  * @property {number} statusCode
  * @property {Object} headers
  * @property {Object} body
  * @property {string} body.status
  * @property {string} [body.message]
- * @property {Object} [body.data]
- * @property {AssetMigrationOutcome} [body.data.assetMigration]
- * @property {string} [body.data.estimatedPrice]
+ * @property {(AssetMigrationOutcome|MigrateAssetPriceEstimate)} [body.data]
  */
 
 /**
@@ -60,7 +63,7 @@ import { Util } from './Util';
  * @property {boolean} [bodyParams.options.estimateOnly] Indicates that no asset migration should be done. Instead, only
  *                                          the estimated price (in the foreign blockchain's native coin) to fulfill the
  *                                          operation should be returned
- * @return {migrateAssetAPIResponse}
+ * @return {MigrateAssetAPIResponse}
  */
 export function migrateAsset() {
     try {
@@ -234,7 +237,7 @@ export function migrateAsset() {
         // Return success
         const data = this.bodyParams.options && this.bodyParams.options.estimateOnly
             ? {estimatedPrice: migrationResult}
-            : {assetMigration: migrationResult};
+            : migrationResult;
 
         return successResponse.call(this, data);
     }
