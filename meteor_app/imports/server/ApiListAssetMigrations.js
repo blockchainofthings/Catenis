@@ -54,6 +54,7 @@ import {
  * @property {Object} queryParams
  * @property {string} [queryParams.assetId] ID of exported Asset
  * @property {string} [queryParams.foreignBlockchain] Name of the foreign blockchain
+ * @property {string} [queryParams.direction] The direction of the migration
  * @property {string} [queryParams.status] A single status or a comma separated list of statuses to include
  * @property {string} [queryParams.negateStatus='false'] Boolean value that indicates whether the specified statuses
  *                                              should be excluded instead
@@ -93,6 +94,16 @@ export function listAssetMigrations() {
         else if (this.queryParams.foreignBlockchain !== undefined) {
             Catenis.logger.DEBUG('Invalid \'foreignBlockchain\' parameter for GET \'assets/migrations\' API request', this.queryParams);
             invalidParams.push('foreignBlockchain');
+        }
+
+        // direction param
+        if (typeof this.queryParams.direction === 'string' && this.queryParams.direction.length > 0
+                && AssetMigration.isValidDirection(this.queryParams.direction)) {
+            filter.direction = this.queryParams.direction;
+        }
+        else if (this.queryParams.direction !== undefined) {
+            Catenis.logger.DEBUG('Invalid \'direction\' parameter for GET \'assets/migrations\' API request', this.queryParams);
+            invalidParams.push('direction');
         }
 
         // status param
