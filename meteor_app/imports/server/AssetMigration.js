@@ -282,9 +282,9 @@ export class AssetMigration {
     /**
      * @typedef {Object} AssetMigrationOutcome
      * @property {string} [migrationId]
-     * @property {string} [direction]
      * @property {string} [assetId]
      * @property {string} [foreignBlockchain]
+     * @property {string} [direction]
      * @property {number} [amount]
      * @property {Object} catenisService
      * @property {string} catenisService.status
@@ -312,9 +312,9 @@ export class AssetMigration {
             } : undefined;
         const migrationInfo = includeMigrationInfo
             ? {
-                direction: this.direction,
                 assetId: this.expAsset.asset.assetId,
                 foreignBlockchain: this.expAsset.blockchainKey,
+                direction: this.direction,
                 amount: this.amount
             } : undefined;
 
