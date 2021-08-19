@@ -56,7 +56,7 @@ import { Util } from './Util';
  * @property {string} bodyParams.migration.direction The migration direction
  * @property {number} bodyParams.migration.amount The amount (expressed as a decimal number) of the asset to be migrated
  * @property {string} [bodyParams.migration.destAddress] The address of the account on the foreign blockchain that
- *                                          should received the migrated amount (of the corresponding foreign token)
+ *                                          should receive the migrated amount (of the corresponding foreign token)
  * @property {Object} [bodyParams.options]
  * @property {string} [bodyParams.options.consumptionProfile] Name of foreign blockchain native coin consumption profile
  *                                                             to use
