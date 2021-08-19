@@ -57,9 +57,9 @@ import { Util } from './Util';
  * @property {Object} [bodyParams.options]
  * @property {string} [bodyParams.options.consumptionProfile] Name of foreign blockchain native coin consumption profile
  *                                                             to use
- * @property {boolean} [bodyParams.options.estimateOnly] Indicates that no asset export should be done. Instead, only
- *                                          the estimated price (in the foreign blockchain's native coin) to fulfill the
- *                                          operation should be returned
+ * @property {boolean} [bodyParams.options.estimateOnly] When set, indicates that no asset export should be executed but
+ *                                          only the estimated price (in the foreign blockchain's native coin) to
+ *                                          fulfill the operation should be returned
  * @return {ExportAssetAPIResponse}
  */
 export function exportAsset() {

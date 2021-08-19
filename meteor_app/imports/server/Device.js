@@ -2622,9 +2622,9 @@ Device.prototype.transferAsset = function (receivingDeviceId, amount, assetId) {
  * @param {string} token.symbol The symbol of the token to be created on the foreign blockchain
  * @param {Object} [options]
  * @param {string} [options.consumptionProfile] Name of foreign blockchain native coin consumption profile to use
- * @param {boolean} [options.estimateOnly] Indicates that no asset export should be done. Instead, only the estimated
- *                                          price (in the foreign blockchain's native coin) to fulfill the operation
- *                                          should be returned
+ * @param {boolean} [options.estimateOnly] When set, indicates that no asset export should be executed but only the
+ *                                          estimated price (in the foreign blockchain's native coin) to fulfill the
+ *                                          operation should be returned
  * @return {(ExportedAssetOutcome|string)} Current outcome state of the asset export, or the estimated price (formatted
  *                                          as string value expressed in the foreign blockchain's native coin)
  */
@@ -2766,9 +2766,9 @@ Device.prototype.listExportedAssets = function (filter, limit, skip) {
  *                                          the migrated amount (of the corresponding foreign token)
  * @param {Object} [options]
  * @param {string} [options.consumptionProfile] Name of foreign blockchain native coin consumption profile to use
- * @param {boolean} [options.estimateOnly] Indicates that no asset migration should be done. Instead, only the estimated
- *                                          price (in the foreign blockchain's native coin) to fulfill the operation
- *                                          should be returned
+ * @param {boolean} [options.estimateOnly] When set, indicates that no asset migration should be executed but only the
+ *                                          estimated price (in the foreign blockchain's native coin) to fulfill the
+ *                                          operation should be returned
  * @return {(AssetMigrationOutcome|string)} Current outcome state of the asset migration, or the estimated price
  *                                           (formatted as string value expressed in the foreign blockchain's native
  *                                           coin)
