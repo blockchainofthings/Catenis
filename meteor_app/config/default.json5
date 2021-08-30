@@ -417,7 +417,7 @@
       },
       "offChain": {
         "price": {
-          "numMsgsPayCost": 10,  // Number of off-chain messages required to pay for full cost of settle off-chain messages transaction
+          "numMsgsPayCost": 40,  // Number of off-chain messages required to pay for full cost of settle off-chain messages transaction
           "msgReceipt": {
             "percCost": 0.25  // (25%) Percentage of off-chain message cost that shall be charged for off-chain message receipts
           }
