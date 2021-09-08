@@ -88,11 +88,13 @@ ClientsUI.initialize = function () {
                 let clientId;
 
                 try {
+                    // Note: we postpone sending the account enrollment notification e-mail until a license is
+                    //        successfully added to the newly created account
                     clientId = CatenisNode.getCatenisNodeByIndex(ctnNodeIndex).createClient(props, null, {
                         createUser: true,
                         username: clientInfo.username,
                         email: clientInfo.email,
-                        sendEnrollmentEmail: true,
+                        sendEnrollmentEmail: false,
                         timeZone: clientInfo.timeZone
                     });
                 }
@@ -104,6 +106,7 @@ ClientsUI.initialize = function () {
 
                 // Add license to newly created client
                 let client;
+                let licenseAdded = false;
                 const postCreateErrMsgs = [];
 
                 try {
@@ -114,11 +117,28 @@ ClientsUI.initialize = function () {
                     }
 
                     client.addLicense(clientInfo.licenseInfo.license_id, clientInfo.licenseInfo.startDate, clientInfo.licenseInfo.endDate);
+                    licenseAdded = true;
                 }
                 catch (err) {
                     // Error trying to add license to newly created client. Log error and throw exception
                     Catenis.logger.ERROR('Failure trying to add license to newly created client (clientId: %s).', clientId, util.inspect({clientLicenseInfo: clientInfo.licenseInfo}), err);
                     postCreateErrMsgs.push(util.format('Failure trying to add license to newly created client: %s', err.toString()));
+                }
+
+                if (licenseAdded) {
+                    try {
+                        // Send account enrollment notification e-mail now
+                        Accounts.sendEnrollmentEmail(client.user_id);
+                    }
+                    catch (err) {
+                        // Error trying to send account enrollment notification e-mail. Log error and throw exception
+                        Catenis.logger.ERROR('Failure trying to send account enrollment notification e-mail for newly created client (clientId: %s).', clientId, err);
+                        postCreateErrMsgs.push(util.format('Failure trying to send account enrollment notification e-mail for newly created client: %s', err.toString()));
+                    }
+                }
+                else {
+                    // No license added. Issue error to communicate that account enrollment could not be sent.
+                    postCreateErrMsgs.push('Account enrollment notification e-mail for newly created client could not be sent: account has no license');
                 }
 
                 if (clientInfo.standbyPurchasedCodes) {
