@@ -10,7 +10,7 @@ Account information:
 
   License type: {!licenseType}
 
-* The username is case sensitive and cannot be changed.
+* The username is case-sensitive and cannot be changed.
 
 Follow the link below to set the password for your new account and ACTIVATE IT:
 
