@@ -546,11 +546,10 @@
       "level": "Basic",  // Level of temporary license to assign
       "type": "annual"  // Type of temporary license to assign
     },
-    averageCreditsConsumptionRate: {
-      ratePeriod: 3600,  // (1 hour) Time interval, in seconds, used for defining the rate itself (e.g., credits consumed per hour)
-      samplingPeriod: 86400,  // (24 hours) Time interval, in seconds, to consider when collecting consumption data to calculate the average rate
-      minimumBalancePeriod: 3600,  // (1 hour) Time interval, in seconds, used for calculating the minimum service account balance (from the average credits consumption rate)
-      balanceFloorMultiplyFactor: 10,  // Multiplication factor (over Catenis' lowest service price) to be used for calculating the floor value of the service account balance
+    creditsConsumption: {
+      pastConsumptionPeriod: 86400,  // (24 hours) Time interval, in seconds, to consider when computing past credits consumption
+      minimumBalanceMultiplyFactor: 1,  // Multiplication factor (over the computed past credits consumption) to be used for calculating the suggested minimum service account balance
+      balanceFloorMultiplyFactor: 1,  // Multiplication factor (over Catenis' highest service price) to be used for calculating the floor value of the service account balance
       timeToLowBalanceRenotification: 24,  // (24 hours) Time, in hours, after which another UI/e-mail notification message warning the client that the service account balance is too low can be displayed/sent
     },
     // NOTE: the following should be interpreted as a single entry with an object value
