@@ -269,7 +269,7 @@ Template.clientServiceAccount.events({
 });
 
 Template.clientServiceAccount.helpers({
-    serviceAccountBalance() {
+    balanceInfo() {
         return Catenis.db.collection.ServiceAccountBalance.findOne(1);
     },
     bcotPayAddress() {

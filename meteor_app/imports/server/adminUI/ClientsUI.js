@@ -533,6 +533,23 @@ ClientsUI.initialize = function () {
                 //  Throw exception
                 throw new Meteor.Error('ctn_admin_no_permission', 'No permission; must be logged in as a system administrator to perform this task');
             }
+        },
+        dismissLowServAccBalanceUINotify: function (client_id) {
+            if (Roles.userIsInRole(this.userId, 'sys-admin')) {
+                try {
+                    Client.getClientByDocId(client_id).resetLowServAccBalanceNotifyUIDismissDate();
+                }
+                catch (err) {
+                    // Error trying to reset low service account balance UI notification dismiss date. Log error and throw exception
+                    Catenis.logger.ERROR('Failure trying to reset client\'s (doc_id: %s) low service account balance UI notification dismiss date.', client_id, err);
+                    throw new Meteor.Error('client.dismissLowServAccBalanceUINotify.failure', 'Failure trying to reset client\'s low service account balance UI notification dismiss date: ' + err.toString());
+                }
+            }
+            else {
+                // User not logged in or not a system administrator.
+                //  Throw exception
+                throw new Meteor.Error('ctn_admin_no_permission', 'No permission; must be logged in as a system administrator to perform this task');
+            }
         }
     });
 

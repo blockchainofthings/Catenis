@@ -279,7 +279,7 @@ Template.serviceAccount.helpers({
     clientTitle(client) {
         return client.props.name || client.clientId;
     },
-    serviceAccountBalance() {
+    balanceInfo() {
         return Catenis.db.collection.ServiceAccountBalance.findOne(1);
     },
     bcotPayAddress() {

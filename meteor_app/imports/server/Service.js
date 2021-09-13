@@ -1172,6 +1172,14 @@ function highestServicePrice() {
     }));
 }
 
+// Returns lowest service price expressed in Catenis service credit's lowest units
+function lowestServicePrice() {
+    // noinspection JSCheckFunctionSignatures
+    return _.min(Object.values(Service.clientPaidService).map((paidService) => {
+        return getServicePrice(paidService).finalServicePrice;
+    }));
+}
+
 function averageServicePrice() {
     return Util.roundToResolution(Util.weightedAverage([
         getServicePrice(Service.clientPaidService.log_message).finalServicePrice,
@@ -1771,6 +1779,9 @@ Object.defineProperties(Service, {
         get: function () {
             return cfgSettings.message.offChain.price.msgReceipt.percCost;
         }
+    },
+    lowestServicePrice: {
+        get: lowestServicePrice
     }
 });
 

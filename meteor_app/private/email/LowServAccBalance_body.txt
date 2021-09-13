@@ -1,0 +1,13 @@
+Dear customer,
+
+This is to let you know that the balance of your Catenis service account appears to be too low.
+
+Current balance (Catenis credits): {!servAccBalance}
+
+It is advisable that you add more credits to your Catenis service account to avoid an eventual disruption of the Catenis services usage.
+
+You may use the link below to access your Catenis client account.
+
+{!url}
+
+The Blockchain of Things team

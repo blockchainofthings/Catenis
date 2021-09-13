@@ -152,7 +152,7 @@ ClientServiceAccountUI.initialize = function () {
             });
 
             if (docCurrentClient) {
-                CommonServiceAccountUI.clientServiceAccountBalance.call(this, Client.getClientByDocId(docCurrentClient._id));
+                CommonServiceAccountUI.clientServiceAccountBalance.call(this, Client.getClientByDocId(docCurrentClient._id), true);
             }
             else {
                 // No active client is associated with currently logged in user.

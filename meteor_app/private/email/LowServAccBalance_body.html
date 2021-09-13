@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Catenis license expiration</title>
+    <style>
+        body {
+            margin-left: 2em;
+            font-family: Arial;
+            font-size: 10.5pt;
+            color: #333333
+        }
+        div#div-catenis-email-body {
+            margin: 0;
+            padding: 0;
+            border: none;
+        }
+        div#div-catenis-email-body span.value {
+            font-family: Courier;
+            font-size: 10.5pt;
+            color: #666666
+        }
+        div#div-catenis-email-body label {
+            color: #181818
+        }
+        div#div-catenis-email-body p {
+            line-height: normal;
+            margin-top: 0;
+            margin-bottom: 1em;
+        }
+        div#div-catenis-email-body p.session_start {
+            margin-top: 1.5em;
+        }
+    </style>
+</head>
+<body>
+<div id="div-catenis-email-body">
+<p>Dear customer,<p>
+<p class="session_start">This is to let you know that the balance of your Catenis service account appears to be too low.<p>
+<p><label>Current balance (Catenis credits):</label> <span class="value">{!servAccBalance}</span></p>
+<p class="session_start">It is advisable that you add more credits to your Catenis service account to avoid an eventual disruption of the Catenis services usage.</p>
+<p><a href="{!url}">{!url}</a></p>
+<p class="session_start">The Blockchain of Things team</p>
+</div>
+</body>
+</html>

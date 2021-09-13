@@ -1109,6 +1109,7 @@ export class AssetMigration {
      */
     _executeOutMigrationService() {
         let outMigrateAssetTransact;
+        let servicePaid = false;
 
         // Execute code in critical section to avoid Colored Coins UTXOs concurrency
         CCFundSource.utxoCS.execute(() => {
@@ -1188,6 +1189,7 @@ export class AssetMigration {
                             throw new Error('Processing for postpaid billing mode not yet implemented');
                         }
 
+                        servicePaid = true;
                         billing.setServicePaymentTransaction(servicePayTransact);
                     }
                     catch (err) {
@@ -1206,6 +1208,17 @@ export class AssetMigration {
             });
         });
 
+        if (servicePaid) {
+            try {
+                // Service successfully paid for. Check client service account balance now
+                this.owningDevice.client.checkServiceAccountBalance();
+            }
+            catch (err) {
+                // Log error
+                Catenis.logger.ERROR('Error while checking for client service account balance.', err);
+            }
+        }
+
         return outMigrateAssetTransact.txid;
     }
 
@@ -1216,6 +1229,7 @@ export class AssetMigration {
      */
     _executeInMigrationService() {
         let inMigrateAssetTransact;
+        let servicePaid = false;
 
         // Execute code in critical section to avoid Colored Coins UTXOs concurrency
         CCFundSource.utxoCS.execute(() => {
@@ -1295,6 +1309,7 @@ export class AssetMigration {
                             throw new Error('Processing for postpaid billing mode not yet implemented');
                         }
 
+                        servicePaid = true;
                         billing.setServicePaymentTransaction(servicePayTransact);
                     }
                     catch (err) {
@@ -1312,6 +1327,17 @@ export class AssetMigration {
                 });
             });
         });
+
+        if (servicePaid) {
+            try {
+                // Service successfully paid for. Check client service account balance now
+                this.owningDevice.client.checkServiceAccountBalance();
+            }
+            catch (err) {
+                // Log error
+                Catenis.logger.ERROR('Error while checking for client service account balance.', err);
+            }
+        }
 
         return inMigrateAssetTransact.txid;
     }

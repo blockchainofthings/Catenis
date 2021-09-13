@@ -763,6 +763,8 @@ Device.prototype.sendMessage3 = function (message, targetDeviceId, encryptMessag
     let messageId = undefined;
 
     const doProcessing = () => {
+        let servicePaid = false;
+
         // Execute code in critical section to avoid Colored Coins UTXOs concurrency
         CCFundSource.utxoCS.execute(() => {
             // Execute code in critical section to avoid UTXOs concurrency
@@ -901,6 +903,7 @@ Device.prototype.sendMessage3 = function (message, targetDeviceId, encryptMessag
                             throw new Error('Processing for postpaid billing mode not yet implemented');
                         }
 
+                        servicePaid = true;
                         billing.setServicePaymentTransaction(servicePayTransact);
                     }
                     catch (err) {
@@ -918,6 +921,17 @@ Device.prototype.sendMessage3 = function (message, targetDeviceId, encryptMessag
                 });
             });
         });
+
+        if (servicePaid) {
+            try {
+                // Service successfully paid for. Check client service account balance now
+                this.client.checkServiceAccountBalance();
+            }
+            catch (err) {
+                // Log error
+                Catenis.logger.ERROR('Error while checking for client service account balance.', err);
+            }
+        }
     };
 
     if (async) {
@@ -1172,6 +1186,8 @@ Device.prototype.logMessage3 = function (message, encryptMessage = true, offChai
     let messageId = undefined;
 
     const doProcessing = () => {
+        let servicePaid = false;
+
         // Execute code in critical section to avoid Colored Coins UTXOs concurrency
         CCFundSource.utxoCS.execute(() => {
             // Execute code in critical section to avoid UTXOs concurrency
@@ -1308,6 +1324,7 @@ Device.prototype.logMessage3 = function (message, encryptMessage = true, offChai
                             throw new Error('Processing for postpaid billing mode not yet implemented');
                         }
 
+                        servicePaid = true;
                         billing.setServicePaymentTransaction(servicePayTransact);
                     }
                     catch (err) {
@@ -1325,6 +1342,17 @@ Device.prototype.logMessage3 = function (message, encryptMessage = true, offChai
                 });
             });
         });
+
+        if (servicePaid) {
+            try {
+                // Service successfully paid for. Check client service account balance now
+                this.client.checkServiceAccountBalance();
+            }
+            catch (err) {
+                // Log error
+                Catenis.logger.ERROR('Error while checking for client service account balance.', err);
+            }
+        }
     };
 
     if (async) {
@@ -2315,6 +2343,7 @@ Device.prototype.issueAsset = function (amount, assetInfo, holdingDeviceId) {
 
     let assetId;
     let totalExistentBalance;
+    let servicePaid = false;
 
     // Execute code in critical section to avoid Colored Coins UTXOs concurrency
     CCFundSource.utxoCS.execute(() => {
@@ -2403,6 +2432,7 @@ Device.prototype.issueAsset = function (amount, assetInfo, holdingDeviceId) {
                         throw new Error('Processing for postpaid billing mode not yet implemented');
                     }
 
+                    servicePaid = true;
                     billing.setServicePaymentTransaction(servicePayTransact);
                 }
                 catch (err) {
@@ -2420,6 +2450,17 @@ Device.prototype.issueAsset = function (amount, assetInfo, holdingDeviceId) {
             });
         });
     });
+
+    if (servicePaid) {
+        try {
+            // Service successfully paid for. Check client service account balance now
+            this.client.checkServiceAccountBalance();
+        }
+        catch (err) {
+            // Log error
+            Catenis.logger.ERROR('Error while checking for client service account balance.', err);
+        }
+    }
 
     // noinspection JSUnusedAssignment
     return totalExistentBalance !== undefined ? totalExistentBalance : assetId;
@@ -2508,6 +2549,7 @@ Device.prototype.transferAsset = function (receivingDeviceId, amount, assetId) {
     }
 
     let remainingBalance;
+    let servicePaid = false;
 
     // Execute code in critical section to avoid Colored Coins UTXOs concurrency
     CCFundSource.utxoCS.execute(() => {
@@ -2591,6 +2633,7 @@ Device.prototype.transferAsset = function (receivingDeviceId, amount, assetId) {
                         throw new Error('Processing for postpaid billing mode not yet implemented');
                     }
 
+                    servicePaid = true;
                     billing.setServicePaymentTransaction(servicePayTransact);
                 }
                 catch (err) {
@@ -2608,6 +2651,17 @@ Device.prototype.transferAsset = function (receivingDeviceId, amount, assetId) {
             });
         });
     });
+
+    if (servicePaid) {
+        try {
+            // Service successfully paid for. Check client service account balance now
+            this.client.checkServiceAccountBalance();
+        }
+        catch (err) {
+            // Log error
+            Catenis.logger.ERROR('Error while checking for client service account balance.', err);
+        }
+    }
 
     // noinspection JSUnusedAssignment
     return remainingBalance;

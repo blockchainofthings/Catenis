@@ -20,6 +20,8 @@
 import { Catenis } from '../Catenis';
 import { Util } from '../Util';
 import { Transaction } from '../Transaction';
+import { Billing } from '../Billing';
+import { Client } from '../Client';
 
 // Config entries
 /*const config_entryConfig = config.get('config_entry');
@@ -62,12 +64,54 @@ export function CommonServiceAccountUI() {
 //
 //  NOTE: this method should be called via the predefined function method .call() passing the context (this)
 //      of the caller publication function (i.e. method.call(this, ...))
-CommonServiceAccountUI.clientServiceAccountBalance = function (client) {
+CommonServiceAccountUI.clientServiceAccountBalance = function (client, clientUI = false) {
     const now = new Date();
-    this.added('ServiceAccountBalance', 1, {
-        balance: Util.formatCatenisServiceCredits(client.serviceAccountBalance())
-    });
+    let lastServAccBalance = client.checkServiceAccountBalance(false);
+    let updatedServAccBalanceRec;
 
+    function updateServiceAccountBalance() {
+        const currentServAccBalance = client.checkServiceAccountBalance(false);
+
+        // Check if info has been updated
+        updatedServAccBalanceRec = {};
+
+        if (lastServAccBalance.currentBalance.comparedTo(currentServAccBalance.currentBalance) !== 0) {
+            updatedServAccBalanceRec.balance = Util.formatCatenisServiceCredits(currentServAccBalance.currentBalance);
+        }
+
+        if (lastServAccBalance.minimumBalance.comparedTo(currentServAccBalance.minimumBalance) !== 0) {
+            updatedServAccBalanceRec.minBalance = Util.formatCatenisServiceCredits(currentServAccBalance.minimumBalance);
+        }
+
+        if (lastServAccBalance.isLowBalance !== currentServAccBalance.isLowBalance) {
+            updatedServAccBalanceRec.isLowBalance = currentServAccBalance.isLowBalance;
+        }
+
+        if (clientUI) {
+            if (lastServAccBalance.canDisplayUINotify !== currentServAccBalance.canDisplayUINotify) {
+                updatedServAccBalanceRec.canDisplayUINotify = currentServAccBalance.canDisplayUINotify;
+            }
+        }
+
+        lastServAccBalance = currentServAccBalance;
+
+        return Object.keys(updatedServAccBalanceRec).length > 0;
+    }
+
+    // Initialize service account balance record
+    const initRec = {
+        balance: Util.formatCatenisServiceCredits(lastServAccBalance.currentBalance),
+        minBalance: Util.formatCatenisServiceCredits(lastServAccBalance.minimumBalance),
+        isLowBalance: lastServAccBalance.isLowBalance
+    };
+
+    if (clientUI) {
+        initRec.canDisplayUINotify = lastServAccBalance.canDisplayUINotify;
+    }
+
+    this.added('ServiceAccountBalance', 1, initRec);
+
+    // Observe changes to current balance
     const observeHandle = Catenis.db.collection.SentTransaction.find({
         sentDate: {
             $gte: now
@@ -86,13 +130,84 @@ CommonServiceAccountUI.clientServiceAccountBalance = function (client) {
     }).observe({
         added: (doc) => {
             // Get updated service account balance
-            this.changed('ServiceAccountBalance', 1, {
-                balance: Util.formatCatenisServiceCredits(client.serviceAccountBalance())
-            });
+            if (updateServiceAccountBalance()) {
+                this.changed('ServiceAccountBalance', 1, updatedServAccBalanceRec);
+            }
         }
     });
 
-    this.onStop(() => observeHandle.stop());
+    // Observe changes to minimum balance
+    const observeHandle2 = Catenis.db.collection.Billing.find({
+        type: Billing.docType.original.name,
+        clientId: this.clientId,
+        billingMode: Client.billingMode.prePaid,
+        createdDate: {
+            $gte: now
+        }
+    }, {
+        fields: {
+            _id: 1
+        }
+    }).observe({
+        added: (doc) => {
+            // Get updated service account balance
+            if (updateServiceAccountBalance()) {
+                this.changed('ServiceAccountBalance', 1, updatedServAccBalanceRec);
+            }
+        }
+    });
+
+    let observeHandle3;
+
+    if (clientUI) {
+        // Observe changes to canDisplayUINotify flag
+        observeHandle3 = Catenis.db.collection.Client.find({
+            _id: client.doc_id,
+            'lowServAccBalanceNotify.uiDismissDate': {
+                $exists: true
+            }
+        }, {
+            fields: {
+                'lowServAccBalanceNotify.uiDismissDate': 1
+            }
+        }).observe({
+            added: (doc) => {
+                client.refreshLowServAccBalanceNotify();
+
+                // Get updated service account balance
+                if (updateServiceAccountBalance()) {
+                    this.changed('ServiceAccountBalance', 1, updatedServAccBalanceRec);
+                }
+            },
+            changed: (newDoc, oldDoc) => {
+                client.refreshLowServAccBalanceNotify();
+
+                // Get updated service account balance
+                if (updateServiceAccountBalance()) {
+                    this.changed('ServiceAccountBalance', 1, updatedServAccBalanceRec);
+                }
+            }
+        });
+    }
+
+    // Periodically (every 30 seconds) checks changes to minimum balance
+    const tiHandle = Meteor.setInterval(() => {
+        // Get updated service account balance
+        if (updateServiceAccountBalance()) {
+            this.changed('ServiceAccountBalance', 1, updatedServAccBalanceRec);
+        }
+    }, 30000);
+
+    this.onStop(() => {
+        observeHandle.stop();
+        observeHandle2.stop();
+
+        if (observeHandle3) {
+            observeHandle3.stop();
+        }
+
+        Meteor.clearInterval(tiHandle);
+    });
 
     this.ready();
 };

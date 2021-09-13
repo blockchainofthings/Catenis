@@ -17,6 +17,7 @@ import config from 'config';
 import _und from 'underscore';     // NOTE: we dot not use the underscore library provided by Meteor because we nee
                                    //        a feature (_und.omit(obj,predicate)) that is not available in that version
 import moment from 'moment-timezone';
+import BigNumber from 'bignumber.js';
 // Meteor packages
 import { Meteor } from 'meteor/meteor';
 import { Random } from 'meteor/random';
@@ -48,10 +49,11 @@ import { ClientOwnedDomain } from './ClientOwnedDomain';
 import { StandbyPurchasedBcot } from './StandbyPurchasedBcot';
 import { AdminEmailNotify } from './AdminEmailNotify';
 import { ForeignBlockchain } from './ForeignBlockchain';
+import { Service } from './Service';
+import { Billing } from './Billing';
 
 // Config entries
 const clientConfig = config.get('client');
-const clientTempLicConfig = clientConfig.get('temporaryLicense');
 
 // Configuration settings
 export const cfgSettings = {
@@ -61,9 +63,16 @@ export const cfgSettings = {
     minLicenseValidityDays: clientConfig.get('minLicenseValidityDays'),
     minLicenseValDaysToReplace: clientConfig.get('minLicenseValDaysToReplace'),
     temporaryLicense: {
-        "active": clientTempLicConfig.get('active'),
-        "level": clientTempLicConfig.get('level'),
-        "type": clientTempLicConfig.get('type')
+        "active": clientConfig.get('temporaryLicense.active'),
+        "level": clientConfig.get('temporaryLicense.level'),
+        "type": clientConfig.get('temporaryLicense.type')
+    },
+    averageCreditsConsumptionRate: {
+        ratePeriod: clientConfig.get('averageCreditsConsumptionRate.ratePeriod'),
+        samplingPeriod: clientConfig.get('averageCreditsConsumptionRate.samplingPeriod'),
+        minimumBalancePeriod: clientConfig.get('averageCreditsConsumptionRate.minimumBalancePeriod'),
+        balanceFloorMultiplyFactor: clientConfig.get('averageCreditsConsumptionRate.balanceFloorMultiplyFactor'),
+        timeToLowBalanceRenotification: clientConfig.get('averageCreditsConsumptionRate.timeToLowBalanceRenotification')
     },
     deviceDefaultRightsByEvent: clientConfig.get('deviceDefaultRightsByEvent')
 };
@@ -107,6 +116,11 @@ export function Client(docClient, ctnNode, initializeDevices, noClientLicense = 
     this.timeZone = docClient.timeZone && moment.tz.zone(docClient.timeZone) ? docClient.timeZone : moment.tz.guess();
     this.billingMode = docClient.billingMode;
     this.status = docClient.status;
+    this.lastStatusChangedDate = docClient.lastStatusChangedDate;
+    /**
+     * @type {{emailSentDate: Date?, uiDismissDate: Date?}}
+     */
+    this.lowServAccBalanceNotify = docClient.lowServAccBalanceNotify || {};
 
     //  NOTE: arrow functions should NOT be used for the getter/setter of the defined properties.
     //      This is to avoid that, if `this` is referred from within the getter/setter body, it
@@ -186,6 +200,27 @@ export function Client(docClient, ctnNode, initializeDevices, noClientLicense = 
             get: function () {
                 // noinspection JSPotentiallyInvalidUsageOfThis
                 return this.status === Client.status.deleted.name;
+            },
+            enumerable: true
+        },
+        firstPrepaidActivityDate: {
+            get: function () {
+                // noinspection JSPotentiallyInvalidUsageOfThis
+                const docs = Catenis.db.collection.Billing.find({
+                    type: Billing.docType.original.name,
+                    clientId: this.clientId,
+                    billingMode: Client.billingMode.prePaid
+                }, {
+                    fields: {
+                        createdDate: 1
+                    },
+                    sort: {
+                        createdDate: 1
+                    },
+                    limit: 1
+                }).fetch();
+
+                return docs.length > 0 ? docs[0].createdDate : undefined;
             },
             enumerable: true
         }
@@ -504,6 +539,291 @@ Client.prototype.assetExportAdminForeignBcAccount = function (blockchainKey) {
         .toString('hex')
     );
 }
+
+/**
+ * Returns a date range that should be used for sampling Catenis credits consumption
+ * @param {Date} [now] Date object to be used as current date and time
+ * @return {{startDate: Date, endDate: Date}} Object containing date range info
+ */
+Client.prototype.creditsConsumptionSamplingDateRange = function (now) {
+    now = now || new Date();
+    let startDate = new Date(now);
+    startDate.setSeconds(now.getSeconds() - cfgSettings.averageCreditsConsumptionRate.samplingPeriod);
+
+    let firstPrepaidActivityDate = this.firstPrepaidActivityDate;
+
+    if (!firstPrepaidActivityDate) {
+        startDate = now;
+    }
+    else if (startDate < firstPrepaidActivityDate) {
+        startDate = firstPrepaidActivityDate;
+        // Make sure that this date in included in the range
+        startDate.setMilliseconds(startDate.getMilliseconds() - 1);
+    }
+
+    return {
+        startDate,
+        endDate: now
+    };
+};
+
+/**
+ * Returns a database cursor for retrieving the Billing records/collections used for calculating
+ *  the Catenis credits consumption rate
+ * @param {{startDate: Date, endDate: Date}} [samplingDateRange]
+ * @return {*} The resulting database cursor
+ */
+Client.prototype.creditsConsumptionDbCursor = function (samplingDateRange) {
+    return Catenis.db.collection.Billing.find({
+        type: Billing.docType.original.name,
+        clientId: this.clientId,
+        billingMode: Client.billingMode.prePaid,
+        $and: [
+            {
+                createdDate: {
+                    $gt: samplingDateRange.startDate
+                }
+            },
+            {
+                createdDate: {
+                    $lte: samplingDateRange.endDate
+                }
+            }
+        ]
+    }, {
+        fields: {
+            _id: 1,
+            clientId: 1,
+            finalServicePrice: 1,
+            createdDate: 1
+        }
+    });
+};
+
+/**
+ * Calculates the average Catenis credits consumption rate
+ * @param {Date} [now] Date object to be used as current date and time
+ * @return {(BigNumber|undefined)} The calculated average Catenis credits consumption rate
+ */
+Client.prototype.averageCreditsConsumptionRate = function (now) {
+    let samplingDateRange = this.creditsConsumptionSamplingDateRange(now);
+
+    if (samplingDateRange.endDate > samplingDateRange.startDate) {
+        let consumedCredits = this.creditsConsumptionDbCursor(samplingDateRange)
+        .fetch()
+        .reduce((total, doc)=> {
+            return total.plus(doc.finalServicePrice)
+        }, new BigNumber(0));
+
+        let periodSeconds = (samplingDateRange.endDate.getTime() - samplingDateRange.startDate.getTime()) / 1000;
+
+        return consumedCredits
+        .div(periodSeconds)
+        .times(cfgSettings.averageCreditsConsumptionRate.ratePeriod)
+        .dp(0, BigNumber.ROUND_HALF_EVEN);
+    }
+};
+
+/**
+ * Returns the minimum expected balance for the client's service account
+ * @param {Date} [now] Date object to be used as current date and time
+ * @return {BigNumber} Expected minimum balance amount for client's service account
+ */
+Client.prototype.minimumServiceAccountBalance = function (now) {
+    const consumptionRate = this.averageCreditsConsumptionRate(now);
+    Catenis.logger.DEBUG('>>>>>> Calculated client Catenis credit consumption rate:', consumptionRate ? Util.formatCatenisServiceCredits(consumptionRate) : consumptionRate);
+
+    let minBalance = consumptionRate ? consumptionRate
+    .div(cfgSettings.averageCreditsConsumptionRate.ratePeriod)
+    .times(cfgSettings.averageCreditsConsumptionRate.minimumBalancePeriod)
+    : new BigNumber(0);
+
+    // Make sure that calculated minimum balance is not below defined balance floor value
+    // noinspection JSCheckFunctionSignatures
+    const balanceFloor = new BigNumber(Service.lowestServicePrice).times(cfgSettings.averageCreditsConsumptionRate.balanceFloorMultiplyFactor);
+
+    return minBalance.comparedTo(balanceFloor) < 0 ? balanceFloor : minBalance;
+};
+
+/**
+ * Update client's lowServAccBalanceNotify property with current value from database
+ */
+Client.prototype.refreshLowServAccBalanceNotify = function () {
+    const docClient = Catenis.db.collection.Client.findOne({
+        _id: this.doc_id
+    }, {
+        fields: {
+            lowServAccBalanceNotify: 1
+        }
+    });
+
+    if (docClient) {
+        this.lowServAccBalanceNotify = docClient.lowServAccBalanceNotify || {};
+    }
+}
+
+/**
+ * Update the date when low service account balance e-mail notification has last been sent
+ * @param {Date} [date] New value for the e-mail notification sent date
+ */
+Client.prototype.resetLowServAccBalanceNotifyEmailSentDate = function (date) {
+    if (date === undefined) {
+        date = new Date();
+    }
+
+    try {
+        Catenis.db.collection.Client.update({
+            _id: this.doc_id,
+        }, {
+            $set: {
+                'lowServAccBalanceNotify.emailSentDate': date
+            }
+        });
+    }
+    catch (err) {
+        // Error updating Client doc/rec. Log error and throw exception
+        Catenis.logger.ERROR(util.format('Error trying to update client (doc_id: %s) to reset low service account balance e-mail notification sent date.', this.doc_id), err);
+        throw new Meteor.Error('ctn_client_update_error', util.format('Error trying to update client (doc_id: %s) to reset low service account balance e-mail notification sent date', this.doc_id), err.stack);
+    }
+
+    // Update local property too
+    this.lowServAccBalanceNotify.emailSentDate = date;
+};
+
+/**
+ * Clear the date when low service account balance e-mail notification has last been sent
+ *  so a new e-mail notification can be sent any time
+ */
+Client.prototype.clearLowServAccBalanceNotifyEmailSentDate = function () {
+    this.resetLowServAccBalanceNotifyEmailSentDate(null);
+}
+
+/**
+ * Update the date when low service account balance UI notification message has last been dismissed
+ * @param {Date} [date] New value for the UI notification dismiss date
+ */
+Client.prototype.resetLowServAccBalanceNotifyUIDismissDate = function (date) {
+    if (date === undefined) {
+        date = new Date();
+    }
+
+    try {
+        Catenis.db.collection.Client.update({
+            _id: this.doc_id,
+        }, {
+            $set: {
+                'lowServAccBalanceNotify.uiDismissDate': date
+            }
+        });
+    }
+    catch (err) {
+        // Error updating Client doc/rec. Log error and throw exception
+        Catenis.logger.ERROR(util.format('Error trying to update client (doc_id: %s) to reset low service account balance UI notification dismiss date.', this.doc_id), err);
+        throw new Meteor.Error('ctn_client_update_error', util.format('Error trying to update client (doc_id: %s) to reset low service account balance UI notification dismiss date', this.doc_id), err.stack);
+    }
+
+    // Update local property too
+    this.lowServAccBalanceNotify.uiDismissDate = date;
+};
+
+/**
+ * Clear the date when low service account balance UI notification message has last been dismissed
+ *  so the notification message can be displayed again
+ */
+Client.prototype.clearLowServAccBalanceNotifyUIDismissDate = function () {
+    this.resetLowServAccBalanceNotifyUIDismissDate(null);
+}
+
+/**
+ * @typedef {Object} ClientServAccBalance
+ * @property {BigNumber} currentBalance
+ * @property {BigNumber} minimumBalance
+ * @property {boolean} isLowBalance
+ * @property {boolean} canSendNotifyEmail
+ * @property {boolean} canDisplayUINotify
+ */
+
+/**
+ * Check the current state of the client service account balance
+ * @param {boolean} [sendNotification=true] Indicates that low balance notification e-mail should be sent (in case of low balance)
+ * @param {Date} [now] Date object to be used as current date and time
+ * @return {ClientServAccBalance} The current state of the client service account balance
+ */
+Client.prototype.checkServiceAccountBalance = function (sendNotification = true, now) {
+    now = now || new Date();
+
+    const currentBalance = new BigNumber(this.serviceAccountBalance());
+    const minimumBalance = this.minimumServiceAccountBalance(now);
+    let isLowBalance = false;
+    let canSendNotifyEmail = false;
+    let canDisplayUINotify = false;
+
+    if (currentBalance.comparedTo(minimumBalance) < 0) {
+        // Balance too low
+        isLowBalance = true;
+
+        // Check if notification e-mail should be sent now
+        if (!this.lowServAccBalanceNotify.emailSentDate) {
+            canSendNotifyEmail = true;
+        }
+        else {
+            const latestAllowedSentDate = new Date();
+            latestAllowedSentDate.setHours(latestAllowedSentDate.getHours() - cfgSettings.averageCreditsConsumptionRate.timeToLowBalanceRenotification);
+            Catenis.logger.DEBUG('>>>>>> Low service account balance e-mail notification:', {
+                latestAllowedSentDate,
+                lastSendDate: this.lowServAccBalanceNotify.emailSentDate,
+            });
+
+            canSendNotifyEmail = this.lowServAccBalanceNotify.emailSentDate <= latestAllowedSentDate;
+        }
+
+        if (canSendNotifyEmail && sendNotification) {
+            // Send notification e-mail
+            Catenis.lowServAccBalanceEmailNtfy.sendAsync(this, (err) => {
+                if (err) {
+                    Catenis.logger.ERROR('Error sending notification e-mail to warn client of low service account balance.', err);
+                }
+                else {
+                    // Notification e-mail successfully sent. Update sent date
+                    try {
+                        this.resetLowServAccBalanceNotifyEmailSentDate();
+                    }
+                    catch (e) {}
+                }
+            });
+        }
+
+        // Check if UI notification message should be displayed
+        if (!this.lowServAccBalanceNotify.uiDismissDate) {
+            canDisplayUINotify = true;
+        }
+        else {
+            const latestAllowedDismissDate = new Date();
+            latestAllowedDismissDate.setHours(latestAllowedDismissDate.getHours() - cfgSettings.averageCreditsConsumptionRate.timeToLowBalanceRenotification);
+            Catenis.logger.DEBUG('>>>>>> Low service account balance UI notification message:', {
+                latestAllowedDismissDate,
+                lastDismissDate: this.lowServAccBalanceNotify.uiDismissDate,
+            });
+
+            canDisplayUINotify = this.lowServAccBalanceNotify.uiDismissDate <= latestAllowedDismissDate;
+        }
+    }
+
+    Catenis.logger.DEBUG('>>>>>> Client service account balance:', {
+        currentBalance,
+        minimumBalance,
+        isLowBalance,
+        canSendNotifyEmail,
+        canDisplayUINotify
+    });
+    return {
+        currentBalance,
+        minimumBalance,
+        isLowBalance,
+        canSendNotifyEmail,
+        canDisplayUINotify
+    };
+};
 
 // Returns current balance of client's service account
 //

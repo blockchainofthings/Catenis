@@ -135,6 +135,11 @@ ServiceAccount.CreditServiceAccount = function (bcotTransact) {
         }
     }
     while (amountToCredit > 0);
+
+    // Clear low service account balance notification/dismiss date to allow for a new notification to be
+    //  sent/displayed any time if needed
+    bcotTransact.client.clearLowServAccBalanceNotifyEmailSentDate();
+    bcotTransact.client.clearLowServAccBalanceNotifyUIDismissDate();
 };
 
 

@@ -546,6 +546,13 @@
       "level": "Basic",  // Level of temporary license to assign
       "type": "annual"  // Type of temporary license to assign
     },
+    averageCreditsConsumptionRate: {
+      ratePeriod: 3600,  // (1 hour) Time interval, in seconds, used for defining the rate itself (e.g., credits consumed per hour)
+      samplingPeriod: 86400,  // (24 hours) Time interval, in seconds, to consider when collecting consumption data to calculate the average rate
+      minimumBalancePeriod: 3600,  // (1 hour) Time interval, in seconds, used for calculating the minimum service account balance (from the average credits consumption rate)
+      balanceFloorMultiplyFactor: 10,  // Multiplication factor (over Catenis' lowest service price) to be used for calculating the floor value of the service account balance
+      timeToLowBalanceRenotification: 24,  // (24 hours) Time, in hours, after which another UI/e-mail notification message warning the client that the service account balance is too low can be displayed/sent
+    },
     // NOTE: the following should be interpreted as a single entry with an object value
     "deviceDefaultRightsByEvent": {   // Default permission right settings for newly created devices to be assigned to clients: there must be one entry for each defined permission event
       "receive-notify-new-msg": {
@@ -983,6 +990,12 @@
     "emailName": "DevicesDisabled",  // Reference name of e-mail contents to be used for this notification
     "fromAddress": "Catenis <noreply@blockchainofthings.com>",  // E-mail address of sender of e-mail notification message
     "replyAddress": "donotreply@blockchainofthings.com"  // (optional) E-mail address to be used as the address to be used when replying to notification e-mail message
+  },
+  // Parameters pertaining to LowServAccBalanceEmailNotify module
+  lowServAccBalanceEmailNotify: {
+    emailName: "LowServAccBalance",  // Reference name of e-mail contents to be used for this notification
+    fromAddress: "Catenis <noreply@blockchainofthings.com>",  // E-mail address of sender of e-mail notification message
+    replyAddress: "donotreply@blockchainofthings.com"  // (optional) E-mail address to be used as the address to be used when replying to notification e-mail message
   },
   // Parameters pertaining to BcotProduct module
   "bcotProduct": {

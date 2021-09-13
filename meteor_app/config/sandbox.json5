@@ -256,6 +256,10 @@
   devicesDisabledEmailNotify: {
     fromAddress: "Catenis [Sandbox] <noreply@blockchainofthings.com>"  // E-mail address of sender of e-mail notification message
   },
+  // Parameters pertaining to LowServAccBalanceEmailNotify module
+  lowServAccBalanceEmailNotify: {
+    fromAddress: "Catenis [Sandbox] <noreply@blockchainofthings.com>"  // E-mail address of sender of e-mail notification message
+  },
   // Parameters pertaining to TwoFactorAuthentication module
   twoFactorAuthentication: {
     recoveryCode: {

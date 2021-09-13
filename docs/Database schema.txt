@@ -167,6 +167,10 @@ Client {
   }],
   timeZone: [string],  // The name of time zone (as defined by IANA, https://www.iana.org/time-zones) attributed to this client. This time zone is used amongst other things to determine the start and end date of licenses assigned to clients
   billingMode: [string],  // Identifies the billing mode used for this client. Valid values (from Client.billingMode): 'pre-paid', 'post-paid'
+  lowServAccBalanceNotify: {
+    emailSentDate: [date/time],  // Date and time when notification e-mail warning client that service account balance is too low has last been sent. Can be set to null to indicate that a new notification e-mail can be sent any time
+    uiDismissDate: [date/time]  // Date and time when UI notification message warning client that service account balance is too low has last been dismissed. Can be set to null to indicate that a new notification message can be displayed any time
+  },
   status: [string],  // Valid values: 'new' (newly created client awaiting activation); 'active' (client is in normal use mode); 'deleted' (client has been logically deleted)
   createdDate: [date/time],  // Date and time when doc/rec has been created
   lastStatusChangedDate: [date/time], // Date and time when status has been last changed

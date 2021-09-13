@@ -104,6 +104,43 @@ ClientUI.initialize = function () {
                 //  Throw exception
                 throw new Meteor.Error('ctn_client_no_permission', 'No permission; must be logged in as a Catenis client to perform this task');
             }
+        },
+        currentClientDismissLowServAccBalanceUINotify: function () {
+            if (Roles.userIsInRole(this.userId, 'ctn-client')) {
+                // Retrieve database doc/rec of client associated with currently logged in user
+                const docCurrentClient = Catenis.db.collection.Client.findOne({
+                    user_id: this.userId,
+                    status: Client.status.active.name
+                }, {
+                    fields: {
+                        _id: 1
+                    }
+                });
+
+                if (docCurrentClient) {
+                    try {
+                        Client.getClientByDocId(docCurrentClient._id).resetLowServAccBalanceNotifyUIDismissDate();
+                    }
+                    catch (err) {
+                        // Error trying to reset low service account balance UI notification dismiss date. Log error and throw exception
+                        Catenis.logger.ERROR('Failure trying to reset current client\'s (doc_id: %s) low service account balance UI notification dismiss date.', docCurrentClient._id, err);
+                        throw new Meteor.Error('client.currentClientDismissLowServAccBalanceUINotify.failure', 'Failure trying to reset current client\'s low service account balance UI notification dismiss date: ' + err.toString());
+                    }
+                }
+                else {
+                    // No active client is associated with currently logged in user.
+                    //  Throw exception
+                    Catenis.logger.ERROR('currentClientDismissLowServAccBalanceUINotify remote method: logged in user not associated with a valid, active client', {
+                        user_id: this.userId
+                    });
+                    throw new Meteor.Error('ctn_client_not_valid', 'Logged in user not associated with a valid client');
+                }
+            }
+            else {
+                // User not logged in or not a Catenis client.
+                //  Throw exception
+                throw new Meteor.Error('ctn_client_no_permission', 'No permission; must be logged in as a Catenis client to perform this task');
+            }
         }
     });
 

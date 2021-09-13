@@ -22,6 +22,8 @@ import { Template } from 'meteor/templating';
 
 // Import template UI
 import './ClientHomeTemplate.html';
+import { Catenis } from '../ClientCatenis';
+import { Meteor } from 'meteor/meteor';
 
 // Import dependent templates
 
@@ -37,13 +39,28 @@ import './ClientHomeTemplate.html';
 //
 
 Template.clientHome.onCreated(function () {
+    // Subscribe to receive database docs/recs updates
+    this.currClntServiceAccountBalanceSubs = this.subscribe('currentClientServiceAccountBalance');
 });
 
 Template.clientHome.onDestroyed(function () {
+    if (this.currClntServiceAccountBalanceSubs) {
+        this.currClntServiceAccountBalanceSubs.stop();
+    }
 });
 
 Template.clientHome.events({
+    'click #btnDismissLowBalanceWarning'(event, template) {
+        Meteor.call('currentClientDismissLowServAccBalanceUINotify', (error) => {
+            if (error) {
+                console.error('Error calling \'currentClientDismissLowServAccBalanceUINotify\' remote method:', error);
+            }
+        });
+    }
 });
 
 Template.clientHome.helpers({
+    balanceInfo() {
+        return Catenis.db.collection.ServiceAccountBalance.findOne(1);
+    }
 });

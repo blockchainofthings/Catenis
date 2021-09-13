@@ -196,6 +196,10 @@
   devicesDisabledEmailNotify: {
     fromAddress: "Catenis [Development] <noreply@blockchainofthings.com>"  // E-mail address of sender of e-mail notification message
   },
+  // Parameters pertaining to LowServAccBalanceEmailNotify module
+  lowServAccBalanceEmailNotify: {
+    fromAddress: "Catenis [Development] <noreply@blockchainofthings.com>"  // E-mail address of sender of e-mail notification message
+  },
   // Parameters pertaining to ProvisionalMessage module
   "provisionalMessage": {
     "timeContinueMsg": 900,  // (15 min.) Maximum time, in seconds, to wait until message continuation chunk is recorded

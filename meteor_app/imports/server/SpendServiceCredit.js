@@ -850,6 +850,8 @@ function reprocessServicePayments(serviceDataRefs) {
             });
 
             if (spendServCredTxsToSend.size > 0) {
+                const clientIdsToCheckServAccBalance = new Set();
+
                 // Execute code in critical section to make sure task is serialized
                 procCS.execute(() => {
                     for (let spendServCredTransact of spendServCredTxsToSend) {
@@ -860,12 +862,16 @@ function reprocessServicePayments(serviceDataRefs) {
 
                                 // Update billing info for services the payment of which had been reprocessed
                                 spendServCredTxBillings.get(spendServCredTransact).forEach((billing) => {
+                                    // Service successfully paid for, so mark client to check their service
+                                    //  account balance
+                                    clientIdsToCheckServAccBalance.add(billing.clientId);
+
                                     try {
                                         billing.setServicePaymentTransaction(spendServCredTransact);
                                     }
                                     catch (err) {
-                                        // Error update billing info for service the payment of which had been reprocessed
-                                        Catenis.logger.ERROR('Error update billing info (doc_id: %s) for service the payment of which had been reprocessed.', billing.doc_id, err);
+                                        // Error updating billing info for service the payment of which had been reprocessed
+                                        Catenis.logger.ERROR('Error updating billing info (doc_id: %s) for service the payment of which had been reprocessed.', billing.doc_id, err);
                                     }
                                 });
                             }
@@ -876,6 +882,20 @@ function reprocessServicePayments(serviceDataRefs) {
                         }
                     }
                 });
+
+                for (const clientId of clientIdsToCheckServAccBalance) {
+                    try {
+                        const client = Client.getClientByClientId(clientId);
+
+                        if (client) {
+                            client.checkServiceAccountBalance();
+                        }
+                    }
+                    catch (err) {
+                        // Log error
+                        Catenis.logger.ERROR('Error while checking for client service account balance.', err);
+                    }
+                }
             }
         });
     }

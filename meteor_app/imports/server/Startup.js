@@ -100,6 +100,7 @@ import { ForeignBlockchain } from './ForeignBlockchain';
 import { ExportedAsset } from './ExportedAsset';
 import { AssetMigration } from './AssetMigration';
 import { ClientForeignBlockchainUI } from './clientUI/ClientForeignBlockchainsUI';
+import { LowServAccBalanceEmailNotify } from './LowServAccBalanceEmailNotify';
 // TEST - begin
 //import { TestCatenisColoredCoins } from './test/TestCatenisColoredCoins';
 // TEST - end
@@ -170,6 +171,7 @@ Meteor.startup(function () {
             LicenseOverdueEmailNotify.initialize();
             LicenseExpireRemindEmailNotify.initialize();
             DevicesDisableEmailNotify.initialize();
+            LowServAccBalanceEmailNotify.initialize();
             MalleabilityEventEmitter.initialize();
             BitcoinCore.initialize();
             BitcoinFees.initialize();
