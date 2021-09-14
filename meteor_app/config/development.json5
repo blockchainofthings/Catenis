@@ -116,6 +116,12 @@
     "rpcConnectionTimeout": 30000,  // (30 sec.) Timeout, in milliseconds, for RPC connection with the Omni Core server
     "rescanTimeout": 900000 // (15 min.) Timeout, in milliseconds, for waiting on Omni Core to finish rescanning the blockchain after importing private key
   },
+  // Parameters pertaining to Client module
+  "client": {
+    creditsConsumption: {
+      servAccBalanceInfoUIRefreshTimeout: 0,  // (disabled) Timeout, in milliseconds, after which service account balance info should be checked if it needs to be updated on the UI. Set to 0 (zero) to disable it
+    },
+  },
   // Parameters pertaining to IpfsClient module
   "ipfsClient": {
     "apiHost": "catenis-local-1",

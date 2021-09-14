@@ -551,6 +551,7 @@
       minimumBalanceMultiplyFactor: 1,  // Multiplication factor (over the computed past credits consumption) to be used for calculating the suggested minimum service account balance
       balanceFloorMultiplyFactor: 1,  // Multiplication factor (over Catenis' highest service price) to be used for calculating the floor value of the service account balance
       timeToLowBalanceRenotification: 24,  // (24 hours) Time, in hours, after which another UI/e-mail notification message warning the client that the service account balance is too low can be displayed/sent
+      servAccBalanceInfoUIRefreshTimeout: 900000,  // (15 min.) Timeout, in milliseconds, after which service account balance info should be checked if it needs to be updated on the UI. Set to 0 (zero) to disable it
     },
     // NOTE: the following should be interpreted as a single entry with an object value
     "deviceDefaultRightsByEvent": {   // Default permission right settings for newly created devices to be assigned to clients: there must be one entry for each defined permission event

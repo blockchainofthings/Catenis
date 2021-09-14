@@ -21,7 +21,10 @@ import { Catenis } from '../Catenis';
 import { Util } from '../Util';
 import { Transaction } from '../Transaction';
 import { Billing } from '../Billing';
-import { Client } from '../Client';
+import {
+    Client,
+    cfgSettings as clientCfgSettings
+} from '../Client';
 
 // Config entries
 /*const config_entryConfig = config.get('config_entry');
@@ -68,6 +71,28 @@ CommonServiceAccountUI.clientServiceAccountBalance = function (client, clientUI 
     const now = new Date();
     let lastServAccBalance = client.checkServiceAccountBalance(false);
     let updatedServAccBalanceRec;
+    let tmHandle;
+
+    // Reset timeout for checking if service account balance info needs to be updated
+    function resetTimeout() {
+        if (tmHandle) {
+            Meteor.clearTimeout(tmHandle);
+            tmHandle = undefined;
+        }
+
+        if (clientCfgSettings.creditsConsumption.servAccBalanceInfoUIRefreshTimeout > 0) {
+            tmHandle = Meteor.setTimeout(() => {
+                tmHandle = undefined;
+
+                // Get updated service account balance
+                if (updateServiceAccountBalance()) {
+                    this.changed('ServiceAccountBalance', 1, updatedServAccBalanceRec);
+                }
+
+                resetTimeout();
+            }, clientCfgSettings.creditsConsumption.servAccBalanceInfoUIRefreshTimeout);
+        }
+    }
 
     function updateServiceAccountBalance() {
         const currentServAccBalance = client.checkServiceAccountBalance(false);
@@ -109,6 +134,7 @@ CommonServiceAccountUI.clientServiceAccountBalance = function (client, clientUI 
         initRec.canDisplayUINotify = lastServAccBalance.canDisplayUINotify;
     }
 
+    resetTimeout();
     this.added('ServiceAccountBalance', 1, initRec);
 
     // Observe changes to current balance
@@ -131,6 +157,7 @@ CommonServiceAccountUI.clientServiceAccountBalance = function (client, clientUI 
         added: (doc) => {
             // Get updated service account balance
             if (updateServiceAccountBalance()) {
+                resetTimeout();
                 this.changed('ServiceAccountBalance', 1, updatedServAccBalanceRec);
             }
         }
@@ -152,6 +179,7 @@ CommonServiceAccountUI.clientServiceAccountBalance = function (client, clientUI 
         added: (doc) => {
             // Get updated service account balance
             if (updateServiceAccountBalance()) {
+                resetTimeout();
                 this.changed('ServiceAccountBalance', 1, updatedServAccBalanceRec);
             }
         }
@@ -176,6 +204,7 @@ CommonServiceAccountUI.clientServiceAccountBalance = function (client, clientUI 
 
                 // Get updated service account balance
                 if (updateServiceAccountBalance()) {
+                    resetTimeout();
                     this.changed('ServiceAccountBalance', 1, updatedServAccBalanceRec);
                 }
             },
@@ -184,19 +213,12 @@ CommonServiceAccountUI.clientServiceAccountBalance = function (client, clientUI 
 
                 // Get updated service account balance
                 if (updateServiceAccountBalance()) {
+                    resetTimeout();
                     this.changed('ServiceAccountBalance', 1, updatedServAccBalanceRec);
                 }
             }
         });
     }
-
-    // Periodically (every 30 seconds) checks changes to minimum balance
-    const tiHandle = Meteor.setInterval(() => {
-        // Get updated service account balance
-        if (updateServiceAccountBalance()) {
-            this.changed('ServiceAccountBalance', 1, updatedServAccBalanceRec);
-        }
-    }, 30000);
 
     this.onStop(() => {
         observeHandle.stop();
@@ -206,7 +228,9 @@ CommonServiceAccountUI.clientServiceAccountBalance = function (client, clientUI 
             observeHandle3.stop();
         }
 
-        Meteor.clearInterval(tiHandle);
+        if (tmHandle) {
+            Meteor.clearTimeout(tmHandle);
+        }
     });
 
     this.ready();

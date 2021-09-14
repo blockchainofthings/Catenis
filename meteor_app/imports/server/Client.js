@@ -71,7 +71,8 @@ export const cfgSettings = {
         pastConsumptionPeriod: clientConfig.get('creditsConsumption.pastConsumptionPeriod'),
         minimumBalanceMultiplyFactor: clientConfig.get('creditsConsumption.minimumBalanceMultiplyFactor'),
         balanceFloorMultiplyFactor: clientConfig.get('creditsConsumption.balanceFloorMultiplyFactor'),
-        timeToLowBalanceRenotification: clientConfig.get('creditsConsumption.timeToLowBalanceRenotification')
+        timeToLowBalanceRenotification: clientConfig.get('creditsConsumption.timeToLowBalanceRenotification'),
+        servAccBalanceInfoUIRefreshTimeout: clientConfig.get('creditsConsumption.servAccBalanceInfoUIRefreshTimeout')
     },
     deviceDefaultRightsByEvent: clientConfig.get('deviceDefaultRightsByEvent')
 };
