@@ -4,6 +4,7 @@
 
 // Load startup modules
 import '/imports/server/ConfigEnv';
+import '/imports/server/ConfigMeteorSettings';
 import '../imports/server/ReadCommandLineArgs';
 import '../imports/server/SetUpCipherFunctions';
 import '/imports/server/ConfigEmail';

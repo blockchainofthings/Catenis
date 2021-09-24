@@ -29,7 +29,8 @@ const accountsEmailConfig = config.get('accountsEmail');
 const cfgSettings = {
     fromAddress: accountsEmailConfig.get('fromAddress'),
     resetPasswordContents: accountsEmailConfig.get('resetPasswordContents'),
-    enrollAccountContents: accountsEmailConfig.get('enrollAccountContents')
+    enrollAccountContents: accountsEmailConfig.get('enrollAccountContents'),
+    verifyEmailContents: accountsEmailConfig.get('verifyEmailContents')
 };
 
 
@@ -66,8 +67,8 @@ AccountsEmail.initialize = function () {
     // Configure accounts related e-mail messages
     Accounts.emailTemplates.from = cfgSettings.fromAddress;
 
+    // Account enrollment
     const enrollAccEmailContents = new EmailContents(cfgSettings.enrollAccountContents);
-    const resetPwdEmailContents = new EmailContents(cfgSettings.resetPasswordContents);
 
     Accounts.emailTemplates.enrollAccount.subject = (user) => {
         return enrollAccEmailContents.subject();
@@ -95,6 +96,9 @@ AccountsEmail.initialize = function () {
         });
     };
 
+    // Password reset
+    const resetPwdEmailContents = new EmailContents(cfgSettings.resetPasswordContents);
+
     Accounts.emailTemplates.resetPassword.subject = (user) => {
         return resetPwdEmailContents.subject();
     };
@@ -108,6 +112,27 @@ AccountsEmail.initialize = function () {
 
     Accounts.emailTemplates.resetPassword.html = (user, url) => {
         return resetPwdEmailContents.htmlBody({
+            username: user.username,
+            url: url
+        });
+    };
+
+    // E-mail verification
+    const verifyEmailContents = new EmailContents(cfgSettings.verifyEmailContents);
+
+    Accounts.emailTemplates.verifyEmail.subject = (user) => {
+        return verifyEmailContents.subject();
+    };
+
+    Accounts.emailTemplates.verifyEmail.text = (user, url) => {
+        return verifyEmailContents.textBody({
+            username: user.username,
+            url: url
+        });
+    };
+
+    Accounts.emailTemplates.verifyEmail.html = (user, url) => {
+        return verifyEmailContents.htmlBody({
             username: user.username,
             url: url
         });

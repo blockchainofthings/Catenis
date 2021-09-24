@@ -2,17 +2,24 @@
     <!--this is the template to render instead of atPwdForm, if not desired, change the configuration at AdminLayout.js-->
     <div class="at-pwd-form">
         <form role="form" id="at-pwd-form" class="{{disabled}}" novalidate action="#" method="POST">
-            {{#each fields}}
-                <div class="form-group">
-                    {{> atInput}}
+            {{#unless verificationEmailSent}}
+                {{#if showWaitNotice}}
+                    <div class="form-disabled-msg">
+                        <p>Please wait...</p>
+                    </div>
+                {{/if}}
+                {{#each fields}}
+                    <div class="form-group">
+                        {{> atInput}}
+                    </div>
+                {{/each}}
+                {{#if useReCaptcha}}
+                    <div id="ctn-login-recaptcha"></div>
+                {{/if}}
+                <div class="col-xs-12 tabs">
+                    {{> atPwdFormBtn}}
                 </div>
-            {{/each}}
-            {{#if useReCaptcha}}
-                <div id="ctn-login-recaptcha"></div>
-            {{/if}}
-            <div class="col-xs-12 tabs">
-                {{> atPwdFormBtn}}
-            </div>
+            {{/unless}}
             <!--need to set conditionals based on what state this is. -->
         </form>
     </div>

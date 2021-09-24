@@ -31,5 +31,8 @@ Template.atPwdFormBtn.helpers({
         const caption = AccountsTemplates.texts.button[AccountsTemplates.getState()];
 
         return AccountsTemplates.state.form.get("2faVerify") ? "VERIFY" : caption;
+    },
+    submitDisabled() {
+        return AccountsTemplates.disabled() && AccountsTemplates.getState() !== 'signIn';
     }
 });

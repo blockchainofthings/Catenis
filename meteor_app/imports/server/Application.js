@@ -32,6 +32,9 @@ import { makeCtnNodeId } from './CatenisNode';
 import { UtxoConsolidation } from './UtxoConsolidation';
 import { FundTransaction } from './FundTransaction';
 import { Service } from './Service';
+// TODO: replace all references to role names with the appropriate property of the UserRoles object
+import { UserRoles } from '../both/UserRoles';
+
 
 // Config entries
 const appConfig = config.get('application');
@@ -45,6 +48,7 @@ const cfgSettings = {
         pubKey: appConfig.get('ctnNode.pubKey')
     },
     environment: appConfig.get('environment'),
+    enableSelfRegistration: appConfig.get('enableSelfRegistration'),
     masterSeed: appConfig.get('masterSeed'),
     commonSeed: appConfig.get('commonSeed'),
     testPrefix: appConfig.get('testPrefix'),
@@ -77,6 +81,8 @@ const statusRegEx = {
 // Application function class
 export function Application(cipherOnly = false, legacyDustFunding = false) {
     if (!cipherOnly) {
+        checkUserRoles();
+
         //  NOTE: arrow functions should NOT be used for the getter/setter of the defined properties.
         //      This is to avoid that, if `this` is referred from within the getter/setter body, it
         //      refers to the object from where the properties have been defined rather than to the
@@ -123,6 +129,12 @@ export function Application(cipherOnly = false, legacyDustFunding = false) {
             environment: {
                 get: function () {
                     return cfgSettings.environment;
+                },
+                enumerable: true
+            },
+            enableSelfRegistration: {
+                get: function () {
+                    return cfgSettings.enableSelfRegistration;
                 },
                 enumerable: true
             },
@@ -476,6 +488,19 @@ Application.processingStatus = Object.freeze({
 
 // Definition of module (private) functions
 //
+
+/**
+ * Make sure that user roles used by Catenis are properly defined
+ */
+function checkUserRoles() {
+    const existingRoles = new Set(Roles.getAllRoles().map(doc => doc._id));
+
+    for(const role of Object.values(UserRoles)) {
+        if (!existingRoles.has(role)) {
+            Roles.createRole(role);
+        }
+    }
+}
 
 function isSeedValid(seed) {
     // Calculate seed HMAC

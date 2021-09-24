@@ -143,7 +143,7 @@ Accounts.registerLoginHandler('re-captcha', (options) => {
 
     if (error || !result.success) {
         // Failed to verify reCAPTCHA response
-        throwLoginError();
+        throwLoginError('End user not successfully verified. Form submission blocked.');
     }
 
     if (options.userId) {

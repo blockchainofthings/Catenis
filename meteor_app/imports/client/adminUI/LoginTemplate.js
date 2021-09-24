@@ -16,8 +16,8 @@
 // Meteor packages
 import { Template } from "meteor/templating";
 import { AccountsTemplates } from 'meteor/useraccounts:core';
-import { FlowRouter } from 'meteor/kadira:flow-router';
-import { Roles } from 'meteor/alanning:roles';
+import { ReactiveDict } from 'meteor/reactive-dict';
+import { Meteor } from 'meteor/meteor';
 
 // Import template UI
 import './LoginTemplate.html';
@@ -27,25 +27,59 @@ import './LoginForm.js';
 import './LoginBtn.js';
 
 
-// Definition of module (private) functions
-//
-
-function redirectHome(user_id) {
-    if (Roles.userIsInRole(user_id, 'sys-admin')) {
-        FlowRouter.go('/admin');
-    }
-    else if (Roles.userIsInRole(user_id, 'ctn-client')) {
-        FlowRouter.go('/');
-    }
-}
-
-
 // Module code
 //
 
+Template.login.onCreated(function () {
+    this.state = new ReactiveDict();
+
+    this.state.set('enableSelfRegistration', undefined);
+
+    Meteor.call('checkEnableSelfRegistration', (err, isSet) => {
+        if (err) {
+            console.log('Error calling \'checkEnableSelfRegistration\' remote procedure: ' + err);
+        }
+        else {
+            this.state.set('enableSelfRegistration', isSet);
+        }
+    });
+
+    // Clear indication that verification e-mail has been sent
+    AccountsTemplates.state.form.set("verifyEmailSent", false);
+});
+
 Template.login.events({
     'click #login-form-link'(event, template) {
+        // Clear indication that verification e-mail has been sent
+        AccountsTemplates.state.form.set("verifyEmailSent", false);
+
+        // Force form reset (re-rendering of all fields)
+        AccountsTemplates.state.form.set('clearForm', !AccountsTemplates.state.form.get('clearForm'));
+        setTimeout(
+            () => AccountsTemplates.state.form.set('clearForm', !AccountsTemplates.state.form.get('clearForm')),
+            1
+        );
+
         AccountsTemplates.setState('signIn');
+    },
+    'click #register-form-link'(event, template) {
+        // Clear indication that verification e-mail has been sent
+        AccountsTemplates.state.form.set("verifyEmailSent", false);
+
+        // Force form reset (re-rendering of all fields)
+        AccountsTemplates.state.form.set('clearForm', !AccountsTemplates.state.form.get('clearForm'));
+        setTimeout(
+            () => AccountsTemplates.state.form.set('clearForm', !AccountsTemplates.state.form.get('clearForm')),
+            1
+        );
+
+        AccountsTemplates.setState('signUp');
+    },
+    'click #resend-verify_email-form-link'(event, template) {
+        // Clear indication that verification e-mail has been sent
+        AccountsTemplates.state.form.set("verifyEmailSent", false);
+
+        AccountsTemplates.setState('resendVerificationEmail');
     },
     'click #cancel-2fa-link'(event, template) {
         if (AccountsTemplates.getState() !== 'singIn') {
@@ -70,6 +104,15 @@ Template.login.helpers({
         else if (state === 'forgotPwd') {
             return "REQUEST PASSWORD RESET";
         }
+        else if (state === 'signUp') {
+            return "ACCOUNT REGISTRATION";
+        }
+        else if (state === 'resendVerificationEmail') {
+            return 'VERIFICATION EMAIL';
+        }
+        else if (state === 'verifyEmail') {
+            return 'EMAIL VERIFICATION';
+        }
         else if (state === 'enrollAccount') {
             return "ACTIVATE NEW ACCOUNT";
         }
@@ -84,6 +127,10 @@ Template.login.helpers({
         let instruction;
 
         switch (AccountsTemplates.getState()) {
+            case 'signUp':
+                instruction = 'Fill up the form to create a new account';
+                break;
+
             case 'enrollAccount':
                 instruction = 'Set the password to active your account';
                 break;
@@ -97,5 +144,17 @@ Template.login.helpers({
     },
     equals(v1, v2) {
         return v1 === v2;
+    },
+    verificationEmailSent() {
+        return AccountsTemplates.state.form.get("verifyEmailSent");
+    },
+    enableSelfRegistration() {
+        return Template.instance().state.get('enableSelfRegistration');
+    },
+    isDefined(v) {
+        return typeof v !== 'undefined';
+    },
+    clearForm() {
+        return AccountsTemplates.state.form.get('clearForm');
     }
 });

@@ -9,6 +9,7 @@
       pubKey: ""
     },
     "environment": "production",
+    enableSelfRegistration: false,  // Indicates whether the UI should include a link from where the end user can register for a new Catenis account.
     testPrefix: null,  // (optional) A prefix used to differentiate non-production environments
     masterSeed: "????",  // Base64 encoded, ciphered Catenis master seed
     commonSeed: "????",  // Base64 encoded, ciphered Catenis common seed
@@ -956,7 +957,8 @@
   "accountsEmail": {
     "fromAddress": "Catenis <noreply@blockchainofthings.com>",  // E-mail address used to send accounts related e-mail messages
     "resetPasswordContents": "PasswordReset",  // Name of e-mail contents used for password reset
-    "enrollAccountContents": "AccountEnrollment"  // Name of e-mail contents used for account enrollment
+    "enrollAccountContents": "AccountEnrollment",  // Name of e-mail contents used for account enrollment
+    verifyEmailContents: "AccountRegVerifyEmail"  // Name of e-mail contents used for e-mail verification to complete account registration
   },
   // Parameters pertaining to ClientLicense module
   "clientLicense": {
@@ -994,6 +996,12 @@
   // Parameters pertaining to LowServAccBalanceEmailNotify module
   lowServAccBalanceEmailNotify: {
     emailName: "LowServAccBalance",  // Reference name of e-mail contents to be used for this notification
+    fromAddress: "Catenis <noreply@blockchainofthings.com>",  // E-mail address of sender of e-mail notification message
+    replyAddress: "donotreply@blockchainofthings.com"  // (optional) E-mail address to be used as the address to be used when replying to notification e-mail message
+  },
+  // Parameters pertaining to AccountRegistrationEmailNotify module
+  accountRegistrationEmailNotify: {
+    emailName: "AccountRegistration",  // Reference name of e-mail contents to be used for this notification
     fromAddress: "Catenis <noreply@blockchainofthings.com>",  // E-mail address of sender of e-mail notification message
     replyAddress: "donotreply@blockchainofthings.com"  // (optional) E-mail address to be used as the address to be used when replying to notification e-mail message
   },
@@ -1312,5 +1320,66 @@
     oldPendingTxTimeFactor: 2,  // Multiplication factor (over web3.js' tx pooling timeout) for defining time to considering a pending foreign blockchain transactions as old
     txExecEventsTimeoutFactor: 1.5,  // Multiplication factor (over web3.js' tx pooling timeout) for defining the timeout for waiting for foreign blockchain transaction execution outcome events
     maxQueryCount: 500  // Maximum number of entries that can be returned when querying for asset migrations
+  },
+  // Parameters pertaining to AccountRegistration module
+  accountRegistration: {
+    clientName: 'Self-registered ({!username})',  // Name to be assigned to client account for self-registered users
+    license: {   // Client license to be used for a self-registration account
+      level: "Starter",
+      type: null,  // Note: may be set to null to specify a license with no type
+      revision: 0
+    }
+  },
+  // Parameters pertaining to CrmIntegration module
+  crmIntegration: {
+    formUrl: 'https://crm.zoho.com/crm/WebToLeadForm',  // URL of the form used to pass customer data to the Blockchain of Things CRM system.
+                                                        //  Note: set to null to disable passing customer data
+    localAddress: null,  // (optional, can be set to null) IP address of local network interface to use when issuing requests
+    timeout: 20000,  // (20 sec.) Timeout, in milliseconds, for connection/request
+    fields: [{
+      name: 'xnQsjsdp',
+      value: '71b0e32d89d616853fc65c92845db906105cf6a82bd120670b6c7c1eb0487d5d',
+      mappedClientProp: null
+    }, {
+      name: 'zc_gad',
+      value: '',
+      mappedClientProp: null
+    }, {
+      name: 'xmIwtLD',
+      value: '3da7098ca28176d6d6260345406b639fbb4bc058a692090944c280f9bb37e962',
+      mappedClientProp: null
+    }, {
+      name: 'actionType',
+      value: 'TGVhZHM=',
+      mappedClientProp: null
+    }, {
+      name: 'returnURL',
+      value: 'https://www.blockchainofthings.com/exclude/success',
+      mappedClientProp: null
+    }, {
+      name: 'First Name',
+      value: null,
+      mappedClientProp: 'props.firstName'
+    }, {
+      name: 'Last Name',
+      value: null,
+      mappedClientProp: 'props.lastName'
+    }, {
+      name: 'Email',
+      value: null,
+      mappedClientProp: 'userAccountEmail'
+    }, {
+      name: 'Phone',
+      value: null,
+      mappedClientProp: 'props.phone'
+    }, {
+      name: 'Company',
+      value: null,
+      mappedClientProp: 'props.company'
+    }, {
+      name: 'Lead Source',
+      value: 'Starter',
+      mappedClientProp: null
+    }]
   }
 }

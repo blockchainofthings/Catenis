@@ -31,6 +31,8 @@ import { KeyStore } from '../KeyStore';
 import { StandbyPurchasedBcot } from '../StandbyPurchasedBcot';
 import { CommonClientForeignBlockchainsUI } from '../commonUI/CommonClientForeignBlockchainsUI';
 import { ForeignBlockchain } from '../ForeignBlockchain';
+import { AccountRegistration } from '../AccountRegistration';
+import { UserRoles } from '../../both/UserRoles';
 
 
 // Definition of function classes
@@ -260,9 +262,11 @@ ClientsUI.initialize = function () {
         // Note: this method is expected to be called by a Catenis client user, right after its successful enrollment
         activateClient: function (user_id) {
             if (Roles.userIsInRole(this.userId, 'ctn-client')) {
+                let client;
+
                 try {
                     // Try to retrieve client associated with given user
-                    const client = Client.getClientByUserId(user_id);
+                    client = Client.getClientByUserId(user_id);
 
                     if (client.status === Client.status.new.name) {
                         client.activate();
@@ -271,13 +275,35 @@ ClientsUI.initialize = function () {
                 catch (err) {
                     // Error trying to activate client. Log error and throw exception
                     Catenis.logger.ERROR('Failure trying to activate Catenis client.', err);
-                    throw new Meteor.Error('client.activate.failure', 'Failure trying to activate Catenis client: ' + err.toString());
+                    throw new Meteor.Error('client.activate.failure', 'Failure trying to activate Catenis client');
+                }
+
+                // Set client user's e-mail address as verified
+                try {
+                    client.setEmailVerified();
+                }
+                catch (err) {
+                    // Error trying to set client account e-mail address as verified.
+                    //  Log error and throw exception
+                    Catenis.logger.ERROR('Failure trying to set client account e-mail address as verified.', err);
+                    throw new Meteor.Error('client.activate.failure', 'Failure trying to set client account e-mail address as verified');
                 }
             }
             else {
-                // User not logged in or not a system administrator.
+                // User not logged in or not a Catenis client.
                 //  Throw exception
-                throw new Meteor.Error('ctn_admin_no_permission', 'No permission; must be logged in as a system administrator to perform this task');
+                throw new Meteor.Error('ctn_client_no_permission', 'No permission; must be logged in as a Catenis client to perform this task');
+            }
+        },
+        // Note: this method is expected to be called by a self-registered user, right after its successful e-mail address verification
+        createNewClientForUser: function () {
+            if (Roles.userIsInRole(this.userId, UserRoles.selfRegistered)) {
+                AccountRegistration.newClient(this.userId);
+            }
+            else {
+                // User not logged in or not a self-registered user.
+                //  Throw exception
+                throw new Meteor.Error('ctn_user_no_permission', 'No permission; must be logged in as a self-registered user');
             }
         },
         sendEnrollmentEmail: function (client_id){

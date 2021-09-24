@@ -1,14 +1,20 @@
 <template name="login">
+{{#unless isDefined enableSelfRegistration}}
+    <p style="color:lightgray; margin:1em 1em">Loading...</p>
+{{else}}
     <div class="container">
         <div class="row paddingTop90px">
             <div class="col-md-6 col-md-offset-3">
                 <div class="panel panel-login">
+                {{#unless clearForm}}
                     <div class="panel-body" style="margin-bottom:1rem">
                         <div class="row">
                             <div class="col-lg-12">
                                 <!--this is where the page title goes-->
                                 <h2>{{atFormTitle}}</h2>
-                                <div class="instruction">{{atFormInstruction}}</div>
+                                {{#unless verificationEmailSent}}
+                                    <div class="instruction">{{atFormInstruction}}</div>
+                                {{/unless}}
                                 {{>atForm}}
                             </div>
                         </div>
@@ -19,6 +25,11 @@
 
                             <!--1. Login page-->
                             {{#if (equals atFormTitle "SIGN IN")}}
+                                <div class="col-xs-6 tabs">
+                                    {{#if enableSelfRegistration}}
+                                    <div class="bottom-line"><a href="#" id="register-form-link">Register</a></div>
+                                    {{/if}}
+                                </div>
                                 <div class="col-xs-6 tabs">
                                     <div class="bottom-line"><a href="#" id="forgotPwd-form-link">Forgot password?</a></div>
                                 </div>
@@ -37,11 +48,39 @@
                                     <div class="bottom-line"><a href="#" id="cancel-2fa-link">Cancel</a></div>
                                 </div>
                             {{/if}}
+
+                            <!--4. Account registration page-->
+                            {{#if (equals atFormTitle "ACCOUNT REGISTRATION")}}
+                                <div class="col-xs-6 tabs">
+                                    <div class="bottom-line"><a href="#" id="login-form-link">Sign in</a></div>
+                                </div>
+                                {{#if verificationEmailSent}}
+                                <div class="col-xs-6 tabs">
+                                    <div class="bottom-line"><a href="#" id="resend-verify_email-form-link">Resend Verification Email</a></div>
+                                </div>
+                                {{/if}}
+                            {{/if}}
+
+                            <!--5. Resend verification e-mail page-->
+                            {{#if (equals atFormTitle "VERIFICATION EMAIL")}}
+                                <div class="col-xs-6 tabs">
+                                    <div class="bottom-line"><a href="#" id="login-form-link">Sign in</a></div>
+                                </div>
+                            {{/if}}
+
+                            <!--6. E-mail verification result page-->
+                            {{#if (equals atFormTitle "EMAIL VERIFICATION")}}
+                                <div class="col-xs-6 tabs">
+                                    <div class="bottom-line"><a href="#" id="login-form-link">Sign in</a></div>
+                                </div>
+                            {{/if}}
                             <!--here to add more pages-->
                         </div>
                     </div>
+                {{/unless}}
                 </div>
             </div>
         </div>
     </div>
+{{/unless}}
 </template>

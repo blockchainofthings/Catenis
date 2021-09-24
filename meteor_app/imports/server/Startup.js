@@ -101,6 +101,8 @@ import { ExportedAsset } from './ExportedAsset';
 import { AssetMigration } from './AssetMigration';
 import { ClientForeignBlockchainUI } from './clientUI/ClientForeignBlockchainsUI';
 import { LowServAccBalanceEmailNotify } from './LowServAccBalanceEmailNotify';
+import { AccountRegistrationEmailNotify } from './AccountRegistrationEmailNotify';
+import { CrmIntegration } from './CrmIntegration';
 // TEST - begin
 //import { TestCatenisColoredCoins } from './test/TestCatenisColoredCoins';
 // TEST - end
@@ -172,6 +174,7 @@ Meteor.startup(function () {
             LicenseExpireRemindEmailNotify.initialize();
             DevicesDisableEmailNotify.initialize();
             LowServAccBalanceEmailNotify.initialize();
+            AccountRegistrationEmailNotify.initialize();
             MalleabilityEventEmitter.initialize();
             BitcoinCore.initialize();
             BitcoinFees.initialize();
@@ -220,6 +223,7 @@ Meteor.startup(function () {
             ReadConfirmation.initialize();
             ReceiveAsset.initialize();
             SpendServiceCredit.initialize();
+            CrmIntegration.initialize();
             TransactionMonitor.initialize();
             CatenisOffChainMonitor.initialize();
             ReCaptcha.initialize();

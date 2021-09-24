@@ -1134,6 +1134,11 @@ Client.prototype.replaceUserAccountEmail = function (newEmail) {
             throw new Meteor.Error('ctn_client_add_email_error', util.format('Error adding new e-mail address to client\'s user account (user_id: %s)', this.user_id), err.stack);
         }
 
+        // Mark the new e-mail address as already verified
+        // TODO: in the future, we might instead require that the user go through the process of verifying the
+        //  new e-mail address
+        this.setEmailVerified();
+
         try {
             // Now, remove previously existing e-mail address
             Accounts.removeEmail(this.user_id, existingEmail);
@@ -1147,6 +1152,28 @@ Client.prototype.replaceUserAccountEmail = function (newEmail) {
 
         // Reload client user
         getUser.call(this);
+    }
+};
+
+/**
+ * Mark all client's user e-mail addresses as verified
+ */
+Client.prototype.setEmailVerified = function () {
+    try {
+        Meteor.users.update({
+            _id: this.user_id,
+            'emails.verified': false
+        }, {
+            $set: {
+                'emails.$.verified': true
+            }
+        });
+    }
+    catch (err) {
+        // Error updating user doc/rec to set e-mail addresses as verified.
+        //  Log error and throw exception
+        Catenis.logger.ERROR('Error trying to update user e-mail address verified state (doc_id: %s).', this.user_id, err);
+        throw new Meteor.Error('ctn_client_user_update_error', `Error trying to update user e-mail address verified state (doc_id: ${this.user_id})`, err.stack);
     }
 };
 
@@ -1794,6 +1821,70 @@ Client.createNewUserForClient = function (username, email, clientName) {
     Roles.addUsersToRoles(user_id, cfgSettings.clientRole);
 
     return user_id;
+};
+
+/**
+ * Fix an existing user doc/rec to prepare it to be assigned to a client.
+ * @param {string} user_id User database doc/rec ID
+ * @param {string} [clientName] The client name. If that name contains the text '{!username}' in it, it will be replaced
+ *                               with the actual user's username
+ * @return {{clientName: string, oldProfile: Object}}
+ */
+Client.fixUserForClient = function (user_id, clientName) {
+    // Make sure that user ID is valid
+    const docUser = Meteor.users.findOne({
+        _id: user_id
+    }, {
+        fields: {
+            username: 1,
+            profile: 1,
+            'catenis.client_id': 1
+        }
+    });
+
+    if (docUser === undefined) {
+        // ID passed is not from a valid user. Throw exception
+        throw new Meteor.Error('ctn_client_invalid_user_id', `No user found with the specified user ID: ${user_id}`);
+    }
+    else if (docUser.catenis !== undefined && docUser.catenis.client_id !== undefined) {
+        // User already assigned to a client. Throw exception
+        throw new Meteor.Error('ctn_client_user_already_assigned', `User (Id: ${user_id}) already assigned to a client`);
+    }
+
+    // Fix client name
+    if (clientName) {
+        clientName = clientName.replace('{!username}', docUser.username);
+    }
+
+    // Update user's profile
+    const oldProfile = docUser.profile;
+
+    try {
+        Meteor.users.update({
+            _id: user_id
+        }, {
+            $set: {
+                profile: {
+                    name: cfgSettings.userNamePrefix + (clientName ? ': ' + clientName : '')
+                }
+            }
+        })
+    }
+    catch (err) {
+        // Log error and throw exception
+        Catenis.logger.ERROR('Error updating user to fix it for a client.', err);
+        throw new Meteor.Error('ctn_client_update_user_error', `Error updating user (Id: ${user_id}) to fix it for a client`);
+    }
+
+    // Set user role
+    if (!Roles.userIsInRole(user_id, cfgSettings.clientRole)) {
+        Roles.addUsersToRoles(user_id, cfgSettings.clientRole);
+    }
+
+    return {
+        clientName,
+        oldProfile
+    };
 };
 
 Client.getClientByClientId = function (clientId, includeDeleted = true) {

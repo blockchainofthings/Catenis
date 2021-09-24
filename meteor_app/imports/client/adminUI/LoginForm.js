@@ -23,7 +23,7 @@ import { ReactiveDict } from 'meteor/reactive-dict';
 import { Meteor } from "meteor/meteor";
 
 
-// Module code
+// Definition of module (private) functions
 //
 
 function checkLoadReCaptchaApi() {
@@ -32,12 +32,17 @@ function checkLoadReCaptchaApi() {
     }
 }
 
+
+// Module code
+//
+
 Template.atPwdForm.onCreated(function () {
     this.state = new ReactiveDict();
 
     this.state.set('rendered', false);
-    this.state.set('useReCaptcha', false);
+    this.state.set('useReCaptcha', true);
 
+    // Retrieve setting for using reCAPTCHA on login form
     Meteor.call('useReCaptchaForLogin', (error, useReCaptcha) => {
         if (error) {
             console.log('Error calling \'useReCaptchaForLogin\' remote method: ' + error);
@@ -63,6 +68,15 @@ Template.atPwdForm.onRendered(function () {
 Template.atPwdForm.helpers({
     useReCaptcha() {
         return Template.instance().state.get('useReCaptcha');
+    },
+    verificationEmailSent() {
+        return AccountsTemplates.state.form.get("verifyEmailSent");
+    },
+    formDisabled() {
+        return AccountsTemplates.disabled();
+    },
+    showWaitNotice() {
+        return AccountsTemplates.disabled() && AccountsTemplates.getState() === 'signUp';
     }
 });
 

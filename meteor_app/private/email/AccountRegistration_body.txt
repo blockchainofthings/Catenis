@@ -1,0 +1,15 @@
+Welcome!
+
+Your Catenis Subscription Plan client account has been successfully created.
+
+Account information:
+
+  Username: {!username} *
+
+  Account number: {!accountNumber}
+
+  License type: {!licenseType}
+
+* The username is case-sensitive and cannot be changed.
+
+The Blockchain of Things team

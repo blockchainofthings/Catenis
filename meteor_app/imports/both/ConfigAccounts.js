@@ -12,7 +12,7 @@
 // Internal node modules
 //import util from 'util';
 // Third-party node modules
-//import config from 'config';
+import moment from 'moment-timezone';
 // Meteor packages
 import { Meteor } from 'meteor/meteor';
 import { Accounts } from 'meteor/accounts-base';
@@ -40,34 +40,71 @@ Accounts.config({
     loginExpirationInDays: 1,
     passwordResetTokenExpirationInDays: 3,
     passwordEnrollTokenExpirationInDays: 7,
-    ambiguousErrorMessages: true
+    ambiguousErrorMessages: false
 });
 
 // Change accounts templates settings
+const emailField = AccountsTemplates.removeField('email');
 const pwdField = AccountsTemplates.removeField('password');
 
-AccountsTemplates.addFields([{
-    _id: 'username',
-    type: 'text',
-    displayName: 'Username',
-    required: true,
-    minLength: 5,
-}, pwdField, {
-    _id: 'verify_code',
-    type: 'text',
-    displayName: 'Verification code',
-    placeholder: 'Verification code',
-    required: false,
-    visible: ['signIn', 'resetPwd']
-}, {
-    _id: 'user_id',
-    type: 'hidden',
-    visible: ['signIn', 'resetPwd']
-}, {
-    _id: 'pwd_hash_json',
-    type: 'hidden',
-    visible: ['resetPwd']
-}]);
+AccountsTemplates.addFields([
+    {
+        _id: 'first_name',
+        type: 'text',
+        displayName: 'First name',
+        placeholder: 'First name',
+        required: false,
+    },
+    {
+        _id: 'last_name',
+        type: 'text',
+        displayName: 'Last name',
+        placeholder: 'Last name',
+        required: true,
+    },
+    {
+        _id: 'company',
+        type: 'text',
+        displayName: 'Company',
+        required: false,
+    },
+    {
+        _id: 'username',
+        type: 'text',
+        displayName: 'Username',
+        required: true,
+        minLength: 5,
+    },
+    emailField,
+    {
+        _id: 'phone',
+        type: 'text',
+        displayName: 'Phone',
+        placeholder: 'Phone',
+        required: false,
+        minLength: 3,
+        maxLength: 24
+    },
+    pwdField,
+    {
+        _id: 'verify_code',
+        type: 'text',
+        displayName: 'Verification code',
+        placeholder: 'Verification code',
+        required: false,
+        visible: ['signIn', 'resetPwd']
+    },
+    {
+        _id: 'user_id',
+        type: 'hidden',
+        visible: ['signIn', 'resetPwd']
+    },
+    {
+        _id: 'pwd_hash_json',
+        type: 'hidden',
+        visible: ['resetPwd']
+    }
+]);
 
 AccountsTemplates.configure({
     loginFunc: twoFactorAuthLogin,
@@ -79,8 +116,10 @@ AccountsTemplates.configure({
 
     enablePasswordChange: true,
     focusFirstInput: true,
-    forbidClientAccountCreation: true,
+    forbidClientAccountCreation: false,
     overrideLoginErrors: true,
+    enforceEmailVerification: true,
+    sendVerificationEmail: true,
 
     hideSignInLink: true,
     hideSignUpLink: true,
@@ -90,12 +129,16 @@ AccountsTemplates.configure({
 
     onSubmitHook: onSubmitFunc,
     onLogoutHook: onLogout,
+    preSignUpHook: onSignUp,
+    postSignUpHook: onPostSignUp,
 
     texts: {
         title: {
             // Get rid of their titles
             signIn: '',
             forgotPwd: '',
+            signUp: '',
+            resendVerificationEmail: '',
             enrollAccount: '',
             resetPwd: ''
         },
@@ -104,10 +147,16 @@ AccountsTemplates.configure({
             enrollAccount: 'Activate Account',
             forgotPwd: 'Send Email',
             resetPwd: 'Reset Password',
-            signIn: 'Sign In'
+            signIn: 'Sign In',
+            signUp: 'Create Account',
+            resendVerificationEmail: 'Resend Email'
         },
         info: {
+            signUpVerifyEmail: 'Pending email verification. To complete the registration, please check your email and follow the instructions.',
             pwdSet: 'Password set'
+        },
+        errors: {
+            loginForbidden: 'Something went wrong. Please check your credentials.'
         }
     }
 });
@@ -132,6 +181,24 @@ AccountsTemplates.configureRoute('enrollAccount', {
         redirectHome();
     }
 });
+AccountsTemplates.configureRoute('verifyEmail', {
+    template: 'login',
+    redirect: function () {
+        redirectHome();
+    }
+});
+
+// Set up 'signUp' route only if required
+if (Meteor.settings.public.catenis && Meteor.settings.public.catenis.enableSelfRegistration) {
+    // Set up signUp route
+    AccountsTemplates.configureRoute('signUp', {
+        path: '/register',
+        template: 'login',
+        redirect: function () {
+            redirectHome();
+        }
+    });
+}
 
 if (Meteor.isClient) {
     Meteor.startup(function () {
@@ -195,20 +262,12 @@ function monitorDisabled() {
             // Enable/disable form fields as the disabled state changes
             const disabled = !!AccountsTemplates.disabled();
 
-            $('#at-field-username_and_email')[0].disabled = disabled;
-            $('#at-field-password')[0].disabled = disabled;
+            $('#at-field-username_and_email').prop('disabled', disabled);
+            $('#at-field-password').prop('disabled', disabled);
+
+            monitoringDisabled = true;
         });
-
-        monitoringDisabled = true;
     }
-}
-
-function returnLoginError(error) {
-    if (!error) {
-        error = new Meteor.Error(403, 'Something went wrong. Please check your credentials.');
-    }
-
-    AccountsTemplates.submitCallback(error, 'singIn');
 }
 
 function setUpTwoFactorAuthentication(userId) {
@@ -232,111 +291,156 @@ function setUpTwoFactorAuthentication(userId) {
 
 let loginCredentials;
 
+class ProcReCaptchaCallback {
+    constructor() {
+        this.callbackByState = new Map();
+    }
+
+    get callback() {
+        return this.callbackByState.get(AccountsTemplates.getState());
+    }
+
+    set callback(func) {
+        this.callbackByState.set(AccountsTemplates.getState(), func);
+    }
+}
+
+const procReCaptchaCb = new ProcReCaptchaCallback();
+
+function processReCaptcha(callback) {
+    // Save callback.
+    //  NOTE: this should be used whenever retrieving the callback from a closure (inner
+    //      callback), so the correct callback, according to the current AccountsTemplate
+    //      sate, is executed
+    procReCaptchaCb.callback = callback;
+
+    function processReCaptchaResponse(token) {
+        const atState = AccountsTemplates.getState();
+
+        switch (atState) {
+            case 'signIn': {
+                // Call custom reCAPTCHA login method
+                Accounts.callLoginMethod({
+                    methodArguments: [{
+                        userId: loginCredentials.userId,
+                        pswHash: Accounts._hashPassword(loginCredentials.password),
+                        reCaptchaToken: token
+                    }],
+                    userCallback: (error) => {
+                        if (error && (error instanceof Meteor.Error) && error.error === 'challenge-user') {
+                            // Error indicating that user should be challenged
+                            const challengeInfo = JSON.parse(error.details);
+
+                            if (challengeInfo.challengeType === LoginChallenge.type.twoFAuth) {
+                                // Challenge user with two-factor authentication
+                                setUpTwoFactorAuthentication(challengeInfo.userId);
+                            }
+                            else {
+                                // Unexpected login challenge type. Return error
+                                (procReCaptchaCb.callback)(new Error('Unexpected login challenge type processing reCAPTCHA response: ' + challengeInfo.challengeType));
+                            }
+
+                            return;
+                        }
+
+                        // Pass back return from regular sign-in (with no two-factory authentication)
+                        (procReCaptchaCb.callback)(null, error);
+                    }
+                });
+
+                // Clear login credentials
+                loginCredentials = undefined;
+
+                break;
+            }
+
+            case 'signUp': {
+                // Verify reCAPTCHA
+                Meteor.call('verifyReCaptcha', token, (error, result) => {
+                    if (error) {
+                        // Return error
+                        (procReCaptchaCb.callback)(new Error('Error calling \'verifyReCaptcha\' remote method: ' + error.toString()));
+                    }
+                    else {
+                        // Pass back verification result
+                        (procReCaptchaCb.callback)(null, result);
+                    }
+                });
+
+                break;
+            }
+
+            default:
+                // Return error
+                callback(new Error('Unexpected AccountsTemplate state while processing reCAPTCHA response: ' + atState));
+        }
+    }
+
+    function activateReCaptcha() {
+        grecaptcha.execute().catch((err) => {
+            // Return error
+            (procReCaptchaCb.callback)(new Error('Error trying to execute reCAPTCHA: ' + err.toString()));
+        });
+    }
+
+    function loadReCaptcha(siteKey) {
+        // Render reCAPTCHA
+        grecaptcha.render('ctn-login-recaptcha', {
+            sitekey: siteKey,
+            size: 'invisible',
+            callback: processReCaptchaResponse
+        });
+
+        activateReCaptcha();
+    }
+
+    let reloadReCaptcha = false;
+
+    try {
+        grecaptcha.reset();
+    }
+    catch (err) {
+        if ((err instanceof Error) && err.message === 'No reCAPTCHA clients exist.') {
+            reloadReCaptcha = true;
+        }
+        else {
+            // Return error
+            callback(new Error('Error resetting reCAPTCHA: ' + err.toString()));
+            return;
+        }
+    }
+
+    if (reloadReCaptcha) {
+        if (!AccountsTemplates.state.form.get('reCaptchaSiteKey')) {
+            // Retrieve reCAPTCHA site key
+            Meteor.call('getReCaptchaSiteKey', (error, siteKey) => {
+                if (error) {
+                    // Return error
+                    (procReCaptchaCb.callback)(new Error('Error calling \'getReCaptchaSiteKey\' remote method: ' + error.toString()));
+                }
+                else {
+                    // Save reCAPTCHA site key, and load reCAPTCHA
+                    AccountsTemplates.state.form.set('reCaptchaSiteKey', siteKey);
+                    loadReCaptcha(siteKey);
+                }
+            });
+        }
+        else {
+            // Load reCAPTCHA
+            loadReCaptcha(AccountsTemplates.state.form.get('reCaptchaSiteKey'));
+        }
+    }
+    else {
+        activateReCaptcha();
+    }
+}
+
 function twoFactorAuthLogin(user, password, formData) {
     monitorState();
     monitorDisabled();
 
     if (!formData.user_id) {
-        // User logging in
-        function processReCaptchaResponse(token) {
-            // Call custom reCAPTCHA login method
-            Accounts.callLoginMethod({
-                methodArguments: [{
-                    userId: loginCredentials.userId,
-                    pswHash: Accounts._hashPassword(loginCredentials.password),
-                    reCaptchaToken: token
-                }],
-                userCallback: (error) => {
-                    if (error && (error instanceof Meteor.Error) && error.error === 'challenge-user') {
-                        // Error indicating that user should be challenged
-                        const challengeInfo = JSON.parse(error.details);
-
-                        if (challengeInfo.challengeType === LoginChallenge.type.twoFAuth) {
-                            // Challenge user with two-factor authentication
-                            setUpTwoFactorAuthentication(challengeInfo.userId);
-
-                            return;
-                        }
-                        else {
-                            // Unexpected login challenge type
-                            console.error('Unexpected login challenge type processing reCAPTCHA response');
-                            error = new Meteor.Error(500, 'Internal server error');
-                        }
-                    }
-
-                    // Process return from regular sign-in (with no two-factory authentication)
-                    AccountsTemplates.submitCallback(error, 'singIn');
-                }
-            });
-
-            // Clear login credentials
-            loginCredentials = undefined;
-        }
-
-        function activateReCaptcha() {
-            grecaptcha.execute().catch((err) => {
-                console.error('Error trying to execute reCAPTCHA:', err);
-                // Return error
-                returnLoginError();
-            });
-        }
-
-        function processReCaptcha() {
-            // reCAPTCHA is enabled for login
-            let reloadReCaptcha = false;
-
-            try {
-                grecaptcha.reset();
-            }
-            catch (err) {
-                if ((err instanceof Error) && err.message === 'No reCAPTCHA clients exist.') {
-                    reloadReCaptcha = true;
-                }
-                else {
-                    console.error('Error resetting reCAPTCHA:', err);
-                    // Return error
-                    returnLoginError();
-                }
-            }
-
-            if (reloadReCaptcha) {
-                function loadReCaptcha(siteKey) {
-                    // Render reCAPTCHA
-                    grecaptcha.render('ctn-login-recaptcha', {
-                        sitekey: siteKey,
-                        size: 'invisible',
-                        callback: processReCaptchaResponse
-                    });
-
-                    activateReCaptcha();
-                }
-
-                if (!AccountsTemplates.state.form.get('reCaptchaSiteKey')) {
-                    // Retrieve reCAPTCHA site key
-                    Meteor.call('getReCaptchaSiteKey', (error, siteKey) => {
-                        if (error) {
-                            console.error('Error calling \'getReCaptchaSiteKey\' remote method:', error);
-                            // Return error
-                            returnLoginError();
-                        }
-                        else {
-                            // Save reCAPTCHA site key, and load reCAPTCHA
-                            AccountsTemplates.state.form.set('reCaptchaSiteKey', siteKey);
-                            loadReCaptcha(siteKey);
-                        }
-                    });
-                }
-                else {
-                    // Load reCAPTCHA
-                    loadReCaptcha(AccountsTemplates.state.form.get('reCaptchaSiteKey'));
-                }
-            }
-            else {
-                activateReCaptcha();
-            }
-        }
-
-        // Disable form
+        // User logging in. Disable form
         AccountsTemplates.setDisabled(true);
 
         Meteor.loginWithPassword(user, password, (error) => {
@@ -353,7 +457,15 @@ function twoFactorAuthLogin(user, password, formData) {
                         password: password
                     };
 
-                    processReCaptcha();
+                    processReCaptcha((error, result) => {
+                        if (error) {
+                            console.error(error);
+                            AccountsTemplates.submitCallback(new Meteor.Error(403, 'End user not successfully verified. Form submission blocked.'), 'signIn');
+                        }
+                        else {
+                            AccountsTemplates.submitCallback(result, 'signIn');
+                        }
+                    });
                 }
                 else if (challengeInfo.challengeType === LoginChallenge.type.twoFAuth) {
                     // Challenge user with two-factor authentication
@@ -364,7 +476,7 @@ function twoFactorAuthLogin(user, password, formData) {
             }
 
             // Process return from regular sign-in (with no user challenge)
-            AccountsTemplates.submitCallback(error, 'singIn');
+            AccountsTemplates.submitCallback(error, 'signIn');
         });
     }
     else if (formData.verify_code) {
@@ -396,7 +508,7 @@ function twoFactorAuthLogin(user, password, formData) {
                 }
 
                 // Process return from login (with two-factor authentication)
-                AccountsTemplates.submitCallback(error, 'singIn');
+                AccountsTemplates.submitCallback(error, 'signIn');
             }
         });
     }
@@ -515,11 +627,21 @@ function twoFactorAuthResetPassword(token, newPassword, formData) {
 //  Arguments:
 //   error: [Object] - Error object containing information about the error that took place, if any
 //   state: [String] - Current internal state of accounts template. Valid values: 'changePwd', 'enrollAccount', 'forgotPwd'
-//                      'resetPwd', 'signIn', 'signUp' (not currently in use), 'verifyEmail', 'resendVerificationEmail'
+//                      'resetPwd', 'signIn', 'signUp', 'verifyEmail', 'resendVerificationEmail'
 function onSubmitFunc(error, state) {
     //runs on successful at-pwd-form submit. Use this to allow for client activation and banning disabled users
     if (!error) {
-        if (state === 'enrollAccount') {
+        if (state === 'signUp') {
+            // Indicate that verification e-mail has been sent
+            AccountsTemplates.state.form.set("verifyEmailSent", true);
+
+            // Make sure that registration form is disabled
+            AccountsTemplates.setDisabled(true);
+
+            // Enable form fields
+            checkDisableFields(false);
+        }
+        else if (state === 'enrollAccount') {
             // Client account successfully enrolled. Activate client
             Meteor.call('activateClient', Meteor.userId(), (error) => {
                 if (error) {
@@ -528,17 +650,31 @@ function onSubmitFunc(error, state) {
                 }
             });
         }
+        else if (state === 'verifyEmail') {
+            // Email successfully verified
+            Meteor.call('createNewClientForUser', Meteor.userId(), (error) => {
+                if (error) {
+                    console.error('Error calling \'createNewClientForUser\' remote method:', error);
+                }
+            });
+        }
     }
     else {
         // Error
+        state = state || AccountsTemplates.getState();
+
         if (state === 'signIn') {
             // Make sure that login form is enabled
             AccountsTemplates.setDisabled(false);
         }
+        else if (state === 'signUp') {
+            // Enable form fields
+            checkDisableFields(false);
+        }
     }
 }
 
-function redirectHome() {
+export function redirectHome() {
     const user = Meteor.user();
     const user_id = user ? user._id : Meteor.userId();
 
@@ -557,4 +693,85 @@ function redirectHome() {
 function onLogout() {
     AccountsTemplates.setState('signIn');
     FlowRouter.go('/login');
+}
+
+function checkDisableFields(disable) {
+    const state = AccountsTemplates.getState();
+
+    for (const field of AccountsTemplates.getFields()) {
+        if (field.visible.includes(state)) {
+            $('#at-field-' + field._id).prop('disabled', disable);
+        }
+    }
+}
+
+function onSignUp(password, options, callback) {
+    // Add local time zone to options.
+    //  NOTE: we do it right now to avoid doing it in a closure (inner callback) and
+    //      incorrectly adding it to the wrong options object
+    options.time_zone = moment.tz.guess();
+
+    // Make sure that account registration is enabled
+    Meteor.call('checkEnableSelfRegistration', (err, isSet) => {
+        if (err) {
+            console.log('Error calling \'checkEnableSelfRegistration\' remote procedure: ' + err);
+
+            // Pass error back
+            callback(new Meteor.Error(403, 'Something went wrong. Account registration is not enabled.'));
+        }
+        else if (isSet) {
+            // Account registration enabled. Proceed with regular processing...
+
+            // Disable form fields
+            checkDisableFields(true);
+
+            // Check if using reCAPTCHA
+            Meteor.call('useReCaptchaForLogin', (error, useReCaptcha) => {
+                if (error) {
+                    console.log('Error calling \'useReCaptchaForLogin\' remote method: ' + error);
+
+                    // Pass error back
+                    callback(new Meteor.Error(403, 'Something went wrong. Form submission blocked.'));
+                }
+                else if (useReCaptcha) {
+                    // reCAPTCHA is in use
+                    processReCaptcha((error, result) => {
+                        if (error || !result.success) {
+                            // Error while processing reCAPTCHA or user not successfully verified
+                            if (error) {
+                                console.error(error);
+                            }
+
+                            // Pass error back
+                            callback(new Meteor.Error(403, 'End user not successfully verified. Form submission blocked.'));
+                        }
+                        else {
+                            // User successfully verified. Pass back success condition
+                            callback(null);
+                        }
+                    });
+                }
+                else {
+                    // reCAPTCHA not in use. Just pass back success condition
+                    callback(null);
+                }
+            });
+        }
+        else {
+            // Pass error back
+            callback(new Meteor.Error(403, 'Account registration is not enabled.'));
+        }
+    });
+}
+
+/**
+ * Note: this function runs on the SERVER
+ * @param userId
+ * @param info
+ */
+function onPostSignUp(userId, info) {
+    if (Meteor.isServer) {
+        import('../server/AccountRegistration.js')
+        .then(({AccountRegistration}) => AccountRegistration.setSelfRegisteredUser(userId));
+    }
 }

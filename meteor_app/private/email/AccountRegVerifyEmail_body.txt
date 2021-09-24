@@ -1,0 +1,7 @@
+Dear customer,
+
+Please follow the link below to verify your email address and complete your Catenis registration (username: {!username}).
+
+{!url}
+
+The Blockchain of Things team

@@ -15,6 +15,7 @@
 //import config from 'config';
 // Meteor packages
 import { Meteor } from "meteor/meteor";
+import { DDP } from 'meteor/ddp-client'
 
 // References code in other (Catenis) modules
 import { Catenis } from '../Catenis';
@@ -60,6 +61,27 @@ LoginUI.initialize = function () {
         },
         useReCaptchaForLogin: function () {
             return Catenis.reCaptcha.useForLogin;
+        },
+        verifyReCaptcha: function (token) {
+            try {
+                // Try to retrieve client IP address
+                const currentMethodInvocation = DDP._CurrentMethodInvocation.get();
+                let clientIP;
+
+                if (currentMethodInvocation) {
+                    clientIP = currentMethodInvocation.connection.clientAddress;
+                }
+
+                // Verify reCAPTCHA response
+                return Catenis.reCaptcha.verify(token, clientIP);
+            }
+            catch (err) {
+                Catenis.logger.ERROR('Failure while verifying reCAPTCHA.', err);
+                throw new Meteor.Error('login.verifyReCaptcha', 'Failure while verifying reCAPTCHA');
+            }
+        },
+        checkEnableSelfRegistration: function () {
+            return Catenis.application.enableSelfRegistration;
         }
     });
 
