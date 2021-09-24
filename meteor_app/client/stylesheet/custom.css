@@ -1017,3 +1017,8 @@ ul.recoveyCode {
 .pointer-cursor {
     cursor: default;
 }
+
+h2.notFound {
+    color: #66cc33;
+    padding-top: 2em;
+}

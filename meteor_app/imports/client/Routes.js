@@ -19,6 +19,7 @@ import { FlowRouter } from 'meteor/kadira:flow-router';
 import { BlazeLayout } from 'meteor/kadira:blaze-layout';
 
 // Import templates
+import './adminUI/NotFoundLayout.js';
 import './adminUI/LoginLayout.js';
 import './adminUI/AdminLayout.js';
 import './clientUI/ClientLayout.js';
@@ -54,6 +55,13 @@ function parseBoolean(strVal) {
 //
 
 BlazeLayout.setRoot('body');
+
+// Default page for invalid URLs
+FlowRouter.notFound = {
+    action: function () {
+        BlazeLayout.render('notFoundLayout');
+    }
+};
 
 // Note: special routes for accounts templates configured at ConfigAccount.js module (via AccountsTemplates.configureRoutes)
 //      since that code needs to be rum on both client and server

@@ -1,0 +1,17 @@
+<template name="notFoundLayout">
+{{#unless appEnvironment}}
+    <p style="color:lightgray; margin:1em 1em">Loading...</p>
+{{else}}
+    {{#if isNonProdEnvironment appEnvironment}}
+        <div class="envHeader">{{capitalize appEnvironment}}</div>
+    {{/if}}
+    <div style="position:relative; top:30px; text-align:center">
+        <a id="lnkCtnTitle" href="#" style="text-decoration:none">
+            <h1>Catenis</h1>
+        </a>
+    </div>
+    <div style="text-align:center">
+        <h2 class="notFound">Sorry... Page not found!</h2>
+    </div>
+{{/unless}}
+</template>
