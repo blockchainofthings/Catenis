@@ -644,7 +644,7 @@ CatenisNode.prototype.getIdentityInfo = function () {
 //      email: [String], - (optional) Email address for the new user to be created
 //      sendEnrollmentEmail: [Boolean], - (optional, default: false) Indicate that enrollment e-mail should be sent after client is successfully created
 //      timeZone: [String], - (optional, default:server time zone) The name of the time zone to be used by the client
-//      billingMode: [String], - (optional, default: 'pre-paid') Identifies that billing mode to be used for this client. The value of one of the properties of Client.billingMode object
+//      billingMode: [String], - (optional, default: 'pre-paid') Identifies the billing mode to be used for this client. The value of one of the properties of Client.billingMode object
 //      deviceDefaultRightsByEvent: [Object] - (optional) Default rights to be used when creating new devices. Object the keys of which should be the defined permission event names.
 //                                           -  The value for each event name key should be a rights object as defined for the Permission.setRights method
 //    }
