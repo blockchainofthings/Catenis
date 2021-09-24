@@ -95,7 +95,7 @@ Accounts.validateLoginAttempt((attempt) => {
     else if (attempt.type === 're-captcha') {
         if (attempt.allowed) {
             // Save ID of user trying to log in
-            userId = attempt.user._id;
+            let userId = attempt.user._id;
 
             // Check if two-factor authentication is enabled for user
             const twoFA = new TwoFactorAuthentication(userId);
