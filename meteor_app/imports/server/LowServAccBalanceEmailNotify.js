@@ -66,8 +66,8 @@ export class LowServAccBalanceEmailNotify {
         }
         else {
             // No client or no client e-mail address to send notification. Log warning condition
-            Catenis.logger.WARN('No client or no client e-mail address to send devices disabled e-mail notification', {
-                data: data
+            Catenis.logger.WARN('No client or no client e-mail address to send low service account balance e-mail notification', {
+                client
             });
         }
     }
