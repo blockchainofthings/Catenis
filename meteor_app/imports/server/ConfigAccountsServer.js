@@ -113,7 +113,7 @@ Accounts.validateLoginAttempt((attempt) => {
         }
     }
 
-    return true;
+    return attempt.allowed;
 });
 
 // Register custom login method to handle Google reCAPTCHA
