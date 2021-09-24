@@ -1745,7 +1745,7 @@ Client.initialize = function () {
     Catenis.logger.TRACE('Client initialization');
 };
 
-Client.createNewUserForClient = function (username, email, deviceName) {
+Client.createNewUserForClient = function (username, email, clientName) {
     const opts = {};
 
     if (typeof username === 'string' && username.length > 0) {
@@ -1757,7 +1757,7 @@ Client.createNewUserForClient = function (username, email, deviceName) {
     }
 
     opts.profile = {
-        name: cfgSettings.userNamePrefix + (typeof deviceName === 'string' && deviceName.length > 0 ? ': ' + deviceName : '')
+        name: cfgSettings.userNamePrefix + (typeof clientName === 'string' && clientName.length > 0 ? ': ' + clientName : '')
     };
 
     let user_id;
