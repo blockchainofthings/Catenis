@@ -78,7 +78,6 @@ export class CrmIntegration {
                     );
             }
 
-            Catenis.logger.DEBUG('Form with data to pass to CRM:', formData);
             got.post(this.formUrl, {
                 ...this.callOptions,
                 form: formData
