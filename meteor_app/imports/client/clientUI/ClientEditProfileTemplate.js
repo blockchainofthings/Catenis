@@ -39,6 +39,7 @@ function loadClientData(template) {
     template.state.set('clientFirstName', client.props.firstName);
     template.state.set('clientLastName', client.props.lastName);
     template.state.set('clientCompany', client.props.company);
+    template.state.set('clientPhone', client.props.phone);
     template.state.set('clientTimeZone', client.timeZone);
 
     const clientUser = Meteor.users.findOne({_id: client.user_id});
@@ -52,7 +53,7 @@ function validateFormData(form, errMsgs, template) {
 
     clientInfo.firstName = form.firstName.value ? form.firstName.value.trim() : undefined;
     clientInfo.lastName = form.lastName.value ? form.lastName.value.trim() : undefined;
-    clientInfo.company= form.companyName.value ? form.companyName.value.trim() : undefined;
+    clientInfo.company = form.companyName.value ? form.companyName.value.trim() : undefined;
 
     if ((!clientInfo.firstName || clientInfo.firstName.length === 0) && (!clientInfo.lastName
         || clientInfo.lastName.length === 0) && (!clientInfo.company || clientInfo.company.length === 0)) {
@@ -75,6 +76,7 @@ function validateFormData(form, errMsgs, template) {
         }
     }
 
+    clientInfo.phone = form.phone.value ? form.phone.value.trim() : undefined;
     clientInfo.timeZone = form.timeZone.value;
 
     return !hasError ? clientInfo : undefined;
@@ -102,6 +104,7 @@ Template.editClientProfile.onCreated(function () {
     this.state.set('clientLastName', undefined);
     this.state.set('clientCompany', undefined);
     this.state.set('clientEmail', undefined);
+    this.state.set('clientPhone', undefined);
     this.state.set('clientTimeZone', undefined);
 
     // Subscribe to receive database docs/recs updates
@@ -168,6 +171,10 @@ Template.editClientProfile.events({
         template.state.set('emailConfirmed', false);
     },
     'change #txtCompanyName'(event, template) {
+        // Indicate that form field has changed
+        template.state.set('fieldsChanged', true);
+    },
+    'change #txtPhone'(event, template) {
         // Indicate that form field has changed
         template.state.set('fieldsChanged', true);
     },
@@ -271,6 +278,7 @@ Template.editClientProfile.helpers({
             lastName: template.state.get('clientLastName'),
             company: template.state.get('clientCompany'),
             email: template.state.get('clientEmail'),
+            phone: template.state.get('clientPhone'),
             timeZone: template.state.get('clientTimeZone')
         };
     },

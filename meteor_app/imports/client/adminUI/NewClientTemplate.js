@@ -62,7 +62,7 @@ function validateFormData(form, template, callback) {
 
     clientInfo.firstName = form.firstName.value ? form.firstName.value.trim() : undefined;
     clientInfo.lastName = form.lastName.value ? form.lastName.value.trim() : undefined;
-    clientInfo.company= form.companyName.value ? form.companyName.value.trim() : undefined;
+    clientInfo.company = form.companyName.value ? form.companyName.value.trim() : undefined;
 
     if ((!clientInfo.firstName || clientInfo.firstName.length === 0) && (!clientInfo.lastName
         || clientInfo.lastName.length === 0) && (!clientInfo.company || clientInfo.company.length === 0)) {
@@ -102,6 +102,7 @@ function validateFormData(form, template, callback) {
         }
     }
 
+    clientInfo.phone = form.phone.value ? form.phone.value.trim() : undefined;
     clientInfo.timeZone = form.timeZone.value;
 
     clientInfo.licenseInfo = {

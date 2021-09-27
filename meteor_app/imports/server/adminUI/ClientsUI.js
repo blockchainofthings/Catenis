@@ -86,6 +86,10 @@ ClientsUI.initialize = function () {
                     props.company = clientInfo.company;
                 }
 
+                if (clientInfo.phone) {
+                    props.phone = clientInfo.phone;
+                }
+
                 // Try to create Catenis client
                 let clientId;
 
@@ -236,7 +240,8 @@ ClientsUI.initialize = function () {
                         name: clientInfo.name,
                         firstName: clientInfo.firstName ? clientInfo.firstName : undefined,
                         lastName: clientInfo.lastName ? clientInfo.lastName : undefined,
-                        company: clientInfo.company ? clientInfo.company : undefined
+                        company: clientInfo.company ? clientInfo.company : undefined,
+                        phone: clientInfo.phone ? clientInfo.phone : undefined
                     };
 
                     client.updateProperties(props);
