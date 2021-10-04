@@ -59,7 +59,7 @@ BcotSaleStock.prototype.checkBcotSaleStock = function () {
     if (updateBcotSaleStockInfo.call(this)) {
         if (this.bcotSaleStockInfo.hasLowBalance()) {
             // Stock of BCOT tokens for sale too low. Send notification to replenish stock of BCOT tokens
-            Catenis.logger.ACTION('Stock of BCOT tokens for sale too low.', util.format('\nCurrent balance: %s, expected minimum balance: %s\n\nACTION REQUIRED: please replenish stock of BCOT tokens immediately.',
+            Catenis.logger.ACTION('Stock of BCOT tokens for sale too low.', util.format('\n\nCurrent balance: %s; expected minimum: %s\n\nACTION REQUIRED: please replenish stock of BCOT tokens immediately.',
                 Util.formatCoins(this.bcotSaleStockInfo.currentBalance), Util.formatCoins(this.bcotSaleStockInfo.minimumBalance)));
         }
 

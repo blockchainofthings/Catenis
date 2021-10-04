@@ -301,7 +301,7 @@ CatenisNode.prototype.checkFundingBalance = function () {
     if (updateFundingBalanceInfo.call(this)) {
         if (this.fundingBalanceInfo.hasLowBalance()) {
             // Funding balance too low. Send notification to refund the system
-            Catenis.logger.ACTION('Catenis funding balance too low.', util.format('\nCurrent balance: %s, expected minimum balance: %s\n\nACTION REQUIRED: please refund Catenis immediately.',
+            Catenis.logger.ACTION('Catenis funding balance too low.', util.format('\n\nCurrent balance: %s; expected minimum: %s\n\nACTION REQUIRED: please refund Catenis immediately.',
                 Util.formatCoins(this.fundingBalanceInfo.currentBalance), Util.formatCoins(this.fundingBalanceInfo.minimumBalance)));
         }
 
