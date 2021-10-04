@@ -22,17 +22,17 @@ import { Random } from 'meteor/random';
 import { Catenis } from './Catenis';
 import { BcotSaleAllocationShared } from '../both/BcotSaleAllocationShared';
 import { CriticalSection } from './CriticalSection';
+import { SelfRegistrationBcotSale } from './SelfRegistrationBcotSale';
 
 // Config entries
 const bcotSaleAllocConfig = config.get('bcotSaleAllocation');
-const bcotSaleAllocProdsRprtConfig = bcotSaleAllocConfig.get('allocatedProductsReport');
 
 // Configuration settings
 export const cfgSettings = {
     allocatedProductsReport: {
-        baseFilename: bcotSaleAllocProdsRprtConfig.get('baseFilename'),
-        fileExtension: bcotSaleAllocProdsRprtConfig.get('fileExtension'),
-        headers: bcotSaleAllocProdsRprtConfig.get('headers')
+        baseFilename: bcotSaleAllocConfig.get('allocatedProductsReport.baseFilename'),
+        fileExtension: bcotSaleAllocConfig.get('allocatedProductsReport.fileExtension'),
+        headers: bcotSaleAllocConfig.get('allocatedProductsReport.headers')
     }
 };
 
@@ -47,6 +47,16 @@ export function BcotSaleAllocation(docBcotSaleAllocation, loadItems = true) {
     this.summary = docBcotSaleAllocation.summary;
     this.status = docBcotSaleAllocation.status;
     this.allocationDate = docBcotSaleAllocation.allocationDate;
+
+    Object.defineProperties(this, {
+        isForSelfRegistration: {
+            get() {
+                // noinspection JSPotentiallyInvalidUsageOfThis
+                return this.status === BcotSaleAllocation.status.self_registration.name;
+            },
+            enumerable: true
+        }
+    })
 
     if (loadItems) {
         this.loadItems();
@@ -124,6 +134,71 @@ BcotSaleAllocation.prototype.generateAllocatedProductsReport = function (addHead
     }
 
     return reportLines.join('');
+};
+
+/**
+ * Recalculates the items summary for the BCOT sale allocation and update it if it differs
+ */
+BcotSaleAllocation.prototype.fixSummary = function () {
+    try {
+        // Make sure that items are loaded
+        if (!this.items) {
+            this.loadItems();
+        }
+
+        // Compute number of items by SKU
+        const quantityBySku = this.items.reduce((totals, item) => {
+            const sku = item.sku;
+
+            if (sku in totals) {
+                totals[sku]++;
+            }
+            else {
+                totals[sku] = 1;
+            }
+
+            return totals;
+        }, {});
+
+        // Get number of items by SKU from current summary
+        const currentQuantityBySku = this.summary.reduce((totals, summaryItem) => {
+            totals[summaryItem.sku] = summaryItem.quantity;
+
+            return totals;
+        }, {});
+
+        // Check if (newly computed and current) number of items by SKU differ
+        const skus = Object.keys(quantityBySku);
+        const currentSkus = Object.keys(currentQuantityBySku);
+
+        const quantitiesDiffer = skus.length !== currentSkus.length
+            || skus.some(sku => {
+                return !(sku in currentSkus) || quantityBySku[sku] !== currentQuantityBySku[sku];
+            });
+
+        if (quantitiesDiffer) {
+            // Number of items by SKU differ.
+            //  Reconstruct summary...
+            const summary = [];
+
+            Object.keys(quantityBySku).forEach(sku => summary.push({sku, quantity: quantityBySku[sku]}));
+
+            // ... and update database
+            Catenis.db.collection.BcotSaleAllocation.update({
+                _id: this.doc_id
+            }, {
+                $set: {
+                    summary
+                }
+            });
+
+            this.summary = summary;
+        }
+    }
+    catch (err) {
+        // Log error condition
+        Catenis.logger.ERROR('Error fixing summary of BcotSaleAllocation (doc_id: %s).', this.doc_id, err);
+    }
 };
 
 
@@ -212,23 +287,34 @@ BcotSaleAllocation.getUnredeemedAllocatedBcotAmount = function () {
 //     <sku_2>: [Number], - Number of BCOT token products with that SKU to allocate
 //     ...
 //   }
-BcotSaleAllocation.createBcotSaleAllocation = function (productsToAllocate) {
-    productsToAllocate = conformProductsToAllocate(productsToAllocate);
+//   forSelfRegistration [boolean] - Indicates that this is an allocation where the BCOT token products will be used to be assign to self-registered client accounts
+BcotSaleAllocation.createBcotSaleAllocation = function (productsToAllocate, forSelfRegistration = false) {
+    const conformedProdsToAllocate = conformProductsToAllocate(productsToAllocate);
 
-    let docBcotSaleAllocation;
+    let doc_id;
+    const itemDoc_ids = [];
 
     try {
-        docBcotSaleAllocation = {
-            summary: productsToAllocate,
-            status: BcotSaleAllocation.status.new.name,
+        if (forSelfRegistration) {
+            // Note: this will throw in case of a negative validation
+            SelfRegistrationBcotSale.validateProductsToAllocate(productsToAllocate)
+        }
+
+        const docBcotSaleAllocation = {
+            summary: conformedProdsToAllocate,
+            status: forSelfRegistration ? BcotSaleAllocation.status.self_registration.name : BcotSaleAllocation.status.new.name,
             allocationDate: new Date()
         };
 
-        const doc_id = Catenis.db.collection.BcotSaleAllocation.insert(docBcotSaleAllocation);
+        doc_id = Catenis.db.collection.BcotSaleAllocation.insert(docBcotSaleAllocation);
 
         // Create allocation items database doc/recs
-        productsToAllocate.forEach((prodToAllocate) => {
+        const allPurchaseCodes = [];
+
+        conformedProdsToAllocate.forEach((prodToAllocate) => {
             const purchaseCodes = newPurchaseCodeList(prodToAllocate.quantity);
+
+            allPurchaseCodes.splice(allPurchaseCodes.length, 0, ...purchaseCodes);
 
             for (let idx = 0; idx < prodToAllocate.quantity; idx++) {
                 const docBcotSaleAllocationItem = {
@@ -241,7 +327,7 @@ BcotSaleAllocation.createBcotSaleAllocation = function (productsToAllocate) {
                 };
 
                 try {
-                    Catenis.db.collection.BcotSaleAllocationItem.insert(docBcotSaleAllocationItem);
+                    itemDoc_ids.push(Catenis.db.collection.BcotSaleAllocationItem.insert(docBcotSaleAllocationItem));
                 }
                 catch (err) {
                     // Error creating BCOT token sale allocation item. Log error and throw exception
@@ -251,14 +337,44 @@ BcotSaleAllocation.createBcotSaleAllocation = function (productsToAllocate) {
             }
         });
 
+        if (forSelfRegistration) {
+            SelfRegistrationBcotSale.addItems(allPurchaseCodes);
+        }
+
         // Make sure that stock of BCOT tokens for sale is high enough to cover newly allocated products
         Catenis.bcotSaleStock.checkBcotSaleStock();
 
         return doc_id;
     }
     catch (err) {
-        // Error creating license. Log error condition and throw exception
-        Catenis.logger.ERROR('Error creating new BCOT token sale allocation: %s.', util.inspect(docBcotSaleAllocation), err);
+        // Error BCOT sale allocation
+        if (doc_id) {
+            // Clean up: remove any database docs/recs that had been created
+            try {
+                if (itemDoc_ids.length > 0) {
+                    Catenis.db.collection.BcotSaleAllocationItem.remove({
+                        _id: {
+                            $in: itemDoc_ids
+                        }
+                    });
+                }
+
+                // noinspection JSUnusedAssignment
+                Catenis.db.collection.BcotSaleAllocation.remove({
+                    _id: doc_id
+                });
+            }
+            catch (err2) {
+                Catenis.logger.ERROR('Error removing inconsistent BCOT sale allocation docs/recs after an error trying to create allocation.', err);
+            }
+        }
+
+        // Log error condition and throw exception
+        Catenis.logger.ERROR('Error creating new BCOT token sale allocation:', {
+            productsToAllocate,
+            forSelfRegistration,
+            conformedProdsToAllocate
+        }, err);
         throw new Meteor.Error('ctn_bcot_sale_alloc_create_error', 'Error creating new BCOT token sale allocation: ' + err.toString());
     }
 };

@@ -23,6 +23,7 @@ import {
     BcotSaleAllocation,
     cfgSettings as bcotSaleAllocCfgSettings
 } from '../BcotSaleAllocation';
+import { SelfRegistrationBcotSale } from '../SelfRegistrationBcotSale';
 
 // Definition of function classes
 //
@@ -56,16 +57,26 @@ BcotSaleAllocationUI.initialize = function () {
     Catenis.logger.TRACE('BcotSaleAllocationUI initialization');
     // Declaration of RPC methods to be called from client
     Meteor.methods({
-        createBcotSaleAllocation: function (productsToAllocate) {
+        createBcotSaleAllocation: function (productsToAllocate, forSelfRegistration) {
             if (Roles.userIsInRole(this.userId, 'sys-admin')) {
                 try {
-                    return BcotSaleAllocation.createBcotSaleAllocation(productsToAllocate);
+                    return BcotSaleAllocation.createBcotSaleAllocation(productsToAllocate, forSelfRegistration);
                 }
                 catch (err) {
                     // Error trying to create new BCOT sale allocation. Log error and throw exception
                     Catenis.logger.ERROR('Failure trying to create new BCOT sale allocation.', util.inspect(productsToAllocate), err);
                     throw new Meteor.Error('bcotSaleAllocation.create.failure', 'Failure trying to create new BCOT sale allocation: ' + err.toString());
                 }
+            }
+            else {
+                // User not logged in or not a system administrator.
+                //  Throw exception
+                throw new Meteor.Error('ctn_admin_no_permission', 'No permission; must be logged in as a system administrator to perform this task');
+            }
+        },
+        getSelfRegistrationBcotSaleProduct: function () {
+            if (Roles.userIsInRole(this.userId, 'sys-admin')) {
+                return SelfRegistrationBcotSale.bcotProductSku;
             }
             else {
                 // User not logged in or not a system administrator.
@@ -122,7 +133,11 @@ BcotSaleAllocationUI.initialize = function () {
     // Declaration of publications
     Meteor.publish('bcotSaleAllocations', function () {
         if (Roles.userIsInRole(this.userId, 'sys-admin')) {
-            return Catenis.db.collection.BcotSaleAllocation.find();
+            return Catenis.db.collection.BcotSaleAllocation.find({
+                status: {
+                    $ne: BcotSaleAllocation.status.self_registration.name
+                }
+            });
         }
         else {
             // User not logged in or not a system administrator
@@ -136,6 +151,49 @@ BcotSaleAllocationUI.initialize = function () {
         if (Roles.userIsInRole(this.userId, 'sys-admin')) {
             return Catenis.db.collection.BcotSaleAllocation.find({
                 _id: bcotSaleAllocation_id
+            });
+        }
+        else {
+            // User not logged in or not a system administrator
+            //  Make sure that publication is not started and throw exception
+            this.stop();
+            throw new Meteor.Error('ctn_admin_no_permission', 'No permission; must be logged in as a system administrator to perform this task');
+        }
+    });
+
+    Meteor.publish('availableSelfRegBcotSale', function () {
+        if (Roles.userIsInRole(this.userId, 'sys-admin')) {
+            let availableQuantity = 0;
+
+            this.added('AvailableSelfRegBcotSale', 1, {
+                minimumQuantity: SelfRegistrationBcotSale.minimumAvailableQuantity,
+                currentQuantity: availableQuantity
+            });
+
+            const observeHandle = Catenis.db.collection.SelfRegistrationBcotSale.find({
+                status: SelfRegistrationBcotSale.itemStatus.available.name
+            }, {
+                fields: {
+                    _id: 1
+                }
+            })
+            .observe({
+                added: () => {
+                    this.changed('AvailableSelfRegBcotSale', 1, {
+                        currentQuantity: ++availableQuantity
+                    });
+                },
+                removed: () => {
+                    this.changed('AvailableSelfRegBcotSale', 1, {
+                        currentQuantity: --availableQuantity
+                    });
+                }
+            });
+
+            this.ready();
+
+            this.onStop(() => {
+                observeHandle.stop();
             });
         }
         else {

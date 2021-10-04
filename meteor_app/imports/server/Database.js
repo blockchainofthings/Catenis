@@ -2969,6 +2969,40 @@ Database.initialize = function() {
                     }
                 }
             }]
+        },
+        SelfRegistrationBcotSale: {
+            indices: [{
+                fields: {
+                    purchaseCode: 1
+                },
+                opts: {
+                    unique: true,
+                    background: true,
+                    writeConcern: {
+                        w: 1
+                    }
+                }
+            }, {
+                fields: {
+                    status: 1
+                },
+                opts: {
+                    background: true,
+                    writeConcern: {
+                        w: 1
+                    }
+                }
+            }, {
+                fields: {
+                    createdDate: 1
+                },
+                opts: {
+                    background: true,
+                    writeConcern: {
+                        w: 1
+                    }
+                }
+            }]
         }
     };
 

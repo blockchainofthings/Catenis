@@ -265,6 +265,11 @@
   accountRegistrationEmailNotify: {
     fromAddress: "Catenis [Sandbox] <noreply@blockchainofthings.com>"  // E-mail address of sender of e-mail notification message
   },
+  // Parameters pertaining to SelfRegistrationBcotSale module
+  selfRegistrationBcotSale: {
+    bcotProduct: 'CTN-1000TBCT',  // (optional, can be set to null) SKU of BCOT product that should be used to be assigned to self-registered client accounts
+    minAvailableQuantity: 100  // Minimum number of self-registration BCOT sale items that should be available (to be assigned to self-registered client accounts) at any time
+  },
   // Parameters pertaining to TwoFactorAuthentication module
   twoFactorAuthentication: {
     recoveryCode: {

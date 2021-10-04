@@ -226,6 +226,11 @@
     "timeKeepReadMsg": 86400, // (24 hours) Minimum time, in seconds, to keep cached messages after they have been fully read (all of its data chunks read)
     "purgeOldMessagesInterval": 43200000  // (12 hours) Time interval, in milliseconds, for executing method to purge old cached messages
   },
+  // Parameters pertaining to SelfRegistrationBcotSale module
+  selfRegistrationBcotSale: {
+    bcotProduct: 'CTN-1000XBCT',  // (optional, can be set to null) SKU of BCOT product that should be used to be assigned to self-registered client accounts
+    minAvailableQuantity: 10  // Minimum number of self-registration BCOT sale items that should be available (to be assigned to self-registered client accounts) at any time
+  },
   // Parameters pertaining to TwoFactorAuthentication module
   twoFactorAuthentication: {
     userVerificationInterval: 3600,  // (1 hour) Time, in seconds, within which it is expected that the user verifies a newly issued secret key

@@ -22,6 +22,8 @@ import { Catenis } from './Catenis';
 import { Client } from './Client';
 import { License } from './License';
 import { UserRoles } from '../both/UserRoles';
+import { SelfRegistrationBcotSale } from './SelfRegistrationBcotSale';
+import { StandbyPurchasedBcot } from './StandbyPurchasedBcot';
 
 // Config entries
 const accRegConfig = config.get('accountRegistration');
@@ -117,6 +119,15 @@ export class AccountRegistration {
 
             client.addLicense(license.doc_id, new Date());
 
+            // Add Catenis credits to client account
+            try {
+                addCatenisCredits(client);
+            }
+            catch (err) {
+                // Log error
+                Catenis.logger.ERROR('Error adding Catenis credits to self-registered client account (clientId: %s).', client.clientId, err)
+            }
+
             // Send notification e-mail reporting that client account has been created
             Catenis.accRegistrationEmailNtfy.sendAsync(client, (error) => {
                 if (error) {
@@ -139,6 +150,41 @@ export class AccountRegistration {
             throw new Meteor.Error('ctn_acc_reg_new_client_error', 'Error trying to create a new client account for a previously registered user');
         }
     }
+}
+
+
+// Definition of module (private) functions
+//
+
+/**
+ * Add Catenis credits to self-registered client account
+ * @param {Client} client Catenis client object
+ */
+function addCatenisCredits(client) {
+    const selfRegBcotSaleItem = SelfRegistrationBcotSale.getNextAvailableItem();
+    let standbyBcot;
+
+    try {
+        standbyBcot = new StandbyPurchasedBcot(client);
+        standbyBcot.addPurchasedCodes(selfRegBcotSaleItem.purchaseCode);
+    }
+    catch (err) {
+        // Error assigning self-registration BCOT product to client for future processing.
+        //  Free reserved self-registration BCOT sale item and rethrow error
+        selfRegBcotSaleItem.free();
+        throw err;
+    }
+
+    selfRegBcotSaleItem.setAsUsed();
+
+    Meteor.defer(() => {
+        try {
+            standbyBcot.processBatches();
+        }
+        catch (err) {
+            Catenis.logger.ERROR('Error redeeming self-registration assigned Catenis credits on standby for client (clientId: %s).', client.clientId, err);
+        }
+    });
 }
 
 

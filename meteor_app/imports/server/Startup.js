@@ -103,6 +103,7 @@ import { ClientForeignBlockchainUI } from './clientUI/ClientForeignBlockchainsUI
 import { LowServAccBalanceEmailNotify } from './LowServAccBalanceEmailNotify';
 import { AccountRegistrationEmailNotify } from './AccountRegistrationEmailNotify';
 import { CrmIntegration } from './CrmIntegration';
+import { SelfRegistrationBcotSale } from './SelfRegistrationBcotSale';
 // TEST - begin
 //import { TestCatenisColoredCoins } from './test/TestCatenisColoredCoins';
 // TEST - end
@@ -224,6 +225,11 @@ Meteor.startup(function () {
             ReceiveAsset.initialize();
             SpendServiceCredit.initialize();
             CrmIntegration.initialize();
+
+            if (Catenis.application.enableSelfRegistration) {
+                SelfRegistrationBcotSale.initialize();
+            }
+
             TransactionMonitor.initialize();
             CatenisOffChainMonitor.initialize();
             ReCaptcha.initialize();

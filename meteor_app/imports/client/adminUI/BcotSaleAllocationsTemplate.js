@@ -43,10 +43,10 @@ function validateCreateAllocationFormData(form, errMsgs) {
     let focusSet = false;
     let value;
 
-    form.product.forEach((productField, idx) => {
+    form.fields.product.forEach((productField, idx) => {
         if (productField.value !== '') {
             const sku = productField.value;
-            const quantityField = form.quantity[idx];
+            const quantityField = form.fields.quantity[idx];
             value = quantityField.value ? quantityField.value.trim() : '';
 
             if (value.length === 0) {
@@ -95,12 +95,23 @@ function validateCreateAllocationFormData(form, errMsgs) {
     });
 
     if (!hasError && Object.keys(productsToAllocate).length === 0) {
-        // No product entered
-        errMsgs.push('Please enter information for at least one product');
-        hasError = true;
+        if (Template.instance().state.get('currentView') === 'register') {
+            // No product entered
+            errMsgs.push('Please enter information for at least one product');
+            hasError = true;
 
-        if (!focusSet) {
-            form.product[0].focus();
+            if (!focusSet) {
+                form.fields.product[0].focus();
+            }
+        }
+        else {
+            // No quantity entered
+            errMsgs.push('Please enter a quantity');
+            hasError = true;
+
+            if (!focusSet) {
+                form.fields.quantity[0].focus();
+            }
         }
     }
 
@@ -133,6 +144,38 @@ Template.bcotSaleAllocations.onCreated(function () {
     this.state.set('displayCreateAllocationConfirm', 'none');
     this.state.set('displayCreateAllocationSubmitButton', 'none');
 
+    this.state.set('currentView', 'regular');
+
+    this.state.set('selfRegistrationEnabled', undefined);
+    this.state.set('selfRegBcotSaleSku', undefined);
+    this.state.set('initFinalized', false);
+
+    Meteor.call('checkEnableSelfRegistration', (err, isSet) => {
+        if (err) {
+            console.log('Error calling \'checkEnableSelfRegistration\' remote procedure: ' + err);
+        }
+        else {
+            this.state.set('selfRegistrationEnabled', isSet);
+
+            if (isSet) {
+                this.availableSelfRegBcotSaleSubs = this.subscribe('availableSelfRegBcotSale');
+
+                Meteor.call('getSelfRegistrationBcotSaleProduct', (err, sku) => {
+                    if (err) {
+                        console.log('Error calling \'getSelfRegistrationBcotSaleProduct\' remote procedure: ' + err);
+                    }
+                    else {
+                        this.state.set('selfRegBcotSaleSku', sku);
+                        this.state.set('initFinalized', true);
+                    }
+                });
+            }
+            else {
+                this.state.set('initFinalized', true);
+            }
+        }
+    });
+
     // Subscribe to receive database docs/recs updates
     this.bcotSaleAllocatioinsSubs = this.subscribe('bcotSaleAllocations');
     this.activeBcotProductsSubs = this.subscribe('activeBcotProducts');
@@ -146,9 +189,17 @@ Template.bcotSaleAllocations.onDestroyed(function () {
     if (this.activeBcotProductsSubs) {
         this.activeBcotProductsSubs.stop();
     }
+
+    if (this.availableSelfRegBcotSaleSubs) {
+        this.availableSelfRegBcotSaleSubs.stop();
+    }
 });
 
 Template.bcotSaleAllocations.events({
+    'change #selView'(event, template) {
+        // Update current view
+        template.state.set('currentView', event.target.value);
+    },
     'click #lnkAddProductRow'(event, template) {
         // Add one more row of product to allocate
         const productRows = template.state.get('productRows');
@@ -177,12 +228,23 @@ Template.bcotSaleAllocations.events({
         // Reset number of product rows
         template.state.set('productRows', defaultProductRows);
 
+        // Fix form fields (since in case of self-registration, product and quantity are single fields)
+        if (!form.fields) {
+            form.fields = {};
+
+            form.fields.product = form.product.length ? form.product : [form.product];
+            form.fields.quantity = form.quantity.length ? form.quantity : [form.quantity];
+        }
+
         // Enable and reset form controls
-        form.product.forEach((field) => {
-            field.disabled = false;
-            field.value = '';
-        });
-        form.quantity.forEach((field) => {
+        if (template.state.get('currentView') === 'register') {
+            form.fields.product.forEach((field) => {
+                field.disabled = false;
+                field.value = '';
+            });
+        }
+
+        form.fields.quantity.forEach((field) => {
             field.disabled = false;
             field.value = '';
         });
@@ -230,10 +292,14 @@ Template.bcotSaleAllocations.events({
 
         // Enable form controls
         const form = $('#frmCreateAllocation')[0];
-        form.product.forEach((field) => {
-            field.disabled = false;
-        });
-        form.quantity.forEach((field) => {
+
+        if (template.state.get('currentView') === 'register') {
+            form.fields.product.forEach((field) => {
+                field.disabled = false;
+            });
+        }
+
+        form.fields.quantity.forEach((field) => {
             field.disabled = false;
         });
 
@@ -277,10 +343,13 @@ Template.bcotSaleAllocations.events({
             form.productsToAllocate = productsToAllocate;
 
             // Disable form controls
-            form.product.forEach((field) => {
-                field.disabled = true;
-            });
-            form.quantity.forEach((field) => {
+            if (template.state.get('currentView') === 'register') {
+                form.fields.product.forEach((field) => {
+                    field.disabled = true;
+                });
+            }
+
+            form.fields.quantity.forEach((field) => {
                 field.disabled = true;
             });
 
@@ -308,7 +377,9 @@ Template.bcotSaleAllocations.events({
         template.state.set('infoMsg', undefined);
         template.state.set('infoMsgType', 'info');
 
-        Meteor.call('createBcotSaleAllocation', form.productsToAllocate, (error, bcotSaleAllocation_id) => {
+        const forSelfRegistration = template.state.get('currentView') === 'self-registration';
+
+        Meteor.call('createBcotSaleAllocation', form.productsToAllocate, forSelfRegistration, (error, bcotSaleAllocation_id) => {
             if (error) {
                 template.state.set('createAllocationErrMsgs', [
                     error.toString()
@@ -316,9 +387,11 @@ Template.bcotSaleAllocations.events({
             }
             else {
                 // New sale allocation successfully added
-                template.state.set('actionSuccessAllocation', bcotSaleAllocation_id);
+                if (!forSelfRegistration) {
+                    template.state.set('actionSuccessAllocation', bcotSaleAllocation_id);
+                }
 
-                template.state.set('infoMsg', 'New BCOT sale allocation successfully added');
+                template.state.set('infoMsg', 'New Catenis credit product allocation successfully added');
                 template.state.set('infoMsgType', 'success');
 
                 // Close modal panel
@@ -444,5 +517,26 @@ Template.bcotSaleAllocations.helpers({
                 })
             });
         }
+    },
+    availableSelfRegBcotSale() {
+        return Catenis.db.collection.AvailableSelfRegBcotSale.findOne({});
+    },
+    isLowQuantity(docAvailableSelfRegBcotSale) {
+        return docAvailableSelfRegBcotSale.currentQuantity < docAvailableSelfRegBcotSale.minimumQuantity;
+    },
+    logicalAnd(v1, v2) {
+        return v1 && v2;
+    },
+    initFinalized() {
+        return Template.instance().state.get('initFinalized');
+    },
+    selfRegistrationEnabled() {
+        return Template.instance().state.get('selfRegistrationEnabled');
+    },
+    isRegularView() {
+        return Template.instance().state.get('currentView') === 'regular';
+    },
+    selfRegBcotSaleSku() {
+        return Template.instance().state.get('selfRegBcotSaleSku');
     }
 });

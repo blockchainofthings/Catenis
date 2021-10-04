@@ -62,6 +62,10 @@ BcotSaleAllocationShared.status = Object.freeze({
     in_use: Object.freeze({
         name: 'in_use',
         description: 'Report of BCOT products allocated for sale has already been downloaded and they should be available for sale'
+    }),
+    self_registration: Object.freeze({
+        name: 'self-registration',
+        description: 'Special type of allocation where the BCOT tokens are not for sale but reserved to be assigned to self-registered client accounts'
     })
 });
 

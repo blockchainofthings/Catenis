@@ -719,7 +719,7 @@ BcotSaleAllocation {
       sku: [string],  // SKU identifying the allocated BCOT product
       quantity: [number]  // Quantity of the BCOT product that had been allocated
   }],
-  status: [string],  // The current status of this BCOT token sale allocation. Valid values (from BcotSaleAllocation.status): 'new', 'in_use'
+  status: [string],  // The current status of this BCOT token sale allocation. Valid values (from BcotSaleAllocation.status): 'new', 'in_use', 'self-registration'
   allocationDate: [date/time],  // Date and time when allocation was done
   lastStatusChangedDate: [date/time]  // Date and time when status has been last modified
 }
@@ -735,6 +735,14 @@ BcotSaleAllocationItem {
     redeemedDate: [date/time],  // Date and time when purchased BCOT tokens have been redeemed
     redeemBcotTxid: [string]  // Blockchain attributed ID (hash) of transaction used to redeem purchased BCOT tokens for Catenis service credits
   }
+}
+
+SelfRegistrationBcotSale {
+  _id: [string],  // MongoDB internal document ID provided by Meteor
+  purchaseCode: [string],  // Purchase code identifying the BCOT sale allocation item that should be assigned to self-registered accounts
+  status: [string],  // The current status of this self-registration BCOT sale item. Valid values (from SelfRegistrationBcotSale.status): 'available', 'reserved', 'used'
+  createdDate: [date/time],  // Date and time when doc/rec has been created
+  lastStatusChangedDate: [date/time]  // Date and time when status has been last modified
 }
 
 StandbyPurchasedBcot {
