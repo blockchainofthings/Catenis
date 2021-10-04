@@ -128,7 +128,7 @@ Template.login.helpers({
 
         switch (AccountsTemplates.getState()) {
             case 'signUp':
-                instruction = 'Fill up the form to create a new account';
+                instruction = 'Fill in the form to create a new account';
                 break;
 
             case 'enrollAccount':

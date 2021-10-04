@@ -1449,7 +1449,7 @@ function distributePayment(totalAmount, payAmount, addressesPerBatch, paysPerAdd
             payPerAddress = Math.floor(workAmount / (payAmount * addressesInBatch));
         let extraPayAmount = workAmount % (payAmount * addressesInBatch);
 
-        // Fill up pays by address for this batch
+        // Fill in pays by address for this batch
         if (payPerAddress > 0) {
             for (let idx = 0; idx < addressesInBatch; idx++) {
                 payments[payIdxOffset + idx] = payPerAddress * payAmount;
