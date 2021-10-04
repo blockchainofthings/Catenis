@@ -119,7 +119,7 @@ BcotProduct.getBcotProductBySku = function (sku, onlyActive = true) {
     };
 
     if (onlyActive) {
-        selector.active = false;
+        selector.active = true;
     }
 
     const docBcotProduct = Catenis.db.collection.BcotProduct.findOne(selector);
