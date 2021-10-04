@@ -337,7 +337,7 @@
   },
   // Parameters pertaining to CrmIntegration module
   crmIntegration: {
-    formUrl: 'http://localhost:8181/', // URL of the form used to pass customer data to the Blockchain of Things CRM system.
-                                       //  Note: set to null to disable passing customer data
+    formUrl: null, // URL of the form used to pass customer data to the Blockchain of Things CRM system.
+                   //  Note: set to null to disable passing customer data
   }
 }
