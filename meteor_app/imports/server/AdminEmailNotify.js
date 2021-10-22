@@ -235,11 +235,9 @@ function getSysAdminEmails() {
 
     // noinspection JSCheckFunctionSignatures
     Roles.getUsersInRole(appAdminRole, {}, {
-        queryOptions: {
-            fields: {
-                username: 1,
-                emails: 1
-            }
+        fields: {
+            username: 1,
+            emails: 1
         }
     }).forEach(doc => {
         // Make sure that admin account has an email address
