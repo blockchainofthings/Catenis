@@ -242,7 +242,7 @@ function getSysAdminEmails() {
     }).forEach(doc => {
         // Make sure that admin account has an email address
         if (doc.emails && doc.emails.length >= 0) {
-            adminEmails.push(`${doc.username} [${doc.emails[0].address}]`)
+            adminEmails.push(`${doc.username} <${doc.emails[0].address}>`)
         }
         else {
             // Log warning message notifying that admin account has not email address
