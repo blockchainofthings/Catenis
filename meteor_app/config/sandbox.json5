@@ -363,5 +363,13 @@
     gasPricesEndPoint: "",  // API endpoint for retrieving Polygon PoS Chain gas price estimates
     localAddress: null,  // (optional, can be set to null) IP address of local network interface to use to issue requests to the Web service
     timeout: 20000  // (20 sec.) Timeout, in milliseconds, for connection/request with API server
+  },
+  // Parameters pertaining to AccountRegistration module
+  accountRegistration: {
+    license: {   // Client license to be used for a self-registration account
+      level: "Starter plan",
+      type: "2 virtual devices",  // Note: may be set to null to specify a license with no type
+      revision: 0
+    }
   }
 }
