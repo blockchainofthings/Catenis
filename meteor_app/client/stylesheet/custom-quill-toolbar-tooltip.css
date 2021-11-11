@@ -1,0 +1,195 @@
+/*
+ * Solution to add tooltip to toolbar buttons of the Quill javascript editor
+ */
+
+/** All toolbar buttons are inside of .ql-formats */
+.ql-formats button {
+    position: relative
+}
+
+/** Set a tooltip with css pseudo-elements, when buttons are hover, active or focus  */
+.ql-formats span.ql-picker:hover:before,
+.ql-formats span.ql-picker:active:before,
+.ql-formats span.ql-picker:focus:before {
+    position: absolute;
+    background: black;
+    color: white;
+    font-size: 11px;
+    font-weight: normal;
+    padding: .5em;
+    border-radius: .5em;
+    left: 0%;
+    top: 100%;
+    width: max-content;
+    z-index: 1;
+}
+
+.ql-formats button:hover:before,
+.ql-formats button:active:before,
+.ql-formats button:focus:before {
+    position: absolute;
+    background: black;
+    color: white;
+    font-size: 11px;
+    font-weight: normal;
+    padding: .5em;
+    border-radius: .5em;
+    left: -50%;
+    top: 100%;
+    width: max-content;
+    z-index: 1;
+}
+
+/** Set tooltip content for bold button **/
+.ql-bold:hover:before,
+.ql-bold:active:before,
+.ql-bold:focus:before {
+    content: 'Bold';
+}
+
+/** Set tooltip content for italic button **/
+.ql-italic:hover:before,
+.ql-italic:active:before,
+.ql-italic:focus:before {
+    content: 'Italic';
+}
+
+/** Set tooltip content for underline button **/
+.ql-underline:hover:before,
+.ql-underline:active:before,
+.ql-underline:focus:before {
+    content: 'Underline';
+}
+
+/** Set tooltip content for strikethrough button **/
+.ql-strike:hover:before,
+.ql-strike:active:before,
+.ql-strike:focus:before {
+    content: 'Strikethrough';
+}
+
+/** Set tooltip content for blockquote button **/
+.ql-blockquote:hover:before,
+.ql-blockquote:active:before,
+.ql-blockquote:focus:before {
+    content: 'Quoted text';
+}
+
+/** Set tooltip content for code-block button **/
+.ql-code-block:hover:before,
+.ql-code-block:active:before,
+.ql-code-block:focus:before {
+    content: 'Code block';
+}
+
+/** Set tooltip content for ordered list button **/
+.ql-list[value=ordered]:hover:before,
+.ql-list[value=ordered]:active:before,
+.ql-list[value=ordered]:focus:before {
+    content: 'Ordered list';
+}
+
+/** Set tooltip content for bulleted list button **/
+.ql-list[value=bullet]:hover:before,
+.ql-list[value=bullet]:active:before,
+.ql-list[value=bullet]:focus:before {
+    content: 'Bulleted list';
+}
+
+/** Set tooltip content for subscript button **/
+.ql-script[value=sub]:hover:before,
+.ql-script[value=sub]:active:before,
+.ql-script[value=sub]:focus:before {
+    content: 'Subscript';
+}
+
+/** Set tooltip content for superscript button **/
+.ql-script[value=super]:hover:before,
+.ql-script[value=super]:active:before,
+.ql-script[value=super]:focus:before {
+    content: 'Superscript';
+}
+
+/** Set tooltip content for indent button **/
+.ql-indent[value='+1']:hover:before,
+.ql-indent[value='+1']:active:before,
+.ql-indent[value='+1']:focus:before {
+    content: 'Indent line';
+}
+
+/** Set tooltip content for unindent button **/
+.ql-indent[value='-1']:hover:before,
+.ql-indent[value='-1']:active:before,
+.ql-indent[value='-1']:focus:before {
+    content: 'Unindent line';
+}
+
+/** Set tooltip content for size dropdown **/
+.ql-size:hover:before,
+.ql-size:active:before,
+.ql-size:focus:before {
+    content: 'Font size';
+}
+
+/** Set tooltip content for header dropdown **/
+.ql-header:hover:before,
+.ql-header:active:before,
+.ql-header:focus:before {
+    content: 'Paragraph style';
+}
+
+/** Set tooltip content for font color dropdown **/
+.ql-color:hover:before,
+.ql-color:active:before,
+.ql-color:focus:before {
+    content: 'Font color';
+}
+
+/** Set tooltip content for font background dropdown **/
+.ql-background:hover:before,
+.ql-background:active:before,
+.ql-background:focus:before {
+    content: 'Font background';
+}
+
+/** Set tooltip content for font type dropdown **/
+.ql-font:hover:before,
+.ql-font:active:before,
+.ql-font:focus:before {
+    content: 'Font type';
+}
+
+/** Set tooltip content for text alignment dropdown **/
+.ql-align:hover:before,
+.ql-align:active:before,
+.ql-align:focus:before {
+    content: 'Text alignment';
+}
+
+/** Set tooltip content for link dropdown **/
+.ql-link:hover:before,
+.ql-link:active:before,
+.ql-link:focus:before {
+    content: 'External link';
+}
+
+/** Set tooltip content for static-field button **/
+.ql-static-field:hover:before,
+.ql-static-field:active:before,
+.ql-static-field:focus:before {
+    content: 'Static field';
+}
+
+/** Set tooltip content for lookup-field button **/
+.ql-lookup-field:hover:before,
+.ql-lookup-field:active:before,
+.ql-lookup-field:focus:before {
+    content: 'Lookup field';
+}
+
+/** Set tooltip content for clean dropdown **/
+.ql-clean:hover:before,
+.ql-clean:active:before,
+.ql-clean:focus:before {
+    content: 'Remove all formatting';
+}

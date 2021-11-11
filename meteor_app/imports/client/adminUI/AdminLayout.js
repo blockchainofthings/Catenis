@@ -42,6 +42,8 @@ import './NewClientTemplate.js';
 import './NewDeviceTemplate.js';
 import './PaidServicesTemplate.js';
 import './ResourcesTemplate.js';
+import './NotificationTemplatesTemplate.js';
+import './NotificationTemplateDetailsTemplate.js';
 
 
 // Definition of module (private) functions

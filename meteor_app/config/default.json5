@@ -1386,5 +1386,13 @@
       value: 'Starter',
       mappedClientProp: null
     }]
+  },
+  // Parameters pertaining to UINotification module
+  uiNotification: {
+    refTimeZone: "UTC+00:00",  // Reference time zone expressed as a time difference from UTC (in the UTC+/-HH:mm format). Used to determine the notification's expiration date
+    fromAddress: "Catenis <noreply@blockchainofthings.com>",  // E-mail address used to send UI notification e-mail messages to Catenis users
+    replyAddress: "donotreply@blockchainofthings.com",  // (optional) E-mail address to be used when replying to UI notification e-mail messages
+    emailHtmlTemplate: "<style>div.ctn_uiNotificationEmail p {margin-top:0;margin-bottom:0}div.ctn_uiNotificationEmail div.ctn_uiNotificationEmailSalutation p {margin-bottom:1.5em}div.ctn_uiNotificationEmail div.ctn_uiNotificationEmailSignature p {margin-top:1.5em}</style><div class=\"ctn_uiNotificationEmail\"><div class=\"ctn_uiNotificationEmailSalutation\">{!salutation}</div>{!body}<div class=\"ctn_uiNotificationEmailSignature\">{!signature}</div></div>",
+    emailTextTemplate: "{!salutation}\n{!body}\n{!signature}"
   }
 }

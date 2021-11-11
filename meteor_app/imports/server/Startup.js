@@ -104,6 +104,8 @@ import { LowServAccBalanceEmailNotify } from './LowServAccBalanceEmailNotify';
 import { AccountRegistrationEmailNotify } from './AccountRegistrationEmailNotify';
 import { CrmIntegration } from './CrmIntegration';
 import { SelfRegistrationBcotSale } from './SelfRegistrationBcotSale';
+import { UserUINotification } from './UserUINotification';
+import { NotificationTemplatesUI } from './adminUI/NotificationTemplatesUI';
 // TEST - begin
 //import { TestCatenisColoredCoins } from './test/TestCatenisColoredCoins';
 // TEST - end
@@ -230,6 +232,8 @@ Meteor.startup(function () {
                 SelfRegistrationBcotSale.initialize();
             }
 
+            UserUINotification.initialize();
+
             TransactionMonitor.initialize();
             CatenisOffChainMonitor.initialize();
             ReCaptcha.initialize();
@@ -264,6 +268,7 @@ Meteor.startup(function () {
             BcotUsageReportUI.initialize();
             LicensesUI.initialize();
             PaidServicesUI.initialize();
+            NotificationTemplatesUI.initialize();
             ClientsUI.initialize();
             ServiceBillingUI.initialize();
             DevicesUI.initialize();

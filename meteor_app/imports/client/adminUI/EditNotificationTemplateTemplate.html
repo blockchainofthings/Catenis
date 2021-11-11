@@ -1,0 +1,116 @@
+<template name="editNotifyTemplate">
+    <div>
+        <div class="panel panel-login minWidthElement noBoxShadow">
+            <div class="panel-body">
+                <div class="row">
+                    <div class="col-lg-12">
+                        {{#unless Template.subscriptionsReady}}
+                            <p style="color:lightgray; margin-top:1em">Loading...</p>
+                        {{else}}
+                            <h2>EDIT NOTIFICATION TEMPLATE</h2>
+                            {{#if hasErrorMessage}}
+                                <div class="alert alert-danger" role="alert">
+                                    <button type="button" id="btnDismissError" class="close" aria-label="Close">
+                                        <span aria-hidden="true">&times;</span>
+                                    </button>
+                                    {{{errorMessage}}}
+                                </div>
+                            {{/if}}
+                            {{#if hasInfoMessage}}
+                                <div class="alert alert-{{infoMessageType}}" role="alert">
+                                    <button type="button" id="btnDismissInfo" class="close" aria-label="Close">
+                                        <span aria-hidden="true">&times;</span>
+                                    </button>
+                                    {{infoMessage}}
+                                </div>
+                            {{/if}}
+                            <form id="frmEditNotifyTemplate" autocomplete="off">
+                                <div class="form-group">
+                                    <input type="text" class="editNotifyTemplateInputField" maxlength="80" id="txtName" name="name" placeholder="Template Name" value="{{uiNotificationTemplate.name}}" autocomplete="off" autocapitalize="none" autocorrect="off">
+                                </div>
+                                <div class="form-group" style="text-align:left; margin-bottom:30px">
+                                    <label for="selCategory" class="input">Category</label><br>
+                                    <select id="selCategory" name="category" class="input editNotifyTemplateChangeField">
+                                        <option value=""></option>
+                                        {{#each category in (notificationCategories uiNotificationTemplate)}}
+                                            <option value="{{category.value}}" selected="{{category.selected}}">{{category.name}}</option>
+                                        {{/each}}
+                                    </select>
+                                </div>
+                                <div class="form-group" style="text-align:left; margin-bottom:30px">
+                                    <label for="selUrgency" class="input">Urgency</label><br>
+                                    <select id="selUrgency" name="urgency" class="input editNotifyTemplateChangeField">
+                                        <option value=""></option>
+                                        {{#each urgency in (notificationUrgencies uiNotificationTemplate)}}
+                                            <option value="{{urgency.value}}" selected="{{urgency.selected}}">{{urgency.name}}</option>
+                                        {{/each}}
+                                    </select>
+                                </div>
+                                <div class="form-group text-left" style="margin-bottom:-0.5em">
+                                    <table style="margin-top:30px">
+                                        <tr>
+                                            <td class="text-right" style="vertical-align:text-top; padding-right:10px"><input id='cbxSendViaEmail' name="sendViaEmail" type='checkbox' class="editNotifyTemplateChangeField" checked="{{uiNotificationTemplate.sendViaEmail}}"/></td>
+                                            <td><label for="cbxSendViaEmail" class="input">Send Via Email</label></td>
+                                        </tr>
+                                    </table>
+                                </div>
+                                <div class="form-group text-left">
+                                    <label class="input" style="margin-top:1.5em">Targets</label>
+                                    <table style="margin-left:1.5em">
+                                        <tr>
+                                            <td class="text-right" style="vertical-align:text-top; padding-right:10px"><input id='cbxTargetActiveClients' name="targetActiveClients" type='checkbox' class="editNotifyTemplateChangeField" checked="{{uiNotificationTemplate.target.activeClients}}"/></td>
+                                            <td><label for="cbxTargetActiveClients" class="input">Active Clients</label></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="text-right" style="vertical-align:text-top; padding-right:10px"><input id='cbxTargetNewClients' name="targetNewClients" type='checkbox' class="editNotifyTemplateChangeField" checked="{{uiNotificationTemplate.target.newClients}}"/></td>
+                                            <td><label for="cbxTargetNewClients" class="input">Not-Yet-Enrolled Clients</label></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="text-right" style="vertical-align:text-top; padding-right:10px"><input id='cbxTargetAdminUsers' name="targetAdminUsers" type='checkbox' class="editNotifyTemplateChangeField" checked="{{uiNotificationTemplate.target.adminUsers}}"/></td>
+                                            <td><label for="cbxTargetAdminUsers" class="input">Admin Users</label></td>
+                                        </tr>
+                                    </table>
+                                </div>
+                                <div class="form-group">
+                                    <input type="text" class="editNotifyTemplateInputField" maxlength="80" id="txtTitle" name="title" placeholder="Message Title" value="{{uiNotificationTemplate.title}}" autocomplete="off" autocapitalize="none" autocorrect="off">
+                                </div>
+                                <div class="form-group text-left" style="display:{{#if showEmailSaluteClientsContentsEditor}}block{{else}}none{{/if}};margin-top:1.5em">
+                                    <label class="input">Salutation for Clients (email only)</label>
+                                    <div id="divEmailSaluteClientsContents"></div>
+                                </div>
+                                <div class="form-group text-left" style="display:{{#if showEmailSaluteNonClientsContentsEditor}}block{{else}}none{{/if}};margin-top:1.5em">
+                                    <label class="input">Salutation for Admin Users (email only)</label>
+                                    <div id="divEmailSaluteNonClientsContents"></div>
+                                </div>
+                                <div class="form-group text-left" style="margin-top:1.5em">
+                                    <label class="input">Message Body</label>
+                                    <div id="divBodyContents"></div>
+                                </div>
+                                <div class="form-group text-left" style="display:{{#if showEmailSignatureContentsEditor}}block{{else}}none{{/if}};margin-top:1.5em">
+                                    <label class="input">Signature (email only)</label>
+                                    <div id="divEmailSignatureContents"></div>
+                                </div>
+                                <input type="hidden" id="hflEmailSaluteClientsContents" name="emailSaluteClientsContents" value="">
+                                <input type="hidden" id="hflEmailSaluteNonClientsContents" name="emailSaluteNonClientsContents" value="">
+                                <input type="hidden" id="hflBodyContents" name="bodyContents" value="">
+                                <input type="hidden" id="hflEmailSignatureContents" name="emailSignatureContents" value="">
+                                <div class="row" style="margin-top:2em">
+                                    <div class="col-xs-6 form-group pull-left">
+                                        <button id="btnCancel" type="button" class="form-control btn btn-login at-btn">{{#if isTemplateUpdated}}Back{{else}}Cancel{{/if}}</button>
+                                        <a id="lnkCancel" href="/admin/notifytemplates/{{uiNotificationTemplate_id}}" style="display:none"></a>
+                                    </div>
+                                    {{#if showUpdateButton}}
+                                        <div class="col-xs-6 form-group pull-right">
+                                            <button type="submit" id="btnUpdate" class="form-control btn btn-login at-btn submit">Update Template</button>
+                                        </div>
+                                    {{/if}}
+                                </div>
+                            </form>
+                            <script>document.getElementById('frmEditNotifyTemplate').click()</script>
+                        {{/unless}}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</template>

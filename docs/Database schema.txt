@@ -757,3 +757,73 @@ StandbyPurchasedBcot {
   addedDate: [date/time],  // Date and time when purchased BCOT tokens have been added to standby
   processedDate: [date/time]  // Date and time when purchased BCOT tokens have been processed to be redeemed
 }
+
+UINotificationTemplate {
+  _id: [string],  // MongoDB internal document ID provided by Meteor
+  name: [string],  // A user attributed unique name for this UI notification template
+  category: [string],  // The type of notification. One of: 'maintenance', 'new_release', 'promotion', 'marketing', 'other'
+  urgency: [string],  // The urgency level of the notification. This indicates how relevant this information is for the end user. One of: 'critical', 'urgent', 'normal', 'low'
+  sendViaEmail: [boolean],  // Indicates whether the notification message should also be delivered via e-mail
+  target: {
+    activeClients: [boolean],  // Currently active clients
+    newClients: [boolean],  // Newly created clients that have not yet been activated
+    adminUsers: [boolean]  // Catenis administrator users
+  },
+  title: [string],  // The notification's title
+  contents: {
+    body: [string],  // A JSON of the Quill (javascript) text editor's Delta object that corresponds to the message's body text
+    email: {  // (optional) Only required if 'sendViaEmail' is set (true)
+      salutation: {
+        client: [string]  // A JSON of the Quill (javascript) text editor's Delta object that corresponds to the e-mail message's salutation text to be used for clients
+        nonClient: [string]  // A JSON of the Quill (javascript) text editor's Delta object that corresponds to the e-mail message's salutation text to be used for non-clients
+      },
+      signature: [string]  // A JSON of the Quill (javascript) text editor's Delta object that corresponds to the e-mail message's signature text
+    }
+  },
+  status: [string],  // The current status of this UI notification template. One of: 'draft', 'active', 'disabled'
+  createdDate: [date/time],  // Date and time when doc/rec has been created
+  lastStatusChangedDate: [date/time]  // Date and time when status has been last modified
+}
+
+UINotification {
+  _id: [string],  // MongoDB internal document ID provided by Meteor
+  uiNotificationTemplate_id: [string],  // MongoDB internal ID of UINotificationTemplate doc/rec from which this notification is derived
+  name: [string],  // A user attributed unique name for this UI notification template
+  contentsStaticFieldsValue: {  // Structure containing the values to be replaced for the static fields of the UI notification template contents. Note that it may be an empty object
+    body: {
+      <field_name>: <field_value>
+    },
+    email: {
+      salutation: {
+        client: {
+          <field_name>: <field_value>
+        },
+        nonClient: {
+          <field_name>: <field_value>
+        }
+      },
+      signature: {
+        <field_name>: <field_value>
+      }
+    }
+  },
+  expirationDate: [date/time],  // Date and time until when this notification should be relevant to the end user. This is an optional field.
+                                //  Note: this is used to avoid displaying outdated critical notifications on the admin UI's front page
+  status: [string],  // The current status of this notification. One of: 'draft', 'issued'
+  createdDate: [date/time],  // Date and time when doc/rec has been created
+  lastStatusChangedDate: [date/time]  // Date and time when status has been last modified
+}
+
+UserUINotification {
+  _id: [string],  // MongoDB internal document ID provided by Meteor
+  uiNotification_id: [string],  // MongoDB internal ID of UINotification doc/rec identifying the notification that should be delivered to the user
+  user_id: [string],  // MongoDB internal ID of User doc/rec to whom the notification should be delivered
+  emailDelivery: {
+    status: [string],  // The current status of the delivery of the notification via e-mail. One of: 'void' (no e-mail delivery), 'pending', 'sent', 'error'
+    sentDate: [date/time]  // Date and time when notification e-mail has been sent
+    error: [string]  // Message describing the error that took place when trying to send the notification e-mail
+  },
+  status: [string],  // The current status of the notification delivery. One of: 'new', 'read', 'deleted'
+  createdDate: [date/time],  // Date and time when doc/rec has been created
+  lastStatusChangedDate: [date/time]  // Date and time when status has been last modified
+}

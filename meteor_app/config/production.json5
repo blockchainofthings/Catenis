@@ -199,5 +199,9 @@
     nodeProtocol: 'wss', // Polygon PoS Chain node client API protocol. Expected values: 'http', 'https', 'ws' our 'wss'
     apiUsername: '??????',  // (optional, can be set to null) Base64 encoded, ciphered username for accessing Polygon PoS Chain node client API
     apiPassword: '??????'  // (optional, can be set to null) Base64 encoded, ciphered password for accessing Polygon PoS Chain node client API
+  },
+  // Parameters pertaining to UINotification module
+  uiNotification: {
+    refTimeZone: "UTC-05:00",  // Reference time zone expressed as a time difference from UTC (in the UTC+/-HH:mm format). Used to determine the notification's expiration date
   }
 }

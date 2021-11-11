@@ -344,5 +344,9 @@
   crmIntegration: {
     formUrl: null, // URL of the form used to pass customer data to the Blockchain of Things CRM system.
                    //  Note: set to null to disable passing customer data
+  },
+  // Parameters pertaining to UINotification module
+  uiNotification: {
+    fromAddress: "Catenis [Development] <noreply@blockchainofthings.com>"  // E-mail address used to send UI notification e-mail messages to Catenis users
   }
 }

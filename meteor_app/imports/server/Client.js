@@ -1929,7 +1929,7 @@ Client.getClientByDocId = function (client_id, includeDeleted = true, noClientLi
     return new Client(docClient, CatenisNode.getCatenisNodeByIndex(docClient.index.ctnNodeIndex), false, noClientLicense);
 };
 
-Client.getClientByUserId = function (user_id, includeDeleted = true) {
+Client.getClientByUserId = function (user_id, includeDeleted = true, logError = true) {
     // Retrieve Client doc/rec
     const query = {
         user_id: user_id
@@ -1943,7 +1943,10 @@ Client.getClientByUserId = function (user_id, includeDeleted = true) {
 
     if (docClient === undefined) {
         // No client available associated with given user id. Log error and throw exception
-        Catenis.logger.ERROR('Could not find client associated with given user id', {user_id: user_id});
+        if (logError) {
+            Catenis.logger.ERROR('Could not find client associated with given user id', {user_id: user_id});
+        }
+
         throw new Meteor.Error('ctn_client_not_found', util.format('Could not find client associated with given user id (%s)', user_id));
     }
 
@@ -2175,6 +2178,35 @@ Client.checkDeviceDefaultRights = function () {
             Client.getClientByClientId(clientId).setDeviceDefaultRights(deviceDefaultRightsByEvent);
         }
     });
+};
+
+/**
+ * List the user IDs associated with selected clients
+ * @param includeActiveClients Include active clients
+ * @param includeNewClients Include not yet active clients
+ * @return {string[]} List of user IDs associated with the selected clients
+ */
+Client.listClientUserIds = function (includeActiveClients = true, includeNewClients = false) {
+    const statuses = [];
+
+    if (includeActiveClients) {
+        statuses.push(Client.status.active.name);
+    }
+
+    if (includeNewClients) {
+        statuses.push(Client.status.new.name);
+    }
+
+    return Catenis.db.collection.Client.find({
+        status: {
+            $in: statuses
+        }
+    }, {
+        fields: {
+            user_id: 1
+        }
+    })
+    .map(doc => doc.user_id);
 };
 
 

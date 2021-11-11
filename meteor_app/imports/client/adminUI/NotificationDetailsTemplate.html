@@ -1,0 +1,158 @@
+<template name="notificationDetails">
+    <div>
+        <div class="panel panel-login minWidthElement noBoxShadow">
+            <div class="panel-body">
+                <div class="row">
+                    <div class="col-lg-12">
+                        {{#unless (logicalAnd Template.subscriptionsReady referenceTimeZone)}}
+                            <p style="color:lightgray; margin-top:1em">Loading...</p>
+                        {{else}}
+                            <h2>NOTIFICATION TEMPLATE<br><span style="color:dimgray">{{uiNotificationTemplate.name}}</span>
+                                <br><br>NOTIFICATION</h2>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="pull-left">
+                                        <a href="/admin/notifytemplates/{{uiNotificationTemplate_id}}/notifications" role="button" class="btn-login btn paddedBtn">Back to Notifications</a>
+                                    </div>
+                                </div>
+                                {{#unless isIssued uiNotification}}
+                                    <div class="col-md-6">
+                                        <div class="pull-right">
+                                            <a href="/admin/notifytemplates/{{uiNotificationTemplate_id}}/notifications/{{uiNotification_id}}/edit" role="button" class="btn-login btn paddedBtn">Edit Notification</a>
+                                        </div>
+                                    </div>
+                                {{/unless}}
+                            </div>
+                            <div class="row" style="padding-top:1em">
+                                <div class="col-lg-12">
+                                    <table id="tblNotifyTemplateProps" class="table table-striped text-left">
+                                        <tbody>
+                                        <tr>
+                                            <th colspan="2" style="width:2em"><label class="noMargin">Name:</label></th>
+                                            <td>{{uiNotification.name}}</td>
+                                        </tr>
+                                        <tr>
+                                            <th colspan="2" style="width:2em"><label class="noMargin">Not Relevant After:</label></th>
+                                            <td>{{formatDateReferenceTimeZone uiNotification.expirationDate}}</td>
+                                        </tr>
+                                        {{#if uiNotification.contentsStaticFieldsValue.email.salutation.client}}
+                                            <tr>
+                                                <th colspan="3" style="width:2em"><label class="noMargin" style="color:gray">Static Fields for Email Salutation for Clients</label></th>
+                                            </tr>
+                                            {{#each field in (nameValueList uiNotification.contentsStaticFieldsValue.email.salutation.client)}}
+                                                <tr>
+                                                    <th style="border:none;width:2em"></th>
+                                                    <th><label class="noMargin">{{capitalize field.name}}:</label></th>
+                                                    <td>{{field.value}}</td>
+                                                </tr>
+                                            {{/each}}
+                                        {{/if}}
+                                        {{#if uiNotification.contentsStaticFieldsValue.email.salutation.client}}
+                                            <tr>
+                                                <th colspan="3" style="width:2em"><label class="noMargin" style="color:gray">Static Fields for Email Salutation for Admin Users</label></th>
+                                            </tr>
+                                            {{#each field in (nameValueList uiNotification.contentsStaticFieldsValue.email.salutation.nonClient)}}
+                                                <tr>
+                                                    <th style="border:none;width:2em"></th>
+                                                    <th><label class="noMargin">{{capitalize field.name}}:</label></th>
+                                                    <td>{{field.value}}</td>
+                                                </tr>
+                                            {{/each}}
+                                        {{/if}}
+                                        {{#if uiNotification.contentsStaticFieldsValue.body}}
+                                            <tr>
+                                                <th colspan="3" style="width:2em"><label class="noMargin" style="color:gray">Static Fields for Message Body</label></th>
+                                            </tr>
+                                            {{#each field in (nameValueList uiNotification.contentsStaticFieldsValue.body)}}
+                                                <tr>
+                                                    <th style="border:none;width:2em"></th>
+                                                    <td><label class="noMargin">{{capitalize field.name}}:</label></td>
+                                                    <td>{{field.value}}</td>
+                                                </tr>
+                                            {{/each}}
+                                        {{/if}}
+                                        {{#if uiNotification.contentsStaticFieldsValue.email.signature}}
+                                            <tr>
+                                                <th colspan="3" style="width:2em"><label class="noMargin" style="color:gray">Static Fields for Email Signature</label></th>
+                                            </tr>
+                                            {{#each field in (nameValueList uiNotification.contentsStaticFieldsValue.email.signature)}}
+                                                <tr>
+                                                    <th style="border:none;width:2em"></th>
+                                                    <th><label class="noMargin">{{capitalize field.name}}:</label></th>
+                                                    <td>{{field.value}}</td>
+                                                </tr>
+                                            {{/each}}
+                                        {{/if}}
+                                        <tr>
+                                            <td colspan="2" style="width:2em"><label class="noMargin">Status:</label></td>
+                                            <td><span style="color:{{statusColor uiNotification.status}}">{{uiNotification.status}}</span></td>
+                                        </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            {{#if hasInfoMessage}}
+                                <div class="alert alert-{{infoMessageType}}" role="alert">
+                                    <button type="button" id="btnDismissInfo" class="close" aria-label="Close">
+                                        <span aria-hidden="true">&times;</span>
+                                    </button>
+                                    {{infoMessage}}
+                                </div>
+                            {{/if}}
+                            {{#if hasErrorMessage}}
+                                <div class="alert alert-danger" role="alert">
+                                    <button type="button" id="btnDismissError" class="close" aria-label="Close">
+                                        <span aria-hidden="true">&times;</span>
+                                    </button>
+                                    {{{errorMessage}}}
+                                </div>
+                            {{/if}}
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <a id="lnkPreviewNotification" href="/admin/notifytemplates/{{uiNotificationTemplate_id}}/notifications/{{uiNotification_id}}/preview" role="button" class="btn-login btn paddedBtn fullWidth">Preview</a>
+                                </div>
+                                {{#if (logicalAnd (isTemplateActive uiNotificationTemplate) (isDraft uiNotification))}}
+                                    <div class="col-md-4">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <button type="button" id="btnIssueNotification" class="btn-login btn paddedBtn fullWidth" data-toggle="modal" data-target="#divIssueNotification">Issue Notification</button>
+                                    </div>
+                                {{/if}}
+                            </div>
+                            {{!Modal panel containing form used to issue the notificaton template}}
+                            <div id="divIssueNotification" class="modal fade" tabindex="-1" role="dialog">
+                                <div class="modal-dialog" role="document">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <button id="btnCloseIssueNotification1" type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                                            <h4 class="modal-title">Issue Notification</h4>
+                                        </div>
+                                        <div class="modal-body">
+                                            <div class="alert alert-warning" role="alert">
+                                                <b>Warning!</b>&nbsp;Once issued, the notification will be immediately delivered to the intended targets.
+                                            </div>
+                                            <form id="frmIssueNotification" autocomplete="off">
+                                                <div id="divIssueNotificationConfirm" class="panel panel-default" style="padding:1em">
+                                                    <div style="margin-top:1em; margin-bottom:1em">
+                                                        <label>To confirm your action, please type the following text below: <b>yes, I do confirm it</b>
+                                                            <br><input id="itxIssueNotificationConfirmation" type="text" size="20" maxlength="20" placeholder="confirmation" autocomplete="off"></label>
+                                                    </div>
+                                                    <div style="margin-top:1em">
+                                                        <button type="submit" class="btn btn-primary" style="display:{{displayIssueNotificationSubmitButton}}">Confirm</button>
+                                                    </div>
+                                                </div>
+                                            </form>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button id="btnCloseIssueNotification2" type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        {{/unless}}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</template>

@@ -48,6 +48,9 @@ Catenis.db = {
         StandbyPurchasedBcot: new Mongo.Collection('StandbyPurchasedBcot'),
         ClientForeignBlockchain: new Mongo.Collection('ClientForeignBlockchain'),
         ForeignBcConsumptionProfile: new Mongo.Collection('ForeignBcConsumptionProfile'),
-        AvailableSelfRegBcotSale: new Mongo.Collection('AvailableSelfRegBcotSale')
+        AvailableSelfRegBcotSale: new Mongo.Collection('AvailableSelfRegBcotSale'),
+        UINotificationTemplate: new Mongo.Collection('UINotificationTemplate'),
+        UINotification: new Mongo.Collection('UINotification'),
+        CatenisUser: new Mongo.Collection('CatenisUser')
     }
 };

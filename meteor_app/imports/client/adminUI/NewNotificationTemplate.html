@@ -1,0 +1,95 @@
+<template name="newNotification">
+    <div>
+        <div class="panel panel-login minWidthElement noBoxShadow">
+            <div class="panel-body">
+                <div class="row">
+                    <div class="col-lg-12">
+                        {{#unless (logicalAnd Template.subscriptionsReady contentsStaticFields)}}
+                            <p style="color:lightgray; margin-top:1em">Loading...</p>
+                        {{else}}
+                            <h2>NOTIFICATION TEMPLATE<br><span style="color:dimgray">{{uiNotificationTemplate.name}}</span>
+                                <br><br>NEW NOTIFICATION</h2>
+                            {{#if hasErrorMessage}}
+                                <div class="alert alert-danger" role="alert">
+                                    <button type="button" id="btnDismissError" class="close" aria-label="Close">
+                                        <span aria-hidden="true">&times;</span>
+                                    </button>
+                                    {{{errorMessage}}}
+                                </div>
+                            {{/if}}
+                            {{#if hasInfoMessage}}
+                                <div class="alert alert-{{infoMessageType}}" role="alert">
+                                    <button type="button" id="btnDismissInfo" class="close" aria-label="Close">
+                                        <span aria-hidden="true">&times;</span>
+                                    </button>
+                                    {{infoMessage}}
+                                </div>
+                            {{/if}}
+                            <form id="frmNewNotification" autocomplete="off">
+                                <div class="form-group">
+                                    <input type="text" maxlength="80" id="txtName" name="name" placeholder="Notification Name" autocomplete="off" autocapitalize="none" autocorrect="off">
+                                </div>
+                                <div class="form-group" style="position:relative">
+                                    <input id='dtpkrExpirationDate' name="expirationDate" type='text' placeholder="Not Relevant After (YYYY-MM-DD)" autocomplete="off" />
+                                    {{#if hasExpirationDate}}<p class="text-left" style="color:darkblue;font-family: Helvetica Neue, Helvetica, Arial, sans-serif; font-size: small"><b>Note:</b> date formatted as YYYY-MM-DD (year-month-day)</p>{{/if}}
+                                </div>
+                                {{#if contentsStaticFields.email.salutation.client}}
+                                    <div class="form-group text-left" style="margin-top:1.5em">
+                                        <label class="input">Static Fields for Email Salutation for Clients</label>
+                                        {{#each field in contentsStaticFields.email.salutation.client}}
+                                            <div class="form-group">
+                                                <input type="text" maxlength="80" id="txtEmailSaluteClientsStaticField{{@index}}" name="emailSaluteClientsStaticField{{@index}}" placeholder="{{capitalize field}}" autocomplete="off" autocapitalize="none" autocorrect="off">
+                                            </div>
+                                        {{/each}}
+                                    </div>
+                                {{/if}}
+                                {{#if contentsStaticFields.email.salutation.nonClient}}
+                                    <div class="form-group text-left" style="margin-top:1.5em">
+                                        <label class="input">Static Fields for Email Salutation for Admin Users</label>
+                                        {{#each field in contentsStaticFields.email.salutation.nonClient}}
+                                            <div class="form-group">
+                                                <input type="text" maxlength="80" id="txtEmailSaluteNonClientsStaticField{{@index}}" name="emailSaluteNonClientsStaticField{{@index}}" placeholder="{{capitalize field}}" autocomplete="off" autocapitalize="none" autocorrect="off">
+                                            </div>
+                                        {{/each}}
+                                    </div>
+                                {{/if}}
+                                {{#if contentsStaticFields.body}}
+                                    <div class="form-group text-left" style="margin-top:1.5em">
+                                        <label class="input">Static Fields for Message Body</label>
+                                        {{#each field in contentsStaticFields.body}}
+                                            <div class="form-group">
+                                                <input type="text" maxlength="80" id="txtBodyStaticField{{@index}}" name="bodyStaticField{{@index}}" placeholder="{{capitalize field}}" autocomplete="off" autocapitalize="none" autocorrect="off">
+                                            </div>
+                                        {{/each}}
+                                    </div>
+                                {{/if}}
+                                {{#if contentsStaticFields.email.signature}}
+                                    <div class="form-group text-left" style="margin-top:1.5em">
+                                        <label class="input">Static Fields for Email Signature</label>
+                                        {{#each field in contentsStaticFields.email.signature}}
+                                            <div class="form-group">
+                                                <input type="text" maxlength="80" id="txtEmailSignatureStaticField{{@index}}" name="emailSignatureStaticField{{@index}}" placeholder="{{capitalize field}}" autocomplete="off" autocapitalize="none" autocorrect="off">
+                                            </div>
+                                        {{/each}}
+                                    </div>
+                                {{/if}}
+                                <div class="row" style="margin-top:2em">
+                                    <div class="col-xs-6 form-group pull-left">
+                                        <button id="btnCancel" type="button" class="form-control btn btn-login at-btn">{{#if isNotificationCreated}}Back{{else}}Cancel{{/if}}</button>
+                                        <a id="lnkCancel" href="/admin/notifytemplates/{{uiNotificationTemplate_id}}/notifications" style="display:none"></a>
+                                    </div>
+                                    {{#if showCreateButton}}
+                                        <div class="col-xs-6 form-group pull-right">
+                                            <button type="submit" id="btnCreate" class="form-control btn btn-login at-btn submit">Create Notification</button>
+                                        </div>
+                                    {{/if}}
+                                </div>
+                            </form>
+                            <script>document.getElementById('frmNewNotification').click()</script>
+                        {{/unless}}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</template>

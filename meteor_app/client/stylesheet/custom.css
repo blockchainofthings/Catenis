@@ -1022,3 +1022,8 @@ h2.notFound {
     color: #66cc33;
     padding-top: 2em;
 }
+
+div.ctn_uiNotification p {
+    margin-top: 0;
+    margin-bottom: 0;
+}

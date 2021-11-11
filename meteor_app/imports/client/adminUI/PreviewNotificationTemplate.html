@@ -1,0 +1,88 @@
+<template name="previewNotification">
+    <div>
+        <div class="panel panel-login minWidthElement noBoxShadow">
+            <div class="panel-body">
+                <div class="row">
+                    <div class="col-lg-12">
+                        {{#unless (logicalAnd Template.subscriptionsReady selectedUserType)}}
+                            <p style="color:lightgray; margin-top:1em">Loading...</p>
+                        {{else}}
+                            <h2>NOTIFICATION TEMPLATE<br><span style="color:dimgray">{{uiNotificationTemplate.name}}</span>
+                                <br><br>NOTIFICATION PREVIEW</h2>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="pull-left">
+                                        <a href="/admin/notifytemplates/{{uiNotificationTemplate_id}}/notifications/{{uiNotification_id}}" role="button" class="btn-login btn paddedBtn">Back to Notification</a>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row" style="padding-top:1em">
+                                <div class="col-lg-12">
+                                    <p>Please select a Catenis user for the simulation</p>
+                                    <div class="form-group" style="text-align:left; margin-bottom:30px">
+                                        <label for="selUserType" class="input">User Type</label><br>
+                                        <select id="selUserType" name="userType" class="input">
+                                            {{#each type in userTypes}}
+                                                <option value="{{type.value}}" selected="{{type.selected}}">{{type.name}}</option>
+                                            {{/each}}
+                                        </select>
+                                    </div>
+                                    {{#if selectAdminUser}}
+                                        <div class="form-group" style="text-align:left; margin-bottom:30px">
+                                            <label for="selAdminUser" class="input">Admin User</label><br>
+                                            <select id="selAdminUser" name="adminUser" class="input previewNotificationUserSelect">
+                                                <option value=""></option>
+                                                {{#each user in adminUsers}}
+                                                    <option value="{{user._id}}">{{user.name}}</option>
+                                                {{/each}}
+                                            </select>
+                                        </div>
+                                    {{/if}}
+                                    {{#if selectClient}}
+                                        <div class="form-group" style="text-align:left; margin-bottom:30px">
+                                            <label for="selClientUser" class="input">Client</label><br>
+                                            <select id="selClientUser" name="adminUser" class="input previewNotificationUserSelect">
+                                                <option value=""></option>
+                                                {{#each user in clientUsers}}
+                                                    <option value="{{user._id}}">{{user.name}}</option>
+                                                {{/each}}
+                                            </select>
+                                        </div>
+                                    {{/if}}
+                                    {{#if hasErrorMessage}}
+                                        <div class="alert alert-danger" role="alert">
+                                            <button type="button" id="btnDismissError" class="close" aria-label="Close">
+                                                <span aria-hidden="true">&times;</span>
+                                            </button>
+                                            {{{errorMessage}}}
+                                        </div>
+                                    {{/if}}
+                                    {{#if composedMessage}}
+                                        <hr>
+                                        <p>UI message</p>
+                                        <div class="text-left">
+                                            <p><b>{{composedMessage.title}}</b></p><br>
+                                            <div class="ctn_uiNotification">
+                                                {{{composedMessage.body.ui}}}
+                                            </div>
+                                        </div>
+                                        {{#if hasEmailMessage}}
+                                            <hr>
+                                            <p>Email message</p>
+                                            <div class="text-left">
+                                                <p>Subject: <b>{{composedMessage.title}}</b></p><br>
+                                                <div>
+                                                    {{{composedMessage.body.email.html}}}
+                                                </div>
+                                            </div>
+                                        {{/if}}
+                                    {{/if}}
+                                </div>
+                            </div>
+                        {{/unless}}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</template>

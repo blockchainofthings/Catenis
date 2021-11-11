@@ -371,5 +371,10 @@
       type: "2 virtual devices",  // Note: may be set to null to specify a license with no type
       revision: 0
     }
+  },
+  // Parameters pertaining to UINotification module
+  uiNotification: {
+    refTimeZone: "UTC-05:00",  // Reference time zone expressed as a time difference from UTC (in the UTC+/-HH:mm format). Used to determine the notification's expiration date
+    fromAddress: "Catenis [Sandbox] <noreply@blockchainofthings.com>"  // E-mail address used to send UI notification e-mail messages to Catenis users
   }
 }

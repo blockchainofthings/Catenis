@@ -418,6 +418,10 @@ Util.isNonNullObject = function (obj) {
     return typeof obj === 'object' && obj !== null;
 };
 
+Util.isNonBlankString = function (str) {
+    return typeof str === 'string' && str.length > 0;
+};
+
 Util.wrapAsyncPromise = function (fn, context) {
     return function (/* arguments */) {
         return Future.fromPromise(fn.apply(context || this, Array.from(arguments))).wait();

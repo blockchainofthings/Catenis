@@ -1,0 +1,56 @@
+/*
+ * Solution to customize the tooltip (popup) form used by the snow theme of the Quill javascript editor
+ */
+
+.ql-snow .ql-tooltip.ql-editing span.ql-field-data {
+    display: none;
+}
+
+.ql-snow .ql-tooltip.ql-editing[data-mode=lookup-field] input[type=text] {
+    display: none;
+}
+
+.ql-snow .ql-tooltip:not(.ql-editing) span.ql-lookup-data,
+.ql-snow .ql-tooltip.ql-editing[data-mode=link] span.ql-lookup-data,
+.ql-snow .ql-tooltip.ql-editing[data-mode]:not([data-mode=lookup-field]) span.ql-lookup-data {
+    display: none;
+}
+
+.ql-snow .ql-tooltip.ql-editing[data-mode=lookup-field]:not([lookup-field-source=client]) select.ql-client-lookup {
+    display: none;
+}
+
+.ql-snow .ql-tooltip.ql-editing[data-mode=lookup-field]:not([lookup-field-source=user]) select.ql-user-lookup {
+    display: none;
+}
+
+.ql-snow .ql-tooltip[data-mode]:not([data-mode=link]) a.ql-preview {
+    display: none;
+}
+
+.ql-snow .ql-tooltip[data-mode]:not([data-mode$="-field"]) span.ql-field-data {
+    display: none;
+}
+
+.ql-snow .ql-tooltip[data-mode=link]::before {
+    content: "Visit URL:";
+    line-height: 26px;
+    margin-right: 8px;
+}
+
+.ql-snow .ql-tooltip[data-mode=static-field]::before {
+    content: "Field Name:";
+    line-height: 26px;
+    margin-right: 8px;
+}
+
+.ql-snow .ql-tooltip[data-mode=lookup-field]::before {
+    content: "Lookup Field:";
+    line-height: 26px;
+    margin-right: 8px;
+}
+
+.ql-snow.ql-toolbar button.ql-static-field,
+.ql-snow.ql-toolbar button.ql-lookup-field {
+    width: 34px;
+}

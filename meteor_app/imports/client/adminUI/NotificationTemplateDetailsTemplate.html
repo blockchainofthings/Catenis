@@ -1,0 +1,244 @@
+<template name="notifyTemplateDetails">
+    <div>
+        <div class="panel panel-login minWidthElement noBoxShadow">
+            <div class="panel-body">
+                <div class="row">
+                    <div class="col-lg-12">
+                        {{#unless Template.subscriptionsReady}}
+                            <p style="color:lightgray; margin-top:1em">Loading...</p>
+                        {{else}}
+                            <h2>NOTIFICATION TEMPLATE</h2>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="pull-left">
+                                        <a href="/admin/notifytemplates" role="button" class="btn-login btn paddedBtn">Back to Notification Templates</a>
+                                    </div>
+                                </div>
+                                {{#unless templateDeleted}}
+                                    {{#if isDraft uiNotificationTemplate}}
+                                        <div class="col-md-6">
+                                            <div class="pull-right">
+                                                <a href="/admin/notifytemplates/{{uiNotificationTemplate_id}}/edit" role="button" class="btn-login btn paddedBtn">Edit Notification Template</a>
+                                            </div>
+                                        </div>
+                                    {{/if}}
+                                {{/unless}}
+                            </div>
+                            {{#unless templateDeleted}}
+                                <div class="row" style="padding-top:1em">
+                                    <div class="col-lg-12">
+                                        <table id="tblNotifyTemplateProps" class="table table-striped text-left">
+                                            <tbody>
+                                            <tr>
+                                                <th colspan="2" style="width:2em"><label class="noMargin">Name:</label></th>
+                                                <td>{{uiNotificationTemplate.name}}</td>
+                                            </tr>
+                                            <tr>
+                                                <th colspan="2" style="width:2em"><label class="noMargin">Category:</label></th>
+                                                <td>{{displayName uiNotificationTemplate.category}}</td>
+                                            </tr>
+                                            <tr>
+                                                <th colspan="2" style="width:2em"><label class="noMargin">Urgency:</label></th>
+                                                <td>{{displayName uiNotificationTemplate.urgency}}</td>
+                                            </tr>
+                                            <tr>
+                                                <th colspan="2" style="width:2em"><label class="noMargin">Send Via Email:</label></th>
+                                                <td>{{uiNotificationTemplate.sendViaEmail}}</td>
+                                            </tr>
+                                            <tr>
+                                                <th colspan="3" style="width:2em"><label class="noMargin" style="color:gray">Targets</label></th>
+                                            </tr>
+                                            <tr>
+                                                <th style="border:none;width:2em"></th>
+                                                <td><label class="noMargin">Active Clients:</label></td>
+                                                <td>{{booleanValue uiNotificationTemplate.target.activeClients}}</td>
+                                            </tr>
+                                            <tr>
+                                                <th style="border:none;width:2em"></th>
+                                                <td><label class="noMargin">Not-Yet-Enrolled Clients:</label></td>
+                                                <td>{{booleanValue uiNotificationTemplate.target.newClients}}</td>
+                                            </tr>
+                                            <tr>
+                                                <th style="border:none;width:2em"></th>
+                                                <td><label class="noMargin">Admin Users:</label></td>
+                                                <td>{{booleanValue uiNotificationTemplate.target.adminUsers}}</td>
+                                            </tr>
+                                            <tr>
+                                                <th colspan="2" style="width:2em"><label class="noMargin">Message Title:</label></th>
+                                                <td>{{uiNotificationTemplate.title}}</td>
+                                            </tr>
+                                            {{#if hasEmailSaluteClientsContents uiNotificationTemplate}}
+                                                <tr>
+                                                    <td colspan="3" style="width:2em">
+                                                        <label>Salutation for Clients (email only):</label>
+                                                        <div id="divEmailSaluteClientsContents"></div>
+                                                    </td>
+                                                </tr>
+                                            {{/if}}
+                                            {{#if hasEmailSaluteNonClientsContents uiNotificationTemplate}}
+                                                <tr>
+                                                    <td colspan="3" style="width:2em">
+                                                        <label>Salutation for Admin Users (email only):</label>
+                                                        <div id="divEmailSaluteNonClientsContents"></div>
+                                                    </td>
+                                                </tr>
+                                            {{/if}}
+                                            <tr>
+                                                <td colspan="3" style="width:2em">
+                                                    <label>Message Body:</label>
+                                                    <div id="divBodyContents"></div>
+                                                </td>
+                                            </tr>
+                                            {{#if hasEmailSignatureContents uiNotificationTemplate}}
+                                                <tr>
+                                                    <td colspan="3" style="width:2em">
+                                                        <label>Signature (email only):</label>
+                                                        <div id="divEmailSignatureContents"></div>
+                                                    </td>
+                                                </tr>
+                                            {{/if}}
+                                            <tr>
+                                                <th colspan="2" style="width:2em"><label class="noMargin">Status:</label></th>
+                                                <td><span style="color:{{statusColor uiNotificationTemplate.status}}">{{uiNotificationTemplate.status}}</span></td>
+                                            </tr>
+                                            </tbody>
+                                        </table>
+                                        <script>document.getElementById('tblNotifyTemplateProps').click()</script>
+                                    </div>
+                                </div>
+                            {{/unless}}
+                            {{#if hasInfoMessage}}
+                                <div class="alert alert-{{infoMessageType}}" role="alert">
+                                    <button type="button" id="btnDismissInfo" class="close" aria-label="Close">
+                                        <span aria-hidden="true">&times;</span>
+                                    </button>
+                                    {{infoMessage}}
+                                </div>
+                            {{/if}}
+                            {{#if hasErrorMessage}}
+                                <div class="alert alert-danger" role="alert">
+                                    <button type="button" id="btnDismissError" class="close" aria-label="Close">
+                                        <span aria-hidden="true">&times;</span>
+                                    </button>
+                                    {{{errorMessage}}}
+                                </div>
+                            {{/if}}
+                            {{#unless templateDeleted}}
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <a id="lnkManageNotifications" href="/admin/notifytemplates/{{uiNotificationTemplate_id}}/notifications" role="button" class="btn-login btn paddedBtn fullWidth">Manage Notifications</a>
+                                    </div>
+                                    {{#if isDraft uiNotificationTemplate}}
+                                        <div class="col-md-4">
+                                            <button type="button" id="btnActivateTemplate" class="btn-login btn paddedBtn fullWidth" data-toggle="modal" data-target="#divActivateTemplate">Activate Template</button>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <button type="button" id="btnDeleteTemplate" class="btn-login btn paddedBtn btn-warn fullWidth" data-toggle="modal" data-target="#divDeleteTemplate">Delete Template</button>
+                                        </div>
+                                    {{/if}}
+                                    {{#if isActive uiNotificationTemplate}}
+                                        <div class="col-md-4">
+                                        </div>
+                                        <div class="col-md-4">
+                                            <button type="button" id="btnDisableTemplate" class="btn-login btn paddedBtn btn-warn fullWidth" data-toggle="modal" data-target="#divDisableTemplate">Disable Template</button>
+                                        </div>
+                                    {{/if}}
+                                </div>
+                            {{/unless}}
+                            {{!Modal panel containing form used to activate the notificaton template}}
+                            <div id="divActivateTemplate" class="modal fade" tabindex="-1" role="dialog">
+                                <div class="modal-dialog" role="document">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <button id="btnCloseActivateTemplate1" type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                                            <h4 class="modal-title">Activate Notification Template</h4>
+                                        </div>
+                                        <div class="modal-body">
+                                            <div class="alert alert-warning" role="alert">
+                                                <b>Warning!</b>&nbsp;Once the template is activated, it <b>cannot</b> be edited anymore.
+                                            </div>
+                                            <form id="frmActivateTemplate" autocomplete="off">
+                                                <div id="divActivateTemplateConfirm" class="panel panel-default" style="padding:1em">
+                                                    <div style="margin-top:1em; margin-bottom:1em">
+                                                        <label>To confirm your action, please type the following text below: <b>yes, I do confirm it</b>
+                                                            <br><input id="itxActivateTemplateConfirmation" type="text" size="20" maxlength="20" placeholder="confirmation" autocomplete="off"></label>
+                                                    </div>
+                                                    <div style="margin-top:1em">
+                                                        <button type="submit" class="btn btn-primary" style="display:{{displayActivateTemplateSubmitButton}}">Confirm</button>
+                                                    </div>
+                                                </div>
+                                            </form>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button id="btnCloseActivateTemplate2" type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {{!Modal panel containing form used to delete the notificaton template}}
+                            <div id="divDeleteTemplate" class="modal fade" tabindex="-1" role="dialog">
+                                <div class="modal-dialog" role="document">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <button id="btnCloseDeleteTemplate1" type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                                            <h4 class="modal-title">Delete Notification Template</h4>
+                                        </div>
+                                        <div class="modal-body">
+                                            <div class="alert alert-warning" role="alert">
+                                                <b>Warning!</b>&nbsp;All notifications derived from this template will also be <b>deleted</b>.
+                                            </div>
+                                            <form id="frmDeleteTemplate" autocomplete="off">
+                                                <div id="divDeleteTemplateConfirm" class="panel panel-default" style="padding:1em">
+                                                    <div style="margin-top:1em; margin-bottom:1em">
+                                                        <label>To confirm your action, please type the following text below: <b>yes, I do confirm it</b>
+                                                            <br><input id="itxDeleteTemplateConfirmation" type="text" size="20" maxlength="20" placeholder="confirmation" autocomplete="off"></label>
+                                                    </div>
+                                                    <div style="margin-top:1em">
+                                                        <button type="submit" class="btn btn-primary" style="display:{{displayDeleteTemplateSubmitButton}}">Confirm</button>
+                                                    </div>
+                                                </div>
+                                            </form>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button id="btnCloseDeleteTemplate2" type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {{!Modal panel containing form used to disable the notificaton template}}
+                            <div id="divDisableTemplate" class="modal fade" tabindex="-1" role="dialog">
+                                <div class="modal-dialog" role="document">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <button id="btnCloseDisableTemplate1" type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                                            <h4 class="modal-title">Disable Notification Template</h4>
+                                        </div>
+                                        <div class="modal-body">
+                                            <div class="alert alert-warning" role="alert">
+                                                <b>Warning!</b>&nbsp;Once the template is disabled, <b>no more</b> notifications can be derived from it.
+                                            </div>
+                                            <form id="frmDisableTemplate" autocomplete="off">
+                                                <div id="divDisableTemplateConfirm" class="panel panel-default" style="padding:1em">
+                                                    <div style="margin-top:1em; margin-bottom:1em">
+                                                        <label>To confirm your action, please type the following text below: <b>yes, I do confirm it</b>
+                                                            <br><input id="itxDisableTemplateConfirmation" type="text" size="20" maxlength="20" placeholder="confirmation" autocomplete="off"></label>
+                                                    </div>
+                                                    <div style="margin-top:1em">
+                                                        <button type="submit" class="btn btn-primary" style="display:{{displayDisableTemplateSubmitButton}}">Confirm</button>
+                                                    </div>
+                                                </div>
+                                            </form>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button id="btnCloseDisableTemplate2" type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        {{/unless}}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</template>

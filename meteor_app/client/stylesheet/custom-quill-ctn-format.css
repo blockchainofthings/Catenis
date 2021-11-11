@@ -1,0 +1,35 @@
+/*
+ * Styles used by the custom formats defined by Catenis for the Quill javascript editor
+ */
+
+@media screen {
+    ctn-static-field, ctn-lookup-field {
+        background-color: lightgray !important;
+    }
+}
+button.ql-static-field:not(.ql-active):after {
+    font-family: 'Helvetica Neue', 'Helvetica', 'Arial', sans-serif;
+    font-size: 12px;
+    font-weight: bold;
+    color: #444;
+    content: "{!St}";
+}
+button.ql-static-field.ql-active:after {
+    font-family: 'Helvetica Neue', 'Helvetica', 'Arial', sans-serif;
+    font-size: 12px;
+    font-weight: bold;
+    content: "{!St}";
+}
+button.ql-lookup-field:not(.ql-active):after {
+    font-family: 'Helvetica Neue', 'Helvetica', 'Arial', sans-serif;
+    font-size: 12px;
+    font-weight: bold;
+    color: #444;
+    content: "{!Lk}";
+}
+button.ql-lookup-field.ql-active:after {
+    font-family: 'Helvetica Neue', 'Helvetica', 'Arial', sans-serif;
+    font-size: 12px;
+    font-weight: bold;
+    content: "{!Lk}";
+}

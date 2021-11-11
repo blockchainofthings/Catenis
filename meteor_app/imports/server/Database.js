@@ -3003,6 +3003,239 @@ Database.initialize = function() {
                     }
                 }
             }]
+        },
+        UINotificationTemplate: {
+            indices: [{
+                fields: {
+                    name: 1
+                },
+                opts: {
+                    unique: true,
+                    background: true,
+                    writeConcern: {
+                        w: 1
+                    }
+                }
+            }, {
+                fields: {
+                    category: 1
+                },
+                opts: {
+                    background: true,
+                    writeConcern: {
+                        w: 1
+                    }
+                }
+            }, {
+                fields: {
+                    urgency: 1
+                },
+                opts: {
+                    background: true,
+                    writeConcern: {
+                        w: 1
+                    }
+                }
+            }, {
+                fields: {
+                    sendViaEmail: 1
+                },
+                opts: {
+                    background: true,
+                    writeConcern: {
+                        w: 1
+                    }
+                }
+            }, {
+                fields: {
+                    'target.activeClients': 1
+                },
+                opts: {
+                    background: true,
+                    writeConcern: {
+                        w: 1
+                    }
+                }
+            }, {
+                fields: {
+                    'target.newClients': 1
+                },
+                opts: {
+                    background: true,
+                    writeConcern: {
+                        w: 1
+                    }
+                }
+            }, {
+                fields: {
+                    'target.adminUsers': 1
+                },
+                opts: {
+                    background: true,
+                    writeConcern: {
+                        w: 1
+                    }
+                }
+            }, {
+                fields: {
+                    status: 1
+                },
+                opts: {
+                    background: true,
+                    writeConcern: {
+                        w: 1
+                    }
+                }
+            }, {
+                fields: {
+                    createdDate: 1
+                },
+                opts: {
+                    background: true,
+                    writeConcern: {
+                        w: 1
+                    }
+                }
+            }, {
+                fields: {
+                    lastStatusChangedDate: 1
+                },
+                opts: {
+                    background: true,
+                    writeConcern: {
+                        w: 1
+                    }
+                }
+            }]
+        },
+        UINotification: {
+            indices: [{
+                fields: {
+                    name: 1
+                },
+                opts: {
+                    unique: true,
+                    background: true,
+                    writeConcern: {
+                        w: 1
+                    }
+                }
+            }, {
+                fields: {
+                    uiNotificationTemplate_id: 1
+                },
+                opts: {
+                    background: true,
+                    writeConcern: {
+                        w: 1
+                    }
+                }
+            }, {
+                fields: {
+                    expirationDate: 1
+                },
+                opts: {
+                    background: true,
+                    writeConcern: {
+                        w: 1
+                    }
+                }
+            }, {
+                fields: {
+                    status: 1
+                },
+                opts: {
+                    background: true,
+                    writeConcern: {
+                        w: 1
+                    }
+                }
+            }, {
+                fields: {
+                    createdDate: 1
+                },
+                opts: {
+                    background: true,
+                    writeConcern: {
+                        w: 1
+                    }
+                }
+            }, {
+                fields: {
+                    lastStatusChangedDate: 1
+                },
+                opts: {
+                    background: true,
+                    writeConcern: {
+                        w: 1
+                    }
+                }
+            }]
+        },
+        UserUINotification: {
+            indices: [{
+                fields: {
+                    uiNotification_id: 1,
+                    user_id: 1
+                },
+                opts: {
+                    unique: true,
+                    background: true,
+                    writeConcern: {
+                        w: 1
+                    }
+                }
+            }, {
+                fields: {
+                    'emailDelivery.status': 1
+                },
+                opts: {
+                    background: true,
+                    writeConcern: {
+                        w: 1
+                    }
+                }
+            }, {
+                fields: {
+                    'emailDelivery.sentDate': 1
+                },
+                opts: {
+                    background: true,
+                    writeConcern: {
+                        w: 1
+                    }
+                }
+            }, {
+                fields: {
+                    status: 1
+                },
+                opts: {
+                    background: true,
+                    writeConcern: {
+                        w: 1
+                    }
+                }
+            }, {
+                fields: {
+                    createdDate: 1
+                },
+                opts: {
+                    background: true,
+                    writeConcern: {
+                        w: 1
+                    }
+                }
+            }, {
+                fields: {
+                    lastStatusChangedDate: 1
+                },
+                opts: {
+                    background: true,
+                    writeConcern: {
+                        w: 1
+                    }
+                }
+            }]
         }
     };
 
