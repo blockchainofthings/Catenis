@@ -412,7 +412,7 @@ Template.clientDeviceDetails.helpers({
         return color;
     },
     booleanValue(val) {
-        return typeof val === 'boolean' ? (val ? 'true' : 'false') : val;
+        return (!!val).toString();
     },
     isActiveDevice(device) {
         return device.status === DeviceShared.status.active.name;

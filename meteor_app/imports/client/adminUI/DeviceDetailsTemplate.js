@@ -439,7 +439,7 @@ Template.deviceDetails.helpers({
         return color;
     },
     booleanValue(val) {
-        return typeof val === 'boolean' && val ? 'true' : 'false';
+        return (!!val).toString();
     },
     isActiveDevice(device) {
         return device.status === DeviceShared.status.active.name;

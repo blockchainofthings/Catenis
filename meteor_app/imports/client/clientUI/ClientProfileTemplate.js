@@ -87,6 +87,6 @@ Template.clientProfile.helpers({
         return ClientUtil.getUserEmail(user);
     },
     booleanValue(val) {
-        return typeof val === 'boolean' && val ? 'true' : 'false';
+        return (!!val).toString();
     },
 });
