@@ -141,5 +141,8 @@ Template.clientClientLicenseDetails.helpers({
     },
     isAboutToExpire() {
         return Template.instance().state.get('aboutToExpire');
+    },
+    booleanValue(val) {
+        return (!!val).toString();
     }
 });

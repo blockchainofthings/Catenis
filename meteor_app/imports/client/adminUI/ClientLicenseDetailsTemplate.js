@@ -676,5 +676,8 @@ Template.clientLicenseDetails.helpers({
     },
     checkSelectedLicense(newLicense, license) {
         return newLicense._id === license._id ? 'selected' : undefined;
+    },
+    booleanValue(val) {
+        return (!!val).toString();
     }
 });
