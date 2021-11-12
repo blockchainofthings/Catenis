@@ -68,7 +68,7 @@
   },
   "repository": "git@bitbucket.org:blockchainofthings/catenis.git",
   "devDependencies": {
-    "@openzeppelin/contracts": "^4.1.0",
+    "@openzeppelin/contracts": "^4.3.2",
     "chai": "^4.3.4",
     "truffle": "^5.4.3"
   }
