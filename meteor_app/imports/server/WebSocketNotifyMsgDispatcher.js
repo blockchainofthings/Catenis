@@ -11,7 +11,6 @@
 //
 // Internal node modules
 import util from 'util';
-import url from 'url';
 // Third-party node modules
 import config from 'config';
 import WebSocket from 'ws';
@@ -105,7 +104,9 @@ export class WebSocketNotifyMsgDispatcher extends NotifyMsgDispatcher {
     //
     // noinspection JSMethodCanBeStatic, JSUnusedLocalSymbols
     handleProtocolConnection(request, socket, head) {
-        if (isValidEndpointUriPath.call(this, url.parse(request.url).pathname)) {
+        // Note: the second argument of the URL constructor (the 'base') is not relevant here,
+        //        but it is required to successfully parse a relative URL
+        if (isValidEndpointUriPath.call(this, new URL(request.url, 'http://catenis.io').pathname)) {
             // Valid endpoint. Try to establish WebSocket protocol connection
             this.wss.handleUpgrade(request, socket, head, (ws) => {
                 this.wss.emit('connection', ws, request);
@@ -614,7 +615,9 @@ function autoRegistration(dispatcherVer) {
 //                       -   name [String] - When result is false this field determines the HTTP reason phrase
 function validateConnection(info, callBack) {
     // Extract notification event name from endpoint URI and validate it
-    const eventName = parseEndpointUriPath.call(this, url.parse(info.req.url).pathname);
+    // Note: the second argument of the URL constructor (the 'base') is not relevant here,
+    //        but it is required to successfully parse a relative URL
+    const eventName = parseEndpointUriPath.call(this, new URL(info.req.url, 'http://catenis.io').pathname);
 
     if (eventName !== undefined) {
         // Save notification event to request object

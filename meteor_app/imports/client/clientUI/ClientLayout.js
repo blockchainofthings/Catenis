@@ -9,7 +9,7 @@
 // References to external code
 //
 // Internal node modules
-import url from 'url';
+//import util from 'util';
 // Third-party node modules
 //import config from 'config';
 // Meteor packages
@@ -68,13 +68,17 @@ function onWindowResize() {
 }
 
 function getSidebarNavEntry(path) {
-    const currentUrlPath = addTrailingSlash(url.parse(path).pathname.toLowerCase());
+    // Note: the second argument of the URL constructor (the 'base') is not relevant here,
+    //        but it is required to successfully parse a relative URL
+    const currentUrlPath = addTrailingSlash(new URL(path, 'http://catenis.io').pathname.toLowerCase());
     const navEntries = $('.sideNavButtons').toArray();
 
     for (let idx = 0, limit = navEntries.length; idx < limit; idx++) {
         const navEntry = navEntries[idx];
 
-        if (currentUrlPath.startsWith(addTrailingSlash(url.parse(navEntry.children[0].href).pathname.toLowerCase()))) {
+        // Note: the second argument of the URL constructor (the 'base') is not relevant here,
+        //        but it is required to successfully parse a relative URL
+        if (currentUrlPath.startsWith(addTrailingSlash(new URL(navEntry.children[0].href, 'http://catenis.io').pathname.toLowerCase()))) {
             return navEntry;
         }
     }

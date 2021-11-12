@@ -10,7 +10,7 @@
 // References to external code
 //
 // Internal node modules
-import url from 'url';
+//import util from 'util';
 // Third-party node modules
 import BigNumber from 'bignumber.js';
 // Meteor packages
@@ -43,7 +43,24 @@ import './clientUI/ClientLayout.js';
 //          retParams: periodid=custom&startdate=2018-10-02T03%3A00%3A00.000Z&enddate=2018-10-16T03%3A00%3A00.000Z
 //        }
 function getQueryParams() {
-    return url.parse(FlowRouter.current().path, true).query;
+    let url;
+
+    try {
+        // Note: the second argument of the URL constructor (the 'base') is not relevant here,
+        //        but it is required to successfully parse a relative URL
+        url = new URL(FlowRouter.current().path, 'http://catenis.io');
+    }
+    catch (e) {}
+
+    return url && url.search.length > 0
+        ? Array.from(url.searchParams).reduce((obj, entry) => {
+            const name = entry[0];
+
+            obj[name] = name in obj ? [obj[name], entry[1]] : entry[1];
+
+            return obj;
+        }, {})
+        : {};
 }
 
 function parseBoolean(strVal) {
