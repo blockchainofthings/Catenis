@@ -35,9 +35,11 @@
                                 </div>
                                 <div class="form-group" style="position:relative">
                                     <input id='dtpkrStartDate' name="startDate" type='text' placeholder="Start Date (YYYY-MM-DD)" autocomplete="off" />
+                                    {{#if hasStartDate}}<p class="text-left" style="color:darkblue;font-family: Helvetica Neue, Helvetica, Arial, sans-serif; font-size: small"><b>Note:</b> date formatted as YYYY-MM-DD (year-month-day)</p>{{/if}}
                                 </div>
                                 <div class="form-group" style="position:relative">
                                     <input id='dtpkrEndDate' name="endDate" type='text' placeholder="End Date * (YYYY-MM-DD)" autocomplete="off" />
+                                    {{#if hasEndDate}}<p class="text-left" style="color:darkblue;font-family: Helvetica Neue, Helvetica, Arial, sans-serif; font-size: small"><b>Note:</b> date formatted as YYYY-MM-DD (year-month-day)</p>{{/if}}
                                 </div>
                                 <div class="text-left" style="font-size:10pt; margin-bottom:20px; color:gray">
                                     * The report will include BCOT token payments received up to this date, but <b>not</b> including it

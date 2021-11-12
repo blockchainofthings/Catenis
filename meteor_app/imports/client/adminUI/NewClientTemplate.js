@@ -225,6 +225,8 @@ Template.newClient.onCreated(function () {
 
     this.state.set('displayConfirmNewClientSubmitButton', 'none');
     this.state.set('isInitializing', true);
+    this.state.set('hasStartDate', false);
+    this.state.set('hasEndDate', false);
     this.state.set('showAddLicenseEndDate', false);
     this.state.set('validatedClientInfo', undefined);
     this.state.set('clientCreated', false);
@@ -261,9 +263,11 @@ Template.newClient.events({
                 format: 'YYYY-MM-DD'
             });
 
-            // Set handler to adjust minimum end date based on currently
-            //  selected start date
+            // Set handler to monitor start date change and adjust minimum end date
+            //  based on currently selected start date
             dtPicker.on("dp.change", function (e) {
+                template.state.set('hasStartDate', !!e.date);
+
                 // Get start date (moment obj)
                 let startDate = e.date;
 
@@ -282,6 +286,11 @@ Template.newClient.events({
                 }
 
                 dataDtPicker2.minDate(minDate);
+            });
+
+            // Set handler to monitor end date change
+            dtPicker2.on("dp.change", function (e) {
+                template.state.set('hasEndDate', !!e.date);
             });
 
             template.state.set('isInitializing', false);
@@ -537,6 +546,12 @@ Template.newClient.helpers({
                 selected: tzName === localTZ ? 'selected' : ''
             };
         }).sort((tz1, tz2) => tz1.offset === tz2.offset ? (tz1.name < tz2.name ? -1 : (tz1.name > tz2.name ? 1 : 0)) : tz1.offset - tz2.offset);
+    },
+    hasStartDate() {
+        return Template.instance().state.get('hasStartDate');
+    },
+    hasEndDate() {
+        return Template.instance().state.get('hasEndDate');
     },
     displayAddLicenseEndDate() {
         return Template.instance().state.get('showAddLicenseEndDate') ? 'block' : 'none';

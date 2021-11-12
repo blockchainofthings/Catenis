@@ -113,9 +113,11 @@
                                                 </div>
                                                 <div class="form-group" style="position:relative; display:{{displayFilterStartDate}}">
                                                     <input id='dtpkrStartDate' name="startDate" type='text' placeholder="Start Date (YYYY-MM-DD HH:mm)" autocomplete="off" />
+                                                    {{#if hasStartDate}}<p class="text-left" style="color:darkblue;font-family: Helvetica Neue, Helvetica, Arial, sans-serif; font-size: small"><b>Note:</b> date formatted as YYYY-MM-DD (year-month-day)</p>{{/if}}
                                                 </div>
                                                 <div class="form-group" style="position:relative; display:{{displayFilterEndDate}}">
                                                     <input id='dtpkrEndDate' name="endDate" type='text' placeholder="End Date (YYYY-MM-DD HH:mm)" autocomplete="off" />
+                                                    {{#if hasEndDate}}<p class="text-left" style="color:darkblue;font-family: Helvetica Neue, Helvetica, Arial, sans-serif; font-size: small"><b>Note:</b> date formatted as YYYY-MM-DD (year-month-day)</p>{{/if}}
                                                 </div>
                                                 <div class="row" style="margin-top:2.5em">
                                                     <div class="center">

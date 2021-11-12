@@ -244,6 +244,8 @@ function getFilterParams(template) {
 Template.paidServicesHistory.onCreated(function () {
     this.state = new ReactiveDict();
 
+    this.state.set('hasStartDate', false);
+    this.state.set('hasEndDate', false);
     this.state.set('reloadHistory', false);
     this.state.set('historyLoaded', false);
     this.state.set('showHistoryRecs', true);
@@ -312,9 +314,11 @@ Template.paidServicesHistory.events({
             maxDate: moment().endOf('day')
         });
 
-        // Set handler to adjust minimum end date based on currently
-        //  selected start date
+        // Set handler to monitor start date change and adjust minimum end date
+        //  based on currently selected start date
         dtPicker.on("dp.change", function (e) {
+            template.state.set('hasStartDate', !!e.date);
+
             // Get start date (moment obj)
             let startDate = e.date;
 
@@ -332,6 +336,11 @@ Template.paidServicesHistory.events({
             }
 
             dataDtPicker2.minDate(minDate);
+        });
+
+        // Set handler to monitor end date change
+        dtPicker2.on("dp.change", function (e) {
+            template.state.set('hasEndDate', !!e.date);
         });
 
         // Initiate start and end date fields
@@ -431,6 +440,12 @@ Template.paidServicesHistory.helpers({
     },
     objProperty(obj, propName) {
         return obj[propName];
+    },
+    hasStartDate() {
+        return Template.instance().state.get('hasStartDate');
+    },
+    hasEndDate() {
+        return Template.instance().state.get('hasEndDate');
     },
     formatDate(date) {
         return moment(date).format('lll');

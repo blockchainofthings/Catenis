@@ -114,6 +114,7 @@
                                 </div>
                                 <div class="form-group" style="position:relative">
                                     <input id="dtpkrLicenseStartDate" name="licenseStartDate" type='text' placeholder="Start Date * (YYYY-MM-DD)" autocomplete="off" />
+                                    {{#if hasStartDate}}<p class="text-left" style="color:darkblue;font-family: Helvetica Neue, Helvetica, Arial, sans-serif; font-size: small"><b>Note:</b> date formatted as YYYY-MM-DD (year-month-day)</p>{{/if}}
                                 </div>
                                 <div class="form-group text-left" style="margin-bottom:-0.5em">
                                     <table style="margin-top:30px">
@@ -125,6 +126,7 @@
                                 </div>
                                 <div class="form-group" style="position:relative; display:{{displayAddLicenseEndDate}}">
                                     <input id='dtpkrLicenseEndDate' name="licenseEndDate" type='text' placeholder="End Date * (YYYY-MM-DD)" autocomplete="off" />
+                                    {{#if hasEndDate}}<p class="text-left" style="color:darkblue;font-family: Helvetica Neue, Helvetica, Arial, sans-serif; font-size: small"><b>Note:</b> date formatted as YYYY-MM-DD (year-month-day)</p>{{/if}}
                                 </div>
                                 <div class="form-group text-left">
                                     <table style="margin-top:30px">

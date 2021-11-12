@@ -188,6 +188,8 @@ function getFilterParams(template) {
 Template.billingReport.onCreated(function () {
     this.state = new ReactiveDict();
 
+    this.state.set('hasStartDate', false);
+    this.state.set('hasEndDate', false);
     this.state.set('reloadReport', false);
     this.state.set('reportLoaded', false);
 
@@ -233,9 +235,11 @@ Template.billingReport.events({
             format: 'YYYY-MM-DD'
         });
 
-        // Set handler to adjust minimum end date based on currently
-        //  selected start date
+        // Set handler to monitor start date change and adjust minimum end date
+        //  based on currently selected start date
         dtPicker.on("dp.change", function (e) {
+            template.state.set('hasStartDate', !!e.date);
+
             // Get start date (moment obj)
             let startDate = e.date;
 
@@ -253,6 +257,11 @@ Template.billingReport.events({
             }
 
             dataDtPicker2.minDate(minDate);
+        });
+
+        // Set handler to monitor end date change
+        dtPicker2.on("dp.change", function (e) {
+            template.state.set('hasEndDate', !!e.date);
         });
 
         // Initiate start and end date fields
@@ -366,6 +375,12 @@ Template.billingReport.helpers({
     },
     serviceName(service_id) {
         return Catenis.db.collection.PaidService.findOne({_id: service_id}).service;
+    },
+    hasStartDate() {
+        return Template.instance().state.get('hasStartDate');
+    },
+    hasEndDate() {
+        return Template.instance().state.get('hasEndDate');
     },
     formatDate(date) {
         return moment(date).format('lll');

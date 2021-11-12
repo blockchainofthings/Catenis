@@ -85,6 +85,8 @@ Template.clientLicenses.onCreated(function () {
     this.state.set('errMsgs', []);
     this.state.set('infoMsg', undefined);
     this.state.set('infoMsgType', 'info');
+    this.state.set('hasStartDate', false);
+    this.state.set('hasEndDate', false);
     this.state.set('actionSuccessClientLicense', undefined);
     this.state.set('replaceActiveClientLicense', false);
     this.state.set('addMoreRestrictiveLicense', false);
@@ -137,9 +139,11 @@ Template.clientLicenses.events({
             format: 'YYYY-MM-DD'
         });
 
-        // Set handler to adjust minimum end date based on currently
-        //  selected start date
+        // Set handler to monitor start date change and adjust minimum end date
+        //  based on currently selected start date
         dtPicker.on("dp.change", function (e) {
+            template.state.set('hasStartDate', !!e.date);
+
             // Get start date (moment obj)
             let startDate = e.date;
 
@@ -167,6 +171,11 @@ Template.clientLicenses.events({
             }
             
             template.state.set('replaceActiveClientLicense', replaceActiveLicense);
+        });
+
+        // Set handler to monitor end date change
+        dtPicker2.on("dp.change", function (e) {
+            template.state.set('hasEndDate', !!e.date);
         });
 
         // Reset alert messages
@@ -465,6 +474,12 @@ Template.clientLicenses.helpers({
         }
 
         return licName;
+    },
+    hasStartDate() {
+        return Template.instance().state.get('hasStartDate');
+    },
+    hasEndDate() {
+        return Template.instance().state.get('hasEndDate');
     },
     formatISODate(date) {
         return (date instanceof Date) && date.toISOString();
