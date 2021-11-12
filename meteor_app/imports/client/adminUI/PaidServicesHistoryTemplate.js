@@ -408,7 +408,11 @@ Template.paidServicesHistory.events({
         $('#divResetFilter').modal('hide');
     },
     'hidden.bs.modal #divResetFilter'(event, template) {
-        // Modal panel has been closed. Reload history if required
+        // Modal panel has been closed. Make sure that link used to
+        //  activate modal panel is not selected...
+        $('#lnkResetFilter').blur();
+
+        // and reload history if required
         if (template.state.get('reloadHistory')) {
             loadHistory(template);
         }

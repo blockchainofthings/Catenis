@@ -330,7 +330,11 @@ Template.clientBillingReport.events({
         $('#divResetFilter').modal('hide');
     },
     'hidden.bs.modal #divResetFilter'(event, template) {
-        // Modal panel has been closed. Reload report if required
+        // Modal panel has been closed. Make sure that link used to
+        //  activate modal panel is not selected...
+        $('#lnkResetFilter').blur();
+
+        // and reload report if required
         if (template.state.get('reloadReport')) {
             loadReport(template);
         }
