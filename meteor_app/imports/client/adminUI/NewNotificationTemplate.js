@@ -42,7 +42,7 @@ function initFormFields(template) {
         useStrict: true
     });
 
-    // Hook up handlers to monitor date change
+    // Hook up handler to monitor date change
     dtPicker.on("dp.change", function (e) {
         template.state.set('hasExpirationDate', !!e.date);
     });
