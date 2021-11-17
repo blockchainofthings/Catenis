@@ -394,7 +394,15 @@ Template.editNotification.helpers({
         return obj != null ? obj[field] : undefined;
     },
     logicalAnd(...ops) {
-        return ops.length > 0 && ops.every(v => !!v);
+        if (ops.length > 0) {
+            // Get rid of the last parameter (keyword arguments dictionary)
+            ops.pop();
+
+            return ops.every(v => !!v);
+        }
+        else {
+            return false;
+        }
     },
     capitalize(str) {
         return ClientUtil.capitalize(str);
