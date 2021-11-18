@@ -348,5 +348,9 @@
   // Parameters pertaining to UINotification module
   uiNotification: {
     fromAddress: "Catenis [Development] <noreply@blockchainofthings.com>"  // E-mail address used to send UI notification e-mail messages to Catenis users
+  },
+  // Parameters pertaining to UserUINotification module
+  userUINotification: {
+    displayBatchSize: 1  // Number of notification messages that should be fetched at time to be displayed on the UI
   }
 }

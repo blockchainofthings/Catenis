@@ -106,6 +106,7 @@ import { CrmIntegration } from './CrmIntegration';
 import { SelfRegistrationBcotSale } from './SelfRegistrationBcotSale';
 import { UserUINotification } from './UserUINotification';
 import { NotificationTemplatesUI } from './adminUI/NotificationTemplatesUI';
+import { NotificationsUI } from './commonUI/NotificationsUI';
 // TEST - begin
 //import { TestCatenisColoredCoins } from './test/TestCatenisColoredCoins';
 // TEST - end
@@ -269,6 +270,7 @@ Meteor.startup(function () {
             LicensesUI.initialize();
             PaidServicesUI.initialize();
             NotificationTemplatesUI.initialize();
+            NotificationsUI.initialize();
             ClientsUI.initialize();
             ServiceBillingUI.initialize();
             DevicesUI.initialize();

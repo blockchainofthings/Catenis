@@ -51,6 +51,8 @@ Catenis.db = {
         AvailableSelfRegBcotSale: new Mongo.Collection('AvailableSelfRegBcotSale'),
         UINotificationTemplate: new Mongo.Collection('UINotificationTemplate'),
         UINotification: new Mongo.Collection('UINotification'),
-        CatenisUser: new Mongo.Collection('CatenisUser')
+        CatenisUser: new Mongo.Collection('CatenisUser'),
+        UserNotificationInfo: new Mongo.Collection('UserNotificationInfo'),
+        UserNotification: new Mongo.Collection('UserNotification')
     }
 };

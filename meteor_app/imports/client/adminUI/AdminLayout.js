@@ -21,7 +21,7 @@ import { FlowRouter } from 'meteor/kadira:flow-router';
 import { AccountsTemplates } from 'meteor/useraccounts:core';
 
 // References code in other (Catenis) modules on the client
-//import { Catenis } from '../ClientCatenis';
+import { Catenis } from '../ClientCatenis';
 
 // Import template UI
 import './AdminLayout.html';
@@ -44,6 +44,7 @@ import './PaidServicesTemplate.js';
 import './ResourcesTemplate.js';
 import './NotificationTemplatesTemplate.js';
 import './NotificationTemplateDetailsTemplate.js';
+import './UserNotificationsTemplate.js';
 
 
 // Definition of module (private) functions
@@ -123,6 +124,9 @@ Template.adminLayout.onCreated(function () {
     this.state.set('appEnv', undefined);
     this.state.set('initializing', true);
 
+    // Subscribe to receive database docs/recs updates
+    this.subscribe('userNotificationInfo');
+
     Meteor.call('getAppEnvironment', (err, env) => {
         if (err) {
             console.log('Error calling \'getAppEnvironment\' remote procedure.', err);
@@ -184,5 +188,10 @@ Template.adminLayout.helpers({
         if (str) {
             return str.substr(0, 1).toUpperCase() + str.substr(1);
         }
+    },
+    unreadNotifications() {
+        const unreadCount = Catenis.db.collection.UserNotificationInfo.findOne({_id: 1}).unreadCount;
+
+        return unreadCount ? unreadCount : '';
     }
 });

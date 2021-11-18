@@ -255,6 +255,27 @@ currently using useraccounts:unstyled
 
 
 
+@media (max-width: 767px){
+    .navbar-nav .open .dropdown-menu
+    {
+        background-color: white;
+        position:absolute;
+        border-width: 2px;
+        border-color: rgb(102, 204,51);
+        border-style: solid;
+        left:auto;
+        right:0;
+    }
+    .navbar-nav>li>a{
+        padding-top:15px;
+        padding-bottom:15px;
+    }
+    /*above single one is for the menu size discrepancy in smaller sizes*/
+    .navbar-default .navbar-nav .open .dropdown-menu>li>a{
+        color: black;
+    }
+
+}
 @media(min-width:768px) {
     #wrapper {
         padding-left: 0;
@@ -1026,4 +1047,38 @@ h2.notFound {
 div.ctn_uiNotification p {
     margin-top: 0;
     margin-bottom: 0;
+}
+
+.floatingNumber {
+    position:relative;
+    top:10px;
+    left:30px;
+    margin:0;
+    height:0;
+    font-size:smaller;
+    font-weight:normal;
+    color:magenta;
+}
+@media (max-width:767px) {
+    #lnkNotifications > i {
+        margin-right:10px
+    }
+}
+
+tr.ctnNotifyEntry {
+    cursor: pointer;
+}
+
+td.ctnUserNotifications {
+    background-color: lightyellow;
+    border-top-color: rgb(221,221,221);
+    border-top-style: solid;
+    border-top-width: 1px;
+    border-bottom-color: rgb(221,221,221);
+    border-bottom-style: solid;
+    border-bottom-width: 1px;
+}
+
+div.ctnUserNotification {
+    background-color: lightyellow;
 }

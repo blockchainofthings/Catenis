@@ -1,0 +1,166 @@
+<template name="userNotifications">
+    <div>
+        <div class="panel panel-login minWidthElement noBoxShadow">
+            <div class="panel-body">
+                <div class="row">
+                    <div class="col-lg-12">
+                        <h2>NOTIFICATIONS</h2>
+                        {{#unless (logicalAnd Template.subscriptionsReady displayBatchSize)}}
+                            <p style="color:lightgray; margin-top:1em">Loading...</p>
+                        {{else}}
+                            {{#if hasUserNotifications}}
+                                <table class="table text-left">
+                                    <tbody>
+                                    {{#each userNotification in userNotifications}}
+                                        <tr class="ctnNotifyEntry" data-notifyId="{{userNotification._id}}">
+                                            <td class="ctnUserNotifications" style="width:10px;padding:0.4em 0 0 2px">
+                                                {{#if isNew userNotification}}<p style="font-size:larger;color:magenta">●</p>{{/if}}
+                                            </td>
+                                            <td class="ctnUserNotifications" style="padding-left:5px">
+                                                <div>
+                                                    <table style="width:100%">
+                                                        <tbody>
+                                                        <tr>
+                                                            <td>
+                                                                <p style="font-weight:bold;{{#if isCritical userNotification}}color:darkred;{{/if}}">{{userNotification.title}}</p>
+                                                            </td>
+                                                            <td>
+                                                                <p class="text-right" style="font-size:smaller;vertical-align:top">{{formatDate userNotification.issuedDate}}</p>
+                                                            </td>
+                                                        </tr>
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                                <div>
+                                                    {{{userNotification.message.excerpt}}}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    {{/each}}
+                                    </tbody>
+                                </table>
+                                {{#if hasMoreRecsToLoad}}
+                                    <div class="row" style="margin:0 1em 1em 1em">
+                                        <div class="row pull-right" style="margin:0 0 1em 1em">
+                                            <a id="lnkShowMoreRecs" href="#">Show More</a>
+                                        </div>
+                                    </div>
+                                {{/if}}
+                                <div class="row">
+                                    <div class="col-md-4">
+                                    </div>
+                                    <div class="col-md-4">
+                                        {{#if (logicalOr hasUnreadUserNotifications hasMoreRecsToLoad)}}
+                                        <button type="button" id="btnMarkAllNotificationsRead" class="btn-login btn paddedBtn fullWidth" data-toggle="modal" data-target="#divMarkAllNotificationsRead">Mark All As Read</button>
+                                        {{/if}}
+                                    </div>
+                                    <div class="col-md-4">
+                                        {{#if (logicalOr hasReadUserNotifications hasMoreRecsToLoad)}}
+                                        <button type="button" id="btnDeleteAllReadNotifications" class="btn-login btn paddedBtn btn-warn fullWidth" data-toggle="modal" data-target="#divDeleteAllReadNotifications">Delete All Read</button>
+                                        {{/if}}
+                                    </div>
+                                </div>
+                            {{else}}
+                                <p>No notification messages</p>
+                            {{/if}}
+                            {{!Modal panel used to display notificaton message}}
+                            <div id="divNotificationMessage" class="modal fade" tabindex="-1" role="dialog">
+                                <div class="modal-dialog" role="document">
+                                    <div class="modal-content text-left ctnUserNotification">
+                                        <div class="modal-header">
+                                            <button id="btnCloseNotificationMessage1" type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                                            <div>
+                                                <table style="width:100%">
+                                                    <tbody>
+                                                        <tr>
+                                                            <td>
+                                                                <h4 class="modal-title" style="{{#if isCritical selectedUserNotification}}color:darkred;{{/if}}">{{selectedUserNotification.title}}</h4>
+                                                            </td>
+                                                            <td>
+                                                                <p class="text-right" style="font-size:small;vertical-align:top;margin-top:0.3em">{{formatDateTime selectedUserNotification.issuedDate}}</p>
+                                                            </td>
+                                                        </tr>
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                        <div class="modal-body">
+                                            <div class="ctn-uiNotificationStyles">
+                                                {{{selectedUserNotification.message.full}}}
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button id="btnCloseNotificationMessage2" type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                                            &nbsp;&nbsp;<button id="btnDeleteNotificationMessage" type="button" class="btn btn-default btn-warn">Delete</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {{!Modal panel containing form used to mark all user notifications as read}}
+                            <div id="divMarkAllNotificationsRead" class="modal fade" tabindex="-1" role="dialog">
+                                <div class="modal-dialog" role="document">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <button id="btnCloseMarkAllNotificationsRead1" type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                                            <h4 class="modal-title">Mark All Notifications As Read</h4>
+                                        </div>
+                                        <div class="modal-body">
+                                            <div class="alert alert-warning" role="alert">
+                                                <b>Warning!</b>&nbsp;Please note that this will mark <b>all</b> notification messages, <b>not only</b> the ones currently displayed, as if they have been already read.
+                                            </div>
+                                            <form id="frmMarkAllNotificationsRead" autocomplete="off">
+                                                <div id="divMarkAllNotificationsReadConfirm" class="panel panel-default" style="padding:1em">
+                                                    <div style="margin-top:1em; margin-bottom:1em">
+                                                        <label>To confirm your action, please type the following text below: <b>yes, I do confirm it</b>
+                                                            <br><input id="itxMarkAllNotificationsReadConfirmation" type="text" size="20" maxlength="20" placeholder="confirmation" autocomplete="off"></label>
+                                                    </div>
+                                                    <div style="margin-top:1em">
+                                                        <button type="submit" class="btn btn-primary" style="display:{{displayMarkAllNotificationsReadSubmitButton}}">Confirm</button>
+                                                    </div>
+                                                </div>
+                                            </form>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button id="btnCloseMarkAllNotificationsRead2" type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {{!Modal panel containing form used to delete all currently read user notifications}}
+                            <div id="divDeleteAllReadNotifications" class="modal fade" tabindex="-1" role="dialog">
+                                <div class="modal-dialog" role="document">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <button id="btnCloseDeleteAllReadNotifications1" type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                                            <h4 class="modal-title">Delete All Read Notifications</h4>
+                                        </div>
+                                        <div class="modal-body">
+                                            <div class="alert alert-warning" role="alert">
+                                                <b>Warning!</b>&nbsp;Please note that this will remove <b>all</b> notification messages currently marked as read, <b>not only</b> the ones currently displayed.
+                                            </div>
+                                            <form id="frmDeleteAllReadNotifications" autocomplete="off">
+                                                <div id="divDeleteAllReadNotificationsConfirm" class="panel panel-default" style="padding:1em">
+                                                    <div style="margin-top:1em; margin-bottom:1em">
+                                                        <label>To confirm your action, please type the following text below: <b>yes, I do confirm it</b>
+                                                            <br><input id="itxDeleteAllReadNotificationsConfirmation" type="text" size="20" maxlength="20" placeholder="confirmation" autocomplete="off"></label>
+                                                    </div>
+                                                    <div style="margin-top:1em">
+                                                        <button type="submit" class="btn btn-primary" style="display:{{displayDeleteAllReadNotificationsSubmitButton}}">Confirm</button>
+                                                    </div>
+                                                </div>
+                                            </form>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button id="btnCloseDeleteAllReadNotifications2" type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <script>document.getElementById('divNotificationMessage').click()</script>
+                        {{/unless}}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</template>

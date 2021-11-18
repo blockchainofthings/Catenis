@@ -5,6 +5,42 @@
                 <div class="row">
                     <div class="col-lg-12">
                         <h2>Catenis System Administration</h2>
+                        {{#unless Template.subscriptionsReady}}
+                            <p style="color:lightgray; margin-top:1em">Loading...</p>
+                        {{else}}
+                            {{#if hasUserNotifications}}
+                                <table class="table table-responsive text-left">
+                                    <tbody>
+                                    {{#each userNotification in userNotifications}}
+                                        <tr class="ctnNotifyEntry" data-notifyId="{{userNotification._id}}">
+                                            <td class="ctnUserNotifications" style="width:10px;padding:0.4em 0 0 2px">
+                                                {{#if isNew userNotification}}<p style="font-size:larger;color:magenta">●</p>{{/if}}
+                                            </td>
+                                            <td class="ctnUserNotifications">
+                                                <div>
+                                                    <table style="width:100%">
+                                                        <tbody>
+                                                        <tr>
+                                                            <td>
+                                                                <p style="font-weight:bold;{{#if isCritical userNotification}}color:darkred;{{/if}}">{{userNotification.title}}</p>
+                                                            </td>
+                                                            <td>
+                                                                <p class="text-right" style="font-size:smaller;vertical-align:top">{{formatDate userNotification.issuedDate}}</p>
+                                                            </td>
+                                                        </tr>
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                                <div>
+                                                    {{{userNotification.message.excerpt}}}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    {{/each}}
+                                    </tbody>
+                                </table>
+                            {{/if}}
+                        {{/unless}}
                     </div>
                 </div>
             </div>

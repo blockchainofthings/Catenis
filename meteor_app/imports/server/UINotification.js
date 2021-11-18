@@ -35,7 +35,11 @@ export const cfgSettings = {
     fromAddress: uiNotifyConfig.get('fromAddress'),
     replyAddress: uiNotifyConfig.get('replyAddress'),
     emailHtmlTemplate: uiNotifyConfig.get('emailHtmlTemplate'),
-    emailTextTemplate: uiNotifyConfig.get('emailTextTemplate')
+    emailTextTemplate: uiNotifyConfig.get('emailTextTemplate'),
+    messageExcerpt: {
+        numTextLines: uiNotifyConfig.get('messageExcerpt.numTextLines'),
+        textLineLength: uiNotifyConfig.get('messageExcerpt.textLineLength'),
+    }
 };
 
 /**
@@ -254,7 +258,7 @@ export class UINotification {
      * @param {Object} [opts]
      * @param {boolean} [opts.uiMessage=true]
      * @param {boolean} [opts.emailMessage=false]
-     * @return {{title: string, body: {ui?: string, email?: {html: string, text: string}}}}
+     * @return {{title: string, body: {ui?: {full: string, excerpt: string}, email?: {html: string, text: string}}}}
      */
     composeMessageForUser(user, opts) {
         if (!(user instanceof CatenisUser)) {
@@ -281,9 +285,17 @@ export class UINotification {
             body: {}
         };
         const htmlBody = mergeUserFields(this.contents.body.html, user);
+        const textBody = mergeUserFields(this.contents.body.text, user);
 
         if (opts.uiMessage) {
-            message.body.ui = htmlBody;
+            message.body.ui = {
+                full: htmlBody,
+                excerpt: getMessageExcerpt(
+                    textBody,
+                    cfgSettings.messageExcerpt.numTextLines,
+                    cfgSettings.messageExcerpt.textLineLength)
+                    .replace('\n', '<br>')
+            };
         }
 
         if (opts.emailMessage) {
@@ -333,7 +345,7 @@ export class UINotification {
             message.body.email.text = mergeEmailFields(
                 cfgSettings.emailTextTemplate,
                 textEmailSalutation,
-                mergeUserFields(this.contents.body.text, user),
+                textBody,
                 mergeUserFields(this.contents.email.signature.text, user)
             );
         }
@@ -892,6 +904,70 @@ function mergeEmailFields(template, salutation, body, signature) {
 
     return emailMessage;
 }
+
+/**
+ * Get an excerpt from a text message. The excerpt is from the message's beginning and is
+ *  limited a given number of lines
+ * @param {string} textMessage The complete text message from which to get an excerpt
+ * @param {number} numTextLines Maximum number of lines in the message excerpt
+ * @param {number} textLineLength Maximum length (in characters) that each line in the excerpt should have
+ * @return {string}
+ */
+export function getMessageExcerpt(textMessage, numTextLines, textLineLength) {
+    function breakLine(textLine, maxLineLength) {
+        // Note: we do this to get any Unicode character, including those made up of more than one UTF-16 code units
+        const lineChars = [...textLine];
+        const numChars = lineChars.length;
+        let brokenLines
+
+        if (numChars > 0) {
+            brokenLines = [];
+
+            for (let startPos = 0; startPos < numChars; startPos += maxLineLength) {
+                brokenLines.push(lineChars.slice(startPos, startPos + maxLineLength).join(''));
+            }
+        }
+        else {
+            brokenLines = [''];
+        }
+
+        return brokenLines;
+    }
+
+    const textLines = textMessage.split('\n');
+    const excerptedLines = [];
+
+    for (const textLine of textLines) {
+        const brokenLines = breakLine(textLine, textLineLength);
+        const numBrokenLines = brokenLines.length;
+        let idx = 0;
+
+        do {
+            excerptedLines.push(brokenLines[idx++]);
+        }
+        while (idx < numBrokenLines && excerptedLines.length < numTextLines);
+
+        if (idx < numBrokenLines) {
+            // The text line has been cut off. So replace last character with an ellipsis
+            const lastLine = excerptedLines[excerptedLines.length - 1];
+            const lastLineChars = [...lastLine];
+            lastLineChars[lastLineChars.length - 1] = '\u2026';
+            excerptedLines[excerptedLines.length - 1] = lastLineChars.join('');
+        }
+
+        if (excerptedLines.length === numTextLines) {
+            // Maximum number of excerpted lines has been reached. So stop iterating
+            break;
+        }
+        else {
+            // Add original end-of-line
+            excerptedLines[excerptedLines.length - 1] = excerptedLines[excerptedLines.length - 1] + '\n';
+        }
+    }
+
+    return excerptedLines.join('');
+}
+
 
 /**
  * Replace embedded fields contained in message with the corresponding Catenis user value

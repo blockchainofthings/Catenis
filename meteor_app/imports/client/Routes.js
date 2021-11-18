@@ -117,6 +117,17 @@ FlowRouter.route('/profile/2fa', {
     }
 });
 
+FlowRouter.route('/usernotifications', {
+    action: function (params, queryParams) {
+        BlazeLayout.render('clientLayout', {
+            page: 'clientUserNotifications',
+            dataContext: {
+                selected_id: queryParams.selected_id
+            }
+        });
+    }
+});
+
 FlowRouter.route('/licenses/', {
     action: function (params, queryParams) {
         BlazeLayout.render('clientLayout', {
@@ -570,6 +581,17 @@ FlowRouter.route('/admin/notifytemplates/:uiNotificationTemplate_id/notification
             dataContext: {
                 uiNotificationTemplate_id: params.uiNotificationTemplate_id,
                 uiNotification_id: params.uiNotification_id
+            }
+        });
+    }
+});
+
+FlowRouter.route('/admin/usernotifications', {
+    action: function (params, queryParams) {
+        BlazeLayout.render('adminLayout', {
+            page: 'userNotifications',
+            dataContext: {
+                selected_id: queryParams.selected_id
             }
         });
     }

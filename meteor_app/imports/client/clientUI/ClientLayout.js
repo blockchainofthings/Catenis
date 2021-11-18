@@ -37,6 +37,7 @@ import './ClientDevicesTemplate.js';
 import './ClientResourcesTemplate.js';
 import './ClientOwnedDomainsTemplate.js';
 import './ClientForeignBlockchainsTemplate.js';
+import './ClientUserNotificationsTemplate.js';
 
 
 // Definition of module (private) functions
@@ -133,6 +134,9 @@ Template.clientLayout.onCreated(function () {
     this.state.set('appEnv', undefined);
     this.state.set('initializing', true);
 
+    // Subscribe to receive database docs/recs updates
+    this.subscribe('userNotificationInfo');
+
     Meteor.call('getAppEnvironment', (err, env) => {
         if (err) {
             console.log('Error calling \'getAppEnvironment\' remote procedure.', err);
@@ -199,6 +203,11 @@ Template.clientLayout.helpers({
         if (str) {
             return str.substr(0, 1).toUpperCase() + str.substr(1);
         }
+    },
+    unreadNotifications() {
+        const unreadCount = Catenis.db.collection.UserNotificationInfo.findOne({_id: 1}).unreadCount;
+
+        return unreadCount ? unreadCount : '';
     }
 });
 

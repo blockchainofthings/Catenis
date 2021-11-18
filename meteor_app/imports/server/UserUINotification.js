@@ -437,6 +437,64 @@ export class UserUINotification {
         });
     }
 
+    /**
+     * Mark all unread UI notifications for a given user as already read
+     * @param {(CatenisUser|string)} user
+     */
+    static readAllUserNotifications(user) {
+        if (user instanceof CatenisUser) {
+            // Get user ID
+            user = user.user_id;
+        }
+
+        Catenis.db.collection.UserUINotification.find({
+            user_id: user,
+            status: UserUINotification.userNotificationStatus.new.name
+        })
+        .fetch()
+        .forEach(doc => {
+            try {
+                // Instantiate user UI notification...
+                const userUINotification = new UserUINotification(doc);
+
+                // and mark it as read
+                userUINotification.read();
+            }
+            catch (err) {
+                Catenis.logger.ERROR('Error setting user UI notification (doc_id: %s) as read.', doc._id, err);
+            }
+        });
+    }
+
+    /**
+     * Delete all UI notifications for a given user that are marked as read
+     * @param {(CatenisUser|string)} user
+     */
+    static deleteAllUserNotifications(user) {
+        if (user instanceof CatenisUser) {
+            // Get user ID
+            user = user.user_id;
+        }
+
+        Catenis.db.collection.UserUINotification.find({
+            user_id: user,
+            status: UserUINotification.userNotificationStatus.read.name
+        })
+        .fetch()
+        .forEach(doc => {
+            try {
+                // Instantiate user UI notification...
+                const userUINotification = new UserUINotification(doc);
+
+                // and delete it
+                userUINotification.delete();
+            }
+            catch (err) {
+                Catenis.logger.ERROR('Error deleting user UI notification (doc_id: %s).', doc._id, err);
+            }
+        });
+    }
+
     static initialize() {
         Catenis.logger.TRACE('UserUINotification initialization');
         // Process any pending notification e-mail messages

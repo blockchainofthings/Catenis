@@ -24,18 +24,28 @@
                                  <a href="" class="menu-toggle"><i class="fa fa-bars fa-th-large"></i></a>
                              </div>
                              <div class="pull-right" id="userAccount">
-                                 <ul class="nav navbar-nav navbar-right">
-                                     <li class="dropdown">
-                                         <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false"><i class="glyphicon glyphicon-user"></i> {{currentUser.username}} <span class="caret"></span></a>
-                                         <ul class="dropdown-menu">
-                                             <li class="userMenuEntry"><a href="/admin/useraccount">User Account</a></li>
-                                             <li role="separator" class="divider"></li>
-                                             <li class="userMenuEntry"><a href="/admin/adminaccount/new">New Admin Account</a></li>
-                                             <li role="separator" class="divider"></li>
-                                             <li class="userMenuEntry"><a id="lnkLogout" href="#" role="button">Sign Out</a></li>
-                                         </ul>
-                                     </li>
-                                 </ul>
+                                 <table>
+                                     <tr>
+                                         <td>
+                                             <p class="floatingNumber" style="z-index:1000">{{unreadNotifications}}</p>
+                                             <a href="/admin/usernotifications" aria-label="Notifications"><i class="fa fa-bell" style="font-size:large;padding:0.9em;color:#333399"></i></a>
+                                         </td>
+                                         <td>
+                                             <ul class="nav navbar-nav navbar-right">
+                                                 <li class="dropdown">
+                                                     <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false"><i class="glyphicon glyphicon-user"></i> {{currentUser.username}} <span class="caret"></span></a>
+                                                     <ul class="dropdown-menu">
+                                                         <li class="userMenuEntry"><a href="/admin/useraccount">User Account</a></li>
+                                                         <li role="separator" class="divider"></li>
+                                                         <li class="userMenuEntry"><a href="/admin/adminaccount/new">New Admin Account</a></li>
+                                                         <li role="separator" class="divider"></li>
+                                                         <li class="userMenuEntry"><a id="lnkLogout" href="#" role="button">Sign Out</a></li>
+                                                     </ul>
+                                                 </li>
+                                             </ul>
+                                         </td>
+                                     </tr>
+                                 </table>
                              </div>
                          </div>
                          <!-- Brand and toggle get grouped for better mobile display -->
