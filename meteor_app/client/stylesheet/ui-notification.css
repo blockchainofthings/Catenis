@@ -1,0 +1,414 @@
+.ctn-uiNotificationStyles {
+    line-height: 1.42;
+    height: 100%;
+    outline: none;
+    overflow-y: auto;
+    padding: 0;
+    tab-size: 4;
+    -moz-tab-size: 4;
+    text-align: left;
+    word-wrap: break-word;
+}
+.ctn-uiNotificationStyles > * {
+    cursor: text;
+}
+.ctn-uiNotificationStyles p,
+.ctn-uiNotificationStyles ol,
+.ctn-uiNotificationStyles ul,
+.ctn-uiNotificationStyles pre,
+.ctn-uiNotificationStyles blockquote,
+.ctn-uiNotificationStyles h1,
+.ctn-uiNotificationStyles h2,
+.ctn-uiNotificationStyles h3,
+.ctn-uiNotificationStyles h4,
+.ctn-uiNotificationStyles h5,
+.ctn-uiNotificationStyles h6 {
+    margin: 0;
+    padding: 0;
+    counter-reset: list-1 list-2 list-3 list-4 list-5 list-6 list-7 list-8 list-9;
+}
+.ctn-uiNotificationStyles ol,
+.ctn-uiNotificationStyles ul {
+    padding-left: 1.5em;
+}
+.ctn-uiNotificationStyles ol > li,
+.ctn-uiNotificationStyles ul > li {
+    list-style-type: none;
+}
+.ctn-uiNotificationStyles ul > li::before {
+    content: '\2022';
+}
+.ctn-uiNotificationStyles ul[data-checked=true],
+.ctn-uiNotificationStyles ul[data-checked=false] {
+    pointer-events: none;
+}
+.ctn-uiNotificationStyles ul[data-checked=true] > li *,
+.ctn-uiNotificationStyles ul[data-checked=false] > li * {
+    pointer-events: all;
+}
+.ctn-uiNotificationStyles ul[data-checked=true] > li::before,
+.ctn-uiNotificationStyles ul[data-checked=false] > li::before {
+    color: #777;
+    cursor: pointer;
+    pointer-events: all;
+}
+.ctn-uiNotificationStyles ul[data-checked=true] > li::before {
+    content: '\2611';
+}
+.ctn-uiNotificationStyles ul[data-checked=false] > li::before {
+    content: '\2610';
+}
+.ctn-uiNotificationStyles li::before {
+    display: inline-block;
+    white-space: nowrap;
+    width: 1.2em;
+}
+.ctn-uiNotificationStyles li:not(.ql-direction-rtl)::before {
+    margin-left: -1.5em;
+    margin-right: 0.3em;
+    text-align: right;
+}
+.ctn-uiNotificationStyles li.ql-direction-rtl::before {
+    margin-left: 0.3em;
+    margin-right: -1.5em;
+}
+.ctn-uiNotificationStyles ol li:not(.ql-direction-rtl),
+.ctn-uiNotificationStyles ul li:not(.ql-direction-rtl) {
+    padding-left: 1.5em;
+}
+.ctn-uiNotificationStyles ol li.ql-direction-rtl,
+.ctn-uiNotificationStyles ul li.ql-direction-rtl {
+    padding-right: 1.5em;
+}
+.ctn-uiNotificationStyles ol li {
+    counter-reset: list-1 list-2 list-3 list-4 list-5 list-6 list-7 list-8 list-9;
+    counter-increment: list-0;
+}
+.ctn-uiNotificationStyles ol li:before {
+    content: counter(list-0, decimal) '. ';
+}
+.ctn-uiNotificationStyles ol li.ql-indent-1 {
+    counter-increment: list-1;
+}
+.ctn-uiNotificationStyles ol li.ql-indent-1:before {
+    content: counter(list-1, lower-alpha) '. ';
+}
+.ctn-uiNotificationStyles ol li.ql-indent-1 {
+    counter-reset: list-2 list-3 list-4 list-5 list-6 list-7 list-8 list-9;
+}
+.ctn-uiNotificationStyles ol li.ql-indent-2 {
+    counter-increment: list-2;
+}
+.ctn-uiNotificationStyles ol li.ql-indent-2:before {
+    content: counter(list-2, lower-roman) '. ';
+}
+.ctn-uiNotificationStyles ol li.ql-indent-2 {
+    counter-reset: list-3 list-4 list-5 list-6 list-7 list-8 list-9;
+}
+.ctn-uiNotificationStyles ol li.ql-indent-3 {
+    counter-increment: list-3;
+}
+.ctn-uiNotificationStyles ol li.ql-indent-3:before {
+    content: counter(list-3, decimal) '. ';
+}
+.ctn-uiNotificationStyles ol li.ql-indent-3 {
+    counter-reset: list-4 list-5 list-6 list-7 list-8 list-9;
+}
+.ctn-uiNotificationStyles ol li.ql-indent-4 {
+    counter-increment: list-4;
+}
+.ctn-uiNotificationStyles ol li.ql-indent-4:before {
+    content: counter(list-4, lower-alpha) '. ';
+}
+.ctn-uiNotificationStyles ol li.ql-indent-4 {
+    counter-reset: list-5 list-6 list-7 list-8 list-9;
+}
+.ctn-uiNotificationStyles ol li.ql-indent-5 {
+    counter-increment: list-5;
+}
+.ctn-uiNotificationStyles ol li.ql-indent-5:before {
+    content: counter(list-5, lower-roman) '. ';
+}
+.ctn-uiNotificationStyles ol li.ql-indent-5 {
+    counter-reset: list-6 list-7 list-8 list-9;
+}
+.ctn-uiNotificationStyles ol li.ql-indent-6 {
+    counter-increment: list-6;
+}
+.ctn-uiNotificationStyles ol li.ql-indent-6:before {
+    content: counter(list-6, decimal) '. ';
+}
+.ctn-uiNotificationStyles ol li.ql-indent-6 {
+    counter-reset: list-7 list-8 list-9;
+}
+.ctn-uiNotificationStyles ol li.ql-indent-7 {
+    counter-increment: list-7;
+}
+.ctn-uiNotificationStyles ol li.ql-indent-7:before {
+    content: counter(list-7, lower-alpha) '. ';
+}
+.ctn-uiNotificationStyles ol li.ql-indent-7 {
+    counter-reset: list-8 list-9;
+}
+.ctn-uiNotificationStyles ol li.ql-indent-8 {
+    counter-increment: list-8;
+}
+.ctn-uiNotificationStyles ol li.ql-indent-8:before {
+    content: counter(list-8, lower-roman) '. ';
+}
+.ctn-uiNotificationStyles ol li.ql-indent-8 {
+    counter-reset: list-9;
+}
+.ctn-uiNotificationStyles ol li.ql-indent-9 {
+    counter-increment: list-9;
+}
+.ctn-uiNotificationStyles ol li.ql-indent-9:before {
+    content: counter(list-9, decimal) '. ';
+}
+.ctn-uiNotificationStyles .ql-indent-1:not(.ql-direction-rtl) {
+    padding-left: 3em;
+}
+.ctn-uiNotificationStyles li.ql-indent-1:not(.ql-direction-rtl) {
+    padding-left: 4.5em;
+}
+.ctn-uiNotificationStyles .ql-indent-1.ql-direction-rtl.ql-align-right {
+    padding-right: 3em;
+}
+.ctn-uiNotificationStyles li.ql-indent-1.ql-direction-rtl.ql-align-right {
+    padding-right: 4.5em;
+}
+.ctn-uiNotificationStyles .ql-indent-2:not(.ql-direction-rtl) {
+    padding-left: 6em;
+}
+.ctn-uiNotificationStyles li.ql-indent-2:not(.ql-direction-rtl) {
+    padding-left: 7.5em;
+}
+.ctn-uiNotificationStyles .ql-indent-2.ql-direction-rtl.ql-align-right {
+    padding-right: 6em;
+}
+.ctn-uiNotificationStyles li.ql-indent-2.ql-direction-rtl.ql-align-right {
+    padding-right: 7.5em;
+}
+.ctn-uiNotificationStyles .ql-indent-3:not(.ql-direction-rtl) {
+    padding-left: 9em;
+}
+.ctn-uiNotificationStyles li.ql-indent-3:not(.ql-direction-rtl) {
+    padding-left: 10.5em;
+}
+.ctn-uiNotificationStyles .ql-indent-3.ql-direction-rtl.ql-align-right {
+    padding-right: 9em;
+}
+.ctn-uiNotificationStyles li.ql-indent-3.ql-direction-rtl.ql-align-right {
+    padding-right: 10.5em;
+}
+.ctn-uiNotificationStyles .ql-indent-4:not(.ql-direction-rtl) {
+    padding-left: 12em;
+}
+.ctn-uiNotificationStyles li.ql-indent-4:not(.ql-direction-rtl) {
+    padding-left: 13.5em;
+}
+.ctn-uiNotificationStyles .ql-indent-4.ql-direction-rtl.ql-align-right {
+    padding-right: 12em;
+}
+.ctn-uiNotificationStyles li.ql-indent-4.ql-direction-rtl.ql-align-right {
+    padding-right: 13.5em;
+}
+.ctn-uiNotificationStyles .ql-indent-5:not(.ql-direction-rtl) {
+    padding-left: 15em;
+}
+.ctn-uiNotificationStyles li.ql-indent-5:not(.ql-direction-rtl) {
+    padding-left: 16.5em;
+}
+.ctn-uiNotificationStyles .ql-indent-5.ql-direction-rtl.ql-align-right {
+    padding-right: 15em;
+}
+.ctn-uiNotificationStyles li.ql-indent-5.ql-direction-rtl.ql-align-right {
+    padding-right: 16.5em;
+}
+.ctn-uiNotificationStyles .ql-indent-6:not(.ql-direction-rtl) {
+    padding-left: 18em;
+}
+.ctn-uiNotificationStyles li.ql-indent-6:not(.ql-direction-rtl) {
+    padding-left: 19.5em;
+}
+.ctn-uiNotificationStyles .ql-indent-6.ql-direction-rtl.ql-align-right {
+    padding-right: 18em;
+}
+.ctn-uiNotificationStyles li.ql-indent-6.ql-direction-rtl.ql-align-right {
+    padding-right: 19.5em;
+}
+.ctn-uiNotificationStyles .ql-indent-7:not(.ql-direction-rtl) {
+    padding-left: 21em;
+}
+.ctn-uiNotificationStyles li.ql-indent-7:not(.ql-direction-rtl) {
+    padding-left: 22.5em;
+}
+.ctn-uiNotificationStyles .ql-indent-7.ql-direction-rtl.ql-align-right {
+    padding-right: 21em;
+}
+.ctn-uiNotificationStyles li.ql-indent-7.ql-direction-rtl.ql-align-right {
+    padding-right: 22.5em;
+}
+.ctn-uiNotificationStyles .ql-indent-8:not(.ql-direction-rtl) {
+    padding-left: 24em;
+}
+.ctn-uiNotificationStyles li.ql-indent-8:not(.ql-direction-rtl) {
+    padding-left: 25.5em;
+}
+.ctn-uiNotificationStyles .ql-indent-8.ql-direction-rtl.ql-align-right {
+    padding-right: 24em;
+}
+.ctn-uiNotificationStyles li.ql-indent-8.ql-direction-rtl.ql-align-right {
+    padding-right: 25.5em;
+}
+.ctn-uiNotificationStyles .ql-indent-9:not(.ql-direction-rtl) {
+    padding-left: 27em;
+}
+.ctn-uiNotificationStyles li.ql-indent-9:not(.ql-direction-rtl) {
+    padding-left: 28.5em;
+}
+.ctn-uiNotificationStyles .ql-indent-9.ql-direction-rtl.ql-align-right {
+    padding-right: 27em;
+}
+.ctn-uiNotificationStyles li.ql-indent-9.ql-direction-rtl.ql-align-right {
+    padding-right: 28.5em;
+}
+.ctn-uiNotificationStyles .ql-video {
+    display: block;
+    max-width: 100%;
+}
+.ctn-uiNotificationStyles .ql-video.ql-align-center {
+    margin: 0 auto;
+}
+.ctn-uiNotificationStyles .ql-video.ql-align-right {
+    margin: 0 0 0 auto;
+}
+.ctn-uiNotificationStyles .ql-bg-black {
+    background-color: #000;
+}
+.ctn-uiNotificationStyles .ql-bg-red {
+    background-color: #e60000;
+}
+.ctn-uiNotificationStyles .ql-bg-orange {
+    background-color: #f90;
+}
+.ctn-uiNotificationStyles .ql-bg-yellow {
+    background-color: #ff0;
+}
+.ctn-uiNotificationStyles .ql-bg-green {
+    background-color: #008a00;
+}
+.ctn-uiNotificationStyles .ql-bg-blue {
+    background-color: #06c;
+}
+.ctn-uiNotificationStyles .ql-bg-purple {
+    background-color: #93f;
+}
+.ctn-uiNotificationStyles .ql-color-white {
+    color: #fff;
+}
+.ctn-uiNotificationStyles .ql-color-red {
+    color: #e60000;
+}
+.ctn-uiNotificationStyles .ql-color-orange {
+    color: #f90;
+}
+.ctn-uiNotificationStyles .ql-color-yellow {
+    color: #ff0;
+}
+.ctn-uiNotificationStyles .ql-color-green {
+    color: #008a00;
+}
+.ctn-uiNotificationStyles .ql-color-blue {
+    color: #06c;
+}
+.ctn-uiNotificationStyles .ql-color-purple {
+    color: #93f;
+}
+.ctn-uiNotificationStyles .ql-font-serif {
+    font-family: Georgia, Times New Roman, serif;
+}
+.ctn-uiNotificationStyles .ql-font-monospace {
+    font-family: Monaco, Courier New, monospace;
+}
+.ctn-uiNotificationStyles .ql-size-small {
+    font-size: 0.75em;
+}
+.ctn-uiNotificationStyles .ql-size-large {
+    font-size: 1.5em;
+}
+.ctn-uiNotificationStyles .ql-size-huge {
+    font-size: 2.5em;
+}
+.ctn-uiNotificationStyles .ql-direction-rtl {
+    direction: rtl;
+    text-align: inherit;
+}
+.ctn-uiNotificationStyles .ql-align-center {
+    text-align: center;
+}
+.ctn-uiNotificationStyles .ql-align-justify {
+    text-align: justify;
+}
+.ctn-uiNotificationStyles .ql-align-right {
+    text-align: right;
+}
+.ctn-uiNotificationStyles.ql-blank::before {
+    color: rgba(0,0,0,0.6);
+    content: attr(data-placeholder);
+    font-style: italic;
+    left: 15px;
+    pointer-events: none;
+    position: absolute;
+    right: 15px;
+}
+.ctn-uiNotificationStyles h1 {
+    font-size: 2em;
+}
+.ctn-uiNotificationStyles h2 {
+    font-size: 1.5em;
+}
+.ctn-uiNotificationStyles h3 {
+    font-size: 1.17em;
+}
+.ctn-uiNotificationStyles h4 {
+    font-size: 1em;
+}
+.ctn-uiNotificationStyles h5 {
+    font-size: 0.83em;
+}
+.ctn-uiNotificationStyles h6 {
+    font-size: 0.67em;
+}
+.ctn-uiNotificationStyles a {
+    text-decoration: underline;
+}
+.ctn-uiNotificationStyles blockquote {
+    border-left: 4px solid #ccc;
+    margin-bottom: 5px;
+    margin-top: 5px;
+    padding-left: 16px;
+}
+.ctn-uiNotificationStyles code,
+.ctn-uiNotificationStyles pre {
+    background-color: #f0f0f0;
+    border-radius: 3px;
+}
+.ctn-uiNotificationStyles pre {
+    white-space: pre-wrap;
+    margin-bottom: 5px;
+    margin-top: 5px;
+    padding: 5px 10px;
+}
+.ctn-uiNotificationStyles code {
+    font-size: 85%;
+    padding: 2px 4px;
+}
+.ctn-uiNotificationStyles pre.ql-syntax {
+    background-color: #23241f;
+    color: #f8f8f2;
+    overflow: visible;
+}
+.ctn-uiNotificationStyles img {
+    max-width: 100%;
+}

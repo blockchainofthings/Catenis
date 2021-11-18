@@ -325,7 +325,7 @@ export class UINotification {
             }
 
             message.body.email.html = mergeEmailFields(
-                cfgSettings.emailHtmlTemplate,
+                cfgSettings.emailHtmlTemplate.replace('{!stylesheet}', Assets.getText('ui_notification/ui-notification.css')),
                 htmlEmailSalutation,
                 htmlBody,
                 mergeUserFields(this.contents.email.signature.html, user)
