@@ -189,7 +189,7 @@ Template.newNotification.onCreated(function () {
     this.state.set('notificationCreated', false);
 
     // Subscribe to receive database docs/recs updates
-    this.uiNotificationTemplateRecordSubs = this.subscribe('uiNotificationTemplateRecord', this.data.uiNotificationTemplate_id);
+    this.subscribe('uiNotificationTemplateRecord', this.data.uiNotificationTemplate_id);
 
     this.state.set('contentsStaticFields', undefined);
 
@@ -202,12 +202,6 @@ Template.newNotification.onCreated(function () {
             this.state.set('contentsStaticFields', contentsStaticFields);
         }
     });
-});
-
-Template.newNotification.onDestroyed(function () {
-    if (this.uiNotificationTemplateRecordSubs) {
-        this.uiNotificationTemplateRecordSubs.stop();
-    }
 });
 
 Template.newNotification.events({

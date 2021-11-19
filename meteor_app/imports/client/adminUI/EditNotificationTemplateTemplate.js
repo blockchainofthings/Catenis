@@ -288,13 +288,7 @@ Template.editNotifyTemplate.onCreated(function () {
     this.staticState = new Map();
 
     // Subscribe to receive database docs/recs updates
-    this.uiNotificationTemplateRecordSubs = this.subscribe('uiNotificationTemplateRecord', this.data.uiNotificationTemplate_id);
-});
-
-Template.editNotifyTemplate.onDestroyed(function () {
-    if (this.uiNotificationTemplateRecordSubs) {
-        this.uiNotificationTemplateRecordSubs.stop();
-    }
+    this.subscribe('uiNotificationTemplateRecord', this.data.uiNotificationTemplate_id);
 });
 
 Template.editNotifyTemplate.events({

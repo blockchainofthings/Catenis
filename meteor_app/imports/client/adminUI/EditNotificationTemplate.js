@@ -210,8 +210,8 @@ Template.editNotification.onCreated(function () {
     this.state.set('notificationUpdated', false);
 
     // Subscribe to receive database docs/recs updates
-    this.uiNotificationTemplateRecordSubs = this.subscribe('uiNotificationTemplateRecord', this.data.uiNotificationTemplate_id);
-    this.uiNotificationRecordSubs = this.subscribe(
+    this.subscribe('uiNotificationTemplateRecord', this.data.uiNotificationTemplate_id);
+    this.subscribe(
         'uiNotificationTemplateNotificationRecord',
         this.data.uiNotificationTemplate_id,
         this.data.uiNotification_id
@@ -240,16 +240,6 @@ Template.editNotification.onCreated(function () {
             this.state.set('referenceTimeZone', referenceTimeZone);
         }
     });
-});
-
-Template.editNotification.onDestroyed(function () {
-    if (this.uiNotificationTemplateRecordSubs) {
-        this.uiNotificationTemplateRecordSubs.stop();
-    }
-
-    if (this.uiNotificationRecordSubs) {
-        this.uiNotificationRecordSubs.stop();
-    }
 });
 
 Template.editNotification.events({

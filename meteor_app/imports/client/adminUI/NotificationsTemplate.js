@@ -35,21 +35,8 @@ import './NotificationDetailsTemplate.js';
 
 Template.notifications.onCreated(function () {
     // Subscribe to receive database docs/recs updates
-    this.uiNotificationTemplateRecordSubs = this.subscribe('uiNotificationTemplateRecord', this.data.uiNotificationTemplate_id);
-    this.uiNotificationsSubs = this.subscribe('uiNotifications', this.data.uiNotificationTemplate_id);
-});
-
-Template.notifications.onDestroyed(function () {
-    if (this.uiNotificationTemplateRecordSubs) {
-        this.uiNotificationTemplateRecordSubs.stop();
-    }
-
-    if (this.uiNotificationsSubs){
-        this.uiNotificationsSubs.stop();
-    }
-});
-
-Template.notifications.events({
+    this.subscribe('uiNotificationTemplateRecord', this.data.uiNotificationTemplate_id);
+    this.subscribe('uiNotifications', this.data.uiNotificationTemplate_id);
 });
 
 Template.notifications.helpers({

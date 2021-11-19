@@ -97,13 +97,7 @@ Template.notifyTemplateDetails.onCreated(function () {
     this.state.set('initialized', false);
 
     // Subscribe to receive database docs/recs updates
-    this.uiNotificationTemplateRecordSubs = this.subscribe('uiNotificationTemplateRecord', this.data.uiNotificationTemplate_id);
-});
-
-Template.notifyTemplateDetails.onDestroyed(function () {
-    if (this.uiNotificationTemplateRecordSubs) {
-        this.uiNotificationTemplateRecordSubs.stop();
-    }
+    this.subscribe('uiNotificationTemplateRecord', this.data.uiNotificationTemplate_id);
 });
 
 Template.notifyTemplateDetails.events({

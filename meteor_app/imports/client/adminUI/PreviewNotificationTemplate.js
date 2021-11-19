@@ -61,7 +61,7 @@ Template.previewNotification.onCreated(function () {
     this.staticState.set('userType', userType);
 
     // Subscribe to receive database docs/recs updates
-    this.uiNotificationTemplateRecordSubs = this.subscribe(
+    this.subscribe(
         'uiNotificationTemplateRecord',
         this.data.uiNotificationTemplate_id,
         () => {
@@ -75,17 +75,7 @@ Template.previewNotification.onCreated(function () {
             this.state.set('selectedUserType', Object.keys(userType)[0]);
         }
     );
-    this.catenisUserSubs = this.subscribe('catenisUsers');
-});
-
-Template.previewNotification.onDestroyed(function () {
-    if (this.uiNotificationTemplateRecordSubs) {
-        this.uiNotificationTemplateRecordSubs.stop();
-    }
-
-    if (this.catenisUserSubs) {
-        this.catenisUserSubs.stop();
-    }
+    this.subscribe('catenisUsers');
 });
 
 Template.previewNotification.events({

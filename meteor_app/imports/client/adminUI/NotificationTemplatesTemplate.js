@@ -34,13 +34,7 @@ import './NewNotificationTemplateTemplate.js';
 
 Template.notifyTemplates.onCreated(function () {
     // Subscribe to receive database docs/recs updates
-    this.uiNotificationTemplatesSubs = this.subscribe('uiNotificationTemplates');
-});
-
-Template.notifyTemplates.onDestroyed(function () {
-    if (this.uiNotificationTemplatesSubs){
-        this.uiNotificationTemplatesSubs.stop();
-    }
+    this.subscribe('uiNotificationTemplates');
 });
 
 Template.notifyTemplates.events({

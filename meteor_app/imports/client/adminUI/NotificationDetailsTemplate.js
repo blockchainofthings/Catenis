@@ -52,8 +52,8 @@ Template.notificationDetails.onCreated(function () {
     this.state.set('displayIssueNotificationSubmitButton', 'none');
 
     // Subscribe to receive database docs/recs updates
-    this.uiNotificationTemplateRecordSubs = this.subscribe('uiNotificationTemplateRecord', this.data.uiNotificationTemplate_id);
-    this.uiNotificationRecordSubs = this.subscribe(
+    this.subscribe('uiNotificationTemplateRecord', this.data.uiNotificationTemplate_id);
+    this.subscribe(
         'uiNotificationTemplateNotificationRecord',
         this.data.uiNotificationTemplate_id,
         this.data.uiNotification_id
@@ -70,16 +70,6 @@ Template.notificationDetails.onCreated(function () {
             this.state.set('referenceTimeZone', referenceTimeZone);
         }
     });
-});
-
-Template.notificationDetails.onDestroyed(function () {
-    if (this.uiNotificationTemplateRecordSubs) {
-        this.uiNotificationTemplateRecordSubs.stop();
-    }
-
-    if (this.uiNotificationRecordSubs) {
-        this.uiNotificationRecordSubs.stop();
-    }
 });
 
 Template.notificationDetails.events({
