@@ -445,10 +445,12 @@ Template.editNotifyTemplate.helpers({
     showEmailSaluteClientsContentsEditor() {
         const template = Template.instance();
 
-        return template.state.get('targetActiveClients') || template.state.get('targetNewClients');
+        return template.state.get('sendViaEmail') && template.state.get('targetActiveClients') || template.state.get('targetNewClients');
     },
     showEmailSaluteNonClientsContentsEditor() {
-        return Template.instance().state.get('targetAdminUsers');
+        const template = Template.instance();
+
+        return template.state.get('sendViaEmail') && template.state.get('targetAdminUsers');
     },
     showEmailSignatureContentsEditor() {
         return Template.instance().state.get('sendViaEmail');
