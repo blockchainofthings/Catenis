@@ -76,7 +76,7 @@
                                 <div class="row" style="margin-top:2em">
                                     <div class="col-xs-6 form-group pull-left">
                                         <button id="btnCancel" type="button" class="form-control btn btn-login at-btn">{{#if isNotificationCreated}}Back{{else}}Cancel{{/if}}</button>
-                                        <a id="lnkCancel" href="/admin/notifytemplates/{{uiNotificationTemplate_id}}/notifications" style="display:none"></a>
+                                        <a id="lnkCancel" href="/admin/notifytemplates/{{uiNotificationTemplate_id}}/notifications{{backQueryString}}" style="display:none"></a>
                                     </div>
                                     {{#if showCreateButton}}
                                         <div class="col-xs-6 form-group pull-right">

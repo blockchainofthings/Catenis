@@ -12,13 +12,13 @@
                             <div class="row">
                                 <div class="col-md-6">
                                     <div class="pull-left">
-                                        <a href="/admin/notifytemplates/{{uiNotificationTemplate_id}}/notifications" role="button" class="btn-login btn paddedBtn">Back to Notifications</a>
+                                        <a href="/admin/notifytemplates/{{uiNotificationTemplate_id}}/notifications{{backQueryString}}" role="button" class="btn-login btn paddedBtn">Back to Notifications</a>
                                     </div>
                                 </div>
                                 {{#unless isIssued uiNotification}}
                                     <div class="col-md-6">
                                         <div class="pull-right">
-                                            <a href="/admin/notifytemplates/{{uiNotificationTemplate_id}}/notifications/{{uiNotification_id}}/edit" role="button" class="btn-login btn paddedBtn">Edit Notification</a>
+                                            <a href="/admin/notifytemplates/{{uiNotificationTemplate_id}}/notifications/{{uiNotification_id}}/edit{{returnQueryString}}" role="button" class="btn-login btn paddedBtn">Edit Notification</a>
                                         </div>
                                     </div>
                                 {{/unless}}
@@ -109,7 +109,7 @@
                             {{/if}}
                             <div class="row">
                                 <div class="col-md-4">
-                                    <a id="lnkPreviewNotification" href="/admin/notifytemplates/{{uiNotificationTemplate_id}}/notifications/{{uiNotification_id}}/preview" role="button" class="btn-login btn paddedBtn fullWidth">Preview</a>
+                                    <a id="lnkPreviewNotification" href="/admin/notifytemplates/{{uiNotificationTemplate_id}}/notifications/{{uiNotification_id}}/preview{{returnQueryString}}" role="button" class="btn-login btn paddedBtn fullWidth">Preview</a>
                                 </div>
                                 {{#if (logicalAnd (isTemplateActive uiNotificationTemplate) (isDraft uiNotification))}}
                                     <div class="col-md-4">

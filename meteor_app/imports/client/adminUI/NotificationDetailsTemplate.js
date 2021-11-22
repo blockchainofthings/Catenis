@@ -10,7 +10,7 @@
 // References to external code
 //
 // Internal node modules
-//import util from 'util';
+import querystring from 'querystring';
 // Third-party node modules
 import moment from 'moment-timezone';
 // Meteor packages
@@ -153,6 +153,11 @@ Template.notificationDetails.events({
 });
 
 Template.notificationDetails.helpers({
+    backQueryString() {
+        const retParams = Template.instance().data.retParams;
+
+        return retParams ? '?' + retParams : undefined;
+    },
     uiNotificationTemplate() {
         return Catenis.db.collection.UINotificationTemplate.findOne({
             _id: Template.instance().data.uiNotificationTemplate_id
@@ -245,4 +250,15 @@ Template.notificationDetails.helpers({
     capitalize(str) {
         return ClientUtil.capitalize(str);
     },
+    returnQueryString() {
+        const retParams = Template.instance().data.retParams;
+
+        if (retParams) {
+            return '?' + querystring.stringify({
+                retparams: querystring.stringify({
+                    retparams: retParams
+                })
+            });
+        }
+    }
 });

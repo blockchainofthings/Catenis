@@ -318,6 +318,11 @@ Template.newNotifyTemplate.events({
 });
 
 Template.newNotifyTemplate.helpers({
+    backQueryString() {
+        const retParams = Template.instance().data.retParams;
+
+        return retParams ? '?' + retParams : undefined;
+    },
     hasErrorMessage() {
         return Template.instance().state.get('errMsgs').length > 0;
     },

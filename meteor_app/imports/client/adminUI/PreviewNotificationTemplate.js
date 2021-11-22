@@ -114,6 +114,11 @@ Template.previewNotification.events({
 });
 
 Template.previewNotification.helpers({
+    backQueryString() {
+        const retParams = Template.instance().data.retParams;
+
+        return retParams ? '?' + retParams : undefined;
+    },
     uiNotificationTemplate() {
         return Catenis.db.collection.UINotificationTemplate.findOne({
             _id: Template.instance().data.uiNotificationTemplate_id

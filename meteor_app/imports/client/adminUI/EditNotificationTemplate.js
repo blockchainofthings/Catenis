@@ -326,6 +326,11 @@ Template.editNotification.events({
 });
 
 Template.editNotification.helpers({
+    backQueryString() {
+        const retParams = Template.instance().data.retParams;
+
+        return retParams ? '?' + retParams : undefined;
+    },
     uiNotificationTemplate() {
         return Catenis.db.collection.UINotificationTemplate.findOne({
             _id: Template.instance().data.uiNotificationTemplate_id

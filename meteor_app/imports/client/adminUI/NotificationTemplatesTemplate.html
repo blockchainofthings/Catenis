@@ -9,7 +9,45 @@
                             <p style="color:lightgray; margin-top:1em">Loading...</p>
                         {{else}}
                             <div style="text-align:right">
-                                <a href="/admin/notifytemplates/new" role="button" class="btn-login btn paddedBtn">New template</a>
+                                <a href="/admin/notifytemplates/new{{returnQueryString}}" role="button" class="btn-login btn paddedBtn">New template</a>
+                            </div>
+                            <div class="row" style="margin-bottom:1em">
+                                <div class="col-md-12">
+                                    <div class="left" style="text-align:left; margin-left:1em">
+                                        <label>Filter:</label> {{#unless showingFilter}}<span class="{{#if isFilterOn}}filterStatusOn{{else}}filterStatusOff{{/if}}">{{filterState}}</span>{{/unless}}
+                                        {{#unless showingFilter}}
+                                            &nbsp;&nbsp;&nbsp;&nbsp;<a href="" id="lnkShowFilter">Show Filter</a>
+                                        {{else}}
+                                            <div style="margin-left:2em">
+                                                <table class="table simpleTable filterProps">
+                                                    <tbody>
+                                                    <tr>
+                                                        <td>
+                                                            <label>Name:</label>&nbsp;{{{filterPropName}}}
+                                                        </td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td>
+                                                            <label>Category:</label>&nbsp;{{{filterPropCategory}}}
+                                                        </td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td>
+                                                            <label>Urgency:</label>&nbsp;{{{filterPropUrgency}}}
+                                                        </td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td>
+                                                            <label>Status:</label>&nbsp;{{{filterPropStatus}}}
+                                                        </td>
+                                                    </tr>
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                            <a href="" id="lnkResetFilter" data-toggle="modal" data-target="#divResetFilter">Reset Filter</a>&nbsp;&nbsp;&nbsp;&nbsp;<a href="" id="lnkHideFilter">Hide Filter</a>
+                                        {{/unless}}
+                                    </div>
+                                </div>
                             </div>
                             <table class="table table-striped table-responsive text-left">
                                 <thead>
@@ -21,16 +59,78 @@
                                 </tr>
                                 </thead>
                                 <tbody>
+                                {{#let retQS=returnQueryString}}
                                 {{#each uiNotificationTemplate in uiNotificationTemplates}}
                                     <tr>
-                                        <td><a href="/admin/notifytemplates/{{uiNotificationTemplate._id}}">{{uiNotificationTemplate.name}}</a></td>
+                                        <td><a href="/admin/notifytemplates/{{uiNotificationTemplate._id}}{{retQS}}">{{uiNotificationTemplate.name}}</a></td>
                                         <td>{{displayName uiNotificationTemplate.category}}</td>
                                         <td>{{displayName uiNotificationTemplate.urgency}}</td>
                                         <td><span style="color:{{statusColor uiNotificationTemplate.status}}">{{uiNotificationTemplate.status}}</span></td>
                                     </tr>
                                 {{/each}}
+                                {{/let}}
                                 </tbody>
                             </table>
+                            {{!Modal panel containing form used to reset filter}}
+                            <div id="divResetFilter" class="modal fade" tabindex="-1" role="dialog">
+                                <div class="modal-dialog" role="document">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <button id="btnCloseResetFilter1" type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                                            <h4 class="modal-title">Reset Filter</h4>
+                                        </div>
+                                        <div class="modal-body">
+                                            <form id="frmResetFilter" autocomplete="off">
+                                                <div class="form-group text-left">
+                                                    <label for="selPropNameEqOp" class="input">Name:</label><br>
+                                                    <select id="selPropNameEqOp" name="propNameEqOp" class="input">
+                                                        <option value="">-- any --</option>
+                                                        {{#each op in filterEqualityOps}}
+                                                            <option value="{{op.value}}" selected="{{op.selected}}">{{op.name}}</option>
+                                                        {{/each}}
+                                                    </select>
+                                                    <input id="txtPropNameValue" type="text" style="display:{{#if selectedPropNameEqOp}}inline{{else}}none{{/if}}" maxlength="80" name="propNameValue" value="{{filter.name.value}}" placeholder="Search text for name" autocomplete="off" autocapitalize="none" autocorrect="off">
+                                                </div>
+                                                <div class="form-group text-left">
+                                                    <label for="selPropCategory" class="input">Category:</label><br>
+                                                    <select id="selPropCategory" name="propCategory" class="input" multiple size="{{categoriesCount}}">
+                                                        {{#each cat in filterCategories}}
+                                                            <option value="{{cat.value}}" selected="{{cat.selected}}">{{cat.name}}</option>
+                                                        {{/each}}
+                                                    </select>
+                                                </div>
+                                                <div class="form-group text-left">
+                                                    <label for="selPropUrgency" class="input">Urgency:</label><br>
+                                                    <select id="selPropUrgency" name="propUrgency" class="input" multiple size="{{urgenciesCount}}">
+                                                        {{#each urg in filterUrgencies}}
+                                                            <option value="{{urg.value}}" selected="{{urg.selected}}">{{urg.name}}</option>
+                                                        {{/each}}
+                                                    </select>
+                                                </div>
+                                                <div class="form-group text-left">
+                                                    <label for="selPropStatus" class="input">Status:</label><br>
+                                                    <select id="selPropStatus" name="propStatus" class="input" multiple size="{{statusesCount}}">
+                                                        {{#each stat in filterStatuses}}
+                                                            <option value="{{stat.value}}" selected="{{stat.selected}}">{{stat.name}}</option>
+                                                        {{/each}}
+                                                    </select>
+                                                </div>
+                                                <div class="row" style="margin-top:2.5em">
+                                                    <div class="col-xs-4">
+                                                        <button type="submit" class="btn btn-primary">Reset Filter</button>
+                                                    </div>
+                                                    <div class="col-xs-4">
+                                                        <button type="reset" class="btn">Clear Filter</button>
+                                                    </div>
+                                                </div>
+                                            </form>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button id="btnCloseResetFilter2" type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         {{/unless}}
                     </div>
                 </div>

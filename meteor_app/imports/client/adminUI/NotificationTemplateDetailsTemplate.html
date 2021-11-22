@@ -11,14 +11,14 @@
                             <div class="row">
                                 <div class="col-md-6">
                                     <div class="pull-left">
-                                        <a href="/admin/notifytemplates" role="button" class="btn-login btn paddedBtn">Back to Notification Templates</a>
+                                        <a href="/admin/notifytemplates{{backQueryString}}" role="button" class="btn-login btn paddedBtn">Back to Notification Templates</a>
                                     </div>
                                 </div>
                                 {{#unless templateDeleted}}
                                     {{#if isDraft uiNotificationTemplate}}
                                         <div class="col-md-6">
                                             <div class="pull-right">
-                                                <a href="/admin/notifytemplates/{{uiNotificationTemplate_id}}/edit" role="button" class="btn-login btn paddedBtn">Edit Notification Template</a>
+                                                <a href="/admin/notifytemplates/{{uiNotificationTemplate_id}}/edit{{returnQueryString}}" role="button" class="btn-login btn paddedBtn">Edit Notification Template</a>
                                             </div>
                                         </div>
                                     {{/if}}
@@ -126,7 +126,7 @@
                             {{#unless templateDeleted}}
                                 <div class="row">
                                     <div class="col-md-4">
-                                        <a id="lnkManageNotifications" href="/admin/notifytemplates/{{uiNotificationTemplate_id}}/notifications" role="button" class="btn-login btn paddedBtn fullWidth">Manage Notifications</a>
+                                        <a id="lnkManageNotifications" href="/admin/notifytemplates/{{uiNotificationTemplate_id}}/notifications{{returnQueryString}}" role="button" class="btn-login btn paddedBtn fullWidth">Manage Notifications</a>
                                     </div>
                                     {{#if isDraft uiNotificationTemplate}}
                                         <div class="col-md-4">

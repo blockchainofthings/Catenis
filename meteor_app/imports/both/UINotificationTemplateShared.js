@@ -76,6 +76,10 @@ export class UINotificationTemplateShared {
     static isValidUrgency(urgName) {
         return Object.values(this.notificationUrgency).some(urg => urg.name === urgName);
     }
+
+    static isValidTemplateStatus(statName) {
+        return Object.values(this.notificationTemplateStatus).some(stat => stat.name === statName);
+    }
 }
 
 

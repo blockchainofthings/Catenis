@@ -1082,3 +1082,21 @@ td.ctnUserNotifications {
 div.ctnUserNotification {
     background-color: lightyellow;
 }
+
+table.filterProps {
+    margin-bottom:0.5em;
+}
+table.filterProps > tbody > tr > td {
+    padding-top: 0;
+    padding-bottom: 0;
+}
+.filterStatusOn {
+    font-style: italic;
+    font-weight: bold;
+    color: green;
+}
+.filterStatusOff {
+    font-style: italic;
+    font-weight: normal;
+    color: gray;
+}

@@ -491,96 +491,134 @@ FlowRouter.route('/admin/paidservices/:service_id', {
 });
 
 FlowRouter.route('/admin/notifytemplates', {
-    action: function () {
+    action: function (params, queryParams) {
         BlazeLayout.render('adminLayout', {
-            page: 'notifyTemplates'
+            page: 'notifyTemplates',
+            dataContext: {
+                showFilter: parseBoolean(queryParams.fltr),
+                equalityOp: queryParams.eq_op,
+                name: queryParams.name,
+                category: queryParams.cat,
+                urgency: queryParams.urg,
+                status: queryParams.stat
+            }
         });
     }
 });
 
 FlowRouter.route('/admin/notifytemplates/new', {
-    action: function () {
+    action: function (params, queryParams) {
+        queryParams = getQueryParams();
+
         BlazeLayout.render('adminLayout', {
-            page: 'newNotifyTemplate'
+            page: 'newNotifyTemplate',
+            dataContext: {
+                retParams: queryParams.retparams
+            }
         });
     }
 });
 
 FlowRouter.route('/admin/notifytemplates/:uiNotificationTemplate_id', {
-    action: function (params) {
+    action: function (params, queryParams) {
+        queryParams = getQueryParams();
+
         BlazeLayout.render('adminLayout', {
             page: 'notifyTemplateDetails',
             dataContext: {
-                uiNotificationTemplate_id: params.uiNotificationTemplate_id
+                uiNotificationTemplate_id: params.uiNotificationTemplate_id,
+                retParams: queryParams.retparams
             }
         });
     }
 });
 
 FlowRouter.route('/admin/notifytemplates/:uiNotificationTemplate_id/edit', {
-    action: function (params) {
+    action: function (params, queryParams) {
+        queryParams = getQueryParams();
+
         BlazeLayout.render('adminLayout', {
             page: 'editNotifyTemplate',
             dataContext: {
-                uiNotificationTemplate_id: params.uiNotificationTemplate_id
+                uiNotificationTemplate_id: params.uiNotificationTemplate_id,
+                retParams: queryParams.retparams
             }
         });
     }
 });
 
 FlowRouter.route('/admin/notifytemplates/:uiNotificationTemplate_id/notifications', {
-    action: function (params) {
+    action: function (params, queryParams) {
+        queryParams = getQueryParams();
+
         BlazeLayout.render('adminLayout', {
             page: 'notifications',
             dataContext: {
-                uiNotificationTemplate_id: params.uiNotificationTemplate_id
+                uiNotificationTemplate_id: params.uiNotificationTemplate_id,
+                showFilter: parseBoolean(queryParams.fltr),
+                equalityOp: queryParams.eq_op,
+                name: queryParams.name,
+                status: queryParams.stat,
+                retParams: queryParams.retparams
             }
         });
     }
 });
 
 FlowRouter.route('/admin/notifytemplates/:uiNotificationTemplate_id/notifications/new', {
-    action: function (params) {
+    action: function (params, queryParams) {
+        queryParams = getQueryParams();
+
         BlazeLayout.render('adminLayout', {
             page: 'newNotification',
             dataContext: {
-                uiNotificationTemplate_id: params.uiNotificationTemplate_id
+                uiNotificationTemplate_id: params.uiNotificationTemplate_id,
+                retParams: queryParams.retparams
             }
         });
     }
 });
 
 FlowRouter.route('/admin/notifytemplates/:uiNotificationTemplate_id/notifications/:uiNotification_id', {
-    action: function (params) {
+    action: function (params, queryParams) {
+        queryParams = getQueryParams();
+
         BlazeLayout.render('adminLayout', {
             page: 'notificationDetails',
             dataContext: {
                 uiNotificationTemplate_id: params.uiNotificationTemplate_id,
-                uiNotification_id: params.uiNotification_id
+                uiNotification_id: params.uiNotification_id,
+                retParams: queryParams.retparams
             }
         });
     }
 });
 
 FlowRouter.route('/admin/notifytemplates/:uiNotificationTemplate_id/notifications/:uiNotification_id/preview', {
-    action: function (params) {
+    action: function (params, queryParams) {
+        queryParams = getQueryParams();
+
         BlazeLayout.render('adminLayout', {
             page: 'previewNotification',
             dataContext: {
                 uiNotificationTemplate_id: params.uiNotificationTemplate_id,
-                uiNotification_id: params.uiNotification_id
+                uiNotification_id: params.uiNotification_id,
+                retParams: queryParams.retparams
             }
         });
     }
 });
 
 FlowRouter.route('/admin/notifytemplates/:uiNotificationTemplate_id/notifications/:uiNotification_id/edit', {
-    action: function (params) {
+    action: function (params, queryParams) {
+        queryParams = getQueryParams();
+
         BlazeLayout.render('adminLayout', {
             page: 'editNotification',
             dataContext: {
                 uiNotificationTemplate_id: params.uiNotificationTemplate_id,
-                uiNotification_id: params.uiNotification_id
+                uiNotification_id: params.uiNotification_id,
+                retParams: queryParams.retparams
             }
         });
     }

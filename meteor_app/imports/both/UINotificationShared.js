@@ -26,6 +26,10 @@ export class UINotificationShared {
             description: 'This UI notification has been finalized and is ready to be delivered'
         })
     });
+
+    static isValidStatus(statName) {
+        return Object.values(this.notificationStatus).some(stat => stat.name === statName);
+    }
 }
 
 
