@@ -43,7 +43,6 @@ import './NewDeviceTemplate.js';
 import './PaidServicesTemplate.js';
 import './ResourcesTemplate.js';
 import './NotificationTemplatesTemplate.js';
-import './NotificationTemplateDetailsTemplate.js';
 import './UserNotificationsTemplate.js';
 
 

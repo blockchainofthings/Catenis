@@ -27,6 +27,7 @@ import { ClientUtil } from '../ClientUtil';
 import './NotificationTemplatesTemplate.html';
 
 // Import dependent templates
+import './NotificationTemplateDetailsTemplate.js';
 import './NewNotificationTemplateTemplate.js';
 
 // Module variables
