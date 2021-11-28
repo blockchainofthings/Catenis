@@ -2341,8 +2341,6 @@ Database.initialize = function() {
                     'token.id': 1
                 },
                 opts: {
-                    unique: true,
-                    sparse: true,
                     background: true,
                     writeConcern: {
                         w: 1
@@ -3240,6 +3238,72 @@ Database.initialize = function() {
     };
 
     Catenis.db = new Database(collections);
+};
+
+//** Temporary method used to fix index of ExportedAsset collection
+//   - index on foreignBlockchain and token.id changed to be made NOT unique and NOT parse
+import { Promise } from 'meteor/promise';
+
+Database.fixExportedAssetForeignBlockchainTokenIdIndex = function () {
+    try {
+        Promise.await(
+            (async () => {
+                let indices;
+
+                try {
+                    indices = await Catenis.db.mongoCollection.ExportedAsset.indexes();
+                }
+                catch (err) {
+                    // Error retrieving indices. Log error
+                    Catenis.logger.ERROR('Error retrieving indices from ExportedAsset DB collection.', err);
+                    throw new Error('Error retrieving indices from ExportedAsset DB collection');
+                }
+
+                const foreignBlockchainTokenId = indices.find((index) => {
+                    const keyFields = Object.keys(index.key);
+
+                    return keyFields.length === 2 && keyFields[0] === 'foreignBlockchain' && keyFields[1] === 'token.id';
+                });
+
+                if (foreignBlockchainTokenId && (foreignBlockchainTokenId.unique || foreignBlockchainTokenId.parse)) {
+                    // Index currently has either the unique or the parse constraint.
+                    //  So remove it and reinsert it
+                    try {
+                        await Catenis.db.mongoCollection.ExportedAsset.dropIndex(foreignBlockchainTokenId.name);
+                    }
+                    catch (err) {
+                        // Error trying to remove index. Log error and throw exception
+                        Catenis.logger.ERROR('Error trying to remove index on foreignBlockchain and token.id fields of ExportedAsset DB collection.', err);
+                        throw new Error('Error trying to remove index on foreignBlockchain and token.id fields of ExportedAsset DB collection');
+                    }
+
+                    // Insert index back
+                    let indexName;
+
+                    try {
+                        await Catenis.db.mongoCollection.ExportedAsset.createIndex({
+                            foreignBlockchain: 1,
+                            'token.id': 1
+                        }, {
+                            background: true,
+                            safe: true
+                        });
+                    }
+                    catch (err) {
+                        // Error trying to insert index back. Log error and throw exception
+                        Catenis.logger.ERROR('Error trying to insert fixed index on foreignBlockchain and token.id fields of ExportedAsset DB collection.', err);
+                        throw new Error('Error trying to insert fixed index on foreignBlockchain and token.id fields of ExportedAsset DB collection');
+                    }
+
+                    Catenis.logger.INFO('****** Index on foreignBlockchain and token.id fields of ExportedAsset DB collection has been fixed');
+                }
+            })()
+        );
+    }
+    catch (err) {
+        Catenis.logger.ERROR('Error executing method to fix index of ExportedAsset DB collection.', err);
+        throw new Error('Error executing method to fix index of ExportedAsset DB collection');
+    }
 };
 
 //** Temporary method used to add missing 'encSentFromAddress' and 'bcotPayAddressPath' fields

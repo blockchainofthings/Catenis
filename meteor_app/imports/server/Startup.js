@@ -164,6 +164,7 @@ Meteor.startup(function () {
 
             Database.initialize();
             Database.migrateRoles();
+            Database.fixExportedAssetForeignBlockchainTokenIdIndex();
             Database.removeInconsistentAssetIndices();
             Database.fixBillingExchangeRate();
             Database.removeBcotExchangeRateColl();
