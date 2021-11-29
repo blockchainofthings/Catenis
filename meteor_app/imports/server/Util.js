@@ -11,6 +11,7 @@
 //
 // Internal node modules
 import util from 'util';
+import dns from "dns";
 // Third-party node modules
 // noinspection JSFileReferences
 import BigNumber from 'bignumber.js';
@@ -27,7 +28,7 @@ import { Catenis } from './Catenis';
 import { Transaction } from './Transaction';
 import { UtilShared } from '../both/UtilShared';
 import { BitcoinInfo } from './BitcoinInfo';
-import dns from "dns";
+import { addressFromPublicKey } from './Transaction';
 
 
 // Definition of function classes
@@ -80,7 +81,7 @@ Util.spendUtxo = function (txout, destAddress, fee) {
 
         if (txout.amount >= fee + 600) {
             const tx = new Transaction();
-            const address = txoutInfo.scriptPubKey.addresses[0];
+            const address = txoutInfo.scriptPubKey.address;
 
             tx.addInput(txout, {
                 isWitness: outputType.isWitness,
@@ -469,6 +470,18 @@ Util.syncDnsResolveTxt = (() => {
         return futFunc.apply(this, arguments).wait();
     }
 })();
+
+/**
+ * Get bitcoin addresses of a multisig transaction output
+ * @param {Object} scriptPubKey Script public key object as returned by Bitcoin Core's RPC methods
+ *                               (e.g. decoderawtransaction)
+ * @return {(string[]|undefined)}
+ */
+Util.multiSigAddresses = function (scriptPubKey) {
+    if (scriptPubKey.type === 'multisig') {
+        return scriptPubKey.asm.split(' ').slice(1, -2).map(pk => addressFromPublicKey(pk));
+    }
+};
 
 
 // Util function class (public) properties

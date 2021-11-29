@@ -1508,10 +1508,9 @@ BaseBlockchainAddress.isAddressWithBalance = function (addr) {
     const hasLockedTxOuts = Catenis.bitcoinCore.listLockUnspent().some((lockTxOut) => {
         const txOutInfo = Catenis.bitcoinCore.getTxOut(lockTxOut.txid, lockTxOut.vout);
 
-        return txOutInfo !== null && 'scriptPubKey' in txOutInfo && 'addresses' in txOutInfo.scriptPubKey
-            && txOutInfo.scriptPubKey.addresses.some((txOutAddr) => {
-                return txOutAddr === addr;
-            });
+        return txOutInfo !== null && ((txOutInfo.scriptPubKey.address && txOutInfo.scriptPubKey.address === addr)
+            || (txOutInfo.scriptPubKey.type === 'multisig'
+            && Util.multiSigAddresses(txOutInfo.scriptPubKey).some(mSigAddr => mSigAddr === addr)));
     });
 
     if (hasLockedTxOuts) {
@@ -1538,10 +1537,15 @@ BaseBlockchainAddress.checkAddressesWithBalance = function (addrList) {
     Catenis.bitcoinCore.listLockUnspent().forEach((lockTxOut) => {
         let txOutInfo = Catenis.bitcoinCore.getTxOut(lockTxOut.txid, lockTxOut.vout);
 
-        if (txOutInfo !== null && 'scriptPubKey' in txOutInfo && 'addresses' in txOutInfo.scriptPubKey) {
-            txOutInfo.scriptPubKey.addresses.forEach((txOutAddr) => {
-                lockedAddresses.add(txOutAddr);
-            });
+        if (txOutInfo !== null) {
+            if (txOutInfo.scriptPubKey.address) {
+                lockedAddresses.add(txOutInfo.scriptPubKey.address);
+            }
+            else if (txOutInfo.scriptPubKey.type === 'multisig') {
+                Util.multiSigAddresses(txOutInfo.scriptPubKey).forEach(mSigAddr => {
+                    lockedAddresses.add(mSigAddr);
+                });
+            }
         }
     });
 

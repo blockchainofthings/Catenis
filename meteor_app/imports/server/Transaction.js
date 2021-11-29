@@ -1645,14 +1645,16 @@ Transaction.fromHex = function (hexTx, txTime, blockTime) {
 
                         if (Transaction.isPayingOutput(outputType)) {
                             // Save address associated with output spent by input
-                            input.address = output.scriptPubKey.addresses[0];
+                            input.address = output.scriptPubKey.address || (output.scriptPubKey.type === 'multisig'
+                                ? Util.multiSigAddresses(output.scriptPubKey)[0]
+                                : undefined);
 
                             // Since the type of all Catenis node's blockchain addresses is either P2PKH or P2WPKH,
                             //  we filter that specific type before trying to get its information
                             if (outputType === BitcoinInfo.outputType.witness_v0_keyhash || outputType === BitcoinInfo.outputType.pubkeyhash) {
                                 // Try to get information about address associated with
                                 //  spent output
-                                const addrInfo = Catenis.keyStore.getAddressInfo(output.scriptPubKey.addresses[0], true);
+                                const addrInfo = Catenis.keyStore.getAddressInfo(output.scriptPubKey.address, true);
 
                                 if (addrInfo !== null) {
                                     input.addrInfo = addrInfo;
@@ -1677,7 +1679,7 @@ Transaction.fromHex = function (hexTx, txTime, blockTime) {
 
                 if (Transaction.isSingleAddressPayingOutput(outputType)) {
                     txOutput.payInfo = {
-                        address: output.scriptPubKey.addresses[0],
+                        address: output.scriptPubKey.address,
                         amount: new BigNumber(output.value).times(100000000).toNumber()
                     };
 
@@ -1697,17 +1699,18 @@ Transaction.fromHex = function (hexTx, txTime, blockTime) {
                 }
                 else if (outputType === BitcoinInfo.outputType.multisig) {
                     // Multi-signature output. Decode scriptPubKey to get public keys
-                    const pubKeys = bitcoinLib.payments.p2ms({output: Buffer.from(output.scriptPubKey.hex, 'hex')}, {validate: false}).pubkeys;
+                    const payment = bitcoinLib.payments.p2ms({output: Buffer.from(output.scriptPubKey.hex, 'hex')}, {validate: false});
+                    const mSigAddresses = Util.multiSigAddresses(output.scriptPubKey);
 
                     txOutput.payInfo = {
-                        address: output.scriptPubKey.addresses,
-                        nSigs: output.scriptPubKey.reqSigs,
+                        address: mSigAddresses,
+                        nSigs: payment.m,
                         amount: new BigNumber(output.value).times(100000000).toNumber(),
-                        addrInfo: output.scriptPubKey.addresses.map((address, idx) => {
+                        addrInfo: mSigAddresses.map((address, idx) => {
                             // Try to get information about address in multi-sig output
                             const addrInfo = Catenis.keyStore.getAddressInfo(address, true);
 
-                            return addrInfo !== null ? addrInfo : pubKeys[idx].toString('hex');
+                            return addrInfo !== null ? addrInfo : payment.pubkeys[idx].toString('hex');
                         })
                     }
                 }
@@ -2248,7 +2251,7 @@ function isTransactFuncClassToMatch(transactFuncClass) {
 //        the statement bitcoinLib.payments.p2pkh({pubkey, network}).address, which might
 //        at first seem to be more intuitive, because bitcoinLib.payment.p2pkh() checks
 //        whether the passed in public key is valid.
-function addressFromPublicKey(pubKey) {
+export function addressFromPublicKey(pubKey) {
     return bitcoinLib.address.toBase58Check(bitcoinLib.crypto.hash160(Buffer.from(pubKey, 'hex')), Catenis.application.cryptoNetwork.pubKeyHash);
 }
 

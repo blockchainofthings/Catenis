@@ -1785,7 +1785,9 @@ function computeAdditionalUtxos(addUtxoTxInputs) {
 
             // Make sure that UTXO is complete
             if (!utxo.address) {
-                utxo.address = scriptPubKey.addresses[0];
+                utxo.address = scriptPubKey.address || (scriptPubKey.type === 'multisig'
+                    ? Util.multiSigAddresses(scriptPubKey)[0]
+                    : undefined);
             }
 
             if (!utxo.scriptPubKey) {
