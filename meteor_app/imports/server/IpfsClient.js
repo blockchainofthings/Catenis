@@ -13,7 +13,7 @@
 import util from 'util';
 // Third-party node modules
 import config from 'config';
-import ipfsHttpClient from 'ipfs-http-client';
+import { create as ipfsHttpClient} from 'ipfs-http-client';
 import toStream from 'it-to-stream';
 // Meteor packages
 import { Meteor } from 'meteor/meteor';
