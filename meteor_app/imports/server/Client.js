@@ -202,27 +202,6 @@ export function Client(docClient, ctnNode, initializeDevices, noClientLicense = 
                 return this.status === Client.status.deleted.name;
             },
             enumerable: true
-        },
-        firstPrepaidActivityDate: {
-            get: function () {
-                // noinspection JSPotentiallyInvalidUsageOfThis
-                const docs = Catenis.db.collection.Billing.find({
-                    type: Billing.docType.original.name,
-                    clientId: this.clientId,
-                    billingMode: Client.billingMode.prePaid
-                }, {
-                    fields: {
-                        createdDate: 1
-                    },
-                    sort: {
-                        createdDate: 1
-                    },
-                    limit: 1
-                }).fetch();
-
-                return docs.length > 0 ? docs[0].createdDate : undefined;
-            },
-            enumerable: true
         }
     });
 
@@ -538,7 +517,29 @@ Client.prototype.assetExportAdminForeignBcAccount = function (blockchainKey) {
         .getPrivateKey()
         .toString('hex')
     );
-}
+};
+
+/**
+ * Retrieve the date/time of the client's first billing activity
+ * @return {Date|undefined}
+ */
+Client.prototype.getFirstPrepaidActivityDate = function () {
+    const docs = Catenis.db.collection.Billing.find({
+        type: Billing.docType.original.name,
+        clientId: this.clientId,
+        billingMode: Client.billingMode.prePaid
+    }, {
+        fields: {
+            createdDate: 1
+        },
+        sort: {
+            createdDate: 1
+        },
+        limit: 1
+    }).fetch();
+
+    return docs.length > 0 ? docs[0].createdDate : undefined;
+};
 
 /**
  * Computes client's past credits consumption
@@ -551,7 +552,7 @@ Client.prototype.pastCreditsConsumption = function (now) {
     let startDate = new Date(now);
     startDate.setSeconds(now.getSeconds() - cfgSettings.creditsConsumption.pastConsumptionPeriod);
 
-    let firstPrepaidActivityDate = this.firstPrepaidActivityDate;
+    let firstPrepaidActivityDate = this.getFirstPrepaidActivityDate();
 
     if (!firstPrepaidActivityDate) {
         startDate = now;
