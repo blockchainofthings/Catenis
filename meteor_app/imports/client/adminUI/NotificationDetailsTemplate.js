@@ -49,7 +49,9 @@ Template.notificationDetails.onCreated(function () {
     this.state.set('infoMsg', undefined);
     this.state.set('infoMsgType', 'info');
 
+    this.state.set('displayDeleteNotificationSubmitButton', 'none');
     this.state.set('displayIssueNotificationSubmitButton', 'none');
+    this.state.set('notificationDeleted', false);
 
     // Subscribe to receive database docs/recs updates
     this.subscribe('uiNotificationTemplateRecord', this.data.uiNotificationTemplate_id);
@@ -81,6 +83,75 @@ Template.notificationDetails.events({
     'click #btnDismissError'(event, template) {
         // Clear error message
         template.state.set('errMsgs', []);
+    },
+    'click #btnDeleteNotification'(event, template) {
+        event.preventDefault();
+
+        // Reset alert messages
+        template.state.set('errMsgs', []);
+        template.state.set('infoMsg', undefined);
+        template.state.set('infoMsgType', 'info');
+
+        // Reset action confirmation
+        $('#itxDeleteNotificationConfirmation')[0].value = '';
+        template.state.set('displayDeleteNotificationSubmitButton', 'none');
+    },
+    'hidden.bs.modal #divDeleteNotification'(event, template) {
+        // Modal panel has been closed. Make sure that button used to
+        //  activate modal panel is not selected
+        $('#btnDeleteNotification').blur();
+    },
+    'input #itxDeleteNotificationConfirmation'(event, template) {
+        // Suppress spaces from beginning of input
+        let inputValue = event.target.value = event.target.value.replace(/^\s+/, '');
+
+        if (inputValue.length > confirmPhrase.length) {
+            // Limit length of input
+            inputValue = event.target.value = inputValue.substring(0, confirmPhrase.length);
+        }
+
+        // Check if input matches confirmation phrase
+        if (inputValue.toLowerCase() === confirmPhrase) {
+            // Show button to confirm action
+            template.state.set('displayDeleteNotificationSubmitButton', 'inline');
+        }
+        else {
+            // Hide button to confirm action
+            template.state.set('displayDeleteNotificationSubmitButton', 'none');
+        }
+    },
+    'submit #frmDeleteNotification'(event, template) {
+        event.preventDefault();
+        event.stopPropagation();
+
+        const confirmMsg = 'LAST CHANCE!\n\nIf you proceed, the notification will be DELETED.\n\nPLEASE NOTE THAT THIS ACTION CANNOT BE UNDONE.';
+
+        if (confirm(confirmMsg)) {
+            // Close modal panel
+            $('#divDeleteNotification').modal('hide');
+
+            // Reset alert messages
+            template.state.set('errMsgs', []);
+            template.state.set('infoMsg', undefined);
+            template.state.set('infoMsgType', 'info');
+
+            Meteor.call('deleteUINotification', template.data.uiNotification_id, (error) => {
+                if (error) {
+                    const errMsgs = template.state.get('errMsgs');
+                    errMsgs.push('Error deleting notification: ' + error.toString());
+                    template.state.set('errMsgs', errMsgs);
+                }
+                else {
+                    template.state.set('notificationDeleted', true);
+                    template.state.set('infoMsg', 'Notification successfully deleted');
+                    template.state.set('infoMsgType', 'success');
+                }
+            });
+        }
+        else {
+            // Close modal panel
+            $('#divDeleteNotification').modal('hide');
+        }
     },
     'click #btnIssueNotification'(event, template) {
         event.preventDefault();
@@ -199,6 +270,9 @@ Template.notificationDetails.helpers({
     isIssued(uiNotification) {
         return uiNotification.status === UINotificationShared.notificationStatus.issued.name;
     },
+    notificationDeleted() {
+        return Template.instance().state.get('notificationDeleted');
+    },
     hasErrorMessage() {
         return Template.instance().state.get('errMsgs').length > 0;
     },
@@ -219,6 +293,9 @@ Template.notificationDetails.helpers({
     infoMessageType() {
         return Template.instance().state.get('infoMsgType');
     },
+    displayDeleteNotificationSubmitButton() {
+        return Template.instance().state.get('displayDeleteNotificationSubmitButton');
+    },
     displayIssueNotificationSubmitButton() {
         return Template.instance().state.get('displayIssueNotificationSubmitButton');
     },
@@ -235,6 +312,17 @@ Template.notificationDetails.helpers({
             name: key,
             value: obj[key]
         }));
+    },
+    logicalOr(...ops) {
+        if (ops.length > 0) {
+            // Get rid of the last parameter (keyword arguments dictionary)
+            ops.pop();
+
+            return ops.some(v => !!v);
+        }
+        else {
+            return false;
+        }
     },
     logicalAnd(...ops) {
         if (ops.length > 0) {

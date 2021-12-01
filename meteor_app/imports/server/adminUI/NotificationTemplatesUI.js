@@ -206,6 +206,24 @@ NotificationTemplatesUI.initialize = function () {
                 throw new Meteor.Error('ctn_admin_no_permission', 'No permission; must be logged in as a system administrator to perform this task');
             }
         },
+        deleteUINotification: function (uiNotification_id) {
+            if (Roles.userIsInRole(this.userId, 'sys-admin')) {
+                try {
+                    // Delete UI notification
+                    UINotification.getUINotificationByDocId(uiNotification_id).delete();
+                }
+                catch (err) {
+                    // Error trying to delete UI notification. Log error and throw exception
+                    Catenis.logger.ERROR('Failure trying to delete UI notification.', err);
+                    throw new Meteor.Error('notification.delete.failure', 'Failure trying to delete UI notification: ' + err.toString());
+                }
+            }
+            else {
+                // User not logged in or not a system administrator.
+                //  Throw exception
+                throw new Meteor.Error('ctn_admin_no_permission', 'No permission; must be logged in as a system administrator to perform this task');
+            }
+        },
         getUINotificationReferenceTimeZone: function () {
             if (Roles.userIsInRole(this.userId, 'sys-admin')) {
                 return uiNotificationCfgSettings.refTimeZone;

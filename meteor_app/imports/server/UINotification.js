@@ -194,6 +194,26 @@ export class UINotification {
     //
 
     /**
+     * Delete this UI notification
+     */
+    delete() {
+        if (!this.isDraft) {
+            throw new Meteor.Error('ctn_ui_ntfy_cannot_delete', 'UI notification cannot be deleted; it is not in draft');
+        }
+
+        try {
+            // Remove UI notification from local database
+            Catenis.db.collection.UINotification.remove({_id: this.doc_id});
+        }
+        catch (err) {
+            // Error trying to remove UINotification database doc/rec.
+            //  Log error and throw exception
+            Catenis.logger.ERROR('Error trying to remove UINotification database doc/rec (status).', err);
+            throw new Meteor.Error('ctn_ui_ntfy_remove_error', `Error trying to remove UINotification database doc/rec: ${err}`);
+        }
+    }
+
+    /**
      * Issue this UI notification
      */
     issue() {
