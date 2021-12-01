@@ -224,7 +224,7 @@ export class UINotification {
      * @param {*} info The updated UI notification data info
      */
     updateInfo(info) {
-        // Make sure that data info can be update
+        // Make sure that data info can be updated
         if (!this.isDraft && !this.isOutdated) {
             throw new Error('Unable to update UI notification data info; notification is neither in draft nor outdated');
         }
@@ -232,7 +232,7 @@ export class UINotification {
         // Note: this will throw in case of an inconsistent UI notification data info
         checkUINotificationInfo(info, this.uiNotificationTemplate, true);
 
-        // Check if there was any changes in the UI notification template's data info
+        // Check if there were any changes in the UI notification template's data info
         const diffInfo = this._diffInfo(info);
 
         if (diffInfo) {
@@ -356,7 +356,7 @@ export class UINotification {
     /**
      * Send UI notification message via e-mail to a given Catenis user
      * @param {(CatenisUser|string)} user
-     * @param {{title: string, body: {ui?: string, email?: {html: string, text: string}}}} [composedMessage]
+     * @param {{title: string, body: {ui?: {full: string, excerpt: string}, email?: {html: string, text: string}}}} [composedMessage]
      */
     sendEmailMessageToUser(user, composedMessage) {
         if (!(user instanceof CatenisUser)) {
@@ -400,7 +400,7 @@ export class UINotification {
     /**
      * Send UI notification message via e-mail to a given Catenis user asynchronously
      * @param {(CatenisUser|string)} user
-     * @param {({title: string, body: {ui?: string, email?: {html: string, text: string}}}|Function)} [composedMessage]
+     * @param {({title: string, body: {ui?: {full: string, excerpt: string}, email?: {html: string, text: string}}}|Function)} [composedMessage]
      * @param {(Function|undefined)} callback
      */
     sendEmailMessageToUserAsync(user, composedMessage, callback) {
@@ -879,7 +879,7 @@ function checkUINotificationInfo(info, uiNotificationTemplate, isPartial = false
  * Assemble a notification e-mail message by replacing the fields in a supplied template
  * @param {string} template The template for the e-mail message
  * @param {string} salutation The contents to be replaced for the salutation field
- * @param {string} body The contents to be replaced for the the body field
+ * @param {string} body The contents to be replaced for the body field
  * @param {string} signature The contents to be replaced for the signature field
  * @return {string} The final e-mail message
  */
@@ -988,7 +988,7 @@ export function mergeUserFields(message, user) {
 
 /**
  * Parse a date to be used as the notification expiration date taking into account the reference time zone
- * @param {string} date The date to be parse in the expect format: YYYY-MM-DD
+ * @param {string} date The date to be parsed in the expected format: YYYY-MM-DD
  * @return {Date} The parsed date
  */
 export function parseExpirationDate(date) {
