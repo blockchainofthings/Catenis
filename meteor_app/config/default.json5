@@ -1402,5 +1402,52 @@
   // Parameters pertaining to UserUINotification module
   userUINotification: {
     displayBatchSize: 50  // Number of notification messages that should be fetched at time to be displayed on the UI
+  },
+  // Parameters pertaining to Bip32 module
+  bip32: {
+    eccLibProxyReadyTimeout: 10000  // (10 sec) Timeout, in milliseconds, for waiting for ECC library proxy object to be ready for use
+  },
+  // Parameters pertaining to BtcPrice module
+  eccLibraryProxy: {
+    inspectPort: 9229  // TCP port used to connect debugger to RestApi child processes
+  },
+  // Parameters pertaining to IpcRpc modules
+  ipcRpc: {
+    rpcCallTimeout: 30000  // Timeout, in millisecond, for waiting on return from RPC command executed on child process
+  },
+  // Parameters pertaining to modules of different child processes
+  childProcess: {
+    nodeJSExec: null, // Path of Node.js executable used to run child processes. If not defined or null, same version as main process is used
+    // Parameters pertaining to EccLibrary child process modules
+    eccLibraryProcess: {
+      // Parameters pertaining to EccLibraryMain module of EccLibrary child process
+      eccLibraryMain: {
+        ipcMessageCommand: {
+          init: "init",  // Process initialization command
+          eccLibraryMethods: [  // Commands for executing an ECC library method
+            "isPoint",                  // ECC library isPoint() method
+            "isPointCompressed",        // ECC library isPointCompressed() method
+            "isXOnlyPoint",             // ECC library isXOnlyPoint() method
+            "isPrivate",                // ECC library isPrivate() method
+            "pointAdd",                 // ECC library pointAdd() method
+            "pointAddScalar",           // ECC library pointAddScalar() method
+            "pointCompress",            // ECC library pointCompress() method
+            "pointFromScalar",          // ECC library pointFromScalar() method
+            "xOnlyPointFromScalar",     // ECC library xOnlyPointFromScalar() method
+            "xOnlyPointFromPoint",      // ECC library xOnlyPointFromPoint() method
+            "pointMultiply",            // ECC library pointMultiply() method
+            "privateAdd",               // ECC library privateAdd() method
+            "privateSub",               // ECC library privateSub() method
+            "XOnlyPointAddTweakResult", // ECC library XOnlyPointAddTweakResult() method
+            "xOnlyPointAddTweak",       // ECC library xOnlyPointAddTweak() method
+            "xOnlyPointAddTweakCheck",  // ECC library xOnlyPointAddTweakCheck() method
+            "sign",                     // ECC library sign() method
+            "signSchnorr",              // ECC library signSchnorr() method
+            "verify",                   // ECC library verify() method
+            "verifySchnorr"             // ECC library verifySchnorr() method
+          ],
+        }
+      }
+    }
   }
 }

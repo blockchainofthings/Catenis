@@ -63,8 +63,8 @@ try {
         }
     }
 
-    // Cipher functions successfully set up. Make sure that password is not accessible
-    //  from any where else
+    // Cipher functions successfully set up. Make sure that password is not out in the open
+    Catenis.cmdLineOpts.cipheredPassword = Catenis.cipherData(Catenis.cmdLineOpts.password).toString('base64');
     delete Catenis.cmdLineOpts.password;
 }
 catch (err) {

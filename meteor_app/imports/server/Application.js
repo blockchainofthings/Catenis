@@ -528,6 +528,11 @@ function isSeedValid(seed) {
 }
 
 function shutdown() {
+    // Kill child processes
+    if (Catenis.eccLibProxy.eccLibProc) {
+        Catenis.eccLibProxy.eccLibProc.kill();
+    }
+
     // Remove process ID file
     removeProcessId();
 

@@ -1,7 +1,7 @@
 /.idea/
 /meteor_app/log
 /meteor_app/node_modules
-/meteor_app/config/development-*.json5
+/meteor_app/config/development-*user_*.json5
 /meteor_app/config/local-*.json5
 /meteor_app/packages/
 /meteor_app/asset_export/ethereum/build

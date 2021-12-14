@@ -107,6 +107,7 @@ import { SelfRegistrationBcotSale } from './SelfRegistrationBcotSale';
 import { UserUINotification } from './UserUINotification';
 import { NotificationTemplatesUI } from './adminUI/NotificationTemplatesUI';
 import { NotificationsUI } from './commonUI/NotificationsUI';
+import { EccLibraryProxy } from './EccLibraryProxy';
 // TEST - begin
 //import { TestCatenisColoredCoins } from './test/TestCatenisColoredCoins';
 // TEST - end
@@ -171,6 +172,7 @@ Meteor.startup(function () {
             Database.addMissingClientTimeZone();
             Database.addMissingBtcServicePriceField();
             Application.initialize(false, cfgSettings.legacyDustFunding);
+            EccLibraryProxy.initialize();
             AccountsEmail.initialize();
             BitcoinInfo.initialize();
             TransactionCache.initialize();

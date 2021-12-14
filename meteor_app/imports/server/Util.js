@@ -484,6 +484,55 @@ Util.multiSigAddresses = function (scriptPubKey) {
 };
 
 
+/**
+ * Recursively converts values that are an instance of Uint8Array into a corresponding array of integers
+ * @param {*} value The value to convert
+ * @return {*}
+ */
+Util.fromUint8Array = function (value) {
+    if (value instanceof Uint8Array) {
+        return Array.from(value);
+    }
+    else if (this.isNonNullObject(value)) {
+        if (Array.isArray(value)) {
+            return value.map(v => this.fromUint8Array(v));
+        }
+        else {
+            return _und.mapObject(value, (v, k) => this.fromUint8Array(v));
+        }
+    }
+
+    return value;
+}
+
+/**
+ * Recursively converts values that are an array of bytes (unsigned integers not greater than 255)
+ *  into a corresponding Uint8Array instance
+ * @param {*} value The value to convert
+ * @return {*}
+ */
+Util.toUint8Array = function (value) {
+    function isByteArray(value) {
+        return Array.isArray(value) && value.length > 0
+            && value.every(v => typeof v === 'number' && v >= 0 && v <= 0xff);
+    }
+
+    if (isByteArray(value)) {
+        return new Uint8Array(value);
+    }
+    else if (this.isNonNullObject(value)) {
+        if (Array.isArray(value)) {
+            return value.map(v => this.toUint8Array(v));
+        }
+        else {
+            return _und.mapObject(value, (v, k) => this.toUint8Array(v));
+        }
+    }
+
+    return value;
+}
+
+
 // Util function class (public) properties
 //
 
