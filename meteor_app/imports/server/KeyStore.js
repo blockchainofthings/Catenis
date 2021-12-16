@@ -172,7 +172,6 @@ import util from 'util';
 // Third-party node modules
 import config from 'config';
 import Loki from 'lokijs';
-import bitcoinLib from 'bitcoinjs-lib';
 // Meteor packages
 import { Meteor } from 'meteor/meteor';
 
@@ -241,7 +240,7 @@ let purgeUnusedExtKeyIntervalHandle;
 //  }
 export function KeyStore(ctnHubNodeIndex, seed, cryptoNetwork, masterOnly = false) {
     // Create master HD extended key
-    this.masterHDNode = bitcoinLib.bip32.fromSeed(seed, cryptoNetwork);
+    this.masterHDNode = Catenis.bip32.fromSeed(seed, cryptoNetwork);
 
     if (!masterOnly) {
         this.ctnHubNodeIndex = ctnHubNodeIndex;
@@ -290,13 +289,13 @@ KeyStore.prototype.removeExtKeysByParentPath = function (parentPath) {
 KeyStore.prototype.getCryptoKeysByPath = function (path) {
     const docExtKey = this.collExtKey.by('path', path);
 
-    return docExtKey !== undefined ? new CryptoKeys(bitcoinLib.bip32.fromBase58(docExtKey.strHDNode, this.cryptoNetwork), BitcoinInfo.getAddressTypeByName(docExtKey.btcAddressType), addressEncryptionScheme(path)) : null;
+    return docExtKey !== undefined ? new CryptoKeys(Catenis.bip32.fromBase58(docExtKey.strHDNode, this.cryptoNetwork), BitcoinInfo.getAddressTypeByName(docExtKey.btcAddressType), addressEncryptionScheme(path)) : null;
 };
 
 KeyStore.prototype.getCryptoKeysByAddress = function (addr) {
     const docExtKey = this.collExtKey.by('address', addr);
 
-    return docExtKey !== undefined ? new CryptoKeys(bitcoinLib.bip32.fromBase58(docExtKey.strHDNode, this.cryptoNetwork), BitcoinInfo.getAddressTypeByName(docExtKey.btcAddressType), addressEncryptionScheme(docExtKey.path)) : null;
+    return docExtKey !== undefined ? new CryptoKeys(Catenis.bip32.fromBase58(docExtKey.strHDNode, this.cryptoNetwork), BitcoinInfo.getAddressTypeByName(docExtKey.btcAddressType), addressEncryptionScheme(docExtKey.path)) : null;
 };
 
 KeyStore.prototype.getTypeAndPathByAddress = function (addr) {
@@ -335,7 +334,7 @@ KeyStore.prototype.getAddressInfo = function (addr, retrieveObsolete = false, ch
             }
 
             addrInfo = {
-                cryptoKeys: new CryptoKeys(bitcoinLib.bip32.fromBase58(docExtKey.strHDNode, this.cryptoNetwork), BitcoinInfo.getAddressTypeByName(docExtKey.btcAddressType), addressEncryptionScheme(docExtKey.path)),
+                cryptoKeys: new CryptoKeys(Catenis.bip32.fromBase58(docExtKey.strHDNode, this.cryptoNetwork), BitcoinInfo.getAddressTypeByName(docExtKey.btcAddressType), addressEncryptionScheme(docExtKey.path)),
                 type: docExtKey.type,
                 path: docExtKey.path,
                 parentPath: docExtKey.parentPath,
@@ -378,7 +377,7 @@ KeyStore.prototype.getAddressInfoByPath = function (path, retrieveObsolete = fal
             }
 
             addrInfo = {
-                cryptoKeys: new CryptoKeys(bitcoinLib.bip32.fromBase58(docExtKey.strHDNode, this.cryptoNetwork), BitcoinInfo.getAddressTypeByName(docExtKey.btcAddressType), addressEncryptionScheme(path)),
+                cryptoKeys: new CryptoKeys(Catenis.bip32.fromBase58(docExtKey.strHDNode, this.cryptoNetwork), BitcoinInfo.getAddressTypeByName(docExtKey.btcAddressType), addressEncryptionScheme(path)),
                 type: docExtKey.type,
                 path: path,
                 parentPath: docExtKey.parentPath,
@@ -418,7 +417,7 @@ KeyStore.prototype.getOffChainAddressInfo = function (pubKeyHash) {
             // Make sure that this HD extended key is for an off-chain address
             if (docExtKey.isOffChainAddr) {
                 addrInfo = {
-                    cryptoKeys: new CryptoKeys(bitcoinLib.bip32.fromBase58(docExtKey.strHDNode, this.cryptoNetwork), undefined, addressEncryptionScheme(docExtKey.path)),
+                    cryptoKeys: new CryptoKeys(Catenis.bip32.fromBase58(docExtKey.strHDNode, this.cryptoNetwork), undefined, addressEncryptionScheme(docExtKey.path)),
                     type: docExtKey.type,
                     path: docExtKey.path,
                     parentPath: docExtKey.parentPath
@@ -3811,7 +3810,7 @@ function storeHDNode(type, path, hdNode, opts) {
 function retrieveHDNode(path, returnObject = false) {
     const docExtKey = this.collExtKey.by('path', path);
 
-    let hdNode = docExtKey !== undefined ? bitcoinLib.bip32.fromBase58(docExtKey.strHDNode, this.cryptoNetwork) : null;
+    let hdNode = docExtKey !== undefined ? Catenis.bip32.fromBase58(docExtKey.strHDNode, this.cryptoNetwork) : null;
 
     if (hdNode && returnObject) {
         hdNode = {

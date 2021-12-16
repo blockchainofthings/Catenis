@@ -108,6 +108,7 @@ import { UserUINotification } from './UserUINotification';
 import { NotificationTemplatesUI } from './adminUI/NotificationTemplatesUI';
 import { NotificationsUI } from './commonUI/NotificationsUI';
 import { EccLibraryProxy } from './EccLibraryProxy';
+import { Bip32 } from './Bip32';
 // TEST - begin
 //import { TestCatenisColoredCoins } from './test/TestCatenisColoredCoins';
 // TEST - end
@@ -173,6 +174,7 @@ Meteor.startup(function () {
             Database.addMissingBtcServicePriceField();
             Application.initialize(false, cfgSettings.legacyDustFunding);
             EccLibraryProxy.initialize();
+            Bip32.initialize();
             AccountsEmail.initialize();
             BitcoinInfo.initialize();
             TransactionCache.initialize();
