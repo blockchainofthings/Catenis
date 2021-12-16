@@ -144,7 +144,7 @@ export class IpcRpc extends events.EventEmitter {
      * @private
      */
     _processIncomingMessage(message) {
-        Catenis.logger.TRACE('IpcRpc: received message from child process [%s]', this.childProc.pid, message);
+        //Catenis.logger.TRACE('IpcRpc: received message from child process [%s]', this.childProc.pid, message);
         if (message === 'started') {
             Catenis.logger.TRACE('IpcRpc: child process [%s] has started', this.childProc.pid);
             // Child process has started. Update status and emit notification event

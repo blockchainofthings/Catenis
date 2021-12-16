@@ -64,7 +64,7 @@ export class EccLibraryMain {
      * @private
      */
     static _processIncomingMessage(message) {
-        logger.TRACE('EccLibraryMain: received message from parent process', Util.maskSensitiveData(message));
+        //logger.TRACE('EccLibraryMain: received message from parent process', Util.maskSensitiveData(message));
         if (isValidIpcCallMessage(message)) {
             if (message.cmd === cfgSettings.ipcMessageCommand.init) {
                 if (!this.state.initialized) {
