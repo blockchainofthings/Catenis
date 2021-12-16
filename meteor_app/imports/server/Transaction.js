@@ -50,6 +50,7 @@ export const cfgSettings = {
 const dbMalleabilityCS = new CriticalSection();
 
 const minimumTxBaseSize = 82;
+const dummyChainCode = Buffer.alloc(32, 0);
 
 
 // Definition of function classes
@@ -911,7 +912,10 @@ Transaction.prototype.getTransaction = function () {
             }
         });
 
-        psbt.validateSignaturesOfAllInputs();
+        psbt.validateSignaturesOfAllInputs(
+            (pubKey, msgHash, signature) =>
+                Catenis.bip32.fromPublicKey(pubKey, dummyChainCode).verify(msgHash, signature)
+        );
         psbt.finalizeAllInputs();
 
         const btcTx = psbt.extractTransaction();

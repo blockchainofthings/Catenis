@@ -6,9 +6,12 @@
 //  . call the revealAddrInit() function passing the password and environment
 //  . then call the addressFromPath() function as many times as needed
 
-const crypto = require('crypto');
-const bitcoinLib = require('bitcoinjs-lib')
+const ecc = require('tiny-secp256k1_2');
+const BIP32Factory = require('bip32').default;
+const bitcoinLib = require('bitcoinjs-lib');
 const CatenisCipher = require('catenis-cipher');
+
+const bip32 = BIP32Factory(ecc);
 
 let cryptoNetwork;
 let appMasterSeed;
@@ -38,7 +41,7 @@ function revealAddrInit(password, environment = 'dev') {
     }
 
     appMasterSeed = new CatenisCipher().genCipherFunctions(password).decipher(cipheredSeed);
-    masterHDNode = bitcoinLib.bip32.fromSeed(appMasterSeed, cryptoNetwork);
+    masterHDNode = bip32.fromSeed(appMasterSeed, cryptoNetwork);
 }
 
 function addressFromPath(path, isWitness = false) {
