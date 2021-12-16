@@ -14,7 +14,7 @@
 // Third-party node modules
 import config from 'config';
 // Meteor packages
-//import { Meteor } from 'meteor/meteor';
+import { Meteor } from 'meteor/meteor';
 
 // References code in other (Catenis) modules
 import { Catenis } from './Catenis';
@@ -49,59 +49,14 @@ export class BufferMessageReadable extends MessageReadable {
         this.message = message;
 
         this.bytesRead = 0;
+
+        this._processRead = Meteor.bindEnvironment(processRead, 'Internal read method of BufferMessageReadable stream', this);
     }
 
     _read(size) {
         // Only do any processing if stream is still open
         if (this.open) {
-            try {
-                let msgLength = this.message.length;
-
-                if (this.bytesRead >= msgLength) {
-                    // No more message bytes. Finalize read
-                    let lastEncryptBlock;
-
-                    if ((lastEncryptBlock = this.checkFinalEncryptData())) {
-                        // Read last block of encrypted data
-                        this.push(lastEncryptBlock);
-                    }
-
-                    // Signal EOF
-                    this.push(null);
-
-                    return;
-                }
-
-                let continuePushing = true;
-                let maxBytesToRead = size || cfgSettings.highWaterMark;
-
-                for (let bytesToRead = Math.min(maxBytesToRead, msgLength - this.bytesRead); bytesToRead > 0 && continuePushing; this.bytesRead += bytesToRead, bytesToRead = Math.min(maxBytesToRead, msgLength - this.bytesRead)) {
-                    let msgData = this.message.slice(this.bytesRead, this.bytesRead + bytesToRead);
-
-                    continuePushing = this.push(this.checkEncryptData(msgData));
-                }
-
-                if (this.bytesRead >= msgLength) {
-                    // No more message bytes. Finalize read
-                    if (this.hasFinalEncryptData()) {
-                        if (continuePushing) {
-                            // Read last block of encrypted data
-                            this.push(this.checkFinalEncryptData());
-
-                            // Signal EOF
-                            this.push(null);
-                        }
-                    }
-                    else {
-                        // Signal EOF
-                        this.push(null);
-                    }
-                }
-            }
-            catch (err) {
-                Catenis.logger.ERROR('Error reading buffer message readable stream.', err);
-                process.nextTick(() => this.emit('error', new Error('Error reading buffer message readable stream: ' + err.toString())));
-            }
+            this._processRead(size);
         }
     }
 }
@@ -113,8 +68,56 @@ export class BufferMessageReadable extends MessageReadable {
 //      or .bind().
 //
 
-/*function priv_func() {
-}*/
+function processRead(size) {
+    try {
+        let msgLength = this.message.length;
+
+        if (this.bytesRead >= msgLength) {
+            // No more message bytes. Finalize read
+            let lastEncryptBlock;
+
+            if ((lastEncryptBlock = this.checkFinalEncryptData())) {
+                // Read last block of encrypted data
+                this.push(lastEncryptBlock);
+            }
+
+            // Signal EOF
+            this.push(null);
+
+            return;
+        }
+
+        let continuePushing = true;
+        let maxBytesToRead = size || cfgSettings.highWaterMark;
+
+        for (let bytesToRead = Math.min(maxBytesToRead, msgLength - this.bytesRead); bytesToRead > 0 && continuePushing; this.bytesRead += bytesToRead, bytesToRead = Math.min(maxBytesToRead, msgLength - this.bytesRead)) {
+            let msgData = this.message.slice(this.bytesRead, this.bytesRead + bytesToRead);
+
+            continuePushing = this.push(this.checkEncryptData(msgData));
+        }
+
+        if (this.bytesRead >= msgLength) {
+            // No more message bytes. Finalize read
+            if (this.hasFinalEncryptData()) {
+                if (continuePushing) {
+                    // Read last block of encrypted data
+                    this.push(this.checkFinalEncryptData());
+
+                    // Signal EOF
+                    this.push(null);
+                }
+            }
+            else {
+                // Signal EOF
+                this.push(null);
+            }
+        }
+    }
+    catch (err) {
+        Catenis.logger.ERROR('Error reading buffer message readable stream.', err);
+        process.nextTick(() => this.emit('error', new Error('Error reading buffer message readable stream: ' + err.toString())));
+    }
+}
 
 
 // BufferMessageReadable function class (public) methods
