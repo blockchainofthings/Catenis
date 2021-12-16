@@ -14,7 +14,7 @@
 // Third-party node modules
 //
 // Meteor packages
-//import { Meteor } from 'meteor/meteor';
+import { Meteor } from 'meteor/meteor';
 import { Template } from 'meteor/templating';
 
 // References code in other (Catenis) modules on the client
