@@ -997,7 +997,8 @@
   lowServAccBalanceEmailNotify: {
     emailName: "LowServAccBalance",  // Reference name of e-mail contents to be used for this notification
     fromAddress: "Catenis <noreply@blockchainofthings.com>",  // E-mail address of sender of e-mail notification message
-    replyAddress: "donotreply@blockchainofthings.com"  // (optional) E-mail address to be used as the address to be used when replying to notification e-mail message
+    replyAddress: "donotreply@blockchainofthings.com",  // (optional) E-mail address to be used as the address to be used when replying to notification e-mail message
+    onlineStoreUrl: "https://blockchainofthings.com/shop/"
   },
   // Parameters pertaining to AccountRegistrationEmailNotify module
   accountRegistrationEmailNotify: {

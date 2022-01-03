@@ -28,7 +28,8 @@ const lowServAccBalanceEmailNtfyConfig = config.get('lowServAccBalanceEmailNotif
 const cfgSettings = {
     emailName: lowServAccBalanceEmailNtfyConfig.get('emailName'),
     fromAddress: lowServAccBalanceEmailNtfyConfig.get('fromAddress'),
-    replyAddress: lowServAccBalanceEmailNtfyConfig.get('replyAddress')
+    replyAddress: lowServAccBalanceEmailNtfyConfig.get('replyAddress'),
+    onlineStoreUrl: lowServAccBalanceEmailNtfyConfig.get('onlineStoreUrl')
 };
 
 
@@ -61,7 +62,8 @@ export class LowServAccBalanceEmailNotify {
         if (client && (clientEmailAddr = client.userAccountEmail)) {
             this.emailNotify.sendAsync(clientEmailAddr, null, {
                 servAccBalance: Util.formatCatenisServiceCredits(client.serviceAccountBalance()),
-                url: Meteor.absoluteUrl('login')
+                url: Meteor.absoluteUrl('login'),
+                storeUrl: cfgSettings.onlineStoreUrl
             }, callback);
         }
         else {
