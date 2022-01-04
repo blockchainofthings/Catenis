@@ -49,6 +49,7 @@ const cfgSettings = {
     },
     environment: appConfig.get('environment'),
     enableSelfRegistration: appConfig.get('enableSelfRegistration'),
+    twoFAForEndUsers: appConfig.get('twoFAForEndUsers'),
     masterSeed: appConfig.get('masterSeed'),
     commonSeed: appConfig.get('commonSeed'),
     testPrefix: appConfig.get('testPrefix'),
@@ -135,6 +136,12 @@ export function Application(cipherOnly = false, legacyDustFunding = false) {
             enableSelfRegistration: {
                 get: function () {
                     return cfgSettings.enableSelfRegistration;
+                },
+                enumerable: true
+            },
+            twoFAForEndUsers: {
+                get: function () {
+                    return cfgSettings.twoFAForEndUsers;
                 },
                 enumerable: true
             },

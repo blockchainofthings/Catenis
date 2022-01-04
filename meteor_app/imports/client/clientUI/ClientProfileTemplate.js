@@ -43,13 +43,30 @@ import './ClientTwoFactorAuthenticationTemplate.js';
 Template.clientProfile.onCreated(function () {
     this.state = new ReactiveDict();
 
+    this.state.set('is2FAAvailable', undefined);
+
+    Meteor.call('check2FAForEndUsers', (err, isSet) => {
+        if (err) {
+            // Error; assume that two-factor authentication should not be made available
+            console.log('Error calling \'check2FAForEndUsers\' remote procedure: ' + err);
+            isSet = false;
+        }
+
+        this.state.set('is2FAAvailable', isSet);
+    });
+
     // Subscribe to receive database docs/recs updates
     this.currentClientSubs = this.subscribe('currentClient');
+    this.clientTwoFactorAuthenticationSubs = this.subscribe('clientTwoFactorAuthentication');
 });
 
 Template.clientProfile.onDestroyed(function () {
     if (this.currentClientSubs) {
         this.currentClientSubs.stop();
+    }
+
+    if (this.clientTwoFactorAuthenticationSubs) {
+        this.clientTwoFactorAuthenticationSubs.stop();
     }
 });
 
@@ -59,6 +76,9 @@ Template.clientProfile.events({
 Template.clientProfile.helpers({
     client() {
         return Catenis.db.collection.Client.findOne();
+    },
+    _2fa() {
+        return Catenis.db.collection.TwoFactorAuthInfo.findOne(1);
     },
     clientUsername(user_id) {
         const user = Meteor.users.findOne({_id: user_id});
@@ -88,5 +108,33 @@ Template.clientProfile.helpers({
     },
     booleanValue(val) {
         return (!!val).toString();
+    },
+    is2FAAvailable() {
+        return Template.instance().state.get('is2FAAvailable');
+    },
+    isDefined(v) {
+        return typeof v !== 'undefined';
+    },
+    logicalAnd(...ops) {
+        if (ops.length > 0) {
+            // Get rid of the last parameter (keyword arguments dictionary)
+            ops.pop();
+
+            return ops.every(v => !!v);
+        }
+        else {
+            return false;
+        }
+    },
+    logicalOr(...ops) {
+        if (ops.length > 0) {
+            // Get rid of the last parameter (keyword arguments dictionary)
+            ops.pop();
+
+            return ops.some(v => !!v);
+        }
+        else {
+            return false;
+        }
     },
 });

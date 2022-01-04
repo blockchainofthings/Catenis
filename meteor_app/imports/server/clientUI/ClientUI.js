@@ -142,6 +142,9 @@ ClientUI.initialize = function () {
                 //  Throw exception
                 throw new Meteor.Error('ctn_client_no_permission', 'No permission; must be logged in as a Catenis client to perform this task');
             }
+        },
+        check2FAForEndUsers: function () {
+            return Catenis.application.twoFAForEndUsers;
         }
     });
 

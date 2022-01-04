@@ -4,7 +4,7 @@
             <div class="panel-body">
                 <div class="row">
                     <div class="col-lg-12">
-                        {{#unless Template.subscriptionsReady}}
+                        {{#unless (logicalAnd Template.subscriptionsReady (isDefined is2FAAvailable))}}
                             <p style="color:lightgray; margin-top:1em">Loading...</p>
                         {{else}}
                             <h2>PROFILE</h2>
@@ -65,13 +65,15 @@
                                     </table>
                                 </div>
                             </div>
-                            <div class="row">
-                                <div class="col-md-3">
+                            {{#if (logicalOr _2fa.isEnabled is2FAAvailable)}}
+                                <div class="row">
+                                    <div class="col-md-3">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <a id="lnkManageLicenses" href="/profile/2fa" role="button" class="btn-login btn paddedBtn fullWidth">Two-Factor Authentication</a>
+                                    </div>
                                 </div>
-                                <div class="col-md-6">
-                                    <a id="lnkManageLicenses" href="/profile/2fa" role="button" class="btn-login btn paddedBtn fullWidth">Two-Factor Authentication</a>
-                                </div>
-                            </div>
+                            {{/if}}
                         {{/unless}}
                     </div>
                 </div>
