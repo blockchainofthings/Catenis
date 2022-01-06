@@ -1121,8 +1121,8 @@
   },
   // Parameters pertaining to TransactionCache module
   transactionCache: {
-    transactTTL: 604800000,  // (7 dias) Time, in milliseconds, before cached transactions are considered aged
-    ttlEvaluationInterval: 3600000  // (1 hour) Period of time, in milliseconds, when cached transactions' time-to-live is evaluated (and transactions marked as aged as appropriate)
+    transactTTL: 604800000,  // (7 days) Time, in milliseconds, before cached transactions are considered aged
+    ttlEvaluationInterval: 3600000  // (1 hour) Period of time, in milliseconds, when cached transactions' time-to-live is evaluated and aged cached transactions automatically removed
   },
   // Parameters pertaining to reCaptcha module
   reCaptcha: {
