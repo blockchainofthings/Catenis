@@ -71,6 +71,16 @@ export class PolygonPSGasPrices {
         }
 
         this.priceByConfidenceLevel = new Map();
+
+        // Already try to retrieve gas price estimates now to make sure that API service is working fine
+        this._updatePriceEstimates();
+
+        if (this.priceByConfidenceLevel.size === 0) {
+            // Unable to retrieve any gas price estimate for Polygon PoS Chain blockchain.
+            //  Log error and throw exception
+            Catenis.logger.ERROR('Unable to retrieve any gas price estimate for Polygon PoS Chain');
+            throw new Error('Unable to retrieve any gas price estimate for Polygon PoS Chain');
+        }
     }
 
 
