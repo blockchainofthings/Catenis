@@ -133,7 +133,7 @@ export class EthereumGasPrices {
         const newPriceByConfidenceLevel = new Map();
 
         for (const priceEntry of body.blockPrices[0].estimatedPrices) {
-            newPriceByConfidenceLevel.set(priceEntry.confidence, new BigNumber(web3.utils.toWei(web3.utils.toBN(priceEntry.price), body.unit).toString()));
+            newPriceByConfidenceLevel.set(priceEntry.confidence, new BigNumber(web3.utils.toWei(new BigNumber(priceEntry.price).toString(), body.unit).toString()));
         }
 
         if (newPriceByConfidenceLevel.size > 0) {

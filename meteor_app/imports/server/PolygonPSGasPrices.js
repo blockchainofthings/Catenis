@@ -133,7 +133,7 @@ export class PolygonPSGasPrices {
             if (speed in body) {
                 newPriceByConfidenceLevel.set(
                     speedToConfidenceLevel[speed],
-                    new BigNumber(web3.utils.toWei(web3.utils.toBN(body[speed]), priceDenomination).toString())
+                    new BigNumber(web3.utils.toWei(new BigNumber(body[speed]).toString(), priceDenomination).toString())
                 );
             }
         }
