@@ -1286,10 +1286,18 @@
   },
   // Parameters pertaining to BinanceSCGasPrices module
   binanceSCGasPrices: {
-    apiUrl: "https://bscgas.info/",  // BSCGas.info API URL
-    gasPricesEndPoint: "gas",  // API endpoint for retrieving Binance Smart Chain gas price estimates
+    apiUrl: "https://owlracle.info/",  // Owlracle multichain gas price tracker API URL
+    gasPricesEndPoint: "bsc/gas",  // API endpoint for retrieving Binance Smart Chain gas price estimates
+    version: 2,  // The Owlracle API version to use
     localAddress: null,  // (optional, can be set to null) IP address of local network interface to use to issue requests to the Web service
-    timeout: 20000  // (20 sec.) Timeout, in milliseconds, for connection/request with API server
+    timeout: 20000,  // (20 sec.) Timeout, in milliseconds, for connection/request with API server
+    apiKey: '??????',  // (optional, can be set to null) Base64 encoded, ciphered Owlracle API key used for getting extended service (more free requests)
+    acceptances: [  // List indicating the price estimate that should be returned for different probabilities for making to the next block
+      100,
+      90,
+      60,
+      35
+    ]
   },
   // Parameters pertaining to PolygonPSGasPrices module
   polygonPSGasPrices: {
