@@ -90,7 +90,7 @@ export class EthereumGasPrices {
     /**
      * Get estimated gas price for a given confidence level
      * @param {number} confidenceLevel Percentage value represented the expected probability for the estimated price to
-     *                                  to be enough for inclusion the next block
+     *                                  be enough for inclusion the next block
      * @return {BigNumber|undefined} The estimated price in wei
      */
     getPriceEstimate(confidenceLevel = 99) {
