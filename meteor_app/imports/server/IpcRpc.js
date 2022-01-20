@@ -86,6 +86,13 @@ export class IpcRpc extends events.EventEmitter {
     }
 
     /**
+     * Kill the associated child process
+     */
+    kill() {
+        this.childProc.kill();
+    }
+
+    /**
      * Execute a command (call a remote procedure) on the child process
      * @param {string} command The command to be executed
      * @param {Object} [args] The args for the command
