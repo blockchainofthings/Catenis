@@ -1,0 +1,342 @@
+// Config file with specific settings for development environment
+{
+  // Parameters pertaining to the Catenis application
+  application: {
+    ctnNode: {  // Catenis node to which this instance of the application corresponds
+      pubKey: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDKqZ82mcs8IQ+ZCkEkCKwkgW5hno7Rte2XNOKuwPYXNRDtkvIQiNbmy7wJBn7Fmq+mUsaZAtf++yYsD6vbgEz4/Q2+5qCnQIebUMP4JzoWRt+qJgIcS9HdKAt/j6hlVrLzb7AhV+jLBEZ+vv9Jj7x+MIWK0qTjvWngpWrvne4S1OtuDRXbH5TY+l0UqtqlyPD/P8or1evjx5RnmzMJSde0OghfbnwqfDgQIqIW+n+Ig5Df0MR4rrelCxzPodMvjXxB6+OcK8AAAJJ+AsRGzSS3rVnviDhxPcMOm3b2LWNehKgmTuIgg6VYLhGix/BdsfyXKxnoFDG4KyriKoaE+C+X"
+    },
+    environment: "development",
+    enableSelfRegistration: true,  // Indicates whether the UI should include a link from where the end user can register for a new Catenis account.
+    twoFAForEndUsers: false,  // Indicates whether two-factor authentication should be made available for end users. Note that it is always available for admin users.
+    testPrefix: "QA",  // (optional) A prefix used to differentiate non-production environments,
+    cryptoNetwork: "regtest",  // Available values: 'bitcoin' (for Bitcoin's production blockchain), 'testnet' (for Bitcoin's test blockchain)
+    shutdownTimeout: 30000   // (30 sec.) Time, in milliseconds, that the application should wait after it receives a terminate request before it actually terminates
+  },
+  // Parameters pertaining to the Startup module
+  startup: {
+    fixMissingAddresses: false,  // Indicate if issued blockchain addresses are missing from BitcoinCore wallet they should be automatically included
+    legacyDustFunding: false,  // Indicates whether the system should use the legacy behavior when funding addresses that are funded with dust amount (service credit issuance, BCOT sale stock, system device main, device main, device asset issuance)
+                               //  NOTE: this option is intended to simulate the old scenario while working on the implementation of segregated witness support
+    fixDustFunding: false,  // Indicates whether addresses that are funded with dust amount (service credit issuance, BCOT sale stock, system device main, device main, device asset issuance) should be refunded to use the new, lower dust amount for segregated witness output
+    bypassProcessing: false     // NOTE: this option is for DEBUG ONLY. Bypass all processing, so the app starts but does not do anything. This allows
+                                  //  for debugging via 'meteor shell' or 'meteor mongo'
+  },
+  // Parameters pertaining to e-mail server configuration
+  email: {
+    smtpHost: null  // (optional, can be set to null) SMTP server host name or IP address. If not specified (null or empty) the system will not send e-mail messages but write them to the standard output instead
+  },
+  // Parameters pertaining to logging mechanism
+  logging: {
+    console: {
+      active: true,
+      logLevel: "DEBUG"
+    },
+    file: {
+      active: false
+    },
+    email: {
+      active: false
+    }
+  },
+  // Parameters pertaining to Database module
+  database: {
+    defaultBcotProducts: [{
+      sku: "CTN-0010XBCT",
+      amount: 1000000000
+    }, {
+      sku: "CTN-0020XBCT",
+      amount: 2000000000
+    }, {
+      sku: "CTN-0050XBCT",
+      amount: 5000000000
+    }, {
+      sku: "CTN-0100XBCT",
+      amount: 10000000000
+    }, {
+      sku: "CTN-0500XBCT",
+      amount: 50000000000
+    }, {
+      sku: "CTN-1000XBCT",
+      amount: 100000000000
+    }]
+  },
+  // Parameters pertaining to ParseRequestBody module
+  parseRequestBody: {
+    reqBodySizeLimit: 15  // Maximum size, in MB, of data that can be received as the body of requests to the Catenis API methods
+  },
+  // Parameters pertaining to CompressResponseBody module
+  compressResponseBody: {
+    useCompression: true,   // Indicate whether response body should be compressed
+    compressThreshold: 1024   // Minimum size, in bytes, of response body for it to be compressed
+  },
+  // Parameters pertaining do BitcoinFees module
+  bitcoinFees: {
+    implementationInUse: 'earnBitcoinFees'  // Name of bitcoin fees implementation that should be used. Available values: 'earnBitcoinFees', 'bitcoinCoreFees'
+  },
+  // Parameters pertaining to EarnBitcoinFees module
+  earnBitcoinFees: {
+    retrieveFeesInterval: 86400000,  // (24 hours) Time interval, in milliseconds, for executing method to retrieve latest bitcoin fees
+    numDbRecsToMaintain: 2000,  // Number of database docs/recs used to store latest fees that should be maintained when purging the database
+    dbPurgeHours: 2,  // Hours component of time when database purge should take place
+    dbPurgeMinutes: 0,  // Minutes component of time when database purge should take place
+    dbPurgeSeconds: 0,  // Seconds component of time when database purge should take place
+    dbPurgeInterval: 86400000  // (24 hours) Time interval, in milliseconds, for executing process to purge database (delete oldest fees docs/recs)
+  },
+  // Parameters pertaining to BitcoinTicker module
+  bitcoinTicker: {
+    mainImplementation: 'gemini',  // Name of bitcoin ticker implementation that should be normally used over the others (the backup ones)
+    minCheckRevertMainInstanceTimeout: 1800000,  // (30 min.) Minimum time, in milliseconds, to wait before trying to revert back to using main bitcoin ticker implementation instance
+    maxCheckRevertMainInstanceTimeout: 1800000  // (30 min.) Minimum time, in milliseconds, to wait before trying to revert back to using main bitcoin ticker implementation instance
+  },
+  // Parameters pertaining to BitcoinAverageBitcoinTicker module
+  bitcoinAverageBitcoinTicker: {
+    localAddress: null,  // (optional, can be set to null) IP address of local network interface to use to issue requests to the Web service
+    timeout: 20000  // (20 sec.) Timeout, in milliseconds, for connection/request with API server
+  },
+  // Parameters pertaining to GeminiBitcoinTicker module
+  geminiBitcoinTicker: {
+    localAddress: null,  // (optional, can be set to null) IP address of local network interface to use to issue requests to the Web service
+    timeout: 20000  // (20 sec.) Timeout, in milliseconds, for connection/request with API server
+  },
+  // Parameters pertaining to BitcoinPrice module
+  bitcoinPrice: {
+    updatePriceTimeInterval: 1800000  // (30 min.) Time interval, in milliseconds, for retrieving new bitcoin ticker price
+  },
+  // Parameters pertaining to KeyStore module
+  keyStore: {
+    purgeUnusedExtKeyInterval: 1800000  // (30 min.) Time interval, in milliseconds, for executing method to purge unused HD extended keys form local key storage
+  },
+  // Parameters pertaining to BitcoinCore module
+  bitcoinCore: {
+    serverHost: "" // Bitcoin Core server host name/IP address
+  },
+  // Parameters pertaining to OmniCore module
+  omniCore: {
+    serverHost: "" // Omni Core server host name/IP address
+  },
+  // Parameters pertaining to Client module
+  client: {
+    creditsConsumption: {
+      servAccBalanceInfoUIRefreshTimeout: 0,  // (disabled) Timeout, in milliseconds, after which service account balance info should be checked if it needs to be updated on the UI. Set to 0 (zero) to disable it
+    },
+  },
+  // Parameters pertaining to IpfsClient module
+  ipfsClient: {
+    apiHost: ""
+  },
+  // Parameters pertaining to IpfsClusterClient module
+  ipfsClusterClient: {
+    apiUrl: ""  // URL of IPFS Cluster REST API
+  },
+  // Parameters pertaining to IpfsServerMonitor module
+  ipfsServerMonitor: {
+    enabled: false
+  },
+  // Parameters pertaining to Message module
+  message: {
+    minSizeReadDataChunk: 10,  // (10 bytes) Minimum size, in bytes, of data chunks that should be used when reading message in chunks
+    maxSizeReadDataChunk: 15728640  // (15 MB) Maximum size, in bytes, of data chunks that should be used when reading message in chunks
+                                      //  Note: the size of the oplog (oplog.rs collection) of Meteor's development environment mongo DB must
+                                      //   be resized to support the default value of this setting (15 MB) since its default size is 8 MB.
+                                      //   Refer to the README file to do so
+  },
+  // Parameters pertaining to C3NodeClient module
+  c3NodeClient: {
+    serverHost: "" // Catenis Colored Coins node server host name/IP address (access via VPN)
+  },
+  // Parameters pertaining to CCMetadata module
+  ccMetadata: {
+    signingCertificateFilePath: "/Users/claudio/Documents/Híades/Clientes/Blockchain_of_Things/Projects/Catenis/Development/Test SSL certificate/Test_cert.pem",  // Filesystem path to Blockchain of Things' owned SSL certificate used to signed message for asset verification
+    signingCertificateKeyFilePath: "/Users/claudio/Documents/Híades/Clientes/Blockchain_of_Things/Projects/Catenis/Development/Test SSL certificate/Test_key.pem",  // Path to file containing key of SSL certificate used to sign message for asset verification
+    urlContentTimeout: 15000,  // (15 sec.) Timeout, in milliseconds, for retrieving content associated with a given URL
+    shareAfterStoring: false  // Indicates whether metadata should be shared right after it is stored (added to Colored Coins metadata server)
+  },
+  // Parameters pertaining to BcotToken module
+  bcotToken: {
+    bcotOmniPropertyId: 2147483651  // BCOT token Omni property ID
+  },
+  // Parameters pertaining to SpendServiceCreditTransaction module
+  spendServiceCreditTransaction: {
+    maxNumClients: 12,  // Maximum number of clients that can be assigned to a single spend service credit transaction
+    ccMetadata: {
+      servTxidsKey: "servTxids",  // Name (key) of Colored Coins free user metadata used to refer to service transaction
+      ocMsgServCidsKey: "ocMsgServCids"  // Name (key) of Colored Coins free user metadata used to refer to off-chain message related service data (off-chain message envelope)
+    },
+    unconfirmedTxTimeout: 10080,  // (7 days) Timeout, in minutes, for waiting for latest sent spend service credit tx to be confirmed (set to 7 days, which is half the default mempool tx eviction time of 14 days)
+    txSizeThresholdRatio: 0.9  // Ratio that should be applied to maximum tx size to calculate threshold for spend service credit tx size. Above that size the tx fee rate should be reset so that is is confirmed as soon as possible
+  },
+  // Parameters pertaining to AccountsEmail module
+  accountsEmail: {
+    fromAddress: "Catenis [Development] <noreply@blockchainofthings.com>"  // E-mail address used to send accounts related e-mail messages
+  },
+  // Parameters pertaining to ClientLicense module
+  clientLicense: {
+    licenseMonitorInterval: 5  // Time interval, in minutes, used to monitor client licenses for update and expiration reminder.
+  },
+  // Parameters pertaining to LicenseExpireEmailNotify module
+  licenseExpireEmailNotify: {
+    fromAddress: "Catenis [Development] <noreply@blockchainofthings.com>"  // E-mail address of sender of e-mail notification message
+  },
+  // Parameters pertaining to LicenseOverdueEmailNotify module
+  licenseOverdueEmailNotify: {
+    fromAddress: "Catenis [Development] <noreply@blockchainofthings.com>"  // E-mail address of sender of e-mail notification message
+  },
+  // Parameters pertaining to LicenseExpireRemindEmailNotify module
+  licenseExpireRemindEmailNotify: {
+    fromAddress: "Catenis [Development] <noreply@blockchainofthings.com>"  // E-mail address of sender of e-mail notification message
+  },
+  // Parameters pertaining to DevicesDisableEmailNotify module
+  devicesDisabledEmailNotify: {
+    fromAddress: "Catenis [Development] <noreply@blockchainofthings.com>"  // E-mail address of sender of e-mail notification message
+  },
+  // Parameters pertaining to LowServAccBalanceEmailNotify module
+  lowServAccBalanceEmailNotify: {
+    fromAddress: "Catenis [Development] <noreply@blockchainofthings.com>"  // E-mail address of sender of e-mail notification message
+  },
+  // Parameters pertaining to AccountRegistrationEmailNotify module
+  accountRegistrationEmailNotify: {
+    fromAddress: "Catenis [Development] <noreply@blockchainofthings.com>"  // E-mail address of sender of e-mail notification message
+  },
+  // Parameters pertaining to ProvisionalMessage module
+  provisionalMessage: {
+    timeContinueMsg: 900,  // (15 min.) Maximum time, in seconds, to wait until message continuation chunk is recorded
+    timeKeepIncompleteMsg: 3600,  // (1 hour) Minimum time, in seconds, to keep provisional messages that have not been finalized (a final chunk has never been recorded)
+    timeKeepProcessedMsg: 86400, // (24 hours) Minimum time, in seconds, to keep provisional messages after they have already been processed
+    purgeOldMessagesInterval: 43200000  // (12 hours) Time interval, in milliseconds, for executing method to purge old provisional messages
+  },
+  // Parameters pertaining to CachedMessage module
+  cachedMessage: {
+    timeContinueMsg: 900,  // (5 min.) Maximum time, in seconds, to wait until message continuation chunk is read
+    timeKeepIncompleteMsg: 3600,  // (1 hour) Minimum time, in seconds, to keep provisional messages that have not been finalized (a final chunk has never been recorded)
+    timeKeepUnreadMsg: 3600,  // (1 hour) Minimum time, in seconds, to keep cached messages that have not been fully read (not all of its data chunks read)
+    timeKeepReadMsg: 86400, // (24 hours) Minimum time, in seconds, to keep cached messages after they have been fully read (all of its data chunks read)
+    purgeOldMessagesInterval: 43200000  // (12 hours) Time interval, in milliseconds, for executing method to purge old cached messages
+  },
+  // Parameters pertaining to SelfRegistrationBcotSale module
+  selfRegistrationBcotSale: {
+    bcotProduct: 'CTN-1000XBCT',  // (optional, can be set to null) SKU of BCOT product that should be used to be assigned to self-registered client accounts
+    minAvailableQuantity: 10  // Minimum number of self-registration BCOT sale items that should be available (to be assigned to self-registered client accounts) at any time
+  },
+  // Parameters pertaining to TwoFactorAuthentication module
+  twoFactorAuthentication: {
+    userVerificationInterval: 3600,  // (1 hour) Time, in seconds, within which it is expected that the user verifies a newly issued secret key
+    recoveryCode: {
+      usageNotifyEmail: {
+        fromAddress: "Catenis [Development] <noreply@blockchainofthings.com>"  // E-mail address used to send recovery code used notification e-mail
+      }
+    }
+  },
+  // Parameters pertaining to CatenisOffChainClient module
+  catenisOffChainClient: {
+    hostname: "catenis-local-1",
+    port: 8199,
+  },
+  // Parameters pertaining to OffChainMessagesSettlement module
+  offChainMessagesSettlement: {
+    refTimeZone: "UTC-03:00",  // Reference time zone expressed as a time difference from UTC (in the UTC+/-HH:mm format)
+    startTime: "00",  // Time of day (formatted as HH[:mm[:ss[.SSS]]]), in reference to reference time zone, when settlement cycles should start
+    cyclesPerDay: 144,//96,  // Number of settlement cycles in a day (24 hour period). Note that a value less than one can be used to designate a period
+                       //  (time between cycles) greater than 24 hours. In that case, the period shall be rounded to the nearest full hour
+    maxCyclesToPostpone: 0  // Maximum settlement cycles that can be postponed before a settle off-chain messages transaction is sent when there not enough off-chain messages to pay for tx cost
+  },
+  // Parameters pertaining to reCaptcha module
+  reCaptcha: {
+    useForLogin: false  // Indicates whether reCAPTCHA should be used when logging Catenis users in
+  },
+  // Parameters pertaining to PaidService module
+  paidService: {
+    refTimeZone: "UTC-03:00",  // Reference time zone expressed as a time difference from UTC (in the UTC+/-HH:mm format). Used to determine earliest date to keep history docs/recs
+    daysToKeepHistory: 15,  // (15 days) Period of time, in days, that services cost history records should be kept. After that time, records are subject to being purged
+    historyPurgeHours: 0,  // Hours component of time when purging of PaidServicesHistory database records should take place
+    historyPurgeMinutes: 0,  // Minutes component of time when purging of PaidServicesHistory database records should take place
+    historyPurgeSeconds: 0,  // Seconds component of time when purging of PaidServicesHistory database records should take place
+    historyPurgeInterval: 86400000  // (24 hours) Time interval, in milliseconds, for executing process to purge old PaidServicesHistory database records
+  },
+  // Parameters pertaining to AdminEmailNotify module
+  adminEmailNotify: {
+    fromAddress: "Catenis [Development] <noreply@blockchainofthings.com>"  // E-mail address used to send notification e-mail messages to administrators
+  },
+  // Parameters pertaining to ForeignBlockchain module
+  foreignBlockchain: [
+    {
+      key: 'ethereum',
+      name: 'Simulated Ethereum (on Ganache)',
+      classPrefix: 'Ethereum',
+      nativeCoin: {
+        name: 'ether',
+        symbol: 'ETH'
+      },
+      blockTime: 15  // Theoretical block time (in seconds)
+    },
+    {
+      key: 'binance',
+      name: 'Simulated Binance Smart Chain (on Ganache)',
+      classPrefix: 'BinanceSC',
+      nativeCoin: {
+        name: 'Binance coin',
+        symbol: 'BNB'
+      },
+      blockTime: 3  // Theoretical block time (in seconds)
+    },
+    {
+      key: 'polygon',
+      name: 'Simulated Polygon PoS Chain (on Ganache)',
+      classPrefix: 'PolygonPS',
+      nativeCoin: {
+        name: 'MATIC',
+        symbol: 'MATIC'
+      },
+      blockTime: 2  // Theoretical block time (in seconds)
+    }
+  ],
+  // Parameters pertaining to EthereumClient module
+  ethereumClient: {
+    nodeHost: '127.0.0.1',  // Ethereum node (on Ganache) client API hostname
+    nodePath:  null,  // (optional, can be set to null) Ethereum node client API endpoint path
+    nodePort: 7545,  // (optional, can be set to null) Ethereum node client API port. If null, the default port (8545) is used
+    nodeProtocol: 'ws', // Ethereum node client API protocol. Expected values: 'http', 'https', 'ws' our 'wss'
+    apiUsername: null,  // (optional, can be set to null) Base64 encoded, ciphered username for accessing Ethereum node client API
+    apiPassword: null,  // (optional, can be set to null) Base64 encoded, ciphered password for accessing Ethereum node client API
+    web3Settings: {
+      txBlockTimeout: 25  // (number of blocks) 'transactionBlockTimeout' setting for web3.js client library (used for WebSocket connections)
+    }
+  },
+  // Parameters pertaining to BinanceSCClient module
+  binanceSCClient: {
+    nodeHost: '127.0.0.1',  // Simulated Binance Smart Chain node (on Ganache) client API hostname
+    nodePath:  null,  // (optional, can be set to null) Binance Smart Chain node client API endpoint path
+    nodePort: 7545,  // (optional, can be set to null) Binance Smart Chain node client API port. If null, the default port (8545) is used
+    nodeProtocol: 'ws', // Binance Smart Chain node client API protocol. Expected values: 'http', 'https', 'ws' our 'wss'
+    apiUsername: null,  // (optional, can be set to null) Base64 encoded, ciphered username for accessing Binance Smart Chain node client API
+    apiPassword: null  // (optional, can be set to null) Base64 encoded, ciphered password for accessing Binance Smart Chain node client API
+  },
+  // Parameters pertaining to PolygonPSClient module
+  polygonPSClient: {
+    nodeHost: '127.0.0.1',  // Simulated Polygon PoS Chain node (on Ganache) client API hostname
+    nodePath:  null,  // (optional, can be set to null) Polygon PoS Chain node client API endpoint path
+    nodePort: 7545,  // (optional, can be set to null) Polygon PoS Chain node client API port. If null, the default port (8545) is used
+    nodeProtocol: 'ws', // Polygon PoS Chain node client API protocol. Expected values: 'http', 'https', 'ws' our 'wss'
+    apiUsername: null,  // (optional, can be set to null) Base64 encoded, ciphered username for accessing Polygon PoS Chain node client API
+    apiPassword: null  // (optional, can be set to null) Base64 encoded, ciphered password for accessing Polygon PoS Chain node client API
+  },
+  // Parameters pertaining to PolygonPSGasPrices module
+  polygonPSGasPrices: {
+    apiUrl: "https://gasstation-mumbai.matic.today/",  // Matic (Polygon) Gas Station API URL (for Mumbai testnet)
+    gasPricesEndPoint: "",  // API endpoint for retrieving Polygon PoS Chain gas price estimates
+    localAddress: null,  // (optional, can be set to null) IP address of local network interface to use to issue requests to the Web service
+    timeout: 20000  // (20 sec.) Timeout, in milliseconds, for connection/request with API server
+  },
+  // Parameters pertaining to CrmIntegration module
+  crmIntegration: {
+    formUrl: null, // URL of the form used to pass customer data to the Blockchain of Things CRM system.
+                   //  Note: set to null to disable passing customer data
+  },
+  // Parameters pertaining to UINotification module
+  uiNotification: {
+    fromAddress: "Catenis [Development] <noreply@blockchainofthings.com>"  // E-mail address used to send UI notification e-mail messages to Catenis users
+  },
+  // Parameters pertaining to UserUINotification module
+  userUINotification: {
+    displayBatchSize: 5  // Number of notification messages that should be fetched at time to be displayed on the UI
+  }
+}

@@ -4,8 +4,8 @@
   "description": "Catenis application",
   "main": "server/main.js",
   "scripts": {
-    "test-fundSource": "TEST_CLIENT=0 MOCHA_GREP=\"^FundSource module\" NODE_APP_INSTANCE=claudio meteor test --once --driver-package meteortesting:mocha",
-    "test-ccFundSource": "TEST_CLIENT=0 MOCHA_GREP=\"^CCFundSource module\" NODE_APP_INSTANCE=claudio meteor test --once --driver-package meteortesting:mocha",
+    "test-fundSource": "TEST_CLIENT=0 MOCHA_GREP=\"^FundSource module\" NODE_CONFIG_ENV=qa NODE_APP_INSTANCE=user_claudio CTN_TEST_CMDLN_OPTS='{\"password\":\"123456\",\"bypass-processing\":false,\"no-cipher-probe\":true}' meteor test --once --driver-package meteortesting:mocha",
+    "test-ccFundSource": "TEST_CLIENT=0 MOCHA_GREP=\"^CCFundSource module\" NODE_CONFIG_ENV=qa NODE_APP_INSTANCE=user_claudio CTN_TEST_CMDLN_OPTS='{\"password\":\"123456\",\"bypass-processing\":false,\"no-cipher-probe\":true}' meteor test --once --driver-package meteortesting:mocha",
     "build-ethereum-contracts": "truffle compile && rsync ./asset_export/ethereum/build/CatenisERC20Token.json ./private/asset_export/ethereum/CatenisERC20Token.json",
     "build_dev": "./bin/build_dev.sh",
     "build": "./bin/build.sh"

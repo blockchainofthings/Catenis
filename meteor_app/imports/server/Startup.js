@@ -153,8 +153,6 @@ Meteor.startup(function () {
             Catenis.logger.INFO('Bypassing processing...');
 
             if (dataToCipher.length > 0) {
-                Application.initialize(true);
-
                 dataToCipher.forEach((data, idx) => {
                     Catenis.logger.INFO('*** Ciphered data #%d (base64): %s', idx + 1, Catenis.cipherData(data).toString('base64'));
                 })
@@ -186,7 +184,7 @@ Meteor.startup(function () {
             Database.removeBcotExchangeRateColl();
             Database.addMissingClientTimeZone();
             Database.addMissingBtcServicePriceField();
-            Application.initialize(false, cfgSettings.legacyDustFunding);
+            Application.initialize(cfgSettings.legacyDustFunding);
             EccLibraryProxy.initialize();
             Bip32.initialize();
             AccountsEmail.initialize();

@@ -24,7 +24,7 @@ const emailConfig = config.get('email');
 
 // Configuration settings
 export const cfgSettings = {
-    smtpHost: emailConfig.get('smtpHost'),
+    smtpHost: emailConfig.has('smtpHost') ? emailConfig.get('smtpHost') : undefined,
     secureProto: emailConfig.has('secureProto') ? emailConfig.get('secureProto') : undefined,
     smtpPort: emailConfig.has('smtpPort') ? emailConfig.get('smtpPort') : undefined,
     username: emailConfig.has('username') ? emailConfig.get('username') : undefined,
@@ -35,17 +35,19 @@ export const cfgSettings = {
 // Module code
 //
 
-let credentials = undefined;
+if (cfgSettings.smtpHost) {
+    let credentials = undefined;
 
-if (cfgSettings.username) {
-    credentials = cfgSettings.username;
+    if (cfgSettings.username) {
+        credentials = cfgSettings.username;
 
-    if (cfgSettings.password) {
-        credentials += ':' + Catenis.decipherData(cfgSettings.password);
+        if (cfgSettings.password) {
+            credentials += ':' + Catenis.decipherData(cfgSettings.password);
+        }
     }
-}
 
-process.env.MAIL_URL = (cfgSettings.secureProto && (cfgSettings.secureProto === 'ssl' || cfgSettings.secureProto === 'tls') ? 'smtps://' : 'smtp://') +
-    (credentials ? credentials + '@' : '') +
-    cfgSettings.smtpHost +
-    (cfgSettings.smtpPort ? ':' + cfgSettings.smtpPort : '');
+    process.env.MAIL_URL = (cfgSettings.secureProto && (cfgSettings.secureProto === 'ssl' || cfgSettings.secureProto === 'tls') ? 'smtps://' : 'smtp://') +
+        (credentials ? credentials + '@' : '') +
+        cfgSettings.smtpHost +
+        (cfgSettings.smtpPort ? ':' + cfgSettings.smtpPort : '');
+}

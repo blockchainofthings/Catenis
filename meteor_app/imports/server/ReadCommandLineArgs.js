@@ -15,49 +15,71 @@
 import Future from 'fibers/future';
 import SocketInputParams from 'socket-input-params';
 // Meteor packages
-//import { Meteor } from 'meteor/meteor';
+import { Meteor } from 'meteor/meteor';
 
 // References code in other (Catenis) modules
 import { Catenis } from './Catenis';
+import { Util } from './Util';
 
 
 // Module code
 //
 
-const sockInParams = new SocketInputParams({
-    path: process.env.PWD,
-    readTimeout: 30000,
-    optionDefs: [{
-        name: 'password',
-        alias: 'p'
-    }, {
-        name: 'bypass-processing',
-        alias: 'b',
-        type: Boolean
-    }, {
-        name: 'cipher-data',
-        alias: 'd',
-        type: String,
-        multiple: true
-    }, {
-        name: 'no-cipher-probe',
-        alias: 'o',
-        type: Boolean,
-        defaultValue: false
-    }]
-});
+if (!Meteor.isTest) {
+    const sockInParams = new SocketInputParams({
+        path: process.env.PWD,
+        readTimeout: 30000,
+        optionDefs: [{
+            name: 'password',
+            alias: 'p'
+        }, {
+            name: 'bypass-processing',
+            alias: 'b',
+            type: Boolean
+        }, {
+            name: 'cipher-data',
+            alias: 'd',
+            type: String,
+            multiple: true
+        }, {
+            name: 'decipher-data',
+            alias: 'D',
+            type: String,
+            multiple: true
+        }, {
+            name: 'no-cipher-probe',
+            alias: 'o',
+            type: Boolean,
+            defaultValue: false
+        }]
+    });
 
-console.log('Waiting for input parameters...')
+    console.log('Waiting for input parameters...')
 
-const fut = new Future();
+    const fut = new Future();
 
-sockInParams.getCommandLineOptions((err, result) => {
-    if (err) {
-        fut.throw(err);
+    sockInParams.getCommandLineOptions((err, result) => {
+        if (err) {
+            fut.throw(err);
+        }
+        else {
+            fut.return(result);
+        }
+    });
+
+    Catenis.cmdLineOpts = fut.wait();
+}
+else {
+    // Running meteor app in test mode.
+    //  Get command line options from environment variable
+    let parsedCmdOpts;
+
+    try {
+        parsedCmdOpts = JSON.parse(process.env.CTN_TEST_CMDLN_OPTS);
     }
-    else {
-        fut.return(result);
-    }
-});
+    catch (e) {}
 
-Catenis.cmdLineOpts = fut.wait();
+    Catenis.cmdLineOpts = Util.isNonNullObject(parsedCmdOpts)
+        ? parsedCmdOpts
+        : {};
+}

@@ -80,101 +80,99 @@ const statusRegEx = {
 //
 
 // Application function class
-export function Application(cipherOnly = false, legacyDustFunding = false) {
-    if (!cipherOnly) {
-        checkUserRoles();
+export function Application(legacyDustFunding = false) {
+    checkUserRoles();
 
-        //  NOTE: arrow functions should NOT be used for the getter/setter of the defined properties.
-        //      This is to avoid that, if `this` is referred from within the getter/setter body, it
-        //      refers to the object from where the properties have been defined rather than to the
-        //      object from where the property is being accessed. Normally, this does not represent
-        //      an issue (since the object from where the property is accessed is the same object
-        //      from where the property has been defined), but it is especially dangerous if the
-        //      object can be cloned.
-        Object.defineProperty(this, 'masterSeed', {
-            get: function () {
-                return Catenis.decipherData(cfgSettings.masterSeed);
-            }
-        });
-
-        if (!isSeedValid(this.masterSeed)) {
-            throw new Error('Application (master) seed does not match seed currently recorded onto the database');
+    //  NOTE: arrow functions should NOT be used for the getter/setter of the defined properties.
+    //      This is to avoid that, if `this` is referred from within the getter/setter body, it
+    //      refers to the object from where the properties have been defined rather than to the
+    //      object from where the property is being accessed. Normally, this does not represent
+    //      an issue (since the object from where the property is accessed is the same object
+    //      from where the property has been defined), but it is especially dangerous if the
+    //      object can be cloned.
+    Object.defineProperty(this, 'masterSeed', {
+        get: function () {
+            return Catenis.decipherData(cfgSettings.masterSeed);
         }
+    });
 
-        this.legacyDustFunding = legacyDustFunding;
+    if (!isSeedValid(this.masterSeed)) {
+        throw new Error('Application (master) seed does not match seed currently recorded onto the database');
+    }
 
-        //  NOTE: arrow functions should NOT be used for the getter/setter of the defined properties.
-        //      This is to avoid that, if `this` is referred from within the getter/setter body, it
-        //      refers to the object from where the properties have been defined rather than to the
-        //      object from where the property is being accessed. Normally, this does not represent
-        //      an issue (since the object from where the property is accessed is the same object
-        //      from where the property has been defined), but it is especially dangerous if the
-        //      object can be cloned.
-        Object.defineProperties(this, {
-            commonSeed: {
-                get: function () {
-                    return Catenis.decipherData(cfgSettings.commonSeed);
+    this.legacyDustFunding = legacyDustFunding;
+
+    //  NOTE: arrow functions should NOT be used for the getter/setter of the defined properties.
+    //      This is to avoid that, if `this` is referred from within the getter/setter body, it
+    //      refers to the object from where the properties have been defined rather than to the
+    //      object from where the property is being accessed. Normally, this does not represent
+    //      an issue (since the object from where the property is accessed is the same object
+    //      from where the property has been defined), but it is especially dangerous if the
+    //      object can be cloned.
+    Object.defineProperties(this, {
+        commonSeed: {
+            get: function () {
+                return Catenis.decipherData(cfgSettings.commonSeed);
+            }
+        },
+        ctnNode: {
+            get: function () {
+                return {
+                    id: makeCtnNodeId(cfgSettings.ctnNode.index),
+                    ..._und.extend(config.util.cloneDeep(cfgSettings.ctnNode), {
+                        privKey: Catenis.decipherData(cfgSettings.ctnNode.privKey).toString()
+                    })
                 }
             },
-            ctnNode: {
-                get: function () {
-                    return {
-                        id: makeCtnNodeId(cfgSettings.ctnNode.index),
-                        ..._und.extend(config.util.cloneDeep(cfgSettings.ctnNode), {
-                            privKey: Catenis.decipherData(cfgSettings.ctnNode.privKey).toString()
-                        })
-                    }
-                },
-                enumerable: true
+            enumerable: true
+        },
+        environment: {
+            get: function () {
+                return cfgSettings.environment;
             },
-            environment: {
-                get: function () {
-                    return cfgSettings.environment;
-                },
-                enumerable: true
+            enumerable: true
+        },
+        enableSelfRegistration: {
+            get: function () {
+                return cfgSettings.enableSelfRegistration;
             },
-            enableSelfRegistration: {
-                get: function () {
-                    return cfgSettings.enableSelfRegistration;
-                },
-                enumerable: true
+            enumerable: true
+        },
+        twoFAForEndUsers: {
+            get: function () {
+                return cfgSettings.twoFAForEndUsers;
             },
-            twoFAForEndUsers: {
-                get: function () {
-                    return cfgSettings.twoFAForEndUsers;
-                },
-                enumerable: true
+            enumerable: true
+        },
+        ctnHubNodeIndex: {
+            get: function () {
+                return ctnHubNodeIndex;
             },
-            ctnHubNodeIndex: {
-                get: function () {
-                    return ctnHubNodeIndex;
-                },
-                enumerable: true
-            }
-        });
-
-        // Identify test prefix if present
-        if (cfgSettings.testPrefix) {
-            this.testPrefix = cfgSettings.testPrefix;
+            enumerable: true
         }
+    });
 
-        // Get crypto network
-        this.cryptoNetworkName = cfgSettings.cryptoNetwork;
-        this.cryptoNetwork = bitcoinLib.networks[this.cryptoNetworkName];
-
-        if (this.cryptoNetwork === undefined) {
-            throw new Error('Invalid/unknown crypto network: ' + this.cryptoNetworkName);
-        }
-
-        // Set initial application status
-        this.status = Application.processingStatus.stopped;
-
-        // Set up handler to gracefully shutdown the application
-        process.on('SIGTERM', Meteor.bindEnvironment(shutdownHandler, 'Catenis application SIGTERM handler', this));
-
-        // Set up handler for event indicating that transaction used to fund system has been confirmed
-        TransactionMonitor.addEventHandler(TransactionMonitor.notifyEvent.sys_funding_tx_conf.name, sysFundingTxConfirmed.bind(this));
+    // Identify test prefix if present
+    if (cfgSettings.testPrefix) {
+        this.testPrefix = cfgSettings.testPrefix;
     }
+
+    // Get crypto network
+    this.cryptoNetworkName = cfgSettings.cryptoNetwork;
+    this.cryptoNetwork = bitcoinLib.networks[this.cryptoNetworkName];
+
+    if (this.cryptoNetwork === undefined) {
+        throw new Error('Invalid/unknown crypto network: ' + this.cryptoNetworkName);
+    }
+
+    // Set initial application status
+    this.status = Application.processingStatus.stopped;
+
+    // Set up handler to gracefully shutdown the application
+    process.on('SIGTERM', Meteor.bindEnvironment(shutdownHandler, 'Catenis application SIGTERM handler', this));
+
+    // Set up handler for event indicating that transaction used to fund system has been confirmed
+    TransactionMonitor.addEventHandler(TransactionMonitor.notifyEvent.sys_funding_tx_conf.name, sysFundingTxConfirmed.bind(this));
 }
 
 
@@ -443,10 +441,10 @@ function sysFundingTxConfirmed(data) {
 // Application function class (public) methods
 //
 
-Application.initialize = function (cipherOnly = false, legacyDustFunding = false) {
+Application.initialize = function (legacyDustFunding = false) {
     Catenis.logger.TRACE('Application initialization');
     // Instantiate App object
-    Catenis.application = new Application(cipherOnly, legacyDustFunding);
+    Catenis.application = new Application(legacyDustFunding);
 };
 
 

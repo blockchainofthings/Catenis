@@ -29,7 +29,7 @@
   },
   // Parameters pertaining to e-mail server configuration
   "email": {
-    "smtpHost": "smtp-pulse.com",
+    "smtpHost": "smtp-pulse.com",  // (optional, can be set to null) SMTP server host name or IP address. If not specified (null or empty) the system will not send e-mail messages but write them to the standard output instead
     "secureProto": "tls",  // (optional, can be set to null) Secure protocol that should be used with SMTP server. Valid options: 'ssl' or 'tls'
     "smtpPort": null,  // (optional, can be set to null) To be set only if different than default (depending on secureProto): none/null (25), ssl (465), tls (587)
     "username": "???????",  // (optional, can be set to null) To be set only if required by SMTP host
