@@ -123,6 +123,7 @@ const cfgSettings = {
     fixDustFunding: startupConfig.get('fixDustFunding'),
     bypassProcessing: startupConfig.get('bypassProcessing'),
     dataToCipher: startupConfig.get('dataToCipher'),
+    dataToDecipher: startupConfig.get('dataToDecipher'),
     pidFilename: startupConfig.get('pidFilename')
 };
 
@@ -138,12 +139,17 @@ Meteor.startup(function () {
 
         const bypassProcessing = ('bypass-processing' in Catenis.cmdLineOpts) ? Catenis.cmdLineOpts['bypass-processing'] : cfgSettings.bypassProcessing;
         const dataToCipher = ('cipher-data' in Catenis.cmdLineOpts) ? Catenis.cmdLineOpts['cipher-data'] : [];
+        const dataToDecipher = ('decipher-data' in Catenis.cmdLineOpts) ? Catenis.cmdLineOpts['decipher-data'] : [];
 
         if (cfgSettings.dataToCipher) {
             dataToCipher.push(cfgSettings.dataToCipher);
         }
 
-        if (bypassProcessing || dataToCipher.length > 0) {
+        if (cfgSettings.dataToDecipher) {
+            dataToDecipher.push(cfgSettings.dataToDecipher);
+        }
+
+        if (bypassProcessing || dataToCipher.length > 0 || dataToDecipher.length > 0) {
             Catenis.logger.INFO('Bypassing processing...');
 
             if (dataToCipher.length > 0) {
@@ -153,6 +159,14 @@ Meteor.startup(function () {
                     Catenis.logger.INFO('*** Ciphered data #%d (base64): %s', idx + 1, Catenis.cipherData(data).toString('base64'));
                 })
             }
+
+            if (dataToDecipher.length > 0) {
+                dataToDecipher.forEach((data, idx) => {
+                    Catenis.logger.INFO('*** Deciphered data #%d (plain text): %s', idx + 1, Catenis.decipherData(data).toString());
+                })
+            }
+
+            process.exit(0);
         }
         else {
             // Normal processing

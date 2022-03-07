@@ -39,6 +39,7 @@
     "bypassProcessing": false,  // NOTE: this option is for DEBUG ONLY. Bypass all processing, so the app starts but does not do anything. This allows
                                 //  for debugging via 'meteor shell' or 'meteor mongo'
     "dataToCipher": null,  // A text that should be ciphered by the application. If set, the Catenis application is started in "bypass processing" mode and will output the ciphered data
+    dataToDecipher: null,  // A base64 encoded, ciphered text that should be deciphered by the application. If set, the Catenis application is started in "bypass processing" mode and will output the deciphered data
     "pidFilename": "catenis-pid"  // Name of the file containing the ID of the current process that is created/updated whenever that app starts
   },
   // Parameters pertaining to e-mail server configuration
