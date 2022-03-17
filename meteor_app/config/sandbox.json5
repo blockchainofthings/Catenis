@@ -360,7 +360,7 @@
   },
   // Parameters pertaining to PolygonPSGasPrices module
   polygonPSGasPrices: {
-    apiUrl: " https://gasstation-mumbai.matic.today/",  // Matic (Polygon) Gas Station API URL (for Mumbai testnet)
+    apiUrl: "https://gasstation-mumbai.matic.today/",  // Matic (Polygon) Gas Station API URL (for Mumbai testnet)
     gasPricesEndPoint: "",  // API endpoint for retrieving Polygon PoS Chain gas price estimates
     localAddress: null,  // (optional, can be set to null) IP address of local network interface to use to issue requests to the Web service
     timeout: 20000  // (20 sec.) Timeout, in milliseconds, for connection/request with API server
