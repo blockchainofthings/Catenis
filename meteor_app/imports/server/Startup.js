@@ -150,8 +150,6 @@ Meteor.startup(function () {
         }
 
         if (bypassProcessing || dataToCipher.length > 0 || dataToDecipher.length > 0) {
-            Catenis.logger.INFO('Bypassing processing...');
-
             if (dataToCipher.length > 0) {
                 dataToCipher.forEach((data, idx) => {
                     Catenis.logger.INFO('*** Ciphered data #%d (base64): %s', idx + 1, Catenis.cipherData(data).toString('base64'));
@@ -164,7 +162,12 @@ Meteor.startup(function () {
                 })
             }
 
-            process.exit(0);
+            if (bypassProcessing) {
+                Catenis.logger.INFO('Bypassing processing...');
+            }
+            else {
+                process.exit(0);
+            }
         }
         else {
             // Normal processing
