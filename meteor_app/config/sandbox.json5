@@ -1,4 +1,4 @@
-// Config file with specific settings for development environment
+// Config file with specific settings for sandbox environment
 {
   // Parameters pertaining to the Catenis application
   "application": {
