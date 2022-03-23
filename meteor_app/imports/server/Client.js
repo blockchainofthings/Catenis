@@ -1161,14 +1161,7 @@ Client.prototype.replaceUserAccountEmail = function (newEmail) {
  */
 Client.prototype.setEmailVerified = function () {
     try {
-        Meteor.users.update({
-            _id: this.user_id,
-            'emails.verified': false
-        }, {
-            $set: {
-                'emails.$.verified': true
-            }
-        });
+        Util.setUserEmailsVerified(this.user_id);
     }
     catch (err) {
         // Error updating user doc/rec to set e-mail addresses as verified.

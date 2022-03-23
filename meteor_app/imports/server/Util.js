@@ -532,6 +532,21 @@ Util.toUint8Array = function (value) {
     return value;
 }
 
+/**
+ * Mark all e-mail addresses associated with a Meteor user as verified
+ * @param {string} user_id Meteor user ID
+ */
+Util.setUserEmailsVerified = function (user_id) {
+    Meteor.users.update({
+        _id: user_id,
+        'emails.verified': false
+    }, {
+        $set: {
+            'emails.$.verified': true
+        }
+    });
+}
+
 
 // Util function class (public) properties
 //

@@ -34,6 +34,7 @@ import { FundTransaction } from './FundTransaction';
 import { Service } from './Service';
 // TODO: replace all references to role names with the appropriate property of the UserRoles object
 import { UserRoles } from '../both/UserRoles';
+import { Util } from './Util';
 
 
 // Config entries
@@ -347,6 +348,7 @@ Application.prototype.createAdminUser = function (username, password, email, des
         throw errorToThrow ? errorToThrow : new Meteor.Error('ctn_new_user_failure', util.format('Error creating new user: %s', err.toString()));
     }
 
+    Util.setUserEmailsVerified(adminUserId);
     Roles.addUsersToRoles(adminUserId, cfgSettings.adminRole);
 
     return adminUserId;
