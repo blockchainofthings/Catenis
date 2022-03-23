@@ -1,0 +1,379 @@
+// Config file with specific settings for debug environment
+{
+  // Parameters pertaining to the Catenis application
+  "application": {
+    ctnNode: {  // Catenis node to which this instance of the application corresponds
+      pubKey: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDKqZ82mcs8IQ+ZCkEkCKwkgW5hno7Rte2XNOKuwPYXNRDtkvIQiNbmy7wJBn7Fmq+mUsaZAtf++yYsD6vbgEz4/Q2+5qCnQIebUMP4JzoWRt+qJgIcS9HdKAt/j6hlVrLzb7AhV+jLBEZ+vv9Jj7x+MIWK0qTjvWngpWrvne4S1OtuDRXbH5TY+l0UqtqlyPD/P8or1evjx5RnmzMJSde0OghfbnwqfDgQIqIW+n+Ig5Df0MR4rrelCxzPodMvjXxB6+OcK8AAAJJ+AsRGzSS3rVnviDhxPcMOm3b2LWNehKgmTuIgg6VYLhGix/BdsfyXKxnoFDG4KyriKoaE+C+X"
+    },
+    "environment": "development",
+    enableSelfRegistration: true,  // Indicates whether the UI should include a link from where the end user can register for a new Catenis account.
+    twoFAForEndUsers: false,  // Indicates whether two-factor authentication should be made available for end users. Note that it is always available for admin users.
+    testPrefix: "debug",  // (optional) A prefix used to differentiate non-production environments,
+    "cryptoNetwork": "regtest",  // Available values: 'bitcoin' (for Bitcoin's production blockchain), 'testnet' (for Bitcoin's test blockchain)
+    "shutdownTimeout": 30000   // (30 sec.) Time, in milliseconds, that the application should wait after it receives a terminate request before it actually terminates
+  },
+  // Parameters pertaining to the SetUpCipherFunctions module
+  setUpCipherFunctions: {
+    cipherProbe: {
+      hash: "I8SbuhBdfZE+Cf5Iuv1xHRIfwCvNeR4a2/g1Ec5C/zw="  // Base64 encoded, SHA256 hash of deciphered text
+    }
+  },
+  // Parameters pertaining to the Startup module
+  "startup": {
+    "fixMissingAddresses": false, // Indicate if issued blockchain addresses are missing from BitcoinCore wallet they should be automatically included
+    legacyDustFunding: false,  // Indicates whether the system should use the legacy behavior when funding addresses that are funded with dust amount (service credit issuance, BCOT sale stock, system device main, device main, device asset issuance)
+                               //  NOTE: this option is intended to simulate the old scenario while working on the implementation of segregated witness support
+    fixDustFunding: false,  // Indicates whether addresses that are funded with dust amount (service credit issuance, BCOT sale stock, system device main, device main, device asset issuance) should be refunded to use the new, lower dust amount for segregated witness output
+    "bypassProcessing": false     // NOTE: this option is for DEBUG ONLY. Bypass all processing, so the app starts but does not do anything. This allows
+                                  //  for debugging via 'meteor shell' or 'meteor mongo'
+  },
+  // Parameters pertaining to e-mail server configuration
+  "email": {
+    "smtpHost": "localhost",  // (optional, can be set to null) SMTP server host name or IP address. If not specified (null or empty) the system will not send e-mail messages but write them to the standard output instead
+    "smtpPort": 25
+  },
+  // Parameters pertaining to logging mechanism
+  "logging": {
+    "exitOnError": true,
+    "console": {
+      "active": true,
+      "logLevel": "TRACE"
+    },
+    "file": {
+      "active": true,
+      "logLevel": "DEBUG"
+    },
+    "email": {
+      "active": true,
+      "logLevel": "WARN",
+      "toAddresses": "claudio@blockchainofthings.com", // Can be set to a comma separated list of e-mail addresses
+      "fromAddress": "Catenis [Debug] <noreply@blockchainofthings.com>"
+    }
+  },
+  // Parameters pertaining to Database module
+  "database": {
+    "defaultBcotProducts": [{
+      "sku": "CTN-0010TBCT",
+      "amount": 1000000000
+    }, {
+      "sku": "CTN-0020TBCT",
+      "amount": 2000000000
+    }, {
+      "sku": "CTN-0050TBCT",
+      "amount": 5000000000
+    }, {
+      "sku": "CTN-0100TBCT",
+      "amount": 10000000000
+    }, {
+      "sku": "CTN-0500TBCT",
+      "amount": 50000000000
+    }, {
+      "sku": "CTN-1000TBCT",
+      "amount": 100000000000
+    }]
+  },
+  // Parameters pertaining do BitcoinFees module
+  bitcoinFees: {
+    implementationInUse: 'earnBitcoinFees'  // Name of bitcoin fees implementation that should be used. Available values: 'earnBitcoinFees', 'bitcoinCoreFees'
+  },
+  // Parameters pertaining to EarnBitcoinFees module
+  "earnBitcoinFees": {
+    "retrieveFeesInterval": 900000,  // (15 min) Time interval, in milliseconds, for executing method to retrieve latest bitcoin fees
+    "numDbRecsToMaintain": 2000,  // Number of database docs/recs used to store latest fees that should be maintained when purging the database
+    "dbPurgeHours": 2,  // Hours component of time when database purge should take place
+    "dbPurgeMinutes": 0,  // Minutes component of time when database purge should take place
+    "dbPurgeSeconds": 0,  // Seconds component of time when database purge should take place
+    "dbPurgeInterval": 86400000  // (24 hours) Time interval, in milliseconds, for executing process to purge database (delete oldest fees docs/recs)
+  },
+  // Parameters pertaining to BitcoinTicker module
+  bitcoinTicker: {
+    mainImplementation: 'bitcoinAverage',  // Name of bitcoin ticker implementation that should be normally used over the others (the backup ones)
+    minCheckRevertMainInstanceTimeout: 1800000,  // (30 min.) Minimum time, in milliseconds, to wait before trying to revert back to using main bitcoin ticker implementation instance
+    maxCheckRevertMainInstanceTimeout: 86400000  // (24 hours) Minimum time, in milliseconds, to wait before trying to revert back to using main bitcoin ticker implementation instance
+  },
+  // Parameters pertaining to BitcoinAverageBitcoinTicker module
+  bitcoinAverageBitcoinTicker: {
+    localAddress: null,  // (optional, can be set to null) IP address of local network interface to use to issue requests to the Web service
+    timeout: 20000  // (20 sec.) Timeout, in milliseconds, for connection/request with API server
+  },
+  // Parameters pertaining to GeminiBitcoinTicker module
+  geminiBitcoinTicker: {
+    localAddress: null,  // (optional, can be set to null) IP address of local network interface to use to issue requests to the Web service
+    timeout: 20000  // (20 sec.) Timeout, in milliseconds, for connection/request with API server
+  },
+  // Parameters pertaining to BitcoinPrice module
+  "bitcoinPrice": {
+    "updatePriceTimeInterval": 1800000  // (30 min.) Time interval, in milliseconds, for retrieving new bitcoin ticker price
+  },
+  // Parameters pertaining to KeyStore module
+  "keyStore": {
+    "obsoleteExtKeyTimeToPurge": 86400, // (24 hours) Time, in seconds, before an obsolete HD extended key is purged from local key storage
+    "purgeUnusedExtKeyInterval": 43200000,  // (12 hours) Time interval, in milliseconds, for executing method to purge unused HD extended keys form local key storage
+    legacyEncryptScheme: [{
+      addrType: 'sys_serv_cred_issu_addr',
+      addrRanges: [
+        [0]  // Path parts: ctnNodeIndex
+      ]
+    }, {
+      addrType: 'cln_srv_acc_cred_ln_addr',
+      addrRanges: [
+        [0, 1],  // Path parts: ctnNodeIndex, clientIndex
+        [0, 2],  // Path parts: ctnNodeIndex, clientIndex
+        [0, 3],  // Path parts: ctnNodeIndex, clientIndex
+        [0, 5],  // Path parts: ctnNodeIndex, clientIndex
+        [0, 6]  // Path parts: ctnNodeIndex, clientIndex
+      ]
+    }, {
+      addrType: 'cln_bcot_pay_addr',
+      addrRanges: [
+        [0, 1],  // Path parts: ctnNodeIndex, clientIndex
+        [0, 2],  // Path parts: ctnNodeIndex, clientIndex
+        [0, 4],  // Path parts: ctnNodeIndex, clientIndex
+        [0, 5]  // Path parts: ctnNodeIndex, clientIndex
+      ]
+    }, {
+      addrType: 'dev_main_addr',
+      addrRanges: [
+        [0, 1, 1],  // Path parts: ctnNodeIndex, clientIndex, deviceIndex
+        [0, 1, 2],  // Path parts: ctnNodeIndex, clientIndex, deviceIndex
+        [0, 1, 3],  // Path parts: ctnNodeIndex, clientIndex, deviceIndex
+        [0, 1, 4],  // Path parts: ctnNodeIndex, clientIndex, deviceIndex
+        [0, 2, 1],  // Path parts: ctnNodeIndex, clientIndex, deviceIndex
+        [0, 3, 1],  // Path parts: ctnNodeIndex, clientIndex, deviceIndex
+        [0, 3, 2],  // Path parts: ctnNodeIndex, clientIndex, deviceIndex
+        [0, 4, 1],  // Path parts: ctnNodeIndex, clientIndex, deviceIndex
+        [0, 4, 2],  // Path parts: ctnNodeIndex, clientIndex, deviceIndex
+        [0, 4, 3],  // Path parts: ctnNodeIndex, clientIndex, deviceIndex
+        [0, 4, 4],  // Path parts: ctnNodeIndex, clientIndex, deviceIndex
+        [0, 4, 5],  // Path parts: ctnNodeIndex, clientIndex, deviceIndex
+        [0, 5, 1],  // Path parts: ctnNodeIndex, clientIndex, deviceIndex
+        [0, 5, 2],  // Path parts: ctnNodeIndex, clientIndex, deviceIndex
+        [0, 6, 1],  // Path parts: ctnNodeIndex, clientIndex, deviceIndex
+        [0, 6, 2]  // Path parts: ctnNodeIndex, clientIndex, deviceIndex
+      ]
+    }, {
+      addrType: 'dev_asst_addr',
+      addrRanges: [
+        [0, 1, 1],  // Path parts: ctnNodeIndex, clientIndex, deviceIndex
+        [0, 1, 2],  // Path parts: ctnNodeIndex, clientIndex, deviceIndex
+        [0, 6, 1],  // Path parts: ctnNodeIndex, clientIndex, deviceIndex
+        [0, 6, 2]  // Path parts: ctnNodeIndex, clientIndex, deviceIndex
+      ]
+    }, {
+      addrType: 'dev_asst_issu_addr',
+      addrRanges: [
+        [0, 1, 1],  // Path parts: ctnNodeIndex, clientIndex, deviceIndex
+        [0, 1, 2],  // Path parts: ctnNodeIndex, clientIndex, deviceIndex
+        [0, 1, 3],  // Path parts: ctnNodeIndex, clientIndex, deviceIndex
+        [0, 1, 4],  // Path parts: ctnNodeIndex, clientIndex, deviceIndex
+        [0, 2, 1],  // Path parts: ctnNodeIndex, clientIndex, deviceIndex
+        [0, 3, 1],  // Path parts: ctnNodeIndex, clientIndex, deviceIndex
+        [0, 3, 2],  // Path parts: ctnNodeIndex, clientIndex, deviceIndex
+        [0, 4, 1],  // Path parts: ctnNodeIndex, clientIndex, deviceIndex
+        [0, 4, 2],  // Path parts: ctnNodeIndex, clientIndex, deviceIndex
+        [0, 4, 3],  // Path parts: ctnNodeIndex, clientIndex, deviceIndex
+        [0, 4, 4],  // Path parts: ctnNodeIndex, clientIndex, deviceIndex
+        [0, 4, 5],  // Path parts: ctnNodeIndex, clientIndex, deviceIndex
+        [0, 5, 1],  // Path parts: ctnNodeIndex, clientIndex, deviceIndex
+        [0, 5, 2],  // Path parts: ctnNodeIndex, clientIndex, deviceIndex
+        [0, 6, 1],  // Path parts: ctnNodeIndex, clientIndex, deviceIndex
+        [0, 6, 2]  // Path parts: ctnNodeIndex, clientIndex, deviceIndex
+      ]
+    }, {
+      addrType: 'dev_off_chain_addr',
+      addrRanges: [
+        [0, 1, 1],  // Path parts: ctnNodeIndex, clientIndex, deviceIndex
+        [0, 1, 2]  // Path parts: ctnNodeIndex, clientIndex, deviceIndex
+      ]
+    }]
+  },
+  // Parameters pertaining to BitcoinCore module
+  "bitcoinCore": {
+    "serverHost": "127.0.0.1", // Bitcoin Core server host name/IP address
+    "testnetRpcPort": 18443, // (regtest) Port used to connect with Bitcoin Core server via its RPC interface to interact with bitcoin's testnet blockchain
+    "rpcConnectionTimeout": 30000  // (30 sec.) Timeout, in milliseconds, for RPC connection with the bitcoin server.
+  },
+  // Parameters pertaining to OmniCore module
+  "omniCore": {
+    "serverHost": "127.0.0.1", // Omni Core server host name/IP address
+    "testnetRpcPort": 17443, // (regtest) Port used to connect with Omni Core server via its RPC interface to interact with bitcoin's testnet blockchain
+    "rpcConnectionTimeout": 30000  // (30 sec.) Timeout, in milliseconds, for RPC connection with the Omni Core server
+  },
+  // Parameters pertaining to IpfsClient module
+  "ipfsClient": {
+    "apiHost": "127.0.0.1",
+    "apiPort": 9095  // Connects to IPFS Cluster node (via its HTTP proxy) instead of to IPFS node (port 5001) directly
+  },
+  // Parameters pertaining to IpfsClusterClient module
+  "ipfsClusterClient": {
+    "apiUrl": "http://localhost:9094/",  // URL of IPFS Cluster REST API
+    "localAddress": null,  // (optional, can be set to null) IP address of local network interface to use to connect to the IPFS Cluster RESP API. If not specified, the default network interface is used
+    "timeout": 20000  // (20 sec.) (optional, can be set to null) Timeout, in milliseconds, for connection/request with API server
+  },
+  // Parameters pertaining to IpfsServerMonitor module
+  "ipfsServerMonitor": {
+    "enabled": true,
+    "ipfsCluster": {
+      "inUse": true,  // Indicates whether IPFS Cluster in being used
+      "numberOfPeers": 2  // Expected number of active IPFS Cluster nodes
+    },
+    "checkInterval": 300  // (5 min.) Time, in seconds, defining the period within which IPFS server shall be checked to make sure it is still alive
+  },
+  // Parameters pertaining to C3NodeClient module
+  "c3NodeClient": {
+    "serverHost": "127.0.0.1", // Catenis Colored Coins node server host name/IP address
+    "connectionTimeout": 30000  // (30 sec.) Timeout, in milliseconds, for connection with the Colored Coins Full-Node server
+  },
+  // Parameters pertaining to CCMetadata module
+  "ccMetadata": {
+    "ctnAssetsLogoUrl": "https://debug.catenis.io/logo/Catenis_small.png",  // URL to image file to be used as the logo image for all assets generated by Catenis
+    "ctnAssetsLargeLogoUrl": "https://debug.catenis.io/logo/Catenis_large.png", // URL to image file to be used as the large logo image for all assets generated by Catenis
+    "signingCertificateFilePath": "/etc/letsencrypt/live/debug.catenis.io/cert.pem",  // Path to file (in PEM format) containing Blockchain of Things' owned SSL certificate used to sign message for asset verification
+    "signingCertificateKeyFilePath": "/etc/letsencrypt/live/debug.catenis.io/privkey.pem",  // Path to file containing key of SSL certificate used to sign message for asset verification
+    "urlContentTimeout": 15000  // (15 sec.) Timeout, in milliseconds, for retrieving content associated with a given URL
+  },
+  // Parameters pertaining to BcotToken module
+  "bcotToken": {
+    "bcotOmniPropertyId": 2147483651  // BCOT token Omni property ID
+  },
+  // Parameters pertaining to AccountsEmail module
+  accountsEmail: {
+    fromAddress: "Catenis [Debug] <noreply@blockchainofthings.com>"  // E-mail address used to send accounts related e-mail messages
+  },
+  // Parameters pertaining to LicenseExpireEmailNotify module
+  licenseExpireEmailNotify: {
+    fromAddress: "Catenis [Debug] <noreply@blockchainofthings.com>"  // E-mail address of sender of e-mail notification message
+  },
+  // Parameters pertaining to LicenseOverdueEmailNotify module
+  licenseOverdueEmailNotify: {
+    fromAddress: "Catenis [Debug] <noreply@blockchainofthings.com>"  // E-mail address of sender of e-mail notification message
+  },
+  // Parameters pertaining to LicenseExpireRemindEmailNotify module
+  licenseExpireRemindEmailNotify: {
+    fromAddress: "Catenis [Debug] <noreply@blockchainofthings.com>"  // E-mail address of sender of e-mail notification message
+  },
+  // Parameters pertaining to DevicesDisableEmailNotify module
+  devicesDisabledEmailNotify: {
+    fromAddress: "Catenis [Debug] <noreply@blockchainofthings.com>"  // E-mail address of sender of e-mail notification message
+  },
+  // Parameters pertaining to LowServAccBalanceEmailNotify module
+  lowServAccBalanceEmailNotify: {
+    fromAddress: "Catenis [Debug] <noreply@blockchainofthings.com>"  // E-mail address of sender of e-mail notification message
+  },
+  // Parameters pertaining to AccountRegistrationEmailNotify module
+  accountRegistrationEmailNotify: {
+    fromAddress: "Catenis [Debug] <noreply@blockchainofthings.com>"  // E-mail address of sender of e-mail notification message
+  },
+  // Parameters pertaining to SelfRegistrationBcotSale module
+  selfRegistrationBcotSale: {
+    bcotProduct: 'CTN-1000TBCT',  // (optional, can be set to null) SKU of BCOT product that should be used to be assigned to self-registered client accounts
+    minAvailableQuantity: 100  // Minimum number of self-registration BCOT sale items that should be available (to be assigned to self-registered client accounts) at any time
+  },
+  // Parameters pertaining to TwoFactorAuthentication module
+  twoFactorAuthentication: {
+    recoveryCode: {
+      usageNotifyEmail: {
+        fromAddress: "Catenis [Debug] <noreply@blockchainofthings.com>"  // E-mail address used to send recovery code used notification e-mail
+      }
+    }
+  },
+  // Parameters pertaining to OffChainMessagesSettlement module
+  offChainMessagesSettlement: {
+    refTimeZone: "UTC-05:00",  // Reference time zone expressed as a time difference from UTC (in the UTC+/-HH:mm format)
+    startTime: "00:00:00",  // Time of day (formatted as HH[:mm[:ss[.SSS]]]), in reference to reference time zone, when settlement cycles should start
+    cyclesPerDay: 4,  // Number of settlement cycles in a day (24 hour period). Note that a value less than one can be used to designate a period
+                      //  (time between cycles) greater than 24 hours. In that case, the period shall be rounded to the nearest full hour
+    maxCyclesToPostpone: 4  // Maximum settlement cycles that can be postponed before a settle off-chain messages transaction is sent when there not enough off-chain messages to pay for tx cost
+  },
+  // Parameters pertaining to reCaptcha module
+  reCaptcha: {
+    siteKey: '6LdrKbQZAAAAAOySIun207M9zUjoKFJiNjVCoabk'  // (Public) Site key assigned to the Google reCAPTCHA account in use
+  },
+  // Parameters pertaining to AdminEmailNotify module
+  adminEmailNotify: {
+    fromAddress: "Catenis [Debug] <noreply@blockchainofthings.com>"  // E-mail address used to send notification e-mail messages to administrators
+  },
+  // Parameters pertaining to ForeignBlockchain module
+  foreignBlockchain: [
+    {
+      key: 'ethereum',
+      name: 'Ethereum (Ropsten testnet)',
+      classPrefix: 'Ethereum',
+      nativeCoin: {
+        name: 'ether',
+        symbol: 'ETH'
+      },
+      blockTime: 15  // Theoretical block time (in seconds)
+    },
+    {
+      key: 'binance',
+      name: 'Binance Smart Chain (testnet)',
+      classPrefix: 'BinanceSC',
+      nativeCoin: {
+        name: 'Binance coin',
+        symbol: 'BNB'
+      },
+      blockTime: 3  // Theoretical block time (in seconds)
+    },
+    {
+      key: 'polygon',
+      name: 'Polygon PoS Chain (Mumbai testnet)',
+      classPrefix: 'PolygonPS',
+      nativeCoin: {
+        name: 'MATIC',
+        symbol: 'MATIC'
+      },
+      blockTime: 2  // Theoretical block time (in seconds)
+    }
+  ],
+  // Parameters pertaining to EthereumClient module
+  ethereumClient: {
+    nodeHost: 'ws-nd-644-088-742.p2pify.com',  // Ethereum node client API hostname
+    nodePath:  null,  // (optional, can be set to null) Ethereum node client API endpoint path
+    nodePort: null,  // (optional, can be set to null) Ethereum node client API port. If null, the default port (8545) is used
+    nodeProtocol: 'wss', // Ethereum node client API protocol. Expected values: 'http', 'https', 'ws' our 'wss'
+    apiUsername: '??????',  // (optional, can be set to null) Base64 encoded, ciphered username for accessing Ethereum node client API
+    apiPassword: '??????',  // (optional, can be set to null) Base64 encoded, ciphered password for accessing Ethereum node client API
+    web3Settings: {
+      txBlockTimeout: 25  // (number of blocks) 'transactionBlockTimeout' setting for web3.js client library (used for WebSocket connections)
+    }
+  },
+  // Parameters pertaining to BinanceSCClient module
+  binanceSCClient: {
+    nodeHost: 'ws-nd-459-885-532.p2pify.com',  // Binance Smart Chain node client API hostname
+    nodePath:  null,  // (optional, can be set to null) Binance Smart Chain node client API endpoint path
+    nodePort: null,  // (optional, can be set to null) Binance Smart Chain node client API port. If null, the default port (8545) is used
+    nodeProtocol: 'wss', // Binance Smart Chain node client API protocol. Expected values: 'http', 'https', 'ws' our 'wss'
+    apiUsername: '??????',  // (optional, can be set to null) Base64 encoded, ciphered username for accessing Binance Smart Chain node client API
+    apiPassword: '??????'  // (optional, can be set to null) Base64 encoded, ciphered password for accessing Binance Smart Chain node client API
+  },
+  // Parameters pertaining to PolygonPSClient module
+  polygonPSClient: {
+    nodeHost: 'ws-nd-548-797-119.p2pify.com',  // Polygon PoS Chain node client API hostname
+    nodePath:  null,  // (optional, can be set to null) Polygon PoS Chain node client API endpoint path
+    nodePort: null,  // (optional, can be set to null) Polygon PoS Chain node client API port. If null, the default port (8545) is used
+    nodeProtocol: 'wss', // Polygon PoS Chain node client API protocol. Expected values: 'http', 'https', 'ws' our 'wss'
+    apiUsername: '??????',  // (optional, can be set to null) Base64 encoded, ciphered username for accessing Polygon PoS Chain node client API
+    apiPassword: '??????'  // (optional, can be set to null) Base64 encoded, ciphered password for accessing Polygon PoS Chain node client API
+  },
+  // Parameters pertaining to PolygonPSGasPrices module
+  polygonPSGasPrices: {
+    apiUrl: "https://gasstation-mumbai.matic.today/",  // Matic (Polygon) Gas Station API URL (for Mumbai testnet)
+    gasPricesEndPoint: "",  // API endpoint for retrieving Polygon PoS Chain gas price estimates
+    localAddress: null,  // (optional, can be set to null) IP address of local network interface to use to issue requests to the Web service
+    timeout: 20000  // (20 sec.) Timeout, in milliseconds, for connection/request with API server
+  },
+  // Parameters pertaining to AccountRegistration module
+  accountRegistration: {
+    license: {   // Client license to be used for a self-registration account
+      level: "Starter plan",
+      type: "2 virtual devices",  // Note: may be set to null to specify a license with no type
+      revision: 0
+    }
+  },
+  // Parameters pertaining to UINotification module
+  uiNotification: {
+    refTimeZone: "UTC-05:00",  // Reference time zone expressed as a time difference from UTC (in the UTC+/-HH:mm format). Used to determine the notification's expiration date
+    fromAddress: "Catenis [Debug] <noreply@blockchainofthings.com>"  // E-mail address used to send UI notification e-mail messages to Catenis users
+  }
+}

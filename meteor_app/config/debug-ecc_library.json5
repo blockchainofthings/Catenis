@@ -1,0 +1,15 @@
+// Config file with specific settings for EccLibrary child process running on debug environment
+{
+  // Parameters pertaining to logging mechanism
+  "logging": {
+    "exitOnError": false,
+    "prefix": {
+      "label": "EccLibrary",
+      "format": "[%s] - ",
+      "showProcessId": false
+    },
+    "file": {
+      "logFilename": "catenis.ecc_library-%DATE%.log"
+    }
+  }
+}
