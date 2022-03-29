@@ -219,6 +219,10 @@
     },
     "checkInterval": 300  // (5 min.) Time, in seconds, defining the period within which IPFS server shall be checked to make sure it is still alive
   },
+  // Parameters pertaining to Message module
+  "message": {
+    "minSizeReadDataChunk": 10  // (10 bytes) Minimum size, in bytes, of data chunks that should be used when reading message in chunks
+  },
   // Parameters pertaining to C3NodeClient module
   "c3NodeClient": {
     "serverHost": "127.0.0.1", // Catenis Colored Coins node server host name/IP address
