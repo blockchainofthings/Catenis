@@ -301,7 +301,7 @@
   foreignBlockchain: [
     {
       key: 'ethereum',
-      name: 'Ethereum (Ropsten testnet)',
+      name: 'Emulated Ethereum (on Ganache)',
       classPrefix: 'Ethereum',
       nativeCoin: {
         name: 'ether',
@@ -311,7 +311,7 @@
     },
     {
       key: 'binance',
-      name: 'Binance Smart Chain (testnet)',
+      name: 'Emulated Binance Smart Chain (on Ganache)',
       classPrefix: 'BinanceSC',
       nativeCoin: {
         name: 'Binance coin',
@@ -321,7 +321,7 @@
     },
     {
       key: 'polygon',
-      name: 'Polygon PoS Chain (Mumbai testnet)',
+      name: 'Emulated Polygon PoS Chain (on Ganache)',
       classPrefix: 'PolygonPS',
       nativeCoin: {
         name: 'MATIC',
@@ -332,33 +332,33 @@
   ],
   // Parameters pertaining to EthereumClient module
   ethereumClient: {
-    nodeHost: 'ws-nd-644-088-742.p2pify.com',  // Ethereum node client API hostname
+    nodeHost: 'catenis-debug.local',  // Ethereum node client API hostname
     nodePath:  null,  // (optional, can be set to null) Ethereum node client API endpoint path
-    nodePort: null,  // (optional, can be set to null) Ethereum node client API port. If null, the default port (8545) is used
-    nodeProtocol: 'wss', // Ethereum node client API protocol. Expected values: 'http', 'https', 'ws' our 'wss'
-    apiUsername: '??????',  // (optional, can be set to null) Base64 encoded, ciphered username for accessing Ethereum node client API
-    apiPassword: '??????',  // (optional, can be set to null) Base64 encoded, ciphered password for accessing Ethereum node client API
+    nodePort: 7545,  // (optional, can be set to null) Ethereum node client API port. If null, the default port (8545) is used
+    nodeProtocol: 'ws', // Ethereum node client API protocol. Expected values: 'http', 'https', 'ws' our 'wss'
+    apiUsername: null,  // (optional, can be set to null) Base64 encoded, ciphered username for accessing Ethereum node client API
+    apiPassword: null,  // (optional, can be set to null) Base64 encoded, ciphered password for accessing Ethereum node client API
     web3Settings: {
       txBlockTimeout: 25  // (number of blocks) 'transactionBlockTimeout' setting for web3.js client library (used for WebSocket connections)
     }
   },
   // Parameters pertaining to BinanceSCClient module
   binanceSCClient: {
-    nodeHost: 'ws-nd-459-885-532.p2pify.com',  // Binance Smart Chain node client API hostname
+    nodeHost: 'catenis-debug.local',  // Binance Smart Chain node client API hostname
     nodePath:  null,  // (optional, can be set to null) Binance Smart Chain node client API endpoint path
-    nodePort: null,  // (optional, can be set to null) Binance Smart Chain node client API port. If null, the default port (8545) is used
-    nodeProtocol: 'wss', // Binance Smart Chain node client API protocol. Expected values: 'http', 'https', 'ws' our 'wss'
-    apiUsername: '??????',  // (optional, can be set to null) Base64 encoded, ciphered username for accessing Binance Smart Chain node client API
-    apiPassword: '??????'  // (optional, can be set to null) Base64 encoded, ciphered password for accessing Binance Smart Chain node client API
+    nodePort: 6545,  // (optional, can be set to null) Binance Smart Chain node client API port. If null, the default port (8545) is used
+    nodeProtocol: 'ws', // Binance Smart Chain node client API protocol. Expected values: 'http', 'https', 'ws' our 'wss'
+    apiUsername: null,  // (optional, can be set to null) Base64 encoded, ciphered username for accessing Binance Smart Chain node client API
+    apiPassword: null  // (optional, can be set to null) Base64 encoded, ciphered password for accessing Binance Smart Chain node client API
   },
   // Parameters pertaining to PolygonPSClient module
   polygonPSClient: {
-    nodeHost: 'ws-nd-548-797-119.p2pify.com',  // Polygon PoS Chain node client API hostname
+    nodeHost: 'catenis-debug.local',  // Polygon PoS Chain node client API hostname
     nodePath:  null,  // (optional, can be set to null) Polygon PoS Chain node client API endpoint path
-    nodePort: null,  // (optional, can be set to null) Polygon PoS Chain node client API port. If null, the default port (8545) is used
-    nodeProtocol: 'wss', // Polygon PoS Chain node client API protocol. Expected values: 'http', 'https', 'ws' our 'wss'
-    apiUsername: '??????',  // (optional, can be set to null) Base64 encoded, ciphered username for accessing Polygon PoS Chain node client API
-    apiPassword: '??????'  // (optional, can be set to null) Base64 encoded, ciphered password for accessing Polygon PoS Chain node client API
+    nodePort: 5545,  // (optional, can be set to null) Polygon PoS Chain node client API port. If null, the default port (8545) is used
+    nodeProtocol: 'ws', // Polygon PoS Chain node client API protocol. Expected values: 'http', 'https', 'ws' our 'wss'
+    apiUsername: null,  // (optional, can be set to null) Base64 encoded, ciphered username for accessing Polygon PoS Chain node client API
+    apiPassword: null  // (optional, can be set to null) Base64 encoded, ciphered password for accessing Polygon PoS Chain node client API
   },
   // Parameters pertaining to PolygonPSGasPrices module
   polygonPSGasPrices: {
