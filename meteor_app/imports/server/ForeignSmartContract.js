@@ -474,12 +474,14 @@ export class ForeignSmartContract {
 /**
  * @typedef {Object} SentTxInfo
  * @property {string} txHash The transaction hash
- * @property {?} txOutcome Web3.js promise/event emitter object that can be used to check transaction outcome
+ * @property {*} txOutcome Web3.js promise/event emitter object that can be used to check transaction outcome
+ * @property {Object} [receipt] The transaction receipt
+ * @property {Error} [error] Error that happened while processing the transaction
  */
 
 /**
  * Process result from web3.js send() methods
- * @param {?} sendResult
+ * @param {*} sendResult
  * @return {Promise<SentTxInfo>}
  */
 export function processSendResult(sendResult) {
@@ -492,16 +494,33 @@ export function processSendResult(sendResult) {
         rejectPromise = reject;
     });
 
+    /**
+     * @type {(undefined|SentTxInfo)}
+     */
+    let txInfo;
+
     sendResult
     .once('transactionHash', txHash => {
-        promiseResolved = true;
-        resolvePromise({
+        txInfo = {
             txHash,
             txOutcome: sendResult
-        });
+        };
+        promiseResolved = true;
+        resolvePromise(txInfo);
+    })
+    .once('receipt', receipt => {
+        if (txInfo) {
+            // Save transaction receipt
+            txInfo.receipt = receipt;
+        }
     })
     .once('error', err => {
-        if (!promiseResolved) {
+        if (txInfo) {
+            // Transaction already sent (tx hash has been received).
+            //  So save tx processing error to be handled afterwards
+            txInfo.error = err;
+        }
+        else if (!promiseResolved) {
             rejectPromise(err)
         }
     });

@@ -722,6 +722,8 @@ export class AssetMigration {
                     }
                 }, this.expAsset.ctnErc20Token.transactionPollingTimeout * cfgSettings.txExecEventsTimeoutFactor * 1000);
 
+                result.txOutcome.removeAllListeners();
+
                 result.txOutcome
                 .once('receipt', Meteor.bindEnvironment(receipt => {
                     try {
@@ -797,6 +799,16 @@ export class AssetMigration {
                         Catenis.logger.ERROR(`Error processing failing foreign tx (txid: ${this.foreignTransaction.txid}) outcome while out-migrating asset.`, err);
                     }
                 }));
+
+                if (result.receipt) {
+                    // Transaction receipt event has already been triggered. So retrigger the event
+                    result.txOutcome.emit('receipt', result.receipt);
+                }
+
+                if (result.error) {
+                    // Transaction processing error event has already been triggered. So retrigger the event
+                    result.txOutcome.emit('error', result.error);
+                }
             }
         }
 
@@ -913,6 +925,8 @@ export class AssetMigration {
                     }
                 }, this.expAsset.ctnErc20Token.transactionPollingTimeout * cfgSettings.txExecEventsTimeoutFactor * 1000);
 
+                result.txOutcome.removeAllListeners();
+
                 result.txOutcome
                 .once('receipt', Meteor.bindEnvironment(receipt => {
                     try {
@@ -988,6 +1002,16 @@ export class AssetMigration {
                         Catenis.logger.ERROR(`Error processing failing foreign tx (txid: ${this.foreignTransaction.txid}) outcome while in-migrating asset.`, err);
                     }
                 }));
+
+                if (result.receipt) {
+                    // Transaction receipt event has already been triggered. So retrigger the event
+                    result.txOutcome.emit('receipt', result.receipt);
+                }
+
+                if (result.error) {
+                    // Transaction processing error event has already been triggered. So retrigger the event
+                    result.txOutcome.emit('error', result.error);
+                }
             }
             else {
                 try {
