@@ -8,7 +8,7 @@ Application {
   lastRetrievedOCMsgDataDate: [date/time]  // Date and time when Catenis off-chain message data (either envelope or receipt) has been last retrieved
 }
 
-BitcoinFees {
+EarnBitcoinFees {
   _id: [string],  / MongoDB internal document ID provided by Meteor
   recommended: {
     fastestFee: [integer],
@@ -631,13 +631,6 @@ AssetMigration {
   status: [string],  // Current status of asset migration. Valid values (from AssetMigration.migrationStatus): 'pending', 'success', 'error'
   createdDate: [date/time],  // Date and time when doc/rec has been created
   lastStatusChangedDate: [date/time]  // Date and time when status has been last modified
-}
-
-BcotExchangeRate {
-  _id: [string],  // MongoDB internal document ID provided by Meteor
-  exchangeRate: [number],  // Bitcoin to BCOT token exchange rate
-  date: [date/time],  // Date and time when exchange rate has been recorded
-  createdDate: [date/time]  // Date and time when doc/rec has been created
 }
 
 Billing {
