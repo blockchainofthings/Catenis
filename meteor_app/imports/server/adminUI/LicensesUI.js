@@ -137,6 +137,23 @@ LicensesUI.initialize = function () {
                 //  Throw exception
                 throw new Meteor.Error('ctn_admin_no_permission', 'No permission; must be logged in as a system administrator to perform this task');
             }
+        },
+        deleteLicense: function (license_id) {
+            if (Roles.userIsInRole(this.userId, 'sys-admin')) {
+                try {
+                    License.getLicenseByDocId(license_id).delete();
+                }
+                catch (err) {
+                    // Error trying to delete license. Log error and throw exception
+                    Catenis.logger.ERROR('Failure trying to delete license (doc_id: %s).', license_id, err);
+                    throw new Meteor.Error('license.delete.failure', 'Failure trying to delete license: ' + err.toString());
+                }
+            }
+            else {
+                // User not logged in or not a system administrator.
+                //  Throw exception
+                throw new Meteor.Error('ctn_admin_no_permission', 'No permission; must be logged in as a system administrator to perform this task');
+            }
         }
     });
 

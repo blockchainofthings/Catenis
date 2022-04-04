@@ -17,6 +17,7 @@
 import { Meteor } from 'meteor/meteor';
 import { Template } from 'meteor/templating';
 import { ReactiveDict } from 'meteor/reactive-dict';
+import { FlowRouter } from 'meteor/kadira:flow-router';
 
 // References code in other (Catenis) modules on the client
 import { Catenis } from '../ClientCatenis';
@@ -207,6 +208,30 @@ Template.licenseDetails.events({
             // Close modal panel
             $('#divDeactivateLicense').modal('hide');
         }
+    },
+    'click #btnDeleteLicense'(event, template) {
+        event.preventDefault();
+        event.stopPropagation();
+
+        const confirmMsg = 'If you proceed, the license will be DELETED.\n\nPLEASE NOTE THAT THIS ACTION CANNOT BE UNDONE.';
+
+        if (confirm(confirmMsg)) {
+            // Reset alert messages
+            template.state.set('errMsgs', []);
+            template.state.set('infoMsg', undefined);
+            template.state.set('infoMsgType', 'info');
+
+            Meteor.call('deleteLicense', template.data.license_id, (error) => {
+                if (error) {
+                    const errMsgs = template.state.get('errMsgs');
+                    errMsgs.push('Error deleting license: ' + error.toString());
+                    template.state.set('errMsgs', errMsgs);
+                }
+                else {
+                    FlowRouter.go('/admin/licenses');
+                }
+            });
+        }
     }
 });
 
@@ -220,7 +245,15 @@ Template.licenseDetails.helpers({
         return Catenis.db.collection.License.findOne({_id: Template.instance().data.license_id});
     },
     activeLicense() {
-        return Catenis.db.collection.License.findOne({status: LicenseShared.status.active.name});
+        const license = Catenis.db.collection.License.findOne({_id: Template.instance().data.license_id});
+
+        if (license) {
+            return Catenis.db.collection.License.findOne({
+                level: license.level,
+                type: license.type,
+                status: LicenseShared.status.active.name
+            });
+        }
     },
     statusColor(status) {
         let color;
@@ -262,10 +295,13 @@ Template.licenseDetails.helpers({
         return Template.instance().state.get('infoMsgType');
     },
     canDeactivateLicense(license) {
-        return license.status === LicenseShared.status.new.name || license.status === LicenseShared.status.active.name;
+        return license && license.status === LicenseShared.status.active.name;
     },
     canActivateLicense(license, activeLicense) {
-        return license.status === LicenseShared.status.new.name && (!activeLicense || activeLicense.revision < license.revision);
+        return license && license.status === LicenseShared.status.new.name && (!activeLicense || activeLicense.revision < license.revision);
+    },
+    canDeleteLicense(license) {
+        return license && license.status === LicenseShared.status.new.name;
     },
     displayDeactivateLicenseSubmitButton() {
         return Template.instance().state.get('displayDeactivateLicenseSubmitButton');

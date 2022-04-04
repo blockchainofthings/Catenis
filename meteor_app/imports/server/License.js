@@ -120,7 +120,7 @@ License.prototype.activate = function () {
 License.prototype.deactivate = function () {
     try {
         // Make sure that license can be deactivated
-        if (this.status === License.status.new.name || this.status === License.status.active.name) {
+        if (this.status === License.status.active.name) {
             // Deactivate license
             const now = new Date();
 
@@ -146,6 +146,30 @@ License.prototype.deactivate = function () {
         // Log error and throw exception
         Catenis.logger.ERROR('Error while deactivating license.', err);
         throw new Meteor.Error('ctn_license_deactivate_error', 'Error while deactivating license: ' + err.toString());
+    }
+};
+
+License.prototype.delete = function () {
+    try {
+        // Make sure that license can be deleted
+        if (this.status === License.status.new.name) {
+            // Delete license database doc/rec
+            Catenis.db.collection.License.remove({
+                _id: this.doc_id
+            });
+
+            // Indicate that license has been deleted
+            this.status = undefined;
+        }
+        else {
+            // Log warning condition
+            Catenis.logger.WARN('License cannot be deleted', this);
+        }
+    }
+    catch (err) {
+        // Log error and throw exception
+        Catenis.logger.ERROR('Error while deleting license.', err);
+        throw new Meteor.Error('ctn_license_delete_error', 'Error while deleting license: ' + err.toString());
     }
 };
 

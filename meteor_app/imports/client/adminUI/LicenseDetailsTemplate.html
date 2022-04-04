@@ -102,6 +102,11 @@
                                         <button type="button" id="btnDeactivateLicense" class="btn-login btn paddedBtn btn-warn fullWidth" data-toggle="modal" data-target="#divDeactivateLicense">Deactivate License</button>
                                     </div>
                                 {{/if}}
+                                {{#if canDeleteLicense license}}
+                                    <div class="col-md-4">
+                                        <button type="button" id="btnDeleteLicense" class="btn-login btn paddedBtn btn-warn fullWidth">Delete License</button>
+                                    </div>
+                                {{/if}}
                             </div>
                             {{!Modal panel containing form used to activate license}}
                             <div id="divActivateLicense" class="modal fade" tabindex="-1" role="dialog">
