@@ -375,6 +375,58 @@
       revision: 0
     }
   },
+  // Parameters pertaining to CrmIntegration module
+  crmIntegration: {
+    formUrl: 'https://crm.zoho.com/crm/WebToLeadForm',  // URL of the form used to pass customer data to the Blockchain of Things CRM system.
+                                                        //  Note: set to null to disable passing customer data
+    localAddress: null,  // (optional, can be set to null) IP address of local network interface to use when issuing requests
+    timeout: 20000,  // (20 sec.) Timeout, in milliseconds, for connection/request
+    fields: [{
+      name: 'xnQsjsdp',
+      value: '',
+      mappedClientProp: null
+    }, {
+      name: 'zc_gad',
+      value: '',
+      mappedClientProp: null
+    }, {
+      name: 'xmIwtLD',
+      value: '',
+      mappedClientProp: null
+    }, {
+      name: 'actionType',
+      value: '',
+      mappedClientProp: null
+    }, {
+      name: 'returnURL',
+      value: '',
+      mappedClientProp: null
+    }, {
+      name: 'First Name',
+      value: null,
+      mappedClientProp: 'props.firstName'
+    }, {
+      name: 'Last Name',
+      value: null,
+      mappedClientProp: 'props.lastName'
+    }, {
+      name: 'Email',
+      value: null,
+      mappedClientProp: 'userAccountEmail'
+    }, {
+      name: 'Phone',
+      value: null,
+      mappedClientProp: 'props.phone'
+    }, {
+      name: 'Company',
+      value: null,
+      mappedClientProp: 'props.company'
+    }, {
+      name: 'Lead Source',
+      value: 'Starter',
+      mappedClientProp: null
+    }]
+  },
   // Parameters pertaining to UINotification module
   uiNotification: {
     refTimeZone: "UTC-05:00",  // Reference time zone expressed as a time difference from UTC (in the UTC+/-HH:mm format). Used to determine the notification's expiration date
