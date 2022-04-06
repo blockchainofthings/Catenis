@@ -2241,9 +2241,9 @@ Device.prototype.retrieveDeviceIdentityInfo = function (device) {
 
     // Make sure that device is active
     if (this.status !== Device.status.active.name) {
-        // Cannot retrieve other device's identification information for a deleted device. Log error and throw exception
-        Catenis.logger.ERROR('Cannot retrieve other device\'s identification information for a deleted device', {deviceId: this.deviceId});
-        throw new Meteor.Error('ctn_device_not_active', util.format('Cannot retrieve other device\'s identification information for a deleted device (deviceId: %s)', this.deviceId));
+        // Cannot retrieve other device's identification information for a device that is not active. Log error and throw exception
+        Catenis.logger.ERROR('Cannot retrieve other device\'s identification information for a device that is not active', {deviceId: this.deviceId});
+        throw new Meteor.Error('ctn_device_not_active', util.format('Cannot retrieve other device\'s identification information for a device that is not active (deviceId: %s)', this.deviceId));
     }
 
     // Make sure that device has permission to retrieve that other device's identification information
