@@ -158,7 +158,8 @@ export class NFAssetIssuance {
      *                                                           (for reissuance)
      * @param {boolean} [encryptNFTContents] Indicates whether the non-fungible tokens' contents should be encrypted
      *                                        before being stored (on IPFS)
-     * @param {string[]} [holdingDeviceIds] List of ID of the devices that will hold the non-fungible tokens being issued
+     * @param {(string|string[])} [holdingDeviceIds] A single ID or a list of ID of the devices that will hold the
+     *                                                non-fungible tokens being issued
      * @param {NonFungibleTokenInfoEntry[]} [nfTokenInfos] List of information about the non-fungible tokens to issue
      * @param {boolean} [isFinal=true] Indicates whether the information about the non-fungible tokens to issue is
      *                                  complete
@@ -204,7 +205,8 @@ export class NFAssetIssuance {
                 errArg.assetPropsOrId = assetPropsOrId;
             }
 
-            if (!Array.isArray(holdingDeviceIds) || holdingDeviceIds.length === 0 || holdingDeviceIds.some(id => typeof id !== 'string')) {
+            if (typeof holdingDeviceIds !== 'string' && (!Array.isArray(holdingDeviceIds)
+                    || holdingDeviceIds.length === 0 || holdingDeviceIds.some(id => typeof id !== 'string'))) {
                 errArg.holdingDeviceIds = holdingDeviceIds;
             }
 
@@ -217,6 +219,16 @@ export class NFAssetIssuance {
 
                 Catenis.logger.ERROR(`NFAssetIssuance constructor called with invalid argument${errArgs.length > 1 ? 's' : ''}`, errArg);
                 throw new TypeError(`Invalid ${errArgs.join(', ')} argument${errArgs.length > 1 ? 's' : ''}`);
+            }
+
+            if (Array.isArray(holdingDeviceIds)) {
+                // Make sure that number of holding devices is consistent with number of tokens to issue
+                if (holdingDeviceIds.length !== nfTokenInfos.length) {
+                    throw new Meteor.Error('nf_asset_issue_wrong_num_hold_devices', 'Number of holding devices is not consistent with the number of non-fungible tokens to be issued');
+                }
+            }
+            else {
+                holdingDeviceIds = [holdingDeviceIds];
             }
 
             this.deviceId = deviceId;

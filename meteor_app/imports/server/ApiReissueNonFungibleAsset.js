@@ -23,7 +23,9 @@ import {
     errorResponse
 } from './RestApi';
 import {
+    getDeviceId,
     isValidHoldingDeviceIdInfoList,
+    isValidHoldingDeviceIdInfo,
     isValidNonFungibleTokenList
 } from './ApiIssueNonFungibleAsset';
 import { Util } from './Util';
@@ -113,42 +115,37 @@ export function reissueNonFungibleAsset() {
             }
 
             // holdingDevices param
-            if (isValidHoldingDeviceIdInfoList(this.bodyParams.holdingDevices)) {
-                // Get list of device IDs
-                const deviceIds = [];
+            try {
+                if (isValidHoldingDeviceIdInfo(this.bodyParams.holdingDevices)) {
+                    holdingDeviceIds = getDeviceId(this.bodyParams.holdingDevices);
+                }
+                else if (isValidHoldingDeviceIdInfoList(this.bodyParams.holdingDevices)) {
+                    // Get list of device IDs
+                    const deviceIds = [];
 
-                this.bodyParams.holdingDevices.forEach(deviceIdInfo => {
-                    let deviceId = deviceIdInfo.deviceId;
+                    this.bodyParams.holdingDevices.forEach(deviceIdInfo => {
+                        deviceIds.push(getDeviceId(deviceIdInfo));
+                    });
 
-                    if (deviceIdInfo.isProdUniqueId) {
-                        try {
-                            deviceId = Device.getDeviceByProductUniqueId(deviceId, false).deviceId;
-                        }
-                        catch (err) {
-                            let error;
-
-                            if ((err instanceof Meteor.Error) && err.error === 'ctn_device_not_found') {
-                                error = errorResponse.call(this, 400, 'Invalid holding device');
-                            }
-                            else {
-                                error = errorResponse.call(this, 500, 'Internal server error');
-                                Catenis.logger.ERROR('Error processing POST \'assets/non-fungible/:assetId/issue\' API request.', err);
-                            }
-
-                            return error;
-                        }
-                    }
-
-                    deviceIds.push(deviceId);
-                });
-
-                if (deviceIds.length > 0) {
                     holdingDeviceIds = deviceIds;
                 }
+                else if (this.bodyParams.holdingDevices !== undefined) {
+                    Catenis.logger.DEBUG('Invalid \'holdingDevices\' parameter for POST \'assets/non-fungible/:assetId/issue\' API request', this.urlParams);
+                    invalidParams.push('holdingDevices');
+                }
             }
-            else if (this.bodyParams.holdingDevices !== undefined) {
-                Catenis.logger.DEBUG('Invalid \'holdingDevices\' parameter for POST \'assets/non-fungible/:assetId/issue\' API request', this.urlParams);
-                invalidParams.push('holdingDevices');
+            catch (err) {
+                let error;
+
+                if ((err instanceof Meteor.Error) && err.error === 'ctn_device_not_found') {
+                    error = errorResponse.call(this, 400, 'Invalid holding device');
+                }
+                else {
+                    error = errorResponse.call(this, 500, 'Internal server error');
+                    Catenis.logger.ERROR('Error processing POST \'assets/non-fungible/:assetId/issue\' API request.', err);
+                }
+
+                return error;
             }
 
             // async param

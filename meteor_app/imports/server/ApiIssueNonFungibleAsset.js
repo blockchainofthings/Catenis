@@ -73,11 +73,15 @@ import { Device } from './Device';
  * @property {Object} bodyParams
  * @property {string} [bodyParams.name] The name of the asset
  * @property {string} [bodyParams.description] A brief description of the asset
- * @property {boolean} [bodyParams.canReissue] Indicates whether more non-fungible tokens of that asset can be issued at a later time (an unlocked asset)
- * @property {boolean} [bodyParams.encryptNFTContents=true] Indicates whether the contents of the asset’s non-fungible tokens should be encrypted before being stored (on IPFS)
- * @property {HoldingDeviceIdInfo[]} [bodyParams.holdingDevices] List of Catenis virtual devices that will hold the issued non-fungible tokens
+ * @property {boolean} [bodyParams.canReissue] Indicates whether more non-fungible tokens of that asset can be issued
+ *                                              at a later time (an unlocked asset)
+ * @property {boolean} [bodyParams.encryptNFTContents=true] Indicates whether the contents of the asset’s non-fungible
+ *                                              tokens should be encrypted before being stored (on IPFS)
+ * @property {(HoldingDeviceIdInfo|HoldingDeviceIdInfo[])} [bodyParams.holdingDevices] List of Catenis virtual devices
+ *                                              that will hold the issued non-fungible tokens
  * @property {boolean} [bodyParams.async=false] Indicates whether processing should be done asynchronously
- * @property {string} [bodyParams.continuationToken] The continuation token returned by the previous request indicating that this is a continuation request for the same issuance
+ * @property {string} [bodyParams.continuationToken] The continuation token returned by the previous request indicating
+ *                                              that this is a continuation request for the same issuance
  * @property {NonFungibleTokenApiInfo[]} [bodyParams.nonFungibleTokens] List of non-fungible tokens to be issued
  * @property {boolean} [bodyParams.isFinal=true] Indicates whether this is the final request for this issuance
  * @return {IssueNonFungibleAssetAPIResponse}
@@ -138,42 +142,37 @@ export function issueNonFungibleAsset() {
             }
 
             // holdingDevices param
-            if (isValidHoldingDeviceIdInfoList(this.bodyParams.holdingDevices)) {
-                // Get list of device IDs
-                const deviceIds = [];
+            try {
+                if (isValidHoldingDeviceIdInfo(this.bodyParams.holdingDevices)) {
+                    holdingDeviceIds = getDeviceId(this.bodyParams.holdingDevices);
+                }
+                else if (isValidHoldingDeviceIdInfoList(this.bodyParams.holdingDevices)) {
+                    // Get list of device IDs
+                    const deviceIds = [];
 
-                this.bodyParams.holdingDevices.forEach(deviceIdInfo => {
-                    let deviceId = deviceIdInfo.deviceId;
+                    this.bodyParams.holdingDevices.forEach(deviceIdInfo => {
+                        deviceIds.push(getDeviceId(deviceIdInfo));
+                    });
 
-                    if (deviceIdInfo.isProdUniqueId) {
-                        try {
-                            deviceId = Device.getDeviceByProductUniqueId(deviceId, false).deviceId;
-                        }
-                        catch (err) {
-                            let error;
-
-                            if ((err instanceof Meteor.Error) && err.error === 'ctn_device_not_found') {
-                                error = errorResponse.call(this, 400, 'Invalid holding device');
-                            }
-                            else {
-                                error = errorResponse.call(this, 500, 'Internal server error');
-                                Catenis.logger.ERROR('Error processing POST \'assets/non-fungible/issue\' API request.', err);
-                            }
-
-                            return error;
-                        }
-                    }
-
-                    deviceIds.push(deviceId);
-                });
-
-                if (deviceIds.length > 0) {
                     holdingDeviceIds = deviceIds;
                 }
+                else if (this.bodyParams.holdingDevices !== undefined) {
+                    Catenis.logger.DEBUG('Invalid \'holdingDevices\' parameter for POST \'assets/non-fungible/issue\' API request', this.urlParams);
+                    invalidParams.push('holdingDevices');
+                }
             }
-            else if (this.bodyParams.holdingDevices !== undefined) {
-                Catenis.logger.DEBUG('Invalid \'holdingDevices\' parameter for POST \'assets/non-fungible/issue\' API request', this.urlParams);
-                invalidParams.push('holdingDevices');
+            catch (err) {
+                let error;
+
+                if ((err instanceof Meteor.Error) && err.error === 'ctn_device_not_found') {
+                    error = errorResponse.call(this, 400, 'Invalid holding device');
+                }
+                else {
+                    error = errorResponse.call(this, 500, 'Internal server error');
+                    Catenis.logger.ERROR('Error processing POST \'assets/non-fungible/issue\' API request.', err);
+                }
+
+                return error;
             }
 
             // async param
@@ -372,11 +371,17 @@ export function issueNonFungibleAsset() {
     }
 }
 
+export function getDeviceId(deviceIdInfo) {
+    return deviceIdInfo.isProdUniqueId
+        ? Device.getDeviceByProductUniqueId(deviceIdInfo.deviceId, false).deviceId
+        : deviceIdInfo.deviceId;
+}
+
 export function isValidHoldingDeviceIdInfoList(data) {
     return Array.isArray(data) && data.length > 0 && data.every(isValidHoldingDeviceIdInfo);
 }
 
-function isValidHoldingDeviceIdInfo(data) {
+export function isValidHoldingDeviceIdInfo(data) {
     return Util.isNonNullObject(data) && Util.isNonBlankString(data.id) && (
         !('isProdUniqueId' in data) || typeof data.isProdUniqueId === 'boolean');
 }

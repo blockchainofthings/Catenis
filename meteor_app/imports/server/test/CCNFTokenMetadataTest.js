@@ -348,7 +348,7 @@ describe('CCNFTokenMetadata module', function () {
                         canReissue: false
                     },
                     false,
-                    ['d00002'],
+                    'd00002',
                     [
                         {
                             metadata: {
@@ -552,7 +552,7 @@ describe('CCNFTokenMetadata module', function () {
                         canReissue: false
                     },
                     true,
-                    ['d00002'],
+                    'd00002',
                     [
                         {
                             metadata: {
@@ -719,7 +719,7 @@ describe('CCNFTokenMetadata module', function () {
                         canReissue: false
                     },
                     true,
-                    ['d00002'],
+                    'd00002',
                     [
                         {
                             metadata: {
@@ -1016,7 +1016,7 @@ describe('CCNFTokenMetadata module', function () {
                         canReissue: false
                     },
                     true,
-                    ['d00002'],
+                    'd00002',
                     [
                         {
                             metadata: {

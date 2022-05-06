@@ -52,7 +52,7 @@ export class IssueNFAssetTransaction {
         input: util.format('^(?:%s)(?:%s)+$',
             Transaction.ioToken.p2_dev_asst_issu_addr.token,
             Transaction.ioToken.p2_sys_pay_tx_exp_addr.token),
-        output: util.format('^(?:%s)*(?:(?:%s)(?:%s)(?:%s){1,2}(?:%s))?(?:%s)(?:%s)*(?:%s){1,4}(?:%s)?$',
+        output: util.format('^(?:%s)*(?:(?:%s)(?:%s)(?:%s){1,2}(?:%s))?(?:%s)(?:%s)?(?:%s){1,4}(?:%s)?$',
             Transaction.ioToken.p2_dev_asst_addr.token,
             Transaction.ioToken.multisig_start.token,
             Transaction.ioToken.p2_sys_msig_sign_addr.token,
@@ -495,8 +495,12 @@ export class IssueNFAssetTransaction {
                         const outputAddr = getAddrAndAddrInfo(output.payInfo);
 
                         if (outputAddr.addrInfo.type === KeyStore.extKeyType.dev_asst_addr.name) {
-                            // Additional holding device asset address. Save it
-                            holdDevAssetAddrs.push(outputAddr);
+                            if (holdDevAssetAddrs.length === 0) {
+                                // Save single holding device asset address
+                                holdDevAssetAddrs.push(outputAddr);
+                            } else {
+                                isValid = false;
+                            }
                         } else if (outputAddr.addrInfo.type === KeyStore.extKeyType.dev_asst_issu_addr.name) {
                             // Make sure that it is consistent with issuing address input
                             if (areAddressesFromSameDevice(devAssetIssueAddr.addrInfo, outputAddr.addrInfo)) {

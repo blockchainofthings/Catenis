@@ -54,7 +54,7 @@ describe('NFAssetIssuance module', function () {
                         canReissue: false
                     },
                     false,
-                    ['d00002'],
+                    'd00002',
                     nfTokenInfos,
                     false,
                     false
@@ -71,7 +71,7 @@ describe('NFAssetIssuance module', function () {
                     'd00001',
                     null,
                     false,
-                    ['d00002'],
+                    'd00002',
                     nfTokenInfos,
                     false,
                     false
@@ -80,7 +80,7 @@ describe('NFAssetIssuance module', function () {
             .to.throw('Invalid assetPropsOrId argument');
         });
 
-        it('should fail to instantiate object with invalid params (holdingDeviceIds: not an array)', function () {
+        it('should fail to instantiate object with invalid params (holdingDeviceIds: neither a string nor an array)', function () {
             expect(() => {
                 const nfTokenIssuingBatch = new NFAssetIssuance(
                     undefined,
@@ -92,7 +92,7 @@ describe('NFAssetIssuance module', function () {
                         canReissue: false
                     },
                     false,
-                    'd00002',
+                    null,
                     nfTokenInfos,
                     false,
                     false
@@ -134,13 +134,34 @@ describe('NFAssetIssuance module', function () {
                         canReissue: false
                     },
                     false,
-                    [1],
+                    [1, 2],
                     nfTokenInfos,
                     false,
                     false
                 );
             })
             .to.throw('Invalid holdingDeviceIds argument');
+        });
+
+        it('should fail to instantiate object: inconsistent number of holding devices)', function () {
+            expect(() => {
+                const nfTokenIssuingBatch = new NFAssetIssuance(
+                    undefined,
+                    undefined,
+                    'd00001',
+                    {
+                        name: 'Test NFAsset #1',
+                        description: 'Non-fungible asset #1 used for testing',
+                        canReissue: false
+                    },
+                    false,
+                    ['d00002'],
+                    nfTokenInfos,
+                    false,
+                    false
+                );
+            })
+            .to.throw('Number of holding devices is not consistent with the number of non-fungible tokens to be issued');
         });
 
         it('should fail to instantiate object with invalid params (nfTokenInfos: not an array)', function () {
@@ -155,7 +176,7 @@ describe('NFAssetIssuance module', function () {
                         canReissue: false
                     },
                     false,
-                    ['d00002'],
+                    'd00002',
                     'blah',
                     false,
                     false
@@ -176,7 +197,7 @@ describe('NFAssetIssuance module', function () {
                         canReissue: false
                     },
                     false,
-                    ['d00002'],
+                    'd00002',
                     [],
                     false,
                     false
@@ -197,7 +218,7 @@ describe('NFAssetIssuance module', function () {
                         canReissue: false
                     },
                     false,
-                    ['d00002'],
+                    'd00002',
                     ['blah'],
                     false,
                     false
@@ -246,11 +267,51 @@ describe('NFAssetIssuance module', function () {
                     canReissue: false
                 },
                 true,
-                ['d00002'],
+                'd00002',
                 nfTokenInfos,
                 false,
                 false
             );
+        });
+
+        it('should correctly instantiate non-fungible asset issuance object (with multiple holding devices)', function () {
+            const nfAssetIssuance = new NFAssetIssuance(
+                undefined,
+                undefined,
+                'd00001',
+                {
+                    name: 'Test NFAsset #1',
+                    description: 'Non-fungible asset #1 used for testing',
+                    canReissue: false
+                },
+                true,
+                ['d00002', 'd00003', 'd00004'],
+                nfTokenInfos,
+                false,
+                false
+            );
+
+            expect(nfAssetIssuance).to.be.an.instanceof(NFAssetIssuance);
+        });
+
+        it('should correctly instantiate non-fungible asset issuance object (with a single holding device)', function () {
+            const nfAssetIssuance = new NFAssetIssuance(
+                undefined,
+                undefined,
+                'd00001',
+                {
+                    name: 'Test NFAsset #1',
+                    description: 'Non-fungible asset #1 used for testing',
+                    canReissue: false
+                },
+                true,
+                'd00002',
+                nfTokenInfos,
+                false,
+                false
+            );
+
+            expect(nfAssetIssuance).to.be.an.instanceof(NFAssetIssuance);
         });
 
         it('should correctly indicate that this issuance is not complete', function () {

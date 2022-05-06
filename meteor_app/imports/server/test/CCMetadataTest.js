@@ -117,7 +117,7 @@ describe('CCMetadata module', function () {
                 canReissue: false
             },
             true,
-            ['d00002'],
+            'd00002',
             [
                 {
                     metadata: {

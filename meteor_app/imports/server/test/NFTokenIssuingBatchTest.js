@@ -38,7 +38,7 @@ describe('NFTokenIssuingBatch module', function () {
                     canReissue: false
                 },
                 isReissuance: false,
-                holdingDeviceId: 'd00002',
+                holdingDeviceIds: ['d00002'],
                 asyncProc: false,
                 nonFungibleToken: {
                     quantity: 2,
@@ -359,7 +359,7 @@ describe('NFTokenIssuingBatch module', function () {
                     canReissue: false
                 },
                 isReissuance: false,
-                holdingDeviceId: 'd00002',
+                holdingDeviceIds: ['d00002'],
                 asyncProc: false,
                 nonFungibleToken: {
                     quantity: 3,

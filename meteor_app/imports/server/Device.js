@@ -2482,7 +2482,8 @@ Device.prototype.issueAsset = function (amount, assetInfo, holdingDeviceId) {
  *                                                            (for reissuance)
  * @property {boolean} encryptNFTContents Indicates whether the non-fungible tokens' contents should be encrypted
  *                                         before being stored (on IPFS)
- * @property {string[]} [holdingDeviceIds] List of ID of the devices that will hold the non-fungible tokens being issued
+ * @property {(string|string[])} [holdingDeviceIds] A single ID or a list of ID of the devices that will hold the
+ *                                                   non-fungible tokens being issued
  * @property {boolean} asyncProc Indicates whether the operation should be performed asynchronously
  * @property {InitialNonFungibleTokenInfo[]} nfTokenInfos List of information about the non-fungible tokens to issue
  * @property {boolean} isFinal Indicates whether this is the only call for the non-fungible asset issuance operation
@@ -2571,9 +2572,9 @@ Device.prototype.issueNonFungibleAsset = function (initialData, continuationData
         }
 
         // Validate devices that should hold the issued non-fungible tokens
-        let holdingDeviceIds = initialData.holdingDeviceIds ? initialData.holdingDeviceIds : [this.deviceId];
+        let holdingDeviceIds = initialData.holdingDeviceIds || this.deviceId;
 
-        holdingDeviceIds.forEach(holdingDeviceId => {
+        const validateHoldingDevice = holdingDeviceId => {
             let holdingDevice;
 
             if (holdingDeviceId !== this.deviceId) {
@@ -2628,7 +2629,14 @@ Device.prototype.issueNonFungibleAsset = function (initialData, continuationData
                 });
                 throw new Meteor.Error('ctn_device_no_permission', `Device has no permission rights to assign non-fungible tokens to be issued to holding device (deviceId: ${this.deviceId}, holdingDeviceId: ${holdingDevice.deviceId})`);
             }
-        });
+        };
+
+        if (Array.isArray(holdingDeviceIds)) {
+            holdingDeviceIds.forEach(validateHoldingDevice);
+        }
+        else {
+            validateHoldingDevice(holdingDeviceIds);
+        }
 
         if (!initialData.isFinal) {
             // Check whether client can pay for service ahead of time to avoid that client wastes resources
