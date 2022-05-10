@@ -179,11 +179,19 @@ CommonPaidServicesUI.billingPaidServiceName = function (billing_id) {
 function paidServiceDoc(serviceName, serviceCost) {
     const serviceInfo = PaidService.serviceInfo(serviceName);
 
+    const serviceInfoProps = {
+        service: serviceInfo.label,
+        description: serviceInfo.description
+    };
+
+    if (serviceInfo.variableCostApplyCondition) {
+        serviceInfoProps.variableCostApplyCondition = serviceInfo.variableCostApplyCondition;
+    }
+
     return {
         id: serviceName,
         fields: {
-            service: serviceInfo.label,
-            description: serviceInfo.description,
+            ...serviceInfoProps,
             ...serviceCost
         }
     }

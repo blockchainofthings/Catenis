@@ -3934,6 +3934,84 @@ Database.migrateRoles = function () {
     }
 }
 
+/**
+ * Temporary method used to fix PaidServicesHistory collection: add missing 'servicesCost[].servicePrice' field,
+ *  and remove deprecated 'servicesCost[].finalServicePrice' field
+ */
+Database.fixPaidServicesHistory = function () {
+    let numUpdatedDocs = 0;
+
+    // Add missing 'servicesCost[].servicePrice' field
+    Catenis.db.collection.PaidServicesHistory.find({
+        'servicesCost.servicePrice': {
+            $exists: false
+        }
+    }, {
+        fields: {
+            servicesCost: 1
+        }
+    })
+    .fetch()
+    .forEach(doc => {
+        const servicesCost = doc.servicesCost.map(serviceCost => {
+            if (!('servicePrice' in serviceCost)) {
+                serviceCost.servicePrice = serviceCost.finalServicePrice;
+            }
+
+            return serviceCost;
+        });
+
+        // Update collection doc
+        numUpdatedDocs += Catenis.db.collection.PaidServicesHistory.update({
+            _id: doc._id
+        }, {
+            $set: {
+                servicesCost
+            }
+        });
+    });
+
+    if (numUpdatedDocs > 0) {
+        Catenis.logger.INFO('****** Number of PaidServicesHistory DB collection docs updated to add missing \'servicesCost[].servicePrice\' field: %d', numUpdatedDocs);
+    }
+
+    // Remove deprecated 'servicesCost[].finalServicePrice' field
+    numUpdatedDocs = 0;
+
+    Catenis.db.collection.PaidServicesHistory.find({
+        'servicesCost.finalServicePrice': {
+            $exists: true
+        }
+    }, {
+        fields: {
+            servicesCost: 1
+        }
+    })
+    .fetch()
+    .forEach(doc => {
+        const servicesCost = doc.servicesCost.map(serviceCost => {
+            if ('finalServicePrice' in serviceCost) {
+                delete serviceCost.finalServicePrice;
+            }
+
+            return serviceCost;
+        });
+
+        // Update collection doc
+        numUpdatedDocs += Catenis.db.collection.PaidServicesHistory.update({
+            _id: doc._id
+        }, {
+            $set: {
+                servicesCost
+            }
+        });
+    });
+
+    if (numUpdatedDocs > 0) {
+        Catenis.logger.INFO('****** Number of PaidServicesHistory DB collection docs updated to remove deprecated \'servicesCost[].finalServicePrice\' field: %d', numUpdatedDocs);
+    }
+}
+
 
 // Module functions used to simulate private Database object methods
 //  NOTE: these functions need to be bound to a Database object reference (this) before

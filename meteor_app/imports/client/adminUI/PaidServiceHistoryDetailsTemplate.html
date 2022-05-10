@@ -54,9 +54,18 @@
                                             <td>{{serviceCost.exchangeRate}}</td>
                                         </tr>
                                         <tr>
-                                            <th><label class="noMargin">Service Price (Catenis Credit):</label></th>
-                                            <td>{{formatServiceCredits serviceCost.finalServicePrice}}</td>
+                                            <th><label class="noMargin">{{#if (hasVariablePrice serviceCost)}}Fixed {{/if}}Service Price (Catenis Credit):</label></th>
+                                            <td>{{formatServiceCredits serviceCost.servicePrice}}</td>
                                         </tr>
+                                        {{#if (hasVariablePrice serviceCost)}}
+                                            <tr>
+                                                <th><label class="noMargin">Variable Service Price (Catenis Credit):</label></th>
+                                                <td>
+                                                    {{formatServiceCredits serviceCost.variable.servicePrice}}<br>
+                                                    <span class="footnote">(amount added {{paidService.variableCostApplyCondition}})</span>
+                                                </td>
+                                            </tr>
+                                        {{/if}}
                                         {{/let}}
                                         </tbody>
                                     </table>

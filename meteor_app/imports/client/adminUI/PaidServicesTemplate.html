@@ -4,7 +4,7 @@
             <div class="row">
                 <div class="col-lg-12">
                     <h2>SERVICE COST</h2>
-                    {{#unless Template.subscriptionsReady}}
+                    {{#unless (logicalAnd Template.subscriptionsReady footnotesInitialized)}}
                         <p style="color:lightgray; margin-top:1em">Loading...</p>
                     {{else}}
                         <div class="row" style="padding-top:1em">
@@ -12,15 +12,20 @@
                                 <table class="table table-striped table-responsive text-left">
                                     <thead>
                                     <tr>
-                                        <th>Service</th>
-                                        <th>Price (Catenis Credit)</th>
+                                        <th rowspan="2">Service</th>
+                                        <th colspan="2" style="text-align: center">Price (Catenis Credit)</th>
+                                    </tr>
+                                    <tr>
+                                        <th>Fixed</th>
+                                        <th>Variable</th>
                                     </tr>
                                     </thead>
                                     <tbody>
                                     {{#each paidService in paidServices}}
                                         <tr>
                                             <td><a href="/admin/paidservices/{{paidService._id}}">{{paidService.service}}</a></td>
-                                            <td>{{formatServiceCredits paidService.finalServicePrice}}</td>
+                                            <td>{{formatServiceCredits paidService.servicePrice}}</td>
+                                            <td>{{formatServiceCredits paidService.variable.servicePrice}}{{#let numFootNote=(checkAddFootNote paidService)}}{{#if numFootNote}}<sup>&nbsp;<a href="#footnote{{numFootNote}}">{{numFootNote}}</a></sup>{{/if}}{{/let}}</td>
                                         </tr>
                                     {{/each}}
                                     </tbody>
@@ -30,6 +35,15 @@
                         <div class="alert alert-warning" role="alert">
                             <b>Note:</b> these prices are <b>volatile</b> and may fluctuate as BCOT token price, bitcoin price and Bitcoin's fee market vary.
                         </div>
+                        {{#if hasFootnotes}}
+                            <div style="margin-bottom:2em">
+                                {{#each footnote in footnotes}}
+                                    <div id="footnote{{footnote.number}}" class="footnote">
+                                    {{footnote.number}}. {{footnote.description}}
+                                    </div>
+                                {{/each}}
+                            </div>
+                        {{/if}}
                         <div class="row">
                             <div class="col-xs-4 form-group"></div>
                             <div class="col-xs-4 form-group">

@@ -2646,9 +2646,9 @@ Device.prototype.issueNonFungibleAsset = function (initialData, continuationData
 
             // Execute code in critical section to avoid Colored Coins UTXOs concurrency
             CCFundSource.utxoCS.execute(() => {
-                // TODO: implement a new method to retrieve the service price for issuing non-fungible assets, and
-                //  replace the call below.
-                const servicePriceInfo = Service.issueAssetServicePrice();
+                const servicePriceInfo = Service.issueNonFungibleAssetServicePrice(
+                    Array.isArray(holdingDeviceIds) ? holdingDeviceIds.length : 1
+                );
 
                 if (this.client.billingMode === Client.billingMode.prePaid) {
                     // Make sure that client has enough service credits to pay for service
@@ -2723,9 +2723,7 @@ Device.prototype.issueNonFungibleAsset = function (initialData, continuationData
             FundSource.utxoCS.execute(() => {
                 // Execute code in critical section to avoid concurrent spend service credit tasks
                 spendServCredProcCS.execute(() => {
-                    // TODO: implement a new method to retrieve the service price for issuing non-fungible assets, and
-                    //  replace the call below.
-                    const servicePriceInfo = Service.issueAssetServicePrice();
+                    const servicePriceInfo = Service.issueNonFungibleAssetServicePrice(nfAssetIssuance.numberOfHoldingDevices);
                     let paymentProvisionInfo;
 
                     if (this.client.billingMode === Client.billingMode.prePaid) {
@@ -2791,7 +2789,6 @@ Device.prototype.issueNonFungibleAsset = function (initialData, continuationData
 
                     try {
                         // Record billing info for service
-                        // TODO: update Billing object to handle new (yet to be defined) issue non-fungible asset service
                         const billing = Billing.createNew(this, issueNFAssetTransact, servicePriceInfo);
 
                         let servicePayTransact;

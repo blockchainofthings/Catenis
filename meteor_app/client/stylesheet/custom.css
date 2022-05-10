@@ -1100,3 +1100,10 @@ table.filterProps > tbody > tr > td {
     font-weight: normal;
     color: gray;
 }
+
+.footnote {
+    text-align: left;
+    font-size: smaller;
+    color: gray;
+    margin-bottom: 0.5em;
+}

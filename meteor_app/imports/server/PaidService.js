@@ -170,7 +170,6 @@ export class PaidService extends EventEmitter {
     //          bitcoinPrice: [Number] - Bitcoin price, in USD, used to calculate exchange rate
     //          bcotPrice: [Number] - BCOT token price, in USD, used to calculate exchange rate
     //          exchangeRate: [Number], - Bitcoin to BCOT token (1 BTC = x BCOT) exchange rate used to calculate final price
-    //          finalServicePrice: [Number] - Price charged for the service expressed in Catenis service credit's lowest units
     //        }
     //      }
     //    }],
@@ -262,15 +261,34 @@ export class PaidService extends EventEmitter {
                 const msDuration = msDurations[idx];
 
                 Object.keys(historyEntry.servicesCost).forEach(serviceName => {
+                    const serviceCost = historyEntry.servicesCost[serviceName];
+                    const weightedCost = {
+                        fixed: new BigNumber(serviceCost.servicePrice).multipliedBy(msDuration)
+                    };
+
+                    if (serviceCost.variable) {
+                        weightedCost.variable = new BigNumber(serviceCost.variable.servicePrice).multipliedBy(msDuration);
+                    }
+
                     if (serviceCostRollup.has(serviceName)) {
                         const costRollup = serviceCostRollup.get(serviceName);
 
-                        costRollup.weighedCost = costRollup.weighedCost.plus(new BigNumber(historyEntry.servicesCost[serviceName].finalServicePrice).multipliedBy(msDuration));
+                        costRollup.weightedCost.fixed = costRollup.weightedCost.fixed.plus(weightedCost.fixed);
+
+                        if (weightedCost.variable) {
+                            if (costRollup.weightedCost.variable) {
+                                costRollup.weightedCost.variable = costRollup.weightedCost.variable.plus(weightedCost.variable);
+                            } else {
+                                // This should never happen
+                                costRollup.weightedCost.variable = weightedCost.variable;
+                            }
+                        }
+
                         costRollup.totalDuration += msDuration;
                     }
                     else {
                         serviceCostRollup.set(serviceName, {
-                            weighedCost: new BigNumber(historyEntry.servicesCost[serviceName].finalServicePrice).multipliedBy(msDuration),
+                            weightedCost,
                             totalDuration: msDuration
                         });
                     }
@@ -280,7 +298,13 @@ export class PaidService extends EventEmitter {
             const servicesAverageCost = {};
 
             for (let [serviceName, costRollup] of serviceCostRollup) {
-                servicesAverageCost[serviceName] = costRollup.weighedCost.dividedBy(costRollup.totalDuration).decimalPlaces(0, BigNumber.ROUND_HALF_EVEN).toNumber();
+                servicesAverageCost[serviceName] = {
+                    fixed: costRollup.weightedCost.fixed.dividedBy(costRollup.totalDuration).decimalPlaces(0, BigNumber.ROUND_HALF_EVEN).toNumber()
+                };
+
+                if (costRollup.weightedCost.variable) {
+                    servicesAverageCost[serviceName].variable = costRollup.weightedCost.variable.dividedBy(costRollup.totalDuration).decimalPlaces(0, BigNumber.ROUND_HALF_EVEN).toNumber();
+                }
             }
 
             result.servicesAverageCost = servicesAverageCost;
@@ -310,7 +334,7 @@ export class PaidService extends EventEmitter {
         const paidService = Service.clientPaidService[serviceName];
 
         if (paidService) {
-            return getServicePrice(paidService);
+            return _und.omit(getServicePrice(paidService), 'finalServicePrice');
         }
     }
 }
@@ -321,7 +345,14 @@ export class PaidService extends EventEmitter {
 
 function getServicesInfo() {
     return Object.freeze(Object.keys(Service.clientPaidService).reduce((obj, serviceName) => {
-        obj[serviceName] = Object.freeze(_und.omit(Service.clientPaidService[serviceName], 'name', 'costFunction'));
+        obj[serviceName] = Object.freeze(
+            _und.omit(
+                Service.clientPaidService[serviceName],
+                'name',
+                'costFunction',
+                'variableCostFunction'
+            )
+        );
 
         return obj;
     }, {}));

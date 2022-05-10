@@ -32,6 +32,7 @@ import { Transaction } from './Transaction';
 import { SettleOffChainMessagesTransaction } from './SettleOffChainMessagesTransaction';
 import { OutMigrateAssetTransaction } from './OutMigrateAssetTransaction';
 import { InMigrateAssetTransaction } from './InMigrateAssetTransaction';
+import { IssueNFAssetTransaction } from './IssueNFAssetTransaction';
 
 // Config entries
 /*const config_entryConfig = config.get('config_entry');
@@ -222,6 +223,11 @@ Billing.createNew = function (device, serviceData, servicePriceInfo, servicePaym
         serviceTransact = serviceData;
 
         docBilling.service = Service.clientPaidService.transfer_asset.name;
+    }
+    else if (serviceData instanceof IssueNFAssetTransaction) {
+        serviceTransact = serviceData;
+
+        docBilling.service = Service.clientPaidService.issue_nf_asset.name;
     }
     else if (serviceData instanceof LogOffChainMessage) {
         offChainMessage = serviceData;

@@ -274,6 +274,14 @@ export class NFAssetIssuance {
     }
 
     /**
+     * Get the number of devices that will receive the issued non-fungible tokens
+     * @returns {number}
+     */
+    get numberOfHoldingDevices() {
+        return this.holdingDeviceIds.length;
+    }
+
+    /**
      * Get the number of non-fungible tokens to issue for the asset
      * @return {number}
      */

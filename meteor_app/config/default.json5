@@ -489,6 +489,26 @@
         "numNonWitnessOutputs": 0,  // Number of non-segregated witness (P2PKH) outputs
         "nullDataPayloadSize": 10   // Size, in bytes, of payload of null data output
       },
+      issueNonFungibleAsset: {  // Issue non-fungible asset
+        // NOTE: the parameters below (next 4 lines) are for the best case where only segregated witness inputs and outputs are used (which is true in the long run for the sandbox environment and should be true for the production environment from inception)
+        numWitnessInputs: 3,      // Number of segregated witness inputs (that spend P2WPKH outputs)
+        numNonWitnessInputs: 0,   // Number of non-segregated witness inputs (that spend P2PKH outputs)
+        numWitnessOutputs: 4,     // Number of segregated witness (P2WPKH) outputs
+        numNonWitnessOutputs: 0,  // Number of non-segregated witness (P2PKH) outputs
+        nullDataPayloadSize: 68,   // Size, in bytes, of payload of null data output
+        variablePart: {
+          numWitnessInputs: 0,      // Number of segregated witness inputs (that spend P2WPKH outputs)
+          numNonWitnessInputs: 0,   // Number of non-segregated witness inputs (that spend P2PKH outputs)
+          numWitnessOutputs: 5,    // Number of segregated witness (P2WPKH) outputs
+                                   //  Note: this value must match the value of the holdingDevicesThreshold property below
+          numNonWitnessOutputs: 0,  // Number of non-segregated witness (P2PKH) outputs
+          nullDataPayloadSize: 0,   // Size, in bytes, of payload of null data output
+          holdingDevicesThreshold: 5,  // For each set of this many (5) or less holding devices above the first one, one variable part should be applied
+          applyCondition: 'for each set of 5 or less holding devices above the first one when issuing a non-fungible asset',
+                          // Note: the number referenced in the message above must match the value of the holdingDevicesThreshold property above
+          defaultNumHoldingDevices: 10,  // Default number of holding devices: used for calculating the typical cost of such a transaction
+        }
+      },
       "outMigrateAsset": {  // Out-migrate asset
         // NOTE: the parameters below (next 4 lines) are for the best case where only segregated witness inputs and outputs are used (which is true in the long run for the sandbox environment and should be true for the production environment from inception)
         "numWitnessInputs": 4,      // Number of segregated witness inputs (that spend P2WPKH outputs)
@@ -513,8 +533,10 @@
       "logOffChainMessage": 91,         // Log off-chain message usage weight
       "sendOffChainMessage": 91,        // Send off-chain message (without read confirmation) usage weight
       "sendOffChainMsgReadConfirm": 91, // Send off-chain message with read confirmation usage weight
-      "issueAsset": 10,                 // Issue asset usage weight
-      "transferAsset": 90,              // Transfer asset usage weight
+      "issueAsset": 5,                  // Issue asset usage weight
+      "transferAsset": 45,              // Transfer asset usage weight
+      "issueNonFungibleAsset": 5,       // Issue non-fungible asset usage weight
+      "transferNonFungibleToken": 45,   // Transfer non-fungible token usage weight
       "outMigrateAsset": 7,             // Migrate asset usage weight
       "inMigrateAsset": 3               // Migrate asset usage weight
     }

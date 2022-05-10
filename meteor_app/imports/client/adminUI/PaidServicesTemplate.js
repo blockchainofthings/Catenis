@@ -16,6 +16,7 @@
 // Meteor packages
 //import { Meteor } from 'meteor/meteor';
 import { Template } from 'meteor/templating';
+import { ReactiveDict } from 'meteor/reactive-dict';
 
 // References code in other (Catenis) modules on the client
 import { Catenis } from '../ClientCatenis';
@@ -37,8 +38,25 @@ import './PaidServicesHistoryTemplate.js';
 //
 
 Template.paidServices.onCreated(function () {
+    this.state = new ReactiveDict();
+
+    this.footnotes = new Map();
+    this.state.set('footnotesInitialized', false);
+
     // Subscribe to receive database docs/recs updates
-    this.paidServicesSubs = this.subscribe('paidServices');
+    this.paidServicesSubs = this.subscribe('paidServices', () => {
+        // Initialize footnotes
+        Catenis.db.collection.PaidService.find({}).forEach(paidService => {
+            if (paidService.variableCostApplyCondition) {
+                this.footnotes.set(paidService._id, {
+                    number: this.footnotes.size + 1,
+                    description: `Amount added ${paidService.variableCostApplyCondition}.`
+                });
+            }
+        });
+
+        this.state.set('footnotesInitialized', true);
+    });
 });
 
 Template.paidServices.onDestroyed(function () {
@@ -54,7 +72,38 @@ Template.paidServices.helpers({
     paidServices() {
         return Catenis.db.collection.PaidService.find({});
     },
+    footnotesInitialized() {
+        return Template.instance().state.get('footnotesInitialized');
+    },
+    checkAddFootNote(paidService) {
+        const footnote = Template.instance().footnotes.get(paidService._id);
+
+        if (footnote) {
+            return footnote.number;
+        }
+
+        return 0;
+    },
+    hasFootnotes() {
+        return Template.instance().footnotes.size > 0;
+    },
+    footnotes() {
+        return Array.from(Template.instance().footnotes.values());
+    },
     formatServiceCredits(amount) {
-        return ClientUtil.formatCatenisServiceCredits(amount);
-    }
+        if (amount !== undefined) {
+            return ClientUtil.formatCatenisServiceCredits(amount);
+        }
+    },
+    logicalAnd(...ops) {
+        if (ops.length > 0) {
+            // Get rid of the last parameter (keyword arguments dictionary)
+            ops.pop();
+
+            return ops.every(v => !!v);
+        }
+        else {
+            return false;
+        }
+    },
 });

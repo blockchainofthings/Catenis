@@ -187,6 +187,7 @@ Meteor.startup(function () {
             Database.removeBcotExchangeRateColl();
             Database.addMissingClientTimeZone();
             Database.addMissingBtcServicePriceField();
+            Database.fixPaidServicesHistory();
             Application.initialize(cfgSettings.legacyDustFunding);
             EccLibraryProxy.initialize();
             Bip32.initialize();

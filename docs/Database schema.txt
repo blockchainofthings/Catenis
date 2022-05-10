@@ -52,7 +52,12 @@ PaidServicesHistory {
     bitcoinPrice: [number],  // Bitcoin price, in USD, used to calculate exchange rate
     bcotPrice: [number],  // BCOT token price, in USD, used to calculate exchange rate
     exchangeRate: [number],  // Bitcoin to BCOT token (1 BTC = x BCOT) exchange rate used to calculate final price
-    finalServicePrice: [number]  // Price charged for the service expressed in Catenis service credit's lowest units
+    servicePrice: [number],  // Price of the service expressed in Catenis service credit's lowest units
+    variable: { // Optional variable data
+      estimatedServiceCost: [number],  // Estimated variable part of the cost, in satoshis, of the service
+      btcServicePrice: [number],  // Variable part of the price of the service expressed in (bitcoin) satoshis
+      servicePrice: [number]  // Variable part of the price of the service expressed in Catenis service credit's lowest units
+    }
   }]
 }
 

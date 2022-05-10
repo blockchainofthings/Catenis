@@ -55,9 +55,21 @@
                                 <table class="table table-striped table-responsive text-left">
                                     <thead>
                                     <tr>
-                                        <th>Date</th>
+                                        <th rowspan="2">Date</th>
                                         {{#each serviceName in selectedServices}}
-                                            <th class="pointer-cursor">{{#let serv=(service serviceName)}}<span class="show-tooltip" aria-label="{{serv.label}}">{{serv.abbreviation}}</span>{{/let}}</th>
+                                            {{#let serv=(service serviceName)}}
+                                            <th colspan="{{#if serv.variableCostApplyCondition}}2{#else}}1{{/if}}" class="pointer-cursor"><span class="show-tooltip" aria-label="{{serv.label}}">{{serv.abbreviation}}</span></th>
+                                            {{/let}}
+                                        {{/each}}
+                                    </tr>
+                                    <tr>
+                                        {{#each serviceName in selectedServices}}
+                                            {{#let serv=(service serviceName)}}
+                                                <th>Fixed</th>
+                                                {{#if serv.variableCostApplyCondition}}
+                                                    <th>Variable</th>
+                                                {{/if}}
+                                            {{/let}}
                                         {{/each}}
                                     </tr>
                                     </thead>
@@ -68,7 +80,21 @@
                                             <tr>
                                                 <td>{{formatDate entry.date}}</td>
                                                 {{#each serviceName in selectedServices}}
-                                                    <td><a href="/admin/paidservices/{{serviceName}}/history/{{entry._id}}{{retQS}}">{{#let servCost=(objProperty entry.servicesCost serviceName)}}{{formatServiceCredits servCost.finalServicePrice}}{{/let}}</a></td>
+                                                    {{#let serv=(service serviceName)}}
+                                                    {{#let servCost=(objProperty entry.servicesCost serviceName)}}
+                                                        {{#if servCost}}
+                                                            <td><a href="/admin/paidservices/{{serviceName}}/history/{{entry._id}}{{retQS}}">{{formatServiceCredits servCost.servicePrice}}</a></td>
+                                                            {{#if serv.variableCostApplyCondition}}
+                                                                <td>{{formatServiceCredits servCost.variable.servicePrice}}</td>
+                                                            {{/if}}
+                                                        {{else}}
+                                                            <td></td>
+                                                            {{#if serv.variableCostApplyCondition}}
+                                                                <td></td>
+                                                            {{/if}}
+                                                        {{/if}}
+                                                    {{/let}}
+                                                    {{/let}}
                                                 {{/each}}
                                             </tr>
                                         {{/each}}
@@ -79,7 +105,12 @@
                                     <tr>
                                         <th>Average</th>
                                         {{#each serviceName in selectedServices}}
-                                            <th>{{formatServiceCredits (objProperty averageCost serviceName)}}</th>
+                                            {{#let servAvrgCost=(objProperty averageCost serviceName)}}
+                                            <th>{{formatServiceCredits servAvrgCost.fixed}}</th>
+                                            {{#if servAvrgCost.variable}}
+                                                <th>{{formatServiceCredits servAvrgCost.variable}}</th>
+                                            {{/if}}
+                                            {{/let}}
                                         {{/each}}
                                     </tr>
                                     </tfoot>

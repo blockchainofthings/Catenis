@@ -82,5 +82,8 @@ Template.paidServiceHistoryDetails.helpers({
     },
     objProperty(obj, propName) {
         return obj[propName];
+    },
+    hasVariablePrice(serviceCost) {
+        return serviceCost.variable !== undefined && serviceCost.variable !== null;
     }
 });

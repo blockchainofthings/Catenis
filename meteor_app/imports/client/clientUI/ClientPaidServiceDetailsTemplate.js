@@ -63,5 +63,8 @@ Template.clientPaidServiceDetails.helpers({
     },
     formatServiceCredits(amount) {
         return ClientUtil.formatCatenisServiceCredits(amount);
+    },
+    hasVariablePrice(paidService) {
+        return paidService.variable !== undefined && paidService.variable !== null;
     }
 });

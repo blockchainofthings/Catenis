@@ -259,6 +259,23 @@ const cfgSettings = {
             numNonWitnessOutputs: serviceConfig.get('serviceTxConfig.transferAsset.numNonWitnessOutputs'),
             nullDataPayloadSize: serviceConfig.get('serviceTxConfig.transferAsset.nullDataPayloadSize')
         },
+        issueNonFungibleAsset: {
+            numWitnessInputs: serviceConfig.get('serviceTxConfig.issueNonFungibleAsset.numWitnessInputs'),
+            numNonWitnessInputs: serviceConfig.get('serviceTxConfig.issueNonFungibleAsset.numNonWitnessInputs'),
+            numWitnessOutputs: serviceConfig.get('serviceTxConfig.issueNonFungibleAsset.numWitnessOutputs'),
+            numNonWitnessOutputs: serviceConfig.get('serviceTxConfig.issueNonFungibleAsset.numNonWitnessOutputs'),
+            nullDataPayloadSize: serviceConfig.get('serviceTxConfig.issueNonFungibleAsset.nullDataPayloadSize'),
+            variablePart: {
+                numWitnessInputs: serviceConfig.get('serviceTxConfig.issueNonFungibleAsset.variablePart.numWitnessInputs'),
+                numNonWitnessInputs: serviceConfig.get('serviceTxConfig.issueNonFungibleAsset.variablePart.numNonWitnessInputs'),
+                numWitnessOutputs: serviceConfig.get('serviceTxConfig.issueNonFungibleAsset.variablePart.numWitnessOutputs'),
+                numNonWitnessOutputs: serviceConfig.get('serviceTxConfig.issueNonFungibleAsset.variablePart.numNonWitnessOutputs'),
+                nullDataPayloadSize: serviceConfig.get('serviceTxConfig.issueNonFungibleAsset.variablePart.nullDataPayloadSize'),
+                holdingDevicesThreshold: serviceConfig.get('serviceTxConfig.issueNonFungibleAsset.variablePart.holdingDevicesThreshold'),
+                applyCondition: serviceConfig.get('serviceTxConfig.issueNonFungibleAsset.variablePart.applyCondition'),
+                defaultNumHoldingDevices: serviceConfig.get('serviceTxConfig.issueNonFungibleAsset.variablePart.defaultNumHoldingDevices'),
+            }
+        },
         outMigrateAsset: {
             numWitnessInputs: serviceConfig.get('serviceTxConfig.outMigrateAsset.numWitnessInputs'),
             numNonWitnessInputs: serviceConfig.get('serviceTxConfig.outMigrateAsset.numNonWitnessInputs'),
@@ -283,6 +300,8 @@ const cfgSettings = {
         sendOffChainMsgReadConfirm: serviceConfig.get('serviceUsageWeight.sendOffChainMsgReadConfirm'),
         issueAsset: serviceConfig.get('serviceUsageWeight.issueAsset'),
         transferAsset: serviceConfig.get('serviceUsageWeight.transferAsset'),
+        issueNonFungibleAsset: serviceConfig.get('serviceUsageWeight.issueNonFungibleAsset'),
+        transferNonFungibleToken: serviceConfig.get('serviceUsageWeight.transferNonFungibleToken'),
         outMigrateAsset: serviceConfig.get('serviceUsageWeight.outMigrateAsset'),
         inMigrateAsset: serviceConfig.get('serviceUsageWeight.inMigrateAsset')
     }
@@ -691,6 +710,16 @@ Service.transferAssetServicePrice = function () {
     return getServicePrice(Service.clientPaidService.transfer_asset);
 };
 
+/**
+ * Returns price data for Issue Non-Fungible Asset service
+ * @param {number} numHoldingDevices Number of holding devices to receive the issued non-fungible tokens
+ * @returns {ServicePriceInfo}
+ */
+Service.issueNonFungibleAssetServicePrice = function (numHoldingDevices) {
+    return getServicePrice(Service.clientPaidService.issue_nf_asset, numHoldingDevices);
+};
+
+
 // Returns price data for Migrate Asset service
 //
 //  Return: {
@@ -735,6 +764,22 @@ Service.avrgDebitServAccTxCostPerServCtrl = {
     lastCostPerServ: undefined
 };
 
+/**
+ * @typedef {Object} PaidServiceInfo
+ * @property {string} name Name identifier of the Catenis paid service
+ * @property {string} label Title label of the Catenis paid service
+ * @property {string} abbreviation Abbreviation of the Catenis paid service
+ * @property {string} description A brief description of the Catenis paid service
+ * @property {Function} costFunction Function that returns the estimated cost of the Catenis paid service
+ * @property {Function} [variableCostFunction] Function that returns the estimated variable cost of the Catenis paid
+ *                                              service
+ * @property {string} [variableCostApplyCondition] A description of the condition that must be met to add the variable
+ *                                                  cost to the total service cost
+ */
+
+/**
+ * @type {Object.<string, PaidServiceInfo>}
+ */
 Service.clientPaidService = Object.freeze({
     log_off_chain_message: Object.freeze({
         name: 'log_off_chain_message',
@@ -791,6 +836,15 @@ Service.clientPaidService = Object.freeze({
         abbreviation: 'TA',
         description: 'Transfer an amount of a Catenis asset to another device',
         costFunction: estimatedTransferAssetTxCost
+    }),
+    issue_nf_asset: Object.freeze({
+        name: 'issue_nf_asset',
+        label: 'Issue Non-Fungible Asset',
+        abbreviation: 'INFA',
+        description: 'Issue non-fungible tokens of a new Catenis non-fungible asset',
+        costFunction: estimatedIssueNonFungibleAssetTxCost,
+        variableCostFunction: estimatedIssueNonFungibleAssetVariableTxCost,
+        variableCostApplyCondition: cfgSettings.serviceTxConfig.issueNonFungibleAsset.variablePart.applyCondition
     }),
     migrate_asset: Object.freeze({
         name: 'migrate_asset',
@@ -859,6 +913,8 @@ function numActiveDeviceAssetIssuanceAddresses() {
 }
 
 function highestEstimatedServiceTxCost() {
+    const ret = {};
+
     return _.max([
         estimatedLogMessageTxCost(),
         estimatedSendMessageTxCost(),
@@ -868,11 +924,18 @@ function highestEstimatedServiceTxCost() {
         estimatedSendOffChainMessageReadConfirmCost(),
         estimatedIssueAssetTxCost(),
         estimatedTransferAssetTxCost(),
+        estimatedIssueNonFungibleAssetTxCost(ret)
+            + estimatedIssueNonFungibleAssetVariableTxCost(
+                cfgSettings.serviceTxConfig.issueNonFungibleAsset.variablePart.defaultNumHoldingDevices,
+                ret.feeRate
+            ),
         estimatedMigrateAssetAverageTxCost()
     ]);
 }
 
 function averageEstimatedServiceTxCost() {
+    const ret = {};
+
     return Util.roundToResolution(Util.weightedAverage([
         estimatedLogMessageTxCost(),
         estimatedSendMessageTxCost(),
@@ -882,6 +945,11 @@ function averageEstimatedServiceTxCost() {
         estimatedSendOffChainMessageReadConfirmCost(),
         estimatedIssueAssetTxCost(),
         estimatedTransferAssetTxCost(),
+        estimatedIssueNonFungibleAssetTxCost(ret)
+            + estimatedIssueNonFungibleAssetVariableTxCost(
+                cfgSettings.serviceTxConfig.issueNonFungibleAsset.variablePart.defaultNumHoldingDevices,
+                ret.feeRate
+            ),
         estimatedMigrateAssetAverageTxCost()
     ], [
         cfgSettings.serviceUsageWeight.logMessage,
@@ -892,6 +960,7 @@ function averageEstimatedServiceTxCost() {
         cfgSettings.serviceUsageWeight.sendOffChainMsgReadConfirm,
         cfgSettings.serviceUsageWeight.issueAsset,
         cfgSettings.serviceUsageWeight.transferAsset,
+        cfgSettings.serviceUsageWeight.issueNonFungibleAsset,
         cfgSettings.serviceUsageWeight.outMigrateAsset + cfgSettings.serviceUsageWeight.inMigrateAsset
     ]), cfgSettings.paymentResolution);
 }
@@ -984,6 +1053,106 @@ function typicalTransferAssetTxVsize() {
         numNonWitnessOutputs: cfgSettings.serviceTxConfig.transferAsset.numNonWitnessOutputs,
         nullDataPayloadSize: cfgSettings.serviceTxConfig.transferAsset.nullDataPayloadSize
     }).savedSizeInfo.vsize;
+}
+
+/**
+ * Get the estimated fixed cost (in satoshis) to issue an Issue Non-Fungible Asset transaction
+ * @param {(number|Object)} [feeRate] The fee rate to use, or an object to get the actual feed rate that was used
+ * @returns {number}
+ */
+function estimatedIssueNonFungibleAssetTxCost(feeRate) {
+    const feeRateToUse = typeof feeRate === 'number'
+        ? feeRate
+        : Catenis.bitcoinFees.getFeeRateByTime(cfgSettings.asset.issuance.minutesToConfirm);
+
+    if (Util.isNonNullObject(feeRate)) {
+        // Pass back the fee rate that was used
+        feeRate.feeRate = feeRateToUse;
+    }
+
+    return Util.roundToResolution(typicalIssueNonFungibleAssetTxVsize() * feeRateToUse, cfgSettings.paymentResolution);
+}
+
+/**
+ * Get the estimated variable cost (in satoshis) to issue an Issue Non-Fungible Asset transaction
+ * @param {number} [feeRate] The fee rate to use
+ * @param {number} [numHoldingDevices=1] The number of devices to receive the issued non-fungible tokens
+ * @returns {number}
+ */
+function estimatedIssueNonFungibleAssetVariableTxCost(feeRate, numHoldingDevices = 2) {
+    if (typeof feeRate !== 'number') {
+        feeRate = Catenis.bitcoinFees.getFeeRateByTime(cfgSettings.asset.issuance.minutesToConfirm);
+    }
+
+    return Util.roundToResolution(typicalIssueNonFungibleAssetVariableTxVsize(numHoldingDevices) * feeRate, cfgSettings.paymentResolution);
+}
+
+function typicalIssueNonFungibleAssetTxVsize() {
+    return new TransactionSize({
+        numWitnessInputs: cfgSettings.serviceTxConfig.issueNonFungibleAsset.numWitnessInputs,
+        numNonWitnessInputs: cfgSettings.serviceTxConfig.issueNonFungibleAsset.numNonWitnessInputs,
+        numWitnessOutputs: cfgSettings.serviceTxConfig.issueNonFungibleAsset.numWitnessOutputs,
+        numNonWitnessOutputs: cfgSettings.serviceTxConfig.issueNonFungibleAsset.numNonWitnessOutputs,
+        nullDataPayloadSize: cfgSettings.serviceTxConfig.issueNonFungibleAsset.nullDataPayloadSize
+    }).savedSizeInfo.vsize;
+}
+
+function typicalIssueNonFungibleAssetVariableTxVsize(numHoldingDevices = 1) {
+    if (numHoldingDevices > 1) {
+        const txSize = new TransactionSize({
+            numWitnessInputs: cfgSettings.serviceTxConfig.issueNonFungibleAsset.numWitnessInputs,
+            numNonWitnessInputs: cfgSettings.serviceTxConfig.issueNonFungibleAsset.numNonWitnessInputs,
+            numWitnessOutputs: cfgSettings.serviceTxConfig.issueNonFungibleAsset.numWitnessOutputs,
+            numNonWitnessOutputs: cfgSettings.serviceTxConfig.issueNonFungibleAsset.numNonWitnessOutputs,
+            nullDataPayloadSize: cfgSettings.serviceTxConfig.issueNonFungibleAsset.nullDataPayloadSize
+        });
+
+        if (cfgSettings.serviceTxConfig.issueNonFungibleAsset.variablePart.numWitnessInputs > 0) {
+            txSize.addInputs(
+                true,
+                cfgSettings.serviceTxConfig.issueNonFungibleAsset.variablePart.numWitnessInputs
+            );
+        }
+
+        if (cfgSettings.serviceTxConfig.issueNonFungibleAsset.variablePart.numNonWitnessInputs > 0) {
+            txSize.addInputs(
+                false,
+                cfgSettings.serviceTxConfig.issueNonFungibleAsset.variablePart.numNonWitnessInputs
+            );
+        }
+
+        if (cfgSettings.serviceTxConfig.issueNonFungibleAsset.variablePart.numWitnessOutputs > 0) {
+            txSize.addOutputs(
+                true,
+                cfgSettings.serviceTxConfig.issueNonFungibleAsset.variablePart.numWitnessOutputs
+            );
+        }
+
+        if (cfgSettings.serviceTxConfig.issueNonFungibleAsset.variablePart.numNonWitnessOutputs > 0) {
+            txSize.addOutputs(
+                false,
+                cfgSettings.serviceTxConfig.issueNonFungibleAsset.variablePart.numNonWitnessOutputs
+            );
+        }
+
+        if (cfgSettings.serviceTxConfig.issueNonFungibleAsset.variablePart.nullDataPayloadSize > 0) {
+            txSize.setNullDataPayloadSize(
+                txSize.nullDataPayloadSize
+                + cfgSettings.serviceTxConfig.issueNonFungibleAsset.variablePart.nullDataPayloadSize
+            );
+        }
+
+        // Calculate number of variable parts to apply
+        const numVariableParts = Math.floor(
+            (numHoldingDevices - 1
+                + cfgSettings.serviceTxConfig.issueNonFungibleAsset.variablePart.holdingDevicesThreshold - 1)
+            / cfgSettings.serviceTxConfig.issueNonFungibleAsset.variablePart.holdingDevicesThreshold
+        );
+
+        return txSize.getSizeChange().deltaVsize * numVariableParts;
+    }
+
+    return 0;
 }
 
 function estimatedOutMigrateAssetTxCost() {
@@ -1182,6 +1351,10 @@ function averageServicePrice() {
         getServicePrice(Service.clientPaidService.send_off_chain_msg_read_confirm).finalServicePrice,
         getServicePrice(Service.clientPaidService.issue_asset).finalServicePrice,
         getServicePrice(Service.clientPaidService.transfer_asset).finalServicePrice,
+        getServicePrice(
+            Service.clientPaidService.issue_nf_asset,
+            cfgSettings.serviceTxConfig.issueNonFungibleAsset.variablePart.defaultNumHoldingDevices
+        ).finalServicePrice,
         getServicePrice(Service.clientPaidService.migrate_asset).finalServicePrice
     ], [
         cfgSettings.serviceUsageWeight.logMessage,
@@ -1192,6 +1365,7 @@ function averageServicePrice() {
         cfgSettings.serviceUsageWeight.sendOffChainMsgReadConfirm,
         cfgSettings.serviceUsageWeight.issueAsset,
         cfgSettings.serviceUsageWeight.transferAsset,
+        cfgSettings.serviceUsageWeight.issueNonFungibleAsset,
         cfgSettings.serviceUsageWeight.outMigrateAsset + cfgSettings.serviceUsageWeight.inMigrateAsset
     ]), cfgSettings.servicePriceResolution);
 }
@@ -1396,23 +1570,42 @@ function numPrePaidServices () {
     return Math.floor(Client.allPrePaidClientsServiceAccountCreditLineBalance() / averageServicePrice());
 }
 
-// Returns price data for given service
-//
-//  Arguments:
-//   paidService: [Object] - Catenis client paid service. One of the properties of Service.clientPaidService
-//
-//  Return: {
-//    estimatedServiceCost: [Number], - Estimated cost, in satoshis, of the service
-//    priceMarkup: [Number], - Markup used to calculate the price of the service
-//    btcServicePrice: [Number], - Price of the service expressed in (bitcoin) satoshis
-//    bitcoinPrice: [Number] - Bitcoin price, in USD, used to calculate exchange rate
-//    bcotPrice: [Number] - BCOT token price, in USD, used to calculate exchange rate
-//    exchangeRate: [Number], - Bitcoin to BCOT token (1 BTC = x BCOT) exchange rate used to calculate final price
-//    finalServicePrice: [Number] - Price charged for the service expressed in Catenis service credit's lowest units
-//  }
-export function getServicePrice(paidService) {
+/**
+ * @typedef {Object} VariableServicePriceInfo
+ * @property {number} estimatedServiceCost Estimated variable part of the cost, in satoshis, of the service
+ * @property {number} btcServicePrice Variable part of the price of the service expressed in (bitcoin) satoshis
+ * @property {number} servicePrice Variable part of the price of the service expressed in Catenis service credit's
+ *                                  lowest units
+ */
+
+/**
+ * @typedef {Object} ServicePriceInfo
+ * @property {number} estimatedServiceCost Estimated cost, in satoshis, of the service
+ * @property {number} priceMarkup Markup used to calculate the price of the service
+ * @property {number} btcServicePrice Price of the service expressed in (bitcoin) satoshis
+ * @property {number} bitcoinPrice Bitcoin price, in USD, used to calculate exchange rate
+ * @property {number} bcotPrice BCOT token price, in USD, used to calculate exchange rate
+ * @property {number} exchangeRate Bitcoin to BCOT token (1 BTC = x BCOT) exchange rate used to calculate final price
+ * @property {number} servicePrice Price of the service expressed in Catenis service credit's lowest units
+ * @property {VariableServicePriceInfo} [variable] Variable service price info
+ * @property {number} finalServicePrice Price charged for the service, expressed in Catenis service credit's lowest
+ *                                       units, including the variable part if present
+ */
+
+/**
+ * Returns price data for given service
+ * @param {PaidServiceInfo} paidService Catenis paid service info object (from Service.clientPaidService)
+ * @param {...*} [variableCostFuncArgs] Arguments to be passed to the variable cost function
+ * @returns {ServicePriceInfo}
+ */
+export function getServicePrice(paidService, ...variableCostFuncArgs) {
+    const ret = {};
+    // noinspection JSValidateTypes
+    /**
+     * @type {ServicePriceInfo}
+     */
     const result = {
-        estimatedServiceCost: paidService.costFunction(),
+        estimatedServiceCost: paidService.costFunction(ret),
         priceMarkup: cfgSettings.priceMarkup,
     };
 
@@ -1423,7 +1616,23 @@ export function getServicePrice(paidService) {
     result.bitcoinPrice = btcExchangeRate.btcPrice;
     result.bcotPrice = btcExchangeRate.bcotPrice;
     result.exchangeRate = btcExchangeRate.exchangeRate;
-    result.finalServicePrice = Util.roundToResolution(BcotToken.bcotToServiceCredit(bnBtcServicePrice.multipliedBy(btcExchangeRate.exchangeRate).decimalPlaces(0, BigNumber.ROUND_CEIL).toNumber()), cfgSettings.servicePriceResolution);
+    result.servicePrice = Util.roundToResolution(BcotToken.bcotToServiceCredit(bnBtcServicePrice.multipliedBy(btcExchangeRate.exchangeRate).decimalPlaces(0, BigNumber.ROUND_CEIL).toNumber()), cfgSettings.servicePriceResolution);
+
+    if (paidService.variableCostFunction) {
+        const variableEstimatedServiceCost = paidService.variableCostFunction(ret.feeRate, ...variableCostFuncArgs);
+        const bnBtcVariableServicePrice = new BigNumber(variableEstimatedServiceCost).times(1 + result.priceMarkup);
+
+        result.variable = {
+            estimatedServiceCost: variableEstimatedServiceCost,
+            btcServicePrice: bnBtcVariableServicePrice.toNumber(),
+            servicePrice: Util.roundToResolution(BcotToken.bcotToServiceCredit(bnBtcVariableServicePrice.multipliedBy(btcExchangeRate.exchangeRate).decimalPlaces(0, BigNumber.ROUND_CEIL).toNumber()), cfgSettings.servicePriceResolution),
+        };
+
+        result.finalServicePrice = result.servicePrice + result.variable.servicePrice;
+    }
+    else {
+        result.finalServicePrice = result.servicePrice;
+    }
 
     return result;
 }

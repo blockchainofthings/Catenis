@@ -318,6 +318,10 @@ describe('NFAssetIssuance module', function () {
             expect(nfAssetIssuance.isComplete).to.be.false;
         });
 
+        it('should correctly report the number of holding devices', function () {
+            expect(nfAssetIssuance.numberOfHoldingDevices).to.equal(1);
+        });
+
         it('should correctly report the number of issued non-fungible tokens', function () {
             expect(nfAssetIssuance.numberOfNFTokens).to.equal(3);
         });
