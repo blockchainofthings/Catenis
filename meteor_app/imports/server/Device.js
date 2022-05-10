@@ -2676,7 +2676,7 @@ Device.prototype.issueNonFungibleAsset = function (initialData, continuationData
                 this.deviceId,
                 initialData.assetPropsOrId,
                 initialData.encryptNFTContents,
-                initialData.holdingDeviceIds,
+                holdingDeviceIds,
                 initialData.nfTokenInfos,
                 initialData.isFinal,
                 initialData.asyncProc
