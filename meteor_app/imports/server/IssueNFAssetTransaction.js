@@ -253,6 +253,8 @@ export class IssueNFAssetTransaction {
                     nfTokenQuantity,
                     0
                 );
+
+                tokensLeft -= nfTokenQuantity;
             });
 
             // Prepare to add Colored Coins asset metadata
@@ -409,7 +411,7 @@ export class IssueNFAssetTransaction {
      * Sends the transaction to the blockchain network
      */
     sendTransaction() {
-        if (!this.txBuilt) {
+        if (this.txBuilt) {
             // Make sure that blockchain is not polled and processing of newly sent tx is
             //  not done until sent transaction is properly recorded into the local database.
             //
@@ -420,7 +422,11 @@ export class IssueNFAssetTransaction {
             try {
                 Catenis.txMonitor.pausePoll();
 
-                this.ccTransact.sendTransaction();
+                // DEBUG - Begin
+                //this.ccTransact.sendTransaction();
+                Catenis.logger.DEBUG('>>>>>> Issue Non-Fungible Asset raw transaction: ' + this.ccTransact.getTransaction());
+                throw new Error('DEBUG - Simulating send transaction error');
+                // DEBUG - End
 
                 // Create Asset database doc/rec if it does not yet exist (newly issued asset)
                 if (!this.asset) {
@@ -447,6 +453,15 @@ export class IssueNFAssetTransaction {
 
             // Check if system pay tx expense addresses need to be refunded
             this.issuingDevice.client.ctnNode.checkPayTxExpenseFundingBalance();
+        }
+    }
+
+    /**
+     * Revert the blockchain addresses that have been allocated for the transaction's outputs
+     */
+    revertOutputAddresses() {
+        if (this.txBuilt) {
+            this.ccTransact.revertOutputAddresses();
         }
     }
 
@@ -478,7 +493,7 @@ export class IssueNFAssetTransaction {
 
                 if (numOutputsBeforeNullData > 0) {
                     for (let idx = 0; idx < numOutputsBeforeNullData; idx++) {
-                        holdDevAssetAddrs.push(getAddrAndAddrInfo(ccTransact.getOutputAt(idx)));
+                        holdDevAssetAddrs.push(getAddrAndAddrInfo(ccTransact.getOutputAt(idx).payInfo));
                     }
                 }
 
@@ -489,7 +504,7 @@ export class IssueNFAssetTransaction {
                     isValid = true;
 
                 do {
-                    const output = ccTransact.getOutputAt(nextOutPos++);
+                    const output = ccTransact.getOutputAt(++nextOutPos);
 
                     if (output !== undefined) {
                         const outputAddr = getAddrAndAddrInfo(output.payInfo);
@@ -546,7 +561,7 @@ export class IssueNFAssetTransaction {
                     .getClientByIndex(devAssetIssueAddr.addrInfo.pathParts.clientIndex)
                     .getDeviceByIndex(devAssetIssueAddr.addrInfo.pathParts.deviceIndex);
                     
-                    issueNFAssetTransact.holdingDevice = holdDevAssetAddrs.map(addr =>
+                    issueNFAssetTransact.holdingDevices = holdDevAssetAddrs.map(addr =>
                         CatenisNode.getCatenisNodeByIndex(addr.addrInfo.pathParts.ctnNodeIndex)
                         .getClientByIndex(addr.addrInfo.pathParts.clientIndex)
                         .getDeviceByIndex(addr.addrInfo.pathParts.deviceIndex)
@@ -574,7 +589,8 @@ export class IssueNFAssetTransaction {
                             issuingOpts: {
                                 type: issueNFAssetTransact.asset.issuingType,
                                 divisibility: issueNFAssetTransact.asset.divisibility,
-                                isAggregatable: issueNFAssetTransact.asset.isAggregatable
+                                isAggregatable: issueNFAssetTransact.asset.isAggregatable,
+                                isNonFungible: issueNFAssetTransact.asset.isNonFungible
                             }
                         };
                     }
@@ -599,7 +615,8 @@ export class IssueNFAssetTransaction {
                         issueNFAssetTransact.assetInfo.issuingOpts = {
                             type: ccTransact.issuingInfo.type,
                             divisibility: ccTransact.issuingInfo.divisibility,
-                            isAggregatable: ccTransact.issuingInfo.isAggregatable
+                            isAggregatable: ccTransact.issuingInfo.isAggregatable,
+                            isNonFungible: ccTransact.issuingInfo.isNonFungible
                         };
                     }
 

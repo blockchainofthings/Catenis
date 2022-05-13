@@ -2618,6 +2618,9 @@ Device.prototype.issueNonFungibleAsset = function (initialData, continuationData
                     }
                 }
             }
+            else {
+                holdingDevice = this;
+            }
 
             // Make sure that device has permission to assign asset to be issued to holding device
             if (!holdingDevice.shouldAcceptAssetOf(this) || (holdingDevice.deviceId !== this.deviceId

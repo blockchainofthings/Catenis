@@ -26,7 +26,8 @@ import {
     getDeviceId,
     isValidHoldingDeviceIdInfoList,
     isValidHoldingDeviceIdInfo,
-    isValidNonFungibleTokenList
+    isValidNonFungibleTokenList,
+    conformNonFungibleTokenList,
 } from './ApiIssueNonFungibleAsset';
 import { Util } from './Util';
 import { Device } from './Device';
@@ -65,7 +66,7 @@ import { Device } from './Device';
  * @property {boolean} [bodyParams.async=false] Indicates whether processing should be done asynchronously
  * @property {string} [bodyParams.continuationToken] The continuation token returned by the previous request indicating
  *                                                    that this is a continuation request for the same issuance
- * @property {NonFungibleTokenApiInfo[]} [bodyParams.nonFungibleTokens] List of non-fungible tokens to be issued
+ * @property {NonFungibleTokenApiInfoEntry[]} [bodyParams.nonFungibleTokens] List of non-fungible tokens to be issued
  * @property {boolean} [bodyParams.isFinal=true] Indicates whether this is the final request for this issuance
  * @return {IssueNonFungibleAssetAPIResponse}
  */
@@ -87,20 +88,27 @@ export function reissueNonFungibleAsset() {
         // continuationToken param
         let isContinuationReq = false;
 
-        if (this.bodyParams.continuationToken === undefined || !Util.isNonBlankString(this.bodyParams.continuationToken)) {
-            Catenis.logger.DEBUG('Invalid \'continuationToken\' parameter for POST \'assets/non-fungible/:assetId/issue\' API request', this.urlParams);
-            invalidParams.push('continuationToken');
-        }
-        else {
+        if (Util.isNonBlankString(this.bodyParams.continuationToken)) {
             isContinuationReq = true;
+        }
+        else if (this.bodyParams.continuationToken !== undefined) {
+            Catenis.logger.DEBUG('Invalid \'continuationToken\' parameter for POST \'assets/non-fungible/:assetId/issue\' API request', this.bodyParams);
+            invalidParams.push('continuationToken');
         }
 
         let encryptNFTContents = true;
         let holdingDeviceIds;
         let asyncProc = false;
         let isFinal = true;
+        /**
+         * @type {IssueNFAssetInitialData}
+         */
         let initialData;
+        /**
+         * @type {IssueNFAssetContinuationData}
+         */
         let continuationData;
+        let errorInfo;
 
         if (!isContinuationReq) {
             // Initial issuance request
@@ -110,7 +118,7 @@ export function reissueNonFungibleAsset() {
                 encryptNFTContents = this.bodyParams.encryptNFTContents;
             }
             else if (this.bodyParams.encryptNFTContents !== undefined) {
-                Catenis.logger.DEBUG('Invalid \'encryptNFTContents\' parameter for POST \'assets/non-fungible/:assetId/issue\' API request', this.urlParams);
+                Catenis.logger.DEBUG('Invalid \'encryptNFTContents\' parameter for POST \'assets/non-fungible/:assetId/issue\' API request', this.bodyParams);
                 invalidParams.push('encryptNFTContents');
             }
 
@@ -130,22 +138,21 @@ export function reissueNonFungibleAsset() {
                     holdingDeviceIds = deviceIds;
                 }
                 else if (this.bodyParams.holdingDevices !== undefined) {
-                    Catenis.logger.DEBUG('Invalid \'holdingDevices\' parameter for POST \'assets/non-fungible/:assetId/issue\' API request', this.urlParams);
+                    Catenis.logger.DEBUG('Invalid \'holdingDevices\' parameter for POST \'assets/non-fungible/:assetId/issue\' API request', this.bodyParams);
                     invalidParams.push('holdingDevices');
                 }
             }
             catch (err) {
-                let error;
+                errorInfo = {
+                    thrownError: err
+                };
 
                 if ((err instanceof Meteor.Error) && err.error === 'ctn_device_not_found') {
-                    error = errorResponse.call(this, 400, 'Invalid holding device');
+                    errorInfo.errorToReturn = errorResponse.call(this, 400, 'Invalid holding device');
                 }
                 else {
-                    error = errorResponse.call(this, 500, 'Internal server error');
-                    Catenis.logger.ERROR('Error processing POST \'assets/non-fungible/:assetId/issue\' API request.', err);
+                    errorInfo.errorToReturn = errorResponse.call(this, 500, 'Internal server error');
                 }
-
-                return error;
             }
 
             // async param
@@ -153,13 +160,13 @@ export function reissueNonFungibleAsset() {
                 asyncProc = this.bodyParams.async;
             }
             else if (typeof this.bodyParams.async !== 'boolean') {
-                Catenis.logger.DEBUG('Invalid \'async\' parameter for POST \'assets/non-fungible/:assetId/issue\' API request', this.urlParams);
+                Catenis.logger.DEBUG('Invalid \'async\' parameter for POST \'assets/non-fungible/:assetId/issue\' API request', this.bodyParams);
                 invalidParams.push('async');
             }
 
             // nonFungibleTokens param
             if (!isValidNonFungibleTokenList(this.bodyParams.nonFungibleTokens)) {
-                Catenis.logger.DEBUG('Invalid \'nonFungibleTokens\' parameter for POST \'assets/non-fungible/:assetId/issue\' API request', this.urlParams);
+                Catenis.logger.DEBUG('Invalid \'nonFungibleTokens\' parameter for POST \'assets/non-fungible/:assetId/issue\' API request', this.bodyParams);
                 invalidParams.push('nonFungibleTokens');
             }
 
@@ -168,37 +175,53 @@ export function reissueNonFungibleAsset() {
                 isFinal = this.bodyParams.isFinal;
             }
             else if (this.bodyParams.isFinal !== undefined) {
-                Catenis.logger.DEBUG('Invalid \'isFinal\' parameter for POST \'assets/non-fungible/:assetId/issue\' API request', this.urlParams);
+                Catenis.logger.DEBUG('Invalid \'isFinal\' parameter for POST \'assets/non-fungible/:assetId/issue\' API request', this.bodyParams);
                 invalidParams.push('isFinal');
             }
 
-            initialData = {
-                assetPropsOrId: this.urlParams.assetId,
-                encryptNFTContents,
-                holdingDeviceIds,
-                asyncProc,
-                nfTokenInfos: this.bodyParams.nonFungibleTokens,
-                isFinal
-            };
+            if (invalidParams.length === 0 && !errorInfo) {
+                try {
+                    initialData = {
+                        assetPropsOrId: this.urlParams.assetId,
+                        encryptNFTContents,
+                        holdingDeviceIds,
+                        asyncProc,
+                        nfTokenInfos: conformNonFungibleTokenList(this.bodyParams.nonFungibleTokens),
+                        isFinal
+                    };
+                }
+                catch (err) {
+                    errorInfo = {
+                        thrownError: err
+                    };
+
+                    if ((err instanceof Meteor.Error) && err.error === 'ctn_nft_contents_encode_error') {
+                        errorInfo.errorToReturn = errorResponse.call(this, 400, 'Invalid non-fungible token contents');
+                    }
+                    else {
+                        errorInfo.errorToReturn = errorResponse.call(this, 500, 'Internal server error');
+                    }
+                }
+            }
         }
         else {
             // Continuation issuance request
 
             // encryptNFTContents param
-            if (this.urlParams.encryptNFTContents !== undefined) {
-                Catenis.logger.DEBUG('Invalid \'encryptNFTContents\' parameter for POST \'assets/non-fungible/:assetId/issue\' API request', this.urlParams);
+            if (this.bodyParams.encryptNFTContents !== undefined) {
+                Catenis.logger.DEBUG('Invalid \'encryptNFTContents\' parameter for POST \'assets/non-fungible/:assetId/issue\' API request', this.bodyParams);
                 invalidParams.push('encryptNFTContents');
             }
 
             // holdingDevices param
-            if (this.urlParams.holdingDevices !== undefined) {
-                Catenis.logger.DEBUG('Invalid \'holdingDevices\' parameter for POST \'assets/non-fungible/:assetId/issue\' API request', this.urlParams);
+            if (this.bodyParams.holdingDevices !== undefined) {
+                Catenis.logger.DEBUG('Invalid \'holdingDevices\' parameter for POST \'assets/non-fungible/:assetId/issue\' API request', this.bodyParams);
                 invalidParams.push('holdingDevices');
             }
 
             // async param
-            if (this.urlParams.async !== undefined) {
-                Catenis.logger.DEBUG('Invalid \'async\' parameter for POST \'assets/non-fungible/:assetId/issue\' API request', this.urlParams);
+            if (this.bodyParams.async !== undefined) {
+                Catenis.logger.DEBUG('Invalid \'async\' parameter for POST \'assets/non-fungible/:assetId/issue\' API request', this.bodyParams);
                 invalidParams.push('async');
             }
 
@@ -207,21 +230,39 @@ export function reissueNonFungibleAsset() {
                 isFinal = this.bodyParams.isFinal;
             }
             else if (this.bodyParams.isFinal !== undefined) {
-                Catenis.logger.DEBUG('Invalid \'isFinal\' parameter for POST \'assets/non-fungible/:assetId/issue\' API request', this.urlParams);
+                Catenis.logger.DEBUG('Invalid \'isFinal\' parameter for POST \'assets/non-fungible/:assetId/issue\' API request', this.bodyParams);
                 invalidParams.push('isFinal');
             }
 
             // nonFungibleTokens param
-            if ((this.bodyParams.nonFungibleTokens !== undefined || !isFinal) && !isValidNonFungibleTokenList(this.bodyParams.nonFungibleTokens)) {
-                Catenis.logger.DEBUG('Invalid \'nonFungibleTokens\' parameter for POST \'assets/non-fungible/:assetId/issue\' API request', this.urlParams);
+            if ((this.bodyParams.nonFungibleTokens !== undefined || !isFinal)
+                    && !isValidNonFungibleTokenList(this.bodyParams.nonFungibleTokens, true)) {
+                Catenis.logger.DEBUG('Invalid \'nonFungibleTokens\' parameter for POST \'assets/non-fungible/:assetId/issue\' API request', this.bodyParams);
                 invalidParams.push('nonFungibleTokens');
             }
 
-            continuationData = {
-                continuationToken: this.bodyParams.continuationToken,
-                nfTokenInfos: this.bodyParams.nonFungibleTokens,
-                isFinal
-            };
+            if (invalidParams.length === 0) {
+                try {
+                    continuationData = {
+                        continuationToken: this.bodyParams.continuationToken,
+                        nfTokenInfos: this.bodyParams.nonFungibleTokens !== undefined
+                            ? conformNonFungibleTokenList(this.bodyParams.nonFungibleTokens) : undefined,
+                        isFinal
+                    };
+                }
+                catch (err) {
+                    errorInfo = {
+                        thrownError: err
+                    };
+
+                    if ((err instanceof Meteor.Error) && err.error === 'ctn_nft_contents_encode_error') {
+                        errorInfo.errorToReturn = errorResponse.call(this, 400, 'Invalid non-fungible token contents');
+                    }
+                    else {
+                        errorInfo.errorToReturn = errorResponse.call(this, 500, 'Internal server error');
+                    }
+                }
+            }
         }
 
         if (invalidParams.length > 0) {
@@ -237,6 +278,15 @@ export function reissueNonFungibleAsset() {
                 }
             );
             return errorResponse.call(this, 503, 'System currently not available; please try again at a later time');
+        }
+
+        if (errorInfo) {
+            // Error already detected. Process it now
+            if (errorInfo.errorToReturn.statusCode === 500) {
+                Catenis.logger.ERROR('Error processing POST \'assets/non-fungible/:assetId/issue\' API request.', errorInfo.thrownError);
+            }
+
+            return errorInfo.errorToReturn;
         }
 
         // Execute method to issue non-fungible asset

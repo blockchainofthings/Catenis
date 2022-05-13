@@ -377,5 +377,9 @@
   uiNotification: {
     refTimeZone: "UTC-05:00",  // Reference time zone expressed as a time difference from UTC (in the UTC+/-HH:mm format). Used to determine the notification's expiration date
     fromAddress: "Catenis [Sandbox] <noreply@blockchainofthings.com>"  // E-mail address used to send UI notification e-mail messages to Catenis users
+  },
+  // Parameters pertaining to NFTokenContentsUrl module
+  nfTokenContentsUrl: {
+    defaultOrigin: 'https://ipfs-sandbox.catenis.io',
   }
 }

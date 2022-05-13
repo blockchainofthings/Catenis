@@ -2484,7 +2484,10 @@ CCTransaction.fromTransaction = function (transact) {
                 throw new Meteor.Error('ctn_cc_tx_inconsistent_transfer', 'Invalid Colored Coins transaction: inconsistent number of Colored Coins payment outputs in input sequence');
             }
 
-            // Determine number of inputs in sequence
+            // Determine number of inputs in sequence and get list of non-fungible tokens
+            //  transferred (if any)
+            let ccTokenIds;
+
             if (ccTransact.issuingInfo !== undefined && curInputPos === 0) {
                 // Special case for transferring new issued assets
                 if (totalAmountTransferred !== ccTransact.issuingInfo.assetAmount) {
@@ -2495,6 +2498,10 @@ CCTransaction.fromTransaction = function (transact) {
                     });
                     // noinspection ExceptionCaughtLocallyJS
                     throw new Meteor.Error('ctn_cc_tx_inconsistent_transfer', 'Invalid Colored Coins transaction: not all newly issued assets are being transferred');
+                }
+
+                if (ccTransact.issuingInfo.ccTokenIds) {
+                    ccTokenIds = ccTransact.issuingInfo.ccTokenIds;
                 }
             }
             else {
@@ -2525,6 +2532,72 @@ CCTransaction.fromTransaction = function (transact) {
                     startPos: curInputPos,
                     nInputs: numInputs
                 });
+
+                if (ccTransact.inputs[curInputPos].ccTokenIds) {
+                    ccTokenIds = ccTransact.inputs[curInputPos].ccTokenIds;
+
+                    for (let inputPos = curInputPos + 1, limit = curInputPos + numInputs; inputPos < limit; inputPos++) {
+                        const input = ccTransact.inputs[inputPos];
+
+                        if (!input.ccTokenIds) {
+                            Catenis.logger.ERROR('Invalid Colored Coins transaction: missing non-fungible token IDs in input associated with the transfer of non-fungible asset', {
+                                transact,
+                                ccPayments: ccData.payments,
+                                paymentIdx: idx,
+                                input: inputPos
+                            });
+                            // noinspection ExceptionCaughtLocallyJS
+                            throw new Meteor.Error('ctn_cc_tx_inconsistent_transfer', 'Invalid Colored Coins transaction: missing non-fungible token IDs in input associated with the transfer of non-fungible asset');
+                        }
+
+                        ccTokenIds = ccTokenIds.concat(input.ccTokenIds);
+                    }
+                }
+            }
+
+            if (ccTokenIds && ccTokenIds.length > 0) {
+                // Transferring non-fungible tokens
+                let transferredTokens = 0;
+
+                for (const payment of ccPayments) {
+                    if (!payment.burn) {
+                        // Asset transfer.
+                        //  Get list of non-fungible token IDs for the current output
+                        const outputCCTokenIds = ccTokenIds.slice(transferredTokens, transferredTokens + payment.amount);
+
+                        if (outputCCTokenIds.length !== payment.amount) {
+                            Catenis.logger.ERROR('Invalid Colored Coins transaction: not enough non-fungible token IDs to be added to tx output receiving non-fungible tokens', {
+                                transact,
+                                ccPayments: ccData.payments,
+                                paymentIdx: idx,
+                                expectedAmount: payment.amount,
+                                availableAmount: outputCCTokenIds.length
+                            });
+                            // noinspection ExceptionCaughtLocallyJS
+                            throw new Meteor.Error('ctn_cc_tx_inconsistent_transfer', 'Invalid Colored Coins transaction: not enough non-fungible token IDs to be added to tx output receiving non-fungible tokens');
+                        }
+
+                        const payInfo = ccTransact.outputs[payment.output].payInfo;
+
+                        if (!payInfo.ccAssetId) {
+                            Catenis.logger.ERROR('Invalid Colored Coins transaction: tx output receiving non-fungible tokens does not have asset info', {
+                                transact,
+                                ccPayments: ccData.payments,
+                                paymentIdx: idx,
+                                txOutput: ccTransact.outputs[payment.output]
+                            });
+                            // noinspection ExceptionCaughtLocallyJS
+                            throw new Meteor.Error('ctn_cc_tx_inconsistent_transfer', 'Invalid Colored Coins transaction: tx output receiving non-fungible tokens does not have asset info');
+                        }
+
+                        // Update output with list of transferred non-fungible token IDs
+                        payInfo.ccTokenIds = !payInfo.ccTokenIds
+                            ? outputCCTokenIds
+                            : payInfo.ccTokenIds.concat(outputCCTokenIds);
+                    }
+
+                    transferredTokens += payment.amount;
+                }
             }
 
             // Retrieve Colored Coins metadata if any

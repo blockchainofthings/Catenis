@@ -353,5 +353,9 @@
   // Parameters pertaining to UserUINotification module
   userUINotification: {
     displayBatchSize: 5  // Number of notification messages that should be fetched at time to be displayed on the UI
+  },
+  // Parameters pertaining to NFTokenContentsUrl module
+  nfTokenContentsUrl: {
+    defaultOrigin: 'http://localhost:8080',
   }
 }
