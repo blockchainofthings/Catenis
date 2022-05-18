@@ -27,7 +27,8 @@ const provMsgReadableConfig = config.get('provisionalMessageReadable');
 
 // Configuration settings
 const cfgSettings = {
-    highWaterMark: provMsgReadableConfig.get('highWaterMark')
+    highWaterMark: provMsgReadableConfig.get('highWaterMark'),
+    defaultReadChunkSize: provMsgReadableConfig.get('defaultReadChunkSize')
 };
 
 
@@ -59,10 +60,7 @@ export class ProvisionalMessageReadable extends MessageReadable {
     }
 
     _read(size) {
-        // Only do any processing if stream is still open
-        if (this.open) {
-            this._processRead(size);
-        }
+        this._processRead(size);
     }
 }
 
@@ -90,7 +88,7 @@ function processRead(size) {
             this.push(null);
         }
         else {
-            const bytesToRead = size || cfgSettings.highWaterMark;
+            const bytesToRead = size || cfgSettings.defaultReadChunkSize;
             let bytesRead = 0;
             let dataToSend = Buffer.from('');
 
@@ -133,7 +131,7 @@ function processRead(size) {
     }
     catch (err) {
         Catenis.logger.ERROR('Error reading provisional message readable stream.', err);
-        process.nextTick(() => this.emit('error', new Error('Error reading provisional message readable stream: ' + err.toString())));
+        this.destroy(new Error('Error reading provisional message readable stream: ' + err.toString()));
     }
 }
 

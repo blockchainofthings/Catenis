@@ -38,19 +38,12 @@ export class MessageReadable extends Readable {
     //  options [Object] - Readable stream options object
     constructor (options) {
         super(options);
-
-        this.open = true;
     }
 
     _destroy(err, callback) {
         if (err) {
             Catenis.logger.DEBUG('Message readable stream is being destroyed because of an error:', err);
         }
-
-        // Close stream
-        this.open = false;
-
-        process.nextTick(() => this.emit('close'));
 
         callback(null);
     }

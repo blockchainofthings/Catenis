@@ -28,7 +28,8 @@ const bufMsgDuplexConfig = config.get('bufferMessageDuplex');
 
 // Configuration settings
 const cfgSettings = {
-    highWaterMark: bufMsgDuplexConfig.get('highWaterMark')
+    highWaterMark: bufMsgDuplexConfig.get('highWaterMark'),
+    defaultReadChunkSize: bufMsgDuplexConfig.get('defaultReadChunkSize')
 };
 
 
@@ -76,30 +77,15 @@ export class BufferMessageDuplex extends MessageDuplex {
     }
 
     _write(chunk, encoding, callback) {
-        // Only do any processing if stream is still open
-        if (this.open) {
-            this._processWrite(chunk, encoding, callback);
-        }
-        else {
-            callback(null);
-        }
+        this._processWrite(chunk, encoding, callback);
     }
 
     _final(callback) {
-        // Only do any processing if stream is still open
-        if (this.open) {
-            this._processFinal(callback);
-        }
-        else {
-            callback(null);
-        }
+        this._processFinal(callback);
     }
 
     _read(size) {
-        // Only do any processing if stream is still open
-        if (this.open) {
-            this._processRead(size);
-        }
+        this._processRead(size);
     }
 }
 
@@ -113,23 +99,29 @@ export class BufferMessageDuplex extends MessageDuplex {
 function processWrite(chunk, encoding, callback) {
     let error = null;
 
-    try {
-        const dataToWrite = this.checkDecryptData(chunk);
+    if (chunk.length > 0) {
+        try {
+            if (typeof chunk === 'string') {
+                chunk = Buffer.from(chunk, encoding);
+            }
 
-        if (dataToWrite.length > this.capacity - this.bytesWritten) {
-            // Message data exceeds capacity of buffer message duplex stream. Return error
-            Catenis.logger.DEBUG('Message data exceeds buffer message duplex stream\'s capacity');
-            callback(new Meteor.Error('ctn_buf_msg_capacity_exceeded', 'Message data exceeds buffer message duplex stream\'s capacity'));
-            return;
+            const dataToWrite = this.checkDecryptData(chunk);
+
+            if (dataToWrite.length > this.capacity - this.bytesWritten) {
+                // Message data exceeds capacity of buffer message duplex stream. Return error
+                Catenis.logger.DEBUG('Message data exceeds buffer message duplex stream\'s capacity');
+                callback(new Meteor.Error('ctn_buf_msg_capacity_exceeded', 'Message data exceeds buffer message duplex stream\'s capacity'));
+                return;
+            }
+
+            this.message = Buffer.concat([this.message, dataToWrite]);
+
+            this.bytesWritten += dataToWrite.length;
         }
-
-        this.message = Buffer.concat([this.message, dataToWrite]);
-
-        this.bytesWritten += dataToWrite.length;
-    }
-    catch (err) {
-        Catenis.logger.ERROR('Error writing buffer message duplex stream.', err);
-        error = new Error('Error writing buffer message duplex stream: ' + err.toString());
+        catch (err) {
+            Catenis.logger.ERROR('Error writing buffer message duplex stream.', err);
+            error = new Error('Error writing buffer message duplex stream: ' + err.toString());
+        }
     }
 
     callback(error);
@@ -172,7 +164,7 @@ function processRead(size) {
         }
 
         let continuePushing = true;
-        let maxBytesToRead = size || cfgSettings.highWaterMark;
+        let maxBytesToRead = size || cfgSettings.defaultReadChunkSize;
 
         for (let bytesToRead = Math.min(maxBytesToRead, msgLength - this.bytesRead); bytesToRead > 0 && continuePushing; this.bytesRead += bytesToRead, bytesToRead = Math.min(maxBytesToRead, msgLength - this.bytesRead)) {
             let msgData = this.message.slice(this.bytesRead, this.bytesRead + bytesToRead);
@@ -187,7 +179,7 @@ function processRead(size) {
     }
     catch (err) {
         Catenis.logger.ERROR('Error reading buffer message readable stream.', err);
-        process.nextTick(() => this.emit('error', new Error('Error reading buffer message readable stream: ' + err.toString())));
+        this.destroy(new Error('Error reading buffer message readable stream: ' + err.toString()));
     }
 }
 

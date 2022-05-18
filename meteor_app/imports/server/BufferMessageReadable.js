@@ -25,7 +25,8 @@ const bufMsgReadableConfig = config.get('bufferMessageReadable');
 
 // Configuration settings
 const cfgSettings = {
-    highWaterMark: bufMsgReadableConfig.get('highWaterMark')
+    highWaterMark: bufMsgReadableConfig.get('highWaterMark'),
+    defaultReadChunkSize: bufMsgReadableConfig.get('defaultReadChunkSize')
 };
 
 
@@ -54,10 +55,7 @@ export class BufferMessageReadable extends MessageReadable {
     }
 
     _read(size) {
-        // Only do any processing if stream is still open
-        if (this.open) {
-            this._processRead(size);
-        }
+        this._processRead(size);
     }
 }
 
@@ -88,7 +86,7 @@ function processRead(size) {
         }
 
         let continuePushing = true;
-        let maxBytesToRead = size || cfgSettings.highWaterMark;
+        let maxBytesToRead = size || cfgSettings.defaultReadChunkSize;
 
         for (let bytesToRead = Math.min(maxBytesToRead, msgLength - this.bytesRead); bytesToRead > 0 && continuePushing; this.bytesRead += bytesToRead, bytesToRead = Math.min(maxBytesToRead, msgLength - this.bytesRead)) {
             let msgData = this.message.slice(this.bytesRead, this.bytesRead + bytesToRead);
@@ -115,7 +113,7 @@ function processRead(size) {
     }
     catch (err) {
         Catenis.logger.ERROR('Error reading buffer message readable stream.', err);
-        process.nextTick(() => this.emit('error', new Error('Error reading buffer message readable stream: ' + err.toString())));
+        this.destroy(new Error('Error reading buffer message readable stream: ' + err.toString()));
     }
 }
 

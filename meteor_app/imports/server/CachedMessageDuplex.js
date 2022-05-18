@@ -30,7 +30,8 @@ const cachMsgDuplexConfig = config.get('cachedMessageDuplex');
 
 // Configuration settings
 const cfgSettings = {
-    highWaterMark: cachMsgDuplexConfig.get('highWaterMark')
+    highWaterMark: cachMsgDuplexConfig.get('highWaterMark'),
+    defaultReadChunkSize: cachMsgDuplexConfig.get('defaultReadChunkSize')
 };
 
 
@@ -77,30 +78,15 @@ export class CachedMessageDuplex extends MessageDuplex {
     }
 
     _write(chunk, encoding, callback) {
-        // Only do any processing if stream is still open
-        if (this.open) {
-            this._processWrite(chunk, encoding, callback);
-        }
-        else {
-            callback(null);
-        }
+        this._processWrite(chunk, encoding, callback);
     }
 
     _final(callback) {
-        // Only do any processing if stream is still open
-        if (this.open) {
-            this._processFinal(callback);
-        }
-        else {
-            callback(null);
-        }
+        this._processFinal(callback);
     }
 
     _read(size) {
-        // Only do any processing if stream is still open
-        if (this.open) {
-            this._processRead(size);
-        }
+        this._processRead(size);
     }
 }
 
@@ -114,36 +100,42 @@ export class CachedMessageDuplex extends MessageDuplex {
 function processWrite(chunk, encoding, callback) {
     let error = null;
 
-    try {
-        this.dataToWrite = Buffer.concat([this.dataToWrite, this.checkDecryptData(chunk)]);
-
-        // Check whether it is time to write data
-        let bytesWritten = 0;
-
-        while (this.dataToWrite.length >= this.dataChunkSize) {
-            if (this.fitInOneChunk && this.messageChunks.length > 0) {
-                // Message wont fit in only one chunk. Return error
-                Catenis.logger.DEBUG('Message too large to fit in just one chunk');
-                callback(new Meteor.Error('ctn_cach_msg_not_fit_one_chunk', 'Message too large to fit in just one chunk'));
-                return;
+    if (chunk.length > 0) {
+        try {
+            if (typeof chunk === 'string') {
+                chunk = Buffer.from(chunk, encoding);
             }
 
-            const dataChunk = this.dataToWrite.slice(0, this.dataChunkSize);
+            this.dataToWrite = Buffer.concat([this.dataToWrite, this.checkDecryptData(chunk)]);
 
-            this.messageChunks.push(MessageChunk.createCachedMessageChunk(this.cachedMessage_id, dataChunk, false, this.messageChunks.length + 1));
+            // Check whether it is time to write data
+            let bytesWritten = 0;
 
-            bytesWritten += dataChunk.length;
-            this.dataToWrite = this.dataToWrite.slice(dataChunk.length);
+            while (this.dataToWrite.length >= this.dataChunkSize) {
+                if (this.fitInOneChunk && this.messageChunks.length > 0) {
+                    // Message won't fit in only one chunk. Return error
+                    Catenis.logger.DEBUG('Message too large to fit in just one chunk');
+                    callback(new Meteor.Error('ctn_cach_msg_not_fit_one_chunk', 'Message too large to fit in just one chunk'));
+                    return;
+                }
+
+                const dataChunk = this.dataToWrite.slice(0, this.dataChunkSize);
+
+                this.messageChunks.push(MessageChunk.createCachedMessageChunk(this.cachedMessage_id, dataChunk, false, this.messageChunks.length + 1));
+
+                bytesWritten += dataChunk.length;
+                this.dataToWrite = this.dataToWrite.slice(dataChunk.length);
+            }
+
+            if (bytesWritten > 0) {
+                // Update processing progress
+                CachedMessage.updateProcessingProgress(this.cachedMessageId, bytesWritten);
+            }
         }
-
-        if (bytesWritten > 0) {
-            // Update processing progress
-            CachedMessage.updateProcessingProgress(this.cachedMessageId, bytesWritten);
+        catch (err) {
+            Catenis.logger.ERROR('Error writing cached message duplex stream.', err);
+            error = new Error('Error writing cached message duplex stream: ' + err.toString());
         }
-    }
-    catch (err) {
-        Catenis.logger.ERROR('Error writing cached message duplex stream.', err);
-        error = new Error('Error writing cached message duplex stream: ' + err.toString());
     }
 
     callback(error);
@@ -217,7 +209,7 @@ function processRead(size) {
             this.push(null);
         }
         else {
-            const bytesToRead = size || cfgSettings.highWaterMark;
+            const bytesToRead = size || cfgSettings.defaultReadChunkSize;
             let bytesRead = 0;
             let dataToSend = Buffer.from('');
 
@@ -242,7 +234,7 @@ function processRead(size) {
     }
     catch (err) {
         Catenis.logger.ERROR('Error reading provisional message readable stream.', err);
-        process.nextTick(() => this.emit('error', new Error('Error reading provisional message readable stream: ' + err.toString())));
+        this.destroy(new Error('Error reading provisional message readable stream: ' + err.toString()));
     }
 }
 

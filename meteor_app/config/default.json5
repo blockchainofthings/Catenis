@@ -1041,11 +1041,13 @@
   },
   // Parameters pertaining to ProvisionalMessageReadable module
   "provisionalMessageReadable": {
-    "highWaterMark": 1048576  // (1 MB) The maximum number of bytes to store in the internal buffer of stream before ceasing to read from the underlying resource
+    "highWaterMark": 1048576,  // (1 MB) The maximum number of bytes to store in the internal buffer of stream before ceasing to read from the underlying resource
+    defaultReadChunkSize: 65536,  // (64 KB) The default number of bytes to read from the underlying resource at a time
   },
   // Parameters pertaining to BufferMessageReadable module
   "bufferMessageReadable": {
-    "highWaterMark": 1048576  // (1 MB) The maximum number of bytes to store in the internal buffer of stream before ceasing to read from the underlying resource
+    "highWaterMark": 1048576,  // (1 MB) The maximum number of bytes to store in the internal buffer of stream before ceasing to read from the underlying resource
+    defaultReadChunkSize: 65536,  // (64 KB) The default number of bytes to read from the underlying resource at a time
   },
   // Parameters pertaining to CachedMessage module
   "cachedMessage": {
@@ -1057,11 +1059,13 @@
   },
   // Parameters pertaining to CachedMessageDuplex module
   "cachedMessageDuplex": {
-    "highWaterMark": 1048576  // (1 MB) The maximum number of bytes to store in the internal buffer of stream before ceasing to read from the underlying resource
+    "highWaterMark": 1048576,  // (1 MB) The maximum number of bytes to store in the internal buffer of stream before ceasing to read from the underlying resource
+    defaultReadChunkSize: 65536,  // (64 KB) The default number of bytes to read from the underlying resource at a time
   },
   // Parameters pertaining to BufferMessageDuplex module
   "bufferMessageDuplex": {
-    "highWaterMark": 1048576  // (1 MB) The maximum number of bytes to store in the internal buffer of stream before ceasing to read from the underlying resource
+    "highWaterMark": 1048576,  // (1 MB) The maximum number of bytes to store in the internal buffer of stream before ceasing to read from the underlying resource
+    defaultReadChunkSize: 65536,  // (64 KB) The default number of bytes to read from the underlying resource at a time
   },
   // Parameters pertaining to TwoFactorAuthentication module
   "twoFactorAuthentication": {
