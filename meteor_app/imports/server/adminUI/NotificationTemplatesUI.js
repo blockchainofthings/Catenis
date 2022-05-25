@@ -383,12 +383,12 @@ NotificationTemplatesUI.initialize = function () {
                         changedFields.name = newDoc.props.name;
                     }
 
-                    if (propChanged(newDoc.props, oldDoc.props, 'company')) {
+                    if (propChanged('company', newDoc.props, oldDoc.props)) {
                         changedFields.company = newDoc.props.company;
                     }
 
-                    if (propChanged(newDoc.props, oldDoc.props, 'firstName')
-                            || propChanged(newDoc.props, oldDoc.props, 'lastName')) {
+                    if (propChanged('firstName', newDoc.props, oldDoc.props)
+                            || propChanged('lastName', newDoc.props, oldDoc.props)) {
                         changedFields.contact = contactName(newDoc);
                     }
 
