@@ -100,9 +100,10 @@ export class QuillConverter {
         getRangeAt: function() { }
       };
     };
+    document._origExecCommand = document.execCommand;
     document.execCommand = function (command, showUI, value) {
       try {
-          return document.execCommand(command, showUI, value);
+          return document._origExecCommand(command, showUI, value);
       } catch(e) {}
       return false;
     };
