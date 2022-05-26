@@ -23,7 +23,7 @@
   },
   "dependencies": {
     "@babel/runtime": "^7.14.0",
-    "async": "^3.2.0",
+    "async": "^3.2.3",
     "bcrypt": "^5.0.1",
     "bignumber.js": "^7.2.1",
     "bip32": "^3.0.1",
@@ -46,7 +46,7 @@
     "jsdom": "^19.0.0",
     "lokijs": "^1.5.12",
     "meteor-node-stubs": "^1.0.3",
-    "moment": "^2.29.1",
+    "moment": "^2.29.3",
     "moment-timezone": "^0.5.33",
     "openssl-wrapper": "^0.3.4",
     "otplib": "^11.0.1",
@@ -73,6 +73,6 @@
   "devDependencies": {
     "@openzeppelin/contracts": "^4.5.0",
     "chai": "^4.3.4",
-    "truffle": "^5.5.6"
+    "truffle": "^5.5.15"
   }
 }
