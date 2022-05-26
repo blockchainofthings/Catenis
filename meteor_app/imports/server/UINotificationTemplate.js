@@ -452,6 +452,8 @@ export class UINotificationTemplate {
             };
         }
 
+        UINotificationTemplate.quillConverter.htmlCleanUp();
+
         return renderedContents;
     }
 

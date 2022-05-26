@@ -66,9 +66,21 @@ export class QuillConverter {
      * @return {string}
      */
     toHtml(delta) {
-        this.quill.setContents(delta);
+        // Resets Quill text editor's contents
+        this.quill.setContents(delta, 'silent');
 
+        // Get contents as HTML
         return this.quill.root.innerHTML;
+    }
+
+    /**
+     * Clean up after HTML conversion.
+     *  Note: this method should be called when done converting Quill text editor contents
+     *      to HTML (by calling the toHtml() method one or more times in sequence)
+     */
+    htmlCleanUp() {
+        // Clears Quill text editor's contents
+        this.quill.setText('\n', 'silent');
     }
 
     /**
@@ -87,13 +99,10 @@ export class QuillConverter {
      * @private
      */
     _initDOM() {
-        const quillLibrary = Assets.getText('quilljs/quill.min.js');
-        const mutationObserverPolyfill = Assets.getText('quilljs/polyfill.js');
-
         const JSDOM_TEMPLATE = `
   <div id="editor">hello</div>
-  <script>${mutationObserverPolyfill}</script>
-  <script>${quillLibrary}</script>
+  <script>${Assets.getText('quilljs/polyfill.js')}</script>
+  <script>${Assets.getText('quilljs/quill.min.js')}</script>
   <script>
     document.getSelection = function() {
       return {
