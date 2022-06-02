@@ -28,6 +28,7 @@ import '/imports/server/test/CCSingleNFTokenMetadataTest.js';
 import '/imports/server/test/CCNFTokenMetadataTest.js';
 import '/imports/server/test/CCAssetMetadataTest.js';
 import '/imports/server/test/CCMetadataTest.js';
+import '/imports/server/test/BufferProgressReadableTest.js';
 
 
 // Initialize required modules

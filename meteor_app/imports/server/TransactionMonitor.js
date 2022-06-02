@@ -1566,6 +1566,10 @@ TransactionMonitor.notifyEvent = Object.freeze({
         name: 'issue_asset_tx_conf',
         description: 'Transaction sent for issuing an amount of a Catenis asset has been confirmed'
     }),
+    issue_nf_asset_tx_conf: Object.freeze({
+        name: 'issue_nf_asset_tx_conf',
+        description: 'Transaction sent for issuing new non-fungible tokens of a Catenis non-fungible asset has been confirmed'
+    }),
     transfer_asset_tx_conf: Object.freeze({
         name: 'transfer_asset_tx_conf',
         description: 'Transaction used to transfer an amount of a Catenis asset between devices has been confirmed'

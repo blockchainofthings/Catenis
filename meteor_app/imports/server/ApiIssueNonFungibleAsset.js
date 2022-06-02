@@ -190,7 +190,7 @@ export function issueNonFungibleAsset() {
             if (typeof this.bodyParams.async === 'boolean') {
                 asyncProc = this.bodyParams.async;
             }
-            else if (typeof this.bodyParams.async !== 'boolean') {
+            else if (this.bodyParams.async !== undefined) {
                 Catenis.logger.DEBUG('Invalid \'async\' parameter for POST \'assets/non-fungible/issue\' API request', this.bodyParams);
                 invalidParams.push('async');
             }

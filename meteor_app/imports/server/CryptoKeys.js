@@ -423,6 +423,14 @@ CryptoKeys.toExportPrivateKeyList = function (listKeys) {
     return listPrivateKey;
 };
 
+/**
+ * Generates a random crypto key pair
+ * @returns {CryptoKeys}
+ */
+CryptoKeys.random = function () {
+    return new CryptoKeys(Catenis.bip32.fromSeed(Buffer.from(Random.secret())));
+}
+
 
 // CryptoKeys function class (public) properties
 //

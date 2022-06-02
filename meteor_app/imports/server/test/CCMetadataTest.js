@@ -22,10 +22,8 @@ import _und from 'underscore';
 import { Catenis } from '../Catenis';
 import { CCMetadata } from '../CCMetadata';
 import { CCAssetMetadata } from '../CCAssetMetadata';
-import { CCUserDataMetadata } from '../CCUserDataMetadata';
 import {
     CCNFTokenMetadata,
-    CryptoKeysSet
 } from '../CCNFTokenMetadata';
 import { CCSingleNFTokenMetadata } from '../CCSingleNFTokenMetadata';
 import { NFTokenContentsUrl } from '../NFTokenContentsUrl';
@@ -70,6 +68,11 @@ describe('CCMetadata module', function () {
         expect(ccMetadata.isStored).to.be.false;
     });
 
+    it('should report an estimated metadata size of zero if not yet assembled', function () {
+        expect(ccMetadata.isAssembled).to.be.false;
+        expect(ccMetadata.estimatedSize).to.equal(0);
+    });
+
     it('should correctly assemble Colored Coins metadata', function () {
         // Set up asset metadata
         ccMetadata.assetMetadata.setAssetProperties(
@@ -79,7 +82,7 @@ describe('CCMetadata module', function () {
                 description: 'Non-fungible asset #1 used for testing',
                 urls: [
                     {
-                        url: 'https://sandbox.catenis.io/logo/Catenis_small.png',
+                        url: 'https://catenis.io/logo/Catenis_small.png',
                         label: 'Catenis logo (small)'
                     }
                 ]
@@ -224,13 +227,13 @@ describe('CCMetadata module', function () {
                     urls: [
                         {
                             name: 'Catenis logo (small)',
-                            url: 'https://sandbox.catenis.io/logo/Catenis_small.png',
+                            url: 'https://catenis.io/logo/Catenis_small.png',
                             mimeType: 'image/png',
                             dataHash: 'dcde5882af4ee42617e5f9b1ff56d801be25c0c1af7ea8334eb46596616b15b2'
                         },
                         {
                             name: 'icon',
-                            url: 'https://sandbox.catenis.io/logo/Catenis_large.png',
+                            url: 'https://catenis.io/logo/Catenis_large.png',
                             mimeType: 'image/png',
                             dataHash: '0a5e3d326c0dfd1f87cebdd63fa214faebb9a3d48234a8c7352186985f838261'
                         }
@@ -404,6 +407,11 @@ describe('CCMetadata module', function () {
         expect(ccMetadata.metadata.metadata.verifications.signed.cert).to.match(/^-----BEGIN CERTIFICATE-----\n/);
     });
 
+    it('should correctly estimate the metadata size', function () {
+        expect(ccMetadata.isAssembled).to.be.true;
+        expect(ccMetadata.estimatedSize).to.equal(Buffer.from(JSON.stringify(ccMetadata.metadata)).length);
+    });
+
     it('should correctly clone Colored Coins metadata object', function () {
         expect(ccMetadata.clone()).to.be.an.instanceof(CCMetadata).that.deep.equals(ccMetadata);
     });
@@ -440,7 +448,7 @@ describe('CCMetadata module', function () {
         );
     });
 
-    it('should successfully store assembled metadata', function () {
+    it('should successfully store assembled metadata (without a progress callback)', function () {
         expect(ccMetadata.isStored).to.be.false;
 
         ccMetadata.store();
@@ -452,6 +460,34 @@ describe('CCMetadata module', function () {
             ]
         );
         expect(ccMetadata.storeResult.cid).to.be.a('string').that.matches(/^[0-9a-f]{68}$/);
+    });
+
+    it('should successfully store assembled metadata with a progress callback', function () {
+        // Simulate that metadata is not yet stored
+        ccMetadata.storeResult = undefined;
+
+        expect(ccMetadata.isStored).to.be.false;
+
+        const progress = {
+            callCount: 0,
+            bytesStored: 0
+        };
+
+        ccMetadata.store((bytesStored) => {
+            progress.callCount++;
+            progress.bytesStored = bytesStored;
+        });
+
+        expect(ccMetadata.isStored).to.be.true;
+        expect(ccMetadata.storeResult).to.be.an('object').that.has.all.keys(
+            [
+                'cid'
+            ]
+        );
+        expect(ccMetadata.storeResult.cid).to.be.a('string').that.matches(/^[0-9a-f]{68}$/);
+
+        expect(progress.callCount).to.be.greaterThan(0);
+        expect(progress.bytesStored).to.equal(Buffer.from(JSON.stringify(ccMetadata.metadata)).length);
     });
 
     it('should successfully retrieve stored metadata', function () {

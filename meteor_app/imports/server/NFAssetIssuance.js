@@ -24,6 +24,13 @@ import { Catenis } from './Catenis';
 import { CriticalSection } from './CriticalSection';
 import { NFTokenIssuingBatch } from './NFTokenIssuingBatch';
 import { NFTokenContentsUrl } from './NFTokenContentsUrl';
+import { CCMetadata } from './CCMetadata';
+import {
+    Asset,
+    newAssetId
+} from './Asset';
+import { CCSingleNFTokenMetadata } from './CCSingleNFTokenMetadata';
+import { CryptoKeys } from './CryptoKeys';
 import { Util } from './Util';
 
 // Config entries
@@ -35,7 +42,7 @@ const cfgSettings = {
     timeKeepIncompleteIssuance: nfAssetIssuanceConfig.get('timeKeepIncompleteIssuance'),
     timeKeepProcessedIssuance: nfAssetIssuanceConfig.get('timeKeepProcessedIssuance'),
     purgeOldIssuancesInterval: nfAssetIssuanceConfig.get('purgeOldIssuancesInterval'),
-    percentSaveNFTokenContents: nfAssetIssuanceConfig.get('percentSaveNFTokenContents')
+    percentSaveNFTokensMetadata: nfAssetIssuanceConfig.get('percentSaveNFTokensMetadata')
 };
 
 
@@ -93,9 +100,11 @@ export class NFAssetIssuance {
      */
 
     /**
-     * @typedef {Object} NonFungibleAssetIssuanceSavedProgress
-     * @property {number} totalContentsBytes Total non-fungible tokens' contents length in bytes (to be saved)
-     * @property {number} savedContentsBytes Number of non-fungible tokens' contents bytes already saved
+     * @typedef {Object} NonFungibleAssetIssuanceStoredProgress
+     * @property {number} totalContentsBytes Total non-fungible tokens' contents length in bytes (to be stored)
+     * @property {number} contentsBytesStored Number of non-fungible tokens' contents bytes already stored
+     * @property {number} totalMetadataBytes Total length of metadata for issuing asset metadata in bytes (to be stored)
+     * @property {number} metadataBytesStored Number of metadata bytes already stored
      * @property {boolean} done Indicates whether processing has been finalized either successfully (asset issued)
      *                           or with an error
      * @property {boolean} [success] Indicates whether the asset issuance has been successfully completed
@@ -138,7 +147,7 @@ export class NFAssetIssuance {
      * @property {number} nonFungibleToken.quantity Number of non-fungible tokens to be issued with this asset
      * @property {boolean} nonFungibleToken.encryptContents Indicates whether the non-fungible tokens' contents should
      *                                                       be encrypted before being stored (on IPFS)
-     * @property {NonFungibleAssetIssuanceSavedProgress} [progress] Asset issuance progress
+     * @property {NonFungibleAssetIssuanceStoredProgress} [progress] Asset issuance progress
      * @property {string} [assetId] Catenis asset ID of the newly/previously issued non-fungible asset
      * @property {string[]} [tokenIds] List of Catenis token ID of the newly issued non-fungible tokens
      * @property {Date} createdDate Date and time when database doc/rec has been created
@@ -259,6 +268,134 @@ export class NFAssetIssuance {
     }
 
     /**
+     * Get the total bytes of the non-fungible tokens' contents for this asset issuance
+     * @return {number}
+     * @private
+     */
+    get _totalNFTokensContentsBytes() {
+        if (this._totalContentsBytes === undefined) {
+            const getTotalNFTokensContentsLength = async () => {
+                if (!this.isComplete) {
+                    throw new Error('Non-fungible asset issuance data not yet complete');
+                }
+
+                // noinspection JSUnresolvedFunction
+                const docs = await Catenis.db.mongoCollection.NonFungibleTokenIssuingBatch.aggregate([
+                    {
+                        $match: {
+                            nonFungibleAssetIssuance_id: this.doc_id
+                        }
+                    },
+                    {
+                        $sort: {
+                            order: 1
+                        }
+                    },
+                    {
+                        $lookup: {
+                            from: 'NonFungibleTokenIssuingPart',
+                            let: {
+                                batch_id: '$_id'
+                            },
+                            pipeline: [
+                                {
+                                    $match: {
+                                        contents: {
+                                            $ne: null
+                                        },
+                                        $expr: {
+                                            $eq: ['$nonFungibleTokenIssuingBatch_id', '$$batch_id']
+                                        }
+                                    }
+                                },
+                                {
+                                    $project: {
+                                        contentsLength: {
+                                            $binarySize: '$contents'
+                                        }
+                                    }
+                                }
+                            ],
+                            as: 'nfTokenIssuingParts'
+                        }
+                    },
+                    {
+                        $unwind: '$nfTokenIssuingParts'
+                    },
+                    {
+                        $group: {
+                            _id: '$nonFungibleAssetIssuance_id',
+                            totalContentsLength: {
+                                $sum: '$nfTokenIssuingParts.contentsLength'
+                            }
+                        }
+                    }
+                ])
+                .toArray();
+
+                return docs && docs.length > 0 ? docs[0].totalContentsLength : 0;
+            }
+
+            try {
+                this._totalContentsBytes = Future.fromPromise(getTotalNFTokensContentsLength()).wait();
+            }
+            catch (err) {
+                Catenis.logger.ERROR('Error computing total non-fungible tokens\' contents length for non-fungible asset issuance (doc_id: %s).', this.doc_id, err);
+                throw new Error(`Error computing total non-fungible tokens\' contents length for non-fungible asset issuance: ${err}`);
+            }
+        }
+
+        return this._totalContentsBytes;
+    }
+
+    /**
+     * Get the estimated size (in bytes) of the metadata for issuing the non-fungible asset
+     * @returns {number}
+     * @private
+     */
+    get _estimatedAssetMetadataSize() {
+        if (this._estimatedMetadataSize === undefined) {
+            try {
+                // Estimate the size of the metadata of the non-fungible asset being issued
+                const ccMetadata = new CCMetadata();
+
+                const asset = this.asset ? this.asset : Asset.getAssetByAssetId(this.assetId);
+
+                ccMetadata.assetMetadata.setAssetProperties({
+                    ctnAssetId: this.assetId ? this.assetId : newAssetId(),
+                    name: asset.name,
+                    description: asset.description
+                });
+
+                ccMetadata.nfTokenMetadata.addNewNFTokensMetadata(
+                    this._getNFTokensMetadataForSizeEstimate().map(nfTokenProps => {
+                        const metadata = new CCSingleNFTokenMetadata();
+                        metadata.setNFTokenProperties(nfTokenProps)
+
+                        return metadata;
+                    })
+                );
+                
+                const nfTokenEncCryptoKeys = [];
+                
+                for (let idx = 0, limit = this.numberOfNFTokens; idx < limit; idx++) {
+                    nfTokenEncCryptoKeys.push(CryptoKeys.random());
+                }
+                
+                ccMetadata.assemble(CryptoKeys.random(), nfTokenEncCryptoKeys);
+                
+                this._estimatedMetadataSize = ccMetadata.estimatedSize;
+            }
+            catch (err) {
+                Catenis.logger.ERROR('Error while estimating the size of the metadata for issuing the non-fungible asset', err);
+                throw new Error(`Error while estimating the size of the metadata for issuing the non-fungible asset: ${err}`);
+            }
+        }
+
+        return this._estimatedMetadataSize;
+    }
+
+    /**
      * Check if all data for non-fungible asset issuance has already been passed
      */
     get isComplete() {
@@ -365,79 +502,6 @@ export class NFAssetIssuance {
     }
 
     /**
-     * Get the total bytes of the non-fungible tokens' contents for this asset issuance
-     * @return {number}
-     * @private
-     */
-    _getTotalContentsBytes() {
-        const getTotalNFTokensContentsLength = async () => {
-            // noinspection JSUnresolvedFunction
-            const docs = await Catenis.db.mongoCollection.NonFungibleTokenIssuingBatch.aggregate([
-                {
-                    $match:{
-                        nonFungibleAssetIssuance_id: this.doc_id
-                    }
-                },
-                {
-                    $sort: {
-                        order: 1
-                    }
-                },
-                {
-                    $lookup: {
-                        from: 'NonFungibleTokenIssuingPart',
-                        let: {
-                            batch_id: '$_id'
-                        },
-                        pipeline: [
-                            {
-                                $match: {
-                                    contents: {
-                                        $ne: null
-                                    },
-                                    $expr: {
-                                        $eq: ['$nonFungibleTokenIssuingBatch_id', '$$batch_id']
-                                    }
-                                }
-                            },
-                            {
-                                $project: {
-                                    contentsLength: {
-                                        $binarySize: '$contents'
-                                    }
-                                }
-                            }
-                        ],
-                        as: 'nfTokenIssuingParts'
-                    }
-                },
-                {
-                    $unwind: '$nfTokenIssuingParts'
-                },
-                {
-                    $group: {
-                        _id: '$nonFungibleAssetIssuance_id',
-                        totalContentsLength: {
-                            $sum: '$nfTokenIssuingParts.contentsLength'
-                        }
-                    }
-                }
-            ])
-            .toArray();
-
-            return docs && docs.length > 0 ? docs[0].totalContentsLength : 0;
-        }
-
-        try {
-            return Future.fromPromise(getTotalNFTokensContentsLength()).wait();
-        }
-        catch (err) {
-            Catenis.logger.ERROR('Error computing total non-fungible tokens\' contents length for non-fungible asset issuance (doc_id: %s).', this.doc_id, err);
-            throw new Error(`Error computing total non-fungible tokens\' contents length for non-fungible asset issuance (doc_id: ${this.doc_id}): ${err}`);
-        }
-    }
-
-    /**
      * Save non-fungible asset issuance object to the database
      * @private
      */
@@ -526,39 +590,39 @@ export class NFAssetIssuance {
                 error.code = 400;
                 error.message = 'Not enough credits to pay for issue non-fungible asset service';
             }
-            if (err.error === 'ctn_issue_nf_asset_amount_too_large') {
+            else if (err.error === 'ctn_issue_nf_asset_amount_too_large') {
                 error.code = 400;
                 error.message = 'Numer of non-fungible tokens to issue is too large';
             }
-            if (err.error === 'nf_asset_issue_no_token_info') {
+            else if (err.error === 'nf_asset_issue_no_token_info') {
                 error.code = 400;
                 error.message = 'Non-fungible asset issuance cannot be finalized with tokens';
             }
-            if (err.error === 'nf_asset_issue_already_complete' || err.error === 'nft_issue_batch_issuance_already_complete') {
+            else if (err.error === 'nf_asset_issue_already_complete' || err.error === 'nft_issue_batch_issuance_already_complete') {
                 error.code = 400;
                 error.message = 'Non-fungible asset issuance is already complete';
             }
-            if (err.error === 'nf_asset_issue_invalid_cont_token' || err.error === 'nf_asset_issue_wrong_device') {
+            else if (err.error === 'nf_asset_issue_invalid_cont_token' || err.error === 'nf_asset_issue_wrong_device') {
                 error.code = 400;
                 error.message = 'Invalid or unexpected asset issuance continuation token';
             }
-            if (err.error === 'nft_issue_batch_wrong_num_tokens') {
+            else if (err.error === 'nft_issue_batch_wrong_num_tokens') {
                 error.code = 400;
                 error.message = 'Inconsistent number of non-fungible tokens';
             }
-            if (err.error === 'nft_issue_batch_no_token_info') {
+            else if (err.error === 'nft_issue_batch_no_token_info') {
                 error.code = 400;
                 error.message = 'Missing non-fungible token data';
             }
-            if (err.error === 'nft_issue_part_missing_metadata') {
+            else if (err.error === 'nft_issue_part_missing_metadata') {
                 error.code = 400;
                 error.message = 'Missing non-fungible token metadata';
             }
-            if (err.error === 'nft_issue_part_missing_contents') {
+            else if (err.error === 'nft_issue_part_missing_contents') {
                 error.code = 400;
                 error.message = 'Missing non-fungible token contents';
             }
-            if (err.error === 'nft_issue_part_contents_already_finalized') {
+            else if (err.error === 'nft_issue_part_contents_already_finalized') {
                 error.code = 400;
                 error.message = 'Non-fungible token contents is already finalized';
             }
@@ -578,6 +642,39 @@ export class NFAssetIssuance {
         }
 
         return error;
+    }
+
+    /**
+     * Get the metadata for all the non-fungible tokens of this asset issuance for size estimate only.
+     *  Note: the metadata structure returned by this method makes use of dummy contents CIDs as well
+     *      as dummy encryption keys
+     * @returns {NFTokenMetadataStoredContents[]}
+     * @private
+     */
+    _getNFTokensMetadataForSizeEstimate() {
+        if (!this.isComplete) {
+            throw new Error('Unable to get non-fungible tokens\' metadata for size estimate: non-fungible asset issuance data not yet complete');
+        }
+
+        const nfTokensMetadata = [];
+        const firstNFTokenIssuingBatch = this.nfTokenIssuingBatches[0];
+
+        for (let nfTokenIdx = 0, length = this.nonFungibleToken.quantity; nfTokenIdx < length; nfTokenIdx++) {
+            const metadata = firstNFTokenIssuingBatch.getNFTokenIssuingPart(nfTokenIdx).metadata;
+
+            if (!metadata) {
+                Catenis.logger.ERROR('No metadata defined for non-fungible token (idx: %d) of non-fungible asset issuance (assetIssuanceId: %s)', nfTokenIdx, this.assetIssuanceId);
+                throw new Error(`No metadata defined for non-fungible token (idx: ${nfTokenIdx}) of non-fungible asset issuance (assetIssuanceId: ${this.assetIssuanceId})`);
+            }
+
+            nfTokensMetadata.push({
+                ...metadata,
+                contents: NFTokenContentsUrl.dummyUrl,
+                contentsEncrypted: this.nonFungibleToken.encryptContents
+            });
+        }
+
+        return nfTokensMetadata;
     }
 
     /**
@@ -772,15 +869,18 @@ export class NFAssetIssuance {
 
     /**
      * Update the asset issuance progress
-     * @param {number} savedContentsBytes Number of additional non-fungible tokens' contents bytes that have been saved
+     * @param {number} bytesStored Number of additional bytes of data that have been stored
+     * @param {boolean} [isContentsData=false] Identifies the type of data that has been stored. If true, it refers
+     *                                          to the contents of the non-fungible tokens being issued. Otherwise, it
+     *                                          refers to the metadata for issuing the asset
      */
-    updateIssuanceProgress(savedContentsBytes) {
+    updateIssuanceProgress(bytesStored, isContentsData = false) {
         // Validate argument
-        if (!Number.isInteger(savedContentsBytes) || savedContentsBytes < 0) {
+        if (!Number.isInteger(bytesStored) || bytesStored < 0) {
             Catenis.logger.ERROR('NFAssetIssuance.updateIssuanceProgress() method called with invalid argument:', {
-                savedContentsBytes
+                bytesStored
             });
-            throw new TypeError('Invalid savedContentsBytes argument');
+            throw new TypeError('Invalid bytesStored argument');
         }
 
         if (!this.isComplete) {
@@ -789,8 +889,10 @@ export class NFAssetIssuance {
 
         if (!this.progress) {
             this.progress = {
-                totalContentsBytes: this._getTotalContentsBytes(),
-                savedContentsBytes: savedContentsBytes,
+                totalContentsBytes: this._totalNFTokensContentsBytes,
+                contentsBytesStored: isContentsData ? bytesStored : 0,
+                totalMetadataBytes: this._estimatedAssetMetadataSize,
+                metadataBytesStored: !isContentsData ? bytesStored : 0,
                 done: false
             };
         }
@@ -803,7 +905,12 @@ export class NFAssetIssuance {
                 throw new Error('Trying to update non-fungible asset issuance progress that has already been finalized');
             }
 
-            this.progress.savedContentsBytes += savedContentsBytes;
+            if (isContentsData) {
+                this.progress.contentsBytesStored += bytesStored;
+            }
+            else {
+                this.progress.metadataBytesStored += bytesStored;
+            }
         }
 
         // Now, save updated progress to the database
@@ -862,8 +969,10 @@ export class NFAssetIssuance {
 
         if (!this.progress) {
             this.progress = {
-                totalContentsBytes: this._getTotalContentsBytes(),
-                savedContentsBytes: 0,
+                totalContentsBytes: this._totalNFTokensContentsBytes,
+                contentsBytesStored: 0,
+                totalMetadataBytes: this._estimatedAssetMetadataSize,
+                metadataBytesStored: 0,
                 done: true
             };
         }
@@ -921,15 +1030,21 @@ export class NFAssetIssuance {
 
         if (!this.progress) {
             this.progress = {
-                totalContentsBytes: this._getTotalContentsBytes(),
-                savedContentsBytes: 0,
+                totalContentsBytes: this._totalNFTokensContentsBytes,
+                contentsBytesStored: 0,
+                totalMetadataBytes: this._estimatedAssetMetadataSize,
+                metadataBytesStored: 0,
                 done: false
             };
         }
 
         const retVal = {
             progress: {
-                percentProcessed: Math.floor((this.progress.savedContentsBytes / this.progress.totalContentsBytes) * cfgSettings.percentSaveNFTokenContents),
+                percentProcessed: Math.floor(
+                ((this.progress.contentsBytesStored + this.progress.metadataBytesStored)
+                        / (this.progress.totalContentsBytes + this.progress.totalMetadataBytes))
+                        * cfgSettings.percentSaveNFTokensMetadata
+                ),
                 done: this.progress.done
             }
         };

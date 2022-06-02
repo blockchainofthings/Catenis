@@ -1201,16 +1201,17 @@ CCTransaction.prototype.replaceCcMetadata = function (ccMetadata) {
     }
 };
 
-// Assemble Colored Coins data and add Colored Coins related outputs to transaction
-//
-//  Arguments:
-//   spendMultiSigOutputAddress: [String] - Blockchain address used to spend multi-signature output if one is required
-//
-//  Return:
-//   success: [Boolean] - True if Colored Coins transaction had been successfully assembled (or was already assembled),
-//                         or false otherwise (not all transfer input sequences have all their asset amount set to be
-//                         transferred/burnt)
-CCTransaction.prototype.assemble = function (spendMultiSigOutputAddress) {
+/**
+ * Assemble Colored Coins data and add Colored Coins related outputs to transaction
+ * @param {string} [spendMultiSigOutputAddress] Blockchain address used to spend multi-signature output if one is
+ *                                               required
+ * @param {StoreProgressCallback} [metadataProgressCallback] Callback to report progress while storing the associated
+ *                                                            Colored Coins metadata (if any)
+ * @returns {boolean} True if Colored Coins transaction had been successfully assembled (or was already assembled),
+ *                     or false otherwise (not all transfer input sequences have all their asset amount set to be
+ *                     transferred/burnt)
+ */
+CCTransaction.prototype.assemble = function (spendMultiSigOutputAddress, metadataProgressCallback) {
     // Make sure that Colored Coins transaction is not yet assembled
     if (!this.isAssembled) {
         // Make sure that assets from all inputs have been set to be transferred/burnt
@@ -1308,7 +1309,7 @@ CCTransaction.prototype.assemble = function (spendMultiSigOutputAddress) {
                             }
                         }
                         else {
-                            // Asset transfer
+                            // Transfer of an existing asset
                             const firstInputOfSeq = this.getInputAt(inputSeqStartPos);
 
                             txOutput = {
@@ -1362,7 +1363,7 @@ CCTransaction.prototype.assemble = function (spendMultiSigOutputAddress) {
                             }
                         }
                         else {
-                            // Asset transfer
+                            // Transfer of an existing asset
                             if (inputSeqCCTokenIds.length > 0) {
                                 txOutput.ccTokenIds = txOutput.ccTokenIds.concat(
                                     inputSeqCCTokenIds.slice(
@@ -1474,15 +1475,13 @@ CCTransaction.prototype.assemble = function (spendMultiSigOutputAddress) {
                     }
                 }
 
-                // Set output offset to 1 plus the number of payment outputs before null data output
-                //  to already account for the null data output (the multisig output shall be accounted
-                //  for later if it is present)
-                const outPosOffset = numPayOutputsBeforeNullData + 1;
-
                 ccCommands.forEach(command => {
                     if (command.method === ccBuilder.addPayment && !command.args[3]/*range*/) {
-                       // Adjust output position
-                       command.args[2]/*output*/ = outPosOffset
+                        // Adjust output position. Note that all payment outputs are incremented by one
+                        //  to account for the fact that, in the end, the transfer outputs shall be shifted
+                        //  by the null data output that is added before them. The multisig output shall be
+                        //  accounted for later if it is present
+                        command.args[2]/*output*/ = 1
                            + (
                                command.args[2]/*output*/ < 0
                                ? negativePaymentOutputFixedOutput.get(command.args[2]/*output*/)
@@ -1510,7 +1509,7 @@ CCTransaction.prototype.assemble = function (spendMultiSigOutputAddress) {
                     }
 
                     // Store metadata
-                    this.ccMetadata.store();
+                    this.ccMetadata.store(metadataProgressCallback);
                 }
 
                 if (this.ccMetadata.isStored) {
@@ -2371,7 +2370,7 @@ CCTransaction.fromTransaction = function (transact) {
                             else {
                                 // Expected last output position for input sequence already set.
                                 //  Validate reverse order position
-                                if (payment.output === expectedLastOutputPos - (curInputPos - firstOutputPos)) {
+                                if (payment.output === expectedLastOutputPos - (curOutputPos - firstOutputPos)) {
                                     outputInReverseOrder = true;
                                 }
                                 else {

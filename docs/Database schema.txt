@@ -618,8 +618,10 @@ NonFungibleAssetIssuance {
     encryptContents: [boolean]  // Indicates whether the non-fungible tokens contents should be encrypted before being stored (on IPFS)
   },
   progress: {   // Note: this field should not exist until all the non-fungible token data have been passed by the user
-    totalContentsBytes: [number],  // Total non-fungible tokens' contents length in bytes (to be saved)
-    savedContentsBytes: [number],  // Number of non-fungible tokens' contents bytes already saved
+    totalContentsBytes: [number],  // Total non-fungible tokens' contents length in bytes (to be stored on IPFS)
+    contentsBytesStored: [number],  // Number of non-fungible tokens' contents bytes already stored
+    totalMetadataBytes: [number],  // Total length of metadata for issuing asset metadata in bytes (to be stored on IPFS)
+    metadataBytesStored: [number],  // Number of metadata bytes already stored
     done: [boolean],           // Indicates whether processing has been finalized either successfully (asset issued) or with an error
     success: [boolean],        // (optional) Indicates whether the asset issuance has been successfully completed. Only present after processing is finalized
     error: {  // (optional) Only present if processing was finalized with an error

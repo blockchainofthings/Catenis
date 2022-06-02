@@ -297,8 +297,9 @@ export class IssueNFAssetTransaction {
             // Pre-allocate multi-signature signee address
             const multiSigSigneeAddr = this.issuingDevice.client.ctnNode.multiSigSigneeAddr.newAddressKeys().getAddress();
 
-            // Assemble Colored Coins transaction
-            this.ccTransact.assemble(multiSigSigneeAddr);
+            // Assemble Colored Coins transaction, passing a callback to register the
+            //  progress of metadata storage
+            this.ccTransact.assemble(multiSigSigneeAddr, this.nfAssetIssuance.updateIssuanceProgress.bind(this.nfAssetIssuance));
 
             if (!this.ccTransact.includesMultiSigOutput) {
                 // Revert pre-allocated multi-signature signee address
@@ -422,11 +423,7 @@ export class IssueNFAssetTransaction {
             try {
                 Catenis.txMonitor.pausePoll();
 
-                // DEBUG - Begin
-                //this.ccTransact.sendTransaction();
-                Catenis.logger.DEBUG('>>>>>> Issue Non-Fungible Asset raw transaction: ' + this.ccTransact.getTransaction());
-                throw new Error('DEBUG - Simulating send transaction error');
-                // DEBUG - End
+                this.ccTransact.sendTransaction();
 
                 // Create Asset database doc/rec if it does not yet exist (newly issued asset)
                 if (!this.asset) {

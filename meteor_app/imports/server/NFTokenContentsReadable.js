@@ -25,7 +25,8 @@ const nftContReadableConfig = config.get('nfTokenContentsReadable');
 
 // Configuration settings
 const cfgSettings = {
-    highWaterMark: nftContReadableConfig.get('highWaterMark')
+    highWaterMark: nftContReadableConfig.get('highWaterMark'),
+    defaultReadChunkSize: nftContReadableConfig.get('defaultReadChunkSize')
 };
 
 
@@ -55,8 +56,6 @@ export class NFTokenContentsReadable extends Readable {
         this.nfAssetIssuance = nfAssetIssuance;
         this.nfTokenIdx = nfTokenIdx;
 
-        this.open = true;
-
         this.contentsParts = nfAssetIssuance.getNFTokenContentsParts(nfTokenIdx);
         this.contentsPartIdx = 0;
         
@@ -65,33 +64,30 @@ export class NFTokenContentsReadable extends Readable {
 
     /**
      * Implementation of readable stream's standard method
+     * @param {(Error|null)} err Error object reporting a possible error
+     * @param {Function} callback Callback function to be called after finishing the processing
+     * @private
      */
     _destroy(err, callback) {
         if (err) {
             Catenis.logger.DEBUG('Non-fungible token contents readable stream is being destroyed because of an error:', err);
         }
 
-        // Close stream
-        this.open = false;
-
-        process.nextTick(() => this.emit('close'));
-
-        callback();
+        callback(null);
     }
 
     /**
      * Implementation of readable stream's standard method
+     * @param {number} size The size of the chunk to read
+     * @private
      */
     _read(size) {
-        // Only do any processing if stream is still open
-        if (this.open) {
-            this.boundProcessRead(size);
-        }
+        this.boundProcessRead(size);
     }
     
     /**
      * Internal method to process standard _read() method
-     * @param {number} size Number of bytes to read
+     * @param {number} [size] Number of bytes to read
      * @private
      */
     _processRead(size) {
@@ -111,7 +107,7 @@ export class NFTokenContentsReadable extends Readable {
                 this.push(null);
             }
             else {
-                const bytesToRead = size || cfgSettings.highWaterMark;
+                const bytesToRead = size || cfgSettings.defaultReadChunkSize;
                 let bytesRead = 0;
                 let dataToSend = Buffer.from('');
 
@@ -141,7 +137,7 @@ export class NFTokenContentsReadable extends Readable {
                 }
 
                 // Update asset issuance progress
-                this.nfAssetIssuance.updateIssuanceProgress(bytesRead);
+                this.nfAssetIssuance.updateIssuanceProgress(bytesRead, true);
 
                 // Send data
                 this.push(dataToSend);
@@ -154,7 +150,7 @@ export class NFTokenContentsReadable extends Readable {
         }
         catch (err) {
             Catenis.logger.ERROR('Error reading non-fungible token contents readable stream.', err);
-            process.nextTick(() => this.emit('error', new Error('Error reading non-fungible token contents readable stream: ' + err.toString())));
+            this.destroy(new Error('Error reading non-fungible token contents readable stream: ' + err.toString()));
         }
     }
 

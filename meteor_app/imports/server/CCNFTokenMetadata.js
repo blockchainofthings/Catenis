@@ -279,6 +279,36 @@ export class CCNFTokenMetadata {
     }
 
     /**
+     * Add metadata for newly issued non-fungible tokens
+     * @param {(CCSingleNFTokenMetadata[]|CCSingleNFTokenMetadata)} metadata A list of or a single non-fungible token
+     *                                                      metadata to add
+     */
+    addNewNFTokensMetadata(metadata) {
+        // Validate arguments
+        const errArg = {};
+
+        if (!(metadata instanceof CCSingleNFTokenMetadata)
+                && (!Array.isArray(metadata) || metadata.length === 0
+                || metadata.some(data => !(data instanceof CCSingleNFTokenMetadata)))) {
+            errArg.metadata = metadata;
+        }
+
+        if (Object.keys(errArg).length > 0) {
+            const errArgs = Object.keys(errArg);
+
+            Catenis.logger.ERROR(`CCNFTokenMetadata.addNewNFTokenMetadata() method called with invalid argument${errArgs.length > 1 ? 's' : ''}`, errArg);
+            throw new TypeError(`Invalid ${errArgs.join(', ')} argument${errArgs.length > 1 ? 's' : ''}`);
+        }
+
+        if (!Array.isArray(metadata)) {
+            metadata = [metadata];
+        }
+
+        // Add new token metadata to the list
+        this.newTokens = this.newTokens.concat(metadata);
+    }
+
+    /**
      * Add a single non-fungible token metadata to be updated
      * @param {string} tokenId The ID of the non-fungible token to be updated
      * @param {CCSingleNFTokenMetadata} metadata The updated single non-fungible token metadata

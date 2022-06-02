@@ -21,9 +21,16 @@ import _und from 'underscore';
 import { Catenis } from '../Catenis';
 import { NFAssetIssuance } from '../NFAssetIssuance';
 import { NFTokenContentsUrl } from '../NFTokenContentsUrl';
+import { EccLibraryProxy } from '../EccLibraryProxy';
+import { Bip32 } from '../Bip32';
 
 
 describe('NFAssetIssuance module', function () {
+    before(function () {
+        EccLibraryProxy.initialize();
+        Bip32.initialize();
+    });
+
     describe('Failure instantiating non-fungible asset issuance object', function () {
         const nfTokenInfos = [
             {
@@ -235,7 +242,24 @@ describe('NFAssetIssuance module', function () {
                     name: 'Test NFT #1',
                     description: 'Non-fungible token #1 used for testing'
                 },
-                contents: Buffer.from('NFT #1 contents: bla, bla, bla')
+                contents: Buffer.from('NFT #1 contents: blah, blah, blah, blah, blah, blah, blah, blah, blah, blah'
+                    + ', blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah'
+                    + ', blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah'
+                    + ', blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah'
+                    + ', blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah'
+                    + ', blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah'
+                    + ', blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah'
+                    + ', blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah'
+                    + ', blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah'
+                    + ', blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah'
+                    + ', blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah'
+                    + ', blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah'
+                    + ', blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah'
+                    + ', blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah'
+                    + ', blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah'
+                    + ', blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah'
+                    + ', blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah'
+                    + ', blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah')
             },
             {
                 metadata: {
@@ -248,7 +272,24 @@ describe('NFAssetIssuance module', function () {
                     name: 'Test NFT #3',
                     description: 'Non-fungible token #3 used for testing'
                 },
-                contents: Buffer.from('NFT #3 contents: bla')
+                contents: Buffer.from('NFT #3 contents: blah, blah, blah, blah, blah, blah, blah, blah, blah, blah'
+                    + ', blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah'
+                    + ', blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah'
+                    + ', blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah'
+                    + ', blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah'
+                    + ', blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah'
+                    + ', blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah'
+                    + ', blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah'
+                    + ', blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah'
+                    + ', blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah'
+                    + ', blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah'
+                    + ', blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah'
+                    + ', blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah'
+                    + ', blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah'
+                    + ', blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah'
+                    + ', blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah'
+                    + ', blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah'
+                    + ', blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah')
             }
         ];
         let nfAssetIssuance;
@@ -349,8 +390,18 @@ describe('NFAssetIssuance module', function () {
             .to.throw('Unable to get list of non-fungible tokens with contents: non-fungible asset issuance data not yet complete');
         });
 
-        it('should successfully get the correct total contents', function () {
-            expect(nfAssetIssuance._getTotalContentsBytes()).to.equal(nfTokenInfos[0].contents.length + nfTokenInfos[2].contents.length);
+        it('should fail trying to get the total length of the non-fungible tokens\' contents (not complete)', function () {
+            expect(() => {
+                nfAssetIssuance._totalNFTokensContentsBytes;
+            })
+            .to.throw('Error computing total non-fungible tokens\' contents length for non-fungible asset issuance: Error: Non-fungible asset issuance data not yet complete');
+        });
+
+        it('should fail trying to retrieve the estimated size of the non-fungible asset metadata (not complete)', function () {
+            expect(() => {
+                nfAssetIssuance._estimatedAssetMetadataSize;
+            })
+            .to.throw('Error while estimating the size of the metadata for issuing the non-fungible asset: Error: Unable to get non-fungible tokens\' metadata for size estimate: non-fungible asset issuance data not yet complete');
         });
 
         it('should fail trying to add one more toke issuing batch', function () {
@@ -431,18 +482,25 @@ describe('NFAssetIssuance module', function () {
             .to.throw('Unable to get non-fungible tokens\' metadata: non-fungible asset issuance data not yet complete');
         });
 
+        it('should fail getting tokens metadata for size estimate (not complete)', function () {
+            expect(() => {
+                nfAssetIssuance._getNFTokensMetadataForSizeEstimate();
+            })
+            .to.throw('Unable to get non-fungible tokens\' metadata for size estimate: non-fungible asset issuance data not yet complete');
+        });
+
         it('should fail updating issuance progress (invalid parameter: not a number)', function () {
             expect(() => {
                 nfAssetIssuance.updateIssuanceProgress('blah');
             })
-            .to.throw('Invalid savedContentsBytes argument');
+            .to.throw('Invalid bytesStored argument');
         });
 
         it('should fail updating issuance progress (invalid parameter: too low)', function () {
             expect(() => {
                 nfAssetIssuance.updateIssuanceProgress(-1);
             })
-            .to.throw('Invalid savedContentsBytes argument');
+            .to.throw('Invalid bytesStored argument');
         });
 
         it('should fail updating issuance progress (not complete)', function () {
@@ -573,7 +631,24 @@ describe('NFAssetIssuance module', function () {
                 null,
                 null,
                 {
-                    contents: Buffer.from('NFT #3 contents (cont.): bla, bla, bla')
+                    contents: Buffer.from('NFT #3 contents (cont.): blah, blah, blah, blah, blah, blah, blah, blah'
+                        + ', blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah'
+                        + ', blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah'
+                        + ', blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah'
+                        + ', blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah'
+                        + ', blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah'
+                        + ', blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah'
+                        + ', blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah'
+                        + ', blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah'
+                        + ', blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah'
+                        + ', blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah'
+                        + ', blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah'
+                        + ', blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah'
+                        + ', blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah'
+                        + ', blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah'
+                        + ', blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah'
+                        + ', blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah'
+                        + ', blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah, blah')
                 }
             ];
             let savedProgress;
@@ -628,11 +703,15 @@ describe('NFAssetIssuance module', function () {
                 expect(nfAssetIssuance.nfTokensWithContents).to.deep.equal([0,2]);
             });
 
-            it('should successfully get the correct total contents', function () {
-                expect(nfAssetIssuance._getTotalContentsBytes()).to.equal(
-                    nfTokenInfos[0].contents.length + nfTokenInfos[2].contents.length
-                        + finalNFTokenInfos[2].contents.length
-                );
+            it('should successfully get the total length of the non-fungible tokens\' contents', function () {
+                expect(nfAssetIssuance._totalContentsBytes).to.be.undefined;
+
+                const totalNFTokensContentsBytes = nfAssetIssuance._totalNFTokensContentsBytes;
+
+                expect(totalNFTokensContentsBytes)
+                .to.equal(nfTokenInfos[0].contents.length + nfTokenInfos[2].contents.length
+                    + finalNFTokenInfos[2].contents.length);
+                expect(nfAssetIssuance._totalContentsBytes).to.equal(totalNFTokensContentsBytes);
             });
 
             it('should correctly retrieve the token contents parts (token #1)', function () {
@@ -753,7 +832,40 @@ describe('NFAssetIssuance module', function () {
                 ]);
             });
 
-            it('should correctly retrieve issuance progress (no bytes saved)', function () {
+            it('should correctly retrieve tokens metadata for size estimate', function () {
+                expect(nfAssetIssuance._getNFTokensMetadataForSizeEstimate())
+                .to.deep.equal([
+                    {
+                        name: 'Test NFT #1',
+                        description: 'Non-fungible token #1 used for testing',
+                        contents: NFTokenContentsUrl.dummyUrl,
+                        contentsEncrypted: true
+                    },
+                    {
+                        name: 'Test NFT #2',
+                        description: 'Non-fungible token #2 used for testing',
+                        contents: NFTokenContentsUrl.dummyUrl,
+                        contentsEncrypted: true
+                    },
+                    {
+                        name: 'Test NFT #3',
+                        description: 'Non-fungible token #3 used for testing',
+                        contents: NFTokenContentsUrl.dummyUrl,
+                        contentsEncrypted: true
+                    }
+                ]);
+            });
+
+            it('should correctly retrieve the estimated size of the non-fungible asset metadata', function () {
+                expect(nfAssetIssuance._estimatedMetadataSize).to.be.undefined;
+
+                const estimatedAssetMetadataSize = nfAssetIssuance._estimatedAssetMetadataSize;
+
+                expect(estimatedAssetMetadataSize).to.equal(5114);
+                expect(nfAssetIssuance._estimatedMetadataSize).to.equal(estimatedAssetMetadataSize);
+            });
+
+            it('should correctly retrieve issuance progress (no contents and no metadata stored)', function () {
                 expect(nfAssetIssuance.progress).to.equal(undefined);
 
                 expect(nfAssetIssuance.getIssuanceProgress()).to.deep.equal({
@@ -763,20 +875,22 @@ describe('NFAssetIssuance module', function () {
                     }
                 });
                 expect(nfAssetIssuance.progress).to.deep.equal({
-                    totalContentsBytes: nfTokenInfos[0].contents.length + nfTokenInfos[2].contents.length
-                        + finalNFTokenInfos[2].contents.length,
-                    savedContentsBytes: 0,
+                    totalContentsBytes: nfAssetIssuance._totalNFTokensContentsBytes,
+                    contentsBytesStored: 0,
+                    totalMetadataBytes: nfAssetIssuance._estimatedAssetMetadataSize,
+                    metadataBytesStored: 0,
                     done: false
                 });
             });
 
-            it('should successfully update issuance progress (initial 10 bytes)', function () {
-                nfAssetIssuance.updateIssuanceProgress(10);
+            it('should successfully update issuance progress (initial 1,000 contents bytes, and no metadata)', function () {
+                nfAssetIssuance.updateIssuanceProgress(1000, true);
 
                 expect(nfAssetIssuance.progress).to.deep.equal({
-                    totalContentsBytes: nfTokenInfos[0].contents.length + nfTokenInfos[2].contents.length
-                        + finalNFTokenInfos[2].contents.length,
-                    savedContentsBytes: 10,
+                    totalContentsBytes: nfAssetIssuance._totalNFTokensContentsBytes,
+                    contentsBytesStored: 1000,
+                    totalMetadataBytes: nfAssetIssuance._estimatedAssetMetadataSize,
+                    metadataBytesStored: 0,
                     done: false
                 });
 
@@ -785,24 +899,27 @@ describe('NFAssetIssuance module', function () {
                     Catenis.db.collection.NonFungibleAssetIssuance.findOne(nfAssetIssuance.doc_id),
                     true
                 );
-                filteredNFAssetIssuance = _und.mapObject(nfAssetIssuance, (val, key) => {
-                    if (key === 'nfTokenIssuingBatches') {
-                        return val.map(obj => _und.mapObject(
-                            _und.omit(obj, '_nfAssetIssuance'),
-                            (val, key) => {
-                                if (key === 'nfTokenIssuingParts') {
-                                    return val.map(obj => _und.omit(obj, '_nfTokenIssuingBatch'));
+                filteredNFAssetIssuance = _und.mapObject(
+                    _und.omit(nfAssetIssuance, '_estimatedMetadataSize', '_totalContentsBytes'),
+                    (val, key) => {
+                        if (key === 'nfTokenIssuingBatches') {
+                            return val.map(obj => _und.mapObject(
+                                _und.omit(obj, '_nfAssetIssuance'),
+                                (val, key) => {
+                                    if (key === 'nfTokenIssuingParts') {
+                                        return val.map(obj => _und.omit(obj, '_nfTokenIssuingBatch'));
+                                    }
+                                    else {
+                                        return val;
+                                    }
                                 }
-                                else {
-                                    return val;
-                                }
-                            }
-                        ));
+                            ));
+                        }
+                        else {
+                            return val;
+                        }
                     }
-                    else {
-                        return val;
-                    }
-                });
+                );
 
                 expect(_und.omit(dbNFAssetIssuance, [
                     'assetId',
@@ -811,25 +928,29 @@ describe('NFAssetIssuance module', function () {
                 .to.deep.equal(filteredNFAssetIssuance);
             });
 
-            it('should correctly retrieve issuance progress (10 bytes saved)', function () {
+            it('should correctly retrieve issuance progress (1,000 contents and no metadata stored)', function () {
+                const percentProcessed = Math.floor(
+                    (1000 / (nfAssetIssuance._totalNFTokensContentsBytes
+                        + nfAssetIssuance._estimatedAssetMetadataSize)) * 95
+                );
+                console.debug('>>>>>> percentProcessed:', percentProcessed);
+
                 expect(nfAssetIssuance.getIssuanceProgress()).to.deep.equal({
                     progress: {
-                        percentProcessed: 11,
+                        percentProcessed,
                         done: false
                     }
                 });
             });
 
-            it('should successfully update issuance progress (remaining bytes)', function () {
-                const totalContentsBytes = nfTokenInfos[0].contents.length + nfTokenInfos[2].contents.length
-                    + finalNFTokenInfos[2].contents.length;
-                const savedContentsBytes = totalContentsBytes - 10;
-
-                nfAssetIssuance.updateIssuanceProgress(savedContentsBytes);
+            it('should successfully update issuance progress (remaining contents bytes, and no metadata)', function () {
+                nfAssetIssuance.updateIssuanceProgress(nfAssetIssuance._totalNFTokensContentsBytes - 1000, true);
 
                 expect(nfAssetIssuance.progress).to.deep.equal({
-                    totalContentsBytes,
-                    savedContentsBytes: 10 + savedContentsBytes,
+                    totalContentsBytes: nfAssetIssuance._totalNFTokensContentsBytes,
+                    contentsBytesStored: nfAssetIssuance._totalNFTokensContentsBytes,
+                    totalMetadataBytes: nfAssetIssuance._estimatedAssetMetadataSize,
+                    metadataBytesStored: 0,
                     done: false
                 });
 
@@ -838,24 +959,27 @@ describe('NFAssetIssuance module', function () {
                     Catenis.db.collection.NonFungibleAssetIssuance.findOne(nfAssetIssuance.doc_id),
                     true
                 );
-                filteredNFAssetIssuance = _und.mapObject(nfAssetIssuance, (val, key) => {
-                    if (key === 'nfTokenIssuingBatches') {
-                        return val.map(obj => _und.mapObject(
-                            _und.omit(obj, '_nfAssetIssuance'),
-                            (val, key) => {
-                                if (key === 'nfTokenIssuingParts') {
-                                    return val.map(obj => _und.omit(obj, '_nfTokenIssuingBatch'));
+                filteredNFAssetIssuance = _und.mapObject(
+                    _und.omit(nfAssetIssuance, '_estimatedMetadataSize', '_totalContentsBytes'),
+                    (val, key) => {
+                        if (key === 'nfTokenIssuingBatches') {
+                            return val.map(obj => _und.mapObject(
+                                _und.omit(obj, '_nfAssetIssuance'),
+                                (val, key) => {
+                                    if (key === 'nfTokenIssuingParts') {
+                                        return val.map(obj => _und.omit(obj, '_nfTokenIssuingBatch'));
+                                    }
+                                    else {
+                                        return val;
+                                    }
                                 }
-                                else {
-                                    return val;
-                                }
-                            }
-                        ));
+                            ));
+                        }
+                        else {
+                            return val;
+                        }
                     }
-                    else {
-                        return val;
-                    }
-                });
+                );
 
                 expect(_und.omit(dbNFAssetIssuance, [
                     'assetId',
@@ -864,10 +988,137 @@ describe('NFAssetIssuance module', function () {
                 .to.deep.equal(filteredNFAssetIssuance);
             });
 
-            it('should correctly retrieve issuance progress (all bytes saved)', function () {
+            it('should correctly retrieve issuance progress (all contents and no metadata stored)', function () {
+                const percentProcessed = Math.floor(
+                    (nfAssetIssuance._totalNFTokensContentsBytes / (nfAssetIssuance._totalNFTokensContentsBytes
+                        + nfAssetIssuance._estimatedAssetMetadataSize)) * 95
+                );
+                console.debug('>>>>>> percentProcessed:', percentProcessed);
+
                 expect(nfAssetIssuance.getIssuanceProgress()).to.deep.equal({
                     progress: {
-                        percentProcessed: 98,
+                        percentProcessed,
+                        done: false
+                    }
+                });
+            });
+
+            it('should successfully update issuance progress (all contents, and first 1,200 bytes of metadata)', function () {
+                nfAssetIssuance.updateIssuanceProgress(1200, false);
+
+                expect(nfAssetIssuance.progress).to.deep.equal({
+                    totalContentsBytes: nfAssetIssuance._totalNFTokensContentsBytes,
+                    contentsBytesStored: nfAssetIssuance._totalNFTokensContentsBytes,
+                    totalMetadataBytes: nfAssetIssuance._estimatedAssetMetadataSize,
+                    metadataBytesStored: 1200,
+                    done: false
+                });
+
+                // Make sure that database was correctly updated
+                dbNFAssetIssuance = new NFAssetIssuance(
+                    Catenis.db.collection.NonFungibleAssetIssuance.findOne(nfAssetIssuance.doc_id),
+                    true
+                );
+                filteredNFAssetIssuance = _und.mapObject(
+                    _und.omit(nfAssetIssuance, '_estimatedMetadataSize', '_totalContentsBytes'),
+                    (val, key) => {
+                        if (key === 'nfTokenIssuingBatches') {
+                            return val.map(obj => _und.mapObject(
+                                _und.omit(obj, '_nfAssetIssuance'),
+                                (val, key) => {
+                                    if (key === 'nfTokenIssuingParts') {
+                                        return val.map(obj => _und.omit(obj, '_nfTokenIssuingBatch'));
+                                    }
+                                    else {
+                                        return val;
+                                    }
+                                }
+                            ));
+                        }
+                        else {
+                            return val;
+                        }
+                    }
+                );
+
+                expect(_und.omit(dbNFAssetIssuance, [
+                    'assetId',
+                    'tokenIds'
+                ]))
+                .to.deep.equal(filteredNFAssetIssuance);
+            });
+
+            it('should correctly retrieve issuance progress (all contents and 1,200 bytes of metadata stored)', function () {
+                const percentProcessed = Math.floor(
+                    ((nfAssetIssuance._totalNFTokensContentsBytes + 1200) / (nfAssetIssuance._totalNFTokensContentsBytes
+                        + nfAssetIssuance._estimatedAssetMetadataSize)) * 95
+                );
+                console.debug('>>>>>> percentProcessed:', percentProcessed);
+
+                expect(nfAssetIssuance.getIssuanceProgress()).to.deep.equal({
+                    progress: {
+                        percentProcessed,
+                        done: false
+                    }
+                });
+            });
+
+            it('should successfully update issuance progress (all contents, and remaining bytes of metadata)', function () {
+                nfAssetIssuance.updateIssuanceProgress(nfAssetIssuance._estimatedAssetMetadataSize - 1200, false);
+
+                expect(nfAssetIssuance.progress).to.deep.equal({
+                    totalContentsBytes: nfAssetIssuance._totalNFTokensContentsBytes,
+                    contentsBytesStored: nfAssetIssuance._totalNFTokensContentsBytes,
+                    totalMetadataBytes: nfAssetIssuance._estimatedAssetMetadataSize,
+                    metadataBytesStored: nfAssetIssuance._estimatedAssetMetadataSize,
+                    done: false
+                });
+
+                // Make sure that database was correctly updated
+                dbNFAssetIssuance = new NFAssetIssuance(
+                    Catenis.db.collection.NonFungibleAssetIssuance.findOne(nfAssetIssuance.doc_id),
+                    true
+                );
+                filteredNFAssetIssuance = _und.mapObject(
+                    _und.omit(nfAssetIssuance, '_estimatedMetadataSize', '_totalContentsBytes'),
+                    (val, key) => {
+                        if (key === 'nfTokenIssuingBatches') {
+                            return val.map(obj => _und.mapObject(
+                                _und.omit(obj, '_nfAssetIssuance'),
+                                (val, key) => {
+                                    if (key === 'nfTokenIssuingParts') {
+                                        return val.map(obj => _und.omit(obj, '_nfTokenIssuingBatch'));
+                                    }
+                                    else {
+                                        return val;
+                                    }
+                                }
+                            ));
+                        }
+                        else {
+                            return val;
+                        }
+                    }
+                );
+
+                expect(_und.omit(dbNFAssetIssuance, [
+                    'assetId',
+                    'tokenIds'
+                ]))
+                .to.deep.equal(filteredNFAssetIssuance);
+            });
+
+            it('should correctly retrieve issuance progress (all contents and all metadata stored)', function () {
+                const percentProcessed = Math.floor(
+                    ((nfAssetIssuance._totalNFTokensContentsBytes + nfAssetIssuance._estimatedAssetMetadataSize)
+                        / (nfAssetIssuance._totalNFTokensContentsBytes + nfAssetIssuance._estimatedAssetMetadataSize))
+                        * 95
+                );
+                console.debug('>>>>>> percentProcessed:', percentProcessed);
+
+                expect(nfAssetIssuance.getIssuanceProgress()).to.deep.equal({
+                    progress: {
+                        percentProcessed,
                         done: false
                     }
                 });
@@ -894,7 +1145,7 @@ describe('NFAssetIssuance module', function () {
                 .to.throw('Unable to finalize issuance progress: missing non-fungible asset Id');
             });
 
-            it('should correctly finalize issuance progress (no bytes saved, error)', function () {
+            it('should correctly finalize issuance progress (no contents and no metadata stored, error)', function () {
                 // Save current issuance progress, and clear it
                 savedProgress = nfAssetIssuance.progress;
                 nfAssetIssuance.progress = undefined;
@@ -903,9 +1154,10 @@ describe('NFAssetIssuance module', function () {
 
                 expect(_und.omit(nfAssetIssuance.progress, 'finishDate'))
                 .to.deep.equal({
-                    totalContentsBytes: nfTokenInfos[0].contents.length + nfTokenInfos[2].contents.length
-                        + finalNFTokenInfos[2].contents.length,
-                    savedContentsBytes: 0,
+                    totalContentsBytes: nfAssetIssuance._totalNFTokensContentsBytes,
+                    contentsBytesStored: 0,
+                    totalMetadataBytes: nfAssetIssuance._estimatedAssetMetadataSize,
+                    metadataBytesStored: 0,
                     done: true,
                     success: false,
                     error: {
@@ -920,24 +1172,27 @@ describe('NFAssetIssuance module', function () {
                     Catenis.db.collection.NonFungibleAssetIssuance.findOne(nfAssetIssuance.doc_id),
                     true
                 );
-                filteredNFAssetIssuance = _und.mapObject(nfAssetIssuance, (val, key) => {
-                    if (key === 'nfTokenIssuingBatches') {
-                        return val.map(obj => _und.mapObject(
-                            _und.omit(obj, '_nfAssetIssuance'),
-                            (val, key) => {
-                                if (key === 'nfTokenIssuingParts') {
-                                    return val.map(obj => _und.omit(obj, '_nfTokenIssuingBatch'));
+                filteredNFAssetIssuance = _und.mapObject(
+                    _und.omit(nfAssetIssuance, '_estimatedMetadataSize', '_totalContentsBytes'),
+                    (val, key) => {
+                        if (key === 'nfTokenIssuingBatches') {
+                            return val.map(obj => _und.mapObject(
+                                _und.omit(obj, '_nfAssetIssuance'),
+                                (val, key) => {
+                                    if (key === 'nfTokenIssuingParts') {
+                                        return val.map(obj => _und.omit(obj, '_nfTokenIssuingBatch'));
+                                    }
+                                    else {
+                                        return val;
+                                    }
                                 }
-                                else {
-                                    return val;
-                                }
-                            }
-                        ));
+                            ));
+                        }
+                        else {
+                            return val;
+                        }
                     }
-                    else {
-                        return val;
-                    }
-                });
+                );
 
                 expect(_und.omit(dbNFAssetIssuance, [
                     'assetId',
@@ -946,7 +1201,7 @@ describe('NFAssetIssuance module', function () {
                 .to.deep.equal(filteredNFAssetIssuance);
             });
 
-            it('should correctly retrieve issuance progress (no bytes saved, error)', function () {
+            it('should correctly retrieve issuance progress (no contents and no metadata stored, error)', function () {
                 expect(nfAssetIssuance.getIssuanceProgress()).to.deep.equal({
                     progress: {
                         percentProcessed: 0,
@@ -960,7 +1215,7 @@ describe('NFAssetIssuance module', function () {
                 });
             });
 
-            it('should correctly finalize issuance progress (all bytes saved, success)', function () {
+            it('should correctly finalize issuance progress (all contents and all metadata stored, success)', function () {
                 // Reset issuance progress
                 nfAssetIssuance.progress = savedProgress;
 
@@ -974,13 +1229,12 @@ describe('NFAssetIssuance module', function () {
                     'a00001'
                 );
 
-                const totalContentsBytes = nfTokenInfos[0].contents.length + nfTokenInfos[2].contents.length
-                    + finalNFTokenInfos[2].contents.length;
-
                 expect(_und.omit(nfAssetIssuance.progress, 'finishDate'))
                 .to.deep.equal({
-                    totalContentsBytes,
-                    savedContentsBytes: totalContentsBytes,
+                    totalContentsBytes: nfAssetIssuance._totalNFTokensContentsBytes,
+                    contentsBytesStored: nfAssetIssuance._totalNFTokensContentsBytes,
+                    totalMetadataBytes: nfAssetIssuance._estimatedAssetMetadataSize,
+                    metadataBytesStored: nfAssetIssuance._estimatedAssetMetadataSize,
                     done: true,
                     success: true
                 });
@@ -996,33 +1250,43 @@ describe('NFAssetIssuance module', function () {
                     Catenis.db.collection.NonFungibleAssetIssuance.findOne(nfAssetIssuance.doc_id),
                     true
                 );
-                filteredNFAssetIssuance = _und.mapObject(nfAssetIssuance, (val, key) => {
-                    if (key === 'nfTokenIssuingBatches') {
-                        return val.map(obj => _und.mapObject(
-                            _und.omit(obj, '_nfAssetIssuance'),
-                            (val, key) => {
-                                if (key === 'nfTokenIssuingParts') {
-                                    return val.map(obj => _und.omit(obj, '_nfTokenIssuingBatch'));
+                filteredNFAssetIssuance = _und.mapObject(
+                    _und.omit(nfAssetIssuance, '_estimatedMetadataSize', '_totalContentsBytes'),
+                    (val, key) => {
+                        if (key === 'nfTokenIssuingBatches') {
+                            return val.map(obj => _und.mapObject(
+                                _und.omit(obj, '_nfAssetIssuance'),
+                                (val, key) => {
+                                    if (key === 'nfTokenIssuingParts') {
+                                        return val.map(obj => _und.omit(obj, '_nfTokenIssuingBatch'));
+                                    }
+                                    else {
+                                        return val;
+                                    }
                                 }
-                                else {
-                                    return val;
-                                }
-                            }
-                        ));
+                            ));
+                        }
+                        else {
+                            return val;
+                        }
                     }
-                    else {
-                        return val;
-                    }
-                });
+                );
 
                 expect(dbNFAssetIssuance)
                 .to.deep.equal(filteredNFAssetIssuance);
             });
 
-            it('should correctly retrieve issuance progress (all bytes saved, success)', function () {
+            it('should correctly retrieve issuance progress (all contents and all metadata stored, success)', function () {
+                const percentProcessed = Math.floor(
+                    ((nfAssetIssuance._totalNFTokensContentsBytes + nfAssetIssuance._estimatedAssetMetadataSize)
+                        / (nfAssetIssuance._totalNFTokensContentsBytes + nfAssetIssuance._estimatedAssetMetadataSize))
+                        * 95
+                );
+                console.debug('>>>>>> percentProcessed:', percentProcessed);
+
                 expect(nfAssetIssuance.getIssuanceProgress()).to.deep.equal({
                     progress: {
-                        percentProcessed: 98,
+                        percentProcessed,
                         done: true,
                         success: true
                     },

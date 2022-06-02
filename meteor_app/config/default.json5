@@ -1465,17 +1465,24 @@
     timeKeepIncompleteIssuance: 3600,  // (1 hour) Minimum time, in seconds, to keep non-fungible asset issuances that have not been finalized (a final non-fungible token issuing batch has never been added)
     timeKeepProcessedIssuance: 86400, // (24 hours) Minimum time, in seconds, to keep non-fungible asset issuances after they have already been processed
     purgeOldIssuancesInterval: 43200000,  // (12 hours) Time interval, in milliseconds, for executing method to purge old non-fungible asset issuances
-    percentSaveNFTokenContents: 98,  // Percentage (of total asset issuance processing time) that is attributed to saving the non-fungible asset contents
+    percentSaveNFTokensMetadata: 95,  // Percentage (of total asset issuance processing time) that is attributed to saving the non-fungible asset metadata
   },
   // Parameters pertaining to NFTokenContentsUrl module
   nfTokenContentsUrl: {
     defaultOrigin: 'https://ipfs.catenis.io',
     pathFormat: '/ipfs/%s',
     pathRegexFormat: '^/ipfs/([a-zA-Z0-9]{46,})$',
+    dummyBinaryCID: '12200000000000000000000000000000000000000000000000000000000000000000',  // Dummy hex-encoded v0 CID
   },
   // Parameters pertaining to NFTokenContentsReadable module
   nfTokenContentsReadable: {
-    highWaterMark: 1048576  // (1 MB) The maximum number of bytes to store in the internal buffer of stream before ceasing to read from the underlying resource
+    highWaterMark: 1048576,  // (1 MB) The maximum number of bytes to store in the internal buffer of stream before ceasing to read from the underlying resource
+    defaultReadChunkSize: 65536,  // (64 KB) The default number of bytes to read from the underlying resource at a time
+  },
+  // Parameters pertaining to BufferProgressReadable module
+  bufferProgressReadable: {
+    highWaterMark: 1048576,  // (1 MB) The maximum number of bytes to store in the internal buffer of stream before ceasing to read from the underlying resource
+    defaultReadChunkSize: 65536,  // (64 KB) The default number of bytes to read from the underlying resource at a time
   },
   // Parameters pertaining to modules of different child processes
   childProcess: {

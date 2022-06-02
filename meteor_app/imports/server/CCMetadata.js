@@ -20,6 +20,7 @@ import { CID } from 'ipfs-http-client';
 import { Catenis } from './Catenis';
 import { CCAssetMetadata } from './CCAssetMetadata';
 import { CCNFTokenMetadata } from './CCNFTokenMetadata';
+import { BufferProgressReadable } from './BufferProgressReadable';
 import { Util } from './Util';
 
 
@@ -81,6 +82,14 @@ export class CCMetadata {
      */
     get isStored() {
         return this.storeResult !== undefined;
+    }
+
+    /**
+     * Get the estimated size of the Colored Coins metadata in bytes
+     * @returns {number}
+     */
+    get estimatedSize() {
+        return this.isAssembled ? Buffer.from(JSON.stringify(this.metadata)).length : 0;
     }
 
     /**
@@ -161,15 +170,26 @@ export class CCMetadata {
      */
 
     /**
+     * @callback StoreProgressCallback
+     * @param {number} bytesStored Number of (additional) bytes that have just been stored
+     */
+
+    /**
      * Stored the rendered Colored Coins metadata onto IFPS
+     * @param {StoreProgressCallback} [progressCallback] Callback to report progress while storing the metadata
      * @return {(CCMetaStoreResult|undefined)}
      */
-    store() {
+    store(progressCallback) {
         if (!this.isStored) {
             if (this.isAssembled) {
                 try {
                     // Save metadata onto IPFS
-                    const cidObj = Catenis.ipfsClient.add(Buffer.from(JSON.stringify(this.metadata))).cid;
+                    const metadata = Buffer.from(JSON.stringify(this.metadata));
+                    const dataSource = typeof progressCallback === 'function'
+                        ? new BufferProgressReadable(metadata, progressCallback)
+                        : metadata;
+
+                    const cidObj = Catenis.ipfsClient.add(dataSource).cid;
 
                     this.storeResult = {
                         cid: Buffer.from(cidObj.bytes).toString('hex')

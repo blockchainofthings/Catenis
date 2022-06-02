@@ -1256,5 +1256,88 @@ describe('CCNFTokenMetadata module', function () {
                 );
             });
         });
+
+        describe('new tokens manually added (NOT from non-fungible asset issuance)', function () {
+            const singleNFTokensMetadata = [
+                new CCSingleNFTokenMetadata(),
+                new CCSingleNFTokenMetadata(),
+                new CCSingleNFTokenMetadata(),
+            ];
+            let nfTokenMetadata = new CCNFTokenMetadata();
+
+            before(function () {
+                singleNFTokensMetadata[0].setNFTokenProperties({
+                    name: 'Test NFT #1',
+                    description: 'Non-fungible token #1 used for testing',
+                    custom: {
+                        sensitiveProps: {
+                            secret1: 'Secret text #1',
+                            secret2: 123
+                        },
+                        custom1: 'Custom property #1',
+                        custom2: 'Custom property #2'
+                    },
+                    contents: new NFTokenContentsUrl('QmUkhVi6zRJz5U87jUjK9ZGTazaXLDKLfGbMRHxiai5xUn'),
+                    contentsEncrypted: true
+                });
+
+                singleNFTokensMetadata[1].setNFTokenProperties({
+                    name: 'Test NFT #2',
+                    description: 'Non-fungible token #2 used for testing',
+                    custom: {
+                        custom1: 'Custom property #3',
+                    },
+                    contents: new NFTokenContentsUrl('QmYwAPJzv5CZsnA625s3Xf2nemtYgPpHdWEz79ojWnPbdG'),
+                    contentsEncrypted: false
+                });
+
+                singleNFTokensMetadata[2].setNFTokenProperties({
+                    name: 'Test NFT #3',
+                    contents: new NFTokenContentsUrl('QmWHyrPWQnsz1wxHR219ooJDYTvxJPyZuDUPSDpdsAovN5'),
+                    contentsEncrypted: false
+                });
+            });
+
+            it('should fail adding new non-fungible tokens metadata with invalid argument (neither a CCSingleNFTokenMetadata object nor an array)', function () {
+                expect(function () {
+                    nfTokenMetadata.addNewNFTokensMetadata({});
+                }).to.throw(TypeError, 'Invalid metadata argument');
+            });
+
+            it('should fail adding new non-fungible tokens metadata with invalid argument (empty array)', function () {
+                expect(function () {
+                    nfTokenMetadata.addNewNFTokensMetadata([]);
+                }).to.throw(TypeError, 'Invalid metadata argument');
+            });
+
+            it('should fail adding new non-fungible tokens metadata with invalid argument (array with wrong elements)', function () {
+                expect(function () {
+                    nfTokenMetadata.addNewNFTokensMetadata([singleNFTokensMetadata[0], {}]);
+                }).to.throw(TypeError, 'Invalid metadata argument');
+            });
+
+            it('should successfully add new non-fungible tokens metadata', function () {
+                expect(nfTokenMetadata.newTokens).to.be.an('array').that.is.empty;
+
+                nfTokenMetadata.addNewNFTokensMetadata(singleNFTokensMetadata.slice(0, 2));
+
+                expect(nfTokenMetadata.newTokens).to.be.with.lengthOf(2);
+                expect(nfTokenMetadata.newTokens).to.be.deep.equal([
+                    singleNFTokensMetadata[0],
+                    singleNFTokensMetadata[1]
+                ]);
+            });
+
+            it('should successfully add more new non-fungible tokens metadata', function () {
+                nfTokenMetadata.addNewNFTokensMetadata(singleNFTokensMetadata.slice(2));
+
+                expect(nfTokenMetadata.newTokens).to.be.with.lengthOf(3);
+                expect(nfTokenMetadata.newTokens).to.be.deep.equal([
+                    singleNFTokensMetadata[0],
+                    singleNFTokensMetadata[1],
+                    singleNFTokensMetadata[2]
+                ]);
+            });
+        });
     });
 });

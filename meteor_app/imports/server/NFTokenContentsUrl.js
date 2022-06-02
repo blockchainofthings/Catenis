@@ -13,6 +13,7 @@
 import util from 'util';
 // Third-party node modules
 import config from 'config';
+import { CID } from 'multiformats/cid';
 // Meteor packages
 //import { Meteor } from 'meteor/meteor';
 
@@ -26,7 +27,8 @@ const contentsUrlConfig = config.get('nfTokenContentsUrl');
 const cfgSettings = {
     defaultOrigin: contentsUrlConfig.get('defaultOrigin'),
     pathFormat: contentsUrlConfig.get('pathFormat'),
-    pathRegexFormat: contentsUrlConfig.get('pathRegexFormat')
+    pathRegexFormat: contentsUrlConfig.get('pathRegexFormat'),
+    dummyBinaryCID: contentsUrlConfig.get('dummyBinaryCID'),
 };
 
 
@@ -37,6 +39,8 @@ const cfgSettings = {
  * Non-fungible token contents URL class
  */
 export class NFTokenContentsUrl {
+    static _dummyCID = CID.decode(Buffer.from(cfgSettings.dummyBinaryCID,'hex')).toString();
+
     /**
      * Class constructor
      * @param {string} cid IPFS CID (formatted as a string) of the stored non-fungible token contents
@@ -93,6 +97,14 @@ export class NFTokenContentsUrl {
      */
     toString() {
         return this.url.toString();
+    }
+
+    /**
+     * Get a new instance of the non-fungible token contents URL object using a dummy CID
+     * @returns {NFTokenContentsUrl}
+     */
+    static get dummyUrl() {
+        return new NFTokenContentsUrl(this._dummyCID);
     }
 
     /**

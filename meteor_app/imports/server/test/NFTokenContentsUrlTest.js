@@ -24,6 +24,17 @@ import { NFTokenContentsUrl } from '../NFTokenContentsUrl';
 describe('NFTokenContentsUrl module', function () {
     let nfTokenContentsUrl;
 
+    it('should correctly initialize a dummy CID', function () {
+        expect(NFTokenContentsUrl._dummyCID).to.equal('QmNLei78zWmzUdbeRB3CiUfAizWUrbeeZh5K1rhAQKCh51')
+    });
+
+    it('should correctly retrieve a contents URL for a dummy CID', function () {
+        const dummyContentsUrl = NFTokenContentsUrl.dummyUrl;
+
+        expect(dummyContentsUrl).to.be.an.instanceof(NFTokenContentsUrl);
+        expect(dummyContentsUrl.toString()).to.equal('https://ipfs.catenis.io/ipfs/QmNLei78zWmzUdbeRB3CiUfAizWUrbeeZh5K1rhAQKCh51');
+    });
+
     it('should fail to instantiate non-fungible token contents url object (invalid CID)', function () {
         expect(function () {
             new NFTokenContentsUrl('blah');
