@@ -1237,6 +1237,7 @@ CCTransaction.prototype.assemble = function (spendMultiSigOutputAddress, metadat
             // Set information about asset transfer/burn
 
             let outputPos = 0;
+            let firstOutputPos;
             let lastInputSeqStartPos;
             let inputSeqCCTokenIds;
             let inputSeqUsedTokens = 0;
@@ -1255,7 +1256,10 @@ CCTransaction.prototype.assemble = function (spendMultiSigOutputAddress, metadat
                     //  Check if there are tx outputs to add
                     if (outputOrderTxOutput.size > 0) {
                         // Add tx outputs for last input sequence
-                        this.addPubKeyHashOutputs(Util.sortMapValuesByKey(outputOrderTxOutput, (a, b) => a - b));
+                        this.addPubKeyHashOutputs(
+                            Util.sortMapValuesByKey(outputOrderTxOutput, (a, b) => a - b),
+                            firstOutputPos
+                        );
 
                         if (negativePaymentOutputs.length > 0) {
                             // Save fixed payment output for each negative payment output of
@@ -1280,6 +1284,7 @@ CCTransaction.prototype.assemble = function (spendMultiSigOutputAddress, metadat
 
                     inputSeqCCTokenIds = this.getTransferCCTokenIds(inputSeqStartPos);
                     lastInputSeqStartPos = inputSeqStartPos;
+                    firstOutputPos = outputPos;
                 }
 
                 if (transferOutput.address !== undefined) {
@@ -1411,7 +1416,10 @@ CCTransaction.prototype.assemble = function (spendMultiSigOutputAddress, metadat
 
             if (outputOrderTxOutput.size > 0) {
                 // Add tx outputs for last input sequence
-                this.addPubKeyHashOutputs(Util.sortMapValuesByKey(outputOrderTxOutput, (a, b) => a - b));
+                this.addPubKeyHashOutputs(
+                    Util.sortMapValuesByKey(outputOrderTxOutput, (a, b) => a - b),
+                    firstOutputPos
+                );
 
                 if (negativePaymentOutputs.length > 0) {
                     // Save fixed payment output for each negative payment output of
