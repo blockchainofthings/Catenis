@@ -21,5 +21,5 @@ echo "Trying to restore Catenis DB from $dumpDir"
 read -p "Do you want to proceed? " -n 1 -r
 echo    # (optional) move to a new line
 if [[ $REPLY =~ ^[Yy]$ ]]; then
-    mongorestore --uri=mongodb://127.0.0.1:3001/ --nsFrom='Catenis.$collection$' --nsTo='meteor.$collection$' $dumpDir
+    mongorestore --preserveUUID --uri=mongodb://127.0.0.1:3001/ --nsFrom='Catenis.$collection$' --nsTo='meteor.$collection$' $dumpDir
 fi
