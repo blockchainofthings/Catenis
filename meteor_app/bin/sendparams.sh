@@ -53,7 +53,7 @@ tmout=60
 while [ ! -S ./inputparams ]; do
   if [ $tmout -eq 0 ]; then
     echo "Timeout waiting for input parameters socket"
-    exit -1
+    exit 1
   fi
   sleep 1
   ((tmout--))
