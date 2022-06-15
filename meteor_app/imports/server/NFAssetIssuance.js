@@ -1040,11 +1040,11 @@ export class NFAssetIssuance {
 
         const retVal = {
             progress: {
-                percentProcessed: Math.floor(
-                ((this.progress.contentsBytesStored + this.progress.metadataBytesStored)
+                percentProcessed: this.progress.done && this.progress.success ?
+                    100
+                    : Math.floor(((this.progress.contentsBytesStored + this.progress.metadataBytesStored)
                         / (this.progress.totalContentsBytes + this.progress.totalMetadataBytes))
-                        * cfgSettings.percentSaveNFTokensMetadata
-                ),
+                        * cfgSettings.percentSaveNFTokensMetadata),
                 done: this.progress.done
             }
         };
