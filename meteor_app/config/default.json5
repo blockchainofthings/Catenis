@@ -849,7 +849,13 @@
       "getMultiAssetBalance": "/getMultiAssetBalance",
       "getAssetIssuance": "/getAssetIssuance",
       "getAssetIssuingAddress": "/getAssetIssuingAddress",
-      "getOwningAssets": "/getOwningAssets"
+      "getOwningAssets": "/getOwningAssets",
+      "getAssetMetadata": "/getAssetMetadata",
+      "getNFTokenMetadata": "/getNFTokenMetadata",
+      "getNFTokenAsset": "/getNFTokenAsset",
+      "getNFTokenOwner": "/getNFTokenOwner",
+      "getAllNFTokensOwner": "/getAllNFTokensOwner",
+      "getOwnedNFTokens": "/getOwnedNFTokens"
     }
   },
   // Parameters pertaining to CCAssetMetadata module

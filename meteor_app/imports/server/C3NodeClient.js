@@ -34,20 +34,26 @@ const cfgSettings = {
     password: c3NodeClientConfig.get('password'),
     connectionTimeout: c3NodeClientConfig.get('connectionTimeout'),
     methodPath: {
-        parseNow: methodPathConfig.get('parseNow'),
-        getAddressesUtxos: methodPathConfig.get('getAddressesUtxos'),
-        getUtxos: methodPathConfig.get('getUtxos'),
-        getTxouts: methodPathConfig.get('getTxouts'),
-        getAddressesTransactions: methodPathConfig.get('getAddressesTransactions'),
-        transmit: methodPathConfig.get('transmit'),
-        getInfo: methodPathConfig.get('getInfo'),
-        importAddresses: methodPathConfig.get('importAddresses'),
-        getAssetHolders: methodPathConfig.get('getAssetHolders'),
-        getAssetBalance: methodPathConfig.get('getAssetBalance'),
-        getMultiAssetBalance: methodPathConfig.get('getMultiAssetBalance'),
-        getAssetIssuance: methodPathConfig.get('getAssetIssuance'),
-        getAssetIssuingAddress: methodPathConfig.get('getAssetIssuingAddress'),
-        getOwningAssets: methodPathConfig.get('getOwningAssets')
+        parseNow: c3NodeClientConfig.get('methodPath.parseNow'),
+        getAddressesUtxos: c3NodeClientConfig.get('methodPath.getAddressesUtxos'),
+        getUtxos: c3NodeClientConfig.get('methodPath.getUtxos'),
+        getTxouts: c3NodeClientConfig.get('methodPath.getTxouts'),
+        getAddressesTransactions: c3NodeClientConfig.get('methodPath.getAddressesTransactions'),
+        transmit: c3NodeClientConfig.get('methodPath.transmit'),
+        getInfo: c3NodeClientConfig.get('methodPath.getInfo'),
+        importAddresses: c3NodeClientConfig.get('methodPath.importAddresses'),
+        getAssetHolders: c3NodeClientConfig.get('methodPath.getAssetHolders'),
+        getAssetBalance: c3NodeClientConfig.get('methodPath.getAssetBalance'),
+        getMultiAssetBalance: c3NodeClientConfig.get('methodPath.getMultiAssetBalance'),
+        getAssetIssuance: c3NodeClientConfig.get('methodPath.getAssetIssuance'),
+        getAssetIssuingAddress: c3NodeClientConfig.get('methodPath.getAssetIssuingAddress'),
+        getOwningAssets: c3NodeClientConfig.get('methodPath.getOwningAssets'),
+        getAssetMetadata: c3NodeClientConfig.get('methodPath.getAssetMetadata'),
+        getNFTokenMetadata: c3NodeClientConfig.get('methodPath.getNFTokenMetadata'),
+        getNFTokenAsset: c3NodeClientConfig.get('methodPath.getNFTokenAsset'),
+        getNFTokenOwner: c3NodeClientConfig.get('methodPath.getNFTokenOwner'),
+        getAllNFTokensOwner: c3NodeClientConfig.get('methodPath.getAllNFTokensOwner'),
+        getOwnedNFTokens: c3NodeClientConfig.get('methodPath.getOwnedNFTokens')
     }
 };
 
@@ -416,6 +422,207 @@ C3NodeClient.prototype.getOwningAssets = function (addresses, numOfConfirmations
         handleError('getOwningAssets', err);
     }
 };
+
+/**
+ * Call Catenis Colored Coins node server getAssetMetadata method
+ * @param {string} assetId The Colored Coins ID of the asset to retrieve the metadata
+ * @param {boolean} [waitForParsing=true] Indicates whether processing of request should wait until parsing of assets
+ *                                         is complete
+ * @returns {(Object|undefined)} A JSON object representing the asset metadata, or undefined if no metadata is found
+ */
+C3NodeClient.prototype.getAssetMetadata = function (assetId, waitForParsing = true) {
+    const postData = {
+        assetId
+    };
+
+    if (waitForParsing) {
+        postData.waitForParsing = true;
+    }
+
+    try {
+        return postRequest.call(this, cfgSettings.methodPath.getAssetMetadata, postData);
+    }
+    catch (err) {
+        handleError('getAssetMetadata', err);
+    }
+}
+
+/**
+ * Call Catenis Colored Coins node server getNFTokenMetadata method
+ * @param {string} tokenId The Colored Coins ID of the non-fungible asset token to retrieve the metadata
+ * @param {boolean} [waitForParsing=true] Indicates whether processing of request should wait until parsing of assets
+ *                                         is complete
+ * @returns {(Object|undefined)} A JSON object representing the non-fungible asset token metadata, or undefined if no
+ *                                metadata is found
+ */
+C3NodeClient.prototype.getNFTokenMetadata = function (tokenId, waitForParsing = true) {
+    const postData = {
+        tokenId
+    };
+
+    if (waitForParsing) {
+        postData.waitForParsing = true;
+    }
+
+    try {
+        return postRequest.call(this, cfgSettings.methodPath.getNFTokenMetadata, postData);
+    }
+    catch (err) {
+        handleError('getNFTokenMetadata', err);
+    }
+}
+
+/**
+ * Call Catenis Colored Coins node server getNFTokenAsset method
+ * @param {string} tokenId The Colored Coins ID of the non-fungible asset token to retrieve its asset
+ * @param {boolean} [waitForParsing=true] Indicates whether processing of request should wait until parsing of assets
+ *                                         is complete
+ * @returns {(string|undefined)} The Colored Coins ID of the non-fungible asset to which the token pertains, or
+ *                                undefined if no non-fungible asset is found (i.e. the token ID is unknown or invalid)
+ */
+C3NodeClient.prototype.getNFTokenAsset = function (tokenId, waitForParsing = true) {
+    const postData = {
+        tokenId
+    };
+
+    if (waitForParsing) {
+        postData.waitForParsing = true;
+    }
+
+    try {
+        return postRequest.call(this, cfgSettings.methodPath.getNFTokenAsset, postData);
+    }
+    catch (err) {
+        handleError('getNFTokenAsset', err);
+    }
+}
+
+/**
+ * Data structure containing information about the possession of a non-fungible asset token
+ * @typedef {Object} NFTokenHolding
+ * @property {(string|undefined)} address The bitcoin address that holds the non-fungible asset token. If undefined
+ *                                         indicates that the non-fungible asset token is not currently held by any
+ *                                         address (e.g. a burnt non-fungible asset token)
+ * @property {boolean} unconfirmed Indicates whether the possession is still unconfirmed (UTXO is not yet confirmed)
+ */
+
+/**
+ * Call Catenis Colored Coins node server getNFTokenOwner method
+ * @param {string} tokenId The Colored Coins ID of the non-fungible asset token to retrieve its current owner
+ * @param {number} [numOfConfirmations=0] The minimum number of confirmations to consider an UTXO as a token holder
+ * @param {boolean} [waitForParsing=true] Indicates whether processing of request should wait until parsing of assets
+ *                                         is complete
+ * @returns {(NFTokenHolding|undefined)} An object containing information about the possession of the non-fungible
+ *                                        asset token, or undefined if no possession info is found (i.e. the token ID is
+ *                                        unknown or invalid)
+ */
+C3NodeClient.prototype.getNFTokenOwner = function (tokenId, numOfConfirmations = 0, waitForParsing = true) {
+    const postData = {
+        tokenId
+    };
+
+    if (numOfConfirmations !== undefined) {
+        postData.numOfConfirmations = numOfConfirmations;
+    }
+
+    if (waitForParsing) {
+        postData.waitForParsing = true;
+    }
+
+    try {
+        return postRequest.call(this, cfgSettings.methodPath.getNFTokenOwner, postData);
+    }
+    catch (err) {
+        handleError('getNFTokenOwner', err);
+    }
+}
+
+/**
+ * Data structure containing information about the possession of all tokens of a non-fungible asset
+ * @typedef {Object.<string, NFTokenHolding>} AllNFTokenHolding A dictionary of info about non-fungible asset token
+ *                                                               possession by token ID
+ */
+
+/**
+ * Call Catenis Colored Coins node server getAllNFTokensOwner method
+ * @param {string} assetId The Colored Coins ID of the non-fungible asset to retrieve the owner of all its tokens
+ * @param {number} [numOfConfirmations=0] The minimum number of confirmations to consider an UTXO as a token holder
+ * @param {boolean} [waitForParsing=true] Indicates whether processing of request should wait until parsing of assets
+ *                                         is complete
+ * @returns {(AllNFTokenHolding|undefined)} An object containing information about the possession of all tokens of the
+ *                                           non-fungible asset, or undefined if no token is found (i.e. the asset ID is
+ *                                           either unknown or invalid, or is not for a non-fungible asset)
+ */
+C3NodeClient.prototype.getAllNFTokensOwner = function (assetId, numOfConfirmations = 0, waitForParsing = true) {
+    const postData = {
+        assetId
+    };
+
+    if (numOfConfirmations !== undefined) {
+        postData.numOfConfirmations = numOfConfirmations;
+    }
+
+    if (waitForParsing) {
+        postData.waitForParsing = true;
+    }
+
+    try {
+        return postRequest.call(this, cfgSettings.methodPath.getAllNFTokensOwner, postData);
+    }
+    catch (err) {
+        handleError('getAllNFTokensOwner', err);
+    }
+}
+
+/**
+ * Data structured containing information about an owned non-fungible asset token
+ * @typedef {Object} OwnedNFToken
+ * @property {string} tokenId The non-fungible asset token ID
+ * @property {boolean} unconfirmed Indicates whether the possession is still unconfirmed (UTXO not yet confirmed).
+ */
+
+/**
+ * Data structured containing information about owned non-fungible asset tokens
+ * @typedef {Object.<string, OwnedNFToken[]>} OwnedNFTokens A dictionary of info about owned non-fungible asset tokens
+ *                                                           by asset ID
+ */
+
+/**
+ * Call Catenis Colored Coins node server getOwnedNFTokens method
+ * @param {(string|string[])} addresses List of bitcoin addresses (or a single address) to retrieve the owned
+ *                                       non-fungible asset tokens
+ * @param {string} [assetId] The Colored Coins ID of a non-fungible asset used to restrict the returned info to tokens
+ *                            that pertain to that asset
+ * @param {number} [numOfConfirmations=0] The minimum number of confirmations to consider an UTXO as a token holder
+ * @param {boolean} [waitForParsing=true] Indicates whether processing of request should wait until parsing of assets
+ *                                         is complete
+ * @returns {(OwnedNFTokens|undefined)} An object containing information about owned non-fungible asset tokens by asset
+ *                                       ID, or undefined if the list of addresses is empty or invalid
+ */
+C3NodeClient.prototype.getOwnedNFTokens = function (addresses, assetId, numOfConfirmations = 0, waitForParsing = true) {
+    const postData = {
+        addresses: Array.isArray(addresses) ? addresses : [addresses]
+    };
+
+    if (assetId) {
+        postData.assetId = assetId;
+    }
+
+    if (numOfConfirmations !== undefined) {
+        postData.numOfConfirmations = numOfConfirmations;
+    }
+
+    if (waitForParsing) {
+        postData.waitForParsing = true;
+    }
+
+    try {
+        return postRequest.call(this, cfgSettings.methodPath.getOwnedNFTokens, postData);
+    }
+    catch (err) {
+        handleError('getOwnedNFTokens', err);
+    }
+}
 
 
 // Module functions used to simulate private C3NodeClient object methods
