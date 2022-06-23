@@ -1277,16 +1277,9 @@ describe('NFAssetIssuance module', function () {
             });
 
             it('should correctly retrieve issuance progress (all contents and all metadata stored, success)', function () {
-                const percentProcessed = Math.floor(
-                    ((nfAssetIssuance._totalNFTokensContentsBytes + nfAssetIssuance._estimatedAssetMetadataSize)
-                        / (nfAssetIssuance._totalNFTokensContentsBytes + nfAssetIssuance._estimatedAssetMetadataSize))
-                        * 95
-                );
-                console.debug('>>>>>> percentProcessed:', percentProcessed);
-
                 expect(nfAssetIssuance.getIssuanceProgress()).to.deep.equal({
                     progress: {
-                        percentProcessed,
+                        percentProcessed: 100,
                         done: true,
                         success: true
                     },
