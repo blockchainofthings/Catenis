@@ -56,10 +56,12 @@ const cfgSettings = {
 //      txid: [String],
 //      vout: [Number],
 //      amount: [number]  - Amount, in satoshis
-// *    ccAssetId: [String],           - Colored Coins attributed ID of the asset
-// *    assetAmount: [Number],         - Asset amount represented as an integer number of the asset's smallest division (according to the asset divisibility)
-// *    assetDivisibility: [Number],   - Number of decimal places allowed for representing quantities of this asset
-// *    isAggregatableAsset: [Boolean] - Indicates whether quantities of the asset from different UTXOs can be combined to allocate the necessary fund
+// *    ccAssetId: [String],            - Colored Coins attributed ID of the asset
+// *    assetAmount: [Number],          - Asset amount represented as an integer number of the asset's smallest division (according to the asset divisibility). For non-fungible assets this is the number of non-fungible tokens (length of ccTokenIds)
+// *    assetDivisibility: [Number],    - Number of decimal places allowed for representing quantities of this asset
+// *    isAggregatableAsset: [Boolean], - Indicates whether quantities of the asset from different UTXOs can be combined to allocate the necessary fund
+// *    isNonFungible: [Boolean],       - (optional, only present for non-fungible assets) Indicates whether this is a non-fungible asset
+// *    ccTokenIds: [Array(String)]     - (optional, only present for non-fungible assets) List of Colored Coins attributed IDs of the non-fungible tokens of that asset that are contained in this UTXO
 //    },
 //    address:  - (optional) Blockchain address associated with unspent output being spent
 //    addrInfo: {  - Info about blockchain address associated with unspent output being spent (as returned by Catenis.keyStore.getAddressInfo())
@@ -83,6 +85,7 @@ const cfgSettings = {
 // *    ccAssetId: [String],           - Colored Coins attributed ID of the asset (null for newly issued locked asset)
 // *    assetAmount: [Number],         - Asset amount represented as an integer number of the asset's smallest division (according to the asset divisibility)
 // *    assetDivisibility: [Number],   - Number of decimal places allowed for representing quantities of this asset
+// *    ccTokenIds: [Array(Number)],   - (optional, only present for non-fungible assets) List of Colored Coins attributed IDs of the non-fungible tokens of that asset
 //      addrInfo: [Object|Array(Object|String)] {  - Info about blockchain address to where payment should be sent (as returned by Catenis.keyStore.getAddressInfo()).
 //                                                    Should only exist for 'multisig' output type or for any other type when transaction is deserialized (generated from
 //                                                    Transaction.fromHex()) and it is a Catenis blockchain address.
@@ -102,35 +105,73 @@ export class CCTransaction extends Transaction {
     constructor (useOptInRBF = false) {
         super(useOptInRBF);
 
-        // Information for issuing new assets
-        //  issuingInfo: {
-        //    ccAssetId: [String],      - Colored Coins attributed ID of the asset
-        //    assetAmount: [Number],    - Amount of asset to issue
-        //    type: [String],           - Issuing type of asset. Either 'locked' or 'unlocked' (a property of CCTransaction.issuingAssetType)
-        //    divisibility: [Number],   - Number of decimal places allowed for representing quantities of this asset
-        //    isAggregatable: [Boolean] - Indicates whether quantities of the asset from different UTXOs can be combined to allocate the necessary fund
-        //  }
+        /**
+         * Colored Coins transaction asset issuing information
+         * @typedef {Object} CCTxAssetIssuingInfo
+         * @property {string} ccAssetId Colored Coins attributed ID of the asset
+         * @property {number} assetAmount Amount of asset to issue. For non-fungible assets, it is the number of
+         *                                 non-fungible tokens.
+         * @property {string} type Issuing type of the asset. Either 'locked' or 'unlocked' (a property of
+         *                          CCTransaction.issuingAssetType).
+         * @property {number} divisibility Number of decimal places allowed for representing quantities of this asset.
+         *                                  Should always be set to 0 (zero) for non-fungible assets.
+         * @property {boolean} isAggregatable Indicates whether quantities of the asset from different UTXOs can be
+         *                                     combined to allocate the necessary fund. Should always be set to false
+         *                                     for non-fungible assets.
+         * @property {boolean} isNonFungible Indicates whether this is a non-fungible asset.
+         * @property {string[]} [ccTokenIds] List of Colored Coins attributed IDs of the non-fungible tokens to issue.
+         */
+
+        /**
+         * Information for issuing new assets
+         * @type {(CCTxAssetIssuingInfo|undefined)}
+         */
         this.issuingInfo = undefined;
 
-        // List of transfer input sequences
-        //  Each element (transfer input sequence) consists of: {
-        //    startPos: [Number], - Position of first input of sequence
-        //    nInputs: [Number]   - Number of inputs in sequence
-        //  }
-        //  NOTE: the transfer input sequences are ordered in regard to its start position from lower to higher, and there should
-        //      be no gap between a input sequence and the following one (one must start at the following input position after the
-        //      last input of the previous sequence)
+        /**
+         * Colored Coins transaction transfer input sequence
+         * @typedef {Object} CCTxTransferInputSequence
+         * @property {number} startPos Position of the first input of the sequence.
+         * @property {number} nInputs Number of inputs in the sequence.
+         */
+
+        /**
+         * List of transfer input sequences.
+         *
+         * Note: the transfer input sequences are ordered in regard to its start position from lower to higher, and
+         *        there should be no gap between one input sequence and the following one (one must start at the
+         *        following input position after the last input of the previous sequence).
+         *
+         * @type {CCTxTransferInputSequence[]}
+         */
         this.transferInputSeqs = [];
 
-        // List of transfer outputs
-        //  Each element (transfer output) consists of: {
-        //    inputSeqStartPos: [Number], - Start position of transfer input sequence from where assets should come
-        //    address: [String],          - Blockchain address to where assets should be sent, or undefined if asset amount should instead be burnt
-        //    assetAmount: [Number]       - Amount of assets that is to be sent to that output
-        //  }
-        //  NOTE: the transfer outputs are ordered in regard to its input sequence start position from lower to higher
+        /**
+         * Colored Coins transaction transfer output
+         * @typedef {Object} CCTxTransferOutput
+         * @property {number} inputSeqStartPos Start position of transfer input sequence from where assets should come.
+         * @property {(string|undefined)} address Blockchain address to where assets should be sent, or undefined if
+         *                                         asset amount should instead be burnt.
+         * @property {number} assetAmount Amount of assets that is to be sent to that output. For non-fungible assets,
+         *                                 it is the number of non-fungible tokens.
+         * @property {boolean} [reverseOutput] This controls how the transfer output will be mapped to a tx output. If
+         *                                      not present or set to false, it follows the natural order of the
+         *                                      transfer output within the transfer input sequence. When set to true, a
+         *                                      reverse order (from last to first) should be used instead.
+         */
+
+        /**
+         * List of transfer outputs.
+         *
+         * Note: the transfer outputs are ordered in regard to its input sequence start position from lower to higher.
+         *
+         * @type {CCTxTransferOutput[]}
+         */
         this.transferOutputs = [];
 
+        /**
+         * @type {(CCMetadata|undefined)}
+         */
         this.ccMetadata = undefined;
 
         this.isAssembled = false;
@@ -159,6 +200,75 @@ export class CCTransaction extends Transaction {
             }
         });
     }
+
+    /**
+     * Gets the number of payment tx outputs that exist before the null data output (and the
+     *  and the multisig output if it exists). Those outputs (if they exist) are the target
+     *  for a Colored Coins range payment.
+     *
+     *  Note: this will only report the correct number after the Colored Coins transaction
+     *   has been assembled.
+     *
+     * @returns {number}
+     */
+    get numPayOutputsBeforeNullData() {
+        let nullDataPos;
+
+        return (nullDataPos = this.getNullDataOutputPosition()) !== undefined
+            ? nullDataPos - (this.includesMultiSigOutput ? 1 : 0)
+            : 0;
+    }
+
+    /**
+     * Indicates whether this Colored Coins transaction is used to issue an asset (of any type).
+     * @returns {boolean}
+     */
+    get hasIssuance() {
+        return this.issuingInfo !== undefined;
+    }
+
+    /**
+     * Indicates whether this Colored Coins transaction is used to issue a regular (fungible) asset.
+     * @returns {boolean}
+     */
+    get isIssuingAsset() {
+        return this.issuingInfo !== undefined && !this.issuingInfo.isNonFungible;
+    }
+
+    /**
+     * Indicates whether this Colored Coins transaction is used to issue a non-fungible asset.
+     * @returns {boolean}
+     */
+    get isIssuingNFAsset() {
+        return this.issuingInfo !== undefined && this.issuingInfo.isNonFungible && this.issuingInfo.ccTokenIds
+            && this.issuingInfo.ccTokenIds.length > 0;
+    }
+
+    /**
+     * Indicates whether this Colored Coins transaction is used to transfer asset units.
+     * @returns {boolean}
+     */
+    get hasTransfer() {
+        return this.transferInputSeqs.length > 0;
+    }
+
+    /**
+     * Indicates whether this Colored Coins transaction is used to transfer amounts of regular (fungible) assets.
+     * @returns {boolean}
+     */
+    get isTransferringAsset() {
+        return this.transferInputSeqs.length > 0
+            && this.transferInputSeqs.some(inputSeq => !this.getInputAt(inputSeq.startPos).txout.isNonFungible);
+    }
+
+    /**
+     * Indicates whether this Colored Coins transaction is used to transfer non-fungible tokens.
+     * @returns {boolean}
+     */
+    get isTransferringNFToken() {
+        return this.transferInputSeqs.length > 0
+            && this.transferInputSeqs.some(inputSeq => this.getInputAt(inputSeq.startPos).txout.isNonFungible);
+    }
 }
 
 // Public CCTransaction object methods
@@ -183,6 +293,7 @@ export class CCTransaction extends Transaction {
 //    type: [String],  - (optional, default: 'locked') Issuing type of asset. Either 'locked' or 'unlocked' (a property of CCTransaction.issuingAssetType)
 //    divisibility: [Number], - (optional, default: 0) Number of decimal places allowed for representing quantities of this asset
 //    isAggregatable: [Boolean] - (optional, default: true) Indicates whether quantities of the asset from different UTXOs can be combined to allocate the necessary fund
+//    isNonFungible: [Boolean] - (optional, default: false) Indicates whether this is a non-fungible asset. In that case, the asset amount represents the number of non-fungible tokens to issue
 //  }
 //
 //  Return:
@@ -197,14 +308,20 @@ CCTransaction.prototype.addIssuingInput = function (txout, outputInfo, assetAmou
         const issuingOpts = {
             type: opts.type !== undefined ? opts.type : CCTransaction.issuingAssetType.locked,
             divisibility: opts.divisibility !== undefined ? opts.divisibility : 0,
-            isAggregatable: opts.isAggregatable !== undefined ? opts.isAggregatable : true
+            isAggregatable: opts.isAggregatable !== undefined ? opts.isAggregatable : true,
+            isNonFungible: opts.isNonFungible !== undefined ? opts.isNonFungible : false
         };
 
         // Prepare info for new asset to be issued
-        const newIssuingInfo = _und.extend({
+        const newIssuingInfo = {
             ccAssetId: getAssetId(txout, outputInfo.address, issuingOpts),
             assetAmount: assetAmount,
-        }, issuingOpts);
+            ...issuingOpts
+        };
+
+        if (issuingOpts.isNonFungible) {
+            newIssuingInfo.ccTokenIds = getNFTokenIds(txout, outputInfo.address, issuingOpts, assetAmount);
+        }
 
         if (this.issuingInfo !== undefined) {
             // Another issuing input had already been added.
@@ -303,7 +420,8 @@ CCTransaction.prototype.addTransferInputs = function (inputs, inputSeqStartPos, 
                 //  and that the asset can be aggregated
                 const firstInputOfSeq = this.getInputAt(inputSeq.startPos);
 
-                if (firstInputOfSeq.txout.ccAssetId === inputs[0].txout.ccAssetId && firstInputOfSeq.txout.isAggregatableAsset) {
+                if (firstInputOfSeq.txout.ccAssetId === inputs[0].txout.ccAssetId
+                        && (firstInputOfSeq.txout.isAggregatableAsset || firstInputOfSeq.txout.isNonFungible)) {
                     // Add new inputs to existing transfer input sequence
                     this.addInputs(inputs, inputSeq.startPos + inputSeq.nInputs);
                     incrementInputsOfTransferInputSeq.call(this, inputSeq, inputs.length);
@@ -448,7 +566,9 @@ CCTransaction.prototype.getTransferInputSeqAssetAmountInfo = function (startPos)
             result.asset = {
                 ccAssetId: firstInputOfSeq.txout.ccAssetId,
                 divisibility: firstInputOfSeq.txout.assetDivisibility,
-                isAggregatable: firstInputOfSeq.txout.isAggregatableAsset
+                isAggregatable: firstInputOfSeq.txout.isAggregatableAsset,
+                isNonFungible: firstInputOfSeq.txout.isNonFungible,
+                ccTokenIds: firstInputOfSeq.txout.ccTokenIds
             };
 
             // Compute total asset amount at inputs
@@ -461,7 +581,9 @@ CCTransaction.prototype.getTransferInputSeqAssetAmountInfo = function (startPos)
             result.asset = {
                 ccAssetId: this.issuingInfo.ccAssetId,
                 divisibility: this.issuingInfo.divisibility,
-                isAggregatable: this.issuingInfo.isAggregatable
+                isAggregatable: this.issuingInfo.isAggregatable,
+                isNonFungible: this.issuingInfo.isNonFungible,
+                ccTokenIds: this.issuingInfo.ccTokenIds
             };
             result.assetAmount.totalInput = this.issuingInfo.assetAmount;
         }
@@ -490,39 +612,48 @@ CCTransaction.prototype.countTransferInputs = function () {
     }, 0);
 };
 
-// Sets one or more transfer output entries designating where Colored Coins assets should be transferred to
-//
-//  Arguments:
-//   outputs: [{ [Array(Object)|Object] - List of output objects
-//     address: [String] - Blockchain address to where assets should be sent
-//     assetAmount: [Number] - Amount of asset to transfer. It can be a negative value
-//   }]
-//   inputSeqStartPos: [Number] - Start position of transfer input sequence from where assets should come
-//
-//  Return:
-//   success: [Boolean] - True if outputs are correctly set, or false if no outputs are set (due to an error)
-CCTransaction.prototype.setTransferOutputs = function (outputs, inputSeqStartPos) {
+/**
+ * @typedef {Object} CCTxOutputInfoForTransfer
+ * @property {string} address Blockchain address to where assets should be sent.
+ * @property {number} assetAmount Amount of asset to transfer. For non-fungible assets, it is the number of
+ *                                 non-fungible tokens. Note: it can be a negative value.
+ * @property {boolean} [reverseOutput] Indicates whether the output order should be reversed.
+ */
+
+/**
+ * Sets one or more transfer output entries designating where Colored Coins assets should be transferred to.
+ * @param {(CCTxOutputInfoForTransfer[]|CCTxOutputInfoForTransfer)} outputs List of output objects
+ * @param {number} inputSeqStartPos Start position of transfer input sequence from where assets should come.
+ * @param {boolean} [aggregateOutputs=true] Indicates whether passed in outputs should be aggregated onto the same
+ *                                           blockchain address.
+ * @return {boolean}
+ */
+CCTransaction.prototype.setTransferOutputs = function (outputs, inputSeqStartPos, aggregateOutputs = true) {
     // Try to retrieve transfer input sequence
     const inputSeq = getTransferInputSeq.call(this, inputSeqStartPos);
 
     if (inputSeq !== undefined || (inputSeqStartPos === 0 && this.issuingInfo !== undefined)) {
         if (!Array.isArray(outputs)) {
+            // noinspection JSValidateTypes
             outputs = [outputs];
         }
 
-        // Group outputs by blockchain address, and also compute total asset amount to transfer/burn
-        const outputsByAddress = new Map();
+        // Compute total asset amount to transfer/burn, and already group outputs by blockchain address
+        //  if aggregating outputs
         let totalTransferAssetAmount = 0;
+        const outputsByAddress = new Map();
 
         outputs.forEach((output) => {
-            if (outputsByAddress.has(output.address)) {
-                outputsByAddress.get(output.address).assetAmount += output.assetAmount;
-            }
-            else {
-                outputsByAddress.set(output.address, output);
-            }
-
             totalTransferAssetAmount += output.assetAmount;
+
+            if (aggregateOutputs) {
+                if (outputsByAddress.has(output.address)) {
+                    outputsByAddress.get(output.address).assetAmount += output.assetAmount;
+                }
+                else {
+                    outputsByAddress.set(output.address, output);
+                }
+            }
         });
 
         // Make sure that specified transfer input sequence has enough asset amount to fulfill the transfer
@@ -541,7 +672,7 @@ CCTransaction.prototype.setTransferOutputs = function (outputs, inputSeqStartPos
                 const transferOutput = this.transferOutputs[idx];
 
                 if (transferOutput.inputSeqStartPos === inputSeqStartPos) {
-                    if (outputsByAddress.has(transferOutput.address)) {
+                    if (aggregateOutputs && outputsByAddress.has(transferOutput.address)) {
                         // Prepare to merge new output with transfer output that already exists
                         //  and sends asset to same address
                         let adjustedAssetAmount = transferOutput.assetAmount + outputsByAddress.get(transferOutput.address).assetAmount;
@@ -572,7 +703,7 @@ CCTransaction.prototype.setTransferOutputs = function (outputs, inputSeqStartPos
                     }
                 }
                 else if (transferOutput.inputSeqStartPos > inputSeqStartPos) {
-                    // No transfer output associated with specified transfer input sequence.
+                    // Transfer output is associated with a subsequent transfer input sequence.
                     //  Stop search
                     break;
                 }
@@ -580,15 +711,25 @@ CCTransaction.prototype.setTransferOutputs = function (outputs, inputSeqStartPos
 
             // Identify new transfer outputs to be added and if there are more negative
             //  values to be discarded
+            /**
+             * @type {CCTxTransferOutput[]}
+             */
             let transferOutputsToAdd = [];
+            /**
+             * @type {CCTxOutputInfoForTransfer[]}
+             */
+            const outputsSource = aggregateOutputs
+                ? (outputsByAddress.size > 0 ? Array.from(outputsByAddress.values()) : [])
+                : outputs;
 
-            if (outputsByAddress.size > 0) {
-                transferOutputsToAdd = Array.from(outputsByAddress.values()).reduce((list, output) => {
+            if (outputsSource.length > 0) {
+                transferOutputsToAdd = outputsSource.reduce((list, output) => {
                     if (output.assetAmount > 0) {
                         list.push({
                             inputSeqStartPos: inputSeqStartPos,
                             address: output.address,
-                            assetAmount: output.assetAmount
+                            assetAmount: output.assetAmount,
+                            reverseOutput: output.reverseOutput
                         });
                     }
                     else if (output.assetAmount < 0) {
@@ -622,6 +763,7 @@ CCTransaction.prototype.setTransferOutputs = function (outputs, inputSeqStartPos
                 }
 
                 if (transferOutputsToAdd.length > 0) {
+                    // noinspection JSCheckFunctionSignatures
                     Array.prototype.splice.apply(this.transferOutputs, [idx, 0].concat(transferOutputsToAdd));
                 }
             }
@@ -664,19 +806,20 @@ CCTransaction.prototype.setTransferOutputs = function (outputs, inputSeqStartPos
     return true;
 };
 
-// Sets a single transfer output entry designating where Colored Coins assets should be transferred to
-//
-//  Arguments:
-//   address: [String] - Blockchain address to where assets should be sent
-//   assetAmount: [Number] - Amount of asset to transfer
-//   inputSeqStartPos: [Number] - Start position of transfer input sequence from where assets should come
-//
-//  Return:
-//   success: [Boolean] - True if output is correctly set, or false if output is not set (due to an error)
-CCTransaction.prototype.setTransferOutput = function (address, assetAmount, inputSeqStartPos) {
+/**
+ * Sets a single transfer output entry designating where Colored Coins assets should be transferred to.
+ * @param {string} address Blockchain address to where assets should be sent.
+ * @param {number} assetAmount Amount of asset to transfer. For non-fungible assets, it is the number of non-fungible
+ *                              tokens.
+ * @param {number} inputSeqStartPos Start position of transfer input sequence from where assets should come.
+ * @param {boolean} [reverseOutput=false] Indicates whether the output order should be reversed.
+ * @return {boolean} True if output is correctly set, or false if output is not set (due to an error).
+ */
+CCTransaction.prototype.setTransferOutput = function (address, assetAmount, inputSeqStartPos, reverseOutput = false) {
     return this.setTransferOutputs({
-        address: address,
-        assetAmount: assetAmount
+        address,
+        assetAmount,
+        reverseOutput
     }, inputSeqStartPos);
 };
 
@@ -818,7 +961,7 @@ CCTransaction.prototype.removeTransferOutputs = function (inputSeqStartPos) {
     return false;
 };
 
-// Return list of blockchain addresses used to transfer assets from a give input sequence
+// Return list of blockchain addresses used to transfer assets from a given input sequence
 //
 //  Arguments:
 //   inputSeqStartPos: [Number] - Position of first input of transfer input sequence
@@ -871,6 +1014,36 @@ CCTransaction.prototype.getTransferInputs = function (inputSeqStartPos) {
     }
 };
 
+/**
+ * Get a list of non-fungible token IDs associated with a given transfer input sequence
+ * @param {number} inputSeqStartPos Input sequence start position
+ * @return {(string[]|undefined)} List of non-fungible token IDs, or undefined if transfer input sequence does not exist
+ */
+CCTransaction.prototype.getTransferCCTokenIds = function (inputSeqStartPos) {
+    const inputSeq = getTransferInputSeq.call(this, inputSeqStartPos);
+    let ccTokenIds = [];
+
+    if (inputSeq !== undefined) {
+        for (let pos = inputSeq.startPos, limit = inputSeq.startPos + inputSeq.nInputs; pos < limit; pos++) {
+            const input = this.getInputAt(pos);
+
+            if (input.ccTokenIds) {
+                ccTokenIds = ccTokenIds.concat(input.ccTokenIds);
+            }
+        }
+    }
+    else if (inputSeqStartPos === 0 && this.issuingInfo !== undefined && this.issuingInfo.ccTokenIds) {
+        // Asset issuance
+        ccTokenIds = this.issuingInfo.ccTokenIds;
+    }
+    else {
+        // Transfer input sequence not found
+        return undefined;
+    }
+
+    return ccTokenIds;
+}
+
 // Get list of transaction outputs used to transfer assets for a given input sequence
 //
 //  Arguments:
@@ -883,33 +1056,91 @@ CCTransaction.prototype.getTransferInputs = function (inputSeqStartPos) {
 //  NOTE: this method should only be called after a Colored Coins transaction has been built and sent
 CCTransaction.prototype.getTransferTxOutputs = function (inputSeqStartPos) {
     if (this.txid !== undefined) {
-        const inputSeq = getTransferInputSeq.call(this, inputSeqStartPos);
-
-        if (inputSeq !== undefined || (inputSeqStartPos === 0 && this.issuingInfo !== undefined)) {
-            let transferOutputPos = this.includesMultiSigOutput ? 2 : 1;
-            const transferTxouts = [];
-
-            for (let idx = 0, limit = this.transferOutputs.length; idx < limit; idx++) {
-                const transferOutput = this.transferOutputs[idx];
-
-                if (transferOutput.inputSeqStartPos < inputSeqStartPos) {
-                    transferOutputPos++;
-                }
-                else if (transferOutput.inputSeqStartPos === inputSeqStartPos) {
-                    transferTxouts.push(Util.txoutToString({
-                        txid: this.txid,
-                        vout: transferOutputPos++
-                    }));
-                }
-                else {
-                    break;
+        const numPayOutputsBeforeNullData = this.numPayOutputsBeforeNullData;
+        const nullDataOutputPos = this.getNullDataOutputPosition()
+        let txOutputPos = numPayOutputsBeforeNullData > 0 ? 0 : nullDataOutputPos + 1;
+        
+        function incrementTxOutputPos(inc = 1) {
+            if (txOutputPos < numPayOutputsBeforeNullData) {
+                txOutputPos += inc;
+                
+                if (txOutputPos >= numPayOutputsBeforeNullData) {
+                    txOutputPos = txOutputPos - numPayOutputsBeforeNullData + nullDataOutputPos + 1
                 }
             }
-
-            return transferTxouts;
+            else {
+                txOutputPos += inc;
+            }
         }
+
+        const inputSeqStartPosNumTxOutputs = this.txOutputsPerInputSeq();
+        const transferTxOuts = [];
+        let inputSeqFound = false;
+
+        for (const inputSeq of this.transferInputSeqs) {
+            if (inputSeq.startPos < inputSeqStartPos) {
+                // A previous input sequence. Just increment number of tx outputs
+                incrementTxOutputPos(inputSeqStartPosNumTxOutputs.get(inputSeq.startPos));
+            }
+            else if (inputSeq.startPos === inputSeqStartPos) {
+                // The input sequence in question. Add the respective number of tx outputs
+                for (let outPosOffset = 0, limit = inputSeqStartPosNumTxOutputs.get(inputSeqStartPos); outPosOffset < limit; outPosOffset++) {
+                    transferTxOuts.push(Util.txoutToString({
+                        txid: this.txid,
+                        vout: outPosOffset + txOutputPos
+                    }));
+                }
+
+                inputSeqFound = true;
+                break;
+            }
+            else {
+                break;
+            }
+        }
+
+        return inputSeqFound ? transferTxOuts : undefined;
     }
 };
+
+/**
+ * Retrieve a dictionary of number of tx outputs per input sequence
+ * @return Map<number, number>
+ */
+CCTransaction.prototype.txOutputsPerInputSeq = function () {
+    const inputSeqStartPosNumTxOutputs = new Map();
+    let lastInputSeqStartPos = undefined;
+    let numTxOutputs = 0;
+    const trfOutputAddresses = new Set();
+
+    for (const transferOutput of this.transferOutputs) {
+        if (transferOutput.inputSeqStartPos !== lastInputSeqStartPos) {
+            // Transfer output is for a new input sequence
+            if (lastInputSeqStartPos) {
+                inputSeqStartPosNumTxOutputs.set(lastInputSeqStartPos, numTxOutputs);
+
+                numTxOutputs = 0;
+                trfOutputAddresses.clear();
+            }
+
+            lastInputSeqStartPos = transferOutput.inputSeqStartPos;
+        }
+
+        if (transferOutput.address) {
+            if (!trfOutputAddresses.has(transferOutput.address)) {
+                // Transfer output yields a new tx output
+                numTxOutputs++;
+                trfOutputAddresses.add(transferOutput.address);
+            }
+        }
+    }
+
+    if (lastInputSeqStartPos) {
+        inputSeqStartPosNumTxOutputs.set(lastInputSeqStartPos, numTxOutputs);
+    }
+
+    return inputSeqStartPosNumTxOutputs;
+}
 
 // Identify transfer input sequences that still do not have all their asset amount set to be transferred/burnt
 //
@@ -936,7 +1167,7 @@ CCTransaction.prototype.pendingTransferInputSeqs = function () {
 // Sets the Colored Coins metadata to be added to the Colored Coins transaction
 //
 //  Arguments:
-//   ccMetadata: [Object(CCMetadata0] - The Colored Coins metadata
+//   ccMetadata: [Object(CCMetadata)] - The Colored Coins metadata
 CCTransaction.prototype.setCcMetadata = function (ccMetadata) {
     // Reset transaction before performing task
     this.reset();
@@ -947,7 +1178,7 @@ CCTransaction.prototype.setCcMetadata = function (ccMetadata) {
 // Replace the Colored Coins metadata reassembling the Colored Coins transaction if already assembled
 //
 //  Arguments:
-//   ccMetadata: [Object(CCMetadata0] - The Colored Coins metadata
+//   ccMetadata: [Object(CCMetadata)] - The Colored Coins metadata
 CCTransaction.prototype.replaceCcMetadata = function (ccMetadata) {
     // Only does anything if metadata is already set
     if (this.ccMetadata) {
@@ -976,16 +1207,16 @@ CCTransaction.prototype.replaceCcMetadata = function (ccMetadata) {
 //   spendMultiSigOutputAddress: [String] - Blockchain address used to spend multi-signature output if one is required
 //
 //  Return:
-//   success: [Boolean] - True if Colored Coins transaction had been successfully assembled (or was already assemble), or
-//                         false otherwise (not all transfer input sequences have all their asset amount set to be
+//   success: [Boolean] - True if Colored Coins transaction had been successfully assembled (or was already assembled),
+//                         or false otherwise (not all transfer input sequences have all their asset amount set to be
 //                         transferred/burnt)
 CCTransaction.prototype.assemble = function (spendMultiSigOutputAddress) {
     // Make sure that Colored Coins transaction is not yet assembled
     if (!this.isAssembled) {
         // Make sure that assets from all inputs have been set to be transferred/burnt
-        const pendingInputStatPositions = this.pendingTransferInputSeqs();
+        const pendingInputStartPositions = this.pendingTransferInputSeqs();
 
-        if (pendingInputStatPositions === undefined) {
+        if (pendingInputStartPositions === undefined) {
             // Make sure that the Catenis Colored Coins protocol is used
             const ccBuilder = new CCBuilder({
                 protocol: hexPrefixToProtocolId(cfgSettings.c3ProtocolPrefix)
@@ -995,78 +1226,298 @@ CCTransaction.prototype.assemble = function (spendMultiSigOutputAddress) {
             if (this.issuingInfo) {
                 ccBuilder.setLockStatus(this.issuingInfo.type === CCTransaction.issuingAssetType.locked);
                 ccBuilder.setAmount(this.issuingInfo.assetAmount, this.issuingInfo.divisibility);
-                ccBuilder.setAggregationPolicy(this.issuingInfo.isAggregatable ? CCTransaction.aggregationPolicy.aggregatable : CCTransaction.aggregationPolicy.dispersed);
+                ccBuilder.setAggregationPolicy(
+                    this.issuingInfo.isAggregatable
+                        ? CCTransaction.aggregationPolicy.aggregatable
+                        : (this.issuingInfo.isNonFungible ? CCTransaction.aggregationPolicy.nonFungible : CCTransaction.aggregationPolicy.dispersed)
+                );
+            }
+
+            // Set information about asset transfer/burn
+
+            let outputPos = 0;
+            let lastInputSeqStartPos;
+            let inputSeqCCTokenIds;
+            let inputSeqUsedTokens = 0;
+            const outputOrderTxOutput = new Map();
+            const addressTxOutput = new Map();
+            const txOutputPaymentOutput = new Map();
+            let negativePaymentOutputs = [];
+            const negativePaymentOutputFixedOutput = new Map();
+            const ccCommands = [];
+
+            this.transferOutputs.forEach((transferOutput) => {
+                const inputSeqStartPos = transferOutput.inputSeqStartPos;
+
+                if (inputSeqStartPos !== lastInputSeqStartPos) {
+                    // Transfer output is for a new input sequence.
+                    //  Check if there are tx outputs to add
+                    if (outputOrderTxOutput.size > 0) {
+                        // Add tx outputs for last input sequence
+                        this.addPubKeyHashOutputs(Util.sortMapValuesByKey(outputOrderTxOutput, (a, b) => a - b));
+
+                        if (negativePaymentOutputs.length > 0) {
+                            // Save fixed payment output for each negative payment output of
+                            //  the last input sequence to be processed later
+                            negativePaymentOutputs.forEach(paymentOutput => {
+                                negativePaymentOutputFixedOutput.set(
+                                    paymentOutput,
+                                    2 * this.numCcTransferOutputs + outputOrderTxOutput.size + paymentOutput
+                                );
+                            });
+
+                            negativePaymentOutputs = [];
+                        }
+
+                        this.numCcTransferOutputs += outputOrderTxOutput.size;
+
+                        inputSeqUsedTokens = 0;
+                        outputOrderTxOutput.clear();
+                        addressTxOutput.clear();
+                        txOutputPaymentOutput.clear();
+                    }
+
+                    inputSeqCCTokenIds = this.getTransferCCTokenIds(inputSeqStartPos);
+                    lastInputSeqStartPos = inputSeqStartPos;
+                }
+
+                if (transferOutput.address !== undefined) {
+                    // Asset transfer
+                    let paymentOutput;
+
+                    if (!addressTxOutput.has(transferOutput.address)) {
+                        // Add transfer to new tx output
+                        let txOutput;
+
+                        if (inputSeqStartPos === 0 && this.issuingInfo !== undefined) {
+                            // Asset issuance
+                            txOutput = {
+                                address: transferOutput.address,
+                                amount: Transaction.dustAmountByAddress(transferOutput.address),
+                                ccAssetId: this.issuingInfo.ccAssetId,
+                                assetAmount: transferOutput.assetAmount,
+                                assetDivisibility: this.issuingInfo.divisibility
+                            };
+
+                            if (this.issuingInfo.ccTokenIds) {
+                                txOutput.ccTokenIds = this.issuingInfo.ccTokenIds.slice(
+                                    inputSeqUsedTokens,
+                                    inputSeqUsedTokens + transferOutput.assetAmount
+                                );
+                                inputSeqUsedTokens += transferOutput.assetAmount;
+                            }
+                        }
+                        else {
+                            // Asset transfer
+                            const firstInputOfSeq = this.getInputAt(inputSeqStartPos);
+
+                            txOutput = {
+                                address: transferOutput.address,
+                                amount: Transaction.dustAmountByAddress(transferOutput.address),
+                                ccAssetId: firstInputOfSeq.txout.ccAssetId,
+                                assetAmount: transferOutput.assetAmount,
+                                assetDivisibility: firstInputOfSeq.txout.assetDivisibility
+                            };
+
+                            if (inputSeqCCTokenIds.length > 0) {
+                                txOutput.ccTokenIds = inputSeqCCTokenIds.slice(
+                                    inputSeqUsedTokens,
+                                    inputSeqUsedTokens + transferOutput.assetAmount
+                                );
+                                inputSeqUsedTokens += transferOutput.assetAmount;
+                            }
+                        }
+
+                        let outputOrder;
+
+                        if (transferOutput.reverseOutput) {
+                            outputOrder = 9999 - outputPos;
+                            paymentOutput = -(outputPos + 1);
+                            negativePaymentOutputs.push(paymentOutput);
+                        }
+                        else {
+                            paymentOutput = outputOrder = outputPos;
+                        }
+
+                        outputOrderTxOutput.set(outputOrder, txOutput);
+                        addressTxOutput.set(transferOutput.address, txOutput);
+                        txOutputPaymentOutput.set(txOutput, paymentOutput);
+                    }
+                    else {
+                        // Add transfer to an existing tx output
+                        const txOutput = addressTxOutput.get(transferOutput.address);
+
+                        txOutput.assetAmount += transferOutput.assetAmount;
+
+                        if (inputSeqStartPos === 0 && this.issuingInfo !== undefined) {
+                            // Asset issuance
+                            if (this.issuingInfo.ccTokenIds) {
+                                txOutput.ccTokenIds = txOutput.ccTokenIds.concat(
+                                    this.issuingInfo.ccTokenIds.slice(
+                                        inputSeqUsedTokens,
+                                        inputSeqUsedTokens + transferOutput.assetAmount
+                                    )
+                                );
+                                inputSeqUsedTokens += transferOutput.assetAmount;
+                            }
+                        }
+                        else {
+                            // Asset transfer
+                            if (inputSeqCCTokenIds.length > 0) {
+                                txOutput.ccTokenIds = txOutput.ccTokenIds.concat(
+                                    inputSeqCCTokenIds.slice(
+                                        inputSeqUsedTokens,
+                                        inputSeqUsedTokens + transferOutput.assetAmount
+                                    )
+                                );
+                                inputSeqUsedTokens += transferOutput.assetAmount;
+                            }
+                        }
+
+                        paymentOutput = txOutputPaymentOutput.get(txOutput);
+                    }
+
+                    // Prepare to add payment and respective tx output
+                    ccCommands.push({
+                       method: ccBuilder.addPayment,
+                       context: ccBuilder,
+                       args: [
+                           inputSeqStartPos/*input*/,
+                           transferOutput.assetAmount/*amount*/,
+                           paymentOutput/*output*/
+                       ]
+                    });
+
+                    outputPos++;
+                }
+                else {
+                    // Asset burn
+                    if (inputSeqCCTokenIds.length > 0) {
+                        inputSeqUsedTokens += transferOutput.assetAmount;
+                    }
+
+                    // Prepare to add burn instruction
+                    ccCommands.push({
+                       method: ccBuilder.addBurn,
+                       context: ccBuilder,
+                       args: [
+                           inputSeqStartPos/*input*/,
+                           transferOutput.assetAmount/*amount*/
+                       ]
+                    });
+                }
+            });
+
+            if (outputOrderTxOutput.size > 0) {
+                // Add tx outputs for last input sequence
+                this.addPubKeyHashOutputs(Util.sortMapValuesByKey(outputOrderTxOutput, (a, b) => a - b));
+
+                if (negativePaymentOutputs.length > 0) {
+                    // Save fixed payment output for each negative payment output of
+                    //  the last input sequence to be processed later
+                    negativePaymentOutputs.forEach(paymentOutput => {
+                        negativePaymentOutputFixedOutput.set(
+                            paymentOutput,
+                            2 * this.numCcTransferOutputs + outputOrderTxOutput.size + paymentOutput
+                        );
+                    });
+                }
+
+                this.numCcTransferOutputs += outputOrderTxOutput.size;
+            }
+
+            let numPayOutputsBeforeNullData = 0;
+
+            if (ccCommands.length > 0) {
+                const firstCommand = ccCommands[0];
+
+                if (firstCommand.method === ccBuilder.addPayment && firstCommand.args[2]/*output*/ === 0) {
+                    // Check if payments begin with a sequence that can be combined into a single range payment
+                    let rangeLength = 1;
+
+                    for (let idx = 1, length = ccCommands.length; idx < length; idx++) {
+                        const command = ccCommands[idx];
+
+                        if (command.method === ccBuilder.addPayment
+                                && command.args[0]/*input*/ === firstCommand.args[0]/*input*/
+                                && command.args[1]/*amount*/ === firstCommand.args[1]/*amount*/
+                                && command.args[2]/*output*/ === rangeLength
+                        ) {
+                            rangeLength++;
+                        }
+                        else {
+                            break;
+                        }
+                    }
+
+                    if (rangeLength > 1) {
+                        // Combine sequence of payments into a single range payment
+                        ccCommands.splice(
+                            0,
+                            rangeLength,
+                            {
+                                method: ccBuilder.addPayment,
+                                context: ccBuilder,
+                                args: [
+                                    firstCommand.args[0]/*input*/,
+                                    firstCommand.args[1]/*amount*/,
+                                    rangeLength - 1/*output*/,
+                                    true/*range*/
+                                ]
+                            }
+                        );
+
+                        // Note: the outputs of the range payment must be the first outputs of the tx,
+                        //  before the null data output (and the multisig output if present). So set it
+                        //  accordingly
+                        numPayOutputsBeforeNullData = rangeLength;
+                    }
+                }
+
+                // Set output offset to 1 plus the number of payment outputs before null data output
+                //  to already account for the null data output (the multisig output shall be accounted
+                //  for later if it is present)
+                const outPosOffset = numPayOutputsBeforeNullData + 1;
+
+                ccCommands.forEach(command => {
+                    if (command.method === ccBuilder.addPayment && !command.args[3]/*range*/) {
+                       // Adjust output position
+                       command.args[2]/*output*/ = outPosOffset
+                           + (
+                               command.args[2]/*output*/ < 0
+                               ? negativePaymentOutputFixedOutput.get(command.args[2]/*output*/)
+                               : command.args[2]/*output*/
+                           );
+                    }
+
+                    // Execute command to add Colored Coins payment/burn instruction
+                    command.method.apply(command.context, command.args);
+                });
             }
 
             // Process Colored Coins metadata if required
             if (this.ccMetadata !== undefined) {
                 // Make sure that Colored Coins metadata is already assembled and stored
-                if (!this.ccMetadata.isStored()) {
-                    if (!this.ccMetadata.isAssembled()) {
+                if (!this.ccMetadata.isStored) {
+                    if (!this.ccMetadata.isAssembled) {
                         // Assemble metadata using crypto keys from first input to encrypt user data (if required)
                         const firstInput = this.getInputAt(0);
 
-                        this.ccMetadata.assemble(firstInput.addrInfo !== undefined ? firstInput.addrInfo.cryptoKeys : undefined);
+                        this.ccMetadata.assemble(
+                            firstInput.addrInfo !== undefined ? firstInput.addrInfo.cryptoKeys : undefined,
+                            this.getCCMetadataNFTokensCryptoKeys()
+                        );
                     }
 
                     // Store metadata
                     this.ccMetadata.store();
                 }
 
-                if (this.ccMetadata.isStored()) {
+                if (this.ccMetadata.isStored) {
                     // Set Colored Coins metadata storing info
                     ccBuilder.setHash(this.ccMetadata.storeResult.cid);
                 }
             }
-
-            // Set information about asset transfer/burn
-
-            // Note: make sure that Colored Coins transfer tx outputs are placed before any other
-            //   non-Colored Coins tx outputs that might already exist. If we already set the start
-            //   position to 1 (since, in the end, the null data output shall occupy the first output
-            //   position), we might inadvertently leave a regular, non-Colored Coins output starting
-            //   before the Colored Coins transfer outputs.
-            let outputPos = 0;
-
-            this.transferOutputs.forEach((transferOutput) => {
-                if (transferOutput.address !== undefined) {
-                    // Asset transfer. Add payment and respective tx output
-                    //  Note: we already increment the output position for the payment of one unit to account for
-                    //    the fact that, in the end, the transfer outputs shall be dislocated by one due to the
-                    //    null data output that shall occupy the first output position.
-                    ccBuilder.addPayment(transferOutput.inputSeqStartPos, transferOutput.assetAmount, outputPos + 1);
-
-                    let assetInfo;
-
-                    if (this.issuingInfo !== undefined && transferOutput.inputSeqStartPos === 0) {
-                        assetInfo = {
-                            ccAssetId: this.issuingInfo.ccAssetId,
-                            assetAmount: transferOutput.assetAmount,
-                            assetDivisibility: this.issuingInfo.divisibility
-                        };
-                    }
-                    else {
-                        const firstInputOfSeq = this.getInputAt(transferOutput.inputSeqStartPos);
-
-                        assetInfo = {
-                            ccAssetId: firstInputOfSeq.txout.ccAssetId,
-                            assetAmount: transferOutput.assetAmount,
-                            assetDivisibility: firstInputOfSeq.txout.assetDivisibility
-                        }
-                    }
-
-                    this.addPubKeyHashOutputs(_und.extend({
-                        address: transferOutput.address,
-                        amount: Transaction.dustAmountByAddress(transferOutput.address)
-                    }, assetInfo), outputPos++);
-
-                    this.numCcTransferOutputs++;
-                }
-                else {
-                    // Burn asset. Add burn instruction
-                    ccBuilder.addBurn(transferOutput.inputSeqStartPos, transferOutput.assetAmount);
-                }
-            });
 
             // Now, encode Colored Coins
             let ccResult;
@@ -1099,7 +1550,7 @@ CCTransaction.prototype.assemble = function (spendMultiSigOutputAddress) {
             }
 
             // Add null data output with Colored Coins encoded data
-            this.addNullDataOutput(ccResult.codeBuffer, 0);
+            this.addNullDataOutput(ccResult.codeBuffer, numPayOutputsBeforeNullData);
 
             if (this.includesMultiSigOutput) {
                 // Add multi-signature output
@@ -1122,7 +1573,12 @@ CCTransaction.prototype.assemble = function (spendMultiSigOutputAddress) {
                     pubKeys.push(Buffer.concat([Buffer.from('03', 'hex'), Buffer.alloc(txCfgSettings.pubKeySize - (buf.length + lengthByte.length + 1), 0), buf, lengthByte], txCfgSettings.pubKeySize).toString('hex'));
                 });
 
-                this.addMultiSigOutput(pubKeys, 1, pubKeys.length > 2 ? txCfgSettings.oneOf3multiSigTxOutputDustAmount : txCfgSettings.oneOf2MultiSigTxOutputDustAmount, 0);
+                this.addMultiSigOutput(
+                    pubKeys,
+                    1,
+                    pubKeys.length > 2 ? txCfgSettings.oneOf3multiSigTxOutputDustAmount : txCfgSettings.oneOf2MultiSigTxOutputDustAmount,
+                    numPayOutputsBeforeNullData
+                );
             }
 
             this.isAssembled = true;
@@ -1132,7 +1588,7 @@ CCTransaction.prototype.assemble = function (spendMultiSigOutputAddress) {
             //  Log error condition, and return indicating error
             Catenis.logger.ERROR('Not all transfer input sequences have all their asset amount set to be transferred/burnt; Colored Coins transaction cannot be assembled', {
                 transferInputSeqs: this.transferInputSeqs,
-                pendingStatPositions: pendingInputStatPositions
+                pendingStatPositions: pendingInputStartPositions
             });
             return false;
         }
@@ -1293,6 +1749,151 @@ CCTransaction.prototype.clone = function () {
     return clone;
 };
 
+/**
+ * Get the crypto key-pair of the bitcoin addresses that should be used to encrypt/decrypt non-fungible
+ *  token metadata data
+ *
+ *  Note: this method should be called only after the Colored Coins transaction has been assembled (or at
+ *         least the tx outputs have been added)
+ *
+ * @return {(CryptoKeys|CryptoKeys[])}
+ */
+CCTransaction.prototype.getCCMetadataNFTokensCryptoKeys = function () {
+    const numPayOutputsBeforeNullData = this.numPayOutputsBeforeNullData;
+    const nullDataOutputPos = this.getNullDataOutputPosition()
+    let txOutputPos = numPayOutputsBeforeNullData > 0 ? 0 : nullDataOutputPos + 1;
+
+    function incrementTxOutputPos(inc = 1) {
+        if (txOutputPos < numPayOutputsBeforeNullData) {
+            txOutputPos += inc;
+
+            if (txOutputPos >= numPayOutputsBeforeNullData) {
+                txOutputPos = txOutputPos - numPayOutputsBeforeNullData + nullDataOutputPos + 1
+            }
+        }
+        else {
+            txOutputPos += inc;
+        }
+    }
+
+    function postIncrementTxOutputPos() {
+        const prevTxOutputPos = txOutputPos;
+
+        incrementTxOutputPos();
+
+        return prevTxOutputPos;
+    }
+
+    function getOutputCryptoKeys(payInfo) {
+        if (payInfo.addrInfo) {
+            return payInfo.addrInfo.cryptoKeys;
+        }
+        else {
+            const addrInfo = Catenis.keyStore.getAddressInfo(payInfo.address, true);
+
+            return addrInfo ? addrInfo.cryptoKeys : undefined;
+        }
+    }
+
+    const inputSeqStartPosNumTxOutputs = this.txOutputsPerInputSeq();
+    const listCryptoKeys = [];
+    const cryptoKeysCCTokenIds = new Map();
+
+    Array.from(inputSeqStartPosNumTxOutputs.keys()).forEach(inputSeqStartPos => {
+        if (inputSeqStartPos === 0 && this.issuingInfo !== undefined) {
+            // Asset issuance
+            if (this.issuingInfo.ccTokenIds) {
+                // Identify crypto keys associated with the token IDs
+                const numCCTokenIdsCryptoKeys = [];
+
+                for (let count = inputSeqStartPosNumTxOutputs.get(inputSeqStartPos); count > 0; count--) {
+                    const txOutput = this.getOutputAt(postIncrementTxOutputPos());
+
+                    if (txOutput) {
+                        const payInfo = txOutput.payInfo;
+
+                        if (payInfo.ccTokenIds) {
+                            const cryptoKeys = getOutputCryptoKeys(payInfo);
+
+                            if (cryptoKeys) {
+                                numCCTokenIdsCryptoKeys.push([payInfo.ccTokenIds.length, cryptoKeys]);
+                            }
+                        }
+                    }
+                }
+
+                if (numCCTokenIdsCryptoKeys.length === 1) {
+                    // Special case: all issued non-fungible tokens go to the same output
+                    listCryptoKeys[-1] = numCCTokenIdsCryptoKeys[0][1];
+                }
+                else {
+                    for (const [numCCTokenIds, cryptoKeys] of numCCTokenIdsCryptoKeys) {
+                        for (let count = numCCTokenIds; count > 0; count--) {
+                            listCryptoKeys.push(cryptoKeys);
+                        }
+                    }
+                }
+            }
+            else {
+                // Not a non-fungible asset. Just increment tx output position
+                incrementTxOutputPos(inputSeqStartPosNumTxOutputs.get(inputSeqStartPos));
+            }
+        }
+        else {
+            // Asset transfer.
+            //  Get token IDs per crypto keys
+            for (let count = inputSeqStartPosNumTxOutputs.get(inputSeqStartPos); count > 0; count--) {
+                const txOutput = this.getOutputAt(postIncrementTxOutputPos());
+
+                if (txOutput) {
+                    const payInfo = txOutput.payInfo;
+
+                    if (payInfo.ccTokenIds) {
+                        const cryptoKeys = getOutputCryptoKeys(payInfo);
+
+                        if (cryptoKeys) {
+                            if (!cryptoKeysCCTokenIds.has(cryptoKeys)) {
+                                cryptoKeysCCTokenIds.set(cryptoKeys, payInfo.ccTokenIds);
+                            }
+                            else {
+                                cryptoKeysCCTokenIds.set(cryptoKeys, cryptoKeysCCTokenIds.get(cryptoKeys).concat(payInfo.ccTokenIds));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    if (cryptoKeysCCTokenIds.size > 0) {
+        // Optimization: find wildcard crypto keys
+        let maxNumCCTokens = 0;
+        let wildcardCryptoKeys;
+
+        for (const [cryptoKeys, ccTokenIds] of cryptoKeysCCTokenIds) {
+            if (ccTokenIds.length > maxNumCCTokens) {
+                maxNumCCTokens = ccTokenIds.length;
+                wildcardCryptoKeys = cryptoKeys;
+            }
+        }
+
+        for (const [cryptoKeys, ccTokenIds] of cryptoKeysCCTokenIds) {
+            if (cryptoKeys === wildcardCryptoKeys) {
+                listCryptoKeys['*'] = cryptoKeys;
+            }
+            else {
+                for (const ccTokenId of ccTokenIds) {
+                    listCryptoKeys[ccTokenId] = cryptoKeys;
+                }
+            }
+        }
+    }
+
+    return Object.keys(listCryptoKeys).length > 0
+        ? (Object.keys(listCryptoKeys).length === 1 && (-1 in listCryptoKeys) ? listCryptoKeys[-1] : listCryptoKeys)
+        : undefined;
+};
+
 
 // Module functions used to simulate private CCTransaction object methods
 //  NOTE: these functions need to be bound to a CCTransaction object reference (this) before
@@ -1399,24 +2000,49 @@ function offsetTransferInputStartPos(startPos, offset) {
 CCTransaction.fromTransaction = function (transact) {
     // Make sure that transaction contains valid Colored Coins data
     let nullDataOutputPos;
-    let multiSigTxOutput;
     let ccData;
 
     // Check if transaction contains Colored Coins data and null data output is in the correct position
-    if (transact.hasNullDataOutput && ((nullDataOutputPos = transact.getNullDataOutputPosition()) === 0 || nullDataOutputPos === 1 && (multiSigTxOutput = transact.getOutputAt(0)).type === BitcoinInfo.outputType.multisig)
+    if (transact.hasNullDataOutput && ((nullDataOutputPos = transact.getNullDataOutputPosition()) !== undefined)
             && (ccData = checkColoredCoinsData(transact.getNullDataOutput().data)) !== undefined) {
         try {
             // Make sure that multi-signature tx output (if exists) is consistent
-            if ((ccData.multiSig.length === 0 && multiSigTxOutput !== undefined) || (ccData.multiSig.length > 0 && (multiSigTxOutput === undefined || multiSigTxOutput.payInfo.addrInfo.length !== ccData.multiSig.length + 1))) {
+            let prevOutput;
+            const multiSigTxOutput = nullDataOutputPos > 0
+                && (prevOutput = transact.getOutputAt(nullDataOutputPos - 1)).type === BitcoinInfo.outputType.multisig
+                ? prevOutput
+                : undefined;
+
+            if ((ccData.multiSig.length === 0 && multiSigTxOutput !== undefined)
+                    || (ccData.multiSig.length > 0 && (multiSigTxOutput === undefined
+                    || multiSigTxOutput.payInfo.addrInfo.length !== ccData.multiSig.length + 1))
+            ) {
                 // Multi-signature transaction output is not consistent with Colored Coins data.
                 //  Log error condition, and throw (local) exception
                 Catenis.logger.ERROR('Invalid Colored Coins transaction: multi-signature transaction output is not consistent with Colored Coins data', {
-                    transact: transact,
+                    transact,
                     ccMultiSig: ccData.multiSig,
-                    multiSigTxOutput: multiSigTxOutput
+                    multiSigTxOutput
                 });
                 // noinspection ExceptionCaughtLocallyJS
                 throw new Meteor.Error('ctn_cc_tx_inconsistent_multisig', 'Invalid Colored Coins transaction: multi-signature transaction output is not consistent with Colored Coins data');
+            }
+
+            const numPayOutputsBeforeNullData = multiSigTxOutput !== undefined ? nullDataOutputPos - 1 : nullDataOutputPos;
+
+            // Make sure that payment tx outputs before null data output are used for a range payment
+            if ((!ccData.payments[0].range && numPayOutputsBeforeNullData > 0)
+                    || (ccData.payments[0].range && ccData.payments[0].output !== numPayOutputsBeforeNullData - 1)
+            ) {
+                // Payment tx outputs before null data output are consistent with Colored Coins data.
+                //  Log error condition, and throw (local) exception
+                Catenis.logger.ERROR('Invalid Colored Coins transaction: inconsistent Colored Coins range payment', {
+                    transact,
+                    ccPayments: ccData.payments,
+                    numPayOutputsBeforeNullData
+                });
+                // noinspection ExceptionCaughtLocallyJS
+                throw new Meteor.Error('ctn_cc_tx_invalid_cc_payment', 'Invalid Colored Coins transaction: inconsistent Colored Coins range payment');
             }
 
             const ccTransact = new CCTransaction();
@@ -1429,13 +2055,42 @@ CCTransaction.fromTransaction = function (transact) {
             // ...and add them to the tx inputs
             txouts.forEach((txout, idx) => {
                 if (txout.assets !== undefined && txout.assets.length > 0) {
-                    const asset = txout.assets[0];
+                    const firstAsset = txout.assets[0];
                     const txInputTxout = ccTransact.inputs[idx].txout;
 
-                    txInputTxout.ccAssetId = asset.assetId;
-                    txInputTxout.assetAmount = asset.amount;
-                    txInputTxout.assetDivisibility = asset.divisibility;
-                    txInputTxout.isAggregatableAsset = asset.aggregationPolicy === CCTransaction.aggregationPolicy.aggregatable;
+                    txInputTxout.ccAssetId = firstAsset.assetId;
+                    txInputTxout.assetAmount = firstAsset.amount;
+                    txInputTxout.assetDivisibility = firstAsset.divisibility;
+                    txInputTxout.isAggregatableAsset = firstAsset.aggregationPolicy === CCTransaction.aggregationPolicy.aggregatable;
+
+                    if (firstAsset.aggregationPolicy === CCTransaction.aggregationPolicy.nonFungible) {
+                        // Non-fungible asset. Get list of non-fungible token IDs in UTXO
+                        const ccTokenIds = [];
+
+                        for (const asset of txout.assets) {
+                            if (asset.assetId !== firstAsset.assetId) {
+                                Catenis.logger.WARN('Invalid Colored Coins transaction: tx output being spent contains asset entries for different assets', {
+                                    transact,
+                                    vin: idx,
+                                    txout: txout
+                                });
+                                throw new Meteor.Error('ctn_cc_tx_inconsistent_input', 'Invalid Colored Coins transaction: tx output being spent contains asset entries for different assets');
+                            }
+
+                            ccTokenIds.push(asset.tokenId);
+                        }
+
+                        txInputTxout.isNonFungible = true;
+                        txInputTxout.ccTokenIds = ccTokenIds;
+                    }
+                    else if (txout.assets.length > 1) {
+                        Catenis.logger.WARN('Invalid Colored Coins transaction: tx output being spent contains more than one asset entry', {
+                            transact,
+                            vin: idx,
+                            txout: txout
+                        });
+                        throw new Meteor.Error('ctn_cc_tx_inconsistent_input', 'Invalid Colored Coins transaction: tx output being spent contains more than one asset entry assets');
+                    }
                 }
             });
 
@@ -1445,7 +2100,8 @@ CCTransaction.fromTransaction = function (transact) {
                 const issuingOpts = {
                     type: ccData.lockStatus ? CCTransaction.issuingAssetType.locked : CCTransaction.issuingAssetType.unlocked,
                     divisibility: ccData.divisibility,
-                    isAggregatable: ccData.aggregationPolicy === CCTransaction.aggregationPolicy.aggregatable
+                    isAggregatable: ccData.aggregationPolicy === CCTransaction.aggregationPolicy.aggregatable,
+                    isNonFungible: ccData.aggregationPolicy === CCTransaction.aggregationPolicy.nonFungible
                 };
 
                 ccTransact.issuingInfo = {
@@ -1453,153 +2109,389 @@ CCTransaction.fromTransaction = function (transact) {
                     assetAmount: ccData.amount,
                     type: issuingOpts.type,
                     divisibility: issuingOpts.divisibility,
-                    isAggregatable: issuingOpts.isAggregatable
+                    isAggregatable: issuingOpts.isAggregatable,
+                    isNonFungible: issuingOpts.isNonFungible
                 };
+
+                if (issuingOpts.isNonFungible) {
+                    ccTransact.issuingInfo.ccTokenIds = getNFTokenIds(ccTransact.inputs[0].txout, ccTransact.inputs[0].address, issuingOpts, ccData.amount);
+                }
             }
 
             let lastPaymentInput;
             let curInputPos = 0;
             let curOutputPos = nullDataOutputPos + 1;
             let totalAmountTransferred = 0;
-
-            // Make sure that payments are properly sorted: sort by inputs and then outputs, leaving
-            //  burn payments at the end of each input sequence
-            ccData.payments.sort((payment1, payment2) => (payment1.input * 10000 + (payment1.burn ? 9999 : payment1.output)) - (payment2.input * 10000 + (payment2.burn ? 9999 : payment2.output)));
+            const usedOutputs = new Set();
+            let ccPayments = [];
+            let firstOutputPos = curOutputPos;
+            let expectedLastOutputPos = undefined;
+            let outputInReverseOrder = false;
 
             ccData.payments.forEach((payment, idx) => {
-                if (!payment.burn && payment.output !== curOutputPos) {
-                    // Transaction output to receive Colored Coins asset payment is not in the right order.
-                    //  Log error condition, and throw (local) exception
-                    Catenis.logger.ERROR('Invalid Colored Coins transaction: transaction output to receive Colored Coins asset payment is not in the right order', {
-                        transact: transact,
+                // Validate Colored Coins payment entry
+                if (payment.input > ccTransact.inputs.length || (!payment.range && !payment.burn && payment.output > ccTransact.outputs.length)) {
+                    Catenis.logger.ERROR('Invalid Colored Coins transaction: Colored Coins asset payment input/output index out of range', {
+                        transact,
                         ccPayments: ccData.payments,
                         paymentIdx: idx,
-                        expectedOutputPos: curOutputPos
                     });
-                    throw new Meteor.Error('ctn_cc_tx_pay_out_of_order', 'Invalid Colored Coins transaction: transaction output to receive Colored Coins asset payment is not in the right order');
+                    throw new Meteor.Error('ctn_cc_tx_invalid_cc_payment', 'Invalid Colored Coins transaction: Colored Coins asset payment input/output index out of range');
                 }
 
-                if (lastPaymentInput !== undefined) {
-                    if (lastPaymentInput !== payment.input) {
-                        // Close and add new transfer input sequence
+                if (payment.input !== curInputPos) {
+                    Catenis.logger.ERROR('Invalid Colored Coins transaction: Colored Coins payment input does not have the expected value', {
+                        transact,
+                        ccPayments: ccData.payments,
+                        paymentIdx: idx,
+                        expectedInputPos: curInputPos
+                    });
+                    throw new Meteor.Error('ctn_cc_tx_invalid_pay_input', 'Invalid Colored Coins transaction: Colored Coins payment input does not have the expected value');
+                }
 
-                        // Determine number of inputs in sequence
-                        let numInputs = 0;
+                if (payment.range) {
+                    if (idx !== 0) {
+                        Catenis.logger.ERROR('Invalid Colored Coins transaction: unexpected Colored Coins range payment', {
+                            transact,
+                            ccPayments: ccData.payments,
+                            paymentIdx: idx,
+                        });
+                        throw new Meteor.Error('ctn_cc_tx_invalid_cc_payment', 'Invalid Colored Coins transaction: unexpected Colored Coins range payment');
+                    }
 
-                        if (ccTransact.issuingInfo !== undefined && curInputPos === 0) {
-                            // Special case for transferring new issued assets
-                            if (totalAmountTransferred !== ccTransact.issuingInfo.assetAmount) {
-                                // Not all newly issued assets are being transferred.
-                                //  Log error condition, and throw (local) exception
-                                Catenis.logger.ERROR('Invalid Colored Coins transaction: not all newly issued assets are being transferred', {
-                                    transact: transact,
-                                    issuedAmount: ccTransact.issuingInfo.assetAmount,
-                                    totalAmountTransferred: totalAmountTransferred
-                                });
-                                throw new Meteor.Error('ctn_cc_tx_inconsistent_transfer', 'Invalid Colored Coins transaction: not all newly issued assets are being transferred');
-                            }
+                    // Process range payment
+                    for (let outputPos = 0, lastPos = payment.output; outputPos <= lastPos; outputPos++) {
+                        // Set new transfer output
+                        let txOutputPayInfo = ccTransact.outputs[outputPos].payInfo;
 
-                            numInputs++;
+                        ccTransact.transferOutputs.push({
+                            inputSeqStartPos: curInputPos,
+                            address: txOutputPayInfo.address,
+                            assetAmount: payment.amount
+                        });
+
+                        // Add Colored Coins asset info to respective tx output
+                        let assetInfo;
+
+                        if (curInputPos === 0 && ccTransact.issuingInfo !== undefined) {
+                            // Asset issuance
+                            assetInfo = {
+                                ccAssetId: ccTransact.issuingInfo.ccAssetId,
+                                assetAmount: payment.amount,
+                                assetDivisibility: ccTransact.issuingInfo.divisibility
+                            };
                         }
                         else {
-                            let txInput;
-                            let inputAmountTransferred = totalAmountTransferred;
+                            // Asset transfer
+                            const txInputTxout = ccTransact.inputs[curInputPos].txout;
 
-                            while (inputAmountTransferred > 0 && (txInput = ccTransact.inputs[curInputPos + numInputs]) !== undefined && txInput.txout.assetAmount !== undefined) {
-                                inputAmountTransferred -= txInput.txout.assetAmount;
-
-                                numInputs++;
+                            assetInfo = {
+                                ccAssetId: txInputTxout.ccAssetId,
+                                assetAmount: payment.amount,
+                                assetDivisibility: txInputTxout.assetDivisibility
                             }
-
-                            // Make sure that the exact amount transferred is supplied by the tx inputs
-                            if (inputAmountTransferred !== 0) {
-                                // Asset amount supplied by tx inputs does not match the amount being transferred
-                                //  Log error condition, and throw (local) exception
-                                Catenis.logger.ERROR('Invalid Colored Coins transaction: asset amount supplied by tx inputs does not match the amount being transferred', {
-                                    transact: transact,
-                                    inputStartPos: curInputPos,
-                                    numInputs: numInputs,
-                                    totalAmountTransferred: totalAmountTransferred,
-                                    amountDifference: inputAmountTransferred
-                                });
-                                throw new Meteor.Error('ctn_cc_tx_inconsistent_transfer', 'Invalid Colored Coins transaction: not all newly issued assets are being transferred');
-                            }
-
-                            ccTransact.transferInputSeqs.push({
-                                startPos: curInputPos,
-                                nInputs: numInputs
-                            });
                         }
 
-                        curInputPos += numInputs;
-                        totalAmountTransferred = 0;
-                        lastPaymentInput = payment.input;
+                        ccTransact.outputs[outputPos].payInfo = {
+                            ...txOutputPayInfo,
+                            ...assetInfo
+                        };
+
+                        usedOutputs.add(outputPos);
+                        ccTransact.numCcTransferOutputs++;
+
+                        ccPayments.push({
+                            input: payment.input,
+                            amount: payment.amount,
+                            output: outputPos
+                        });
+                        totalAmountTransferred += payment.amount;
                     }
-                }
-                else {
+
                     lastPaymentInput = payment.input;
                 }
+                else {
+                    // Process input sequence transition
+                    if (lastPaymentInput !== undefined) {
+                        if (lastPaymentInput !== payment.input) {
+                            // A new input sequence is starting. Finalize last input sequence
 
-                if (!payment.burn) {
-                    // Set new transfer output
-                    const txOutputPayInfo = ccTransact.outputs[curOutputPos].payInfo;
+                            if (expectedLastOutputPos !== undefined && expectedLastOutputPos !== firstOutputPos + usedOutputs.size - 1) {
+                                // Expected last output position for input sequence (used to identify reverse
+                                //  outputs) does not match actual last output position of input sequence
+                                Catenis.logger.ERROR('Invalid Colored Coins transaction: inconsistent number of Colored Coins payment outputs in input sequence', {
+                                    transact,
+                                    ccPayments: ccData.payments,
+                                    input: curInputPos,
+                                    expectedLastOutputPos
+                                });
+                                throw new Meteor.Error('ctn_cc_tx_inconsistent_transfer', 'Invalid Colored Coins transaction: inconsistent number of Colored Coins payment outputs in input sequence');
+                            }
 
-                    ccTransact.transferOutputs.push({
-                        inputSeqStartPos: curInputPos,
-                        address: txOutputPayInfo.address,
-                        assetAmount: payment.amount
-                    });
+                            // Determine number of inputs in sequence and get list of non-fungible tokens
+                            //  transferred (if any)
+                            let numInputs = 0;
+                            let ccTokenIds;
 
-                    ccTransact.numCcTransferOutputs++;
+                            if (curInputPos === 0 && ccTransact.issuingInfo !== undefined) {
+                                // Special case for transferring new issued assets
+                                if (totalAmountTransferred !== ccTransact.issuingInfo.assetAmount) {
+                                    Catenis.logger.ERROR('Invalid Colored Coins transaction: not all newly issued assets are being transferred', {
+                                        transact,
+                                        issuedAmount: ccTransact.issuingInfo.assetAmount,
+                                        totalAmountTransferred
+                                    });
+                                    throw new Meteor.Error('ctn_cc_tx_inconsistent_transfer', 'Invalid Colored Coins transaction: not all newly issued assets are being transferred');
+                                }
 
-                    // Add Colored Coins asset info to respective tx output
-                    let assetInfo;
+                                numInputs++;
 
-                    if (ccTransact.issuingInfo !== undefined && curInputPos === 0) {
-                        assetInfo = {
-                            ccAssetId: ccTransact.issuingInfo.ccAssetId,
-                            assetAmount: payment.amount,
-                            assetDivisibility: ccTransact.issuingInfo.divisibility
-                        };
+                                if (ccTransact.issuingInfo.ccTokenIds) {
+                                    ccTokenIds = ccTransact.issuingInfo.ccTokenIds;
+                                }
+                            }
+                            else {
+                                let txInput;
+                                let inputAmountTransferred = totalAmountTransferred;
+
+                                while (inputAmountTransferred > 0 && (txInput = ccTransact.inputs[curInputPos + numInputs]) !== undefined && txInput.txout.assetAmount !== undefined) {
+                                    inputAmountTransferred -= txInput.txout.assetAmount;
+
+                                    numInputs++;
+                                }
+
+                                // Make sure that the exact amount transferred is supplied by the tx inputs
+                                if (inputAmountTransferred !== 0) {
+                                    Catenis.logger.ERROR('Invalid Colored Coins transaction: asset amount supplied by tx inputs does not match the amount being transferred', {
+                                        transact,
+                                        inputStartPos: curInputPos,
+                                        numInputs,
+                                        totalAmountTransferred,
+                                        amountDifference: inputAmountTransferred
+                                    });
+                                    throw new Meteor.Error('ctn_cc_tx_inconsistent_transfer', 'Invalid Colored Coins transaction: asset amount supplied by tx inputs does not match the amount being transferred');
+                                }
+
+                                ccTransact.transferInputSeqs.push({
+                                    startPos: curInputPos,
+                                    nInputs: numInputs
+                                });
+
+                                if (ccTransact.inputs[curInputPos].ccTokenIds) {
+                                    ccTokenIds = ccTransact.inputs[curInputPos].ccTokenIds;
+
+                                    for (let inputPos = curInputPos + 1, limit = curInputPos + numInputs; inputPos < limit; inputPos++) {
+                                        const input = ccTransact.inputs[inputPos];
+
+                                        if (!input.ccTokenIds) {
+                                            Catenis.logger.ERROR('Invalid Colored Coins transaction: missing non-fungible token IDs in input associated with the transfer of non-fungible asset', {
+                                                transact,
+                                                ccPayments: ccData.payments,
+                                                paymentIdx: idx,
+                                                input: inputPos
+                                            });
+                                            throw new Meteor.Error('ctn_cc_tx_inconsistent_transfer', 'Invalid Colored Coins transaction: missing non-fungible token IDs in input associated with the transfer of non-fungible asset');
+                                        }
+
+                                        ccTokenIds = ccTokenIds.concat(input.ccTokenIds);
+                                    }
+                                }
+                            }
+
+                            if (ccTokenIds && ccTokenIds.length > 0) {
+                                // Transferring non-fungible tokens
+                                let transferredTokens = 0;
+
+                                for (const payment of ccPayments) {
+                                    if (!payment.burn) {
+                                        // Asset transfer.
+                                        //  Get list of non-fungible token IDs for the current output
+                                        const outputCCTokenIds = ccTokenIds.slice(transferredTokens, transferredTokens + payment.amount);
+
+                                        if (outputCCTokenIds.length !== payment.amount) {
+                                            Catenis.logger.ERROR('Invalid Colored Coins transaction: not enough non-fungible token IDs to be added to tx output receiving non-fungible tokens', {
+                                                transact,
+                                                ccPayments: ccData.payments,
+                                                paymentIdx: idx,
+                                                expectedAmount: payment.amount,
+                                                availableAmount: outputCCTokenIds.length
+                                            });
+                                            throw new Meteor.Error('ctn_cc_tx_inconsistent_transfer', 'Invalid Colored Coins transaction: not enough non-fungible token IDs to be added to tx output receiving non-fungible tokens');
+                                        }
+
+                                        const payInfo = ccTransact.outputs[payment.output].payInfo;
+
+                                        if (!payInfo.ccAssetId) {
+                                            Catenis.logger.ERROR('Invalid Colored Coins transaction: tx output receiving non-fungible tokens does not have asset info', {
+                                                transact,
+                                                ccPayments: ccData.payments,
+                                                paymentIdx: idx,
+                                                txOutput: ccTransact.outputs[payment.output]
+                                            });
+                                            throw new Meteor.Error('ctn_cc_tx_inconsistent_transfer', 'Invalid Colored Coins transaction: tx output receiving non-fungible tokens does not have asset info');
+                                        }
+
+                                        // Update output with list of transferred non-fungible token IDs
+                                        payInfo.ccTokenIds = !payInfo.ccTokenIds
+                                            ? outputCCTokenIds
+                                            : payInfo.ccTokenIds.concat(outputCCTokenIds);
+                                    }
+
+                                    transferredTokens += payment.amount;
+                                }
+                            }
+
+                            curInputPos += numInputs;
+                            totalAmountTransferred = 0;
+                            lastPaymentInput = payment.input;
+                            usedOutputs.clear();
+                            ccPayments = [];
+                            firstOutputPos = curOutputPos;
+                            expectedLastOutputPos = undefined;
+                        }
                     }
                     else {
-                        const txInputTxout = ccTransact.inputs[curInputPos].txout;
+                        lastPaymentInput = payment.input;
+                    }
 
-                        assetInfo = {
-                            ccAssetId: txInputTxout.ccAssetId,
-                            assetAmount: payment.amount,
-                            assetDivisibility: txInputTxout.assetDivisibility
+                    // Determine if payment output is in reverse order
+                    outputInReverseOrder = false;
+
+                    if (!payment.burn && !usedOutputs.has(payment.output) && payment.output !== curOutputPos) {
+                        // Payment output not in expected order. Check if output is in reverse order
+                        let error = false;
+
+                        if (payment.output > firstOutputPos) {
+                            if (expectedLastOutputPos === undefined) {
+                                // Expected last output position for input sequence not set yet.
+                                //  So assume output is in reverse order, and calculate it
+                                expectedLastOutputPos = curOutputPos - firstOutputPos + payment.output;
+                                outputInReverseOrder = true;
+                            }
+                            else {
+                                // Expected last output position for input sequence already set.
+                                //  Validate reverse order position
+                                if (payment.output === expectedLastOutputPos - (curInputPos - firstOutputPos)) {
+                                    outputInReverseOrder = true;
+                                }
+                                else {
+                                    error = true;
+                                }
+                            }
+                        }
+                        else {
+                            error = true;
+                        }
+
+                        if (error) {
+                            // Output not in a valid reverse order (nor normal order for that matter)
+                            Catenis.logger.ERROR('Invalid Colored Coins transaction: Colored Coins payment output is not in the expect order', {
+                                transact,
+                                ccPayments: ccData.payments,
+                                paymentIdx: idx,
+                                expectedOutputPos: curOutputPos
+                            });
+                            throw new Meteor.Error('ctn_cc_tx_pay_out_of_order', 'Invalid Colored Coins transaction: Colored Coins payment output is not in the expect order');
                         }
                     }
 
-                    _und.extend(txOutputPayInfo, assetInfo);
+                    // Process Colored Coins payment
+                    if (!payment.burn) {
+                        // Set new transfer output
+                        let txOutputPayInfo = ccTransact.outputs[payment.output].payInfo;
 
-                    curOutputPos++;
-                }
-                else {
-                    // Set new burn transfer output
-                    ccTransact.transferOutputs.push({
-                        inputSeqStartPos: curInputPos,
-                        address: undefined,
-                        assetAmount: payment.amount
-                    });
-                }
+                        ccTransact.transferOutputs.push({
+                            inputSeqStartPos: curInputPos,
+                            address: txOutputPayInfo.address,
+                            assetAmount: payment.amount,
+                            reverseOutput: outputInReverseOrder
+                        });
 
-                totalAmountTransferred += payment.amount;
+                        if (!usedOutputs.has(payment.output)) {
+                            if (txOutputPayInfo.ccAssetId) {
+                                // Inconsistency: tx output not yet used in input sequence already has asset info
+                                Catenis.logger.ERROR('Invalid Colored Coins transaction: Colored Coins payment output being referenced by more than one input sequence', {
+                                    transact,
+                                    ccPayments: ccData.payments,
+                                    paymentIdx: idx,
+                                });
+                                throw new Meteor.Error('ctn_cc_tx_inconsistent_transfer', 'Invalid Colored Coins transaction: Colored Coins payment output being referenced by more than one input sequence');
+                            }
+
+                            // Add Colored Coins asset info to respective tx output
+                            let assetInfo;
+
+                            if (curInputPos === 0 && ccTransact.issuingInfo !== undefined) {
+                                // Asset issuance
+                                assetInfo = {
+                                    ccAssetId: ccTransact.issuingInfo.ccAssetId,
+                                    assetAmount: payment.amount,
+                                    assetDivisibility: ccTransact.issuingInfo.divisibility
+                                };
+                            }
+                            else {
+                                // Asset transfer
+                                const txInputTxout = ccTransact.inputs[curInputPos].txout;
+
+                                assetInfo = {
+                                    ccAssetId: txInputTxout.ccAssetId,
+                                    assetAmount: payment.amount,
+                                    assetDivisibility: txInputTxout.assetDivisibility
+                                }
+                            }
+
+                            ccTransact.outputs[payment.output].payInfo = {
+                                ...txOutputPayInfo,
+                                ...assetInfo
+                            };
+
+                            usedOutputs.add(payment.output);
+                            ccTransact.numCcTransferOutputs++;
+                        }
+                        else {
+                            // Output already used in this input sequence. Update asset amount
+                            txOutputPayInfo.assetAmount += payment.amount;
+                        }
+
+                        curOutputPos++;
+                    }
+                    else {
+                        // Set new burn transfer output
+                        ccTransact.transferOutputs.push({
+                            inputSeqStartPos: curInputPos,
+                            address: undefined,
+                            assetAmount: payment.amount
+                        });
+                    }
+
+                    ccPayments.push(payment);
+                    totalAmountTransferred += payment.amount;
+                }
             });
 
-            // Close and add last transfer input sequence
+            // Finalize last input sequence
+
+            if (expectedLastOutputPos !== undefined && expectedLastOutputPos !== firstOutputPos + usedOutputs.size - 1) {
+                // Expected last output position for input sequence (used to identify reverse
+                //  outputs) does not match actual last output position of input sequence
+                Catenis.logger.ERROR('Invalid Colored Coins transaction: inconsistent number of Colored Coins payment outputs in input sequence', {
+                    transact,
+                    ccPayments: ccData.payments,
+                    input: curInputPos,
+                    expectedLastOutputPos
+                });
+                // noinspection ExceptionCaughtLocallyJS
+                throw new Meteor.Error('ctn_cc_tx_inconsistent_transfer', 'Invalid Colored Coins transaction: inconsistent number of Colored Coins payment outputs in input sequence');
+            }
 
             // Determine number of inputs in sequence
             if (ccTransact.issuingInfo !== undefined && curInputPos === 0) {
                 // Special case for transferring new issued assets
                 if (totalAmountTransferred !== ccTransact.issuingInfo.assetAmount) {
-                    // Not all newly issued assets are being transferred.
-                    //  Log error condition, and throw (local) exception
                     Catenis.logger.ERROR('Invalid Colored Coins transaction: not all newly issued assets are being transferred', {
-                        transact: transact,
+                        transact,
                         issuedAmount: ccTransact.issuingInfo.assetAmount,
-                        totalAmountTransferred: totalAmountTransferred
+                        totalAmountTransferred
                     });
                     // noinspection ExceptionCaughtLocallyJS
                     throw new Meteor.Error('ctn_cc_tx_inconsistent_transfer', 'Invalid Colored Coins transaction: not all newly issued assets are being transferred');
@@ -1618,13 +2510,11 @@ CCTransaction.fromTransaction = function (transact) {
 
                 // Make sure that the exact amount transferred is supplied by the tx inputs
                 if (inputAmountTransferred !== 0) {
-                    // Asset amount supplied by tx inputs does not match the amount being transferred
-                    //  Log error condition, and throw (local) exception
                     Catenis.logger.ERROR('Invalid Colored Coins transaction: asset amount supplied by tx inputs does not match the amount being transferred', {
-                        transact: transact,
+                        transact,
                         inputStartPos: curInputPos,
-                        numInputs: numInputs,
-                        totalAmountTransferred: totalAmountTransferred,
+                        numInputs,
+                        totalAmountTransferred,
                         amountDifference: inputAmountTransferred
                     });
                     // noinspection ExceptionCaughtLocallyJS
@@ -1673,7 +2563,11 @@ CCTransaction.fromTransaction = function (transact) {
                     // Get metadata using crypto keys from first input to decrypt user data (if required)
                     const firstInput = ccTransact.getInputAt(0);
 
-                    ccTransact.ccMetadata = CCMetadata.fromCID(cid, firstInput.addrInfo !== undefined ? firstInput.addrInfo.cryptoKeys : undefined);
+                    ccTransact.ccMetadata = CCMetadata.fromCID(
+                        cid,
+                        firstInput.addrInfo !== undefined ? firstInput.addrInfo.cryptoKeys : undefined,
+                        ccTransact.getCCMetadataNFTokensCryptoKeys()
+                    );
                 }
             }
             else {
@@ -1697,7 +2591,7 @@ CCTransaction.fromTransaction = function (transact) {
                         // Inconsistent Colored Coins data; multiSig length different than expected
                         //  Log error condition and throw exception
                         Catenis.logger.ERROR('Invalid Colored Coins transaction: inconsistent Colored Coins data; multiSig length different than expected', {
-                            ccData: ccData,
+                            ccData,
                             expectedMultiSigLength: 1
                         });
                         // noinspection ExceptionCaughtLocallyJS
@@ -1721,7 +2615,7 @@ CCTransaction.fromTransaction = function (transact) {
                     // Inconsistent Colored Coins data; multiSig length different than expected
                     //  Log error condition and throw exception
                     Catenis.logger.ERROR('Invalid Colored Coins transaction: inconsistent Colored Coins data; multiSig length different than expected', {
-                        ccData: ccData,
+                        ccData,
                         expectedMultiSigLength: 0
                     });
                     // noinspection ExceptionCaughtLocallyJS
@@ -1729,14 +2623,18 @@ CCTransaction.fromTransaction = function (transact) {
                 }
 
                 if (torrentHash !== undefined) {
-                    // Get metadata using crypto keys from first input to decrypt user data (if required)
-                    const firstInput = ccTransact.getInputAt(0);
-
                     // Make sure that torrentHash has been converted into IPFS CID
                     let cid;
 
                     if ((cid = CCMetadata.checkCIDConverted(torrentHash))) {
-                        ccTransact.ccMetadata = CCMetadata.fromCID(cid, firstInput.addrInfo !== undefined ? firstInput.addrInfo.cryptoKeys : undefined);
+                        // Get metadata using crypto keys from first input to decrypt user data (if required)
+                        const firstInput = ccTransact.getInputAt(0);
+
+                        ccTransact.ccMetadata = CCMetadata.fromCID(
+                            cid,
+                            firstInput.addrInfo !== undefined ? firstInput.addrInfo.cryptoKeys : undefined,
+                            ccTransact.getCCMetadataNFTokensCryptoKeys()
+                        );
                     }
                     else {
                         Catenis.logger.WARN('Cannot retrieve Colored Coins metadata that is stored in BitTorrent', {
@@ -1753,7 +2651,13 @@ CCTransaction.fromTransaction = function (transact) {
             return ccTransact;
         }
         catch (err) {
-            if (!(err instanceof Meteor.Error) || err.error !== 'ctn_cc_tx_inconsistent_multisig' && err.error !== 'ctn_cc_tx_inconsistent_cc_data' && err.error !== 'ctn_cc_tx_pay_out_of_order' && err.error !== 'ctn_cc_tx_inconsistent_transfer') {
+            if (!(err instanceof Meteor.Error)
+                    || !['ctn_cc_tx_inconsistent_input',
+                    'ctn_cc_tx_invalid_cc_payment',
+                    'ctn_cc_tx_invalid_pay_input',
+                    'ctn_cc_tx_pay_out_of_order',
+                    'ctn_cc_tx_inconsistent_transfer',
+                    'ctn_cc_tx_inconsistent_cc_data'].includes(err.error)) {
                 // Throws exception if not any locally thrown exception
                 throw err;
             }
@@ -1763,7 +2667,7 @@ CCTransaction.fromTransaction = function (transact) {
         // No Colored Coins data or null data output in an unexpected position
         //  Log error condition
         Catenis.logger.ERROR('Invalid Colored Coins transaction: no Colored Coins data or null data output in an unexpected position', {
-            transact: transact
+            transact
         });
     }
 };
@@ -1780,7 +2684,8 @@ CCTransaction.issuingAssetType = Object.freeze({
 CCTransaction.aggregationPolicy = Object.freeze({
     aggregatable: 'aggregatable',
     hybrid: 'hybrid',
-    dispersed: 'dispersed'
+    dispersed: 'dispersed',
+    nonFungible: 'nonFungible'
 });
 
 CCTransaction.largestDivisibility = 7;
@@ -1788,13 +2693,22 @@ CCTransaction.largestDivisibility = 7;
 // Definition of module (private) functions
 //
 
+/**
+ * Get Colored Coins ID that will be attributed to new asset being issued
+ * @param {{txid:string, vout:number}} txout Blockchain transaction output
+ * @param {string} address Blockchain address
+ * @param {{type:string, divisibility:number, isAggregatable:boolean, isNonFungible:boolean}} issuingOpts Asset issuing options
+ * @return {string}
+ */
 function getAssetId(txout, address, issuingOpts) {
     return ccAssetIdEncoder({
         ccdata: [{
             type: 'issuance',
             lockStatus: issuingOpts.type === CCTransaction.issuingAssetType.locked,
             divisibility: issuingOpts.divisibility,
-            aggregationPolicy: issuingOpts.isAggregatable ? CCTransaction.aggregationPolicy.aggregatable : CCTransaction.aggregationPolicy.dispersed
+            aggregationPolicy: issuingOpts.isAggregatable
+                ? CCTransaction.aggregationPolicy.aggregatable
+                : (issuingOpts.isNonFungible ? CCTransaction.aggregationPolicy.nonFungible : CCTransaction.aggregationPolicy.dispersed)
         }],
         vin: [{
             txid: txout.txid,
@@ -1802,6 +2716,34 @@ function getAssetId(txout, address, issuingOpts) {
             address: address
         }]
     }, Catenis.application.cryptoNetwork);
+}
+
+/**
+ * Get list of Colored Coins IDs that will be attributed to new non-fungible tokens being issued
+ * @param {{txid:string, vout:number}} txout Blockchain transaction output
+ * @param {string} address Blockchain address
+ * @param {{type:string, divisibility:number, isAggregatable:boolean, isNonFungible:boolean}} issuingOpts Asset issuing options
+ * @param {number} numNFTokens of non-fungible tokens to issue
+ * @return {string[]}
+ */
+function getNFTokenIds(txout, address, issuingOpts, numNFTokens) {
+    return ccAssetIdEncoder({
+        ccdata: [{
+            protocol: hexPrefixToProtocolId(cfgSettings.c3ProtocolPrefix),
+            type: 'issuance',
+            amount: numNFTokens,
+            lockStatus: issuingOpts.type === CCTransaction.issuingAssetType.locked,
+            divisibility: issuingOpts.divisibility,
+            aggregationPolicy: issuingOpts.isAggregatable
+                ? CCTransaction.aggregationPolicy.aggregatable
+                : (issuingOpts.isNonFungible ? CCTransaction.aggregationPolicy.nonFungible : CCTransaction.aggregationPolicy.dispersed)
+        }],
+        vin: [{
+            txid: txout.txid,
+            vout: txout.vout,
+            address: address
+        }]
+    }, Catenis.application.cryptoNetwork, true);
 }
 
 // Checks and returns decoded Colored Coins data if it is valid
@@ -1812,8 +2754,8 @@ function getAssetId(txout, address, issuingOpts) {
 //  Return:
 //   result: [Object(CCBuilder)] - CCBuilder object containing  decoded Colored Coins data or undefined if supplied data is not valid
 function checkColoredCoinsData(ccData) {
-    const c3Header = Buffer.from(cfgSettings.ccProtocolPrefix + cfgSettings.ccVersionByte, 'hex');  // For Catenis Colored Coins protocol
-    const ccHeader = Buffer.from(cfgSettings.c3ProtocolPrefix + cfgSettings.ccVersionByte, 'hex');
+    const ccHeader = Buffer.from(cfgSettings.ccProtocolPrefix + cfgSettings.ccVersionByte, 'hex');  // For Catenis Colored Coins protocol
+    const c3Header = Buffer.from(cfgSettings.c3ProtocolPrefix + cfgSettings.ccVersionByte, 'hex');
 
     if ((ccData.length > c3Header.length && ccData.slice(0, c3Header.length).equals(c3Header))
             || (ccData.length > ccHeader.length && ccData.slice(0, ccHeader.length).equals(ccHeader))) {

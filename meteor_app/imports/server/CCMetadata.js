@@ -1,5 +1,5 @@
 /**
- * Created by Claudio on 2017-09-28.
+ * Created by claudio on 2022-02-23
  */
 
 //console.log('[CCMetadata.js]: This code just ran.');
@@ -10,779 +10,261 @@
 // References to external code
 //
 // Internal node modules
-import util from 'util';
-import crypto from 'crypto';
-import fs from 'fs';
-import Url from 'url';
+//import util from 'util';
 // Third-party node modules
-import config from 'config';
-import openssl from 'openssl-wrapper';
-import moment from 'moment';
-import CID from 'cids';
-import got from 'got';
+import { CID } from 'ipfs-http-client';
 // Meteor packages
-import { Meteor } from 'meteor/meteor';
-import { Promise } from 'meteor/promise';
+//import { Meteor } from 'meteor/meteor';
 
 // References code in other (Catenis) modules
 import { Catenis } from './Catenis';
+import { CCAssetMetadata } from './CCAssetMetadata';
+import { CCNFTokenMetadata } from './CCNFTokenMetadata';
 import { Util } from './Util';
 
-// Config entries
-const ccMetadataConfig = config.get('ccMetadata');
 
-// Configuration settings
-const cfgSettings = {
-    ctnAssetsIssuer: ccMetadataConfig.get('ctnAssetsIssuer'),
-    ctnAssetsDescription: ccMetadataConfig.get('ctnAssetsDescription'),
-    ctnAssetsLogoUrl: ccMetadataConfig.get('ctnAssetsLogoUrl'),
-    ctnAssetsLogoMimeType: ccMetadataConfig.get('ctnAssetsLogoMimeType'),
-    ctnAssetsLogoHash: ccMetadataConfig.get('ctnAssetsLogoHash'),
-    ctnAssetsLargeLogoUrl: ccMetadataConfig.get('ctnAssetsLargeLogoUrl'),
-    ctnAssetsLargeLogoMimeType: ccMetadataConfig.get('ctnAssetsLargeLogoMimeType'),
-    ctnAssetsLargeLogoHash: ccMetadataConfig.get('ctnAssetsLargeLogoHash'),
-    signingMessageFormat: ccMetadataConfig.get('signingMessageFormat'),
-    signingCertificateFilePath: ccMetadataConfig.get('signingCertificateFilePath'),
-    signingCertificateKeyFilePath: ccMetadataConfig.get('signingCertificateKeyFilePath'),
-    urlContentTimeout: ccMetadataConfig.get('urlContentTimeout'),
-    encryptedUserDataKeyPrefix: ccMetadataConfig.get('encryptedUserDataKeyPrefix'),
-    shareAfterStoring: ccMetadataConfig.get('shareAfterStoring')
-};
-
-const opensslSync = Meteor.wrapAsync(openssl);
-
-
-// Definition of function classes
+// Definition of classes
 //
 
-// CCMetadata function class
-//
-//  Arguments:
-//   metadata [Object] - (optional) Metadata to use to initialize object
-//   decCryptKeys [Object(CryptoKeys)] - (optional) The crypto key-pair associated with a blockchain address that should be used to decrypt encrypted user data
-export function CCMetadata(metadata, decCryptoKeys) {
-    if (typeof metadata === 'object' && metadata !== null) {
-        if (metadata.issuer !== undefined && metadata.issuer !== cfgSettings.ctnAssetsIssuer) {
-            // Asset issuer not as expected. Log error and throw exception
-            Catenis.logger.ERROR(util.format('Asset issuer in Colored Coins metadata not set as \'%s\' as expected', cfgSettings.ctnAssetsIssuer), {metadata: metadata});
-            throw new Meteor.Error('ctn_ccmetadata_invalid_issuer', util.format('Asset issuer in Colored Coins metadata not set as \'%s\' as expected', cfgSettings.ctnAssetsIssuer), metadata);
+/**
+ * Colored Coins Metadata class
+ */
+export class CCMetadata {
+    /**
+     * @typedef {Object} ColoredCoinsMetadata
+     * @property {CCMetaAsset} [metadata]
+     * @property {CCMetaNonFungibleToken} [nfTokenMetadata]
+     */
+
+    /**
+     * Class constructor
+     * @param {ColoredCoinsMetadata} [metadata] The Colored Coins metadata used to initialize object
+     * @param {CryptoKeys} [assetDecCryptoKeys] The crypto key-pair associated with a blockchain address that should be
+     *                                           used to decrypt encrypted asset free user data
+     * @param {(CryptoKeys|CryptoKeys[])} [nfTokenDecCryptoKeys] A list of crypto key-pairs associated with a blockchain
+     *                                      address that should be used for decrypting encrypted non-fungible token
+     *                                      metadata data. Key-pairs for new non-fungible token metadata are indexed by
+     *                                      their numeric position (starting from zero) on the list (natural array
+     *                                      indexing), and the special index -1 is used as a wildcard. On the other
+     *                                      hand, key-pairs for updated non-fungible token metadata are indexed by the
+     *                                      respective non-fungible token ID, and the special index "*" is used as a
+     *                                      wildcard. Optionally, a single crypto key-pair may be passed. In that case,
+     *                                      the single key-pair is used as the new non-fungible token metadata wildcard
+     *                                      (equivalent to a key-pair from the list at index -1)
+     */
+    constructor(metadata, assetDecCryptoKeys, nfTokenDecCryptoKeys) {
+        if (Util.isNonNullObject(metadata)) {
+            this.assetMetadata = new CCAssetMetadata(metadata.metadata, assetDecCryptoKeys);
+            this.nfTokenMetadata = new CCNFTokenMetadata(metadata.nfTokenMetadata, nfTokenDecCryptoKeys);
+            this.metadata = metadata;
+        }
+        else {
+            this.assetMetadata = new CCAssetMetadata();
+            this.nfTokenMetadata = new CCNFTokenMetadata();
+            this.metadata = undefined;
         }
 
-        // Initialize object with supplied metadata
-        this.assetName = metadata.assetName;
-        this.assetDescription = metadata.description;
-        this.urls = metadata.urls ? metadata.urls : [];
-
-        parseUserData.call(this, metadata.userData, decCryptoKeys);
-
-        if (this.userData && this.userData.meta && typeof this.userData.meta.ctnAssetId === 'string') {
-            this.ctnAssetId = this.userData.meta.ctnAssetId;
-        }
-
-        this.metadata = metadata;
-    }
-    else {
-        this.ctnAssetId = undefined;
-        this.assetName = undefined;
-        this.assetDescription = undefined;
-        this.urls = [];
-        this.userData = undefined;
-        this.encryptUserDataKeys = new Set();
-        this.signingCertificate = undefined;
-        this.metadata = undefined;
         this.storeResult = undefined;
     }
 
-    //  NOTE: arrow functions should NOT be used for the getter/setter of the defined properties.
-    //      This is to avoid that, if `this` is referred from within the getter/setter body, it
-    //      refers to the object from where the properties have been defined rather than to the
-    //      object from where the property is being accessed. Normally, this does not represent
-    //      an issue (since the object from where the property is accessed is the same object
-    //      from where the property has been defined), but it is especially dangerous if the
-    //      object can be cloned.
-    Object.defineProperties(this, {
-        signingMessage: {
-            get: function () {
-                return util.format(cfgSettings.signingMessageFormat, new Date().toString());
+    /**
+     * Indicates whether the Colored Coins metadata has already been rendered
+     * @return {boolean}
+     */
+    get isAssembled() {
+        return this.metadata !== undefined;
+    }
+
+    /**
+     * Indicates whether the rendered Colored Coins metadata has already been stored onto IPFS
+     * @return {boolean}
+     */
+    get isStored() {
+        return this.storeResult !== undefined;
+    }
+
+    /**
+     * Clone this object
+     * @return {CCMetadata}
+     */
+    clone() {
+        const clone = Util.cloneObj(this);
+
+        if (clone.assetMetadata) {
+            clone.assetMetadata = clone.assetMetadata.clone();
+        }
+
+        if (clone.nfTokenMetadata) {
+            clone.nfTokenMetadata = clone.nfTokenMetadata.clone();
+        }
+
+        if (clone.metadata) {
+            clone.metadata = Util.cloneObjDict(clone.metadata);
+        }
+
+        if (clone.storeResult) {
+            clone.storeResult = Util.cloneObj(clone.storeResult);
+        }
+
+        return clone;
+    }
+
+    /**
+     * Reset Colored Coins metadata object clearing the rendered metadata and store result
+     */
+    reset() {
+        this.metadata = this.storeResult = undefined;
+    }
+
+    /**
+     * Render the Colored Coins metadata
+     * @param {CryptoKeys} [assetEncCryptoKeys] The crypto key-pair associated with a blockchain address that should be
+     *                                           used for encrypting selected free user data
+     * @param {(CryptoKeys|CryptoKeys[])} [nfTokenEncCryptoKeys] A list of crypto key-pairs associated with a blockchain
+     *                                      address that should be used for encrypting selected non-fungible token
+     *                                      metadata data. Key-pairs for new non-fungible token metadata are indexed by
+     *                                      their numeric position (starting from zero) on the list (natural array
+     *                                      indexing), and the special index -1 is used as a wildcard. On the other
+     *                                      hand, key-pairs for updated non-fungible token metadata are indexed by the
+     *                                      respective non-fungible token ID, and the special index "*" is used as a
+     *                                      wildcard. Optionally, a single crypto key-pair may be passed. In that case,
+     *                                      the single key-pair is used as the new non-fungible token metadata wildcard
+     *                                      (equivalent to a key-pair from the list at index -1)
+     */
+    assemble(assetEncCryptoKeys, nfTokenEncCryptoKeys) {
+        if (!this.isAssembled) {
+            const assembledMetadata = {};
+
+            const assembledAssetMetadata = this.assetMetadata.assemble(assetEncCryptoKeys);
+            const assembledNFTokenMetadata = this.nfTokenMetadata.assemble(nfTokenEncCryptoKeys);
+
+            if (assembledAssetMetadata) {
+                assembledMetadata.metadata = assembledAssetMetadata;
             }
-        }
-    });
-}
 
+            if (assembledNFTokenMetadata) {
+                assembledMetadata.nfTokenMetadata = assembledNFTokenMetadata;
+            }
 
-// Public CCMetadata object methods
-//
-
-CCMetadata.prototype.clone = function () {
-    const clone = Util.cloneObj(this);
-
-    clone.urls = Util.cloneObjArray(clone.urls);
-
-    if (clone.userData) {
-        clone.userData = Util.cloneObj(clone.userData);
-    }
-
-    clone.encryptUserDataKeys = new Set(clone.encryptUserDataKeys);
-
-    if (clone.metadata) {
-        clone.metadata = Util.cloneObj(clone.metadata);
-    }
-
-    if (clone.storeResult) {
-        clone.storeResult = Util.cloneObj(clone.storeResult);
-    }
-
-    return clone;
-};
-
-// Specify metadata for the asset (being issued)
-//
-//  Arguments:
-//   metadata: {
-//     ctnAssetId: [String], - The Catenis assigned ID for asset
-//     name: [String], - (optional) The name for the asset
-//     description: [String], - (optional) The description for the asset
-//     urls: [{  - (optional)
-//       url: [String], - The URL itself
-//       label: [String], - (optional) Label used to identify the content pointed to by this URL
-//       mimeType: [String] - (optional) The mime type of the content
-//     }]
-//   }
-CCMetadata.prototype.setAssetMetadata = function (metadata) {
-    // Make sure that required data is supplied
-    if (typeof metadata !== 'object' || metadata === null) {
-        Catenis.logger.ERROR('CCMetadata.setAssetMetadata() method called with invalid \'metadata\' argument', {metadata: metadata});
-        return;
-    }
-
-    if (metadata.ctnAssetId) {
-        this.ctnAssetId = metadata.ctnAssetId;
-
-        if (metadata.name) {
-            this.assetName = metadata.name;
-        }
-
-        if (metadata.description) {
-            this.assetDescription = metadata.description;
-        }
-
-        if (metadata.urls) {
-            this.setUrls(metadata.urls);
-        }
-
-        resetMetadata.call(this);
-    }
-    else {
-        Catenis.logger.ERROR('CCMetadata.setAssetMetadata() method called without required \'metadata\' property \'ctnAssetId\'', {metadata: metadata});
-    }
-};
-
-// Specify URLs to be added to the metadata
-//
-//  Arguments:
-//   urls: [{  - (optional)
-//     url: [String], - The URL itself
-//     label: [String], - (optional) Label used to identify the content pointed to by this URL
-//     mimeType: [String] - (optional) The mime type of the content
-//   }]
-CCMetadata.prototype.setUrls = function (urls) {
-    urls = Array.isArray(urls) ? urls : [urls];
-    let newUrlInserted = false;
-
-    urls.forEach((url) => {
-        const urlContentInfo = retrieveUrlContentInfo(url);
-
-        if (urlContentInfo !== undefined) {
-            this.urls.push(urlContentInfo);
-            newUrlInserted = true;
+            if (Object.keys(assembledMetadata).length > 0) {
+                this.metadata = assembledMetadata;
+            }
         }
         else {
-            Catenis.logger.ERROR('Unable to retrieve content info from URL to be associated with asset', {url: url});
+            Catenis.logger.WARN('Trying to assemble Colored Coins metadata that is already assembled', this);
         }
-    });
-
-    if (newUrlInserted) {
-        resetMetadata.call(this);
-    }
-};
-
-// Specify user data of a given type to be added to the metadata
-//
-//  Arguments:
-//   data [Object] - Object the properties of which define the data to add. The name of the properties is the
-//                    name of the data, and the value of the properties the value of the data. To specify a value
-//                    of a given data type (i.e. 'URL' or 'Email'), the value should be an Array of the format:
-//                    [type(String),value]. Otherwise, the data type is inferred from the value itself (String,
-//                    Number, Boolean or Date). When the value is an object, the object is interpreted the same
-//                    way as the data argument, and an array of data is inserted
-CCMetadata.prototype.setMetaUserData = function (data) {
-    const meta = formatMetaUserData(data);
-
-    if (meta) {
-        if (this.userData === undefined) {
-            this.userData = {};
-        }
-
-        if (this.userData.meta !== undefined) {
-            this.userData.meta = this.userData.meta.concat(meta);
-        }
-        else {
-            this.userData.meta = meta;
-        }
-
-        resetMetadata.call(this);
-    }
-};
-
-// Specify generic user data to be added to the metadata
-//
-//  Arguments:
-//   key [String] - The key to be associated with this data
-//   data [Object] - The data to be added. Should be an instance of Buffer if data is intended to be encrypted
-//   encryptData [Boolean] - Indicates whether data should be encrypted
-CCMetadata.prototype.setFreeUserData = function (key, data, encryptData) {
-    // Make sure that key is a string
-    if (typeof key !== 'string') {
-        Catenis.logger.ERROR('CCMetadata.setFreeUserData() method called with invalid \'key\' argument', {key: key});
-        return;
     }
 
-    // Make sure that key is not a reserved key
-    if (key !== 'meta') {
-        if (this.userData === undefined) {
-            this.userData = {};
-        }
+    /**
+     * @typedef {Object} CCMetaStoreResult
+     * @property {string} cid Hex-encoded (from binary) IPFS CID of the stored Colored Coins metadata
+     */
 
-        this.userData[key] = data;
+    /**
+     * Stored the rendered Colored Coins metadata onto IFPS
+     * @return {(CCMetaStoreResult|undefined)}
+     */
+    store() {
+        if (!this.isStored) {
+            if (this.isAssembled) {
+                try {
+                    // Save metadata onto IPFS
+                    const cidObj = Catenis.ipfsClient.add(Buffer.from(JSON.stringify(this.metadata))).cid;
 
-        if (encryptData && Buffer.isBuffer(data)) {
-            this.encryptUserDataKeys.add(key);
-        }
-
-        resetMetadata.call(this);
-    }
-    else {
-        Catenis.logger.WARN('Trying to set free user data to Colored Coins metadata with a reserved key', {key: key});
-    }
-};
-
-//  Arguments:
-//   encCryptoKeys [Object(CryptoKeys)] - (optional) The crypto key-pair associated with a blockchain address that should be used to encrypt the data
-CCMetadata.prototype.assemble = function (encCryptoKeys) {
-    if (this.metadata === undefined) {
-        this.metadata = {};
-
-        if (this.ctnAssetId !== undefined) {
-            // Add asset metadata
-            if (this.assetName !== undefined) {
-                this.metadata.assetName = this.assetName;
-            }
-
-            this.metadata.issuer = cfgSettings.ctnAssetsIssuer;
-
-            this.metadata.description = this.assetDescription ? this.assetDescription : cfgSettings.ctnAssetsDescription;
-
-            this.metadata.urls = [{
-                name: 'icon',
-                url: cfgSettings.ctnAssetsLargeLogoUrl,
-                mimeType: cfgSettings.ctnAssetsLargeLogoMimeType,
-                dataHash: cfgSettings.ctnAssetsLargeLogoHash
-            }];
-
-            this.metadata.userData = {
-                meta: [{
-                    key: 'ctnAssetId',
-                    value: this.ctnAssetId,
-                    type: 'String'
-                }]
-            };
-
-            this.metadata.verifications = {
-                signed: getMetadataSignedVerification.call(this)
-            };
-        }
-
-        if (this.urls.length > 0) {
-            this.metadata.urls = this.metadata.urls === undefined ? this.urls : this.metadata.urls.concat(this.urls);
-        }
-
-        if (this.userData !== undefined) {
-            if (this.metadata.userData === undefined) {
-                this.metadata.userData = {};
-            }
-
-            if (this.userData.meta !== undefined) {
-                this.metadata.userData.meta = this.metadata.userData.meta === undefined ? this.userData.meta : this.metadata.userData.meta.concat(this.userData.meta);
-            }
-
-            Object.keys(this.userData).forEach((key) => {
-                if (key !== 'meta') {
-                    if (encCryptoKeys && this.encryptUserDataKeys.has(key)) {
-                        // Encrypt before saving user data
-                        const encKey = cfgSettings.encryptedUserDataKeyPrefix + key;
-
-                        try {
-                            this.metadata.userData[encKey] = encCryptoKeys.encryptData(this.userData[key]).toString('base64');
-                        }
-                        catch (err) {
-                            Catenis.logger.ERROR(util.format('Error trying to encrypt Colored Coins metadata user data (key: %s, value: %s).', key, this.userData[key]), err);
-                        }
-                    }
-                    else {
-                        this.metadata.userData[key] = this.userData[key];
-                    }
+                    this.storeResult = {
+                        cid: Buffer.from(cidObj.bytes).toString('hex')
+                    };
                 }
-            });
-        }
-    }
-    else {
-        Catenis.logger.WARN('Trying to assemble Colored Coins metadata that is already assembled', this);
-    }
-};
-
-//  Result: [Object] - Object the properties of which depends if using IPFS to store metadata (useIpfs = true) or BitTorrent (useIpfs = false)
-//   - using IPFS: {
-//     cid: [String] - Hex encoded CID of metadata stored on IPFS
-//   }
-//   - using BitTorrent: {
-//     torrentHash: [String] - The (hex encoded) hash of the torrent file containing the added metadata
-//     sha2: [String] - The (hex encoded) SHA256 hash of the metadata (JSON.stringify())
-//  }
-CCMetadata.prototype.store = function () {
-    if (this.storeResult === undefined) {
-        if (this.metadata) {
-            const metadata = {
-                metadata: this.metadata
-            };
-
-            // Special case for the Catenis Colored Coins protocol
-            try {
-                // Save metadata onto IPFS
-                const cidObj = Catenis.ipfsClient.add(Buffer.from(JSON.stringify(metadata))).cid;
-
-                this.storeResult = {
-                    cid: Buffer.from(cidObj.bytes).toString('hex')
-                };
-            }
-            catch (err) {
-                Catenis.logger.ERROR('Error while storing Colored Coins metadata onto IPFS.', err);
-            }
-        }
-        else {
-            Catenis.logger.WARN('No Colored Coins metadata to store');
-        }
-    }
-    else {
-        Catenis.logger.WARN('Trying to store Colored Coins metadata that is already stored', this);
-    }
-
-    return this.storeResult;
-};
-
-CCMetadata.prototype.isAssembled = function () {
-    return this.metadata !== undefined;
-};
-
-CCMetadata.prototype.isStored = function () {
-    return this.storeResult !== undefined;
-};
-
-
-// Module functions used to simulate private CCMetadata object methods
-//  NOTE: these functions need to be bound to a CCMetadata object reference (this) before
-//      they are called, by means of one of the predefined function methods .call(), .apply()
-//      or .bind().
-//
-
-function resetMetadata() {
-    this.metadata = this.storeResult = undefined;
-}
-
-function getSigningCertificate() {
-    if (!this.signingCertificate) {
-        try {
-            this.signingCertificate = fs.readFileSync(cfgSettings.signingCertificateFilePath, {encoding: 'utf8'});
-        }
-        catch (err) {
-            Catenis.logger.ERROR('Error reading SSL signing certificate for asset verification.', err);
-        }
-    }
-
-    return this.signingCertificate;
-}
-
-function getSignedMessage(message) {
-    let signedMsg;
-
-    try {
-        const opts = {
-            binary: true,
-            nodetach: true,
-            nosmimecap: true,
-            nocerts: true,
-            outform: 'PEM',
-            signer: cfgSettings.signingCertificateFilePath,
-            inkey: cfgSettings.signingCertificateKeyFilePath
-        };
-        signedMsg = opensslSync('cms.sign', Buffer.from(message), opts);
-    }
-    catch (err) {
-        Catenis.logger.ERROR('Error executing openssl to sign message for asset verification.', err);
-    }
-
-    return signedMsg !== undefined ? signedMsg.toString() : undefined;
-}
-
-function getMetadataSignedVerification() {
-    let signedVerification;
-    let cert;
-
-    if ((cert = getSigningCertificate.call(this))) {
-        const message = this.signingMessage;
-        const signedMessage = getSignedMessage.call(this, message);
-
-        if (signedMessage) {
-            signedVerification = {
-                message: message,
-                signed_message: signedMessage,
-                cert: cert
-            };
-        }
-    }
-
-    return signedVerification;
-}
-
-// Parse metadata user data entry
-//
-//  Arguments:
-//   userData [Object] - The user data to be parsed
-//   decCryptKeys [Object(CryptoKeys)] - (optional) The crypto key-pair associated with a blockchain address that should be used to decrypt encrypted data
-function parseUserData(userData, decCryptoKeys) {
-    this.userData = undefined;
-    this.encryptUserDataKeys = new Set();
-
-    if (typeof userData === 'object' && userData !== null) {
-        const parsedUserData = {};
-
-        Object.keys(userData).forEach((key) => {
-            if (key === 'meta') {
-                const parsedMetaUserData = parseMetaUserData(userData[key]);
-
-                if (parsedMetaUserData) {
-                    parsedUserData.meta = parsedMetaUserData;
+                catch (err) {
+                    Catenis.logger.ERROR('Error while storing Colored Coins metadata onto IPFS.', err);
                 }
             }
             else {
-                let data = userData[key];
+                Catenis.logger.WARN('No Colored Coins metadata to store');
+            }
+        }
+        else {
+            Catenis.logger.WARN('Trying to store Colored Coins metadata that is already stored', this);
+        }
 
-                if (decCryptoKeys && key.startsWith(cfgSettings.encryptedUserDataKeyPrefix) && key.length > cfgSettings.encryptedUserDataKeyPrefix.length
-                        && typeof data === 'string') {
-                    try {
-                        data = decCryptoKeys.decryptData(Buffer.from(data, 'base64'));
-                    }
-                    catch (err) {
-                        Catenis.logger.ERROR(util.format('Error trying to decrypt Colored Coins user data (key: %s, value: %s).', key, userData[key]), err);
-                    }
+        return this.storeResult;
+    }
 
-                    key = key.substr(cfgSettings.encryptedUserDataKeyPrefix.length);
-                    this.encryptUserDataKeys.add(key);
-                }
+    // Class (public) methods
+    //
 
-                parsedUserData[key] = data;
+    /**
+     * Get Colored Coins metadata from IPFS
+     * @param {Buffer} cid The CID of the metadata on IPFS in binary representation
+     * @param {CryptoKeys} [assetDecCryptoKeys] The crypto key-pair associated with a blockchain address that should be
+     *                                           used to decrypt encrypted asset free user data
+     * @param {(CryptoKeys|CryptoKeys[])} [nfTokenDecCryptoKeys] A list of crypto key-pairs associated with a blockchain
+     *                                      address that should be used for decrypting encrypted non-fungible token
+     *                                      metadata data. Key-pairs for new non-fungible token metadata are indexed by
+     *                                      their numeric position (starting from zero) on the list (natural array
+     *                                      indexing), and the special index -1 is used as a wildcard. On the other
+     *                                      hand, key-pairs for updated non-fungible token metadata are indexed by the
+     *                                      respective non-fungible token ID, and the special index "*" is used as a
+     *                                      wildcard. Optionally, a single crypto key-pair may be passed. In that case,
+     *                                      the single key-pair is used as the new non-fungible token metadata wildcard
+     *                                      (equivalent to a key-pair from the list at index -1)
+     * @return {CCMetadata}
+     */
+    static fromCID(cid, assetDecCryptoKeys, nfTokenDecCryptoKeys) {
+        let metadata;
+
+        try {
+            const cidObj = CID.decode(cid);
+
+            metadata = Catenis.ipfsClient.cat(cidObj);
+        }
+        catch (err) {
+            Catenis.logger.ERROR('Error trying to retrieve Colored Coins metadata from IPFS.', err);
+        }
+
+        if (metadata) {
+            try {
+                const ccMetadata = new CCMetadata(JSON.parse(metadata), assetDecCryptoKeys, nfTokenDecCryptoKeys);
+
+                ccMetadata.storeResult = {
+                    cid: cid.toString('hex')
+                };
+
+                return ccMetadata;
+            }
+            catch (err) {
+                Catenis.logger.ERROR('Error parsing Colored Coins metadata.', err);
+            }
+        }
+    }
+
+    /**
+     * Checks whether Colored Coins metadata (previously) stored on BitTorrent had already
+     *  been stored onto IPFS, and returns its CID if it did
+     * @param {string} torrentHash The Torrent hash of the Colored Coins metadata on BitTorrent
+     * @return {(Buffer|undefined)} CID (in binary format) of Colored Coins metadata on IPFS, or
+     *                               undefined if metadata is not yet stored on IPFS
+     */
+    static checkCIDConverted(torrentHash) {
+        const ccMetaConvert = Catenis.db.collection.CCMetadataConversion.findOne({
+            torrentHash: torrentHash
+        }, {
+            fields: {
+                cid: true
             }
         });
 
-        if (Object.keys(parsedUserData).length > 0) {
-            this.userData = parsedUserData;
-        }
+        return ccMetaConvert ? Buffer.from(ccMetaConvert.cid, 'hex') : undefined;
     }
 }
-
-
-// CCMetadata function class (public) methods
-//
-
-// Get metadata from IPFS (for Catenis Colored Coins protocol)
-//
-//  Arguments:
-//   cid: [Object(Buffer)] - Buffer containing CID of the metadata on IPFS
-//   decCryptKeys [Object(CryptoKeys)] - (optional) The crypto key-pair associated with a blockchain address that should be used to decrypt encrypted user data
-CCMetadata.fromCID = function (cid, decCryptoKeys) {
-    let metadata;
-
-    try {
-        const cidObj = new CID(cid);
-
-        metadata = Catenis.ipfsClient.cat(cidObj);
-    }
-    catch (err) {
-        Catenis.logger.ERROR('Error trying to retrieve Colored Coins metadata from IPFS.', err);
-    }
-
-    if (metadata) {
-        try {
-            const ccMeta = new CCMetadata(JSON.parse(metadata).metadata, decCryptoKeys);
-
-            ccMeta.storeResult = {
-                cid: cid.toString('hex')
-            };
-
-            return ccMeta;
-        }
-        catch (err) {
-            Catenis.logger.ERROR('Error parsing Colored Coins metadata.', err);
-        }
-    }
-};
-
-// Check whether Colored Coins metadata (previously) stored on BitTorrent had already
-//  been stored onto IPFS, and returns its CID if it did
-CCMetadata.checkCIDConverted = function (torrentHash) {
-    const ccMetaConvert = Catenis.db.collection.CCMetadataConversion.findOne({
-        torrentHash: torrentHash
-    }, {
-        fields: {
-            cid: true
-        }
-    });
-
-    return ccMetaConvert ? Buffer.from(ccMetaConvert.cid, 'hex') : undefined;
-};
-
-
-// CCMetadata function class (public) properties
-//
-
-/*CCMetadata.prop = {};*/
 
 
 // Definition of module (private) functions
 //
 
-// Arguments:
-//  url: {
-//    label: [String] - (options)
-//    url: [String] - The URL for the contents
-//  }
-function retrieveUrlContentInfo(url) {
-    let contentInfo;
-
-    try {
-        const response = Promise.await(
-            got(url.url, {
-                retry: 0,
-                responseType: 'buffer',
-                timeout: {
-                    socket: cfgSettings.urlContentTimeout,
-                    response: cfgSettings.urlContentTimeout
-                }
-            })
-        );
-
-        if (response.body) {
-            // Calculate SHA256 hash of content
-            contentInfo = {
-                dataHash: crypto.createHash('sha256').update(response.body).digest('hex')
-            };
-
-            // Get content type if specified
-            if (response.headers && response.headers.hasOwnProperty('content-type')) {
-                contentInfo.contentType = response.headers['content-type'];
-            }
-        }
-        else {
-            Catenis.logger.ERROR(util.format('No content returned from URL %s', url.url));
-        }
-    }
-    catch (err) {
-        Catenis.logger.ERROR(util.format('Error trying to access URL %s.', url.url), err);
-    }
-
-    if (!url.label) {
-        // Try to get content label from URL
-        try {
-            const parsedUrl = Url.parse(url.url);
-
-            if (parsedUrl.pathname) {
-                let lastSlashIdx = parsedUrl.pathname.lastIndexOf('/');
-
-                contentInfo.name = parsedUrl.pathname.substr(lastSlashIdx < 0 || lastSlashIdx === parsedUrl.pathname.length - 1 ? 0 : lastSlashIdx + 1);
-            }
-        }
-        catch (err) {}
-    }
-    else {
-        contentInfo.name = url.label;
-    }
-
-    let result;
-
-    if (contentInfo) {
-        result = {};
-
-        if (contentInfo.name) {
-            result.name = contentInfo.name;
-        }
-
-        result.url = url.url;
-
-        if (url.mimeType) {
-            result.mimeType = url.mimeType;
-        }
-        else if (contentInfo.contentType) {
-            result.mimeType = contentInfo.contentType;
-        }
-
-        result.dataHash = contentInfo.dataHash;
-    }
-
-    return result;
-}
-
-function formatMetaUserData(data) {
-    const meta = [];
-
-    // Make sure that data is of the right type
-    if (typeof data === 'object' && data !== null) {
-        Object.keys(data).forEach((key) => {
-            const entry = {
-                key: key
-            };
-
-            const value = data[key];
-
-            switch (typeof value) {
-                case 'string':
-                    entry.value = value;
-                    entry.type = 'String';
-                    break;
-
-                case 'number':
-                    entry.value = value.toString();
-                    entry.type = 'Number';
-                    break;
-
-                case 'boolean':
-                    entry.value = value.toString();
-                    entry.type = 'Boolean';
-                    break;
-
-                case 'object':
-                    if (Array.isArray(value)) {
-                        if (value.length >= 2 && typeof value[1] === 'string') {
-                            if (value[0].toLowerCase() === 'url') {
-                                entry.value = value[1];
-                                entry.type = 'URL';
-                            }
-                            else if (value[0].toLowerCase() === 'email') {
-                                entry.value = value[1];
-                                entry.type = 'Email';
-                            }
-                        }
-                    }
-                    else if (value instanceof Date) {
-                        entry.value = moment(value).format();
-                        entry.type = 'Date';
-                    }
-                    else {
-                        let formattedValue = formatMetaUserData(value);
-
-                        if (formattedValue) {
-                            entry.value = formattedValue;
-                            entry.type = 'Array';
-                        }
-                    }
-
-                    break;
-            }
-
-            if ('value' in entry) {
-                meta.push(entry);
-            }
-        });
-    }
-
-    return meta.length > 0 ? meta : undefined;
-}
-
-function parseMetaUserData(meta) {
-    if (Array.isArray(meta)) {
-        const data = {};
-
-        meta.forEach((entry) => {
-            if (typeof entry.key === 'string' && (typeof entry.type === 'undefined' || typeof entry.type === 'string')) {
-                if (entry.type === undefined) {
-                    // If no type specified, assume it is string
-                    entry.type = 'String';
-                }
-
-                if (entry.type.toLowerCase() === 'array' || typeof entry.value === 'string')
-                switch (entry.type.toLowerCase()) {
-                    case 'string':
-                    case 'url':
-                    case 'email':
-                    default:
-                        if (typeof entry.value === 'string') {
-                            // Interpret value as string
-                            data[entry.key] = entry.value;
-                        }
-
-                        break;
-
-                    case 'date':
-                        if (typeof entry.value === 'string') {
-                            // Interpret value as date
-                            const mt = moment(entry.value);
-
-                            if (mt.isValid()) {
-                                data[entry.key] = mt.toDate();
-                            }
-                        }
-
-                        break;
-
-                    case 'number':
-                        if (typeof entry.value === 'string') {
-                            // Interpret value as number
-                            let parsedNumber = Number.parseInt(entry.value);
-
-                            if (Number.isNaN(parsedNumber)) {
-                                parsedNumber = Number.parseFloat(entry.value);
-                            }
-
-                            data[entry.key] = Number.isFinite(parsedNumber) ? parsedNumber : entry.value;
-                        }
-
-                        break;
-
-                    case 'boolean':
-                        if (typeof entry.value === 'string') {
-                            // Interpret value as boolean
-                            data[entry.key] = entry.value.toLowerCase() === 'false' || entry.value.toLowerCase() === '0';
-                        }
-
-                        break;
-
-                    case 'array':
-                        const parsedData = parseMetaUserData(entry.value);
-
-                        if (parsedData) {
-                            data[entry.key] = parsedData;
-                        }
-
-                        break;
-                }
-            }
-        });
-
-        return Object.keys(data).length > 0 ? data : undefined;
-    }
-}
-
 
 // Module code
 //
 
-// Lock function class
+// Lock class
 Object.freeze(CCMetadata);

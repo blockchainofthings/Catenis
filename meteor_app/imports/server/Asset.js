@@ -43,6 +43,7 @@ export const cfgSettings = {
 //  Constructor arguments:
 //    docAsset: [Object] - Asset database doc/rec
 export function Asset(docAsset) {
+    this.doc_id = docAsset._id;
     this.assetId = docAsset.assetId;
     this.ccAssetId = docAsset.ccAssetId;
     this.type = docAsset.type;
@@ -63,6 +64,7 @@ export function Asset(docAsset) {
 
     this.divisibility = docAsset.divisibility;
     this.isAggregatable = docAsset.isAggregatable;
+    this.isNonFungible = docAsset.isNonFungible;
     this.createdDate = docAsset.createdDate;
 }
 
@@ -124,29 +126,29 @@ Asset.prototype.formatAmount = function (amount) {
 // Create new Asset local database entry
 //
 //  Arguments:
-//   ccTransaction: [Object(CCTransaction)] - A Colored Coin transaction object used to issued asset
+//   ccTransaction: [Object(CCTransaction)] - A Colored Coin transaction object used to issue asset
 //   name: [String] - (optional) The asset name. If not defined, the asset name is gotten from the Colored Coins
 //                     metadata (if any) in the Colored Coins transaction
 //   description: [String] - (optional) The asset description. If not defined, the asset name is gotten from the Colored Coins
 //                            metadata (if any) in the Colored Coins transaction
 Asset.createAsset = function (ccTransact, name, description) {
-    // Make sure that Colored Coins transaction is used to issued new assets
+    // Make sure that Colored Coins transaction is used to issue new assets
     if (ccTransact.issuingInfo === undefined) {
         //  Log error and throw exception
         Catenis.logger.ERROR('Cannot create asset from Colored Coins transaction that does not issue new assets', {
             ccTransact: ccTransact
         });
-        new Meteor.Error('ctn_asset_cannot_create', 'Cannot create asset from Colored Coins transaction that does not issue new assets');
+        throw new Meteor.Error('ctn_asset_cannot_create', 'Cannot create asset from Colored Coins transaction that does not issue new assets');
     }
 
     if ((name === undefined || description === undefined) && ccTransact.ccMetadata !== undefined) {
         // Get asset name and/or description from Colored Coins metadata
         if (name === undefined) {
-            name = ccTransact.ccMetadata.assetName;
+            name = ccTransact.ccMetadata.assetMetadata.assetName;
         }
 
         if (description === undefined) {
-            description = ccTransact.ccMetadata.assetDescription;
+            description = ccTransact.ccMetadata.assetMetadata.assetDescription;
         }
     }
 
@@ -162,6 +164,7 @@ Asset.createAsset = function (ccTransact, name, description) {
         issuance: {},
         divisibility: ccTransact.issuingInfo.divisibility,
         isAggregatable: ccTransact.issuingInfo.isAggregatable,
+        isNonFungible: ccTransact.issuingInfo.isNonFungible,
         createdDate: new Date()
     };
 
@@ -178,7 +181,7 @@ Asset.createAsset = function (ccTransact, name, description) {
     catch (err) {
         // Error inserting new Asset database doc/rec.
         //  Log error and throw exception
-        Catenis.logger.ERROR('Error trying to create new asset database doc: %j.', docAsset, err);
+        Catenis.logger.ERROR('Error trying to create new asset database doc:', docAsset, err);
         throw new Meteor.Error('ctn_asset_insert_error', 'Error trying to create new asset database doc', err.stack);
     }
 

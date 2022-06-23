@@ -3234,6 +3234,242 @@ Database.initialize = function() {
                     }
                 }
             }]
+        },
+        NonFungibleToken: {
+            indices: [{
+                fields: {
+                    asset_id: 1
+                },
+                opts: {
+                    background: true,
+                    writeConcern: {
+                        w: 1
+                    }
+                }
+            }, {
+                fields: {
+                    tokenId: 1
+                },
+                opts: {
+                    unique: true,
+                    background: true,
+                    writeConcern: {
+                        w: 1
+                    }
+                }
+            }, {
+                fields: {
+                    ccTokenId: 1
+                },
+                opts: {
+                    unique: true,
+                    background: true,
+                    writeConcern: {
+                        w: 1
+                    }
+                }
+            }, {
+                fields: {
+                    name: 1
+                },
+                opts: {
+                    background: true,
+                    writeConcern: {
+                        w: 1
+                    }
+                }
+            }, {
+                fields: {
+                    createdDate: 1
+                },
+                opts: {
+                    background: true,
+                    writeConcern: {
+                        w: 1
+                    }
+                }
+            }]
+        },
+        NonFungibleAssetIssuance: {
+            indices: [{
+                fields: {
+                    assetIssuanceId: 1
+                },
+                opts: {
+                    unique: true,
+                    background: true,
+                    writeConcern: {
+                        w: 1
+                    }
+                }
+            }, {
+                fields: {
+                    deviceId: 1
+                },
+                opts: {
+                    background: true,
+                    writeConcern: {
+                        w: 1
+                    }
+                }
+            }, {
+                fields: {
+                    'progress.done': 1
+                },
+                opts: {
+                    background: true,
+                    sparse: true,
+                    writeConcern: {
+                        w: 1
+                    }
+                }
+            }, {
+                fields: {
+                    'progress.success': 1
+                },
+                opts: {
+                    background: true,
+                    sparse: true,
+                    writeConcern: {
+                        w: 1
+                    }
+                }
+            }, {
+                fields: {
+                    'progress.error.code': 1
+                },
+                opts: {
+                    background: true,
+                    sparse: true,
+                    writeConcern: {
+                        w: 1
+                    }
+                }
+            }, {
+                fields: {
+                    'progress.error.message': 1
+                },
+                opts: {
+                    background: true,
+                    sparse: true,
+                    writeConcern: {
+                        w: 1
+                    }
+                }
+            }, {
+                fields: {
+                    'progress.finishDate': 1
+                },
+                opts: {
+                    background: true,
+                    sparse: true,
+                    writeConcern: {
+                        w: 1
+                    }
+                }
+            }, {
+                fields: {
+                    'assetId': 1
+                },
+                opts: {
+                    background: true,
+                    sparse: true,
+                    writeConcern: {
+                        w: 1
+                    }
+                }
+            }, {
+                fields: {
+                    createdDate: 1
+                },
+                opts: {
+                    background: true,
+                    writeConcern: {
+                        w: 1
+                    }
+                }
+            }]
+        },
+        NonFungibleTokenIssuingBatch: {
+            indices: [{
+                fields: {
+                    nfTokenIssuingBatchId: 1
+                },
+                opts: {
+                    unique: true,
+                    background: true,
+                    writeConcern: {
+                        w: 1
+                    }
+                }
+            }, {
+                fields: {
+                    nonFungibleAssetIssuance_id: 1,
+                    order: 1
+                },
+                opts: {
+                    unique: true,
+                    background: true,
+                    writeConcern: {
+                        w: 1
+                    }
+                }
+            }, {
+                fields: {
+                    nonFungibleAssetIssuance_id: 1
+                },
+                opts: {
+                    background: true,
+                    writeConcern: {
+                        w: 1
+                    }
+                }
+            }, {
+                fields: {
+                    isFinal: 1
+                },
+                opts: {
+                    background: true,
+                    writeConcern: {
+                        w: 1
+                    }
+                }
+            }, {
+                fields: {
+                    createdDate: 1
+                },
+                opts: {
+                    background: true,
+                    writeConcern: {
+                        w: 1
+                    }
+                }
+            }]
+        },
+        NonFungibleTokenIssuingPart: {
+            indices: [{
+                fields: {
+                    nonFungibleTokenIssuingBatch_id: 1,
+                    index: 1
+                },
+                opts: {
+                    unique: true,
+                    background: true,
+                    writeConcern: {
+                        w: 1
+                    }
+                }
+            }, {
+                fields: {
+                    createdDate: 1
+                },
+                opts: {
+                    background: true,
+                    writeConcern: {
+                        w: 1
+                    }
+                }
+            }]
         }
     };
 

@@ -1123,16 +1123,44 @@ function allocateUtxos(amount, utxoResultSets, numWorkUtxos, work) {
 // Return asset info from within UTXO for the specified asset if it exists
 function getAssetUtxoInfo(utxo) {
     if (utxo.assets !== undefined) {
-        if (utxo.assets.length === 1) {
-            return utxo.assets[0].assetId === this.ccAssetId ? utxo.assets[0] : undefined;
-        }
-        else if (utxo.assets.length === 0) {
+        if (utxo.assets.length === 0) {
             // No asset entry in UTXO. Discard it
             Catenis.logger.WARN('UTXO has no Colored Coins asset entry. UTXO is being discarded', {utxo: utxo});
         }
         else {
-            // More than one asset entry in UTXO. This is not supported
-            Catenis.logger.WARN('UTXO has more than one Colored Coins asset entry. UTXO is being discarded', {utxo: utxo});
+            // Check if there are multiple asset entries in UTXO. Note that multiple entries of different
+            //  non-fungible tokens of the same non-fungible asset are allowed
+            let firstAsset = utxo.assets[0];
+            let multipleAssets = false;
+
+            for (let idx = 1, limit = utxo.assets.length; idx < limit; idx++) {
+                const asset = utxo.assets[idx];
+
+                if (asset.assetId !== firstAsset.assetId || firstAsset.aggregationPolicy !== CCTransaction.aggregationPolicy.nonFungible) {
+                    multipleAssets = true;
+                    break;
+                }
+            }
+
+            if (!multipleAssets) {
+                if (firstAsset.assetId === this.ccAssetId) {
+                    // This is the Colored Coins asset we are looking for. Make sure that it is of a supported type
+                    //  though before proceeding
+                    if (firstAsset.aggregationPolicy === CCTransaction.aggregationPolicy.nonFungible) {
+                        // Unsupported asset type. Log error and throw exception
+                        Catenis.logger.ERROR('Unable to retrieve Colored Coins asset info for UTXO; non-fungible assets are not supported', {
+                            ccAssetId: this.ccAssetId
+                        });
+                        throw new Error('Unable to retrieve Colored Coins asset info for UTXO; non-fungible assets are not supported');
+                    }
+
+                    return firstAsset;
+                }
+            }
+            else {
+                // Multiple asset entries. Discard UTXO
+                Catenis.logger.WARN('UTXO has more than one Colored Coins asset entry. UTXO is being discarded', {utxo: utxo});
+            }
         }
     }
 }
@@ -1175,7 +1203,9 @@ function computeAdditionalUtxos(addUtxoTxInputs) {
             assetId: txInput.txout.ccAssetId,
             amount: txInput.txout.assetAmount,
             divisibility: txInput.txout.assetDivisibility,
-            aggregationPolicy: txInput.txout.isAggregatableAsset ? CCTransaction.aggregationPolicy.aggregatable : CCTransaction.aggregationPolicy.dispersed,
+            aggregationPolicy: txInput.txout.isAggregatableAsset ? CCTransaction.aggregationPolicy.aggregatable
+                : (txInput.txout.ccTokenId ? CCTransaction.aggregationPolicy.nonFungible
+                : CCTransaction.aggregationPolicy.dispersed),
         }];
 
         if (txidUtxos.has(txInput.txout.txid)) {

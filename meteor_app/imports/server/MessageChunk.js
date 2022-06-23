@@ -368,7 +368,7 @@ function newMessageChunkId(checkExistence = true) {
     let id = 'k' + Random.id(19);
 
     if (checkExistence) {
-        while (Catenis.db.collection.MessageChunk.findOne({provisionalMessageId: id}, {fields: {_id: 1}})) {
+        while (Catenis.db.collection.MessageChunk.findOne({messageChunkId: id}, {fields: {_id: 1}})) {
             Catenis.logger.DEBUG('Newly generated Message Chunk ID (%s) already exists. Trying again.', id);
 
             id = 'k' + Random.id(19);

@@ -159,12 +159,12 @@
     "localAddress": "", // IP address of local network interface to use to connect with the Catenis Colored Coins node server. If not specified (empty string) the default network interface is used
     "connectionTimeout": 30000  // (30 sec.) Timeout, in milliseconds, for connection with the Catenis Colored Coins node server
   },
-  // Parameters pertaining to CCMetadata module
-  "ccMetadata": {
-    "signingCertificateFilePath": "/Users/claudio/Documents/Híades/Clientes/Blockchain_of_Things/Projects/Catenis/Development/Test SSL certificate/Test_cert.pem",  // Filesystem path to Blockchain of Things' owned SSL certificate used to signed message for asset verification
-    "signingCertificateKeyFilePath": "/Users/claudio/Documents/Híades/Clientes/Blockchain_of_Things/Projects/Catenis/Development/Test SSL certificate/Test_key.pem",  // Path to file containing key of SSL certificate used to sign message for asset verification
-    "urlContentTimeout": 15000,  // (15 sec.) Timeout, in milliseconds, for retrieving content associated with a given URL
-    "shareAfterStoring": false  // Indicates whether metadata should be shared right after it is stored (added to Colored Coins metadata server)
+  // Parameters pertaining to CCAssetMetadata module
+  ccAssetMetadata: {
+    signingCertificateFilePath: "/Users/claudio/Documents/Híades/Clientes/Blockchain_of_Things/Projects/Catenis/Development/Test SSL certificate/Test_cert.pem",  // Filesystem path to Blockchain of Things' owned SSL certificate used to signed message for asset verification
+    signingCertificateKeyFilePath: "/Users/claudio/Documents/Híades/Clientes/Blockchain_of_Things/Projects/Catenis/Development/Test SSL certificate/Test_key.pem",  // Path to file containing key of SSL certificate used to sign message for asset verification
+    urlContentTimeout: 15000,  // (15 sec.) Timeout, in milliseconds, for retrieving content associated with a given URL
+    shareAfterStoring: false  // Indicates whether metadata should be shared right after it is stored (added to Colored Coins metadata server)
   },
   // Parameters pertaining to BcotToken module
   "bcotToken": {
@@ -173,7 +173,7 @@
   // Parameters pertaining to SpendServiceCreditTransaction module
   "spendServiceCreditTransaction": {
     "maxNumClients": 12,  // Maximum number of clients that can be assigned to a single spend service credit transaction
-    "ccMetadata": {
+    "ccAssetMetadata": {
       "servTxidsKey": "servTxids",  // Name (key) of Colored Coins free user metadata used to refer to service transaction
       "ocMsgServCidsKey": "ocMsgServCids"  // Name (key) of Colored Coins free user metadata used to refer to off-chain message related service data (off-chain message envelope)
     },

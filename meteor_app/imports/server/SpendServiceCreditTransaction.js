@@ -39,19 +39,19 @@ import { BitcoinInfo } from './BitcoinInfo';
 
 // Config entries
 const spendServCredTxConfig = config.get('spendServiceCreditTransaction');
-const spndSrvCrdTxCcMetaConfig = spendServCredTxConfig.get('ccMetadata');
-const spndSrvCrdTxCcMetaPlhdConfig = spndSrvCrdTxCcMetaConfig.get('placeholder');
+const spndSrvCrdTxCcAssetMetaConfig = spendServCredTxConfig.get('ccAssetMetadata');
+const spndSrvCrdTxCcMetaPlhdConfig = spndSrvCrdTxCcAssetMetaConfig.get('placeholder');
 
 // Configuration settings
 const cfgSettings = {
     maxNumClients: spendServCredTxConfig.get('maxNumClients'),
-    ccMetadata: {
+    ccAssetMetadata: {
         placeholder: {
             key: spndSrvCrdTxCcMetaPlhdConfig.get('key'),
             value: spndSrvCrdTxCcMetaPlhdConfig.get('value')
         },
-        servTxidsKey: spndSrvCrdTxCcMetaConfig.get('servTxidsKey'),
-        ocMsgServCidsKey: spndSrvCrdTxCcMetaConfig.get('ocMsgServCidsKey')
+        servTxidsKey: spndSrvCrdTxCcAssetMetaConfig.get('servTxidsKey'),
+        ocMsgServCidsKey: spndSrvCrdTxCcAssetMetaConfig.get('ocMsgServCidsKey')
     },
     unconfirmedTxTimeout: spendServCredTxConfig.get('unconfirmedTxTimeout'),
     txSizeThresholdRatio: spendServCredTxConfig.get('txSizeThresholdRatio')
@@ -147,22 +147,22 @@ export class SpendServiceCreditTransaction extends events.EventEmitter {
             let hasOCMsgServCids = false;
 
             // noinspection CommaExpressionJS
-            if (this.ccTransact.ccMetadata !== undefined && this.ccTransact.ccMetadata.userData !== undefined
-                    && (hasServTxids = this.ccTransact.ccMetadata.userData[cfgSettings.ccMetadata.servTxidsKey] !== undefined,
-                    hasOCMsgServCids = this.ccTransact.ccMetadata.userData[cfgSettings.ccMetadata.ocMsgServCidsKey] !== undefined,
+            if (this.ccTransact.ccMetadata !== undefined
+                    && (hasServTxids = this.ccTransact.ccMetadata.assetMetadata.userData.hasFreeDataKey(cfgSettings.ccAssetMetadata.servTxidsKey),
+                    hasOCMsgServCids = this.ccTransact.ccMetadata.assetMetadata.userData.hasFreeDataKey(cfgSettings.ccAssetMetadata.ocMsgServCidsKey),
                     hasServTxids || hasOCMsgServCids)) {
                 const debugInfo = {};
                 if (hasServTxids) debugInfo.servTxids = {
-                    raw: this.ccTransact.ccMetadata.userData[cfgSettings.ccMetadata.servTxidsKey],
-                    string: this.ccTransact.ccMetadata.userData[cfgSettings.ccMetadata.servTxidsKey].toString()
+                    raw: this.ccTransact.ccMetadata.assetMetadata.userData.freeData[cfgSettings.ccAssetMetadata.servTxidsKey],
+                    string: this.ccTransact.ccMetadata.assetMetadata.userData.freeData[cfgSettings.ccAssetMetadata.servTxidsKey].toString()
                 };
                 if (hasOCMsgServCids) debugInfo.ocMsgServCids = {
-                    raw: this.ccTransact.ccMetadata.userData[cfgSettings.ccMetadata.ocMsgServCidsKey],
-                    string: this.ccTransact.ccMetadata.userData[cfgSettings.ccMetadata.ocMsgServCidsKey].toString()
+                    raw: this.ccTransact.ccMetadata.assetMetadata.userData.freeData[cfgSettings.ccAssetMetadata.ocMsgServCidsKey],
+                    string: this.ccTransact.ccMetadata.assetMetadata.userData.freeData[cfgSettings.ccAssetMetadata.ocMsgServCidsKey].toString()
                 };
                 Catenis.logger.DEBUG('>>>>>> Spend service credit Colored Coins metadata', debugInfo);
-                this.serviceTxids = hasServTxids ? JSON.parse(this.ccTransact.ccMetadata.userData[cfgSettings.ccMetadata.servTxidsKey].toString()) : [];
-                this.ocMsgServiceCids = hasOCMsgServCids ? JSON.parse(this.ccTransact.ccMetadata.userData[cfgSettings.ccMetadata.ocMsgServCidsKey].toString()) : [];
+                this.serviceTxids = hasServTxids ? JSON.parse(this.ccTransact.ccMetadata.assetMetadata.userData.freeData[cfgSettings.ccAssetMetadata.servTxidsKey].toString()) : [];
+                this.ocMsgServiceCids = hasOCMsgServCids ? JSON.parse(this.ccTransact.ccMetadata.assetMetadata.userData.freeData[cfgSettings.ccAssetMetadata.ocMsgServCidsKey].toString()) : [];
             }
             else {
                 // Colored Coins metadata missing. Try to get service transactions from
@@ -486,11 +486,11 @@ SpendServiceCreditTransaction.prototype.payForService = function (client, servic
             }
 
             if (newServiceTxids || this.serviceTxids.length > 0) {
-                ccMetadata.setFreeUserData(cfgSettings.ccMetadata.servTxidsKey, Buffer.from(JSON.stringify(newServiceTxids || this.serviceTxids)), true);
+                ccMetadata.assetMetadata.addFreeUserData(cfgSettings.ccAssetMetadata.servTxidsKey, Buffer.from(JSON.stringify(newServiceTxids || this.serviceTxids)), true);
             }
 
             if (newOCMsgServiceCids || this.ocMsgServiceCids.length > 0) {
-                ccMetadata.setFreeUserData(cfgSettings.ccMetadata.ocMsgServCidsKey, Buffer.from(JSON.stringify(newOCMsgServiceCids || this.ocMsgServiceCids)), true);
+                ccMetadata.assetMetadata.addFreeUserData(cfgSettings.ccAssetMetadata.ocMsgServCidsKey, Buffer.from(JSON.stringify(newOCMsgServiceCids || this.ocMsgServiceCids)), true);
             }
             Catenis.logger.DEBUG('>>>>>> New spend service credit Colored Coins metadata', {
                 newServiceTxids: newServiceTxids || this.serviceTxids,
@@ -500,7 +500,7 @@ SpendServiceCreditTransaction.prototype.payForService = function (client, servic
         }
         else {
             // No service data reference passed. Add a placeholder metadata for now
-            ccMetadata.setFreeUserData(cfgSettings.ccMetadata.placeholder.key, cfgSettings.ccMetadata.placeholder.value);
+            ccMetadata.assetMetadata.addFreeUserData(cfgSettings.ccAssetMetadata.placeholder.key, cfgSettings.ccAssetMetadata.placeholder.value);
         }
 
         newCcTransact.setCcMetadata(ccMetadata);
@@ -619,11 +619,11 @@ SpendServiceCreditTransaction.prototype.setServiceDataRef = function (serviceDat
     const ccMetadata = new CCMetadata();
 
     if (newServiceTxids || this.serviceTxids.length > 0) {
-        ccMetadata.setFreeUserData(cfgSettings.ccMetadata.servTxidsKey, Buffer.from(JSON.stringify(newServiceTxids || this.serviceTxids)), true);
+        ccMetadata.assetMetadata.addFreeUserData(cfgSettings.ccAssetMetadata.servTxidsKey, Buffer.from(JSON.stringify(newServiceTxids || this.serviceTxids)), true);
     }
 
     if (newOCMsgServiceCids || this.ocMsgServiceCids.length > 0) {
-        ccMetadata.setFreeUserData(cfgSettings.ccMetadata.ocMsgServCidsKey, Buffer.from(JSON.stringify(newOCMsgServiceCids || this.ocMsgServiceCids)), true);
+        ccMetadata.assetMetadata.addFreeUserData(cfgSettings.ccAssetMetadata.ocMsgServCidsKey, Buffer.from(JSON.stringify(newOCMsgServiceCids || this.ocMsgServiceCids)), true);
     }
     Catenis.logger.DEBUG('>>>>>> New spend service credit Colored Coins metadata', {
         newServiceTxids: newServiceTxids || this.serviceTxids,

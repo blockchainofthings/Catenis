@@ -16,6 +16,19 @@ import { Application } from '../imports/server/Application';
 // Load test cases
 import '/imports/server/test/FundSourceTest.js';
 import '/imports/server/test/CCFundSourceTest.js';
+import '/imports/server/test/NFTokenSourceTest.js';
+import '/imports/server/test/NFTokenIssuingPartTest.js';
+import '/imports/server/test/NFTokenIssuingBatchTest.js';
+import '/imports/server/test/NFTokenContentsUrlTest.js';
+import '/imports/server/test/NFAssetIssuanceTest.js';
+import '/imports/server/test/NFTokenStorageTest.js';
+import '/imports/server/test/NFTokenContentsReadableTest.js';
+import '/imports/server/test/CCUserDataMetadataTest.js';
+import '/imports/server/test/CCSingleNFTokenMetadataTest.js';
+import '/imports/server/test/CCNFTokenMetadataTest.js';
+import '/imports/server/test/CCAssetMetadataTest.js';
+import '/imports/server/test/CCMetadataTest.js';
+
 
 // Initialize required modules
 Logger.initialize();

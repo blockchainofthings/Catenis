@@ -251,22 +251,87 @@ Util.mergeArrays = function (ar1, ar2) {
     return resultAr;
 };
 
-// This method is to be used in place of underscore.js's clone() method to overcome a limitation
-//  of that method where accessor type properties (getter/setter) are copied as data properties
-Util.cloneObj = function (obj) {
-    // noinspection CommaExpressionJS
-    return  Object.create(obj, Object.getOwnPropertyNames(obj).reduce((o, n) => (o[n] = Object.getOwnPropertyDescriptor(obj, n), o), {}));
-};
-
-// Clone an object or an array. If the array contains objects, the objects are also cloned. If those objects
-//  are arrays, the process repeats itself
-Util.cloneObjArray = function (arr) {
-    if (typeof arr === 'object') {
-        if (Array.isArray(arr)) {
-            return _und.map(arr, Util.cloneObjArray);
+/**
+ * Clone an object
+ *
+ * Note: this method is to be used in place of underscore.js's clone() method to overcome a limitation
+ *        of that method where accessor type properties (getter/setter) are copied as data properties
+ *
+ * @param {Object} obj The object to clone
+ * @param {boolean} checkSelfClonable Indicates whether the object should be cloned by calling its own 'clone()' method
+ *                                     if available
+ * @return {Object} The cloned object
+ */
+Util.cloneObj = function (obj, checkSelfClonable = false) {
+    if (Util.isNonNullObject(obj)) {
+        if (checkSelfClonable && typeof obj.constructor.prototype.clone === 'function') {
+            // Object is self-clonable. So let it clone itself
+            return obj.clone();
         }
 
-        return Util.cloneObj(arr);
+        // noinspection CommaExpressionJS
+        return Object.create(obj, Object.getOwnPropertyNames(obj).reduce((o, n) => (o[n] = Object.getOwnPropertyDescriptor(obj, n), o), {}));
+    }
+
+    return obj;
+};
+
+/**
+ * Clone an object or an array. If the array contains objects, those objects are also cloned.
+ *  If those objects are arrays, the process repeats itself
+ * @param {(Object|any[])} arr The object or array to clone
+ * @param {boolean} checkSelfClonable Indicates whether objects should be cloned by calling their own 'clone()' method
+ *                                     if available
+ * @return {Object}
+ */
+Util.cloneObjArray = function (arr, checkSelfClonable = false) {
+    if (Util.isNonNullObject(arr)) {
+        if (Array.isArray(arr)) {
+            return _und.map(arr, elem => Util.cloneObjArray(elem, checkSelfClonable));
+        }
+
+        return Util.cloneObj(arr, checkSelfClonable);
+    }
+
+    return arr;
+};
+
+/**
+ * Clone an object interpreting it as a key, value dictionary
+ * @param {Object} obj The dictionary object to clone
+ * @param {boolean} checkSelfClonable Indicates whether the object should be cloned by calling its own 'clone()' method
+ *                                     if available
+ * @return {Object}
+ */
+Util.cloneObjDict = function (obj, checkSelfClonable = false) {
+    if (Util.isNonNullObject(obj)) {
+        if (checkSelfClonable && typeof obj.constructor.prototype.clone === 'function') {
+            // Object is self-clonable. So let it clone itself
+            return obj.clone();
+        }
+
+        return _und.mapObject(obj, value => Util.cloneObjDictArray(value, checkSelfClonable));
+    }
+
+    return obj;
+}
+
+/**
+ * Clone an object -- interpreting it as a key, value dictionary -- or an array. If the array contains objects,
+ *  those objects are also cloned -- also interpreting them as key, value dictionaries. If those objects are arrays,
+ *  the process repeats itself
+ * @param {(Object|any[])} arr The dictionary object or array to clone
+ * @param {boolean} checkSelfClonable Indicates whether objects should be cloned by calling their onw 'clone()' method
+ *                                     if available
+ * @return {Object}
+ */
+Util.cloneObjDictArray = function (arr, checkSelfClonable = false) {
+    if (Util.isNonNullObject(arr)) {
+        if (Array.isArray(arr)) {
+            return _und.map(arr, elem => Util.cloneObjDictArray(elem, checkSelfClonable));
+        }
+
+        return Util.cloneObjDict(arr, checkSelfClonable);
     }
 
     return arr;
@@ -503,7 +568,7 @@ Util.fromUint8Array = function (value) {
     }
 
     return value;
-}
+};
 
 /**
  * Recursively converts values that are an array of bytes (unsigned integers not greater than 255)
@@ -530,7 +595,33 @@ Util.toUint8Array = function (value) {
     }
 
     return value;
-}
+};
+
+/**
+ * Sort the values of a map object in regard to their keys
+ * @param {Map<*, *>} map The map to sort
+ * @param {Function} [compareFn] The compare function to use for the sorting (this is identical to the 'compareFn'
+ *                                parameter of the standard Array.prototype.sort() method)
+ * @return {*[]}
+ */
+Util.sortMapValuesByKey = function (map, compareFn) {
+    return Array.from(map.keys()).sort(compareFn).map(key => map.get(key));
+};
+
+/**
+ * Return the number of non-null (not null, empty nor undefined) elements in an array
+ * @param {any[]} arr The input array
+ * @return {number}
+ */
+Util.nonNullArrayLength = function (arr) {
+    return arr.reduce((s, e) => {
+        if (e) {
+            s++;
+        }
+
+        return s;
+    }, 0);
+};
 
 /**
  * Mark all e-mail addresses associated with a Meteor user as verified

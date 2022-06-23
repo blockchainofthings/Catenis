@@ -84,6 +84,10 @@ import { listExportedAssets } from './ApiListExportedAssets';
 import { migrateAsset } from './ApiMigrateAsset';
 import { assetMigrationOutcome } from './ApiAssetMigrationOutcome';
 import { listAssetMigrations } from './ApiListAssetMigrations';
+import { issueNonFungibleAsset } from './ApiIssueNonFungibleAsset';
+import { reissueNonFungibleAsset } from './ApiReissueNonFungibleAsset';
+import { retrieveNFAssetIssuanceProgress } from './ApiNFAssetIssuanceProgress';
+
 
 // Config entries
 const restApiConfig = config.get('restApi');
@@ -411,6 +415,38 @@ export function RestApi(apiVersion) {
             //  Refer to the source file where the action function is defined for a detailed description of the endpoint
             get: {
                 action: listAssetMigrations
+            }
+        });
+    }
+
+    if (this.apiVer.gte('0.12')) {
+        // noinspection JSUnresolvedFunction
+        this.api.addRoute('assets/non-fungible/issue', {authRequired: true}, {
+            // Issue non-fungible asset (public method)
+            //
+            //  Refer to the source file where the action function is defined for a detailed description of the endpoint
+            post: {
+                action: issueNonFungibleAsset
+            }
+        });
+
+        // noinspection JSUnresolvedFunction
+        this.api.addRoute('assets/non-fungible/:assetId/issue', {authRequired: true}, {
+            // Reissue non-fungible asset (public method)
+            //
+            //  Refer to the source file where the action function is defined for a detailed description of the endpoint
+            post: {
+                action: reissueNonFungibleAsset
+            }
+        });
+
+        // noinspection JSUnresolvedFunction
+        this.api.addRoute('assets/non-fungible/issuance/:issuanceId', {authRequired: true}, {
+            // Retrieve non-fungible asset issuance progress (public method)
+            //
+            //  Refer to the source file where the action function is defined for a detailed description of the endpoint
+            get: {
+                action: retrieveNFAssetIssuanceProgress
             }
         });
     }

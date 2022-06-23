@@ -155,7 +155,16 @@ export function IssueAssetTransaction(issuingDevice, holdingDevice, amount, asse
         if (this.asset) {
             // Request to reissue an amount of an existing asset
 
-            // Make sure that asset can be reissued and that the issuing device is the original issuing device
+            // Make sure that this is a regular (fungible) asset, that it can be reissued and that the issuing device
+            //  is the original issuing device
+
+            if (this.asset.isNonFungible) {
+                Catenis.logger.ERROR('Inconsistent asset for reissuance; expected a regular (fungible) asset', {
+                    assetId: this.asset.assetId
+                });
+                throw new Meteor.Error('ctn_issue_asset_non_fungible', `Inconsistent asset for reissuance; expected an regular (fungible) asset (assetId: ${this.asset.assetId})`);
+            }
+
             if (this.asset.issuingType !== CCTransaction.issuingAssetType.unlocked) {
                 Catenis.logger.ERROR('Trying to reissue a locked asset', {
                     assetId: this.assetId
@@ -265,7 +274,7 @@ IssueAssetTransaction.prototype.buildTransaction = function () {
         // Prepare to add Colored Coins asset metadata
         const ccMetadata = new CCMetadata();
 
-        ccMetadata.setAssetMetadata({
+        ccMetadata.assetMetadata.setAssetProperties({
             ctnAssetId: this.assetId ? this.assetId : Asset.getAssetIdFromCcTransaction(this.ccTransact),
             name: this.assetInfo.name,
             description: this.assetInfo.description
@@ -287,7 +296,7 @@ IssueAssetTransaction.prototype.buildTransaction = function () {
 
         if (this.assetInfo.description === undefined) {
             // Update asset description from (assembled) Colored Coins metadata
-            this.assetInfo.description = ccMetadata.metadata.description;
+            this.assetInfo.description = ccMetadata.metadata.metadata.description;
         }
 
         // Finalize transaction
@@ -469,10 +478,10 @@ IssueAssetTransaction.checkTransaction = function (ccTransact) {
 
     // First, check if pattern of transaction's inputs and outputs is consistent
     if ((ccTransact instanceof CCTransaction) && ccTransact.matches(IssueAssetTransaction)) {
-        // Make sure that this is a Colored Coins transaction that issues asset, with no transfer input sequences
-        //  and exactly one transfer output, and with a valid metadata if present
-        if (ccTransact.issuingInfo !== undefined && ccTransact.transferInputSeqs.length === 0 && ccTransact.transferOutputs.length === 1
-                && (ccTransact.ccMetadata === undefined || ccTransact.ccMetadata.ctnAssetId !== undefined)) {
+        // Make sure that this is a Colored Coins transaction that issues regular (fungible) asset, with no
+        //  transfer input sequences and exactly one transfer output, and with a valid metadata if present
+        if (ccTransact.isIssuingAsset && !ccTransact.hasTransfer && ccTransact.transferOutputs.length === 1
+                && (!ccTransact.ccMetadata || ccTransact.ccMetadata.assetMetadata.ctnAssetId)) {
             // Validate and identify input and output addresses
             //  NOTE: no need to check if the variables below are non-null because the transact.matches()
             //      result above already guarantees it
@@ -558,8 +567,8 @@ IssueAssetTransaction.checkTransaction = function (ccTransact) {
                     issueAssetTransact.assetInfo = {};
 
                     if (ccTransact.ccMetadata !== undefined) {
-                        issueAssetTransact.assetInfo.name = ccTransact.ccMetadata.assetName;
-                        issueAssetTransact.assetInfo.description = ccTransact.ccMetadata
+                        issueAssetTransact.assetInfo.name = ccTransact.ccMetadata.assetMetadata.assetName;
+                        issueAssetTransact.assetInfo.description = ccTransact.ccMetadata.assetMetadata.assetDescription;
                     }
                     else {
                         // Issue asset transaction missing Colored Coins metadata.

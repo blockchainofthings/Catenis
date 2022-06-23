@@ -175,6 +175,9 @@ export function reissueAsset2() {
                 else if (err.error === 'ctn_issue_asset_amount_too_large') {
                     error = errorResponse.call(this, 400, 'Amount to issue is too large');
                 }
+                else if (err.error === 'ctn_issue_asset_non_fungible') {
+                    error = errorResponse.call(this, 400, 'Not a regular (fungible) asset');
+                }
                 else if (err.error === 'ctn_issue_asset_reissue_locked') {
                     error = errorResponse.call(this, 400, 'Asset cannot be reissued');
                 }

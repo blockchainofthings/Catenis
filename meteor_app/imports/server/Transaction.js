@@ -2042,8 +2042,13 @@ Transaction.type = Object.freeze({
     }),
     issue_asset: Object.freeze({
         name: 'issue_asset',
-        description: 'Transaction used to issue an amount of a Catenis assets for a device',
+        description: 'Transaction used to issue an amount of a Catenis asset for a device',
         dbInfoEntryName: 'issueAsset'
+    }),
+    issue_nf_asset: Object.freeze({
+        name: 'issue_nf_asset',
+        description: 'Transaction used to issue new non-fungible tokens of a Catenis non-fungible asset for one or more devices',
+        dbInfoEntryName: 'issueNFAsset'
     }),
     transfer_asset: Object.freeze({
         name: 'transfer_asset',

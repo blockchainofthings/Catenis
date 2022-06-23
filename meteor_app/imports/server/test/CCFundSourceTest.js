@@ -2249,6 +2249,31 @@ describe('CCFundSource module', function () {
             expect(ccFundSrc.ancestorTxs.ancestorRefCounter).to.deep.equal(ancTxs.ancestorRefCounter, 'ancestor transactions reference counter not as expected');
         });
     });
+
+    describe('Try to retrieve non-fungible asset', function () {
+        before(function () {
+            resetC3NodeClient(utxosTestData3);
+            C3NodeClient.initialize();
+        });
+
+        it ('should fail trying to retrieve non-fungible asset (UTXO with single non-fungible token)', function () {
+            expect(() => {
+                const ccFundSrc = new CCFundSource('LnAR9VJaHTtHQPeMaPTVWvKo6nLmBGoZH5z92v', 'bcrt1q0zxcuyjwx6fa8g7j0dhxe7judv7l7986rtp8r6', {
+                    useUnconfirmedUtxo: false
+                });
+            })
+            .to.throw('Unable to retrieve Colored Coins asset info for UTXO; non-fungible assets are not supported');
+        });
+
+        it ('should fail trying to retrieve non-fungible asset (UTXO with multiple non-fungible tokens)', function () {
+            expect(() => {
+                const ccFundSrc = new CCFundSource('Un4zg8Ku1CQvPca9y6wJSPWdV2xkM5BWCnppoD', 'bcrt1qxpd89mf77l3q43ajmwwcxms2smc4uyqh3xpknm', {
+                    useUnconfirmedUtxo: false
+                });
+            })
+            .to.throw('Unable to retrieve Colored Coins asset info for UTXO; non-fungible assets are not supported');
+        });
+    });
 });
 
 // Only confirmed UTXOs
@@ -2571,6 +2596,58 @@ const utxosTestData2 = [
             amount: 6500,
             divisibility: 0,
             aggregationPolicy: CCTransaction.aggregationPolicy.aggregatable
+        }]
+    }
+];
+
+// Non-fungible assets
+const utxosTestData3 = [
+    // Confirmed UTXO with single non-fungible token (asset ID: 'LnAR9VJaHTtHQPeMaPTVWvKo6nLmBGoZH5z92v')
+    {
+        "txid": "841f14f80b3f9f0b0d9f353c7ec2d517121ed948542bd0a0f1c080c29141eaff",
+        "vout": 0,
+        "address": "bcrt1q0zxcuyjwx6fa8g7j0dhxe7judv7l7986rtp8r6",
+        "label": "",
+        "scriptPubKey": "0014788d8e124e3693d3a3d27b6e6cfa5c6b3dff14fa",
+        "amount": 0.00000600,
+        "confirmations": 10,
+        "spendable": false,
+        "solvable": true,
+        "desc": "wpkh([788d8e12]02ac23301af8b315dc38b910ffaa237a0ff6a2b3bf540b5812bc52880ef9f6a112)#mvz9vxud",
+        "safe": true,
+        "assets": [{
+            assetId: 'LnAR9VJaHTtHQPeMaPTVWvKo6nLmBGoZH5z92v',
+            amount: 1,
+            divisibility: 0,
+            aggregationPolicy: CCTransaction.aggregationPolicy.nonFungible,
+            tokenId: 'Tk97fk8Rg27toQW68faxhnDuYeFEoLC1fYfiE1'
+        }]
+    },
+    // Confirmed UTXO with multiple non-fungible tokens for the same asset (asset ID: 'Un4zg8Ku1CQvPca9y6wJSPWdV2xkM5BWCnppoD')
+    {
+        "txid": "254f30129b88b65a9a35378c71a3724aa946c7b0e2696f999a34d5227bde0fe7",
+        "vout": 3,
+        "address": "bcrt1qxpd89mf77l3q43ajmwwcxms2smc4uyqh3xpknm",
+        "label": "",
+        "scriptPubKey": "0014305a72ed3ef7e20ac7b2db9d836e0a86f15e1017",
+        "amount": 0.00000600,
+        "confirmations": 12,
+        "spendable": false,
+        "solvable": true,
+        "desc": "wpkh([305a72ed]02ac3649d4c0b460904de168630010aa02bc77c5cf943d11a49d03adab0ed94bcd)#hqedwf9e",
+        "safe": true,
+        "assets": [{
+            assetId: 'Un4zg8Ku1CQvPca9y6wJSPWdV2xkM5BWCnppoD',
+            amount: 1,
+            divisibility: 0,
+            aggregationPolicy: CCTransaction.aggregationPolicy.nonFungible,
+            tokenId: 'Tk97fk8Rg27toQW68faxhnDuYeFEoK6GNnWDAH'
+        }, {
+            assetId: 'Un4zg8Ku1CQvPca9y6wJSPWdV2xkM5BWCnppoD',
+            amount: 1,
+            divisibility: 0,
+            aggregationPolicy: CCTransaction.aggregationPolicy.nonFungible,
+            tokenId: 'Tk97fk8Rg27toQW68faxhnDuYeFEoK6GZ1AedZ'
         }]
     }
 ];

@@ -236,6 +236,11 @@ Notification.event = Object.freeze({
         name: 'asset-migration-outcome',
         description: 'Asset migration has been finalized',
         minNotifyServiceVer: '0.4'
+    }),
+    nf_asset_issuance_outcome: Object.freeze({
+        name: 'nf-asset-issuance-outcome',
+        description: 'Non-fungible asset issuance has been finalized',
+        minNotifyServiceVer: '0.5'
     })
 });
 

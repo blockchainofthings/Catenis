@@ -77,6 +77,8 @@ import { OffChainMsgReceipt } from './OffChainMsgReceipt';
 import { ExportedAsset } from './ExportedAsset';
 import { ForeignBlockchain } from './ForeignBlockchain';
 import { AssetMigration } from './AssetMigration';
+import { NFAssetIssuance } from './NFAssetIssuance';
+import { IssueNFAssetTransaction } from './IssueNFAssetTransaction';
 
 
 // Definition of function classes
@@ -2466,6 +2468,444 @@ Device.prototype.issueAsset = function (amount, assetInfo, holdingDeviceId) {
     return totalExistentBalance !== undefined ? totalExistentBalance : assetId;
 };
 
+/**
+ * @typedef {Object} InitialNonFungibleTokenInfo
+ * @property {NonFungibleTokenProps} metadata The non-fungible token's properties
+ * @property {Buffer} [contents] Another part of the non-fungible token contents
+ */
+
+/**
+ * Initial data for creating a non-fungible asset and/or issuing its non-fungible tokens
+ * @typedef {Object} IssueNFAssetInitialData
+ * @property {(NonFungibleAssetProps|string)} assetPropsOrId Properties of the new non-fungible asset to create, or
+ *                                                            external ID of a previously created non-fungible asset
+ *                                                            (for reissuance)
+ * @property {boolean} encryptNFTContents Indicates whether the non-fungible tokens' contents should be encrypted
+ *                                         before being stored (on IPFS)
+ * @property {string[]} [holdingDeviceIds] List of ID of the devices that will hold the non-fungible tokens being issued
+ * @property {boolean} asyncProc Indicates whether the operation should be performed asynchronously
+ * @property {InitialNonFungibleTokenInfo[]} nfTokenInfos List of information about the non-fungible tokens to issue
+ * @property {boolean} isFinal Indicates whether this is the only call for the non-fungible asset issuance operation
+ */
+
+/**
+ * @typedef {Object} ContinuationNonFungibleTokenInfo
+ * @property {Buffer} contents Another part of the non-fungible token contents
+ */
+
+/**
+ * @typedef {(ContinuationNonFungibleTokenInfo|null)} ContinuationNonFungibleTokenInfoEntry
+ */
+
+/**
+ * Continuation data for creating a non-fungible asset and/or issuing its non-fungible tokens
+ * @typedef {Object} IssueNFAssetContinuationData
+ * @property {string} continuationToken ID that identifies the ongoing non-fungible asset issuance operation
+ * @property {ContinuationNonFungibleTokenInfoEntry[]} [nfTokenInfos] List with additional contents data for the
+ *                                                                     non-fungible tokens
+ * @property {boolean} isFinal Indicates whether this is the final call for the ongoing non-fungible asset issuance
+ *                              operation
+ */
+
+/**
+ * Create a non-fungible asset and/or issue its non-fungible tokens
+ * @param {IssueNFAssetInitialData} [initialData] Initial data for creating a non-fungible asset and/or issuing its
+ *                                                 non-fungible tokens
+ * @param {IssueNFAssetContinuationData} [continuationData] Continuation data for creating a non-fungible asset and/or
+ *                                                           issuing its non-fungible tokens
+ * @param {boolean} [isReissuance] Indicates whether this is actually a reissuance operation
+ * @returns {NFAssetIssuanceResult}
+ */
+Device.prototype.issueNonFungibleAsset = function (initialData, continuationData, isReissuance = false) {
+    // Make sure that device is not deleted
+    if (this.status === Device.status.deleted.name) {
+        // Cannot issue non-fungible asset from a deleted device. Log error and throw exception
+        Catenis.logger.ERROR('Cannot issue non-fungible asset from a deleted device', {deviceId: this.deviceId});
+        throw new Meteor.Error('ctn_device_deleted', `Cannot issue non-fungible asset from a deleted device (deviceId: ${this.deviceId})`);
+    }
+
+    // Make sure that device is active
+    if (this.status !== Device.status.active.name) {
+        // Cannot issue non-fungible asset from a device that is not active. Log error and throw exception
+        Catenis.logger.ERROR('Cannot issue non-fungible asset from a device that is not active', {
+            deviceId: this.deviceId}
+        );
+        throw new Meteor.Error('ctn_device_not_active', `Cannot issue non-fungible asset from a device that is not active (deviceId: ${this.deviceId})`);
+    }
+
+    let nfAssetIssuance;
+
+    if (initialData) {
+        // Initiating a new non-fungible asset issuance operation
+        if (typeof initialData.assetPropsOrId === 'string') {
+            // An asset ID was passed for asset reissuance. Validate asset
+
+            // Make sure that asset exists. Note: it throws ctn_asset_not_found exception otherwise
+            const asset = Asset.getAssetByAssetId(initialData.assetPropsOrId, true);
+
+            // Make sure that this is a non-fungible asset
+            if (!asset.isNonFungible) {
+                Catenis.logger.ERROR('Inconsistent asset for reissuance; expected an non-fungible asset', {
+                    assetId: asset.assetId
+                });
+                throw new Meteor.Error('ctn_issue_nf_asset_fungible', `Inconsistent asset for reissuance; expected an non-fungible asset (assetId: ${asset.assetId})`);
+            }
+
+            // Make sure that asset can be reissued
+            if (asset.issuingType !== CCTransaction.issuingAssetType.unlocked) {
+                Catenis.logger.ERROR('Trying to reissue a locked non-fungible asset', {
+                    assetId: asset.assetId
+                });
+                throw new Meteor.Error('ctn_issue_nf_asset_reissue_locked', `Trying to reissue a locked non-fungible asset (assetId: ${asset.assetId})`);
+            }
+
+            // Make sure that the issuing device is the original issuing device
+            if (asset.issuingDevice.deviceId !== this.deviceId) {
+                Catenis.logger.ERROR('Device trying to reissue asset is not the same as the original issuing device', {
+                    assetId: asset.assetId,
+                    assetIssuingDeviceId: asset.issuingDevice.deviceId,
+                    issuingDeviceId: this.deviceId
+                });
+                throw new Meteor.Error('ctn_issue_nf_asset_invalid_issuer', `Device (deviceId: ${this.deviceId}) trying to reissue non-fungible asset (assetId: ${asset.assetId}) is not the same as the original issuing device (deviceId: ${asset.issuingDevice.deviceId})`);
+            }
+        }
+
+        // Validate devices that should hold the issued non-fungible tokens
+        let holdingDeviceIds = initialData.holdingDeviceIds ? initialData.holdingDeviceIds : [this.deviceId];
+
+        holdingDeviceIds.forEach(holdingDeviceId => {
+            let holdingDevice;
+
+            if (holdingDeviceId !== this.deviceId) {
+                try {
+                    holdingDevice = Device.getDeviceByDeviceId(holdingDeviceId);
+
+                    // Make sure that holding device is not deleted
+                    if (holdingDevice.status === Device.status.deleted.name) {
+                        // Cannot assign issued non-fungible tokens to a deleted device.
+                        //  Log error and throw exception
+                        Catenis.logger.ERROR('Cannot assign issued non-fungible tokens to a deleted device', {
+                            deviceId: holdingDeviceId
+                        });
+                        //noinspection ExceptionCaughtLocallyJS
+                        throw new Meteor.Error('ctn_issue_nf_asset_hold_dev_deleted', `Cannot assign issued non-fungible tokens to a deleted device (deviceId: ${holdingDeviceId})`);
+                    }
+
+                    // Make sure that holding device is active
+                    if (holdingDevice.status !== Device.status.active.name) {
+                        // Cannot assign issued non-fungible tokens to a device that is not active.
+                        //  Log error condition and throw exception
+                        Catenis.logger.ERROR('Cannot assign issued non-fungible tokens to a device that is not active', {
+                            deviceId: holdingDeviceId
+                        });
+                        //noinspection ExceptionCaughtLocallyJS
+                        throw new Meteor.Error('ctn_issue_nf_asset_hold_dev_not_active', `Cannot assign issued non-fungible tokens to a device that is not active (deviceId: ${holdingDeviceId})`);
+                    }
+                }
+                catch (err) {
+                    if ((err instanceof Meteor.Error) && err.error === 'ctn_device_not_found') {
+                        // No holding device available with the given device ID.
+                        //  Log error and throw exception
+                        Catenis.logger.ERROR('Could not find holding device with the given device ID', {
+                            deviceId: holdingDeviceId
+                        });
+                        throw new Meteor.Error('ctn_issue_nf_asset_hold_dev_not_found', `Could not find holding device with the given device ID (${holdingDeviceId})`);
+                    }
+                    else {
+                        // Otherwise, just re-throws exception
+                        throw err;
+                    }
+                }
+            }
+
+            // Make sure that device has permission to assign asset to be issued to holding device
+            if (!holdingDevice.shouldAcceptAssetOf(this) || (holdingDevice.deviceId !== this.deviceId
+                    && !holdingDevice.shouldAcceptAssetFrom(this))) {
+                // Device has no permission rights to assign asset to be issued to holding device
+                Catenis.logger.INFO('Device has no permission rights to assign non-fungible tokens to be issued to holding device', {
+                    deviceId: this.deviceId,
+                    holdingDeviceId: holdingDevice.deviceId
+                });
+                throw new Meteor.Error('ctn_device_no_permission', `Device has no permission rights to assign non-fungible tokens to be issued to holding device (deviceId: ${this.deviceId}, holdingDeviceId: ${holdingDevice.deviceId})`);
+            }
+        });
+
+        if (!initialData.isFinal) {
+            // Check whether client can pay for service ahead of time to avoid that client wastes resources
+            //  making various calls to pass all the non-fungible tokens' contents only to find out later that
+            //  it cannot pay for it. Note, however, that a definitive check shall still be done once the
+            //  issuance operation is finally executed
+
+            // Execute code in critical section to avoid Colored Coins UTXOs concurrency
+            CCFundSource.utxoCS.execute(() => {
+                // TODO: implement a new method to retrieve the service price for issuing non-fungible assets, and
+                //  replace the call below.
+                const servicePriceInfo = Service.issueAssetServicePrice();
+
+                if (this.client.billingMode === Client.billingMode.prePaid) {
+                    // Make sure that client has enough service credits to pay for service
+                    const serviceAccountBalance = this.client.serviceAccountBalance();
+
+                    if (serviceAccountBalance < servicePriceInfo.finalServicePrice) {
+                        // Client does not have enough credits to pay for service.
+                        //  Log error condition and throw exception
+                        Catenis.logger.ERROR('Client does not have enough credits to pay for issue non-fungible asset service', {
+                            serviceAccountBalance,
+                            servicePrice: servicePriceInfo.finalServicePrice
+                        });
+                        throw new Meteor.Error('ctn_device_low_service_acc_balance', 'Client does not have enough credits to pay for issue non-fungible asset service');
+                    }
+                }
+            });
+        }
+
+        // Execute code in critical section to avoid database concurrency
+        NFAssetIssuance.dbCS.execute(() => {
+            // Instantiate a non-fungible asset issuance object for a new issuance operation
+            nfAssetIssuance = new NFAssetIssuance(
+                undefined,
+                undefined,
+                this.deviceId,
+                initialData.assetPropsOrId,
+                initialData.encryptNFTContents,
+                initialData.holdingDeviceIds,
+                initialData.nfTokenInfos,
+                initialData.isFinal,
+                initialData.asyncProc
+            );
+        });
+    }
+    else if (continuationData) {
+        // Continuing an ongoing non-fungible asset issuance operation
+
+        // Execute code in critical section to avoid database concurrency
+        NFAssetIssuance.dbCS.execute(() => {
+            // Get the corresponding non-fungible asset issuance object
+            nfAssetIssuance = NFAssetIssuance.getNFAssetIssuanceByContinuationToken(
+                continuationData.continuationToken,
+                this.deviceId,
+                isReissuance
+            );
+
+            // Add the additional contents data for the non-fungible tokens being issued
+            nfAssetIssuance.newNFTokenIssuingBatch(continuationData.nfTokenInfos, continuationData.isFinal);
+        });
+    }
+    else {
+        // Missing data for issuing non-fungible asset. Nothing to do
+        Catenis.logger.WARN('Missing data for issuing non-fungible asset for device (deviceId: %s)', this.deviceId);
+        throw new Error('Missing data for issuing non-fungible asset');
+    }
+
+    if (!nfAssetIssuance.isComplete) {
+        // Issuance data not yet complete. Return continuation token so
+        //  issuance operation can be continued
+        return {
+            continuationToken: nfAssetIssuance.continuationToken
+        };
+    }
+
+    const doProcessing = () => {
+        const result = {};
+        let servicePaid = false;
+
+        // Execute code in critical section to avoid Colored Coins UTXOs concurrency
+        CCFundSource.utxoCS.execute(() => {
+            // Execute code in critical section to avoid UTXOs concurrency
+            FundSource.utxoCS.execute(() => {
+                // Execute code in critical section to avoid concurrent spend service credit tasks
+                spendServCredProcCS.execute(() => {
+                    // TODO: implement a new method to retrieve the service price for issuing non-fungible assets, and
+                    //  replace the call below.
+                    const servicePriceInfo = Service.issueAssetServicePrice();
+                    let paymentProvisionInfo;
+
+                    if (this.client.billingMode === Client.billingMode.prePaid) {
+                        try {
+                            paymentProvisionInfo = Catenis.spendServCredit.provisionPaymentForService(this.client, servicePriceInfo.finalServicePrice);
+                        }
+                        catch (err) {
+                            if ((err instanceof Meteor.Error) && err.error === 'ctn_spend_serv_cred_utxo_alloc_error') {
+                                // Unable to allocate service credits from client service account to pay for service.
+                                //  Log error and throw exception
+                                Catenis.logger.ERROR('Client does not have enough credits to pay for issue non-fungible asset service', {
+                                    serviceAccountBalance: this.client.serviceAccountBalance(),
+                                    servicePrice: servicePriceInfo.finalServicePrice
+                                });
+                                throw new Meteor.Error('ctn_device_low_service_acc_balance', 'Client does not have enough credits to pay for issue non-fungible asset service');
+                            }
+                            else {
+                                // Error provisioning spend service credit transaction to pay for service.
+                                //  Log error and throw exception
+                                Catenis.logger.ERROR('Error provisioning spend service credit transaction to pay for issue non-fungible asset service.', err);
+                                throw new Error('Error provisioning spend service credit transaction to pay for issue non-fungible asset service');
+                            }
+                        }
+                    }
+                    else if (this.client.billingMode === Client.billingMode.postPaid) {
+                        // Not yet implemented
+                        Catenis.logger.ERROR('Processing for postpaid billing mode not yet implemented');
+                        throw new Error('Processing for postpaid billing mode not yet implemented');
+                    }
+
+                    let issueNFAssetTransact;
+
+                    try {
+                        // Prepare transaction to issue asset
+                        issueNFAssetTransact = new IssueNFAssetTransaction(this, nfAssetIssuance);
+
+                        // Build and send transaction
+                        issueNFAssetTransact.buildTransaction();
+
+                        issueNFAssetTransact.sendTransaction();
+
+                        // Force polling of blockchain so newly sent transaction is received and processed right away
+                        Catenis.txMonitor.pollNow();
+                    }
+                    catch (err) {
+                        // Error issuing asset. Log error condition
+                        Catenis.logger.ERROR('Error issuing asset.', err);
+
+                        if (issueNFAssetTransact && !issueNFAssetTransact.txid) {
+                            // Revert output addresses added to transaction
+                            issueNFAssetTransact.revertOutputAddresses();
+                        }
+
+                        // Rethrows exception
+                        throw err;
+                    }
+
+                    if (!nfAssetIssuance.isReissuance) {
+                        result.assetId = issueNFAssetTransact.assetId;
+                    }
+
+                    result.nonFungibleTokenIds = issueNFAssetTransact.nfTokenIds;
+
+                    try {
+                        // Record billing info for service
+                        // TODO: update Billing object to handle new (yet to be defined) issue non-fungible asset service
+                        const billing = Billing.createNew(this, issueNFAssetTransact, servicePriceInfo);
+
+                        let servicePayTransact;
+
+                        if (this.client.billingMode === Client.billingMode.prePaid) {
+                            servicePayTransact = Catenis.spendServCredit.confirmPaymentForService(paymentProvisionInfo, issueNFAssetTransact.txid);
+                        }
+                        else if (this.client.billingMode === Client.billingMode.postPaid) {
+                            // Not yet implemented
+                            Catenis.logger.ERROR('Processing for postpaid billing mode not yet implemented');
+                            // noinspection ExceptionCaughtLocallyJS
+                            throw new Error('Processing for postpaid billing mode not yet implemented');
+                        }
+
+                        servicePaid = true;
+                        billing.setServicePaymentTransaction(servicePayTransact);
+                    }
+                    catch (err) {
+                        if ((err instanceof Meteor.Error) && err.error === 'ctn_spend_serv_cred_tx_rejected') {
+                            // Spend service credit transaction has been rejected.
+                            //  Log warning condition
+                            Catenis.logger.WARN('Billing for issue asset service (serviceTxid: %s) recorded with no service payment transaction', issueNFAssetTransact.txid);
+                        }
+                        else {
+                            // Error recording billing info for issue asset service.
+                            //  Just log error condition
+                            Catenis.logger.ERROR('Error recording billing info for issue asset service (serviceTxid: %s),', issueNFAssetTransact.txid, err);
+                        }
+                    }
+                });
+            });
+        });
+
+        if (servicePaid) {
+            try {
+                // Service successfully paid for. Check client service account balance now
+                this.client.checkServiceAccountBalance();
+            }
+            catch (err) {
+                // Log error
+                Catenis.logger.ERROR('Error while checking for client service account balance.', err);
+            }
+        }
+
+        return result;
+    };
+
+    if (nfAssetIssuance.asyncProc) {
+        // Execute processing asynchronously
+        Future.task(doProcessing).resolve((err, result) => {
+            // Finalize issuance
+            result = result || {};
+            nfAssetIssuance.finalizeIssuanceProgress(err, result.nonFungibleTokenIds, result.assetId);
+
+            try {
+                // Send notification advising that non-fungible asset issuance has been finalized
+                // noinspection JSUnusedAssignment
+                this.notifyNFAssetIssuanceOutcome(nfAssetIssuance.assetIssuanceId, nfAssetIssuance.getIssuanceProgress());
+            }
+            catch (err) {
+                // Error sending notification message. Log error
+                Catenis.logger.ERROR('Error sending non-fungible asset issuance outcome notification event for device (doc_id: %s)', this.doc_id, err);
+            }
+        });
+
+        // Return non-fungible asset issuance ID so its progress can be monitored
+        return {
+            assetIssuanceId: nfAssetIssuance.assetIssuanceId,
+        }
+    }
+    else {
+        // Execute processing immediately (synchronously)
+        let result;
+        let error;
+
+        try {
+            result = doProcessing();
+        }
+        catch (err) {
+            error = err;
+        }
+
+        // Finalize issuance
+        result = result || {};
+        nfAssetIssuance.finalizeIssuanceProgress(error, result.nonFungibleTokenIds, result.assetId);
+
+        if (error) {
+            throw error;
+        }
+
+        // Return issuance result
+        return result;
+    }
+}
+
+/**
+ * Retrieve information about the progress of a non-fungible asset issuance
+ * @param {string} assetIssuanceId The ID of the non-fungible asset issuance
+ * @returns {NonFungibleAssetIssuanceProgressInfo}
+ */
+Device.prototype.getNFAssetIssuanceProgress = function (assetIssuanceId) {
+    // Make sure that device is not deleted
+    if (this.status === Device.status.deleted.name) {
+        // Cannot retrieve non-fungible asset issuance for a deleted device. Log error and throw exception
+        Catenis.logger.ERROR('Cannot retrieve non-fungible asset issuance for a deleted device', {deviceId: this.deviceId});
+        throw new Meteor.Error('ctn_device_deleted', `Cannot retrieve non-fungible asset issuance for a deleted device (deviceId: ${this.deviceId})`);
+    }
+
+    // Make sure that device is active
+    if (this.status !== Device.status.active.name) {
+        // Cannot retrieve non-fungible asset issuance for a device that is not active. Log error and throw exception
+        Catenis.logger.ERROR('Cannot retrieve non-fungible asset issuance from a device that is not active', {
+            deviceId: this.deviceId}
+        );
+        throw new Meteor.Error('ctn_device_not_active', `Cannot retrieve non-fungible asset issuance for a device that is not active (deviceId: ${this.deviceId})`);
+    }
+
+    const nfAssetIssuance = NFAssetIssuance.getNFAssetIssuanceByAssetIssuanceId(assetIssuanceId, this.deviceId);
+
+    return nfAssetIssuance.getIssuanceProgress();
+};
+
 // Transfer an amount of an asset to a device
 //
 //  Arguments:
@@ -3336,6 +3776,19 @@ Device.prototype.notifyAssetMigrationOutcome = function (outcome) {
     // Dispatch notification message
     Catenis.notification.dispatchNotifyMessage(this.deviceId, Notification.event.asset_migration_outcome.name, JSON.stringify(outcome));
 };
+
+/**
+ * Issue a notification advising that a non-fungible asset issuance has been finalized
+ * @param {string} assetIssuanceId The non-fungible asset issuance ID
+ * @param {NonFungibleAssetIssuanceProgressInfo} issuanceProgress The final non-fungible asset issuance progress
+ */
+Device.prototype.notifyNFAssetIssuanceOutcome = function (assetIssuanceId, issuanceProgress) {
+    // Dispatch notification message
+    Catenis.notification.dispatchNotifyMessage(this.deviceId, Notification.event.nf_asset_issuance_outcome.name, JSON.stringify({
+        assetIssuanceId,
+        ...issuanceProgress
+    }));
+}
 /** End of notification related methods **/
 
 /** Asset related methods **/

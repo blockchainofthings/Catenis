@@ -16,13 +16,13 @@ export class TestCatenisColoredCoins {
     //      first input of the tx issued by the testIssuance method is different from the UTXO spent by the
     //      first input of the tx issued by the testTransfer method)
     resetMetadata() {
-        this.ccMeta = new CCMetadata();
+        this.ccMetadata = new CCMetadata();
 
-        this.ccMeta.setAssetMetadata({ctnAssetId:'fjkajfkjfjdslj'});
+        this.ccMetadata.assetMetadata.setAssetProperties({ctnAssetId:'fjkajfkjfjdslj'});
 
         const txids = ['6062e56442ebe60df16b5348fa4dba4c7ff2f95a65377c4f1adce89b3412de85','ecc8cdd2f3aaff6d95a6d520a7cb4b3955b119285d9b88bff4e6e2902288a0b3'];
 
-        this.ccMeta.setFreeUserData('txids',new Buffer(JSON.stringify(txids)),true);
+        this.ccMetadata.assetMetadata.addFreeUserData('txids',new Buffer(JSON.stringify(txids)),true);
     }
 
     testIssuance(metadataStorage = TestCatenisColoredCoins.metadataStorage.nullDataOnly) {
@@ -71,7 +71,7 @@ export class TestCatenisColoredCoins {
 
             this.ccTransact.setChangeTransferOutput(TestCatenisColoredCoins.outAddrs[idx], 0);
 
-            this.ccTransact.setCcMetadata(this.ccMeta);
+            this.ccTransact.setCcMetadata(this.ccMetadata);
 
             this.ccTransact.assemble();
 
@@ -138,7 +138,7 @@ export class TestCatenisColoredCoins {
 
             this.ccTransact.setChangeTransferOutput(TestCatenisColoredCoins.outAddrs[idx], 0);
 
-            this.ccTransact.setCcMetadata(this.ccMeta);
+            this.ccTransact.setCcMetadata(this.ccMetadata);
 
             this.ccTransact.assemble();
 

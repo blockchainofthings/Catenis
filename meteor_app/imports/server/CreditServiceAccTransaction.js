@@ -40,15 +40,15 @@ import { BitcoinInfo } from './BitcoinInfo';
 
 // Config entries
 const credServAccTxConfig = config.get('creditServiceAccTransaction');
-const credSrvAccTxCcMetaConfig = credServAccTxConfig.get('ccMetadata');
+const credSrvAccTxCcAssetMetaConfig = credServAccTxConfig.get('ccAssetMetadata');
 
 // Configuration settings
 const cfgSettings = {
     maxNumCcTransferOutputs: credServAccTxConfig.get('maxNumCcTransferOutputs'),
     safeNumCcTransferOutputs: credServAccTxConfig.get('safeNumCcTransferOutputs'),
-    ccMetadata: {
-        bcotPayTxidKey: credSrvAccTxCcMetaConfig.get('bcotPayTxidKey'),
-        redeemBcotTxidKey: credSrvAccTxCcMetaConfig.get('redeemBcotTxidKey')
+    ccAssetMetadata: {
+        bcotPayTxidKey: credSrvAccTxCcAssetMetaConfig.get('bcotPayTxidKey'),
+        redeemBcotTxidKey: credSrvAccTxCcAssetMetaConfig.get('redeemBcotTxidKey')
     }
 };
 
@@ -218,7 +218,7 @@ CreditServiceAccTransaction.prototype.buildTransaction = function () {
                 // No Colored Coins asset metadata set yet. Create it now
                 this.servCredCcMetadata = new CCMetadata();
 
-                this.servCredCcMetadata.setAssetMetadata({
+                this.servCredCcMetadata.assetMetadata.setAssetProperties({
                     ctnAssetId: Asset.getAssetIdFromCcTransaction(this.ccTransact),
                     name: servCredAssetInfo.name,
                     description: servCredAssetInfo.description
@@ -226,11 +226,11 @@ CreditServiceAccTransaction.prototype.buildTransaction = function () {
 
                 if (this.bcotTxType === Transaction.type.bcot_payment) {
                     // Add BCOT payment transaction ID to Colored Coins metadata
-                    this.servCredCcMetadata.setFreeUserData(cfgSettings.ccMetadata.bcotPayTxidKey, Buffer.from(this.bcotTxid), true);
+                    this.servCredCcMetadata.assetMetadata.addFreeUserData(cfgSettings.ccAssetMetadata.bcotPayTxidKey, Buffer.from(this.bcotTxid), true);
                 }
                 else if (this.bcotTxType === Transaction.type.redeem_bcot) {
                     // Add redeem BCOT transaction ID to Colored Coins metadata
-                    this.servCredCcMetadata.setFreeUserData(cfgSettings.ccMetadata.redeemBcotTxidKey, Buffer.from(this.bcotTxid), true);
+                    this.servCredCcMetadata.assetMetadata.addFreeUserData(cfgSettings.ccAssetMetadata.redeemBcotTxidKey, Buffer.from(this.bcotTxid), true);
                 }
             }
 
@@ -386,8 +386,9 @@ CreditServiceAccTransaction.checkTransaction = function (ccTransact) {
     // First, check if pattern of transaction's inputs and outputs is consistent
     if ((ccTransact instanceof CCTransaction) && ccTransact.matches(CreditServiceAccTransaction)) {
         // Make sure that this is a Colored Coins asset issuing transaction
-        if (ccTransact.issuingInfo !== undefined && ccTransact.ccMetadata !== undefined && ccTransact.ccMetadata.userData !== undefined
-                && ((cfgSettings.ccMetadata.bcotPayTxidKey in ccTransact.ccMetadata.userData) || (cfgSettings.ccMetadata.redeemBcotTxidKey in ccTransact.ccMetadata.userData))) {
+        if (ccTransact.issuingInfo !== undefined && ccTransact.ccMetadata !== undefined
+                && (ccTransact.ccMetadata.assetMetadata.userData.hasFreeDataKey(cfgSettings.ccAssetMetadata.bcotPayTxidKey)
+                || ccTransact.ccMetadata.assetMetadata.userData.hasFreeDataKey(cfgSettings.ccAssetMetadata.redeemBcotTxidKey))) {
             // Validate and identify input and output addresses
             //  NOTE: no need to check if the variables below are non-null because the transact.matches()
             //      result above already guarantees it
@@ -445,15 +446,15 @@ CreditServiceAccTransaction.checkTransaction = function (ccTransact) {
                     credServAccTransact.client = CatenisNode.getCatenisNodeByIndex(servAccCredLineAddrs[0].addrInfo.pathParts.ctnNodeIndex).getClientByIndex(servAccCredLineAddrs[0].addrInfo.pathParts.clientIndex);
                     credServAccTransact.amount = credServAccTransact.issuingAmount = ccTransact.issuingInfo.assetAmount;
 
-                    if (cfgSettings.ccMetadata.bcotPayTxidKey in ccTransact.ccMetadata.userData) {
+                    if (ccTransact.ccMetadata.assetMetadata.userData.hasFreeDataKey(cfgSettings.ccAssetMetadata.bcotPayTxidKey)) {
                         // Credit derived from BCOT payment. Retrieve BCOT payment tx info
                         credServAccTransact.bcotTxType = Transaction.type.bcot_payment;
-                        credServAccTransact.bcotTxid = ccTransact.ccMetadata.userData[cfgSettings.ccMetadata.bcotPayTxidKey];
+                        credServAccTransact.bcotTxid = ccTransact.ccMetadata.assetMetadata.userData.freeData[cfgSettings.ccAssetMetadata.bcotPayTxidKey];
                     }
-                    else if (cfgSettings.ccMetadata.redeemBcotTxidKey in ccTransact.ccMetadata.userData) {
+                    else if (ccTransact.ccMetadata.assetMetadata.userData.hasFreeDataKey(cfgSettings.ccAssetMetadata.redeemBcotTxidKey)) {
                         // Credit derived from BCOT redemption. Retrieve redeem BCOT tx info
                         credServAccTransact.bcotTxType = Transaction.type.redeem_bcot;
-                        credServAccTransact.bcotTxid = ccTransact.ccMetadata.userData[cfgSettings.ccMetadata.redeemBcotTxidKey];
+                        credServAccTransact.bcotTxid = ccTransact.ccMetadata.assetMetadata.userData.freeData[cfgSettings.ccAssetMetadata.redeemBcotTxidKey];
                     }
                 }
             }
