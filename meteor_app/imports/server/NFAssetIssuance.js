@@ -1115,12 +1115,11 @@ export class NFAssetIssuance {
      * @param {string} continuationToken The external ID of the last non-fungible token issuing batch of the asset
      *                                    issuance (presented to the end user as a continuation token)
      * @param {string} [deviceId] Device ID of device trying to access the non-fungible asset issuance
-     * @param {boolean} [forReissuance=false] Indicates whether the non-fungible asset issuance being retrieved is for
-     *                                         reissuance
+     * @param {string} [assetId] Asset ID of the non-fungible asset being reissued
      * @param {boolean} [preloadNFTContents=false] Indicates whether non-fungible tokens' contents should be preloaded
      * @return {NFAssetIssuance}
      */
-    static getNFAssetIssuanceByContinuationToken(continuationToken, deviceId, forReissuance = false, preloadNFTContents = false) {
+    static getNFAssetIssuanceByContinuationToken(continuationToken, deviceId, assetId, preloadNFTContents = false) {
         // Get corresponding non-fungible token issuing batch doc/rec
         const docNFTokenIssuingBatch = Catenis.db.collection.NonFungibleTokenIssuingBatch.findOne({
             nfTokenIssuingBatchId: continuationToken
@@ -1148,8 +1147,13 @@ export class NFAssetIssuance {
         }
 
         // Make sure that the non-fungible asset issuance is for the expected operation (issuance or reissuance)
-        if (nfAssetIssuance.isReissuance !== !!forReissuance) {
+        if (nfAssetIssuance.isReissuance !== !!assetId) {
             throw new Meteor.Error('nf_asset_issue_wrong_operation', 'Non-fungible asset issuance is not for the expected operation');
+        }
+
+        // Make sure that the non-fungible asset reissuance is for the correct asset
+        if (nfAssetIssuance.isReissuance && nfAssetIssuance.assetId !== assetId) {
+            throw new Meteor.Error('nf_asset_issue_wrong_asset', 'Non-fungible asset reissuance is for a different asset');
         }
 
         if (deviceId) {

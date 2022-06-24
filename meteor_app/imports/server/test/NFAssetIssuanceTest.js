@@ -610,7 +610,7 @@ describe('NFAssetIssuance module', function () {
 
         it('should fail retrieving non-fungible asset issuance by continuation token (wrong operation)', function () {
             expect(() => {
-                NFAssetIssuance.getNFAssetIssuanceByContinuationToken(firstContinuationToken, 'd00003', true);
+                NFAssetIssuance.getNFAssetIssuanceByContinuationToken(firstContinuationToken, 'd00003', 'a00001');
             })
             .to.throw('Non-fungible asset issuance is not for the expected operation');
         });
@@ -619,7 +619,7 @@ describe('NFAssetIssuance module', function () {
             const retrievedNFAssetIssuance = NFAssetIssuance.getNFAssetIssuanceByContinuationToken(
                 firstContinuationToken,
                 'd00001',
-                false,
+                undefined,
                 true
             );
 
@@ -1322,12 +1322,48 @@ describe('NFAssetIssuance module', function () {
                 const retrievedNFAssetIssuance = NFAssetIssuance.getNFAssetIssuanceByContinuationToken(
                     nfAssetIssuance.continuationToken,
                     'd00001',
-                    false,
+                    undefined,
                     true
                 );
 
                 expect(retrievedNFAssetIssuance).to.deep.equal(dbNFAssetIssuance);
             });
+        });
+    });
+
+    describe('Asset reissuance', function () {
+        let nfAssetIssuance;
+        let firstContinuationToken;
+
+        before(function () {
+            nfAssetIssuance = new NFAssetIssuance(
+                undefined,
+                undefined,
+                'd00001',
+                'a00001',
+                false,
+                'd00001',
+                [{
+                    metadata: {
+                        name: 'Test NFT #1 (reissuance)',
+                        description: 'Non-fungible token #1 used for testing reissuance',
+                    },
+                    contents: Buffer.from('NFT #1 contents (reissuance)')
+                }],
+                true,
+                false
+            );
+        });
+
+        it('should successfully retrieve a non-empty continuation token', function () {
+            expect(firstContinuationToken = nfAssetIssuance.continuationToken).to.not.equal(undefined);
+        });
+
+        it('should fail retrieving non-fungible asset issuance by continuation token (wrong asset)', function () {
+            expect(() => {
+                NFAssetIssuance.getNFAssetIssuanceByContinuationToken(firstContinuationToken, 'd00001', 'a00002');
+            })
+            .to.throw('Non-fungible asset reissuance is for a different asset');
         });
     });
 

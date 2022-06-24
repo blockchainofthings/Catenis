@@ -244,6 +244,7 @@ export function reissueNonFungibleAsset() {
             if (invalidParams.length === 0) {
                 try {
                     continuationData = {
+                        assetId: this.urlParams.assetId,
                         continuationToken: this.bodyParams.continuationToken,
                         nfTokenInfos: this.bodyParams.nonFungibleTokens !== undefined
                             ? conformNonFungibleTokenList(this.bodyParams.nonFungibleTokens) : undefined,
@@ -295,7 +296,7 @@ export function reissueNonFungibleAsset() {
         try {
             result = initialData
                 ? this.user.device.issueNonFungibleAsset(initialData)
-                : this.user.device.issueNonFungibleAsset(initialData, continuationData, true);
+                : this.user.device.issueNonFungibleAsset(undefined, continuationData);
         }
         catch (err) {
             let error;
@@ -341,7 +342,8 @@ export function reissueNonFungibleAsset() {
                 else if (err.error === 'nf_asset_issue_already_complete' || err.error === 'nft_issue_batch_issuance_already_complete') {
                     error = errorResponse.call(this, 400, 'Non-fungible asset issuance is already complete');
                 }
-                else if (err.error === 'nf_asset_issue_invalid_cont_token' || err.error === 'nf_asset_issue_wrong_device') {
+                else if (err.error === 'nf_asset_issue_invalid_cont_token' || err.error === 'nf_asset_issue_wrong_operation'
+                        || err.error === 'nf_asset_issue_wrong_asset' || err.error === 'nf_asset_issue_wrong_device') {
                     error = errorResponse.call(this, 400, 'Invalid or unexpected asset issuance continuation token');
                 }
                 else if (err.error === 'nft_issue_batch_wrong_num_tokens') {

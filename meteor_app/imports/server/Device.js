@@ -2501,6 +2501,7 @@ Device.prototype.issueAsset = function (amount, assetInfo, holdingDeviceId) {
 /**
  * Continuation data for creating a non-fungible asset and/or issuing its non-fungible tokens
  * @typedef {Object} IssueNFAssetContinuationData
+ * @property {string} [assetId] ID of the non-fungible asset to reissue
  * @property {string} continuationToken ID that identifies the ongoing non-fungible asset issuance operation
  * @property {ContinuationNonFungibleTokenInfoEntry[]} [nfTokenInfos] List with additional contents data for the
  *                                                                     non-fungible tokens
@@ -2514,10 +2515,9 @@ Device.prototype.issueAsset = function (amount, assetInfo, holdingDeviceId) {
  *                                                 non-fungible tokens
  * @param {IssueNFAssetContinuationData} [continuationData] Continuation data for creating a non-fungible asset and/or
  *                                                           issuing its non-fungible tokens
- * @param {boolean} [isReissuance] Indicates whether this is actually a reissuance operation
  * @returns {NFAssetIssuanceResult}
  */
-Device.prototype.issueNonFungibleAsset = function (initialData, continuationData, isReissuance = false) {
+Device.prototype.issueNonFungibleAsset = function (initialData, continuationData) {
     // Make sure that device is not deleted
     if (this.status === Device.status.deleted.name) {
         // Cannot issue non-fungible asset from a deleted device. Log error and throw exception
@@ -2695,7 +2695,7 @@ Device.prototype.issueNonFungibleAsset = function (initialData, continuationData
             nfAssetIssuance = NFAssetIssuance.getNFAssetIssuanceByContinuationToken(
                 continuationData.continuationToken,
                 this.deviceId,
-                isReissuance
+                continuationData.assetId
             );
 
             // Add the additional contents data for the non-fungible tokens being issued
