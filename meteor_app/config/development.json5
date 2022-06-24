@@ -156,7 +156,7 @@
   // Parameters pertaining to C3NodeClient module
   "c3NodeClient": {
     "serverHost": "catenis-local-1", // Catenis Colored Coins node server host name/IP address (access via VPN)
-    "localAddress": "", // IP address of local network interface to use to connect with the Catenis Colored Coins node server. If not specified (empty string) the default network interface is used
+    "inetAddress": "", // IP address of local network interface to use to connect with the Catenis Colored Coins node server. If not specified (empty string) the default network interface is used
     "connectionTimeout": 30000  // (30 sec.) Timeout, in milliseconds, for connection with the Catenis Colored Coins node server
   },
   // Parameters pertaining to CCAssetMetadata module
