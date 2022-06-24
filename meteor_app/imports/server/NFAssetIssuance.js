@@ -592,7 +592,7 @@ export class NFAssetIssuance {
             }
             else if (err.error === 'ctn_issue_nf_asset_amount_too_large') {
                 error.code = 400;
-                error.message = 'Numer of non-fungible tokens to issue is too large';
+                error.message = 'Number of non-fungible tokens to issue is too large';
             }
             else if (err.error === 'nf_asset_issue_no_token_info') {
                 error.code = 400;
