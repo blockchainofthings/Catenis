@@ -146,7 +146,7 @@
   },
   // Parameters pertaining to C3NodeClient module
   c3NodeClient: {
-    serverHost: "" // Catenis Colored Coins node server host name/IP address (access via VPN)
+    serverHost: "catenis-local-1" // Catenis Colored Coins node server host name/IP address (access via VPN)
   },
   // Parameters pertaining to CCAssetMetadata module
   ccAssetMetadata: {
