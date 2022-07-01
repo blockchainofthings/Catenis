@@ -337,7 +337,7 @@ Util.cloneObjDictArray = function (arr, checkSelfClonable = false) {
     return arr;
 };
 
-// Method used to escape special characters in an string that is to be used as a regular expression pattern
+// Method used to escape special characters in a string that is to be used as a regular expression pattern
 Util.escapeRegExp = function (str) {
     return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // $& means the whole matched string
 };

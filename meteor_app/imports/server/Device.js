@@ -2020,7 +2020,7 @@ Device.prototype.getMessageProgress = function (ephemeralMessageId) {
 //      blockchain: {
 //        txid: [String],         // ID of blockchain transaction where message is recorded
 //                                //  NOTE: due to malleability, the ID of the transaction might change
-//                                //    until the it is finally confirmed
+//                                //    until the transaction is finally confirmed
 //        isConfirmed: [Boolean]  // Indicates whether the returned txid is confirmed
 //      },
 //      externalStorage: {     // Note: only returned if message is stored in an external storage
@@ -2044,7 +2044,7 @@ Device.prototype.retrieveMessageContainer = function (messageId) {
 //      blockchain: {
 //        txid: [String],         // ID of blockchain transaction where message is recorded
 //                                //  NOTE: due to malleability, the ID of the transaction might change
-//                                //    until the it is finally confirmed
+//                                //    until the transaction is finally confirmed
 //        isConfirmed: [Boolean]  // Indicates whether the returned txid is confirmed
 //      },
 //      externalStorage: {     // Note: only returned if message is stored in an external storage
@@ -3264,7 +3264,7 @@ Device.prototype.listExportedAssets = function (filter, limit, skip) {
  *                                     asset migration
  * @param {string} migration.direction The migration direction
  * @param {number} migration.amount The amount (expressed as a decimal number) of the asset to be migrated
- * @param {string} [migration.destAddress] The address of the account on the foreign blockchain that should received
+ * @param {string} [migration.destAddress] The address of the account on the foreign blockchain that should receive
  *                                          the migrated amount (of the corresponding foreign token)
  * @param {Object} [options]
  * @param {string} [options.consumptionProfile] Name of foreign blockchain native coin consumption profile to use
@@ -3844,7 +3844,7 @@ Device.prototype.getUnlockedAssetIssuanceAddresses = function () {
 //  Arguments:
 //    asset: [Object(Asset)|String] - An object of type Asset or the asset ID
 //    convertAmount: [Boolean] - Indicate whether balance amount should be converted from a fractional amount to an
-//                                an integer number of the asset's smallest division (according to the asset divisibility)
+//                                integer number of the asset's smallest division (according to the asset divisibility)
 //
 //  Return:
 //    balance: {
@@ -3881,7 +3881,7 @@ Device.prototype.assetBalance = function (asset, convertAmount = true) {
 //  Arguments:
 //    asset: [Object(Asset)|String] - An object of type Asset or the asset ID
 //    convertAmount: [Boolean] - Indicate whether balance amount should be converted from a fractional amount to an
-//                                an integer number of the asset's smallest division (according to the asset divisibility)
+//                                integer number of the asset's smallest division (according to the asset divisibility)
 //
 //  Return:
 //    balance: {
@@ -4583,7 +4583,7 @@ function fundDeviceAddresses(amountPerDevMainAddress, amountPerAssetIssuanceAddr
             return fundTransact.sendTransaction();
         }
         else {
-            // Could not allocated UTXOs to pay for transaction fee.
+            // Could not allocate UTXOs to pay for transaction fee.
             //  Throw exception
             //noinspection ExceptionCaughtLocallyJS
             throw new Meteor.Error('ctn_sys_no_fund', 'Could not allocate UTXOs from system funding addresses to pay for tx expense');
