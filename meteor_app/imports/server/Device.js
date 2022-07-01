@@ -2895,18 +2895,18 @@ Device.prototype.issueNonFungibleAsset = function (initialData, continuationData
 Device.prototype.getNFAssetIssuanceProgress = function (assetIssuanceId) {
     // Make sure that device is not deleted
     if (this.status === Device.status.deleted.name) {
-        // Cannot retrieve non-fungible asset issuance for a deleted device. Log error and throw exception
-        Catenis.logger.ERROR('Cannot retrieve non-fungible asset issuance for a deleted device', {deviceId: this.deviceId});
-        throw new Meteor.Error('ctn_device_deleted', `Cannot retrieve non-fungible asset issuance for a deleted device (deviceId: ${this.deviceId})`);
+        // Cannot retrieve non-fungible asset issuance progress for a deleted device. Log error and throw exception
+        Catenis.logger.ERROR('Cannot retrieve non-fungible asset issuance progress for a deleted device', {deviceId: this.deviceId});
+        throw new Meteor.Error('ctn_device_deleted', `Cannot retrieve non-fungible asset issuance progress for a deleted device (deviceId: ${this.deviceId})`);
     }
 
     // Make sure that device is active
     if (this.status !== Device.status.active.name) {
-        // Cannot retrieve non-fungible asset issuance for a device that is not active. Log error and throw exception
-        Catenis.logger.ERROR('Cannot retrieve non-fungible asset issuance from a device that is not active', {
+        // Cannot retrieve non-fungible asset issuance progress for a device that is not active. Log error and throw exception
+        Catenis.logger.ERROR('Cannot retrieve non-fungible asset issuance progress from a device that is not active', {
             deviceId: this.deviceId}
         );
-        throw new Meteor.Error('ctn_device_not_active', `Cannot retrieve non-fungible asset issuance for a device that is not active (deviceId: ${this.deviceId})`);
+        throw new Meteor.Error('ctn_device_not_active', `Cannot retrieve non-fungible asset issuance progress for a device that is not active (deviceId: ${this.deviceId})`);
     }
 
     const nfAssetIssuance = NFAssetIssuance.getNFAssetIssuanceByAssetIssuanceId(assetIssuanceId, this.deviceId);
