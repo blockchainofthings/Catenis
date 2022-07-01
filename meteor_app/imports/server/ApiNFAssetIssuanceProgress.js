@@ -33,13 +33,13 @@ import { Util } from './Util';
  */
 
 /**
- * @typedef {Object} ReissueNonFungibleAssetAPIResponse
+ * @typedef {Object} RetrieveNFAssetIssuanceProgressAPIResponse
  * @property {number} statusCode
  * @property {Object} headers
  * @property {Object} body
  * @property {string} body.status
  * @property {string} [body.message]
- * @property {NFAssetReissuanceResult} [body.data]
+ * @property {RetrieveNFAssetIssuanceProgressResult} [body.data]
  */
 
 /**
@@ -47,7 +47,7 @@ import { Util } from './Util';
  * @this {Object}
  * @property {Object} urlParams
  * @property {string} urlParam.issuanceId ID of the non-fungible asset issuance
- * @return {IssueNonFungibleAssetAPIResponse}
+ * @return {RetrieveNFAssetIssuanceProgressAPIResponse}
  */
 export function retrieveNFAssetIssuanceProgress() {
     try {

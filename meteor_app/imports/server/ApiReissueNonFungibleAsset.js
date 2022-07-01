@@ -58,6 +58,8 @@ import { Device } from './Device';
 /**
  * Method used to process POST 'assets/non-fungible/:assetId/issue' endpoint of REST API
  * @this {Object}
+ * @property {Object} urlParams
+ * @property {string} urlParams.assetId The external ID of the non-fungible asset to reissue
  * @property {Object} bodyParams
  * @property {boolean} [bodyParams.encryptNFTContents=true] Indicates whether the contents of the asset’s non-fungible
  *                                                           tokens should be encrypted before being stored (on IPFS)
@@ -68,7 +70,7 @@ import { Device } from './Device';
  *                                                    that this is a continuation request for the same issuance
  * @property {NonFungibleTokenApiInfoEntry[]} [bodyParams.nonFungibleTokens] List of non-fungible tokens to be issued
  * @property {boolean} [bodyParams.isFinal=true] Indicates whether this is the final request for this issuance
- * @return {IssueNonFungibleAssetAPIResponse}
+ * @return {ReissueNonFungibleAssetAPIResponse}
  */
 export function reissueNonFungibleAsset() {
     try {
