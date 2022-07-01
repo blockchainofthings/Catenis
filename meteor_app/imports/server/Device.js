@@ -2689,6 +2689,12 @@ Device.prototype.issueNonFungibleAsset = function (initialData, continuationData
     else if (continuationData) {
         // Continuing an ongoing non-fungible asset issuance operation
 
+        if (continuationData.assetId) {
+            // Continuation for an asset reissuance. Validate asset ID.
+            //  Note: this will throw a 'ctn_asset_not_found' exception if ID is not valid
+            Asset.getAssetByAssetId(continuationData.assetId, true);
+        }
+
         // Execute code in critical section to avoid database concurrency
         NFAssetIssuance.dbCS.execute(() => {
             // Get the corresponding non-fungible asset issuance object
