@@ -3514,8 +3514,6 @@ Database.fixExportedAssetForeignBlockchainTokenIdIndex = function () {
                     }
 
                     // Insert index back
-                    let indexName;
-
                     try {
                         await Catenis.db.mongoCollection.ExportedAsset.createIndex({
                             foreignBlockchain: 1,

@@ -13,6 +13,8 @@
 import util from 'util';
 // Third-party node modules
 import config from 'config';
+import moment from 'moment';
+import Future from 'fibers/future';
 // Meteor packages
 import { Meteor } from 'meteor/meteor';
 
@@ -20,8 +22,6 @@ import { Meteor } from 'meteor/meteor';
 import { Catenis } from './Catenis';
 import { MessageChunk } from './MessageChunk';
 import { Random } from 'meteor/random';
-import moment from 'moment';
-import Future from 'fibers/future';
 
 // Config entries
 const cachedMsgConfig = config.get('cachedMessage');

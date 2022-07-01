@@ -30,7 +30,6 @@ import {
     conformNonFungibleTokenList,
 } from './ApiIssueNonFungibleAsset';
 import { Util } from './Util';
-import { Device } from './Device';
 
 
 // Definition of module (private) functions
