@@ -203,6 +203,21 @@ Asset.getCcAssetIdFromCcTransaction = function (ccTransact) {
         : (ccTransact.transferInputSeqs.length > 0 ? ccTransact.getTransferInputs(ccTransact.transferInputSeqs[0].startPos)[0].txout.ccAssetId : undefined);
 };
 
+/**
+ * Retrieve the asset object with the given database doc/rec ID
+ * @param {string} doc_id The asset database doc/rec ID
+ * @returns {Asset} The asset object
+ */
+Asset.getAssetByDocId = function (doc_id) {
+    const docAsset = Catenis.db.collection.Asset.findOne({_id: doc_id});
+
+    if (!docAsset) {
+        throw new Error(`Cannot find asset with the given database doc/rec ID: ${doc_id}`);
+    }
+
+    return new Asset(docAsset);
+}
+
 Asset.getAssetByAssetId = function (assetId, restrictToDeviceAsset = false) {
     const selector = {
         assetId: assetId

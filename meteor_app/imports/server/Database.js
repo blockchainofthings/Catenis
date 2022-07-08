@@ -3470,6 +3470,202 @@ Database.initialize = function() {
                     }
                 }
             }]
+        },
+        NonFungibleTokenRetrieval: {
+            indices: [{
+                fields: {
+                    tokenRetrievalId: 1
+                },
+                opts: {
+                    unique: true,
+                    background: true,
+                    writeConcern: {
+                        w: 1
+                    }
+                }
+            }, {
+                fields: {
+                    deviceId: 1
+                },
+                opts: {
+                    background: true,
+                    writeConcern: {
+                        w: 1
+                    }
+                }
+            }, {
+                fields: {
+                    tokenId: 1
+                },
+                opts: {
+                    background: true,
+                    writeConcern: {
+                        w: 1
+                    }
+                }
+            }, {
+                fields: {
+                    holdingAddressPath: 1
+                },
+                opts: {
+                    background: true,
+                    writeConcern: {
+                        w: 1
+                    }
+                }
+            }, {
+                fields: {
+                    'progress.done': 1
+                },
+                opts: {
+                    background: true,
+                    writeConcern: {
+                        w: 1
+                    }
+                }
+            }, {
+                fields: {
+                    'progress.success': 1
+                },
+                opts: {
+                    background: true,
+                    sparse: true,
+                    writeConcern: {
+                        w: 1
+                    }
+                }
+            }, {
+                fields: {
+                    'progress.error.code': 1
+                },
+                opts: {
+                    background: true,
+                    sparse: true,
+                    writeConcern: {
+                        w: 1
+                    }
+                }
+            }, {
+                fields: {
+                    'progress.error.message': 1
+                },
+                opts: {
+                    background: true,
+                    sparse: true,
+                    writeConcern: {
+                        w: 1
+                    }
+                }
+            }, {
+                fields: {
+                    'progress.finishDate': 1
+                },
+                opts: {
+                    background: true,
+                    sparse: true,
+                    writeConcern: {
+                        w: 1
+                    }
+                }
+            }, {
+                fields: {
+                    'delivery.done': 1
+                },
+                opts: {
+                    background: true,
+                    sparse: true,
+                    writeConcern: {
+                        w: 1
+                    }
+                }
+            }, {
+                fields: {
+                    'delivery.lastSentDate': 1
+                },
+                opts: {
+                    background: true,
+                    sparse: true,
+                    writeConcern: {
+                        w: 1
+                    }
+                }
+            }, {
+                fields: {
+                    createdDate: 1
+                },
+                opts: {
+                    background: true,
+                    writeConcern: {
+                        w: 1
+                    }
+                }
+            }]
+        },
+        RetrievedNonFungibleTokenData: {
+            indices: [{
+                fields: {
+                    retrievedNFTokenDataId: 1
+                },
+                opts: {
+                    unique: true,
+                    background: true,
+                    writeConcern: {
+                        w: 1
+                    }
+                }
+            }, {
+                fields: {
+                    nonFungibleTokenRetrieval_id: 1,
+                    order: 1
+                },
+                opts: {
+                    unique: true,
+                    background: true,
+                    writeConcern: {
+                        w: 1
+                    }
+                }
+            }, {
+                fields: {
+                    nonFungibleTokenRetrieval_id: 1
+                },
+                opts: {
+                    background: true,
+                    writeConcern: {
+                        w: 1
+                    }
+                }
+            }, {
+                fields: {
+                    order: 1
+                },
+                opts: {
+                    background: true,
+                    writeConcern: {
+                        w: 1
+                    }
+                }
+            }, {
+                fields: {
+                    isFinal: 1
+                },
+                opts: {
+                    background: true,
+                    writeConcern: {
+                        w: 1
+                    }
+                }
+            }, {
+                fields: {
+                    createdDate: 1
+                },
+                opts: {
+                    background: true,
+                    writeConcern: {
+                        w: 1
+                    }
+                }
+            }]
         }
     };
 

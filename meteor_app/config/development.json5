@@ -357,5 +357,10 @@
   // Parameters pertaining to NFTokenContentsUrl module
   nfTokenContentsUrl: {
     defaultOrigin: 'http://localhost:8080',
+  },
+  // Parameters pertaining to NFTokenRetrieval module
+  nfTokenRetrieval: {
+    minSizeContentsDataChunk: 25,  // (1 KB) Minimum size, in bytes, of data chunks that should be used when retrieving/delivering the non-fungible token contents data
+    maxSizeContentsDataChunk: 15728640,  // (15 MB) Maximum size, in bytes, of data chunks that should be used when retrieving/delivering the non-fungible token contents data
   }
 }

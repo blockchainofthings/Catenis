@@ -1490,6 +1490,25 @@
     highWaterMark: 1048576,  // (1 MB) The maximum number of bytes to store in the internal buffer of stream before ceasing to read from the underlying resource
     defaultReadChunkSize: 65536,  // (64 KB) The default number of bytes to read from the underlying resource at a time
   },
+  // Parameters pertaining to NFTokenRetrieval module
+  nfTokenRetrieval: {
+    minSizeContentsDataChunk: 1024,  // (1 KB) Minimum size, in bytes, of data chunks that should be used when retrieving/delivering the non-fungible token contents data
+    maxSizeContentsDataChunk: 15728640,  // (15 MB) Maximum size, in bytes, of data chunks that should be used when retrieving/delivering the non-fungible token contents data
+                                         //  Note: this must be below 16 MB, which is the maximum size of a MongoDB doc/rec, since the whole data chunk is stored in a single database doc/rec (of the MessageChunk collection)
+    timeContinueDataDelivery: 300,  // (5 min.) Maximum time, in seconds, to wait until the following retrieved non-fungible token data is delivered to the end user
+    timeKeepIncompleteRetrieval: 3600,  // (1 hour) Minimum time, in seconds, to keep non-fungible token retrievals that have not been finalized
+    timeKeepUndeliveredData: 3600,  // (1 hour) Minimum time, in seconds, to keep retrieved non-fungible token data that have not been fully delivered to the end user
+    timeKeepDeliveredData: 86400, // (24 hours) Minimum time, in seconds, to keep retrieved non-fungible token data after they have been fully delivered to the end user
+    purgeOldRetrievalsInterval: 43200000  // (12 hours) Time interval, in milliseconds, for executing method to purge old non-fungible token retrievals
+  },
+  // Parameters pertaining to NFTokenMetadataWritable module
+  nfTokenMetadataWritable: {
+    highWaterMark: 1048576  // (1 MB) The maximum number of bytes to store in the internal buffer of stream before ceasing to write to the underlying resource
+  },
+  // Parameters pertaining to NFTokenContentsWritable module
+  nfTokenContentsWritable: {
+    highWaterMark: 1048576  // (1 MB) The maximum number of bytes to store in the internal buffer of stream before ceasing to write to the underlying resource
+  },
   // Parameters pertaining to modules of different child processes
   childProcess: {
     nodeJSExec: null, // Path of Node.js executable used to run child processes. If not defined or null, same version as main process is used

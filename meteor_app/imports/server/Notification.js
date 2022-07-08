@@ -241,6 +241,11 @@ Notification.event = Object.freeze({
         name: 'nf-asset-issuance-outcome',
         description: 'Non-fungible asset issuance has been finalized',
         minNotifyServiceVer: '0.5'
+    }),
+    nft_retrieval_outcome: Object.freeze({
+        name: 'nft-retrieval-outcome',
+        description: 'Non-fungible token retrieval has been finalized',
+        minNotifyServiceVer: '0.5'
     })
 });
 

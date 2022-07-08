@@ -488,6 +488,14 @@ Util.isNonBlankString = function (str) {
     return typeof str === 'string' && str.length > 0;
 };
 
+Util.strictParseFloat = function (val) {
+    return typeof val === 'string' && /^[+-]?\d*\.\d*$/.test(val) ? parseFloat(val) : NaN;
+}
+
+Util.strictParseInt = function (val) {
+    return typeof val === 'string' && /^[+-]?\d+$/.test(val) ? parseInt(val) : NaN;
+}
+
 Util.wrapAsyncPromise = function (fn, context) {
     return function (/* arguments */) {
         return Future.fromPromise(fn.apply(context || this, Array.from(arguments))).wait();

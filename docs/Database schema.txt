@@ -662,6 +662,48 @@ NonFungibleTokenIssuingPart {
   createdDate: [date/time]  // Date and time when doc/rec has been created
 }
 
+NonFungibleTokenRetrieval {
+  _id: [string],  // MongoDB internal document ID provided by Meteor
+  tokenRetrievalId: [string],  // External ID used to uniquely identify this non-fungible asset retrieval
+  deviceId: [string],  // External ID of device to which this non-fungible token retrieval belongs
+  tokenId: [string],  // External ID of the non-fungible token to be retrieved
+  holdingAddressPath: [string],  // HD node path of the blockchain address that currently holds the non-fungible token
+  retrieveContents: [boolean],  // Indicates whether the non-fungible token contents should be retrieved
+  contentsOptions: {  // This field should only be present if retrieving the non-fungible token contents
+    contentsOnly: [boolean],  // Indicates whether only the non-fungible token contents should be retrieved
+    encoding: [string],  // The encoding used to encode the non-fungible token contents
+    dataChunkSize: [number]  // (optional) The size, in bytes, of the largest contents data chunk that should be returned
+  },
+  progress: {
+    metadataBytesRetrieved: [number],  // Number of metadata bytes already retrieved
+    contentsBytesRetrieved: [number],  // Number of non-fungible token contents bytes already retrieved
+    done: [boolean],           // Indicates whether the data retrieval has been finalized, either successfully or with an error
+    success: [boolean],        // (optional) Indicates whether all the token data has been successfully retrieved. Only present after the data retrieval is finalized
+    error: {  // (optional) Only present if the data retrieval was finalized with an error
+      code: [number],    // Code number of error that took place while retrieving the token data
+      message: [string]  // Text describing the error that took place while retrieving the token data
+    },
+    finishDate: [date/time]    // Date and time when data retrieval was finalized
+  },
+  delivery: {  // (optional) This field should only be present after all the non-fungible token data is successfully retrieved
+    dataChunksSent: [number],  // Number of retrieved non-fungible token data chunks that have already been delivered to the end user
+    done: [boolean],           // Indicates whether all non-fungible token data has already been delivered to the end user
+    lastSentDate: [date/time]  // Date and time when the last non-fungible token data chunk has been delivered to the end user
+  },
+  createdDate: [date/time]  // Date and time when doc/rec has been created
+}
+
+RetrievedNonFungibleTokenData {
+  _id: [string],  // MongoDB internal document ID provided by Meteor
+  retrievedNFTokenDataId: [string],  // External ID used to uniquely identify this retrieved non-fungible token data. Note: this should be used as a continuation token for retrieving the remainder of the non-fungible token data
+  nonFungibleTokenRetrieval_id: [string],  // MongoDB internal ID of the non-fungible token retrieval doc/rec to which this retrieved non-fungible token data belongs
+  order: [number],  // The order (starting from 1) of the retrieved non-fungible token data of the non-fungible token retrieval
+  isFinal: [boolean],  // Indicates whether this is the last retrieved non-fungible token data of the non-fungible token retrieval
+  metadata: [object],  // The retrieved non-fungible token metadata. This field should only be present in the first retrieved non-fungible token data (order = 1), except when retrieving only the non-fungible token contents (NonFungibleTokenRetrieval.contentsOnly = true)
+  contentsData: [binary],  // The retrieved non-fungible token contents part. This field should only be present for order > 1, or order = 1 if retrieving only the non-fungible token contents (NonFungibleTokenRetrieval.contentsOnly = true)
+  createdDate: [date/time]  // Date and time when doc/rec has been created
+}
+
 ExportedAsset {
   _id: [string],  // MongoDB internal document ID provided by Meteor
   assetId: [string],  // ID of Catenis asset that has been exported

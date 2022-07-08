@@ -79,6 +79,8 @@ import { ForeignBlockchain } from './ForeignBlockchain';
 import { AssetMigration } from './AssetMigration';
 import { NFAssetIssuance } from './NFAssetIssuance';
 import { IssueNFAssetTransaction } from './IssueNFAssetTransaction';
+import { NonFungibleToken } from './NonFungibleToken';
+import { NFTokenRetrieval } from './NFTokenRetrieval';
 
 
 // Definition of function classes
@@ -2920,6 +2922,244 @@ Device.prototype.getNFAssetIssuanceProgress = function (assetIssuanceId) {
     return nfAssetIssuance.getIssuanceProgress();
 };
 
+/**
+ * @typedef {Object} RetrieveNFTokenOptions
+ * @property {boolean} retrieveContents Indicates whether the non-fungible token contents should be retrieved
+ * @property {NFTokenContentsRetrievalOptions} [contentsOptions] Options for the retrieval of non-fungible token
+ *                                                                contents
+ * @property {boolean} asyncProc Indicates whether the non-fungible token retrieval should be processed asynchronously
+ */
+
+/**
+ * Retrieve a non-fungible token
+ * @param {string} tokenId The external ID of the non-fungible token to retrieve
+ * @param {RetrieveNFTokenOptions} [retrieveOptions] Options for retrieving of the non-fungible token
+ * @param {string} [continuationToken] ID that identifies the ongoing non-fungible token retrieval operation
+ * @returns {NFTokenRetrievalResult}
+ */
+Device.prototype.retrieveNonFungibleToken = function (tokenId, retrieveOptions, continuationToken) {
+    // Make sure that device is not deleted
+    if (this.status === Device.status.deleted.name) {
+        // Cannot retrieve non-fungible token from a deleted device. Log error and throw exception
+        Catenis.logger.ERROR('Cannot retrieve non-fungible token from a deleted device', {deviceId: this.deviceId});
+        throw new Meteor.Error('ctn_device_deleted', `Cannot retrieve non-fungible token from a deleted device (deviceId: ${this.deviceId})`);
+    }
+
+    // Make sure that device is active
+    if (this.status !== Device.status.active.name) {
+        // Cannot retrieve non-fungible token from a device that is not active. Log error and throw exception
+        Catenis.logger.ERROR('Cannot retrieve non-fungible token from a device that is not active', {
+            deviceId: this.deviceId}
+        );
+        throw new Meteor.Error('ctn_device_not_active', `Cannot retrieve non-fungible token from a device that is not active (deviceId: ${this.deviceId})`);
+    }
+
+    // Get the non-fungible token object for the non-fungible token to retrieve.
+    //  Note: this will throw a 'nf_token_invalid_id' exception if the non-fungible token does not exist
+    const nfToken = NonFungibleToken.getNFTokenByTokenId(tokenId);
+
+    if (continuationToken) {
+        // Continue delivery of retrieved non-fungible token
+        let nextContinuationToken;
+        let retrievedNFToken;
+
+        // Execute code in critical section to avoid database concurrency
+        NFTokenRetrieval.dbCS.execute(() => {
+            // Get non-fungible token retrieval
+            const nfTokenRetrieval = NFTokenRetrieval.getNFTokenRetrievalByContinuationToken(continuationToken, tokenId, this.deviceId);
+
+            // Get non-fungible token data to be delivered
+            const nfTokenData = nfTokenRetrieval.deliverRetrievedData(continuationToken);
+
+            retrievedNFToken = nfTokenData.metadata
+                ? {
+                    assetId: nfToken.asset.assetId,
+                    ...nfTokenData
+                }
+                : nfTokenData;
+
+            nextContinuationToken = nfTokenRetrieval.nextContinuationToken;
+        });
+
+        const result = {};
+
+        if (nextContinuationToken) {
+            result.continuationToken = nextContinuationToken;
+        }
+
+        result.nonFungibleToken = retrievedNFToken;
+
+        return result;
+    }
+
+    // New retrieval of non-fungible token
+
+    // Make sure we have the required data
+    if (!retrieveOptions) {
+        // Missing retrieve options. Log error and throw exception
+        Catenis.logger.ERROR('Missing options for non-fungible token retrieval', {
+            deviceId: this.deviceId,
+            tokenId: tokenId
+        });
+        throw new Error('Missing options for non-fungible token retrieval');
+    }
+
+    // Retrieve the non-fungible token owner info
+    const nftOwnerInfo = Catenis.c3NodeClient.getNFTokenOwner(nfToken.ccTokenId);
+
+    if (!nftOwnerInfo) {
+        Catenis.logger.ERROR('No possession info found for the non-fungible token', {
+            tokenId: tokenId,
+            ccTokenId: nfToken.ccTokenId
+        });
+        throw new Meteor.Error('ctn_retrieve_nft_invalid_cc_id', 'No possession info found for the given non-fungible token ID');
+    }
+
+    if (!nftOwnerInfo.address) {
+        Catenis.logger.ERROR('Non-fungible token is not currently held by any blockchain address', {
+            tokenId: tokenId,
+            ccTokenId: nfToken.ccTokenId
+        });
+        throw new Meteor.Error('ctn_retrieve_nft_burnt', 'Non-fungible token is not currently held by any blockchain address');
+    }
+
+    const holdingAddressInfo = Catenis.keyStore.getAddressInfo(nftOwnerInfo.address, true);
+
+    if (!holdingAddressInfo || holdingAddressInfo.type !== KeyStore.extKeyType.dev_asst_addr.name) {
+        Catenis.logger.ERROR('fungible token is currently held by an unknown of inconsistent blockchain address', {
+            tokenId: tokenId,
+            ccTokenId: nfToken.ccTokenId,
+            holdingAddress: nftOwnerInfo.address
+        });
+        throw new Meteor.Error('ctn_retrieve_nft_invalid_addr', 'Non-fungible token is currently held by an unknown of inconsistent blockchain address');
+    }
+
+    // Get holding device
+    const holdingDevice = CatenisNode.getCatenisNodeByIndex(holdingAddressInfo.pathParts.ctnNodeIndex)
+    .getClientByIndex(holdingAddressInfo.pathParts.clientIndex)
+    .getDeviceByIndex(holdingAddressInfo.pathParts.deviceIndex);
+
+    // Make sure that device is allowed to retrieve the non-fungible token
+    if (this.deviceId !== holdingDevice.deviceId && this.deviceId !== nfToken.issuingDeviceId) {
+        // Device is neither the issuer nor the current holder of the non-fungible token
+        throw new Meteor.Error('ctn_retrieve_nft_no_access', 'Device has no access rights to retrieve the non-fungible token');
+    }
+
+    const nfTokenRetrieval = new NFTokenRetrieval(
+        undefined,
+        this.deviceId,
+        nfToken,
+        holdingAddressInfo,
+        retrieveOptions.retrieveContents,
+        retrieveOptions.contentsOptions
+    );
+
+    if (retrieveOptions.asyncProc) {
+        // Do non-fungible token retrieval asynchronously
+        const processRetrievalResult = (error) => {
+            nfTokenRetrieval.finalizeRetrievalProgress(error);
+
+            try {
+                // Send notification advising that non-fungible token retrieval has been finalized
+                // noinspection JSUnusedAssignment
+                this.notifyNFTokenRetrievalOutcome(nfTokenRetrieval.tokenRetrievalId, nfTokenRetrieval.getRetrievalProgress());
+            }
+            catch (err) {
+                // Error sending notification message. Log error
+                Catenis.logger.ERROR('Error sending non-fungible token retrieval outcome notification event for device (doc_id: %s)', this.doc_id, err);
+            }
+        }
+
+        nfTokenRetrieval.startRetrieval()
+        .then(processRetrievalResult, processRetrievalResult);
+
+        // ...and just return the token retrieval ID
+        return {
+            tokenRetrievalId: nfTokenRetrieval.tokenRetrievalId
+        };
+    }
+    else {
+        // Do non-fungible token retrieval synchronously
+        let error;
+
+        try {
+            Promise.await(
+                nfTokenRetrieval.startRetrieval()
+            );
+        }
+        catch (err) {
+            error = err;
+        }
+
+        nfTokenRetrieval.finalizeRetrievalProgress(error);
+
+        if (error) {
+            throw error;
+        }
+
+        // Deliver retrieved non-fungible token
+        let nextContinuationToken;
+        let retrievedNFToken;
+
+        // Execute code in critical section to avoid database concurrency
+        NFTokenRetrieval.dbCS.execute(() => {
+            // Get first non-fungible token data to be delivered
+            const nfTokenData = nfTokenRetrieval.deliverRetrievedData();
+
+            retrievedNFToken = nfTokenData.metadata
+                ? {
+                    assetId: nfToken.asset.assetId,
+                    ...nfTokenData
+                }
+                : nfTokenData;
+
+            nextContinuationToken = nfTokenRetrieval.nextContinuationToken;
+        });
+
+        const result = {};
+
+        if (nextContinuationToken) {
+            result.continuationToken = nextContinuationToken;
+        }
+
+        result.nonFungibleToken = retrievedNFToken;
+
+        return result;
+    }
+}
+
+/**
+ * Retrieve information about the progress of a non-fungible token retrieval
+ * @param {string} tokenId The external ID of the non-fungible token to retrieve
+ * @param {string} tokenRetrievalId The ID of the non-fungible token retrieval
+ * @returns {NonFungibleTokenRetrievalProgressInfo}
+ */
+Device.prototype.getNFTokenRetrievalProgress = function (tokenId, tokenRetrievalId) {
+    // Make sure that device is not deleted
+    if (this.status === Device.status.deleted.name) {
+        // Cannot retrieve non-fungible token retrieval progress for a deleted device. Log error and throw exception
+        Catenis.logger.ERROR('Cannot retrieve non-fungible token retrieval progress for a deleted device', {deviceId: this.deviceId});
+        throw new Meteor.Error('ctn_device_deleted', `Cannot retrieve non-fungible token retrieval progress for a deleted device (deviceId: ${this.deviceId})`);
+    }
+
+    // Make sure that device is active
+    if (this.status !== Device.status.active.name) {
+        // Cannot retrieve non-fungible token retrieval progress for a device that is not active. Log error and throw exception
+        Catenis.logger.ERROR('Cannot retrieve non-fungible token retrieval progress from a device that is not active', {
+            deviceId: this.deviceId}
+        );
+        throw new Meteor.Error('ctn_device_not_active', `Cannot retrieve non-fungible token retrieval progress for a device that is not active (deviceId: ${this.deviceId})`);
+    }
+
+    // Validate the non-fungible token ID.
+    //  Note: this will throw a 'nf_token_invalid_id' exception if the ID is not valid
+    NonFungibleToken.getNFTokenByTokenId(tokenId);
+
+    const nfTokenRetrieval = NFTokenRetrieval.getNFTokenRetrievalByTokenRetrievalId(tokenRetrievalId, tokenId, this.deviceId);
+
+    return nfTokenRetrieval.getRetrievalProgress();
+}
+
 // Transfer an amount of an asset to a device
 //
 //  Arguments:
@@ -3801,6 +4041,19 @@ Device.prototype.notifyNFAssetIssuanceOutcome = function (assetIssuanceId, issua
     Catenis.notification.dispatchNotifyMessage(this.deviceId, Notification.event.nf_asset_issuance_outcome.name, JSON.stringify({
         assetIssuanceId,
         ...issuanceProgress
+    }));
+}
+
+/**
+ * Issue a notification advising that a non-fungible token retrieval has been finalized
+ * @param {string} tokenRetrievalId The non-fungible token retrieval ID
+ * @param {NonFungibleTokenRetrievalProgressInfo} retrievalProgress The final non-fungible token retrieval progress
+ */
+Device.prototype.notifyNFTokenRetrievalOutcome = function (tokenRetrievalId, retrievalProgress) {
+    // Dispatch notification message
+    Catenis.notification.dispatchNotifyMessage(this.deviceId, Notification.event.nft_retrieval_outcome.name, JSON.stringify({
+        tokenRetrievalId,
+        ...retrievalProgress
     }));
 }
 /** End of notification related methods **/

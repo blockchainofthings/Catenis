@@ -29,6 +29,10 @@ import '/imports/server/test/CCNFTokenMetadataTest.js';
 import '/imports/server/test/CCAssetMetadataTest.js';
 import '/imports/server/test/CCMetadataTest.js';
 import '/imports/server/test/BufferProgressReadableTest.js';
+import '/imports/server/test/RetrievedNFTokenDataTest.js';
+import '/imports/server/test/NFTokenRetrievalTest.js';
+import '/imports/server/test/NFTokenMetadataWritableTest.js';
+import '/imports/server/test/NFTokenContentsWritableTest.js';
 
 
 // Initialize required modules

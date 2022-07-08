@@ -54,6 +54,48 @@ export class NonFungibleToken {
         this.name = docNFToken.name;
         this.description = docNFToken.description;
         this.createdDate = docNFToken.createdDate;
+
+        /**
+         * @type {Asset}
+         * @private
+         */
+        this._asset = undefined
+    }
+
+    /**
+     * Get the asset object to which this non-fungible token pertains
+     * @returns {Asset}
+     */
+    get asset() {
+        if (!this._asset) {
+            this._asset = Asset.getAssetByDocId(this.asset_id);
+        }
+
+        return this._asset;
+    }
+
+    /**
+     * Get the device ID of the device that issued this non-fungible token
+     * @returns {string|undefined}
+     */
+    get issuingDeviceId() {
+        return this.asset.issuingDevice ? this.asset.issuingDevice.deviceId : undefined;
+    }
+
+    /**
+     * Retrieve the non-fungible token object with the given ID
+     * @param {string} tokenId The external ID of the non-fungible token
+     * @returns {NonFungibleToken}
+     */
+    static getNFTokenByTokenId(tokenId) {
+        const docNFToken = Catenis.db.collection.NonFungibleToken.findOne({tokenId: tokenId});
+
+        if (!docNFToken) {
+            // Invalid non-fungible token ID
+            throw new Meteor.Error('nf_token_invalid_id', 'Unable to find non-fungible token with the given token ID');
+        }
+
+        return new NonFungibleToken(docNFToken);
     }
 
     /**
