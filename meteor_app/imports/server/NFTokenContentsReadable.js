@@ -73,7 +73,8 @@ export class NFTokenContentsReadable extends Readable {
             Catenis.logger.DEBUG('Non-fungible token contents readable stream is being destroyed because of an error:', err);
         }
 
-        callback(null);
+        // Pass back error so error handler of stream is called
+        callback(err);
     }
 
     /**

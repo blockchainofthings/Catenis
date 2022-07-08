@@ -75,7 +75,8 @@ export class BufferProgressReadable extends Readable {
             Catenis.logger.DEBUG('Buffer progress readable is being destroyed because of an error:', err);
         }
 
-        callback(null);
+        // Pass back error so error handler of stream is called
+        callback(err);
     }
 
     /**

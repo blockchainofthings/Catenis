@@ -45,7 +45,8 @@ export class MessageReadable extends Readable {
             Catenis.logger.DEBUG('Message readable stream is being destroyed because of an error:', err);
         }
 
-        callback(null);
+        // Pass back error so error handler of stream is called
+        callback(err);
     }
 
     setEncryption(sourceKeys, destKeys) {
