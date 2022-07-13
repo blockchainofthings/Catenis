@@ -18,7 +18,6 @@ import { Meteor } from 'meteor/meteor';
 
 // References code in other (Catenis) modules
 import { Catenis } from './Catenis';
-import { NFTokenRetrieval } from './NFTokenRetrieval';
 
 // Config entries
 const nftMetaWritableConfig = config.get('nfTokenMetadataWritable');
@@ -38,10 +37,10 @@ const cfgSettings = {
 export class NFTokenMetadataWritable extends Writable {
     /**
      * Class constructor
-     * @param {NFTokenRetrieval} nfTokenRetrieval Non-fungible token retrieval object
+     * @param {NFTokenMetadataRepo} nfTokenMetaRepo Non-fungible token metadata repo object
      * @param {Object} [options] Writable stream options object
      */
-    constructor(nfTokenRetrieval, options) {
+    constructor(nfTokenMetaRepo, options) {
         options = options || {};
 
         if (!options.highWaterMark) {
@@ -50,7 +49,7 @@ export class NFTokenMetadataWritable extends Writable {
 
         super(options);
 
-        this.nfTokenRetrieval = nfTokenRetrieval;
+        this.nfTokenMetaRepo = nfTokenMetaRepo;
         this.writtenData = Buffer.from('');
 
         this.boundProcessWrite = Meteor.bindEnvironment(this._processWrite, 'Internal write method of NFTokenMetadataWritable stream', this);
@@ -108,8 +107,7 @@ export class NFTokenMetadataWritable extends Writable {
                     chunk = Buffer.from(chunk, encoding);
                 }
 
-                // Update non-fungible token retrieval progress
-                this.nfTokenRetrieval.updateRetrievalProgress(chunk.length, false);
+                this.nfTokenMetaRepo.reportProgress(chunk.length);
 
                 this.writtenData = Buffer.concat([this.writtenData, chunk], this.writtenData.length + chunk.length);
             }
@@ -134,10 +132,7 @@ export class NFTokenMetadataWritable extends Writable {
             // Parse the written data (as a non-fungible token metadata) and save it
             const metadata = JSON.parse(this.writtenData.toString());
 
-            // Execute code in critical section to avoid database concurrency
-            NFTokenRetrieval.dbCS.execute(() => {
-                this.nfTokenRetrieval.saveRetrievedMetadata(metadata);
-            });
+            this.nfTokenMetaRepo.saveToRepo(metadata);
         }
         catch (err) {
             Catenis.logger.ERROR('Error finalizing non-fungible token metadata writable stream.', err);

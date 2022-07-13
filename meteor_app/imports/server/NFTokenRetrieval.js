@@ -24,6 +24,7 @@ import { Promise } from 'meteor/promise';
 
 // References code in other (Catenis) modules
 import { Catenis } from './Catenis';
+import { NFTokenMetadataRepo } from './NFTokenMetadataRepo';
 import { Util } from './Util';
 import { CriticalSection } from './CriticalSection';
 import { CatenisNode } from './CatenisNode';
@@ -56,7 +57,7 @@ export const cfgSettings = {
 /**
  * Non-Fungible Token Retrieval object class
  */
-export class NFTokenRetrieval {
+export class NFTokenRetrieval extends NFTokenMetadataRepo {
     /**
      * Critical section object to avoid concurrent access to database collections related to non-fungible
      *  token retrieval (NonFungibleTokenRetrieval, and RetrievedNonFungibleTokenData)
@@ -158,6 +159,8 @@ export class NFTokenRetrieval {
      *                                                             contents
      */
     constructor(doc, deviceId, nfToken, holdingAddressInfo, retrieveContents, contentsOptions) {
+        super();
+
         if (doc) {
             this.doc_id = doc._id;
             this.tokenRetrievalId = doc.tokenRetrievalId;
@@ -693,6 +696,26 @@ export class NFTokenRetrieval {
         if (this.contentsInfo) {
             await this._retrieveContents();
         }
+    }
+
+    /**
+     * Implementation of NFTokenMetadataRepo base class's method
+     * @param {number} bytesRetrieved
+     */
+    reportProgress(bytesRetrieved) {
+        // Update non-fungible token retrieval progress
+        this.updateRetrievalProgress(bytesRetrieved, false);
+    }
+
+    /**
+     * Implementation of NFTokenMetadataRepo base class's method
+     * @param {Object} metadata The retrieved metadata
+     */
+    saveToRepo(metadata) {
+        // Execute code in critical section to avoid database concurrency
+        NFTokenRetrieval.dbCS.execute(() => {
+            this.saveRetrievedMetadata(metadata);
+        });
     }
 
     /**
