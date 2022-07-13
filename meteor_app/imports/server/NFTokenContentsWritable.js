@@ -21,7 +21,7 @@ import { Catenis } from './Catenis';
 import { NFTokenRetrieval } from './NFTokenRetrieval';
 
 // Config entries
-const nftContsWritableConfig = config.get('nfTokenMetadataWritable');
+const nftContsWritableConfig = config.get('nfTokenContentsWritable');
 
 // Configuration settings
 const cfgSettings = {
@@ -32,7 +32,9 @@ const cfgSettings = {
 // Definition of classes
 //
 
-// NFTokenContentsWritable class
+/**
+ * Non-Fungible Token Contents Writable class
+ */
 export class NFTokenContentsWritable extends Writable {
     /**
      * Class constructor
@@ -56,8 +58,8 @@ export class NFTokenContentsWritable extends Writable {
 
         this.writtenData = Buffer.from('');
 
-        this.boundProcessWrite = Meteor.bindEnvironment(this._processWrite, 'Internal write method of NFTokenMetadataWritable stream', this);
-        this.boundProcessFinal = Meteor.bindEnvironment(this._processFinal, 'Internal final method of NFTokenMetadataWritable stream', this);
+        this.boundProcessWrite = Meteor.bindEnvironment(this._processWrite, 'Internal write method of NFTokenContentsWritable stream', this);
+        this.boundProcessFinal = Meteor.bindEnvironment(this._processFinal, 'Internal final method of NFTokenContentsWritable stream', this);
     }
 
     /**
@@ -77,8 +79,8 @@ export class NFTokenContentsWritable extends Writable {
 
     /**
      * Implementation of writable stream's standard method
-     * @param {(string|Buffer|Uint8Array)} chunk The data chunk to be written
-     * @param {(string|null)} encoding The encoding if the data chunk is a string
+     * @param {(Buffer|string)} chunk The data chunk to be written
+     * @param {(string|null)} encoding The encoding if the data chunk if a string
      * @param {Function} callback Callback function to be called after finishing the processing
      * @private
      */
@@ -97,8 +99,8 @@ export class NFTokenContentsWritable extends Writable {
 
     /**
      * Internal method to process standard _write() method
-     * @param {(string|Buffer|Uint8Array)} chunk The data chunk to be written
-     * @param {(string|null)} encoding The encoding if the data chunk is a string
+     * @param {(Buffer|string)} chunk The data chunk to be written
+     * @param {(string|null)} encoding The encoding if the data chunk if a string
      * @param {Function} callback Callback function to be called after finishing the processing
      * @private
      */
@@ -111,7 +113,6 @@ export class NFTokenContentsWritable extends Writable {
                     chunk = Buffer.from(chunk, encoding);
                 }
 
-                // noinspection JSCheckFunctionSignatures
                 const dataToConcat = this.checkDecryptData(chunk);
                 this.writtenData = Buffer.concat([this.writtenData, dataToConcat], this.writtenData.length + dataToConcat.length);
 
@@ -131,8 +132,8 @@ export class NFTokenContentsWritable extends Writable {
                 }
             }
             catch (err) {
-                Catenis.logger.ERROR('Error writing Non-fungible token contents writable stream.', err);
-                error = new Error('Error writing Non-fungible token contents writable stream: ' + err.toString());
+                Catenis.logger.ERROR('Error writing to Non-fungible token contents writable stream.', err);
+                error = new Error('Error writing to Non-fungible token contents writable stream: ' + err.toString());
             }
         }
 
@@ -233,6 +234,50 @@ export class NFTokenContentsWritable extends Writable {
     checkFinalDecryptData() {
         if (this.decryptKeys && this.decryptKeys.decryptingData()) {
             return this.decryptKeys.continueDecryptData();
+        }
+    }
+
+
+    /**
+     * Set up stream to encrypt contents
+     * @param {CryptoKeys} encryptKeys Crypto key pairs used to encrypt the non-fungible token's contents
+     */
+    setEncryption(encryptKeys) {
+        this.encryptKeys = encryptKeys;
+    }
+
+    /**
+     * Conditionally encrypt the provided data
+     * @param {Buffer} data The data to encrypt
+     * @return {Buffer} The resulting encrypted data
+     */
+    checkEncryptData(data) {
+        if (this.encryptKeys) {
+            return !this.encryptKeys.encryptingData()
+                ? this.encryptKeys.startEncryptData(data)
+                : this.encryptKeys.continueEncryptData(data);
+        }
+        else {
+            // Encryption not set up. So just return the unencrypted data
+            return data;
+        }
+    }
+
+    /**
+     * Checks whether data is currently being encrypted
+     * @return {boolean}
+     */
+    hasFinalEncryptData() {
+        return this.encryptKeys && this.encryptKeys.encryptingData();
+    }
+
+    /**
+     * Conditionally terminates the current data encryption
+     * @return {(Buffer|undefined)} The final part of the encrypted data
+     */
+    checkFinalEncryptData() {
+        if (this.encryptKeys && this.encryptKeys.encryptingData()) {
+            return this.encryptKeys.continueEncryptData();
         }
     }
 }

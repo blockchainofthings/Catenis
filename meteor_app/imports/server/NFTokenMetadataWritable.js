@@ -73,8 +73,8 @@ export class NFTokenMetadataWritable extends Writable {
 
     /**
      * Implementation of writable stream's standard method
-     * @param {(string|Buffer|Uint8Array)} chunk The data chunk to be written
-     * @param {(string|null)} encoding The encoding if the data chunk is a string
+     * @param {(Buffer|string)} chunk The data chunk to be written
+     * @param {(string|null)} encoding The encoding if the data chunk if a string
      * @param {Function} callback Callback function to be called after finishing the processing
      * @private
      */
@@ -93,8 +93,8 @@ export class NFTokenMetadataWritable extends Writable {
 
     /**
      * Internal method to process standard _write() method
-     * @param {(string|Buffer|Uint8Array)} chunk The data chunk to be written
-     * @param {(string|null)} encoding The encoding if the data chunk is a string
+     * @param {(Buffer|string)} chunk The data chunk to be written
+     * @param {(string|null)} encoding The encoding if the data chunk if a string
      * @param {Function} callback Callback function to be called after finishing the processing
      * @private
      */
@@ -112,8 +112,8 @@ export class NFTokenMetadataWritable extends Writable {
                 this.writtenData = Buffer.concat([this.writtenData, chunk], this.writtenData.length + chunk.length);
             }
             catch (err) {
-                Catenis.logger.ERROR('Error writing non-fungible token metadata writable stream.', err);
-                error = new Error('Error writing non-fungible token metadata writable stream: ' + err.toString());
+                Catenis.logger.ERROR('Error writing to non-fungible token metadata writable stream.', err);
+                error = new Error('Error writing to non-fungible token metadata writable stream: ' + err.toString());
             }
         }
 

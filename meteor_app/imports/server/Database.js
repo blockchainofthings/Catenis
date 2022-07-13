@@ -3674,6 +3674,7 @@ Database.initialize = function() {
 
 //** Temporary method used to fix index of ExportedAsset collection
 //   - index on foreignBlockchain and token.id changed to be made NOT unique and NOT parse
+// noinspection ES6CheckImport
 import { Promise } from 'meteor/promise';
 
 Database.fixExportedAssetForeignBlockchainTokenIdIndex = function () {

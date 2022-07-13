@@ -10,11 +10,12 @@
 // References to external code
 //
 // Internal node modules
-import util from 'util';
+//import util from 'util';
 // Third-party node modules
 //import config from 'config';
 // Meteor packages
-import { Meteor } from 'meteor/meteor';
+//import { Meteor } from 'meteor/meteor';
+// noinspection ES6CheckImport
 import { Promise } from 'meteor/promise';
 
 // References code in other (Catenis) modules

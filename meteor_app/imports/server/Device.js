@@ -3026,12 +3026,12 @@ Device.prototype.retrieveNonFungibleToken = function (tokenId, retrieveOptions, 
     const holdingAddressInfo = Catenis.keyStore.getAddressInfo(nftOwnerInfo.address, true);
 
     if (!holdingAddressInfo || holdingAddressInfo.type !== KeyStore.extKeyType.dev_asst_addr.name) {
-        Catenis.logger.ERROR('fungible token is currently held by an unknown of inconsistent blockchain address', {
+        Catenis.logger.ERROR('fungible token is currently held by an unknown or inconsistent blockchain address', {
             tokenId: tokenId,
             ccTokenId: nfToken.ccTokenId,
             holdingAddress: nftOwnerInfo.address
         });
-        throw new Meteor.Error('ctn_retrieve_nft_invalid_addr', 'Non-fungible token is currently held by an unknown of inconsistent blockchain address');
+        throw new Meteor.Error('ctn_retrieve_nft_invalid_addr', 'Non-fungible token is currently held by an unknown or inconsistent blockchain address');
     }
 
     // Get holding device
@@ -3130,7 +3130,7 @@ Device.prototype.retrieveNonFungibleToken = function (tokenId, retrieveOptions, 
 
 /**
  * Retrieve information about the progress of a non-fungible token retrieval
- * @param {string} tokenId The external ID of the non-fungible token to retrieve
+ * @param {string} tokenId The external ID of the non-fungible token that is being retrieved
  * @param {string} tokenRetrievalId The ID of the non-fungible token retrieval
  * @returns {NonFungibleTokenRetrievalProgressInfo}
  */
@@ -3234,7 +3234,7 @@ Device.prototype.transferAsset = function (receivingDeviceId, amount, assetId) {
 
     // Make sure that device has permission to send asset to receiving device
     if ((issuingDevice !== undefined && !receivingDevice.shouldAcceptAssetOf(issuingDevice)) || !receivingDevice.shouldAcceptAssetFrom(this)) {
-        // Device has no permission rights to sent asset to receiving device
+        // Device has no permission rights to send asset to receiving device
         Catenis.logger.INFO('Device has no permission rights to send asset to receiving device', {
             deviceId: this.deviceId,
             receivingDeviceId: receivingDevice.deviceId

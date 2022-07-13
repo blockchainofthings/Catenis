@@ -417,7 +417,7 @@ export class IssueNFAssetTransaction {
             //  not done until sent transaction is properly recorded into the local database.
             //
             //  NOTE: the main reason why we do this for this specific case (and not for most of
-            //      the other transactions we send) is that it may required to do other database
+            //      the other transactions we send) is that it may require to do other database
             //      access tasks (to create new Asset doc/rec) before the transaction is saved
             //      onto the database.
             try {

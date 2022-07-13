@@ -67,7 +67,7 @@ export class NFTokenRetrieval extends NFTokenMetadataRepo {
 
     /**
      * @type {Object}
-     * @property {(undefined|number)} purgeOldIssuances
+     * @property {(undefined|number)} purgeOldRetrievals
      */
     static intervalHandle = {
         purgeOldRetrievals: undefined
@@ -129,7 +129,7 @@ export class NFTokenRetrieval extends NFTokenMetadataRepo {
      * NonFungibleTokenRetrieval database doc/rec
      * @typedef {Object} NonFungibleTokenRetrievalRec
      * @property {string} _id MongoDB internal document ID provided by Meteor
-     * @property {string} tokenRetrievalId External ID used to uniquely identify this non-fungible asset retrieval
+     * @property {string} tokenRetrievalId External ID used to uniquely identify this non-fungible token retrieval
      * @property {string} deviceId External ID of device to which this non-fungible token retrieval belongs
      * @property {string} tokenId External ID of the non-fungible token to be retrieved
      * @property {string} holdingAddressPath HD node path of the blockchain address that currently holds the
@@ -666,7 +666,7 @@ export class NFTokenRetrieval extends NFTokenMetadataRepo {
         }
 
         function endRetrieval(error) {
-            // Fee up event handlers
+            // Free up event handlers
             if (contentsReadable) {
                 contentsReadable.removeAllListeners();
             }
@@ -842,7 +842,7 @@ export class NFTokenRetrieval extends NFTokenMetadataRepo {
         // Make sure that retrieval progress has not yet finalized
         if (this.progress.done) {
             Catenis.logger.ERROR('Trying to update non-fungible token retrieval progress that has already been finalized', {
-                nfAssetIssuance: this
+                nfTokenRetrieval: this
             });
             throw new Error('Trying to update non-fungible token retrieval progress that has already been finalized');
         }

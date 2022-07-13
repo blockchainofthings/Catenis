@@ -96,7 +96,7 @@ export function retrieveNonFungibleToken() {
         // tokenId param
         if (!Util.isNonBlankString(this.urlParams.tokenId)) {
             Catenis.logger.DEBUG('Invalid \'tokenId\' parameter for GET \'assets/non-fungible/tokens/:tokenId\' API request', this.urlParams);
-            invalidParams.push('assetId');
+            invalidParams.push('tokenId');
         }
 
         // From query string

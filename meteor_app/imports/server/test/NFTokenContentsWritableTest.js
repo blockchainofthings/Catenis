@@ -110,7 +110,7 @@ describe('NFTokenContentsWritable module', function () {
         };
 
         // Stream to read contents in (small) chunks
-        class _contentChunkReadable extends stream.Readable {
+        class _contentsChunkReadable extends stream.Readable {
             constructor(contentsData, chunkSize, options) {
                 super(options);
                 this.contentsData = contentsData;
@@ -134,7 +134,7 @@ describe('NFTokenContentsWritable module', function () {
             }
         }
 
-        contentsChunkReadable = _contentChunkReadable;
+        contentsChunkReadable = _contentsChunkReadable;
     });
 
     describe('Unencrypted contents', function () {
@@ -159,13 +159,13 @@ describe('NFTokenContentsWritable module', function () {
                     done();
                 });
 
-                const metaReadable = new contentsChunkReadable(contentsData, Math.ceil(contentsData.length / 3));
+                const contentsReadable = new contentsChunkReadable(contentsData, Math.ceil(contentsData.length / 3));
 
-                metaReadable.once('error', (err) => {
+                contentsReadable.once('error', (err) => {
                     contentsWritable.destroy(err);
                 });
 
-                metaReadable.pipe(contentsWritable);
+                contentsReadable.pipe(contentsWritable);
             });
 
             describe('Error while reading contents', function () {
@@ -180,9 +180,9 @@ describe('NFTokenContentsWritable module', function () {
                 });
 
                 it('should correctly handle error while reading contents', function (done) {
-                    const metaWritable = new NFTokenContentsWritable(nfTokenRetrieval);
+                    const contentsWritable = new NFTokenContentsWritable(nfTokenRetrieval);
 
-                    metaWritable.once('error', (err) => {
+                    contentsWritable.once('error', (err) => {
                         try {
                             expect(err.message).to.have.string('Simulated error reading contents');
                         }
@@ -194,15 +194,15 @@ describe('NFTokenContentsWritable module', function () {
                         done();
                     });
 
-                    metaWritable.once('finish', () => {
+                    contentsWritable.once('finish', () => {
                         done(expect.fail('Should not have finished writing contents'));
                     });
 
                     contentsErrorReadable.once('error', (err) => {
-                        metaWritable.destroy(err);
+                        contentsWritable.destroy(err);
                     });
 
-                    contentsErrorReadable.pipe(metaWritable);
+                    contentsErrorReadable.pipe(contentsWritable);
                 });
             });
         });
@@ -238,13 +238,13 @@ describe('NFTokenContentsWritable module', function () {
                     done();
                 });
 
-                const metaReadable = new contentsChunkReadable(contentsData, Math.ceil(contentsData.length / 3));
+                const contentsReadable = new contentsChunkReadable(contentsData, Math.ceil(contentsData.length / 3));
 
-                metaReadable.once('error', (err) => {
+                contentsReadable.once('error', (err) => {
                     contentsWritable.destroy(err);
                 });
 
-                metaReadable.pipe(contentsWritable);
+                contentsReadable.pipe(contentsWritable);
             });
         });
 
@@ -284,13 +284,13 @@ describe('NFTokenContentsWritable module', function () {
                     done();
                 });
 
-                const metaReadable = new contentsChunkReadable(contentsData, Math.ceil(contentsData.length / 3));
+                const contentsReadable = new contentsChunkReadable(contentsData, Math.ceil(contentsData.length / 3));
 
-                metaReadable.once('error', (err) => {
+                contentsReadable.once('error', (err) => {
                     contentsWritable.destroy(err);
                 });
 
-                metaReadable.pipe(contentsWritable);
+                contentsReadable.pipe(contentsWritable);
             });
         });
     });
@@ -330,13 +330,13 @@ describe('NFTokenContentsWritable module', function () {
                 });
 
                 const encryptedContents = devAssetAddresssKeys[0].encryptData(contentsData);
-                const metaReadable = new contentsChunkReadable(encryptedContents, Math.ceil(encryptedContents.length / 3));
+                const contentsReadable = new contentsChunkReadable(encryptedContents, Math.ceil(encryptedContents.length / 3));
 
-                metaReadable.once('error', (err) => {
+                contentsReadable.once('error', (err) => {
                     contentsWritable.destroy(err);
                 });
 
-                metaReadable.pipe(contentsWritable);
+                contentsReadable.pipe(contentsWritable);
             });
         });
 
@@ -372,13 +372,13 @@ describe('NFTokenContentsWritable module', function () {
                 });
 
                 const encryptedContents = devAssetAddresssKeys[0].encryptData(contentsData);
-                const metaReadable = new contentsChunkReadable(encryptedContents, Math.ceil(encryptedContents.length / 3));
+                const contentsReadable = new contentsChunkReadable(encryptedContents, Math.ceil(encryptedContents.length / 3));
 
-                metaReadable.once('error', (err) => {
+                contentsReadable.once('error', (err) => {
                     contentsWritable.destroy(err);
                 });
 
-                metaReadable.pipe(contentsWritable);
+                contentsReadable.pipe(contentsWritable);
             });
         });
 
@@ -419,13 +419,13 @@ describe('NFTokenContentsWritable module', function () {
                 });
 
                 const encryptedContents = devAssetAddresssKeys[0].encryptData(contentsData);
-                const metaReadable = new contentsChunkReadable(encryptedContents, Math.ceil(encryptedContents.length / 3));
+                const contentsReadable = new contentsChunkReadable(encryptedContents, Math.ceil(encryptedContents.length / 3));
 
-                metaReadable.once('error', (err) => {
+                contentsReadable.once('error', (err) => {
                     contentsWritable.destroy(err);
                 });
 
-                metaReadable.pipe(contentsWritable);
+                contentsReadable.pipe(contentsWritable);
             });
         });
     });

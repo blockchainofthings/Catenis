@@ -624,8 +624,8 @@ CCTransaction.prototype.countTransferInputs = function () {
  * Sets one or more transfer output entries designating where Colored Coins assets should be transferred to.
  * @param {(CCTxOutputInfoForTransfer[]|CCTxOutputInfoForTransfer)} outputs List of output objects
  * @param {number} inputSeqStartPos Start position of transfer input sequence from where assets should come.
- * @param {boolean} [aggregateOutputs=true] Indicates whether passed in outputs should be aggregated onto the same
- *                                           blockchain address.
+ * @param {boolean} [aggregateOutputs=true] Indicates whether the passed in outputs should be aggregated onto the same
+ *                                           blockchain address among themselves and the other existing outputs.
  * @return {boolean}
  */
 CCTransaction.prototype.setTransferOutputs = function (outputs, inputSeqStartPos, aggregateOutputs = true) {
@@ -2550,7 +2550,6 @@ CCTransaction.fromTransaction = function (transact) {
                             Catenis.logger.ERROR('Invalid Colored Coins transaction: missing non-fungible token IDs in input associated with the transfer of non-fungible asset', {
                                 transact,
                                 ccPayments: ccData.payments,
-                                paymentIdx: idx,
                                 input: inputPos
                             });
                             // noinspection ExceptionCaughtLocallyJS
@@ -2576,7 +2575,6 @@ CCTransaction.fromTransaction = function (transact) {
                             Catenis.logger.ERROR('Invalid Colored Coins transaction: not enough non-fungible token IDs to be added to tx output receiving non-fungible tokens', {
                                 transact,
                                 ccPayments: ccData.payments,
-                                paymentIdx: idx,
                                 expectedAmount: payment.amount,
                                 availableAmount: outputCCTokenIds.length
                             });
@@ -2590,7 +2588,6 @@ CCTransaction.fromTransaction = function (transact) {
                             Catenis.logger.ERROR('Invalid Colored Coins transaction: tx output receiving non-fungible tokens does not have asset info', {
                                 transact,
                                 ccPayments: ccData.payments,
-                                paymentIdx: idx,
                                 txOutput: ccTransact.outputs[payment.output]
                             });
                             // noinspection ExceptionCaughtLocallyJS

@@ -171,6 +171,7 @@ export class CCSingleNFTokenMetadata extends CCUserDataMetadata {
         if (this.freeData) {
             if (this.encryptUserDataKeys.size > 0) {
                 tokenProps.custom = _und.omit(this.freeData, Array.from(this.encryptUserDataKeys));
+                // noinspection JSUnusedLocalSymbols
                 tokenProps.custom.sensitiveProps = _und.mapObject(
                     _und.pick(this.freeData, Array.from(this.encryptUserDataKeys)),
                     (val, key) => {
