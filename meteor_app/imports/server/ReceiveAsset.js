@@ -239,8 +239,8 @@ function processTransferredAssetConfirmed(data) {
         let confirmationDate;
 
         // Check if receiving device should be notified
-        if (transferAssetTransact.receivingDevice.status === Device.status.active.name && (transferAssetTransact.receivingDevice.shouldBeNotifiedOfReceivedAssetOf(transferAssetTransact.asset.issuingDevice)
-                || transferAssetTransact.receivingDevice.shouldBeNotifiedOfAssetReceivedFrom(transferAssetTransact.sendingDevice))) {
+        if (transferAssetTransact.receivingDevice.status === Device.status.active.name && (transferAssetTransact.receivingDevice.shouldBeNotifiedOfConfirmedAssetOf(transferAssetTransact.asset.issuingDevice)
+                || transferAssetTransact.receivingDevice.shouldBeNotifiedOfConfirmedAssetFrom(transferAssetTransact.sendingDevice))) {
             // Get transaction confirmation date
             confirmationDate = getTxConfirmationDate(data.txid);
 
