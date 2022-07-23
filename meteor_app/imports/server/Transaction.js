@@ -73,7 +73,7 @@ const dummyChainCode = Buffer.alloc(32, 0);
 //      type: [String],  - Type of address from Catenis.KeyStore.extKeyType
 //      path: [String],  - Path of the HD extended key associated with this address
 //      parentPath: [String],  - Path of the root HD extended key associated with this address
-//      isObsolete: [Boolean], - Indicates whether this address is not in used anymore
+//      isObsolete: [Boolean], - Indicates whether this address is not in use anymore
 //      pathParts: [Object]    - Object with components that make up the HD extended key path associated with this address
 //    }
 //  }
@@ -94,7 +94,7 @@ const dummyChainCode = Buffer.alloc(32, 0);
 //        type: [String],  - Type of address from Catenis.KeyStore.extKeyType
 //        path: [String],  - Path of the HD extended key associated with this address
 //        parentPath: [String],  - Path of the root HD extended key associated with this address
-//        isObsolete: [Boolean], - Indicates whether this address is not in used anymore
+//        isObsolete: [Boolean], - Indicates whether this address is not in use anymore
 //        pathParts: [Object]    - Object with components that make up the HD extended key path associated with this address
 //      }
 //    },
@@ -890,7 +890,7 @@ Transaction.prototype.getTransaction = function () {
                         }
                     });
 
-                    // NOTE: we are NOT using bitcoinLib.payments.p2ms(), which is the current recommended way to generate
+                    // NOTE: we are NOT using bitcoinLib.payments.p2ms(), which is the currently recommended way to generate
                     //      multisignature outputs, because it validates the public keys passed in, and, in our case,
                     //      one or more of the provided public keys can be fabricated to hold additional data that will
                     //      not fit in a null data output (which is the case with Colored Coins metadata)
