@@ -3062,7 +3062,11 @@ Device.prototype.retrieveNonFungibleToken = function (tokenId, retrieveOptions, 
             try {
                 // Send notification advising that non-fungible token retrieval has been finalized
                 // noinspection JSUnusedAssignment
-                this.notifyNFTokenRetrievalOutcome(nfTokenRetrieval.tokenRetrievalId, nfTokenRetrieval.getRetrievalProgress());
+                this.notifyNFTokenRetrievalOutcome(
+                    nfTokenRetrieval.tokenId,
+                    nfTokenRetrieval.tokenRetrievalId,
+                    nfTokenRetrieval.getRetrievalProgress()
+                );
             }
             catch (err) {
                 // Error sending notification message. Log error
@@ -4049,12 +4053,14 @@ Device.prototype.notifyNFAssetIssuanceOutcome = function (assetIssuanceId, issua
 
 /**
  * Issue a notification advising that a non-fungible token retrieval has been finalized
+ * @param {string} tokenId The non-fungible token ID
  * @param {string} tokenRetrievalId The non-fungible token retrieval ID
  * @param {NonFungibleTokenRetrievalProgressInfo} retrievalProgress The final non-fungible token retrieval progress
  */
-Device.prototype.notifyNFTokenRetrievalOutcome = function (tokenRetrievalId, retrievalProgress) {
+Device.prototype.notifyNFTokenRetrievalOutcome = function (tokenId, tokenRetrievalId, retrievalProgress) {
     // Dispatch notification message
     Catenis.notification.dispatchNotifyMessage(this.deviceId, Notification.event.nft_retrieval_outcome.name, JSON.stringify({
+        tokenId,
         tokenRetrievalId,
         ...retrievalProgress
     }));
