@@ -109,6 +109,8 @@ import { NotificationTemplatesUI } from './adminUI/NotificationTemplatesUI';
 import { NotificationsUI } from './commonUI/NotificationsUI';
 import { EccLibraryProxy } from './EccLibraryProxy';
 import { Bip32 } from './Bip32';
+import { NFAssetIssuance } from './NFAssetIssuance';
+import { NFTokenRetrieval } from './NFTokenRetrieval';
 // TEST - begin
 //import { TestCatenisColoredCoins } from './test/TestCatenisColoredCoins';
 // TEST - end
@@ -249,6 +251,8 @@ Meteor.startup(function () {
             ReceiveAsset.initialize();
             SpendServiceCredit.initialize();
             CrmIntegration.initialize();
+            NFAssetIssuance.initialize();
+            NFTokenRetrieval.initialize();
 
             if (Catenis.application.enableSelfRegistration) {
                 SelfRegistrationBcotSale.initialize();
