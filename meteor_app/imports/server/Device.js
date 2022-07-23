@@ -3218,6 +3218,9 @@ Device.prototype.transferAsset = function (receivingDeviceId, amount, assetId) {
             }
         }
     }
+    else {
+        receivingDevice = this;
+    }
 
     // Identify asset issuing device
     let issuingDevice;
