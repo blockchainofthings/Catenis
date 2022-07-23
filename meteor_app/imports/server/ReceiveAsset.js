@@ -25,6 +25,8 @@ import { Transaction } from './Transaction';
 import { CCTransaction } from './CCTransaction';
 import { IssueAssetTransaction } from './IssueAssetTransaction';
 import { TransferAssetTransaction } from './TransferAssetTransaction';
+import { IssueNFAssetTransaction } from './IssueNFAssetTransaction';
+import { NonFungibleToken } from './NonFungibleToken';
 
 // Config entries
 /*const config_entryConfig = config.get('config_entry');
@@ -76,6 +78,12 @@ ReceiveAsset.initialize = function () {
 
     // Set up handler for event indicating that transfer asset transaction has been confirmed
     TransactionMonitor.addEventHandler(TransactionMonitor.notifyEvent.transfer_asset_tx_conf.name, processTransferredAssetConfirmed);
+
+    // Set up handler for event indicating that new issue non-fungible asset transaction has been received
+    TransactionMonitor.addEventHandler(TransactionMonitor.notifyEvent.issue_nf_asset_tx_rcvd.name, processIssuedNFAsset);
+
+    // Set up handler for event indicating that issue non-fungible asset transaction has been confirmed
+    TransactionMonitor.addEventHandler(TransactionMonitor.notifyEvent.issue_nf_asset_tx_conf.name, processIssuedNFAssetConfirmed);
 };
 
 
@@ -257,6 +265,126 @@ function processTransferredAssetConfirmed(data) {
     catch (err) {
         // Error while processing confirmed transfer asset transaction. Log error condition
         Catenis.logger.ERROR(util.format('Error while processing confirmed transfer asset transaction (txid: %s).', data.txid), err);
+    }
+}
+
+function processIssuedNFAsset(data) {
+    Catenis.logger.TRACE('Received notification of newly received issue non-fungible asset transaction', data);
+    try {
+        // Separate issued/transferred non-fungible tokens by holding devices
+        const holdingDeviceIdNFTokenIds = new Map();
+
+        data.holdingDeviceIds.forEach((holdingDeviceId, idx) => {
+            if (!holdingDeviceIdNFTokenIds.has(holdingDeviceId)) {
+                holdingDeviceIdNFTokenIds.set(holdingDeviceId, [data.nfTokenIds[idx]]);
+            }
+            else {
+                holdingDeviceIdNFTokenIds.get(holdingDeviceId).push(data.nfTokenIds[idx]);
+            }
+        });
+
+        // Make sure that non-fungible asset is recorded into local database...
+        const issueNFAssetTransact = IssueNFAssetTransaction.checkTransaction(CCTransaction.fromTransaction(Transaction.fromTxid(data.txid)));
+
+        if (issueNFAssetTransact.asset === undefined) {
+            // (Non-fungible) Asset not yet in local database. Create it now
+            issueNFAssetTransact.asset = Asset.getAssetByAssetId(Asset.createAsset(issueNFAssetTransact.ccTransact));
+        }
+
+        // ... and also create the associated non-fungible token database docs/recs (if not yet created)
+        NonFungibleToken.createNFTokens(issueNFAssetTransact.asset, issueNFAssetTransact.ccTransact);
+
+        // Iterate through each holding device
+        for (const [holdingDeviceId, nfTokenIds] of holdingDeviceIdNFTokenIds) {
+            // Check if newly issued non-fungible tokens come from a different device (not the one that issued them)
+            if (holdingDeviceId !== data.issuingDeviceId) {
+                // Make sure that holding device is active
+                const holdingDevice = Device.getDeviceByDeviceId(holdingDeviceId);
+
+                if (holdingDevice.status === Device.status.active.name) {
+                    const issuingDevice = Device.getDeviceByDeviceId(data.issuingDeviceId);
+
+                    // Check if holding device should be notified
+                    if (holdingDevice.shouldBeNotifiedOfReceivedNFTokenOf(issuingDevice)
+                            || holdingDevice.shouldBeNotifiedOfNFTokenReceivedFrom(issuingDevice)) {
+                        // Get transaction received date
+                        const receivedDate = Catenis.db.collection.ReceivedTransaction.findOne({
+                            txid: data.txid
+                        }, {
+                            fields: {
+                                receivedDate: 1
+                            }
+                        }).receivedDate;
+
+                        // Notify holding device
+                        holdingDevice.notifyNFTokenReceived(nfTokenIds, issuingDevice, issuingDevice, receivedDate);
+                    }
+                }
+            }
+        }
+    }
+    catch (err) {
+        // Error while processing received issue non-fungible asset transaction. Log error condition
+        Catenis.logger.ERROR(util.format('Error while processing received issue non-fungible asset transaction (txid: %s).', data.txid), err);
+    }
+}
+
+function processIssuedNFAssetConfirmed(data) {
+    Catenis.logger.TRACE('Received notification of confirmed issue non-fungible asset transaction', data);
+    try {
+        // Separate issued/transferred non-fungible tokens by holding devices
+        const holdingDeviceIdNFTokenIds = new Map();
+
+        data.holdingDeviceIds.forEach((holdingDeviceId, idx) => {
+            if (!holdingDeviceIdNFTokenIds.has(holdingDeviceId)) {
+                holdingDeviceIdNFTokenIds.set(holdingDeviceId, [data.nfTokenIds[idx]]);
+            }
+            else {
+                holdingDeviceIdNFTokenIds.get(holdingDeviceId).push(data.nfTokenIds[idx]);
+            }
+        });
+
+        // Make sure that non-fungible asset is recorded in local database...
+        const issueNFAssetTransact = IssueNFAssetTransaction.checkTransaction(CCTransaction.fromTransaction(Transaction.fromTxid(data.txid)));
+
+        if (issueNFAssetTransact.asset === undefined) {
+            // This should never happen because, at a minimum, the asset should have already been
+            //  created while processing received issue non-fungible asset tx event
+            Catenis.logger.WARN('Asset not yet defined in local database while processing notification of confirmed issue non-fungible asset transaction', {
+                assetId: data.assetId,
+                txid: data.txid
+            });
+            
+            // (Non-fungible) Asset not yet in local database. Create it now
+            issueNFAssetTransact.asset = Asset.getAssetByAssetId(Asset.createAsset(issueNFAssetTransact.ccTransact));
+        }
+
+        // ... and also create the associated non-fungible token database docs/recs (if not yet created)
+        NonFungibleToken.createNFTokens(issueNFAssetTransact.asset, issueNFAssetTransact.ccTransact);
+
+        // Iterate through each holding device
+        for (const [holdingDeviceId, nfTokenIds] of holdingDeviceIdNFTokenIds) {
+            // Make sure that holding device is active
+            const holdingDevice = Device.getDeviceByDeviceId(holdingDeviceId);
+
+            if (holdingDevice.status === Device.status.active.name) {
+                const issuingDevice = Device.getDeviceByDeviceId(data.issuingDeviceId);
+
+                // Check if holding device should be notified
+                if (holdingDevice.shouldBeNotifiedOfConfirmedNFTokenOf(issuingDevice)
+                        || holdingDevice.shouldBeNotifiedOfConfirmedNFTokenFrom(issuingDevice)) {
+                    // Get transaction confirmation date
+                    const confirmationDate = getTxConfirmationDate(data.txid);
+
+                    // Notify holding device
+                    holdingDevice.notifyNFTokenConfirmed(nfTokenIds, issuingDevice, issuingDevice, confirmationDate);
+                }
+            }
+        }
+    }
+    catch (err) {
+        // Error while processing confirmed issue non-fungible asset transaction. Log error condition
+        Catenis.logger.ERROR(util.format('Error while processing confirmed issue non-fungible asset transaction (txid: %s).', data.txid), err);
     }
 }
 

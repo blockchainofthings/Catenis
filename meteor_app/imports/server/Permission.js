@@ -552,6 +552,26 @@ Permission.event = Object.freeze({
         description: 'Receive notification of confirmation of pending asset transferred by a device',
         minApiVer: '0.6'
     }),
+    receive_notify_nf_token_of: Object.freeze({
+        name: 'receive-notify-nf-token-of',
+        description: 'Receive notification of non-fungible token received for non-fungible tokens issued by a device',
+        minApiVer: '0.12'
+    }),
+    receive_notify_nf_token_from: Object.freeze({
+        name: 'receive-notify-nf-token-from',
+        description: 'Receive notification of non-fungible token received from a device',
+        minApiVer: '0.12'
+    }),
+    receive_notify_confirm_nf_token_of: Object.freeze({
+        name: 'receive-notify-confirm-nf-token-of',
+        description: 'Receive notification of confirmation of pending non-fungible token issued by a device',
+        minApiVer: '0.12'
+    }),
+    receive_notify_confirm_nf_token_from: Object.freeze({
+        name: 'receive-notify-confirm-nf-token-from',
+        description: 'Receive notification of confirmation of pending non-fungible token transferred by a device',
+        minApiVer: '0.12'
+    }),
     send_read_msg_confirm: Object.freeze({
         name: 'send-read-msg-confirm',
         description: 'Send read message confirmation to a device',
@@ -581,6 +601,16 @@ Permission.event = Object.freeze({
         name: 'receive-asset-from',
         description: 'Receive an amount of an asset from a device',
         minApiVer: '0.6'
+    }),
+    receive_nf_token_of: Object.freeze({
+        name: 'receive-nf-token-of',
+        description: 'Receive a non-fungible token issued by a device',
+        minApiVer: '0.12'
+    }),
+    receive_nf_token_from: Object.freeze({
+        name: 'receive-nf-token-from',
+        description: 'Receive a non-fungible token from a device',
+        minApiVer: '0.12'
     })
 });
 

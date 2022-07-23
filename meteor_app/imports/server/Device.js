@@ -2624,9 +2624,9 @@ Device.prototype.issueNonFungibleAsset = function (initialData, continuationData
                 holdingDevice = this;
             }
 
-            // Make sure that device has permission to assign asset to be issued to holding device
-            if (!holdingDevice.shouldAcceptAssetOf(this) || (holdingDevice.deviceId !== this.deviceId
-                    && !holdingDevice.shouldAcceptAssetFrom(this))) {
+            // Make sure that device has permission to assign non-fungible tokens to be issued to holding device
+            if (!holdingDevice.shouldAcceptNFTokenOf(this) || (holdingDevice.deviceId !== this.deviceId
+                    && !holdingDevice.shouldAcceptNFTokenFrom(this))) {
                 // Device has no permission rights to assign asset to be issued to holding device
                 Catenis.logger.INFO('Device has no permission rights to assign non-fungible tokens to be issued to holding device', {
                     deviceId: this.deviceId,
@@ -3841,6 +3841,22 @@ Device.prototype.shouldBeNotifiedOfConfirmedAssetFrom = function (device) {
     return Catenis.permission.hasRight(Permission.event.receive_notify_confirm_asset_from.name, this, device);
 };
 
+Device.prototype.shouldBeNotifiedOfReceivedNFTokenOf = function (device) {
+    return Catenis.permission.hasRight(Permission.event.receive_notify_nf_token_of.name, this, device);
+};
+
+Device.prototype.shouldBeNotifiedOfNFTokenReceivedFrom = function (device) {
+    return Catenis.permission.hasRight(Permission.event.receive_notify_nf_token_from.name, this, device);
+};
+
+Device.prototype.shouldBeNotifiedOfConfirmedNFTokenOf = function (device) {
+    return Catenis.permission.hasRight(Permission.event.receive_notify_confirm_nf_token_of.name, this, device);
+};
+
+Device.prototype.shouldBeNotifiedOfConfirmedNFTokenFrom = function (device) {
+    return Catenis.permission.hasRight(Permission.event.receive_notify_confirm_nf_token_from.name, this, device);
+};
+
 Device.prototype.shouldSendReadMsgConfirmationTo = function (device) {
     return Catenis.permission.hasRight(Permission.event.send_read_msg_confirm.name, this, device);
 };
@@ -3863,6 +3879,14 @@ Device.prototype.shouldAcceptAssetOf = function (device) {
 
 Device.prototype.shouldAcceptAssetFrom = function (device) {
     return Catenis.permission.hasRight(Permission.event.receive_asset_from.name, this, device);
+};
+
+Device.prototype.shouldAcceptNFTokenOf = function (device) {
+    return Catenis.permission.hasRight(Permission.event.receive_nf_token_of.name, this, device);
+};
+
+Device.prototype.shouldAcceptNFTokenFrom = function (device) {
+    return Catenis.permission.hasRight(Permission.event.receive_nf_token_from.name, this, device);
 };
 
 Device.prototype.checkEffectiveRight = function (eventName, device) {
@@ -4018,6 +4042,48 @@ Device.prototype.notifyAssetConfirmed = function (asset, amount, sendingDevice, 
 
     // Dispatch notification message
     Catenis.notification.dispatchNotifyMessage(this.deviceId, Notification.event.asset_confirmed.name, JSON.stringify(msgInfo));
+};
+
+Device.prototype.notifyNFTokenReceived = function (tokenIds, issuingDevice, sendingDevice, receivedDate) {
+    // Prepare information about received non-fungible token be sent by notification
+    const msgInfo = {
+        tokenIds: tokenIds,
+        issuer: {
+            deviceId: issuingDevice.deviceId,
+        },
+        from: {
+            deviceId: sendingDevice.deviceId,
+        },
+        receivedDate: receivedDate
+    };
+
+    // Add device public properties
+    _und.extend(msgInfo.issuer, issuingDevice.discloseMainPropsTo(this));
+    _und.extend(msgInfo.issuer, sendingDevice.discloseMainPropsTo(this));
+
+    // Dispatch notification message
+    Catenis.notification.dispatchNotifyMessage(this.deviceId, Notification.event.nf_token_received.name, JSON.stringify(msgInfo));
+};
+
+Device.prototype.notifyNFTokenConfirmed = function (tokenIds, issuingDevice, sendingDevice, confirmedDate) {
+    // Prepare information about confirmed non-fungible token to be sent by notification
+    const msgInfo = {
+        tokenIds: tokenIds,
+        issuer: {
+            deviceId: issuingDevice.deviceId,
+        },
+        from: {
+            deviceId: sendingDevice.deviceId,
+        },
+        confirmedDate: confirmedDate
+    };
+
+    // Add device public properties
+    _und.extend(msgInfo.issuer, issuingDevice.discloseMainPropsTo(this));
+    _und.extend(msgInfo.issuer, sendingDevice.discloseMainPropsTo(this));
+
+    // Dispatch notification message
+    Catenis.notification.dispatchNotifyMessage(this.deviceId, Notification.event.nf_token_confirmed.name, JSON.stringify(msgInfo));
 };
 
 Device.prototype.notifyFinalMessageProgress = function (ephemeralMessageId, msgProgress) {

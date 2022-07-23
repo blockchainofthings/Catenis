@@ -237,6 +237,16 @@ Notification.event = Object.freeze({
         description: 'Asset migration has been finalized',
         minNotifyServiceVer: '0.4'
     }),
+    nf_token_received: Object.freeze({
+        name: 'nf-token-received',
+        description: 'One or more non-fungible tokens have been received',
+        minNotifyServiceVer: '0.5'
+    }),
+    nf_token_confirmed: Object.freeze({
+        name: 'nf-token-confirmed',
+        description: 'One or more non-fungible tokens that were pending due to a non-fungible token issuance/transfer has been confirmed',
+        minNotifyServiceVer: '0.5'
+    }),
     nf_asset_issuance_outcome: Object.freeze({
         name: 'nf-asset-issuance-outcome',
         description: 'Non-fungible asset issuance has been finalized',

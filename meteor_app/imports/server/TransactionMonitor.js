@@ -977,7 +977,15 @@ function handleNewTransactions(data) {
                                     eventData.amount = txInfo.amount;
                                     
                                     break;
-                                    
+
+                                case Transaction.type.issue_nf_asset.name:
+                                    eventData.assetId = txInfo.assetId;
+                                    eventData.issuingDeviceId = txInfo.issuingDeviceId;
+                                    eventData.holdingDeviceIds = txInfo.holdingDeviceIds;
+                                    eventData.nfTokenIds = txInfo.nfTokenIds;
+
+                                    break;
+
                                 case Transaction.type.transfer_asset.name:
                                     eventData.assetId = txInfo.assetId;
                                     eventData.sendingDeviceId = txInfo.sendingDeviceId;
@@ -1615,6 +1623,10 @@ TransactionMonitor.notifyEvent = Object.freeze({
         name: 'issue_asset_tx_rcvd',
         description: 'Transaction sent for issuing an amount of a Catenis asset has been received'
     }),
+    issue_nf_asset_tx_rcvd: Object.freeze({
+        name: 'issue_nf_asset_tx_rcvd',
+        description: 'Transaction sent for issuing new non-fungible tokens of a Catenis non-fungible asset has been received'
+    }),
     transfer_asset_tx_rcvd: Object.freeze({
         name: 'transfer_asset_tx_rcvd',
         description: 'Transaction used to transfer an amount of a Catenis asset between devices has been received'
@@ -1691,6 +1703,14 @@ function processConfirmedSentTransactions(doc, eventsToEmit) {
                     eventData.issuingDeviceId = txInfo.issuingDeviceId;
                     eventData.holdingDeviceId = txInfo.holdingDeviceId;
                     eventData.amount = txInfo.amount;
+
+                    break;
+
+                case Transaction.type.issue_nf_asset.name:
+                    eventData.assetId = txInfo.assetId;
+                    eventData.issuingDeviceId = txInfo.issuingDeviceId;
+                    eventData.holdingDeviceIds = txInfo.holdingDeviceIds;
+                    eventData.nfTokenIds = txInfo.nfTokenIds;
 
                     break;
 

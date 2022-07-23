@@ -189,10 +189,17 @@ export class NonFungibleToken {
                     insertedDocIds.push(Catenis.db.collection.NonFungibleToken.insert(docNFToken));
                 }
                 catch (err) {
-                    // Error inserting new NonFungibleToken database doc/rec.
-                    //  Log error and throw exception
-                    Catenis.logger.ERROR('Error trying to create new non-fungible token database doc:', docNFToken, err);
-                    throw new Meteor.Error('ctn_nf_token_insert_error', 'Error trying to create new non-fungible token database doc', err.stack);
+                    if ((err.name === 'MongoError' || err.name === 'BulkWriteError') && err.code === 11000 && err.errmsg.search(/index:\s+(cc)?tokenId/i) >= 0) {
+                        // Trying to insert a non-fungible token doc/rec that is already in the database.
+                        //  Proceed as if the doc/rec was created
+                        Catenis.logger.DEBUG(`Trying to insert a non-fungible token (tokenId: ${docNFToken.tokenId}) doc/rec that is already in the database`);
+                    }
+                    else {
+                        // Error inserting new NonFungibleToken database doc/rec.
+                        //  Log error and throw exception
+                        Catenis.logger.ERROR('Error trying to create new non-fungible token database doc:', docNFToken, err);
+                        throw new Meteor.Error('ctn_nf_token_insert_error', 'Error trying to create new non-fungible token database doc', err.stack);
+                    }
                 }
 
                 tokenIds.push(docNFToken.tokenId);
