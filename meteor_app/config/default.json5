@@ -906,7 +906,7 @@
       "getOwningAssets": "getOwningAssets",
       "getAssetMetadata": "getAssetMetadata",
       "getNFTokenMetadata": "getNFTokenMetadata",
-      "getNFTokenAsset": "getNFTokenAsset",
+      "getNFTokenIssuance": "getNFTokenIssuance",
       "getNFTokenOwner": "getNFTokenOwner",
       "getAllNFTokensOwner": "getAllNFTokensOwner",
       "getOwnedNFTokens": "getOwnedNFTokens"

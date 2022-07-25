@@ -50,7 +50,7 @@ const cfgSettings = {
         getOwningAssets: c3NodeClientConfig.get('methodPath.getOwningAssets'),
         getAssetMetadata: c3NodeClientConfig.get('methodPath.getAssetMetadata'),
         getNFTokenMetadata: c3NodeClientConfig.get('methodPath.getNFTokenMetadata'),
-        getNFTokenAsset: c3NodeClientConfig.get('methodPath.getNFTokenAsset'),
+        getNFTokenIssuance: c3NodeClientConfig.get('methodPath.getNFTokenIssuance'),
         getNFTokenOwner: c3NodeClientConfig.get('methodPath.getNFTokenOwner'),
         getAllNFTokensOwner: c3NodeClientConfig.get('methodPath.getAllNFTokensOwner'),
         getOwnedNFTokens: c3NodeClientConfig.get('methodPath.getOwnedNFTokens')
@@ -619,14 +619,14 @@ C3NodeClient.prototype.getNFTokenMetadataReadableStream = function (tokenId, wai
 }
 
 /**
- * Call Catenis Colored Coins node server getNFTokenAsset method
- * @param {string} tokenId The Colored Coins ID of the non-fungible asset token to retrieve its asset
+ * Call Catenis Colored Coins node server getNFTokenIssuance method
+ * @param {string} tokenId The Colored Coins ID of the non-fungible asset token to retrieve its issuance info
  * @param {boolean} [waitForParsing=true] Indicates whether processing of request should wait until parsing of assets
  *                                         is complete
- * @returns {(string|undefined)} The Colored Coins ID of the non-fungible asset to which the token pertains, or
- *                                undefined if no non-fungible asset is found (i.e. the token ID is unknown or invalid)
+ * @returns {({assetId: string, txid: string}|undefined)} A JSON object representing the non-fungible token's issuance info, or undefined if no
+ *                                issuance info is found (i.e. the token ID is unknown or invalid)
  */
-C3NodeClient.prototype.getNFTokenAsset = function (tokenId, waitForParsing = true) {
+C3NodeClient.prototype.getNFTokenIssuance = function (tokenId, waitForParsing = true) {
     const postData = {
         tokenId
     };
@@ -637,14 +637,14 @@ C3NodeClient.prototype.getNFTokenAsset = function (tokenId, waitForParsing = tru
 
     try {
         return Promise.await(
-            parseJsonResponse(got.post(cfgSettings.methodPath.getNFTokenAsset, {
+            parseJsonResponse(got.post(cfgSettings.methodPath.getNFTokenIssuance, {
                 ...this.httpOptions,
                 json: postData
             }))
         );
     }
     catch (err) {
-        handleError('getNFTokenAsset', err);
+        handleError('getNFTokenIssuance', err);
     }
 }
 
