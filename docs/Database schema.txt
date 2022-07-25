@@ -558,7 +558,7 @@ Malleability {
 
 Permission {
   _id: [string], // MongoDB internal document ID provided by Meteor
-  event: [string], // Name of event for which permission is being defined. Valid values (from Permission.event): 'receive-notify-new-msg', 'receive-notify-msg-read', 'receive-notify-asset-of', 'receive-notify-asset-from', 'receive-notify-confirm-asset-of', 'receive-notify-confirm-asset-from', 'send-read-msg-confirm', 'receive-msg', 'disclose-main-props', 'disclose-identity-info', 'receive-asset-of', 'receive-asset-from'
+  event: [string], // Name of event for which permission is being defined. Valid values (from Permission.event): 'receive-notify-new-msg', 'receive-notify-msg-read', 'receive-notify-asset-of', 'receive-notify-asset-from', 'receive-notify-confirm-asset-of', 'receive-notify-confirm-asset-from', 'send-read-msg-confirm', 'receive-msg', 'disclose-main-props', 'disclose-identity-info', 'receive-asset-of', 'receive-asset-from', 'receive-notify-nf-token-of', 'receive-notify-nf-token-from', 'receive-notify-confirm-nf-token-of', 'receive-notify-confirm-nf-token-from', 'receive-nf-token-of', 'receive-nf-token-from'
   subjectEntityType: [string],  // The type of the subject entity: either 'client' or 'device'
   subjectEntityId: [string], // ID of device that functions as the subject of the action associated with the event for which permission is being defined (subjectEntityType = 'device'),
                              //  or ID of client for which default permission for all its devices is being set (subjectEntityType = 'client')

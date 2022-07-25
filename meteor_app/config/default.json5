@@ -687,6 +687,60 @@
         "device": {
           "allow": "self"
         }
+      },
+      "receive-notify-nf-token-of": {
+        "system": "deny",
+        "client": {
+          "allow": "self"
+        },
+        "device": {
+          "allow": "self"
+        }
+      },
+      "receive-notify-nf-token-from": {
+        "system": "deny",
+        "client": {
+          "allow": "self"
+        },
+        "device": {
+          "allow": "self"
+        }
+      },
+      "receive-notify-confirm-nf-token-of": {
+        "system": "deny",
+        "client": {
+          "allow": "self"
+        },
+        "device": {
+          "allow": "self"
+        }
+      },
+      "receive-notify-confirm-nf-token-from": {
+        "system": "deny",
+        "client": {
+          "allow": "self"
+        },
+        "device": {
+          "allow": "self"
+        }
+      },
+      "receive-nf-token-of": {
+        "system": "deny",
+        "client": {
+          "allow": "self"
+        },
+        "device": {
+          "allow": "self"
+        }
+      },
+      "receive-nf-token-from": {
+        "system": "deny",
+        "client": {
+          "allow": "self"
+        },
+        "device": {
+          "allow": "self"
+        }
       }
     }
   },
