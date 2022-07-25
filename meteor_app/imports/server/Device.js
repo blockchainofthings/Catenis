@@ -4125,7 +4125,7 @@ Device.prototype.notifyNFAssetIssuanceOutcome = function (assetIssuanceId, issua
  */
 Device.prototype.notifyNFTokenRetrievalOutcome = function (tokenId, tokenRetrievalId, retrievalProgress) {
     // Dispatch notification message
-    Catenis.notification.dispatchNotifyMessage(this.deviceId, Notification.event.nft_retrieval_outcome.name, JSON.stringify({
+    Catenis.notification.dispatchNotifyMessage(this.deviceId, Notification.event.nf_token_retrieval_outcome.name, JSON.stringify({
         tokenId,
         tokenRetrievalId,
         ...retrievalProgress
