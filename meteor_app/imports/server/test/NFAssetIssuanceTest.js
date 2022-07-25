@@ -1365,6 +1365,52 @@ describe('NFAssetIssuance module', function () {
             })
             .to.throw('Non-fungible asset reissuance is for a different asset');
         });
+
+        it('should successfully retrieve issuance progress (not yet initialized)', function () {
+            // Set asset props to avoid looking for an existing asset
+            nfAssetIssuance.asset = {
+                name: 'Test NFAsset #1',
+                description: 'Non-fungible asset #1 used for testing',
+            };
+
+            expect(nfAssetIssuance.getIssuanceProgress()).to.deep.equal({
+                assetId: 'a00001',
+                progress: {
+                    percentProcessed: 0,
+                    done: false
+                }
+            });
+        });
+
+        it('should successfully retrieve issuance progress (successfully finalized)', function () {
+            expect(() => {
+                // Update and finalize issuance progress
+                nfAssetIssuance.updateIssuanceProgress(nfAssetIssuance._totalNFTokensContentsBytes, true);
+                nfAssetIssuance.updateIssuanceProgress(nfAssetIssuance._estimatedAssetMetadataSize, false);
+                nfAssetIssuance.finalizeIssuanceProgress(
+                    null,
+                    [
+                        'tk00001'
+                    ],
+                    'a00001'
+                );
+            })
+            .not.to.throw();
+
+            expect(nfAssetIssuance.getIssuanceProgress()).to.deep.equal({
+                assetId: 'a00001',
+                progress: {
+                    percentProcessed: 100,
+                    done: true,
+                    success: true
+                },
+                result: {
+                    tokenIds: [
+                        'tk00001'
+                    ]
+                }
+            });
+        });
     });
 
     describe('Purge old non-fungible asset issuances', function () {

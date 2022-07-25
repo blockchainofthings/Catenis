@@ -1015,8 +1015,10 @@ export class NFAssetIssuance {
 
     /**
      * @typedef {Object} NonFungibleAssetIssuanceProgressInfo
-     * @property {NonFungibleAssetIssuanceProgress} progress
-     * @property {NonFungibleAssetIssuanceResult} [result]
+     * @property {string} [assetId] The ID of the non-fungible asset for which more non-fungible tokens are being issued.
+     *                               Only included in case of reissuance
+     * @property {NonFungibleAssetIssuanceProgress} progress The progress of the asset issuance
+     * @property {NonFungibleAssetIssuanceResult} [result] The result of the asset issuance
      */
 
     /**
@@ -1038,32 +1040,43 @@ export class NFAssetIssuance {
             };
         }
 
-        const retVal = {
-            progress: {
-                percentProcessed: this.progress.done && this.progress.success ?
-                    100
-                    : Math.floor(((this.progress.contentsBytesStored + this.progress.metadataBytesStored)
+        const progress = {
+            percentProcessed: this.progress.done && this.progress.success ?
+                100
+                : Math.floor(((this.progress.contentsBytesStored + this.progress.metadataBytesStored)
                         / (this.progress.totalContentsBytes + this.progress.totalMetadataBytes))
-                        * cfgSettings.percentSaveNFTokensMetadata),
-                done: this.progress.done
-            }
+                    * cfgSettings.percentSaveNFTokensMetadata),
+            done: this.progress.done
         };
+        let result;
 
         if (this.progress.done) {
-            retVal.progress.success = this.progress.success;
+            progress.success = this.progress.success;
 
             if (this.progress.success) {
-                retVal.result = {};
+                result = {};
 
                 if (!this.isReissuance) {
-                    retVal.result.assetId = this.assetId;
+                    result.assetId = this.assetId;
                 }
 
-                retVal.result.tokenIds = this.tokenIds;
+                result.tokenIds = this.tokenIds;
             }
             else {
-                retVal.progress.error = this.progress.error;
+                progress.error = this.progress.error;
             }
+        }
+
+        const retVal = {};
+
+        if (this.isReissuance) {
+            retVal.assetId = this.assetId;
+        }
+
+        retVal.progress = progress;
+
+        if (result) {
+            retVal.result = result;
         }
 
         return retVal;
