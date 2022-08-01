@@ -19,6 +19,7 @@ import { Meteor } from 'meteor/meteor';
 // References code in other (Catenis) modules
 import { Catenis } from './Catenis';
 import { NFTokenRetrieval } from './NFTokenRetrieval';
+import { DataDecryption } from './DataDecryption';
 
 // Config entries
 const nftContsWritableConfig = config.get('nfTokenContentsWritable');
@@ -116,7 +117,7 @@ export class NFTokenContentsWritable extends Writable {
                 const dataToConcat = this.checkDecryptData(chunk);
                 this.writtenData = Buffer.concat([this.writtenData, dataToConcat], this.writtenData.length + dataToConcat.length);
 
-                // Check whether is there are enough data to save
+                // Check whether there are enough data to save
                 while (this.writtenData.length >= this.nfTokenRetrieval.contentsDataChunkSize) {
                     const dataToSave = this.writtenData.slice(0, this.nfTokenRetrieval.contentsDataChunkSize);
 
@@ -149,7 +150,7 @@ export class NFTokenContentsWritable extends Writable {
         let error = null;
 
         try {
-            if (this.hasFinalDecryptData()) {
+            if (this.hasFinalDecryptData) {
                 const dataToConcat = this.checkFinalDecryptData();
                 this.writtenData = Buffer.concat([this.writtenData, dataToConcat], this.writtenData.length + dataToConcat.length);
 
@@ -197,11 +198,19 @@ export class NFTokenContentsWritable extends Writable {
     }
 
     /**
+     * Checks whether data is currently being decrypted
+     * @return {boolean}
+     */
+    get hasFinalDecryptData() {
+        return this.dataDecryption && this.dataDecryption.inProgress;
+    }
+
+    /**
      * Set up stream to decrypt contents
      * @param {CryptoKeys} decryptKeys Crypto key pairs used to decrypt the non-fungible token's contents
      */
     setDecryption(decryptKeys) {
-        this.decryptKeys = decryptKeys;
+        this.dataDecryption = new DataDecryption(decryptKeys);
     }
 
     /**
@@ -210,21 +219,12 @@ export class NFTokenContentsWritable extends Writable {
      * @return {Buffer} The resulting decrypted data
      */
     checkDecryptData(data) {
-        if (this.decryptKeys) {
-            return !this.decryptKeys.decryptingData() ? this.decryptKeys.startDecryptData(data)
-                : this.decryptKeys.continueDecryptData(data);
+        if (this.dataDecryption) {
+            return this.dataDecryption.decryptChunk(data);
         }
         else {
             return data;
         }
-    }
-
-    /**
-     * Checks whether data is currently being decrypted
-     * @return {boolean}
-     */
-    hasFinalDecryptData() {
-        return this.decryptKeys && this.decryptKeys.decryptingData();
     }
 
     /**
@@ -232,52 +232,8 @@ export class NFTokenContentsWritable extends Writable {
      * @return {(Buffer|undefined)} The final part of the decrypted data
      */
     checkFinalDecryptData() {
-        if (this.decryptKeys && this.decryptKeys.decryptingData()) {
-            return this.decryptKeys.continueDecryptData();
-        }
-    }
-
-
-    /**
-     * Set up stream to encrypt contents
-     * @param {CryptoKeys} encryptKeys Crypto key pairs used to encrypt the non-fungible token's contents
-     */
-    setEncryption(encryptKeys) {
-        this.encryptKeys = encryptKeys;
-    }
-
-    /**
-     * Conditionally encrypt the provided data
-     * @param {Buffer} data The data to encrypt
-     * @return {Buffer} The resulting encrypted data
-     */
-    checkEncryptData(data) {
-        if (this.encryptKeys) {
-            return !this.encryptKeys.encryptingData()
-                ? this.encryptKeys.startEncryptData(data)
-                : this.encryptKeys.continueEncryptData(data);
-        }
-        else {
-            // Encryption not set up. So just return the unencrypted data
-            return data;
-        }
-    }
-
-    /**
-     * Checks whether data is currently being encrypted
-     * @return {boolean}
-     */
-    hasFinalEncryptData() {
-        return this.encryptKeys && this.encryptKeys.encryptingData();
-    }
-
-    /**
-     * Conditionally terminates the current data encryption
-     * @return {(Buffer|undefined)} The final part of the encrypted data
-     */
-    checkFinalEncryptData() {
-        if (this.encryptKeys && this.encryptKeys.encryptingData()) {
-            return this.encryptKeys.continueEncryptData();
+        if (this.dataDecryption) {
+            return this.dataDecryption.decryptChunk();
         }
     }
 }

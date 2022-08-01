@@ -33,6 +33,8 @@ import '/imports/server/test/RetrievedNFTokenDataTest.js';
 import '/imports/server/test/NFTokenRetrievalTest.js';
 import '/imports/server/test/NFTokenMetadataWritableTest.js';
 import '/imports/server/test/NFTokenContentsWritableTest.js';
+import '/imports/server/test/DataEncryptionTest.js';
+import '/imports/server/test/DataDecryptionTest.js';
 
 
 // Initialize required modules

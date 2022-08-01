@@ -19,6 +19,7 @@ import { Duplex } from 'stream';
 // References code in other (Catenis) modules
 import { Catenis } from './Catenis';
 import { MessageReadable } from './MessageReadable';
+import { DataDecryption } from './DataDecryption';
 
 // Config entries
 /*const config_entryConfig = config.get('config_entry');
@@ -50,34 +51,30 @@ export class MessageDuplex extends Duplex {
         callback(err);
     }
 
+    get hasFinalDecryptData() {
+        return this.dataDecryption && this.dataDecryption.inProgress;
+    }
+
     setDecryption(destKeys, sourceKeys) {
-        this.decryption = {
-            destKeys: destKeys,
-            sourceKeys: sourceKeys
-        };
+        this.dataDecryption = new DataDecryption(destKeys, sourceKeys);
     }
 
     unsetDecryption() {
-        this.decryption = undefined;
+        this.dataDecryption = undefined;
     }
 
     checkDecryptData(data) {
-        if (this.decryption) {
-            return !this.decryption.destKeys.decryptingData() ? this.decryption.destKeys.startDecryptData(data, this.decryption.sourceKeys)
-                : this.decryption.destKeys.continueDecryptData(data);
+        if (this.dataDecryption) {
+            return this.dataDecryption.decryptChunk(data);
         }
         else {
             return data;
         }
     }
 
-    hasFinalDecryptData() {
-        return this.decryption && this.decryption.destKeys.decryptingData();
-    }
-
     checkFinalDecryptData() {
-        if (this.decryption && this.decryption.destKeys.decryptingData()) {
-            return this.decryption.destKeys.continueDecryptData();
+        if (this.dataDecryption) {
+            return this.dataDecryption.decryptChunk();
         }
     }
 

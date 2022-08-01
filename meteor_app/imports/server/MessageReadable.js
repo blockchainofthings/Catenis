@@ -18,6 +18,7 @@ import { Readable } from 'stream';
 
 // References code in other (Catenis) modules
 import { Catenis } from './Catenis';
+import { DataEncryption } from './DataEncryption';
 
 // Config entries
 /*const config_entryConfig = config.get('config_entry');
@@ -49,30 +50,26 @@ export class MessageReadable extends Readable {
         callback(err);
     }
 
+    get hasFinalEncryptData() {
+        return this.dataEncryption && this.dataEncryption.inProgress;
+    }
+
     setEncryption(sourceKeys, destKeys) {
-        this.encryption = {
-            sourceKeys: sourceKeys,
-            destKeys: destKeys
-        };
+        this.dataEncryption = new DataEncryption(sourceKeys, destKeys);
     }
 
     checkEncryptData(data) {
-        if (this.encryption) {
-            return !this.encryption.sourceKeys.encryptingData() ? this.encryption.sourceKeys.startEncryptData(data, this.encryption.destKeys)
-                    : this.encryption.sourceKeys.continueEncryptData(data);
+        if (this.dataEncryption) {
+            return this.dataEncryption.encryptChunk(data);
         }
         else {
             return data;
         }
     }
 
-    hasFinalEncryptData() {
-        return this.encryption && this.encryption.sourceKeys.encryptingData();
-    }
-
     checkFinalEncryptData() {
-        if (this.encryption && this.encryption.sourceKeys.encryptingData()) {
-            return this.encryption.sourceKeys.continueEncryptData();
+        if (this.dataEncryption) {
+            return this.dataEncryption.encryptChunk();
         }
     }
 }

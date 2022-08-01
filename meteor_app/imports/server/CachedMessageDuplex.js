@@ -147,13 +147,13 @@ function processFinal(callback) {
     try {
         let bytesWritten = 0;
 
-        if (this.hasFinalDecryptData()) {
+        if (this.hasFinalDecryptData) {
             this.dataToWrite = Buffer.concat([this.dataToWrite, this.checkFinalDecryptData()]);
 
             // Check whether it is time to write data
             while (this.dataToWrite.length >= this.dataChunkSize) {
                 if (this.fitInOneChunk && this.messageChunks.length > 0) {
-                    // Message wont fit in only one chunk. Return error
+                    // Message won't fit in only one chunk. Return error
                     Catenis.logger.DEBUG('Message too large to fit in just one chunk');
                     callback(new Meteor.Error('ctn_cach_msg_not_fit_one_chunk', 'Message too large to fit in just one chunk'));
                     return;
@@ -171,7 +171,7 @@ function processFinal(callback) {
         // Check if there is still data to be written
         if (this.dataToWrite.length > 0) {
             if (this.fitInOneChunk && this.messageChunks.length > 0) {
-                // Message wont fit in only one chunk. Return error
+                // Message won't fit in only one chunk. Return error
                 Catenis.logger.DEBUG('Message too large to fit in just one chunk');
                 callback(new Meteor.Error('ctn_cach_msg_not_fit_one_chunk', 'Message too large to fit in just one chunk'));
                 return;

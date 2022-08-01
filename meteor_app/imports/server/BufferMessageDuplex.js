@@ -131,7 +131,7 @@ function processFinal(callback) {
     let error = null;
 
     try {
-        if (this.hasFinalDecryptData()) {
+        if (this.hasFinalDecryptData) {
             const dataToWrite = this.checkFinalDecryptData();
 
             if (dataToWrite.length > this.capacity - this.bytesWritten) {

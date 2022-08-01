@@ -14,11 +14,11 @@ import { Readable } from 'stream';
 // Third-party node modules
 import config from 'config';
 // Meteor packages
-//import { Meteor } from 'meteor/meteor';
+import { Meteor } from 'meteor/meteor';
 
 // References code in other (Catenis) modules
 import { Catenis } from './Catenis';
-import { Meteor } from 'meteor/meteor';
+import { DataEncryption } from './DataEncryption';
 
 // Config entries
 const nftContReadableConfig = config.get('nfTokenContentsReadable');
@@ -156,11 +156,19 @@ export class NFTokenContentsReadable extends Readable {
     }
 
     /**
+     * Checks whether data is currently being encrypted
+     * @return {boolean}
+     */
+    get hasFinalEncryptData() {
+        return this.dataEncryption && this.dataEncryption.inProgress;
+    }
+
+    /**
      * Set up stream to encrypt contents
      * @param {CryptoKeys} encryptKeys Crypto key pairs used to encrypt the non-fungible token's contents
      */
     setEncryption(encryptKeys) {
-        this.encryptKeys = encryptKeys;
+        this.dataEncryption = new DataEncryption(encryptKeys);
     }
 
     /**
@@ -169,10 +177,8 @@ export class NFTokenContentsReadable extends Readable {
      * @return {Buffer} The resulting encrypted data
      */
     checkEncryptData(data) {
-        if (this.encryptKeys) {
-            return !this.encryptKeys.encryptingData()
-                ? this.encryptKeys.startEncryptData(data)
-                : this.encryptKeys.continueEncryptData(data);
+        if (this.dataEncryption) {
+            return this.dataEncryption.encryptChunk(data);
         }
         else {
             // Encryption not set up. So just return the unencrypted data
@@ -181,20 +187,12 @@ export class NFTokenContentsReadable extends Readable {
     }
 
     /**
-     * Checks whether data is currently being encrypted
-     * @return {boolean}
-     */
-    hasFinalEncryptData() {
-        return this.encryptKeys && this.encryptKeys.encryptingData();
-    }
-
-    /**
      * Conditionally terminates the current data encryption
      * @return {(Buffer|undefined)} The final part of the encrypted data
      */
     checkFinalEncryptData() {
-        if (this.encryptKeys && this.encryptKeys.encryptingData()) {
-            return this.encryptKeys.continueEncryptData();
+        if (this.dataEncryption) {
+            return this.dataEncryption.encryptChunk();
         }
     }
 }

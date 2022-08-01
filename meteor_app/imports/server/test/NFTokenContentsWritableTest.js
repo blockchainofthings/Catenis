@@ -474,7 +474,7 @@ function resetNFTokenRetrieval() {
         updateRetrievalProgress: NFTokenRetrieval.prototype.updateRetrievalProgress,
     };
 
-    NFTokenRetrieval.__callOrigMethod = function (name, ...args) {
+    NFTokenRetrieval.prototype.__callOrigMethod = function (name, ...args) {
         return this.__origMethods[name].call(this, ...args);
     };
 

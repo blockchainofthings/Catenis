@@ -96,7 +96,7 @@ function processRead(size) {
 
         if (this.bytesRead >= msgLength) {
             // No more message bytes. Finalize read
-            if (this.hasFinalEncryptData()) {
+            if (this.hasFinalEncryptData) {
                 if (continuePushing) {
                     // Read last block of encrypted data
                     this.push(this.checkFinalEncryptData());

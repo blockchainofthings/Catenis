@@ -14,10 +14,10 @@
 // Third-party node modules
 import { expect } from 'chai';
 // Meteor packages
-import { Meteor } from 'meteor/meteor';
+//import { Meteor } from 'meteor/meteor';
 
 // References code in other (Catenis) modules
-import { Catenis } from '../Catenis';
+//import { Catenis } from '../Catenis';
 import { BufferProgressReadable } from '../BufferProgressReadable';
 
 
