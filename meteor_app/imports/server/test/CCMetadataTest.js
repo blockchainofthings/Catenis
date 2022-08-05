@@ -82,7 +82,7 @@ describe('CCMetadata module', function () {
                 description: 'Non-fungible asset #1 used for testing',
                 urls: [
                     {
-                        url: 'https://catenis.io/logo/Catenis_small.png',
+                        url: 'https://sandbox.catenis.io/logo/Catenis_small.png',
                         label: 'Catenis logo (small)'
                     }
                 ]
@@ -227,13 +227,13 @@ describe('CCMetadata module', function () {
                     urls: [
                         {
                             name: 'Catenis logo (small)',
-                            url: 'https://catenis.io/logo/Catenis_small.png',
+                            url: 'https://sandbox.catenis.io/logo/Catenis_small.png',
                             mimeType: 'image/png',
                             dataHash: 'dcde5882af4ee42617e5f9b1ff56d801be25c0c1af7ea8334eb46596616b15b2'
                         },
                         {
                             name: 'icon',
-                            url: 'https://catenis.io/logo/Catenis_large.png',
+                            url: 'https://sandbox.catenis.io/logo/Catenis_large.png',
                             mimeType: 'image/png',
                             dataHash: '0a5e3d326c0dfd1f87cebdd63fa214faebb9a3d48234a8c7352186985f838261'
                         }
