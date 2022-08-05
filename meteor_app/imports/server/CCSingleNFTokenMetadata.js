@@ -254,17 +254,19 @@ export class CCSingleNFTokenMetadata extends CCUserDataMetadata {
 
                     Object.keys(customProps).forEach(key => this.addFreeData(key, customProps[key]));
 
-                    if (Util.isNonNullObject(sensitiveProps)) {
-                        Object.keys(sensitiveProps).forEach(key => this.addFreeData(
-                            key,
-                            Buffer.from(JSON.stringify(sensitiveProps[key])),
-                            true
-                        ));
-                    }
-                    else {
-                        Catenis.logger.WARN('Unexpected data type for sensitive custom non-fungible token properties when setting the Colored Coins metadata non-fungible token data', {
-                            sensitiveProps
-                        });
+                    if (sensitiveProps) {
+                        if (Util.isNonNullObject(sensitiveProps)) {
+                            Object.keys(sensitiveProps).forEach(key => this.addFreeData(
+                                key,
+                                Buffer.from(JSON.stringify(sensitiveProps[key])),
+                                true
+                            ));
+                        }
+                        else {
+                            Catenis.logger.WARN('Unexpected data type for sensitive custom non-fungible token properties when setting the Colored Coins metadata non-fungible token data', {
+                                sensitiveProps
+                            });
+                        }
                     }
                 }
                 else {
