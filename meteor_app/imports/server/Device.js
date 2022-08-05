@@ -4645,7 +4645,7 @@ Device.prototype.retrieveAssetIssuanceHistory = function (assetId, startDate, en
             skip = 0;
         }
 
-        const docSentAssetIssueTxs = Catenis.db.collection.SentTransaction.find(querySelector, {
+        Catenis.db.collection.SentTransaction.find(querySelector, {
             fields: {
                 txid: 1,
                 sentDate: 1,
