@@ -534,7 +534,7 @@ CCTransaction.prototype.removeTransferInputSequence = function (startPos) {
 //       totalTransfer: [Number] - Total asset amount designated to be transferred
 //       totalBurn: [Number] - Total asset amount designated to be burnt
 //       remainingInput: getter([Number]) - Total asset amount still remaining at input (neither designated
-//                                           to be transferred or burnt)
+//                                           to be transferred nor burnt)
 //     }
 //   }
 CCTransaction.prototype.getTransferInputSeqAssetAmountInfo = function (startPos) {
