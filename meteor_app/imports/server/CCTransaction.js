@@ -1027,8 +1027,8 @@ CCTransaction.prototype.getTransferCCTokenIds = function (inputSeqStartPos) {
         for (let pos = inputSeq.startPos, limit = inputSeq.startPos + inputSeq.nInputs; pos < limit; pos++) {
             const input = this.getInputAt(pos);
 
-            if (input.ccTokenIds) {
-                ccTokenIds = ccTokenIds.concat(input.ccTokenIds);
+            if (input.txout.ccTokenIds) {
+                ccTokenIds = ccTokenIds.concat(input.txout.ccTokenIds);
             }
         }
     }
@@ -1116,7 +1116,7 @@ CCTransaction.prototype.txOutputsPerInputSeq = function () {
     for (const transferOutput of this.transferOutputs) {
         if (transferOutput.inputSeqStartPos !== lastInputSeqStartPos) {
             // Transfer output is for a new input sequence
-            if (lastInputSeqStartPos) {
+            if (lastInputSeqStartPos !== undefined) {
                 inputSeqStartPosNumTxOutputs.set(lastInputSeqStartPos, numTxOutputs);
 
                 numTxOutputs = 0;
@@ -1135,7 +1135,7 @@ CCTransaction.prototype.txOutputsPerInputSeq = function () {
         }
     }
 
-    if (lastInputSeqStartPos) {
+    if (lastInputSeqStartPos !== undefined) {
         inputSeqStartPosNumTxOutputs.set(lastInputSeqStartPos, numTxOutputs);
     }
 
@@ -1238,6 +1238,7 @@ CCTransaction.prototype.assemble = function (spendMultiSigOutputAddress, metadat
 
             let outputPos = 0;
             let firstOutputPos;
+            let numReverseOutputs = 0;
             let lastInputSeqStartPos;
             let inputSeqCCTokenIds;
             let inputSeqUsedTokens = 0;
@@ -1285,6 +1286,7 @@ CCTransaction.prototype.assemble = function (spendMultiSigOutputAddress, metadat
                     inputSeqCCTokenIds = this.getTransferCCTokenIds(inputSeqStartPos);
                     lastInputSeqStartPos = inputSeqStartPos;
                     firstOutputPos = outputPos;
+                    numReverseOutputs = 0;
                 }
 
                 if (transferOutput.address !== undefined) {
@@ -1340,14 +1342,17 @@ CCTransaction.prototype.assemble = function (spendMultiSigOutputAddress, metadat
                             outputOrder = 9999 - outputPos;
                             paymentOutput = -(outputPos + 1);
                             negativePaymentOutputs.push(paymentOutput);
+                            numReverseOutputs++;
                         }
                         else {
-                            paymentOutput = outputOrder = outputPos;
+                            paymentOutput = outputOrder = outputPos - numReverseOutputs;
                         }
 
                         outputOrderTxOutput.set(outputOrder, txOutput);
                         addressTxOutput.set(transferOutput.address, txOutput);
                         txOutputPaymentOutput.set(txOutput, paymentOutput);
+
+                        outputPos++;
                     }
                     else {
                         // Add transfer to an existing tx output
@@ -1393,8 +1398,6 @@ CCTransaction.prototype.assemble = function (spendMultiSigOutputAddress, metadat
                            paymentOutput/*output*/
                        ]
                     });
-
-                    outputPos++;
                 }
                 else {
                     // Asset burn
@@ -1768,9 +1771,11 @@ CCTransaction.prototype.clone = function () {
 CCTransaction.prototype.getCCMetadataNFTokensCryptoKeys = function () {
     const numPayOutputsBeforeNullData = this.numPayOutputsBeforeNullData;
     const nullDataOutputPos = this.getNullDataOutputPosition()
-    let txOutputPos = numPayOutputsBeforeNullData > 0 ? 0 : nullDataOutputPos + 1;
+    let txOutputPos = numPayOutputsBeforeNullData > 0 || nullDataOutputPos === undefined ? 0 : nullDataOutputPos + 1;
 
     function incrementTxOutputPos(inc = 1) {
+        // Note that the condition below will always be false if null data output is not present,
+        //  since in that case numPayOutputsBeforeNullData will be 0
         if (txOutputPos < numPayOutputsBeforeNullData) {
             txOutputPos += inc;
 
@@ -2087,6 +2092,8 @@ CCTransaction.fromTransaction = function (transact) {
                             ccTokenIds.push(asset.tokenId);
                         }
 
+                        // Also adjust the asset amount to reflect the number of non-fungible tokens in the UTXO
+                        txInputTxout.assetAmount = ccTokenIds.length;
                         txInputTxout.isNonFungible = true;
                         txInputTxout.ccTokenIds = ccTokenIds;
                     }
@@ -2132,6 +2139,7 @@ CCTransaction.fromTransaction = function (transact) {
             const usedOutputs = new Set();
             let ccPayments = [];
             let firstOutputPos = curOutputPos;
+            let numReverseOutputs = 0;
             let expectedLastOutputPos = undefined;
             let outputInReverseOrder = false;
 
@@ -2284,13 +2292,13 @@ CCTransaction.fromTransaction = function (transact) {
                                     nInputs: numInputs
                                 });
 
-                                if (ccTransact.inputs[curInputPos].ccTokenIds) {
-                                    ccTokenIds = ccTransact.inputs[curInputPos].ccTokenIds;
+                                if (ccTransact.inputs[curInputPos].txout.ccTokenIds) {
+                                    ccTokenIds = ccTransact.inputs[curInputPos].txout.ccTokenIds;
 
                                     for (let inputPos = curInputPos + 1, limit = curInputPos + numInputs; inputPos < limit; inputPos++) {
                                         const input = ccTransact.inputs[inputPos];
 
-                                        if (!input.ccTokenIds) {
+                                        if (!input.txout.ccTokenIds) {
                                             Catenis.logger.ERROR('Invalid Colored Coins transaction: missing non-fungible token IDs in input associated with the transfer of non-fungible asset', {
                                                 transact,
                                                 ccPayments: ccData.payments,
@@ -2300,7 +2308,7 @@ CCTransaction.fromTransaction = function (transact) {
                                             throw new Meteor.Error('ctn_cc_tx_inconsistent_transfer', 'Invalid Colored Coins transaction: missing non-fungible token IDs in input associated with the transfer of non-fungible asset');
                                         }
 
-                                        ccTokenIds = ccTokenIds.concat(input.ccTokenIds);
+                                        ccTokenIds = ccTokenIds.concat(input.txout.ccTokenIds);
                                     }
                                 }
                             }
@@ -2354,6 +2362,7 @@ CCTransaction.fromTransaction = function (transact) {
                             usedOutputs.clear();
                             ccPayments = [];
                             firstOutputPos = curOutputPos;
+                            numReverseOutputs = 0;
                             expectedLastOutputPos = undefined;
                         }
                     }
@@ -2364,7 +2373,7 @@ CCTransaction.fromTransaction = function (transact) {
                     // Determine if payment output is in reverse order
                     outputInReverseOrder = false;
 
-                    if (!payment.burn && !usedOutputs.has(payment.output) && payment.output !== curOutputPos) {
+                    if (!payment.burn && !usedOutputs.has(payment.output) && payment.output !== curOutputPos - numReverseOutputs) {
                         // Payment output not in expected order. Check if output is in reverse order
                         let error = false;
 
@@ -2385,6 +2394,8 @@ CCTransaction.fromTransaction = function (transact) {
                                     error = true;
                                 }
                             }
+
+                            numReverseOutputs++;
                         }
                         else {
                             error = true;
@@ -2454,13 +2465,13 @@ CCTransaction.fromTransaction = function (transact) {
 
                             usedOutputs.add(payment.output);
                             ccTransact.numCcTransferOutputs++;
+
+                            curOutputPos++;
                         }
                         else {
                             // Output already used in this input sequence. Update asset amount
                             txOutputPayInfo.assetAmount += payment.amount;
                         }
-
-                        curOutputPos++;
                     }
                     else {
                         // Set new burn transfer output
@@ -2532,7 +2543,7 @@ CCTransaction.fromTransaction = function (transact) {
                         amountDifference: inputAmountTransferred
                     });
                     // noinspection ExceptionCaughtLocallyJS
-                    throw new Meteor.Error('ctn_cc_tx_inconsistent_transfer', 'Invalid Colored Coins transaction: not all newly issued assets are being transferred');
+                    throw new Meteor.Error('ctn_cc_tx_inconsistent_transfer', 'Invalid Colored Coins transaction: asset amount supplied by tx inputs does not match the amount being transferred');
                 }
 
                 ccTransact.transferInputSeqs.push({
@@ -2540,13 +2551,13 @@ CCTransaction.fromTransaction = function (transact) {
                     nInputs: numInputs
                 });
 
-                if (ccTransact.inputs[curInputPos].ccTokenIds) {
-                    ccTokenIds = ccTransact.inputs[curInputPos].ccTokenIds;
+                if (ccTransact.inputs[curInputPos].txout.ccTokenIds) {
+                    ccTokenIds = ccTransact.inputs[curInputPos].txout.ccTokenIds;
 
                     for (let inputPos = curInputPos + 1, limit = curInputPos + numInputs; inputPos < limit; inputPos++) {
                         const input = ccTransact.inputs[inputPos];
 
-                        if (!input.ccTokenIds) {
+                        if (!input.txout.ccTokenIds) {
                             Catenis.logger.ERROR('Invalid Colored Coins transaction: missing non-fungible token IDs in input associated with the transfer of non-fungible asset', {
                                 transact,
                                 ccPayments: ccData.payments,
@@ -2556,7 +2567,7 @@ CCTransaction.fromTransaction = function (transact) {
                             throw new Meteor.Error('ctn_cc_tx_inconsistent_transfer', 'Invalid Colored Coins transaction: missing non-fungible token IDs in input associated with the transfer of non-fungible asset');
                         }
 
-                        ccTokenIds = ccTokenIds.concat(input.ccTokenIds);
+                        ccTokenIds = ccTokenIds.concat(input.txout.ccTokenIds);
                     }
                 }
             }
