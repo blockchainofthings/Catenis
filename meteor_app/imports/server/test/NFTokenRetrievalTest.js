@@ -34,7 +34,6 @@ import { NFTokenStorage } from '../NFTokenStorage';
 import { CCSingleNFTokenMetadata } from '../CCSingleNFTokenMetadata';
 import { NFTokenContentsUrl } from '../NFTokenContentsUrl';
 import { RetrievedNFTokenData } from '../RetrievedNFTokenData';
-import { NFAssetIssuance } from '../NFAssetIssuance';
 
 const clientIndex = 123;
 const ccTokenId = 'Tk97fk8Rg27toQW68faxhnDuYeFEoLC1K4DLji';
@@ -1119,11 +1118,11 @@ describe('NFTokenRetrieval module', function () {
     describe('Purge old non-fungible token retrievals', function () {
         const now = new Date();
         const inIncompleteDate = new Date(now);
-        inIncompleteDate.setSeconds(inIncompleteDate.getHours() - nftRetrievalCfgSettings.timeKeepIncompleteRetrieval + 1);
+        inIncompleteDate.setSeconds(inIncompleteDate.getSeconds() - nftRetrievalCfgSettings.timeKeepIncompleteRetrieval - 1);
         const inUndeliveredDate = new Date(now);
-        inUndeliveredDate.setSeconds(inUndeliveredDate.getHours() - nftRetrievalCfgSettings.timeKeepUndeliveredData + 1);
+        inUndeliveredDate.setSeconds(inUndeliveredDate.getSeconds() - nftRetrievalCfgSettings.timeKeepUndeliveredData - 1);
         const inDeliveredDate = new Date(now);
-        inDeliveredDate.setSeconds(inDeliveredDate.getHours() - nftRetrievalCfgSettings.timeKeepDeliveredData + 1);
+        inDeliveredDate.setSeconds(inDeliveredDate.getSeconds() - nftRetrievalCfgSettings.timeKeepDeliveredData - 1);
         const outDate = new Date(now);
 
         const docsNFTokenRetrieval = [
@@ -1486,9 +1485,7 @@ describe('NFTokenRetrieval module', function () {
 
                 done();
             })
-            .catch(err => {
-                done(err);
-            });
+            .catch(done);
         });
 
         it('should purge non-fungible token retrieval database docs', function () {
@@ -1540,7 +1537,7 @@ function resetC3NodeClient() {
         getNFTokenMetadataReadableStream: C3NodeClient.prototype.getNFTokenMetadataReadableStream,
     };
 
-    C3NodeClient.__callOrigMethod = function (name, ...args) {
+    C3NodeClient.prototype.__callOrigMethod = function (name, ...args) {
         return this.__origMethods[name].call(this, ...args);
     };
 
@@ -1558,7 +1555,7 @@ function resetNFTokenStorage() {
         retrieve: NFTokenStorage.prototype.retrieve,
     };
 
-    NFTokenStorage.__callOrigMethod = function (name, ...args) {
+    NFTokenStorage.prototype.__callOrigMethod = function (name, ...args) {
         return this.__origMethods[name].call(this, ...args);
     };
 
