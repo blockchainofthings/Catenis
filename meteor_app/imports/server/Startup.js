@@ -111,6 +111,7 @@ import { EccLibraryProxy } from './EccLibraryProxy';
 import { Bip32 } from './Bip32';
 import { NFAssetIssuance } from './NFAssetIssuance';
 import { NFTokenRetrieval } from './NFTokenRetrieval';
+import { NFTokenTransfer } from './NFTokenTransfer';
 // TEST - begin
 //import { TestCatenisColoredCoins } from './test/TestCatenisColoredCoins';
 // TEST - end
@@ -253,6 +254,7 @@ Meteor.startup(function () {
             CrmIntegration.initialize();
             NFAssetIssuance.initialize();
             NFTokenRetrieval.initialize();
+            NFTokenTransfer.initialize();
 
             if (Catenis.application.enableSelfRegistration) {
                 SelfRegistrationBcotSale.initialize();

@@ -99,6 +99,22 @@ export class NonFungibleToken {
     }
 
     /**
+     * Retrieve the non-fungible token object with the given Colored Coins non-fungible token ID
+     * @param {string} ccTokenId The Colored Coins attributed non-fungible token ID
+     * @returns {NonFungibleToken}
+     */
+    static getNFTokenByCCTokenId(ccTokenId) {
+        const docNFToken = Catenis.db.collection.NonFungibleToken.findOne({ccTokenId: ccTokenId});
+
+        if (!docNFToken) {
+            // Invalid non-fungible token ID
+            throw new Meteor.Error('nf_token_invalid_id', 'Unable to find non-fungible token with the given Colored Coins token ID');
+        }
+
+        return new NonFungibleToken(docNFToken);
+    }
+
+    /**
      * Creates a new set of non-fungible token database docs/recs
      * @param {Asset} asset Asset object to which the non-fungible tokens pertain
      * @param {CCTransaction} ccTransact Colored Coins transaction used to issue new non-fungible tokens for the

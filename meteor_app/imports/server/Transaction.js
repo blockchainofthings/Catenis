@@ -2055,6 +2055,11 @@ Transaction.type = Object.freeze({
         description: 'Transaction used to transfer an amount of a Catenis asset owned by a device to another device',
         dbInfoEntryName: 'transferAsset'
     }),
+    transfer_nf_token: Object.freeze({
+        name: 'transfer_nf_token',
+        description: 'Transaction used to transfer a non-fungible token to another device',
+        dbInfoEntryName: 'transferNFToken'
+    }),
     settle_off_chain_messages: Object.freeze({
         name: 'settle_off_chain_messages',
         title: 'Settle Off-Chain Messages',

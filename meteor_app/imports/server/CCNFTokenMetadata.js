@@ -106,6 +106,14 @@ export class CCNFTokenMetadata {
     }
 
     /**
+     * Checks whether no token info has been specified yet
+     * @returns {boolean}
+     */
+    get isEmpty() {
+        return this.newTokens.length === 0 && this.update === undefined;
+    }
+
+    /**
      * Set new non-fungible token metadata data from (previously set) non-fungible asset issuance
      * @private
      */

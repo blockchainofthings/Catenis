@@ -14,7 +14,7 @@ import util from 'util';
 // Third-party node modules
 //import config from 'config';
 // Meteor packages
-//import { Meteor } from 'meteor/meteor';
+import { Meteor } from 'meteor/meteor';
 
 // References code in other (Catenis) modules
 import { Catenis } from './Catenis';
@@ -26,6 +26,7 @@ import { CCTransaction } from './CCTransaction';
 import { IssueAssetTransaction } from './IssueAssetTransaction';
 import { TransferAssetTransaction } from './TransferAssetTransaction';
 import { IssueNFAssetTransaction } from './IssueNFAssetTransaction';
+import { TransferNFTokenTransaction } from './TransferNFTokenTransaction';
 import { NonFungibleToken } from './NonFungibleToken';
 
 // Config entries
@@ -82,8 +83,14 @@ ReceiveAsset.initialize = function () {
     // Set up handler for event indicating that new issue non-fungible asset transaction has been received
     TransactionMonitor.addEventHandler(TransactionMonitor.notifyEvent.issue_nf_asset_tx_rcvd.name, processIssuedNFAsset);
 
+    // Set up handler for event indicating that new transfer non-fungible token transaction has been received
+    TransactionMonitor.addEventHandler(TransactionMonitor.notifyEvent.transfer_nf_token_tx_rcvd.name, processTransferredNFToken);
+
     // Set up handler for event indicating that issue non-fungible asset transaction has been confirmed
     TransactionMonitor.addEventHandler(TransactionMonitor.notifyEvent.issue_nf_asset_tx_conf.name, processIssuedNFAssetConfirmed);
+
+    // Set up handler for event indicating that transfer non-fungible token transaction has been confirmed
+    TransactionMonitor.addEventHandler(TransactionMonitor.notifyEvent.transfer_nf_token_tx_conf.name, processTransferredNFTokenConfirmed);
 };
 
 
@@ -329,6 +336,76 @@ function processIssuedNFAsset(data) {
     }
 }
 
+function processTransferredNFToken(data) {
+    Catenis.logger.TRACE('Received notification of newly received transfer non-fungible token transaction', data);
+    try {
+        // Make sure that receiving device is active
+        const receivingDevice = Device.getDeviceByDeviceId(data.receivingDeviceId);
+
+        if (receivingDevice.status === Device.status.active.name) {
+            const sendingDevice = Device.getDeviceByDeviceId(data.sendingDeviceId);
+
+            // Make sure that non-fungible token and its associated asset are recorded into local database
+            let asset;
+            const transferNFTokenTransact = TransferNFTokenTransaction.checkTransaction(CCTransaction.fromTransaction(Transaction.fromTxid(data.txid)));
+
+            if (transferNFTokenTransact.nfTokenTransfer === undefined) {
+                // Non-fungible token doc/rec not yet in local database. Create it.
+                //  But first, check if associated non-fungible asset doc/rec also needs to be created
+                const ccAssetId = Asset.getCcAssetIdFromCcTransaction(transferNFTokenTransact.ccTransact);
+
+                try {
+                    asset = Asset.getAssetByCcAssetId(ccAssetId);
+                }
+                catch (err) {
+                    if (!((err instanceof Meteor.Error) && err.error === 'ctn_asset_not_found')) {
+                        // noinspection ExceptionCaughtLocallyJS
+                        throw err;
+                    }
+                }
+
+                if (!asset) {
+                    // Asset info not yet in local database. Create it now
+
+                    // Get transaction(s) used to issue this asset
+                    const assetIssuance = Catenis.c3NodeClient.getAssetIssuance(ccAssetId, false);
+
+                    asset = Asset.getAssetByAssetId(Asset.createAsset(CCTransaction.fromTransaction(Transaction.fromTxid(Object.keys(assetIssuance)[0]))));
+                }
+
+                // Get transaction used to issue this non-fungible token
+                const nfTokenIssuance = Catenis.c3NodeClient.getNFTokenIssuance(transferNFTokenTransact.ccTokenId, false);
+
+                // And also create the associated non-fungible token database docs/recs
+                NonFungibleToken.createNFTokens(asset, CCTransaction.fromTransaction(Transaction.fromTxid(nfTokenIssuance.txid)));
+            }
+            else {
+                asset = transferNFTokenTransact.nfTokenTransfer.nfToken.asset;
+            }
+
+            // Check if receiving device should be notified
+            if (receivingDevice.shouldBeNotifiedOfReceivedNFTokenOf(asset.issuingDevice)
+                    || receivingDevice.shouldBeNotifiedOfNFTokenReceivedFrom(sendingDevice)) {
+                // Get transaction received date
+                const receivedDate = Catenis.db.collection.ReceivedTransaction.findOne({
+                    txid: data.txid
+                }, {
+                    fields: {
+                        receivedDate: 1
+                    }
+                }).receivedDate;
+
+                // Notify receiving device
+                receivingDevice.notifyNFTokenReceived([data.tokenId], asset.issuingDevice, sendingDevice, receivedDate);
+            }
+        }
+    }
+    catch (err) {
+        // Error while processing received transfer non-fungible token transaction. Log error condition
+        Catenis.logger.ERROR(util.format('Error while processing received transfer non-fungible token transaction (txid: %s).', data.txid), err);
+    }
+}
+
 function processIssuedNFAssetConfirmed(data) {
     Catenis.logger.TRACE('Received notification of confirmed issue non-fungible asset transaction', data);
     try {
@@ -385,6 +462,82 @@ function processIssuedNFAssetConfirmed(data) {
     catch (err) {
         // Error while processing confirmed issue non-fungible asset transaction. Log error condition
         Catenis.logger.ERROR(util.format('Error while processing confirmed issue non-fungible asset transaction (txid: %s).', data.txid), err);
+    }
+}
+
+function processTransferredNFTokenConfirmed(data) {
+    Catenis.logger.TRACE('Received notification of confirmed transfer non-fungible token transaction', data);
+    try {
+        const receivingDevice = Device.getDeviceByDeviceId(data.receivingDeviceId);
+        const sendingDevice = Device.getDeviceByDeviceId(data.sendingDeviceId);
+
+        // Make sure that non-fungible token and its associated asset are recorded into local database
+        let asset;
+        const transferNFTokenTransact = TransferNFTokenTransaction.checkTransaction(CCTransaction.fromTransaction(Transaction.fromTxid(data.txid)));
+
+        if (transferNFTokenTransact.nfTokenTransfer === undefined) {
+            // Non-fungible token doc/rec not yet in local database. Create it.
+            //  But first, check if associated non-fungible asset doc/rec also needs to be created
+            const ccAssetId = Asset.getCcAssetIdFromCcTransaction(transferNFTokenTransact.ccTransact);
+
+            try {
+                asset = Asset.getAssetByCcAssetId(ccAssetId);
+            }
+            catch (err) {
+                if (!((err instanceof Meteor.Error) && err.error === 'ctn_asset_not_found')) {
+                    // noinspection ExceptionCaughtLocallyJS
+                    throw err;
+                }
+            }
+
+            if (!asset) {
+                // Asset info not yet in local database. Create it now
+
+                // Get transaction(s) used to issue this asset
+                const assetIssuance = Catenis.c3NodeClient.getAssetIssuance(ccAssetId, false);
+
+                asset = Asset.getAssetByAssetId(Asset.createAsset(CCTransaction.fromTransaction(Transaction.fromTxid(Object.keys(assetIssuance)[0]))));
+            }
+
+            // Get transaction used to issue this non-fungible token
+            const nfTokenIssuance = Catenis.c3NodeClient.getNFTokenIssuance(transferNFTokenTransact.ccTokenId, false);
+
+            // And also create the associated non-fungible token database docs/recs
+            NonFungibleToken.createNFTokens(asset, CCTransaction.fromTransaction(Transaction.fromTxid(nfTokenIssuance.txid)));
+        }
+        else {
+            asset = transferNFTokenTransact.nfTokenTransfer.nfToken.asset;
+        }
+
+        let confirmationDate;
+
+        // Check if receiving device should be notified
+        if (receivingDevice.status === Device.status.active.name && (receivingDevice.shouldBeNotifiedOfConfirmedNFTokenOf(asset.issuingDevice)
+                || receivingDevice.shouldBeNotifiedOfConfirmedNFTokenFrom(sendingDevice))) {
+            // Get transaction confirmation date
+            confirmationDate = getTxConfirmationDate(data.txid);
+
+            // Notify receiving device
+            receivingDevice.notifyNFTokenConfirmed([data.tokenId], asset.issuingDevice, sendingDevice, confirmationDate);
+        }
+
+        // Check if sending device should be notified
+        if (sendingDevice.deviceId !== receivingDevice.deviceId
+                && transferNFTokenTransact.returningCCTokenIds.length > 0 && sendingDevice.status === Device.status.active.name
+                && (sendingDevice.shouldBeNotifiedOfConfirmedNFTokenOf(asset.issuingDevice)
+                || sendingDevice.shouldBeNotifiedOfConfirmedNFTokenFrom(sendingDevice))) {
+            if (!confirmationDate) {
+                // Get transaction confirmation date
+                confirmationDate = getTxConfirmationDate(data.txid);
+            }
+
+            // Notify receiving device
+            sendingDevice.notifyNFTokenConfirmed([data.tokenId], asset.issuingDevice, sendingDevice, confirmationDate);
+        }
+    }
+    catch (err) {
+        // Error while processing confirmed transfer non-fungible token transaction. Log error condition
+        Catenis.logger.ERROR(util.format('Error while processing confirmed transfer non-fungible token transaction (txid: %s).', data.txid), err);
     }
 }
 

@@ -89,7 +89,8 @@ import { reissueNonFungibleAsset } from './ApiReissueNonFungibleAsset';
 import { retrieveNFAssetIssuanceProgress } from './ApiNFAssetIssuanceProgress';
 import { retrieveNonFungibleToken } from './ApiRetrieveNonFungibleToken';
 import { retrieveNFTokenRetrievalProgress } from './ApiNFTokenRetrievalProgress';
-
+import { transferNonFungibleToken } from './ApiTransferNonFungibleToken';
+import { retrieveNFTokenTransferProgress } from './ApiNFTokenTransferProgress';
 
 // Config entries
 const restApiConfig = config.get('restApi');
@@ -469,6 +470,26 @@ export function RestApi(apiVersion) {
             //  Refer to the source file where the action function is defined for a detailed description of the endpoint
             get: {
                 action: retrieveNFTokenRetrievalProgress
+            }
+        });
+
+        // noinspection JSUnresolvedFunction
+        this.api.addRoute('assets/non-fungible/tokens/:tokenId/transfer', {authRequired: true}, {
+            // Transfer non-fungible token (public method)
+            //
+            //  Refer to the source file where the action function is defined for a detailed description of the endpoint
+            post: {
+                action: transferNonFungibleToken
+            }
+        });
+
+        // noinspection JSUnresolvedFunction
+        this.api.addRoute('assets/non-fungible/tokens/:tokenId/transfer/:transferId', {authRequired: true}, {
+            // Retrieve non-fungible token transfer progress (public method)
+            //
+            //  Refer to the source file where the action function is defined for a detailed description of the endpoint
+            get: {
+                action: retrieveNFTokenTransferProgress
             }
         });
     }

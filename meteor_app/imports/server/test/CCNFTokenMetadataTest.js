@@ -386,6 +386,7 @@ describe('CCNFTokenMetadata module', function () {
                 nfTokenMetadata = new CCNFTokenMetadata();
 
                 expect(nfTokenMetadata).to.be.an.instanceof(CCNFTokenMetadata);
+                expect(nfTokenMetadata.isEmpty).to.be.true;
                 expect(nfTokenMetadata.newTokens).to.be.an('array').that.is.empty;
                 expect(nfTokenMetadata.update).to.be.undefined;
                 expect(nfTokenMetadata._fromAssetIssuance).to.be.undefined;
@@ -436,6 +437,7 @@ describe('CCNFTokenMetadata module', function () {
 
                 expect(assembledNFTokenMetadata).to.not.be.undefined;
 
+                expect(nfTokenMetadata.isEmpty).to.be.false;
                 expect(nfTokenMetadata.newTokens).to.have.lengthOf(2);
 
                 const newTokensContentsURLs = nfTokenMetadata.newTokens.map(o => o.contentsUrl);

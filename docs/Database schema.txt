@@ -310,7 +310,7 @@ MessageChunk {
 
 SentTransaction {
   _id: [string], // MongoDB internal document ID provided by Meteor
-  type: [string], // Identifies the type of transaction that was sent. Valid values (from Catenis.Transaction.type): 'funding', 'credit_service_account', 'store_bcot', 'redeem_bcot', 'spend_service_credit', 'send_message', 'log_message', 'read_confirmation', 'issue_asset', 'issue_nf_asset', 'transfer_asset', 'settle_off_chain_messages', 'out_migrate_asset', 'in_migrate_asset'
+  type: [string], // Identifies the type of transaction that was sent. Valid values (from Catenis.Transaction.type): 'funding', 'credit_service_account', 'store_bcot', 'redeem_bcot', 'spend_service_credit', 'send_message', 'log_message', 'read_confirmation', 'issue_asset', 'issue_nf_asset', 'transfer_asset', 'transfer_nf_token', 'settle_off_chain_messages', 'out_migrate_asset', 'in_migrate_asset'
   txid: [string], // Blockchain attributed ID (hash) of the sent transaction
   sentDate: [date/time], // Date and time when transaction was sent to the blockchain network
   confirmation: {
@@ -397,6 +397,11 @@ SentTransaction {
       amount: [number],            // Amount of asset transferred
       changeAmount: [number]       // Amount of asset sent back to sending device as change
     },
+    transferNFToken: {
+      tokenId: [string], // ID that uniquely identifies the Catenis non-fungible token that is transferred
+      sendingDeviceId: [string],   // External ID of the device that sent the non-fungible token
+      receivingDeviceId: [string], // External ID of the device that receives the non-fungible token
+    },
     settleOffChainMessages: {
       offChainMsgDataCids: [Array(string)]  // List of IPFS CIDs of Catenis off-chain message data (either envelope or receipt) that have been settled to the blockchain
     },
@@ -418,7 +423,7 @@ SentTransaction {
 
 ReceivedTransaction {
   _id: [string], // MongoDB internal document ID provided by Meteor
-  type: [string], // Identifies the type of transaction that was received. Valid values (from Catenis.Transaction.type): 'sys_funding', 'bcot_payment', 'bcot_replenishment', 'credit_service_account', 'send_message', 'read_confirmation', 'issue_asset', 'issue_nf_asset', 'transfer_asset', 'settle_off_chain_messages'
+  type: [string], // Identifies the type of transaction that was received. Valid values (from Catenis.Transaction.type): 'sys_funding', 'bcot_payment', 'bcot_replenishment', 'credit_service_account', 'send_message', 'read_confirmation', 'issue_asset', 'issue_nf_asset', 'transfer_asset', 'transfer_nf_token', 'settle_off_chain_messages'
                   //  Note: only settle off-chain messages tx containing off-chain message envelopes saved by this Catenis node or off-chain message receipts for off-chain message envelopes sent by this Catenis node are added to this DB collection
   txid: [string], // Blockchain attributed ID (hash) of the received transaction
   receivedDate: [date/time], // Date and time when transaction was received. This is derived from timereceived property returned by gettransaction RPC method
@@ -490,6 +495,11 @@ ReceivedTransaction {
       receivingDeviceId: [string], // External ID of the device that receives the assets
       amount: [number],            // Amount of asset transferred
       changeAmount: [number]       // Amount of asset sent back to sending device as change
+    },
+    transferNFToken: {
+      tokenId: [string], // ID that uniquely identifies the Catenis non-fungible token that is transferred
+      sendingDeviceId: [string],   // External ID of the device that sent the non-fungible token
+      receivingDeviceId: [string], // External ID of the device that receives the non-fungible token
     },
     settleOffChainMessages: {
       offChainMsgDataCids: [Array(string)]  // List of IPFS CIDs of Catenis off-chain message data (either envelope or receipt) that have been settled to the blockchain
@@ -701,6 +711,32 @@ RetrievedNonFungibleTokenData {
   isFinal: [boolean],  // Indicates whether this is the last retrieved non-fungible token data of the non-fungible token retrieval
   metadata: [object],  // The retrieved non-fungible token metadata. This field should only be present in the first retrieved non-fungible token data (order = 1), except when retrieving only the non-fungible token contents (NonFungibleTokenRetrieval.contentsOnly = true)
   contentsData: [binary],  // The retrieved non-fungible token contents part. This field should only be present for order > 1, or order = 1 if retrieving only the non-fungible token contents (NonFungibleTokenRetrieval.contentsOnly = true)
+  createdDate: [date/time]  // Date and time when doc/rec has been created
+}
+
+NonFungibleTokenTransfer {
+  _id: [string],  // MongoDB internal document ID provided by Meteor
+  tokenTransferId: [string],  // External ID used to uniquely identify this non-fungible token transfer
+  tokenId: [string],  // External ID of the non-fungible token being transferred
+  sendingDeviceId: [string],  // External ID of device that is transferring the non-fungible token
+  receivingDeviceId: [string],  // External ID of device that will receive the transferred non-fungible token
+  progress: {
+    metadata: {
+      bytesRead: [number],    // Number of non-fungible token metadata bytes that have been read
+      bytesWritten: [number],  // Number of non-fungible token metadata bytes that have been written
+      contents: {
+        bytesRead: [number],    // Number of non-fungible token contents bytes that have been read
+        bytesWritten: [number]  // Number of non-fungible token contents bytes that have been written
+      }
+    },
+    done: [boolean],           // Indicates whether the non-fungible token transfer has been finalized, either successfully or with an error
+    success: [boolean],        // (optional) Indicates whether the non-fungible token has been successfully transferred. Only present after the token transfer is finalized
+    error: {  // (optional) Only present if the non-fungible token transfer was finalized with an error
+      code: [number],    // Code number of error that took place while transferring the non-fungible token
+      message: [string]  // Text describing the error that took place while transferring the non-fungible token
+    },
+    finishDate: [date/time]    // Date and time when the non-fungible token transfer was finalized
+  },
   createdDate: [date/time]  // Date and time when doc/rec has been created
 }
 

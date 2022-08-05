@@ -108,6 +108,10 @@ describe('CCSingleNFTokenMetadata module', function () {
             expect(nfTokenMetadata.clone()).to.be.an.instanceof(CCSingleNFTokenMetadata).and.deep.equal(nfTokenMetadata);
         });
 
+        it('should correctly clone the non-fungible token properties', function () {
+            expect(nfTokenMetadata.cloneTokenProps()).to.deep.equal(nfTokenMetadata.tokenProps);
+        });
+
         it('should correctly instantiate single non-fungible token metadata object from assembled data', function () {
             cryptoKeys = new CryptoKeys(Catenis.bip32.fromSeed(Buffer.from('This is only a test')));
 
@@ -173,6 +177,10 @@ describe('CCSingleNFTokenMetadata module', function () {
 
         it('should correctly clone single non-fungible token metadata object', function () {
             expect(nfTokenMetadata.clone()).to.be.an.instanceof(CCSingleNFTokenMetadata).and.deep.equal(nfTokenMetadata);
+        });
+
+        it('should correctly clone the non-fungible token properties', function () {
+            expect(nfTokenMetadata.cloneTokenProps()).to.deep.equal(nfTokenMetadata.tokenProps);
         });
 
         it('should correctly instantiate single non-fungible token metadata object from assembled data', function () {

@@ -81,6 +81,8 @@ import { NFAssetIssuance } from './NFAssetIssuance';
 import { IssueNFAssetTransaction } from './IssueNFAssetTransaction';
 import { NonFungibleToken } from './NonFungibleToken';
 import { NFTokenRetrieval } from './NFTokenRetrieval';
+import { TransferNFTokenTransaction } from './TransferNFTokenTransaction';
+import { NFTokenTransfer } from './NFTokenTransfer';
 
 
 // Definition of function classes
@@ -3369,6 +3371,286 @@ Device.prototype.transferAsset = function (receivingDeviceId, amount, assetId) {
 };
 
 /**
+ * Transfer a non-fungible token to another device
+ * @param {string} tokenId The external ID of the non-fungible token to transfer
+ * @param {string} receivingDeviceId Device ID of the device that will receive the token being transferred
+ * @param {boolean} asyncProc Indicates whether the non-fungible token transfer should be processed asynchronously
+ * @returns {NFTokenTransferResult}
+ */
+Device.prototype.transferNonFungibleToken = function (tokenId, receivingDeviceId, asyncProc) {
+    // Make sure that device is not deleted
+    if (this.status === Device.status.deleted.name) {
+        // Cannot transfer non-fungible token from a deleted device. Log error and throw exception
+        Catenis.logger.ERROR('Cannot transfer non-fungible token from a deleted device', {deviceId: this.deviceId});
+        throw new Meteor.Error('ctn_device_deleted', `Cannot transfer non-fungible token from a deleted device (deviceId: ${this.deviceId})`);
+    }
+
+    // Make sure that device is active
+    if (this.status !== Device.status.active.name) {
+        // Cannot transfer non-fungible token from a device that is not active. Log error and throw exception
+        Catenis.logger.ERROR('Cannot transfer non-fungible token from a device that is not active', {
+                deviceId: this.deviceId
+            }
+        );
+        throw new Meteor.Error('ctn_device_not_active', `Cannot transfer non-fungible token from a device that is not active (deviceId: ${this.deviceId})`);
+    }
+
+    // Get the non-fungible token object for the non-fungible token to transfer.
+    //  Note: this will throw a 'nf_token_invalid_id' exception if the non-fungible token does not exist
+    const nfToken = NonFungibleToken.getNFTokenByTokenId(tokenId);
+
+    let receivingDevice;
+
+    if (receivingDeviceId !== this.deviceId) {
+        try {
+            receivingDevice = Device.getDeviceByDeviceId(receivingDeviceId);
+
+            // Make sure that receiving device is not deleted
+            if (receivingDevice.status === Device.status.deleted.name) {
+                // Cannot transfer non-fungible token to a deleted device. Log error and throw exception
+                Catenis.logger.ERROR('Cannot transfer non-fungible token to a deleted device', {deviceId: receivingDeviceId});
+                //noinspection ExceptionCaughtLocallyJS
+                throw new Meteor.Error('ctn_device_recv_dev_deleted', `Cannot transfer non-fungible token to a deleted device (deviceId: ${receivingDeviceId})`);
+            }
+
+            // Make sure that receiving device is active
+            if (receivingDevice.status !== Device.status.active.name) {
+                // Cannot transfer non-fungible token to a device that is not active. Log error condition and throw exception
+                Catenis.logger.ERROR('Cannot transfer non-fungible token to a device that is not active', {deviceId: receivingDeviceId});
+                //noinspection ExceptionCaughtLocallyJS
+                throw new Meteor.Error('ctn_device_recv_dev_not_active', `Cannot transfer non-fungible token to a device that is not active (deviceId: ${receivingDeviceId})`);
+            }
+        }
+        catch (err) {
+            if ((err instanceof Meteor.Error) && err.error === 'ctn_device_not_found') {
+                // No receiving device available with the given device ID. Log error and throw exception
+                Catenis.logger.ERROR('Could not find receiving device with the given device ID', {deviceId: receivingDeviceId});
+                throw new Meteor.Error('ctn_device_recv_dev_not_found', `Could not find receiving device with the given device ID (${receivingDeviceId})`);
+            }
+            else {
+                // Otherwise, just re-throws exception
+                throw err;
+            }
+        }
+    }
+    else {
+        receivingDevice = this;
+    }
+
+    // Identify asset issuing device
+    const issuingDevice = Asset.getAssetByDocId(nfToken.asset_id).issuingDevice;
+
+    // Make sure that device has permission to send non-fungible token to receiving device
+    if (!receivingDevice.shouldAcceptNFTokenOf(issuingDevice) || !receivingDevice.shouldAcceptNFTokenFrom(this)) {
+        // Device has no permission rights to send non-fungible token to receiving device
+        Catenis.logger.INFO('Device has no permission rights to send non-fungible token to receiving device', {
+            deviceId: this.deviceId,
+            receivingDeviceId: receivingDevice.deviceId
+        });
+        throw new Meteor.Error('ctn_device_no_permission', `Device has no permission rights to send non-fungible token to receiving device (deviceId: ${this.deviceId}, receivingDeviceId: ${receivingDevice.deviceId})`);
+    }
+
+    // Instantiate a new non-fungible token transfer object
+    const nfTokenTransfer = new NFTokenTransfer(undefined, nfToken, this, receivingDevice);
+
+    const doProcessing = () => {
+        let servicePaid = false;
+
+        // Execute code in critical section to avoid Colored Coins UTXOs concurrency
+        CCFundSource.utxoCS.execute(() => {
+            // Execute code in critical section to avoid UTXOs concurrency
+            FundSource.utxoCS.execute(() => {
+                // Execute code in critical section to avoid concurrent spend service credit tasks
+                spendServCredProcCS.execute(() => {
+                    const servicePriceInfo = Service.transferNonFungibleTokenServicePrice();
+                    let paymentProvisionInfo;
+
+                    if (this.client.billingMode === Client.billingMode.prePaid) {
+                        try {
+                            paymentProvisionInfo = Catenis.spendServCredit.provisionPaymentForService(this.client, servicePriceInfo.finalServicePrice);
+                        }
+                        catch (err) {
+                            if ((err instanceof Meteor.Error) && err.error === 'ctn_spend_serv_cred_utxo_alloc_error') {
+                                // Unable to allocate service credits from client service account to pay for service.
+                                //  Log error and throw exception
+                                Catenis.logger.ERROR('Client does not have enough credits to pay for transfer non-fungible token service', {
+                                    serviceAccountBalance: this.client.serviceAccountBalance(),
+                                    servicePrice: servicePriceInfo.finalServicePrice
+                                });
+                                throw new Meteor.Error('ctn_device_low_service_acc_balance', 'Client does not have enough credits to pay for transfer non-fungible token service');
+                            }
+                            else {
+                                // Error provisioning spend service credit transaction to pay for service.
+                                //  Log error and throw exception
+                                Catenis.logger.ERROR('Error provisioning spend service credit transaction to pay for transfer non-fungible token service.', err);
+                                throw new Error('Error provisioning spend service credit transaction to pay for transfer non-fungible token service');
+                            }
+                        }
+                    }
+                    else if (this.client.billingMode === Client.billingMode.postPaid) {
+                        // Not yet implemented
+                        Catenis.logger.ERROR('Processing for postpaid billing mode not yet implemented');
+                        throw new Error('Processing for postpaid billing mode not yet implemented');
+                    }
+
+                    let transferNFTokenTransact;
+
+                    try {
+                        // Prepare transaction to transfer non-fungible token
+                        transferNFTokenTransact = new TransferNFTokenTransaction(nfTokenTransfer);
+
+                        // Build and send transaction
+                        transferNFTokenTransact.buildTransaction();
+
+                        transferNFTokenTransact.sendTransaction();
+
+                        // Force polling of blockchain so newly sent transaction is received and processed right away
+                        Catenis.txMonitor.pollNow();
+                    }
+                    catch (err) {
+                        // Error transferring non-fungible token. Log error condition
+                        Catenis.logger.ERROR('Error transferring non-fungible token.', err);
+
+                        if (transferNFTokenTransact && !transferNFTokenTransact.txid) {
+                            // Revert output addresses added to transaction
+                            transferNFTokenTransact.revertOutputAddresses();
+                        }
+
+                        // Rethrows exception
+                        throw err;
+                    }
+
+                    try {
+                        // Record billing info for service
+                        const billing = Billing.createNew(this, transferNFTokenTransact, servicePriceInfo);
+
+                        let servicePayTransact;
+
+                        if (this.client.billingMode === Client.billingMode.prePaid) {
+                            servicePayTransact = Catenis.spendServCredit.confirmPaymentForService(paymentProvisionInfo, transferNFTokenTransact.txid);
+                        }
+                        else if (this.client.billingMode === Client.billingMode.postPaid) {
+                            // Not yet implemented
+                            Catenis.logger.ERROR('Processing for postpaid billing mode not yet implemented');
+                            // noinspection ExceptionCaughtLocallyJS
+                            throw new Error('Processing for postpaid billing mode not yet implemented');
+                        }
+
+                        servicePaid = true;
+                        billing.setServicePaymentTransaction(servicePayTransact);
+                    }
+                    catch (err) {
+                        if ((err instanceof Meteor.Error) && err.error === 'ctn_spend_serv_cred_tx_rejected') {
+                            // Spend service credit transaction has been rejected.
+                            //  Log warning condition
+                            Catenis.logger.WARN('Billing for transfer non-fungible token service (serviceTxid: %s) recorded with no service payment transaction', transferNFTokenTransact.txid);
+                        }
+                        else {
+                            // Error recording billing info for transfer non-fungible token service.
+                            //  Just log error condition
+                            Catenis.logger.ERROR('Error recording billing info for transfer non-fungible token service (serviceTxid: %s),', transferNFTokenTransact.txid, err);
+                        }
+                    }
+                });
+            });
+        });
+
+        if (servicePaid) {
+            try {
+                // Service successfully paid for. Check client service account balance now
+                this.client.checkServiceAccountBalance();
+            }
+            catch (err) {
+                // Log error
+                Catenis.logger.ERROR('Error while checking for client service account balance.', err);
+            }
+        }
+    };
+
+    if (asyncProc) {
+        // Execute processing asynchronously
+        Future.task(doProcessing).resolve((err) => {
+            // Finalize non-fungible token transfer
+            nfTokenTransfer.finalizeTransferProgress(err);
+
+            try {
+                // Send notification advising that non-fungible token transfer has been finalized
+                // noinspection JSUnusedAssignment
+                this.notifyNFTokenTransferOutcome(
+                    nfTokenTransfer.tokenId,
+                    nfTokenTransfer.tokenTransferId,
+                    nfTokenTransfer.getTransferProgress()
+                );
+            }
+            catch (err) {
+                // Error sending notification message. Log error
+                Catenis.logger.ERROR('Error sending non-fungible token transfer outcome notification event for device (doc_id: %s)', this.doc_id, err);
+            }
+        });
+
+        // Return non-fungible token transfer ID so its progress can be monitored
+        return {
+            tokenTransferId: nfTokenTransfer.tokenTransferId
+        }
+    }
+    else {
+        // Execute processing immediately (synchronously)
+        let error;
+
+        try {
+            doProcessing();
+        }
+        catch (err) {
+            error = err;
+        }
+
+        // Finalize issuance
+        nfTokenTransfer.finalizeTransferProgress(error);
+
+        if (error) {
+            throw error;
+        }
+
+        // Return success
+        return {
+            success: true
+        }
+    }
+}
+
+/**
+ * Retrieve information about the progress of a non-fungible token transfer
+ * @param {string} tokenId The external ID of the non-fungible token that is being transferred
+ * @param {string} tokenTransferId The ID of the non-fungible token transfer
+ * @returns {NonFungibleTokenTransferProgressInfo}
+ */
+Device.prototype.getNFTokenTransferProgress = function (tokenId, tokenTransferId) {
+    // Make sure that device is not deleted
+    if (this.status === Device.status.deleted.name) {
+        // Cannot retrieve non-fungible token transfer progress for a deleted device. Log error and throw exception
+        Catenis.logger.ERROR('Cannot retrieve non-fungible token transfer progress for a deleted device', {deviceId: this.deviceId});
+        throw new Meteor.Error('ctn_device_deleted', `Cannot retrieve non-fungible token transfer progress for a deleted device (deviceId: ${this.deviceId})`);
+    }
+
+    // Make sure that device is active
+    if (this.status !== Device.status.active.name) {
+        // Cannot retrieve non-fungible token transfer progress for a device that is not active. Log error and throw exception
+        Catenis.logger.ERROR('Cannot retrieve non-fungible token transfer progress from a device that is not active', {
+            deviceId: this.deviceId}
+        );
+        throw new Meteor.Error('ctn_device_not_active', `Cannot retrieve non-fungible token transfer progress for a device that is not active (deviceId: ${this.deviceId})`);
+    }
+
+    // Validate the non-fungible token ID.
+    //  Note: this will throw a 'nf_token_invalid_id' exception if the ID is not valid
+    NonFungibleToken.getNFTokenByTokenId(tokenId);
+
+    const nfTokenTransfer = NFTokenTransfer.getNFTokenTransferByTokenTransferId(tokenTransferId, tokenId, this.deviceId);
+
+    return nfTokenTransfer.getTransferProgress();
+}
+
+/**
  * Export an asset to a foreign blockchain
  * @param {string} assetId The ID of the asset to export
  * @param {string} foreignBlockchain Name of the foreign blockchain
@@ -4129,6 +4411,21 @@ Device.prototype.notifyNFTokenRetrievalOutcome = function (tokenId, tokenRetriev
         tokenId,
         tokenRetrievalId,
         ...retrievalProgress
+    }));
+}
+
+/**
+ * Issue a notification advising that a non-fungible token transfer has been finalized
+ * @param {string} tokenId The non-fungible token ID
+ * @param {string} tokenTransferId The non-fungible token transfer ID
+ * @param {NonFungibleTokenTransferProgressInfo} transferProgress The final non-fungible token transfer progress
+ */
+Device.prototype.notifyNFTokenTransferOutcome = function (tokenId, tokenTransferId, transferProgress) {
+    // Dispatch notification message
+    Catenis.notification.dispatchNotifyMessage(this.deviceId, Notification.event.nf_token_transfer_outcome.name, JSON.stringify({
+        tokenId,
+        tokenTransferId,
+        ...transferProgress
     }));
 }
 /** End of notification related methods **/

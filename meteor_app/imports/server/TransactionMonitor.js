@@ -920,10 +920,11 @@ function handleNewTransactions(data) {
                     sentTxids.add(doc.txid);
 
                     // Filter the type of transactions that should be processed as received transactions: 'credit_service_account', 'send_message',
-                    //  'read_confirmation', and 'transfer_asset' for now
+                    //  'read_confirmation', 'issue_asset', 'issue_nf_asset', 'transfer_asset', and 'transfer_nf_token' for now
                     if (doc.type === Transaction.type.credit_service_account.name || doc.type === Transaction.type.send_message.name
                             || doc.type === Transaction.type.read_confirmation.name || doc.type === Transaction.type.issue_asset.name
-                            || doc.type === Transaction.type.transfer_asset.name || doc.type === Transaction.type.settle_off_chain_messages.name) {
+                            || doc.type === Transaction.type.issue_nf_asset.name || doc.type === Transaction.type.transfer_asset.name
+                            || doc.type === Transaction.type.transfer_nf_token.name || doc.type === Transaction.type.settle_off_chain_messages.name) {
                         Catenis.logger.TRACE('Processing sent transaction as received transaction', doc);
 
                         // Get needed data from read confirmation tx
@@ -992,6 +993,13 @@ function handleNewTransactions(data) {
                                     eventData.receivingDeviceId = txInfo.receivingDeviceId;
                                     eventData.amount = txInfo.amount;
                                     eventData.changeAmount = txInfo.changeAmount;
+
+                                    break;
+
+                                case Transaction.type.transfer_nf_token.name:
+                                    eventData.tokenId = txInfo.tokenId;
+                                    eventData.sendingDeviceId = txInfo.sendingDeviceId;
+                                    eventData.receivingDeviceId = txInfo.receivingDeviceId;
 
                                     break;
 
@@ -1582,6 +1590,10 @@ TransactionMonitor.notifyEvent = Object.freeze({
         name: 'transfer_asset_tx_conf',
         description: 'Transaction used to transfer an amount of a Catenis asset between devices has been confirmed'
     }),
+    transfer_nf_token_tx_conf: Object.freeze({
+        name: 'transfer_nf_token_tx_conf',
+        description: 'Transaction used to transfer a non-fungible token between devices has been confirmed'
+    }),
     settle_off_chain_messages_tx_conf: Object.freeze({
         name: 'settle_off_chain_messages_tx_conf',
         description: 'Transaction used to settle Catenis off-chain messages to the blockchain has been confirmed'
@@ -1630,6 +1642,10 @@ TransactionMonitor.notifyEvent = Object.freeze({
     transfer_asset_tx_rcvd: Object.freeze({
         name: 'transfer_asset_tx_rcvd',
         description: 'Transaction used to transfer an amount of a Catenis asset between devices has been received'
+    }),
+    transfer_nf_token_tx_rcvd: Object.freeze({
+        name: 'transfer_nf_token_tx_rcvd',
+        description: 'Transaction used to transfer a non-fungible token between devices has been received'
     }),
     settle_off_chain_messages_tx_rcvd: Object.freeze({
         name: 'settle_off_chain_messages_tx_rcvd',
@@ -1720,6 +1736,13 @@ function processConfirmedSentTransactions(doc, eventsToEmit) {
                     eventData.receivingDeviceId = txInfo.receivingDeviceId;
                     eventData.amount = txInfo.amount;
                     eventData.changeAmount = txInfo.changeAmount;
+
+                    break;
+
+                case Transaction.type.transfer_nf_token.name:
+                    eventData.tokenId = txInfo.tokenId;
+                    eventData.sendingDeviceId = txInfo.sendingDeviceId;
+                    eventData.receivingDeviceId = txInfo.receivingDeviceId;
 
                     break;
 

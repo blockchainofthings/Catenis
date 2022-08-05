@@ -3666,6 +3666,114 @@ Database.initialize = function() {
                     }
                 }
             }]
+        },
+        NonFungibleTokenTransfer: {
+            indices: [{
+                fields: {
+                    tokenTransferId: 1
+                },
+                opts: {
+                    unique: true,
+                    background: true,
+                    writeConcern: {
+                        w: 1
+                    }
+                }
+            }, {
+                fields: {
+                    tokenId: 1
+                },
+                opts: {
+                    background: true,
+                    writeConcern: {
+                        w: 1
+                    }
+                }
+            }, {
+                fields: {
+                    sendingDeviceId: 1
+                },
+                opts: {
+                    background: true,
+                    writeConcern: {
+                        w: 1
+                    }
+                }
+            }, {
+                fields: {
+                    receivingDeviceId: 1
+                },
+                opts: {
+                    background: true,
+                    writeConcern: {
+                        w: 1
+                    }
+                }
+            }, {
+                fields: {
+                    'progress.done': 1
+                },
+                opts: {
+                    background: true,
+                    writeConcern: {
+                        w: 1
+                    }
+                }
+            }, {
+                fields: {
+                    'progress.success': 1
+                },
+                opts: {
+                    background: true,
+                    sparse: true,
+                    writeConcern: {
+                        w: 1
+                    }
+                }
+            }, {
+                fields: {
+                    'progress.error.code': 1
+                },
+                opts: {
+                    background: true,
+                    sparse: true,
+                    writeConcern: {
+                        w: 1
+                    }
+                }
+            }, {
+                fields: {
+                    'progress.error.message': 1
+                },
+                opts: {
+                    background: true,
+                    sparse: true,
+                    writeConcern: {
+                        w: 1
+                    }
+                }
+            }, {
+                fields: {
+                    'progress.finishDate': 1
+                },
+                opts: {
+                    background: true,
+                    sparse: true,
+                    writeConcern: {
+                        w: 1
+                    }
+                }
+            }, {
+                fields: {
+                    createdDate: 1
+                },
+                opts: {
+                    background: true,
+                    writeConcern: {
+                        w: 1
+                    }
+                }
+            }]
         }
     };
 

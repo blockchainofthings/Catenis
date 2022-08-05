@@ -276,6 +276,13 @@ const cfgSettings = {
                 defaultNumHoldingDevices: serviceConfig.get('serviceTxConfig.issueNonFungibleAsset.variablePart.defaultNumHoldingDevices'),
             }
         },
+        transferNonFungibleToken: {
+            numWitnessInputs: serviceConfig.get('serviceTxConfig.transferNonFungibleToken.numWitnessInputs'),
+            numNonWitnessInputs: serviceConfig.get('serviceTxConfig.transferNonFungibleToken.numNonWitnessInputs'),
+            numWitnessOutputs: serviceConfig.get('serviceTxConfig.transferNonFungibleToken.numWitnessOutputs'),
+            numNonWitnessOutputs: serviceConfig.get('serviceTxConfig.transferNonFungibleToken.numNonWitnessOutputs'),
+            nullDataPayloadSize: serviceConfig.get('serviceTxConfig.transferNonFungibleToken.nullDataPayloadSize')
+        },
         outMigrateAsset: {
             numWitnessInputs: serviceConfig.get('serviceTxConfig.outMigrateAsset.numWitnessInputs'),
             numNonWitnessInputs: serviceConfig.get('serviceTxConfig.outMigrateAsset.numNonWitnessInputs'),
@@ -353,6 +360,8 @@ Service.testFunctions = function () {
         estimatedIssueNonFungibleAssetVariableTxCost: estimatedIssueNonFungibleAssetVariableTxCost(),
         typicalIssueNonFungibleAssetTxVsize: typicalIssueNonFungibleAssetTxVsize(),
         typicalIssueNonFungibleAssetVariableTxVsize: typicalIssueNonFungibleAssetVariableTxVsize(),
+        estimatedTransferNonFungibleTokenTxCost: estimatedTransferNonFungibleTokenTxCost(),
+        typicalTransferNonFungibleTokenTxVsize: typicalTransferNonFungibleTokenTxVsize(),
         estimatedOutMigrateAssetTxCost: estimatedOutMigrateAssetTxCost(),
         typicalOutMigrateAssetTxVsize: typicalOutMigrateAssetTxVsize(),
         estimatedInMigrateAssetTxCost: estimatedInMigrateAssetTxCost(),
@@ -723,6 +732,13 @@ Service.issueNonFungibleAssetServicePrice = function (numHoldingDevices) {
     return getServicePrice(Service.clientPaidService.issue_nf_asset, numHoldingDevices);
 };
 
+/**
+ * Returns price data for Transfer Non-Fungible Token service
+ * @returns {ServicePriceInfo}
+ */
+Service.transferNonFungibleTokenServicePrice = function () {
+    return getServicePrice(Service.clientPaidService.transfer_nf_token);
+};
 
 // Returns price data for Migrate Asset service
 //
@@ -850,6 +866,13 @@ Service.clientPaidService = Object.freeze({
         variableCostFunction: estimatedIssueNonFungibleAssetVariableTxCost,
         variableCostApplyCondition: cfgSettings.serviceTxConfig.issueNonFungibleAsset.variablePart.applyCondition
     }),
+    transfer_nf_token: Object.freeze({
+        name: 'transfer_nf_token',
+        label: 'Transfer Non-Fungible Token',
+        abbreviation: 'TNFT',
+        description: 'Transfer a non-fungible token to another device',
+        costFunction: estimatedTransferNonFungibleTokenTxCost
+    }),
     migrate_asset: Object.freeze({
         name: 'migrate_asset',
         label: 'Migrate Asset',
@@ -954,6 +977,7 @@ function averageEstimatedServiceTxCost() {
                 cfgSettings.serviceTxConfig.issueNonFungibleAsset.variablePart.defaultNumHoldingDevices,
                 ret.feeRate
             ),
+        estimatedTransferNonFungibleTokenTxCost(),
         estimatedMigrateAssetAverageTxCost()
     ], [
         cfgSettings.serviceUsageWeight.logMessage,
@@ -965,6 +989,7 @@ function averageEstimatedServiceTxCost() {
         cfgSettings.serviceUsageWeight.issueAsset,
         cfgSettings.serviceUsageWeight.transferAsset,
         cfgSettings.serviceUsageWeight.issueNonFungibleAsset,
+        cfgSettings.serviceUsageWeight.transferNonFungibleToken,
         cfgSettings.serviceUsageWeight.outMigrateAsset + cfgSettings.serviceUsageWeight.inMigrateAsset
     ]), cfgSettings.paymentResolution);
 }
@@ -1157,6 +1182,21 @@ function typicalIssueNonFungibleAssetVariableTxVsize(numHoldingDevices = 1) {
     }
 
     return 0;
+}
+
+
+function estimatedTransferNonFungibleTokenTxCost() {
+    return Util.roundToResolution(typicalTransferNonFungibleTokenTxVsize() * Catenis.bitcoinFees.getFeeRateByTime(cfgSettings.asset.transfer.minutesToConfirm), cfgSettings.paymentResolution);
+}
+
+function typicalTransferNonFungibleTokenTxVsize() {
+    return new TransactionSize({
+        numWitnessInputs: cfgSettings.serviceTxConfig.transferNonFungibleToken.numWitnessInputs,
+        numNonWitnessInputs: cfgSettings.serviceTxConfig.transferNonFungibleToken.numNonWitnessInputs,
+        numWitnessOutputs: cfgSettings.serviceTxConfig.transferNonFungibleToken.numWitnessOutputs,
+        numNonWitnessOutputs: cfgSettings.serviceTxConfig.transferNonFungibleToken.numNonWitnessOutputs,
+        nullDataPayloadSize: cfgSettings.serviceTxConfig.transferNonFungibleToken.nullDataPayloadSize
+    }).savedSizeInfo.vsize;
 }
 
 function estimatedOutMigrateAssetTxCost() {
@@ -1359,6 +1399,7 @@ function averageServicePrice() {
             Service.clientPaidService.issue_nf_asset,
             cfgSettings.serviceTxConfig.issueNonFungibleAsset.variablePart.defaultNumHoldingDevices
         ).finalServicePrice,
+        getServicePrice(Service.clientPaidService.transfer_nf_token).finalServicePrice,
         getServicePrice(Service.clientPaidService.migrate_asset).finalServicePrice
     ], [
         cfgSettings.serviceUsageWeight.logMessage,
@@ -1370,6 +1411,7 @@ function averageServicePrice() {
         cfgSettings.serviceUsageWeight.issueAsset,
         cfgSettings.serviceUsageWeight.transferAsset,
         cfgSettings.serviceUsageWeight.issueNonFungibleAsset,
+        cfgSettings.serviceUsageWeight.transferNonFungibleToken,
         cfgSettings.serviceUsageWeight.outMigrateAsset + cfgSettings.serviceUsageWeight.inMigrateAsset
     ]), cfgSettings.servicePriceResolution);
 }

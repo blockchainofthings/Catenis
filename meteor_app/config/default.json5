@@ -509,6 +509,14 @@
           defaultNumHoldingDevices: 10,  // Default number of holding devices: used for calculating the typical cost of such a transaction
         }
       },
+      "transferNonFungibleToken": {  // Transfer non-fungible token
+        // NOTE: the parameters below (next 4 lines) are for the best case where only segregated witness inputs and outputs are used (which is true in the long run for the sandbox environment and should be true for the production environment from inception)
+        "numWitnessInputs": 3,      // Number of segregated witness inputs (that spend P2WPKH outputs)
+        "numNonWitnessInputs": 0,   // Number of non-segregated witness inputs (that spend P2PKH outputs)
+        "numWitnessOutputs": 3,     // Number of segregated witness (P2WPKH) outputs
+        "numNonWitnessOutputs": 0,  // Number of non-segregated witness (P2PKH) outputs
+        "nullDataPayloadSize": 40   // (4 header, 34 metadata CID, 2 transfer instruction) Size, in bytes, of payload of null data output
+      },
       "outMigrateAsset": {  // Out-migrate asset
         // NOTE: the parameters below (next 4 lines) are for the best case where only segregated witness inputs and outputs are used (which is true in the long run for the sandbox environment and should be true for the production environment from inception)
         "numWitnessInputs": 4,      // Number of segregated witness inputs (that spend P2WPKH outputs)
@@ -1562,6 +1570,16 @@
   // Parameters pertaining to NFTokenContentsWritable module
   nfTokenContentsWritable: {
     highWaterMark: 1048576  // (1 MB) The maximum number of bytes to store in the internal buffer of stream before ceasing to write to the underlying resource
+  },
+  // Parameters pertaining to NFTokenContentsTransform module
+  nfTokenContentsTransform: {
+    highWaterMark: 1048576  // (1 MB) The maximum number of bytes to store in the internal buffer of stream before ceasing to read/write from/to the underlying resource
+  },
+  // Parameters pertaining to NFTokenTransfer module
+  nfTokenTransfer: {
+    timeKeepIncompleteTransfer: 3600,  // (1 hour) Minimum time, in seconds, to keep non-fungible token transfers that have not been finalized
+    timeKeepProcessedTransfer: 86400, // (24 hours) Minimum time, in seconds, to keep non-fungible token transfers after they have already been processed
+    purgeOldTransfersInterval: 43200000  // (12 hours) Time interval, in milliseconds, for executing method to purge old non-fungible token retrievals
   },
   // Parameters pertaining to modules of different child processes
   childProcess: {

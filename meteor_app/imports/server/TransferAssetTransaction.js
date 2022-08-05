@@ -342,9 +342,9 @@ TransferAssetTransaction.checkTransaction = function (ccTransact) {
 
     // First, check if pattern of transaction's inputs and outputs is consistent
     if ((ccTransact instanceof CCTransaction) && ccTransact.matches(TransferAssetTransaction)) {
-        // Make sure that this is a Colored Coins transaction that does not issue asset, with exactly one transfer
-        //  input sequence and one or two transfer output
-        if (ccTransact.issuingInfo === undefined && ccTransact.transferInputSeqs.length === 1
+        // Make sure that this is a Colored Coins transaction that transfers regular (fungible) assets, does not issue
+        //  any asset, and has exactly one transfer input sequence and one or two transfer outputs
+        if (ccTransact.isTransferringAsset && !ccTransact.hasIssuance && ccTransact.transferInputSeqs.length === 1
                 && (ccTransact.transferOutputs.length === 1 || ccTransact.transferOutputs.length === 2)) {
             // Validate and identify input and output addresses
             //  NOTE: no need to check if the variables below are non-null because the transact.matches()

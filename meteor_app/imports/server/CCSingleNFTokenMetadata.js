@@ -203,6 +203,15 @@ export class CCSingleNFTokenMetadata extends CCUserDataMetadata {
     }
 
     /**
+     * Clone the token properties
+     * @returns {CCMetaNonFungibleTokenProps}
+     */
+    cloneTokenProps() {
+        // noinspection JSValidateTypes
+        return Util.cloneObjDict(this.tokenProps, true);
+    }
+
+    /**
      * Clear the user data metadata of this object
      */
     clear() {

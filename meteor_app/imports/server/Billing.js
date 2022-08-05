@@ -33,6 +33,7 @@ import { SettleOffChainMessagesTransaction } from './SettleOffChainMessagesTrans
 import { OutMigrateAssetTransaction } from './OutMigrateAssetTransaction';
 import { InMigrateAssetTransaction } from './InMigrateAssetTransaction';
 import { IssueNFAssetTransaction } from './IssueNFAssetTransaction';
+import { TransferNFTokenTransaction } from './TransferNFTokenTransaction';
 
 // Config entries
 /*const config_entryConfig = config.get('config_entry');
@@ -228,6 +229,11 @@ Billing.createNew = function (device, serviceData, servicePriceInfo, servicePaym
         serviceTransact = serviceData;
 
         docBilling.service = Service.clientPaidService.issue_nf_asset.name;
+    }
+    else if (serviceData instanceof TransferNFTokenTransaction) {
+        serviceTransact = serviceData;
+
+        docBilling.service = Service.clientPaidService.transfer_nf_token.name;
     }
     else if (serviceData instanceof LogOffChainMessage) {
         offChainMessage = serviceData;

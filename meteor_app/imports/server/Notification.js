@@ -256,6 +256,11 @@ Notification.event = Object.freeze({
         name: 'nf-token-retrieval-outcome',
         description: 'Non-fungible token retrieval has been finalized',
         minNotifyServiceVer: '0.5'
+    }),
+    nf_token_transfer_outcome: Object.freeze({
+        name: 'nf-token-transfer-outcome',
+        description: 'Non-fungible token transfer has been finalized',
+        minNotifyServiceVer: '0.5'
     })
 });
 

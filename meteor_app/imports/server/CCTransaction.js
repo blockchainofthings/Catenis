@@ -813,14 +813,16 @@ CCTransaction.prototype.setTransferOutputs = function (outputs, inputSeqStartPos
  *                              tokens.
  * @param {number} inputSeqStartPos Start position of transfer input sequence from where assets should come.
  * @param {boolean} [reverseOutput=false] Indicates whether the output order should be reversed.
+ * @param {boolean} [aggregateOutput=true] Indicates whether the passed in output should be aggregated onto the same
+ *                                          blockchain address among the other existing outputs.
  * @return {boolean} True if output is correctly set, or false if output is not set (due to an error).
  */
-CCTransaction.prototype.setTransferOutput = function (address, assetAmount, inputSeqStartPos, reverseOutput = false) {
+CCTransaction.prototype.setTransferOutput = function (address, assetAmount, inputSeqStartPos, reverseOutput = false, aggregateOutput = true) {
     return this.setTransferOutputs({
         address,
         assetAmount,
         reverseOutput
-    }, inputSeqStartPos);
+    }, inputSeqStartPos, aggregateOutput);
 };
 
 // Sets a transfer output entry designating assets to be burnt (instead of being transferred)
