@@ -2564,10 +2564,10 @@ Device.prototype.issueNonFungibleAsset = function (initialData, continuationData
 
             // Make sure that this is a non-fungible asset
             if (!asset.isNonFungible) {
-                Catenis.logger.ERROR('Inconsistent asset for reissuance; expected an non-fungible asset', {
+                Catenis.logger.ERROR('Inconsistent asset for reissuance; expected a non-fungible asset', {
                     assetId: asset.assetId
                 });
-                throw new Meteor.Error('ctn_issue_nf_asset_fungible', `Inconsistent asset for reissuance; expected an non-fungible asset (assetId: ${asset.assetId})`);
+                throw new Meteor.Error('ctn_issue_nf_asset_fungible', `Inconsistent asset for reissuance; expected a non-fungible asset (assetId: ${asset.assetId})`);
             }
 
             // Make sure that asset can be reissued
