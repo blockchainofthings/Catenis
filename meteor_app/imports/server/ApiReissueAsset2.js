@@ -159,6 +159,12 @@ export function reissueAsset2() {
                     // This should never happen (inactive devices are not authenticated)
                     error = errorResponse.call(this, 400, 'Device is not active');
                 }
+                else if (err.error === 'ctn_asset_not_found') {
+                    error = errorResponse.call(this, 400, 'Invalid asset ID');
+                }
+                else if (err.error === 'ctn_issue_asset_non_fungible') {
+                    error = errorResponse.call(this, 400, 'Not a regular (fungible) asset');
+                }
                 else if (err.error === 'ctn_device_hold_dev_deleted' || err.error === 'ctn_device_hold_dev_not_active'
                     || err.error === 'ctn_device_hold_dev_not_found') {
                     error = errorResponse.call(this, 400, 'Invalid holding device');
@@ -169,14 +175,8 @@ export function reissueAsset2() {
                 else if (err.error === 'ctn_device_low_service_acc_balance') {
                     error = errorResponse.call(this, 400, 'Not enough credits to pay for issue asset service');
                 }
-                else if (err.error === 'ctn_asset_not_found') {
-                    error = errorResponse.call(this, 400, 'Invalid asset ID');
-                }
                 else if (err.error === 'ctn_issue_asset_amount_too_large') {
                     error = errorResponse.call(this, 400, 'Amount to issue is too large');
-                }
-                else if (err.error === 'ctn_issue_asset_non_fungible') {
-                    error = errorResponse.call(this, 400, 'Not a regular (fungible) asset');
                 }
                 else if (err.error === 'ctn_issue_asset_reissue_locked') {
                     error = errorResponse.call(this, 400, 'Asset cannot be reissued');

@@ -2298,6 +2298,20 @@ Device.prototype.issueAsset = function (amount, assetInfo, holdingDeviceId) {
         throw new Meteor.Error('ctn_device_not_active', util.format('Cannot issue asset from a device that is not active (deviceId: %s)', this.deviceId));
     }
 
+    if (typeof assetInfo === 'string') {
+        // Asset reissuance. Validate the asset.
+        //  Note: this will throw a 'ctn_asset_not_found' exception if the asset does not exist
+        const asset = Asset.getAssetByAssetId(assetInfo, true);
+
+        // Make sure that this is a regular (fungible) asset
+        if (asset.isNonFungible) {
+            Catenis.logger.ERROR('Inconsistent asset for reissuance; expected a regular (fungible) asset', {
+                assetId: asset.assetId
+            });
+            throw new Meteor.Error('ctn_issue_asset_non_fungible', `Inconsistent asset for reissuance; expected a regular (fungible) asset (assetId: ${asset.assetId})`);
+        }
+    }
+
     let holdingDevice;
 
     if (holdingDeviceId !== undefined && holdingDeviceId !== this.deviceId) {
@@ -3190,6 +3204,18 @@ Device.prototype.transferAsset = function (receivingDeviceId, amount, assetId) {
         throw new Meteor.Error('ctn_device_not_active', util.format('Cannot transfer asset from a device that is not active (deviceId: %s)', this.deviceId));
     }
 
+    // Validate the asset to be transferred.
+    //  Note: this will throw a 'ctn_asset_not_found' exception if the asset does not exist
+    const asset = Asset.getAssetByAssetId(assetId, true);
+
+    // Make sure that this is a regular (fungible) asset
+    if (asset.isNonFungible) {
+        Catenis.logger.ERROR('Inconsistent asset to be transferred; expected a regular (fungible) asset', {
+            assetId: asset.assetId
+        });
+        throw new Meteor.Error('ctn_transfer_asset_non_fungible', `Inconsistent asset to be transferred; expected a regular (fungible) asset (assetId: ${asset.assetId})`);
+    }
+
     let receivingDevice;
 
     if (receivingDeviceId !== this.deviceId) {
@@ -3229,20 +3255,10 @@ Device.prototype.transferAsset = function (receivingDeviceId, amount, assetId) {
     }
 
     // Identify asset issuing device
-    let issuingDevice;
-
-    try {
-        issuingDevice = Asset.getAssetByAssetId(assetId, true).issuingDevice;
-    }
-    catch (err) {
-        if (!((err instanceof Meteor.Error) && err.error === 'ctn_asset_not_found')) {
-            // Error trying to identify asset issuing device
-            Catenis.logger.ERROR('Error trying to identify asset issuing device', err);
-        }
-    }
+    const issuingDevice = asset.issuingDevice;
 
     // Make sure that device has permission to send asset to receiving device
-    if ((issuingDevice !== undefined && !receivingDevice.shouldAcceptAssetOf(issuingDevice)) || !receivingDevice.shouldAcceptAssetFrom(this)) {
+    if (!receivingDevice.shouldAcceptAssetOf(issuingDevice) || !receivingDevice.shouldAcceptAssetFrom(this)) {
         // Device has no permission rights to send asset to receiving device
         Catenis.logger.INFO('Device has no permission rights to send asset to receiving device', {
             deviceId: this.deviceId,

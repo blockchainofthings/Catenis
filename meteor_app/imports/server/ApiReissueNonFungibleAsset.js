@@ -311,6 +311,12 @@ export function reissueNonFungibleAsset() {
                     // This should never happen (inactive devices are not authenticated)
                     error = errorResponse.call(this, 400, 'Device is not active');
                 }
+                else if (err.error === 'ctn_asset_not_found') {
+                    error = errorResponse.call(this, 400, 'Invalid asset ID');
+                }
+                else if (err.error === 'ctn_issue_nf_asset_fungible') {
+                    error = errorResponse.call(this, 400, 'Not a non-fungible asset');
+                }
                 else if (err.error === 'ctn_issue_nf_asset_hold_dev_deleted' || err.error === 'ctn_issue_nf_asset_hold_dev_not_active'
                     || err.error === 'ctn_issue_nf_asset_hold_dev_not_found') {
                     error = errorResponse.call(this, 400, 'Invalid holding device');
@@ -323,12 +329,6 @@ export function reissueNonFungibleAsset() {
                 }
                 else if (err.error === 'ctn_issue_nf_asset_amount_too_large') {
                     error = errorResponse.call(this, 400, 'Number of non-fungible tokens to issue is too large');
-                }
-                else if (err.error === 'ctn_asset_not_found') {
-                    error = errorResponse.call(this, 400, 'Invalid asset ID');
-                }
-                else if (err.error === 'ctn_issue_nf_asset_fungible') {
-                    error = errorResponse.call(this, 400, 'Not a non-fungible asset');
                 }
                 else if (err.error === 'ctn_issue_nf_asset_reissue_locked') {
                     error = errorResponse.call(this, 400, 'Asset cannot be reissued');

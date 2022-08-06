@@ -162,7 +162,7 @@ export function IssueAssetTransaction(issuingDevice, holdingDevice, amount, asse
                 Catenis.logger.ERROR('Inconsistent asset for reissuance; expected a regular (fungible) asset', {
                     assetId: this.asset.assetId
                 });
-                throw new Meteor.Error('ctn_issue_asset_non_fungible', `Inconsistent asset for reissuance; expected an regular (fungible) asset (assetId: ${this.asset.assetId})`);
+                throw new Meteor.Error('ctn_issue_asset_non_fungible', `Inconsistent asset for reissuance; expected a regular (fungible) asset (assetId: ${this.asset.assetId})`);
             }
 
             if (this.asset.issuingType !== CCTransaction.issuingAssetType.unlocked) {

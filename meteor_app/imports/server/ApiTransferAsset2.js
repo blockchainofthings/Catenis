@@ -160,6 +160,12 @@ export function transferAsset2() {
                     // This should never happen (inactive devices are not authenticated)
                     error = errorResponse.call(this, 400, 'Device is not active');
                 }
+                else if (err.error === 'ctn_asset_not_found') {
+                    error = errorResponse.call(this, 400, 'Invalid asset ID');
+                }
+                else if (err.error === 'ctn_transfer_asset_non_fungible') {
+                    error = errorResponse.call(this, 400, 'Not a regular (fungible) asset');
+                }
                 else if (err.error === 'ctn_device_recv_dev_deleted' || err.error === 'ctn_device_recv_dev_not_active'
                     || err.error === 'ctn_device_recv_dev_not_found') {
                     error = errorResponse.call(this, 400, 'Invalid receiving device');
@@ -169,9 +175,6 @@ export function transferAsset2() {
                 }
                 else if (err.error === 'ctn_device_low_service_acc_balance') {
                     error = errorResponse.call(this, 400, 'Not enough credits to pay for transfer asset service');
-                }
-                else if (err.error === 'ctn_asset_not_found') {
-                    error = errorResponse.call(this, 400, 'Invalid asset ID');
                 }
                 else if (err.error === 'ctn_transf_asset_amount_too_large') {
                     error = errorResponse.call(this, 400, 'Amount to transfer is too large');

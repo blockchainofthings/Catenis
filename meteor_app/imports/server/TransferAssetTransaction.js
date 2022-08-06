@@ -103,6 +103,13 @@ export function TransferAssetTransaction(sendingDevice, receivingDevice, amount,
         this.asset = Asset.getAssetByAssetId(assetId, true);
 
         // Asset exists (otherwise ctn_asset_not_found exception is thrown).
+        //  Make sure that this is a regular (fungible) asset
+        if (this.asset.isNonFungible) {
+            Catenis.logger.ERROR('Inconsistent asset to be transferred; expected a regular (fungible) asset', {
+                assetId
+            });
+            throw new Meteor.Error('ctn_transfer_asset_non_fungible', `Inconsistent asset to be transferred; expected a regular (fungible) asset (assetId: ${assetId})`);
+        }
 
         if (typeof amount !== 'number' || amount <= 0) {
             errArg.amount = amount;
