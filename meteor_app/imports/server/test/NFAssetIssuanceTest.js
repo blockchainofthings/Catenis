@@ -861,7 +861,7 @@ describe('NFAssetIssuance module', function () {
 
                 const estimatedAssetMetadataSize = nfAssetIssuance._estimatedAssetMetadataSize;
 
-                expect(estimatedAssetMetadataSize).to.equal(5114);
+                expect(estimatedAssetMetadataSize).to.equal(5122);
                 expect(nfAssetIssuance._estimatedMetadataSize).to.equal(estimatedAssetMetadataSize);
             });
 
@@ -1285,7 +1285,7 @@ describe('NFAssetIssuance module', function () {
                     },
                     result: {
                         assetId: 'a00001',
-                        tokenIds: [
+                        nfTokenIds: [
                             'tk00001',
                             'tk00002',
                             'tk00003'
@@ -1405,7 +1405,7 @@ describe('NFAssetIssuance module', function () {
                     success: true
                 },
                 result: {
-                    tokenIds: [
+                    nfTokenIds: [
                         'tk00001'
                     ]
                 }

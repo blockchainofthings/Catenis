@@ -40,8 +40,8 @@ import { Util } from './Util';
  * @property {string} [continuationToken] The continuation token to be used in the next continuation request
  * @property {string} [assetIssuanceId] The asset issuance ID to be used for querying the progress of the non-fungible
  *                                       asset issuance. Only returned when doing the processing asynchronously
- * @property {string[]} [nonFungibleTokenIds] A list of the IDs of the newly issued non-fungible tokens for that
- *                                             non-fungible asset
+ * @property {string[]} [nfTokenIds] A list of the IDs of the newly issued non-fungible tokens for that non-fungible
+ *                                    asset
  */
 
 /**

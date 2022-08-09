@@ -116,7 +116,7 @@ export class NFAssetIssuance {
      * @typedef {Object} NonFungibleAssetIssuanceResult
      * @property {string} [assetId] Catenis asset ID of the newly issued non-fungible asset. Not included in case of
      *                               reissuance
-     * @property {string[]} tokenIds List of Catenis token ID of the newly issued non-fungible tokens
+     * @property {string[]} nfTokenIds List of IDs of the newly issued Catenis non-fungible tokens
      */
 
     /**
@@ -1060,7 +1060,7 @@ export class NFAssetIssuance {
                     result.assetId = this.assetId;
                 }
 
-                result.tokenIds = this.tokenIds;
+                result.nfTokenIds = this.tokenIds;
             }
             else {
                 progress.error = this.progress.error;

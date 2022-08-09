@@ -35,8 +35,8 @@ import { Device } from './Device';
  * @property {string} [assetIssuanceId] The asset issuance ID to be used for querying the progress of the non-fungible
  *                                       asset issuance. Only returned when doing the processing asynchronously
  * @property {string} [assetId] The ID of the newly created non-fungible asset
- * @property {string[]} [nonFungibleTokenIds] A list of the IDs of the newly issued non-fungible tokens for the newly
- *                                             created non-fungible asset
+ * @property {string[]} [nfTokenIds] A list of the IDs of the newly issued non-fungible tokens for the newly created
+ *                                    non-fungible asset
  */
 
 /**

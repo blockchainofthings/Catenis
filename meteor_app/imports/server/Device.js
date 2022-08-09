@@ -2815,7 +2815,7 @@ Device.prototype.issueNonFungibleAsset = function (initialData, continuationData
                         result.assetId = issueNFAssetTransact.assetId;
                     }
 
-                    result.nonFungibleTokenIds = issueNFAssetTransact.nfTokenIds;
+                    result.nfTokenIds = issueNFAssetTransact.nfTokenIds;
 
                     try {
                         // Record billing info for service
@@ -2871,7 +2871,7 @@ Device.prototype.issueNonFungibleAsset = function (initialData, continuationData
         Future.task(doProcessing).resolve((err, result) => {
             // Finalize issuance
             result = result || {};
-            nfAssetIssuance.finalizeIssuanceProgress(err, result.nonFungibleTokenIds, result.assetId);
+            nfAssetIssuance.finalizeIssuanceProgress(err, result.nfTokenIds, result.assetId);
 
             try {
                 // Send notification advising that non-fungible asset issuance has been finalized
@@ -2903,7 +2903,7 @@ Device.prototype.issueNonFungibleAsset = function (initialData, continuationData
 
         // Finalize issuance
         result = result || {};
-        nfAssetIssuance.finalizeIssuanceProgress(error, result.nonFungibleTokenIds, result.assetId);
+        nfAssetIssuance.finalizeIssuanceProgress(error, result.nfTokenIds, result.assetId);
 
         if (error) {
             throw error;
@@ -4369,10 +4369,10 @@ Device.prototype.notifyAssetConfirmed = function (asset, amount, sendingDevice, 
     Catenis.notification.dispatchNotifyMessage(this.deviceId, Notification.event.asset_confirmed.name, JSON.stringify(msgInfo));
 };
 
-Device.prototype.notifyNFTokenReceived = function (tokenIds, issuingDevice, sendingDevice, receivedDate) {
+Device.prototype.notifyNFTokenReceived = function (nfTokenIds, issuingDevice, sendingDevice, receivedDate) {
     // Prepare information about received non-fungible token be sent by notification
     const msgInfo = {
-        tokenIds: tokenIds,
+        nfTokenIds,
         issuer: {
             deviceId: issuingDevice.deviceId,
         },
@@ -4390,10 +4390,10 @@ Device.prototype.notifyNFTokenReceived = function (tokenIds, issuingDevice, send
     Catenis.notification.dispatchNotifyMessage(this.deviceId, Notification.event.nf_token_received.name, JSON.stringify(msgInfo));
 };
 
-Device.prototype.notifyNFTokenConfirmed = function (tokenIds, issuingDevice, sendingDevice, confirmedDate) {
+Device.prototype.notifyNFTokenConfirmed = function (nfTokenIds, issuingDevice, sendingDevice, confirmedDate) {
     // Prepare information about confirmed non-fungible token to be sent by notification
     const msgInfo = {
-        tokenIds: tokenIds,
+        nfTokenIds,
         issuer: {
             deviceId: issuingDevice.deviceId,
         },
@@ -4444,14 +4444,14 @@ Device.prototype.notifyNFAssetIssuanceOutcome = function (assetIssuanceId, issua
 
 /**
  * Issue a notification advising that a non-fungible token retrieval has been finalized
- * @param {string} tokenId The non-fungible token ID
+ * @param {string} nfTokenId The non-fungible token ID
  * @param {string} tokenRetrievalId The non-fungible token retrieval ID
  * @param {NonFungibleTokenRetrievalProgressInfo} retrievalProgress The final non-fungible token retrieval progress
  */
-Device.prototype.notifyNFTokenRetrievalOutcome = function (tokenId, tokenRetrievalId, retrievalProgress) {
+Device.prototype.notifyNFTokenRetrievalOutcome = function (nfTokenId, tokenRetrievalId, retrievalProgress) {
     // Dispatch notification message
     Catenis.notification.dispatchNotifyMessage(this.deviceId, Notification.event.nf_token_retrieval_outcome.name, JSON.stringify({
-        tokenId,
+        nfTokenId,
         tokenRetrievalId,
         ...retrievalProgress
     }));
@@ -4459,14 +4459,14 @@ Device.prototype.notifyNFTokenRetrievalOutcome = function (tokenId, tokenRetriev
 
 /**
  * Issue a notification advising that a non-fungible token transfer has been finalized
- * @param {string} tokenId The non-fungible token ID
+ * @param {string} nfTokenId The non-fungible token ID
  * @param {string} tokenTransferId The non-fungible token transfer ID
  * @param {NonFungibleTokenTransferProgressInfo} transferProgress The final non-fungible token transfer progress
  */
-Device.prototype.notifyNFTokenTransferOutcome = function (tokenId, tokenTransferId, transferProgress) {
+Device.prototype.notifyNFTokenTransferOutcome = function (nfTokenId, tokenTransferId, transferProgress) {
     // Dispatch notification message
     Catenis.notification.dispatchNotifyMessage(this.deviceId, Notification.event.nf_token_transfer_outcome.name, JSON.stringify({
-        tokenId,
+        nfTokenId,
         tokenTransferId,
         ...transferProgress
     }));
