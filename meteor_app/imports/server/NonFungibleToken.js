@@ -267,7 +267,7 @@ export class NonFungibleToken {
  * @param {string} ccTokenId The Colored Coins attributed non-fungible token ID
  * @returns {string} The new Catenis non-fungible token ID
  */
-function newTokenId(ccTokenId) {
+export function newTokenId(ccTokenId) {
     const seed = Catenis.application.commonSeed.toString() + ',Colored Coins non-fungible asset non-fungible token ID:' + ccTokenId;
 
     return 't' + Random.createWithSeeds(seed).id(19);

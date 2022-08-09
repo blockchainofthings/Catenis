@@ -176,6 +176,9 @@ export function migrateAsset() {
                 else if (err.error === 'ctn_asset_not_found') {
                     error = errorResponse.call(this, 400, 'Invalid asset ID');
                 }
+                else if (err.error === 'ctn_migrate_asset_non_fungible') {
+                    error = errorResponse.call(this, 400, 'Not a regular (fungible) asset');
+                }
                 else if (err.error === 'ctn_device_not_exp_asset_owner') {
                     error = errorResponse.call(this, 403, 'No permission to migrate asset');
                 }

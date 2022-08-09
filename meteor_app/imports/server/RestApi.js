@@ -63,6 +63,7 @@ import { transferAsset } from './ApiTransferAsset';
 import { transferAsset2 } from './ApiTransferAsset2';
 import { retrieveAssetInfo } from './ApiAssetInfo';
 import { retrieveAssetInfo2 } from './ApiAssetInfo2';
+import { retrieveAssetInfo3 } from './ApiAssetInfo3';
 import { getAssetBalance } from './ApiAssetBalance';
 import { getAssetBalance2 } from './ApiAssetBalance2';
 import { listOwnedAssets } from './ApiOwnedAssets';
@@ -72,6 +73,7 @@ import { listIssuedAssets2 } from './ApiIssuedAssets2';
 import { retrieveAssetIssuanceHistory } from './ApiAssetIssuance';
 import { retrieveAssetIssuanceHistory2 } from './ApiAssetIssuance2';
 import { retrieveAssetIssuanceHistory3 } from './ApiAssetIssuance3';
+import { retrieveAssetIssuanceHistory4 } from './ApiAssetIssuance4';
 import { listAssetHolders } from './ApiAssetHolders';
 import { listAssetHolders2 } from './ApiAssetHolders2';
 import { retrieveMessageProgress } from './ApiMessageProgress';
@@ -285,7 +287,7 @@ export function RestApi(apiVersion) {
             //
             //  Refer to the source file where the action function is defined for a detailed description of the endpoint
             get: {
-                action: this.apiVer.gt('0.10') ? retrieveAssetInfo2 : retrieveAssetInfo
+                action: this.apiVer.gt('0.10') ? (this.apiVer.gt('0.11') ? retrieveAssetInfo3 : retrieveAssetInfo2) : retrieveAssetInfo
             }
         });
 
@@ -325,7 +327,13 @@ export function RestApi(apiVersion) {
             //
             //  Refer to the source file where the action function is defined for a detailed description of the endpoint
             get: {
-                action: this.apiVer.gt('0.7') ? (this.apiVer.gt('0.10') ? retrieveAssetIssuanceHistory3 : retrieveAssetIssuanceHistory2) : retrieveAssetIssuanceHistory
+                action: this.apiVer.gt('0.7')
+                    ? (this.apiVer.gt('0.10')
+                        ? (this.apiVer.gt('0.11')
+                            ? retrieveAssetIssuanceHistory3
+                            : retrieveAssetIssuanceHistory4)
+                        : retrieveAssetIssuanceHistory2)
+                    : retrieveAssetIssuanceHistory
             }
         });
 

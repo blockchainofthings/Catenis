@@ -1,8 +1,8 @@
 /**
- * Created by claudio on 2021-07-14
+ * Created by claudio on 2022-08-06
  */
 
-//console.log('[ApiAssetExportOutcome.js]: This code just ran.');
+//console.log('[ApiAssetInfo3.js]: This code just ran.');
 
 // Module variables
 //
@@ -22,31 +22,29 @@ import {
     successResponse,
     errorResponse
 } from './RestApi';
-import { ForeignBlockchain } from './ForeignBlockchain';
 
 
 // Definition of module (private) functions
 //
 
 /**
- * @typedef {Object} AssetExportOutcomeAPIResponse
+ * @typedef {Object} RetrieveAssetInfoAPIResponse
  * @property {number} statusCode
  * @property {Object} headers
  * @property {Object} body
  * @property {string} body.status
  * @property {string} [body.message]
- * @property {ExportedAssetOutcome} [body.data]
+ * @property {RegularNonFungibleAssetInfo} [body.data]
  */
 
 /**
- * Method used to process GET 'assets/:assetId/export/:foreignBlockchain' endpoint of REST API
+ * Method used to process GET 'assets/:assetId' endpoint of Rest API
  * @this {Object}
  * @property {Object} urlParams
- * @property {string} urlParam.assetId ID of the exported asset
- * @property {string} urlParam.foreignBlockchain Name of the foreign blockchain
- * @return {AssetExportOutcomeAPIResponse}
+ * @property {string} urlParams.assetId ID of the asset to retrieve information
+ * @returns {RetrieveAssetInfoAPIResponse}
  */
-export function assetExportOutcome() {
+export function retrieveAssetInfo3() {
     try {
         // Process request parameters
         let invalidParams = [];
@@ -55,15 +53,8 @@ export function assetExportOutcome() {
         //
         // assetId param
         if (!(typeof this.urlParams.assetId === 'string' && this.urlParams.assetId.length > 0)) {
-            Catenis.logger.DEBUG('Invalid \'assetId\' parameter for GET \'assets/:assetId/export/:foreignBlockchain\' API request', this.urlParams);
+            Catenis.logger.DEBUG('Invalid \'assetId\' parameter for GET \'assets/:assetId\' API request', this.urlParams);
             invalidParams.push('assetId');
-        }
-
-        // foreignBlockchain param
-        if (!(typeof this.urlParams.foreignBlockchain === 'string' && this.urlParams.foreignBlockchain.length > 0
-                && ForeignBlockchain.isValidKey(this.urlParams.foreignBlockchain))) {
-            Catenis.logger.DEBUG('Invalid \'foreignBlockchain\' parameter for GET \'assets/:assetId/export/:foreignBlockchain\' API request', this.urlParams);
-            invalidParams.push('foreignBlockchain');
         }
 
         if (invalidParams.length > 0) {
@@ -72,18 +63,15 @@ export function assetExportOutcome() {
 
         // Make sure that system is running and accepting API calls
         if (!Catenis.application.isRunning()) {
-            Catenis.logger.DEBUG('System currently not available for fulfilling GET \'assets/:assetId/export/:foreignBlockchain\' API request', {applicationStatus: Catenis.application.status});
+            Catenis.logger.DEBUG('System currently not available for fulfilling GET \'assets/:assetId\' API request', {applicationStatus: Catenis.application.status});
             return errorResponse.call(this, 503, 'System currently not available; please try again at a later time');
         }
 
-        // Execute method to get asset export outcome
-        let exportOutcome;
+        // Execute method to retrieve asset info
+        let result;
 
         try {
-            exportOutcome = this.user.device.getAssetExportOutcome(
-                this.urlParams.assetId,
-                this.urlParams.foreignBlockchain
-            );
+            result = this.user.device.retrieveAssetInfo2(this.urlParams.assetId);
         }
         catch (err) {
             let error;
@@ -100,14 +88,8 @@ export function assetExportOutcome() {
                 else if (err.error === 'ctn_asset_not_found') {
                     error = errorResponse.call(this, 400, 'Invalid asset ID');
                 }
-                else if (err.error === 'ctn_exp_outcome_asset_non_fungible') {
-                    error = errorResponse.call(this, 400, 'Not a regular (fungible) asset');
-                }
-                else if (err.error === 'ctn_device_not_exp_asset_owner') {
-                    error = errorResponse.call(this, 403, 'No permission to retrieve asset export outcome');
-                }
-                else if (err.error === 'ctn_exp_asset_not_found') {
-                    error = errorResponse.call(this, 400, 'Asset is not yet exported');
+                else if (err.error === 'ctn_device_asset_no_access') {
+                    error = errorResponse.call(this, 403, 'No permission to retrieve asset info');
                 }
                 else {
                     error = errorResponse.call(this, 500, 'Internal server error');
@@ -118,16 +100,17 @@ export function assetExportOutcome() {
             }
 
             if (error.statusCode === 500) {
-                Catenis.logger.ERROR('Error processing GET \'assets/:assetId/export/:foreignBlockchain\' API request.', err);
+                Catenis.logger.ERROR('Error processing GET \'assets/:assetId\' API request.', err);
             }
 
             return error;
         }
 
-        return successResponse.call(this, exportOutcome);
+        // Return success
+        return successResponse.call(this, result);
     }
     catch (err) {
-        Catenis.logger.ERROR('Error processing GET \'assets/:assetId/export/:foreignBlockchain\' API request.', err);
+        Catenis.logger.ERROR('Error processing GET \'assets/:assetId\' API request.', err);
         return errorResponse.call(this, 500, 'Internal server error');
     }
 }

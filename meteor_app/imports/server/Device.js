@@ -79,7 +79,10 @@ import { ForeignBlockchain } from './ForeignBlockchain';
 import { AssetMigration } from './AssetMigration';
 import { NFAssetIssuance } from './NFAssetIssuance';
 import { IssueNFAssetTransaction } from './IssueNFAssetTransaction';
-import { NonFungibleToken } from './NonFungibleToken';
+import {
+    NonFungibleToken,
+    newTokenId
+} from './NonFungibleToken';
 import { NFTokenRetrieval } from './NFTokenRetrieval';
 import { TransferNFTokenTransaction } from './TransferNFTokenTransaction';
 import { NFTokenTransfer } from './NFTokenTransfer';
@@ -3702,6 +3705,14 @@ Device.prototype.exportAsset = function (assetId, foreignBlockchain, token, opti
     //  Note: this will throw 'ctn_asset_not_found' if no asset with that asset ID can be found
     const asset = Asset.getAssetByAssetId(assetId, true);
 
+    // Make sure that this is a regular (fungible) asset
+    if (asset.isNonFungible) {
+        Catenis.logger.ERROR('Inconsistent asset to be exported; expected a regular (fungible) asset', {
+            assetId
+        });
+        throw new Meteor.Error('ctn_export_asset_non_fungible', `Inconsistent asset to be exported; expected a regular (fungible) asset (assetId: ${assetId})`);
+    }
+
     // Make sure that this asset has been issued by the current device
     if (asset.issuingDevice.deviceId !== this.deviceId) {
         // Device trying to export the asset is not the same as the device that issued the asset
@@ -3752,6 +3763,14 @@ Device.prototype.getAssetExportOutcome = function (assetId, foreignBlockchain) {
     // Get asset that was exported.
     //  Note: this will throw 'ctn_asset_not_found' if no asset with that asset ID can be found
     const asset = Asset.getAssetByAssetId(assetId, true);
+
+    // Make sure that this is a regular (fungible) asset
+    if (asset.isNonFungible) {
+        Catenis.logger.ERROR('Inconsistent asset for retrieving export outcome; expected a regular (fungible) asset', {
+            assetId
+        });
+        throw new Meteor.Error('ctn_exp_outcome_asset_non_fungible', `Inconsistent asset for retrieving export outcome; expected a regular (fungible) asset (assetId: ${assetId})`);
+    }
 
     // Instantiate asset export.
     //  Note: this will throw 'ctn_exp_asset_not_found' if asset was not yet exported
@@ -3844,6 +3863,14 @@ Device.prototype.migrateAsset = function (assetId, foreignBlockchain, migration,
     // Get asset to migrate.
     //  Note: this will throw 'ctn_asset_not_found' if no asset with that asset ID can be found
     const asset = Asset.getAssetByAssetId(assetId, true);
+
+    // Make sure that this is a regular (fungible) asset
+    if (asset.isNonFungible) {
+        Catenis.logger.ERROR('Inconsistent asset to be migrated; expected a regular (fungible) asset', {
+            assetId
+        });
+        throw new Meteor.Error('ctn_migrate_asset_non_fungible', `Inconsistent asset to be migrated; expected a regular (fungible) asset (assetId: ${assetId})`);
+    }
 
     let assetMgr;
 
@@ -4617,6 +4644,41 @@ Device.prototype.getAssetBalance = function (assetId) {
 //     totalExistentBalance: [Number] - The current total balance of the asset in existence, expressed as a fractional amount
 //   }
 Device.prototype.retrieveAssetInfo = function (assetId) {
+    return this.retrieveAssetInfo2(assetId, false);
+};
+
+/**
+ * Information shared about a Catenis device
+ * @typedef {Object} SharedDeviceInfo
+ * @property {String} deviceId The ID of the device that issued the asset
+ * @property {String} [name] The name of the device
+ * @property {String} [prodUniqueId] The product unique ID of the device
+ */
+
+/**
+ * Information about both regular and non-fungible assets
+ * @typedef {Object} RegularNonFungibleAssetInfo
+ * @property {String} assetId The ID of the asset
+ * @property {String} name The name of the asset
+ * @property {String} description The description of the asset
+ * @property {isNonFungible} [isNonFungible] Indicates whether this is a non-fungible asset
+ * @property {Boolean} canReissue Indicates whether more units/tokens of this asset can be reissued
+ * @property {Number} decimalPlaces The maximum number of decimal places that can be used to represent a fractional
+ *                                   amount of this asset. For non-fungible assets, this will always be 0
+ * @property {SharedDeviceInfo} issuer The information about the issuer of this asset
+ * @property {Number} totalExistentBalance The current total balance of the asset in existence, expressed as a
+ *                                          fractional amount. For non-fungible assets, this corresponds to the total
+ *                                          number of non-fungible tokens of this asset
+ */
+
+/**
+ * Return the information about a given asset
+ * @param {String} assetId The ID of the asset the information of which is requested
+ * @param {boolean} includeNonFungibleInfo Indicates whether the returned information should indicate whether the asset
+ *                                          is a non-fungible asset or not
+ * @returns {RegularNonFungibleAssetInfo} The information about the asset
+ */
+Device.prototype.retrieveAssetInfo2 = function (assetId, includeNonFungibleInfo = true) {
     // Make sure that device is not deleted
     if (this.status === Device.status.deleted.name) {
         // Cannot retrieve asset info for deleted device. Log error and throw exception
@@ -4663,11 +4725,19 @@ Device.prototype.retrieveAssetInfo = function (assetId) {
         });
     }
 
-    // Return asset info
-    const assetInfo = {
+    const basicAssetInfo = {
         assetId: assetId,
         name: asset.name,
         description: asset.description,
+    };
+
+    if (includeNonFungibleInfo) {
+        basicAssetInfo.isNonFungible = !!asset.isNonFungible;
+    }
+
+    // Return asset info
+    const assetInfo = {
+        ...basicAssetInfo,
         canReissue: asset.issuingType === CCTransaction.issuingAssetType.unlocked,
         decimalPlaces: asset.divisibility,
         issuer: {
@@ -4879,11 +4949,57 @@ Device.prototype.listIssuedAssets = function (limit, skip) {
 //       },
 //       date: [Date] - Date end time when asset issuance took place
 //     }],
-//     countExceeded: [Boolean] - Indicates whether the number of asset issuance events that should have been returned
-//                                 is larger than maximum number of asset issuance events that can be returned
 //     hasMore: [Boolean] - Indicates whether there are more asset issuance events that satisfy the search criteria yet to be returned
 //   }
 Device.prototype.retrieveAssetIssuanceHistory = function (assetId, startDate, endDate, limit, skip) {
+    return this.retrieveAssetIssuanceHistory2(assetId, startDate, endDate, limit, skip, false);
+};
+
+/**
+ * Issuance information for regular (fungible) assets
+ * @typedef {Object} FungibleAssetIssuanceInfo
+ * @property {Number} amount The amount of the asset that has been issued, expressed as a decimal number
+ * @property {SharedDeviceInfo} holdingDevice The device to which the issued asset amount has been assigned
+ * @property {Date} date Date end time when the asset issuance took place
+ */
+
+/**
+ * Issuance information for non-fungible assets
+ * @typedef {Object} NonFungibleAssetIssuanceInfo
+ * @property {string[]} nfTokenIds List of the IDs of the non-fungible tokens of the asset that have been issued
+ * @property {SharedDeviceInfo[]} holdingDevices List of the devices to which the issued non-fungible tokens have been
+ *                                                assigned
+ * @property {Date} date Date end time when the asset issuance took place
+ */
+
+/**
+ * @typedef {(FungibleAssetIssuanceInfo|NonFungibleAssetIssuanceInfo)} AssetIssuanceInfo
+ */
+
+/**
+ * Asset issuance history
+ * @typedef {Object} AssetIssuanceHistory
+ * @property {AssetIssuanceInfo[]} issuanceEvents List of the asset issuance events
+ * @property {boolean} hasMore Indicates whether there are more asset issuance events that satisfy the search criteria
+ *                              yet to be returned
+ */
+
+/**
+ * Return a list of issuance events for this asset that took place in a given time frame
+ * @param {string} assetId The ID of the asset the issuance history of which is requested
+ * @param {Date} [startDate] Date and time specifying the start of the filtering time frame. The returned issuance
+ *                            events must have occurred not before that date/time
+ * @param {Date} [endDate] Date and time specifying the end of the filtering time frame. The returned issuance events
+ *                          must have occurred not after that date/time
+ * @param {number} [limit] Maximum number of asset issuance events that should be returned. Default value:
+ *                          assetCfgSetting.maxQueryIssuanceCount
+ * @param {number} [skip=0] Number of asset issuance events that should be skipped (from beginning of list of matching
+ *                           events) and not returned
+ * @param {boolean} includeNFAsset Indicates whether non-fungible assets should also be taken into account when doing
+ *                                  the search
+ * @returns {AssetIssuanceHistory}
+ */
+Device.prototype.retrieveAssetIssuanceHistory2 = function (assetId, startDate, endDate, limit, skip, includeNFAsset = true) {
     // Make sure that device is not deleted
     if (this.status === Device.status.deleted.name) {
         // Cannot retrieve asset issuance history for deleted device. Log error and throw exception
@@ -4917,7 +5033,9 @@ Device.prototype.retrieveAssetIssuanceHistory = function (assetId, startDate, en
 
         // Retrieve asset issuance transactions from local database
         const querySelector = {
-            type: 'issue_asset',
+            type: {
+                $in: ['issue_asset', 'issue_nf_asset']
+            },
             txid: {
                 $in: assetIssuanceTxids
             }
@@ -4971,14 +5089,66 @@ Device.prototype.retrieveAssetIssuanceHistory = function (assetId, startDate, en
             limit: limit + 1
         }).fetch().forEach((doc, idx) => {
             if (idx < limit) {
-                const issuance = {
-                    amount: asset.smallestDivisionAmountToAmount(doc.info.issueAsset.amount),
-                    holdingDevice: {
-                        deviceId: doc.info.issueAsset.holdingDeviceId
-                    }
-                };
+                const assetIssuance = txidAssetIssuance[doc.txid];
+                const issuance = {};
 
-                _und.extend(issuance.holdingDevice, Device.getDeviceByDeviceId(doc.info.issueAsset.holdingDeviceId).discloseMainPropsTo(this));
+                if ('tokenIds' in assetIssuance) {
+                    // Non-fungible asset
+                    const nfTokenIds = assetIssuance.tokenIds.map(newTokenId);
+                    let diff;
+
+                    if ((diff = Util.diffArrays(nfTokenIds, doc.info.issueNFAsset.nfTokenIds)) !== undefined) {
+                        Catenis.logger.WARN('List of issued non-fungible token IDs recorded in the local database differs from the list reported by the Catenis Colored Coins node server', {
+                            reportedList: nfTokenIds,
+                            diff
+                        });
+                    }
+
+                    // Return the list of non-fungible token IDs, and the list of holding devices
+                    //  NOTE: we return the list of non-fungible token IDs recorded in the local database because it is
+                    //         guaranteed to match (the order of) the list of holding devices
+                    issuance.nfTokenIds = doc.info.issueNFAsset.nfTokenIds;
+
+                    const holdingDevices = [];
+                    const deviceIdAdditionalInfo = new Map();
+
+                    doc.info.issueNFAsset.holdingDeviceIds.forEach((holdingDeviceId) => {
+                        let additionalInfo;
+
+                        if (!deviceIdAdditionalInfo.has(holdingDeviceId)) {
+                            additionalInfo = Device.getDeviceByDeviceId(holdingDeviceId).discloseMainPropsTo(this);
+                            deviceIdAdditionalInfo.set(holdingDeviceId, additionalInfo);
+                        }
+                        else {
+                            additionalInfo = deviceIdAdditionalInfo.get(holdingDeviceId);
+                        }
+
+                        holdingDevices.push({
+                            deviceId: holdingDeviceId,
+                            ...additionalInfo
+                        });
+                    });
+
+                    issuance.holdingDevices = holdingDevices;
+                }
+                else {
+                    // Regular (fungible) asset
+                    let bnAmount;
+
+                    if ((bnAmount = asset.smallestDivisionAmountToAmount(doc.info.issueAsset.amount, true)).comparedTo(assetIssuance.amount) !== 0) {
+                        Catenis.logger.WARN('Asset amount recorded in the local database differs from the asset amount reported by the Catenis Colored Coins node server', {
+                            reportedAmount: assetIssuance.amount,
+                            localAmount: bnAmount.toNumber()
+                        });
+                    }
+
+                    // Return asset amount and single holding device
+                    issuance.amount = assetIssuance.amount;
+                    issuance.holdingDevice = {
+                        deviceId: doc.info.issueAsset.holdingDeviceId,
+                        ...Device.getDeviceByDeviceId(doc.info.issueAsset.holdingDeviceId).discloseMainPropsTo(this)
+                    };
+                }
 
                 issuance.date = doc.sentDate;
 
