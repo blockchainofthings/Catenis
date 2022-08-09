@@ -5032,9 +5032,15 @@ Device.prototype.retrieveAssetIssuanceHistory2 = function (assetId, startDate, e
         const assetIssuanceTxids = Object.keys(txidAssetIssuance);
 
         // Retrieve asset issuance transactions from local database
+        const issueAssetTxType = ['issue_asset'];
+
+        if (includeNFAsset) {
+            issueAssetTxType.push('issue_nf_asset');
+        }
+
         const querySelector = {
             type: {
-                $in: ['issue_asset', 'issue_nf_asset']
+                $in: issueAssetTxType
             },
             txid: {
                 $in: assetIssuanceTxids

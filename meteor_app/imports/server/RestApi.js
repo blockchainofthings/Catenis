@@ -330,8 +330,8 @@ export function RestApi(apiVersion) {
                 action: this.apiVer.gt('0.7')
                     ? (this.apiVer.gt('0.10')
                         ? (this.apiVer.gt('0.11')
-                            ? retrieveAssetIssuanceHistory3
-                            : retrieveAssetIssuanceHistory4)
+                            ? retrieveAssetIssuanceHistory4
+                            : retrieveAssetIssuanceHistory3)
                         : retrieveAssetIssuanceHistory2)
                     : retrieveAssetIssuanceHistory
             }
