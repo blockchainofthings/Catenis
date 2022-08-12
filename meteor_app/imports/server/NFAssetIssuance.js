@@ -1065,6 +1065,8 @@ export class NFAssetIssuance {
             else {
                 progress.error = this.progress.error;
             }
+
+            progress.finishDate = this.progress.finishDate;
         }
 
         const retVal = {};

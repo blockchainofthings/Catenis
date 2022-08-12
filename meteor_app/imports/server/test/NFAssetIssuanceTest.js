@@ -1202,7 +1202,11 @@ describe('NFAssetIssuance module', function () {
             });
 
             it('should correctly retrieve issuance progress (no contents and no metadata stored, error)', function () {
-                expect(nfAssetIssuance.getIssuanceProgress()).to.deep.equal({
+                const issuanceProgress = nfAssetIssuance.getIssuanceProgress();
+                expect(
+                    _und.mapObject(issuanceProgress, (val, key) => key === 'progress' ? _und.omit(val, 'finishDate') : val)
+                )
+                .to.deep.equal({
                     progress: {
                         percentProcessed: 0,
                         done: true,
@@ -1213,6 +1217,7 @@ describe('NFAssetIssuance module', function () {
                         }
                     }
                 });
+                expect(issuanceProgress.progress.finishDate).to.be.a('date');
             });
 
             it('should correctly finalize issuance progress (all contents and all metadata stored, success)', function () {
@@ -1277,7 +1282,11 @@ describe('NFAssetIssuance module', function () {
             });
 
             it('should correctly retrieve issuance progress (all contents and all metadata stored, success)', function () {
-                expect(nfAssetIssuance.getIssuanceProgress()).to.deep.equal({
+                const issuanceProgress = nfAssetIssuance.getIssuanceProgress();
+                expect(
+                    _und.mapObject(issuanceProgress, (val, key) => key === 'progress' ? _und.omit(val, 'finishDate') : val)
+                )
+                .to.deep.equal({
                     progress: {
                         percentProcessed: 100,
                         done: true,
@@ -1292,6 +1301,7 @@ describe('NFAssetIssuance module', function () {
                         ]
                     }
                 });
+                expect(issuanceProgress.progress.finishDate).to.be.a('date');
             });
 
             it('should fail updating issuance progress (issuance progress already finalized)', function () {
@@ -1397,7 +1407,11 @@ describe('NFAssetIssuance module', function () {
             })
             .not.to.throw();
 
-            expect(nfAssetIssuance.getIssuanceProgress()).to.deep.equal({
+            const issuanceProgress = nfAssetIssuance.getIssuanceProgress();
+            expect(
+                _und.mapObject(issuanceProgress, (val, key) => key === 'progress' ? _und.omit(val, 'finishDate') : val)
+            )
+            .to.deep.equal({
                 assetId: 'a00001',
                 progress: {
                     percentProcessed: 100,
@@ -1410,6 +1424,7 @@ describe('NFAssetIssuance module', function () {
                     ]
                 }
             });
+            expect(issuanceProgress.progress.finishDate).to.be.a('date');
         });
     });
 
