@@ -531,7 +531,7 @@ function processTransferredNFTokenConfirmed(data) {
                 confirmationDate = getTxConfirmationDate(data.txid);
             }
 
-            // Notify receiving device
+            // Notify sending device
             sendingDevice.notifyNFTokenConfirmed([data.tokenId], asset.issuingDevice, sendingDevice, confirmationDate);
         }
     }

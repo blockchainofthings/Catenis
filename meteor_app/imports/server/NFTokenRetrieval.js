@@ -1086,7 +1086,7 @@ export class NFTokenRetrieval extends NFTokenMetadataRepo {
 
     /**
      * Retrieve the non-fungible token retrieval object with the given continuation token
-     * @param {string} continuationToken The external ID D that identifies the retrieved non-fungible token data to be
+     * @param {string} continuationToken The external ID that identifies the retrieved non-fungible token data to be
      *                                    delivered
      * @param {string} tokenId The external ID of the non-fungible token being retrieved
      * @param {string} [deviceId] Device ID of device trying to access the non-fungible token retrieval
