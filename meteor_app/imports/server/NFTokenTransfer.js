@@ -99,15 +99,16 @@ export class NFTokenTransfer extends NFTokenContentsProgress {
      */
 
     /**
-     * @typedef {Object} NFTokenTransferMetadataProgress
-     * @property {number} bytesRead Number of non-fungible token metadata/contents bytes that have been read
-     * @property {number} [bytesWritten] Number of non-fungible token metadata/contents bytes that have been written
+     * @typedef {Object} NFTokenTransferDataManipulationProgress
+     * @property {number} bytesRead Number of bytes of non-fungible token data that have been read
+     * @property {number} [bytesWritten] Number of bytes of non-fungible token data that have been written
      */
 
     /**
      * @typedef {Object} NonFungibleTokenTransferProgress
-     * @property {NFTokenTransferMetadataProgress} metadata Progress reading/writing non-fungible token
-     *                                                       metadata/contents
+     * @property {NFTokenTransferDataManipulationProgress} dataManipulation Progress of non-fungible token data
+     *                                                      manipulation: reading and rewriting it after re-encryption
+     *                                                      if required
      * @property {boolean} done Indicates whether the non-fungible token transfer has been finalized, either
      *                           successfully or with an error
      * @property {boolean} [success] Indicates whether the non-fungible token has been successfully transferred
@@ -694,28 +695,28 @@ export class NFTokenTransfer extends NFTokenContentsProgress {
      * @returns {NonFungibleTokenTransferProgressInfo}
      */
     getTransferProgress() {
-        const metadata = {
+        const dataManipulation = {
             bytesRead: this.progress.metadata.bytesRead
         };
 
         if (this.progress.metadata.bytesWritten) {
-            metadata.bytesWritten = this.progress.metadata.bytesWritten;
+            dataManipulation.bytesWritten = this.progress.metadata.bytesWritten;
         }
 
         if (this.progress.metadata.contents) {
-            metadata.bytesRead += this.progress.metadata.contents.bytesRead;
+            dataManipulation.bytesRead += this.progress.metadata.contents.bytesRead;
 
-            if (!metadata.bytesWritten) {
-                metadata.bytesWritten = 0;
+            if (!dataManipulation.bytesWritten) {
+                dataManipulation.bytesWritten = 0;
             }
 
-            metadata.bytesWritten += this.progress.metadata.contents.bytesWritten;
+            dataManipulation.bytesWritten += this.progress.metadata.contents.bytesWritten;
         }
 
         // noinspection JSValidateTypes
         return {
             progress: {
-                metadata,
+                dataManipulation,
                 ..._und.omit(this.progress, 'metadata')
             }
         };

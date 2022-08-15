@@ -1055,7 +1055,7 @@ describe('NFTokenTransfer module', function () {
 
                 expect(nfTokenTransfer.getTransferProgress()).to.deep.equal({
                     progress: {
-                        metadata: {
+                        dataManipulation: {
                             bytesRead: 0
                         },
                         done: false
@@ -1087,7 +1087,7 @@ describe('NFTokenTransfer module', function () {
             it('should correctly report transfer progress (metadata read)', function () {
                 expect(nfTokenTransfer.getTransferProgress()).to.deep.equal({
                     progress: {
-                        metadata: {
+                        dataManipulation: {
                             bytesRead: JSON.stringify(nfTokens[0].nfTokenInfo.ccMetadata).length
                                 + JSON.stringify(nfTokens[3].nfTokenInfo.ccMetadata).length
                         },
@@ -1135,7 +1135,7 @@ describe('NFTokenTransfer module', function () {
             it('should correctly report transfer progress (metadata read, and contents rewritten)', function () {
                 expect(nfTokenTransfer.getTransferProgress()).to.deep.equal({
                     progress: {
-                        metadata: {
+                        dataManipulation: {
                             bytesRead: JSON.stringify(nfTokens[0].nfTokenInfo.ccMetadata).length
                                 + JSON.stringify(nfTokens[3].nfTokenInfo.ccMetadata).length
                                 + nfTokens[2].nfTokenInfo.contents.length + nfTokens[3].nfTokenInfo.contents.length,
@@ -1163,7 +1163,7 @@ describe('NFTokenTransfer module', function () {
                 // Make sure that transfer progress has been updated accordingly
                 expect(nfTokenTransfer.getTransferProgress()).to.deep.equal({
                     progress: {
-                        metadata: {
+                        dataManipulation: {
                             bytesRead: JSON.stringify(nfTokens[0].nfTokenInfo.ccMetadata).length
                         },
                         done: false
@@ -1206,7 +1206,7 @@ describe('NFTokenTransfer module', function () {
                 // Make sure that transfer progress has been updated accordingly
                 expect(nfTokenTransfer.getTransferProgress()).to.deep.equal({
                     progress: {
-                        metadata: {
+                        dataManipulation: {
                             bytesRead: JSON.stringify(nfTokens[0].nfTokenInfo.ccMetadata).length
                                 + JSON.stringify(nfTokens[1].nfTokenInfo.ccMetadata).length,
                             bytesWritten: JSON.stringify(nfTokens[1].nfTokenInfo.getCCMetadata(cryptoKeysList[2])).length
@@ -1267,7 +1267,7 @@ describe('NFTokenTransfer module', function () {
                 // Make sure that transfer progress has been updated accordingly
                 expect(nfTokenTransfer2.getTransferProgress()).to.deep.equal({
                     progress: {
-                        metadata: {
+                        dataManipulation: {
                             bytesRead: JSON.stringify(nfTokens[0].nfTokenInfo.ccMetadata).length
                                 + JSON.stringify(nfTokens[1].nfTokenInfo.ccMetadata).length
                                 + JSON.stringify(nfTokens[2].nfTokenInfo.ccMetadata).length
