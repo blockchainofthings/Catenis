@@ -50,6 +50,14 @@ import { Device } from './Device';
  */
 
 /**
+ * @typedef {Object} NonFungibleAssetInfo
+ * @property {string} name The name of the non-fungible asset
+ * @property {string} [description] A brief description of the non-fungible asset
+ * @property {boolean} canReissue Indicates whether more non-fungible tokens of that non-fungible asset can be issued at
+ *                                 a later time (an unlocked asset)
+ */
+
+/**
  * @typedef {Object} HoldingDeviceIdInfo
  * @property {string} id
  * @property {boolean} [isProdUniqueId=false]
@@ -75,12 +83,9 @@ import { Device } from './Device';
  * Method used to process POST 'assets/non-fungible/issue' endpoint of REST API
  * @this {Object}
  * @property {Object} bodyParams
- * @property {string} [bodyParams.name] The name of the asset
- * @property {string} [bodyParams.description] A brief description of the asset
- * @property {boolean} [bodyParams.canReissue] Indicates whether more non-fungible tokens of that asset can be issued
- *                                              at a later time (an unlocked asset)
- * @property {boolean} [bodyParams.encryptNFTContents=true] Indicates whether the contents of the asset’s non-fungible
- *                                              tokens should be encrypted before being stored (on IPFS)
+ * @property {NonFungibleAssetInfo} [bodyParams.assetInfo] The properties of the new non-fungible asset to create
+ * @property {boolean} [bodyParams.encryptNFTContents=true] Indicates whether the contents of the non-fungible tokens
+ *                                              being issued should be encrypted before being stored (on IPFS)
  * @property {(HoldingDeviceIdInfo|HoldingDeviceIdInfo[])} [bodyParams.holdingDevices] List of Catenis virtual devices
  *                                              that will hold the issued non-fungible tokens
  * @property {boolean} [bodyParams.async=false] Indicates whether processing should be done asynchronously
@@ -125,22 +130,29 @@ export function issueNonFungibleAsset() {
         if (!isContinuationReq) {
             // Initial issuance request
 
-            // name param
-            if (!Util.isNonBlankString(this.bodyParams.name)) {
-                Catenis.logger.DEBUG('Invalid \'name\' parameter for POST \'assets/non-fungible/issue\' API request', this.bodyParams);
-                invalidParams.push('name');
-            }
+            // assetInfo param
+            if (Util.isNonNullObject(this.bodyParams.assetInfo)) {
+                // assetInfo.name param
+                if (!Util.isNonBlankString(this.bodyParams.assetInfo.name)) {
+                    Catenis.logger.DEBUG('Invalid \'assetInfo.name\' parameter for POST \'assets/non-fungible/issue\' API request', this.bodyParams);
+                    invalidParams.push('assetInfo.name');
+                }
 
-            // description param
-            if (this.bodyParams.description !== undefined && !Util.isNonBlankString(this.bodyParams.description)) {
-                Catenis.logger.DEBUG('Invalid \'description\' parameter for POST \'assets/non-fungible/issue\' API request', this.bodyParams);
-                invalidParams.push('description');
-            }
+                // assetInfo.description param
+                if (this.bodyParams.assetInfo.description !== undefined && !Util.isNonBlankString(this.bodyParams.assetInfo.description)) {
+                    Catenis.logger.DEBUG('Invalid \'assetInfo.description\' parameter for POST \'assets/non-fungible/issue\' API request', this.bodyParams);
+                    invalidParams.push('assetInfo.description');
+                }
 
-            // canReissue param
-            if (typeof this.bodyParams.canReissue !== 'boolean') {
-                Catenis.logger.DEBUG('Invalid \'canReissue\' parameter for POST \'assets/non-fungible/issue\' API request', this.bodyParams);
-                invalidParams.push('canReissue');
+                // assetInfo.canReissue param
+                if (typeof this.bodyParams.assetInfo.canReissue !== 'boolean') {
+                    Catenis.logger.DEBUG('Invalid \'assetInfo.canReissue\' parameter for POST \'assets/non-fungible/issue\' API request', this.bodyParams);
+                    invalidParams.push('assetInfo.canReissue');
+                }
+            }
+            else {
+                Catenis.logger.DEBUG('Invalid \'assetInfo\' parameter POST for \'assets/non-fungible/issue\' API request', this.bodyParams);
+                invalidParams.push('assetInfo');
             }
 
             // encryptNFTContents param
@@ -214,9 +226,9 @@ export function issueNonFungibleAsset() {
                 try {
                     initialData = {
                         assetPropsOrId: {
-                            name: this.bodyParams.name,
-                            description: this.bodyParams.description,
-                            canReissue: this.bodyParams.canReissue,
+                            name: this.bodyParams.assetInfo.name,
+                            description: this.bodyParams.assetInfo.description,
+                            canReissue: this.bodyParams.assetInfo.canReissue,
                         },
                         encryptNFTContents,
                         holdingDeviceIds,
@@ -242,22 +254,10 @@ export function issueNonFungibleAsset() {
         else {
             // Continuation issuance request
 
-            // name param
-            if (this.bodyParams.name !== undefined) {
-                Catenis.logger.DEBUG('Invalid \'name\' parameter for POST \'assets/non-fungible/issue\' API request', this.bodyParams);
-                invalidParams.push('name');
-            }
-
-            // description param
-            if (this.bodyParams.description !== undefined) {
-                Catenis.logger.DEBUG('Invalid \'description\' parameter for POST \'assets/non-fungible/issue\' API request', this.bodyParams);
-                invalidParams.push('description');
-            }
-
-            // canReissue param
-            if (this.bodyParams.canReissue !== undefined) {
-                Catenis.logger.DEBUG('Invalid \'canReissue\' parameter for POST \'assets/non-fungible/issue\' API request', this.bodyParams);
-                invalidParams.push('canReissue');
+            // assetInfo param
+            if (this.bodyParams.assetInfo !== undefined) {
+                Catenis.logger.DEBUG('Invalid \'assetInfo\' parameter for POST \'assets/non-fungible/issue\' API request', this.bodyParams);
+                invalidParams.push('assetInfo');
             }
 
             // encryptNFTContents param
