@@ -374,11 +374,11 @@ export function issueNonFungibleAsset() {
                     error = errorResponse.call(this, 400, 'Not enough credits to pay for issue non-fungible asset service');
                 }
                 else if (err.error === 'ctn_issue_nf_asset_amount_too_large') {
-                    error = errorResponse.call(this, 400, 'Numer of non-fungible tokens to issue is too large');
+                    error = errorResponse.call(this, 400, 'Number of non-fungible tokens to issue is too large');
                 }
                 else if (err.error === 'nf_asset_issue_no_token_info') {
                     // This should only happen if database is corrupted
-                    error = errorResponse.call(this, 400, 'Non-fungible asset issuance cannot be finalized with tokens');
+                    error = errorResponse.call(this, 400, 'Non-fungible asset issuance cannot be finalized with no tokens');
                 }
                 else if (err.error === 'nf_asset_issue_already_complete' || err.error === 'nft_issue_batch_issuance_already_complete') {
                     error = errorResponse.call(this, 400, 'Non-fungible asset issuance is already complete');

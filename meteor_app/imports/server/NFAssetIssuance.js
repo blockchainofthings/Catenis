@@ -596,7 +596,7 @@ export class NFAssetIssuance {
             }
             else if (err.error === 'nf_asset_issue_no_token_info') {
                 error.code = 400;
-                error.message = 'Non-fungible asset issuance cannot be finalized with tokens';
+                error.message = 'Non-fungible asset issuance cannot be finalized with no tokens';
             }
             else if (err.error === 'nf_asset_issue_already_complete' || err.error === 'nft_issue_batch_issuance_already_complete') {
                 error.code = 400;
