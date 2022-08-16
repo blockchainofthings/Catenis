@@ -86,8 +86,9 @@ import { Device } from './Device';
  * @property {NonFungibleAssetInfo} [bodyParams.assetInfo] The properties of the new non-fungible asset to create
  * @property {boolean} [bodyParams.encryptNFTContents=true] Indicates whether the contents of the non-fungible tokens
  *                                              being issued should be encrypted before being stored (on IPFS)
- * @property {(HoldingDeviceIdInfo|HoldingDeviceIdInfo[])} [bodyParams.holdingDevices] List of Catenis virtual devices
- *                                              that will hold the issued non-fungible tokens
+ * @property {(HoldingDeviceIdInfo|HoldingDeviceIdInfo[])} [bodyParams.holdingDevices] A single Catenis virtual device
+ *                                              or a list of virtual devices that will hold the issued non-fungible
+ *                                              tokens
  * @property {boolean} [bodyParams.async=false] Indicates whether processing should be done asynchronously
  * @property {string} [bodyParams.continuationToken] The continuation token returned by the previous request indicating
  *                                              that this is a continuation request for the same issuance
