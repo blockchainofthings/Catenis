@@ -355,6 +355,26 @@ describe('NFAssetIssuance module', function () {
             expect(nfAssetIssuance).to.be.an.instanceof(NFAssetIssuance);
         });
 
+        it('should attribute default description if issuing asset with no description', function () {
+            const nfAssetIssuance = new NFAssetIssuance(
+                undefined,
+                undefined,
+                'd00001',
+                {
+                    name: 'Test NFAsset #1',
+                    canReissue: false
+                },
+                true,
+                'd00002',
+                nfTokenInfos,
+                false,
+                false
+            );
+
+            expect(nfAssetIssuance).to.be.an.instanceof(NFAssetIssuance);
+            expect(nfAssetIssuance.asset.description).to.equal('General purpose Catenis non-fungible asset');
+        });
+
         it('should correctly indicate that this issuance is not complete', function () {
             expect(nfAssetIssuance.isComplete).to.be.false;
         });

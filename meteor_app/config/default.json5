@@ -1529,6 +1529,7 @@
   },
   // Parameters pertaining to NFAssetIssuance module
   nfAssetIssuance: {
+    defaultNFAssetDescription: 'General purpose Catenis non-fungible asset',
     timeContinueIssuance: 300,  // (5 min.) Maximum time, in seconds, to wait until a new non-fungible token issuing batch is added to the non-fungible asset issuance
     timeKeepIncompleteIssuance: 3600,  // (1 hour) Minimum time, in seconds, to keep non-fungible asset issuances that have not been finalized (a final non-fungible token issuing batch has never been added)
     timeKeepProcessedIssuance: 86400, // (24 hours) Minimum time, in seconds, to keep non-fungible asset issuances after they have already been processed

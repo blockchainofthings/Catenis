@@ -38,6 +38,7 @@ const nfAssetIssuanceConfig = config.get('nfAssetIssuance');
 
 // Configuration settings
 const cfgSettings = {
+    defaultNFAssetDescription: nfAssetIssuanceConfig.get('defaultNFAssetDescription'),
     timeContinueIssuance: nfAssetIssuanceConfig.get('timeContinueIssuance'),
     timeKeepIncompleteIssuance: nfAssetIssuanceConfig.get('timeKeepIncompleteIssuance'),
     timeKeepProcessedIssuance: nfAssetIssuanceConfig.get('timeKeepProcessedIssuance'),
@@ -243,6 +244,11 @@ export class NFAssetIssuance {
             this.deviceId = deviceId;
 
             if (typeof assetPropsOrId === 'object') {
+                // Make sure that asset description is set
+                if (!assetPropsOrId.description) {
+                    assetPropsOrId.description = cfgSettings.defaultNFAssetDescription;
+                }
+
                 this.asset = assetPropsOrId;
                 this.isReissuance = false;
             }
