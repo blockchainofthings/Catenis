@@ -268,17 +268,17 @@ export function retrieveNonFungibleToken() {
                     error = errorResponse.call(this, 403, 'No permission to retrieve non-fungible token');
                 }
                 else if (err.error === 'nft_retrieval_not_available') {
-                    error = errorResponse.call(this, 400, 'Data retrieval not yet done');
+                    error = errorResponse.call(this, 400, 'Non-fungible token data retrieval not yet done');
                 }
                 else if (err.error === 'nft_retrieval_already_delivered') {
-                    error = errorResponse.call(this, 400, 'Retrieved data already delivered');
+                    error = errorResponse.call(this, 400, 'Retrieved non-fungible token data already delivered');
                 }
                 else if (err.error === 'nft_retrieval_invalid_cont_token' || err.error === 'nft_retrieval_wrong_token'
                         || err.error === 'nft_retrieval_wrong_device') {
                     error = errorResponse.call(this, 400, 'Invalid or unexpected non-fungible token retrieval continuation token');
                 }
                 else if (err.error === 'nft_retrieval_expired') {
-                    error = errorResponse.call(this, 400, 'Retrieved data expired');
+                    error = errorResponse.call(this, 400, 'Retrieved non-fungible token data expired');
                 }
             }
             else {
