@@ -244,6 +244,8 @@ CreditServiceAccTransaction.prototype.buildTransaction = function () {
             // TODO: avoid preallocating and passing multisig address to assemble() method and reverting it if not used.
             //  Solution: pass an "address allocation" function instead, which would be used by the assemble() method
             //  only in case it is really needed.
+            // TODO: review the transaction spec to allow for the use of Colored Coins range payment (third parameter
+            //  of the assemble() method of the CCTransaction class)
             this.ccTransact.assemble(multiSigSigneeAddr);
 
             if (!this.ccTransact.includesMultiSigOutput) {

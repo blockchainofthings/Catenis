@@ -324,7 +324,7 @@ export class TransferNFTokenTransaction {
             const multiSigSigneeAddr = this.nfTokenTransfer.sendingDevice.client.ctnNode.multiSigSigneeAddr.newAddressKeys().getAddress();
 
             // Assemble Colored Coins transaction
-            this.ccTransact.assemble(multiSigSigneeAddr, this.nfTokenTransfer.updateTransferProgress.bind(this.nfTokenTransfer, 0));
+            this.ccTransact.assemble(multiSigSigneeAddr, this.nfTokenTransfer.updateTransferProgress.bind(this.nfTokenTransfer, 0), true);
 
             if (!this.ccTransact.includesMultiSigOutput) {
                 // Revert pre-allocated multi-signature signee address

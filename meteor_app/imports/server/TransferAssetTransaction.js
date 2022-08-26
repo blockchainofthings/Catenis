@@ -211,6 +211,8 @@ TransferAssetTransaction.prototype.buildTransaction = function () {
         const multiSigSigneeAddr = this.sendingDevice.client.ctnNode.multiSigSigneeAddr.newAddressKeys().getAddress();
 
         // Assemble Colored Coins transaction
+        // TODO: review the transaction spec to allow for the use of Colored Coins range payment (third parameter
+        //  of the assemble() method of the CCTransaction class)
         this.ccTransact.assemble(multiSigSigneeAddr);
 
         if (!this.ccTransact.includesMultiSigOutput) {

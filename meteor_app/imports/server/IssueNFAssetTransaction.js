@@ -299,7 +299,7 @@ export class IssueNFAssetTransaction {
 
             // Assemble Colored Coins transaction, passing a callback to register the
             //  progress of metadata storage
-            this.ccTransact.assemble(multiSigSigneeAddr, this.nfAssetIssuance.updateIssuanceProgress.bind(this.nfAssetIssuance));
+            this.ccTransact.assemble(multiSigSigneeAddr, this.nfAssetIssuance.updateIssuanceProgress.bind(this.nfAssetIssuance), true);
 
             if (!this.ccTransact.includesMultiSigOutput) {
                 // Revert pre-allocated multi-signature signee address

@@ -513,6 +513,8 @@ SpendServiceCreditTransaction.prototype.payForService = function (client, servic
 
         try {
             // Assemble Colored Coins transaction
+            // TODO: review the transaction spec to allow for the use of Colored Coins range payment (third parameter
+            //  of the assemble() method of the CCTransaction class)
             assembleOK = newCcTransact.assemble(multiSigSigneeAddr);
         }
         catch (err) {

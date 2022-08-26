@@ -1181,7 +1181,9 @@ CCTransaction.prototype.setCcMetadata = function (ccMetadata) {
 //
 //  Arguments:
 //   ccMetadata: [Object(CCMetadata)] - The Colored Coins metadata
-CCTransaction.prototype.replaceCcMetadata = function (ccMetadata) {
+//   useRangePayment: [Boolean] - (optional) Indicates whether Color Coins payments should be optimized to use a range
+//                                            payment whenever possible when assembling the transaction
+CCTransaction.prototype.replaceCcMetadata = function (ccMetadata, useRangePayment) {
     // Only does anything if metadata is already set
     if (this.ccMetadata) {
         let reassemble = false;
@@ -1198,7 +1200,7 @@ CCTransaction.prototype.replaceCcMetadata = function (ccMetadata) {
         this.setCcMetadata(ccMetadata);
 
         if (reassemble) {
-            this.assemble(multiSigAddress);
+            this.assemble(multiSigAddress, undefined, useRangePayment);
         }
     }
 };
@@ -1209,11 +1211,13 @@ CCTransaction.prototype.replaceCcMetadata = function (ccMetadata) {
  *                                               required
  * @param {StoreProgressCallback} [metadataProgressCallback] Callback to report progress while storing the associated
  *                                                            Colored Coins metadata (if any)
+ * @param {Boolean} [useRangePayment=false] Indicates whether Color Coins payments should be optimized to use a range
+ *                                           payment whenever possible
  * @returns {boolean} True if Colored Coins transaction had been successfully assembled (or was already assembled),
  *                     or false otherwise (not all transfer input sequences have all their asset amount set to be
  *                     transferred/burnt)
  */
-CCTransaction.prototype.assemble = function (spendMultiSigOutputAddress, metadataProgressCallback) {
+CCTransaction.prototype.assemble = function (spendMultiSigOutputAddress, metadataProgressCallback, useRangePayment = false) {
     // Make sure that Colored Coins transaction is not yet assembled
     if (!this.isAssembled) {
         // Make sure that assets from all inputs have been set to be transferred/burnt
@@ -1445,7 +1449,7 @@ CCTransaction.prototype.assemble = function (spendMultiSigOutputAddress, metadat
             if (ccCommands.length > 0) {
                 const firstCommand = ccCommands[0];
 
-                if (firstCommand.method === ccBuilder.addPayment && firstCommand.args[2]/*output*/ === 0) {
+                if (useRangePayment && firstCommand.method === ccBuilder.addPayment && firstCommand.args[2]/*output*/ === 0) {
                     // Check if payments begin with a sequence that can be combined into a single range payment
                     let rangeLength = 1;
 
