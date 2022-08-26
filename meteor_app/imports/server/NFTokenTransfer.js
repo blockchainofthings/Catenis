@@ -561,7 +561,23 @@ export class NFTokenTransfer extends NFTokenContentsProgress {
         }
 
         // Wait for all the promises to be resolved
-        await Promise.all(promises);
+        const results = await Promise.allSettled(promises);
+
+        const composedErrorMessage = results.reduce((errMsg, result, idx) => {
+            if (result.status === 'rejected') {
+                if (errMsg) {
+                    errMsg += '; ';
+                }
+
+                errMsg += `[${ccTokenIds[idx]}] - ${result.reason}`;
+            }
+
+            return errMsg;
+        }, '');
+
+        if (composedErrorMessage) {
+            throw new Error(`Error setting up non-fungible token metadata for non-fungible token transfer: ${composedErrorMessage}`);
+        }
 
         return !updatedMetadata.nfTokenMetadata.isEmpty ? updatedMetadata : undefined;
     }
