@@ -307,17 +307,17 @@ export class TransferNFTokenTransaction {
             if (ccMetadata) {
                 // Handle metadata to be sent along with non-fungible token transfer transaction
                 this.ccTransact.setCcMetadata(ccMetadata);
+            }
 
-                // Pre-allocate multi-signature signee address
-                const multiSigSigneeAddr = this.nfTokenTransfer.sendingDevice.client.ctnNode.multiSigSigneeAddr.newAddressKeys().getAddress();
+            // Pre-allocate multi-signature signee address
+            const multiSigSigneeAddr = this.nfTokenTransfer.sendingDevice.client.ctnNode.multiSigSigneeAddr.newAddressKeys().getAddress();
 
-                // Assemble Colored Coins transaction
-                this.ccTransact.assemble(multiSigSigneeAddr, this.nfTokenTransfer.updateTransferProgress.bind(this.nfTokenTransfer, 0));
+            // Assemble Colored Coins transaction
+            this.ccTransact.assemble(multiSigSigneeAddr, this.nfTokenTransfer.updateTransferProgress.bind(this.nfTokenTransfer, 0));
 
-                if (!this.ccTransact.includesMultiSigOutput) {
-                    // Revert pre-allocated multi-signature signee address
-                    BaseBlockchainAddress.revertAddress(multiSigSigneeAddr);
-                }
+            if (!this.ccTransact.includesMultiSigOutput) {
+                // Revert pre-allocated multi-signature signee address
+                BaseBlockchainAddress.revertAddress(multiSigSigneeAddr);
             }
 
             // Finalize transaction
