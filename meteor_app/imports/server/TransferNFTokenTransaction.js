@@ -52,13 +52,24 @@ export class TransferNFTokenTransaction {
         input: util.format('^(?:%s)(?:%s)*$',
             Transaction.ioToken.p2_dev_asst_addr.token,
             Transaction.ioToken.p2_sys_pay_tx_exp_addr.token),
-        output: util.format('^(?:(?:%s)(?:%s)(?:%s){1,2}(?:%s))?(?:%s)(?:%s){1,2}(?:%s)?$',
+        output: util.format('^(?:(?:(?:%s)(?:%s)(?:%s){1,2}(?:%s))?(?:%s)(?:%s){1,2}(?:%s)?|(?:%s){2}(?:(?:%s)(?:%s)(?:%s){1,2}(?:%s))?(?:%s)(?:%s)?)$',
+            // No Colored Coins range payment outputs (sub-pattern before the pipe ('|') character)
             Transaction.ioToken.multisig_start.token,
             Transaction.ioToken.p2_sys_msig_sign_addr.token,
             Transaction.ioToken.p2_unknown_addr.token,
             Transaction.ioToken.multisig_end.token,
             Transaction.ioToken.null_data.token,
             Transaction.ioToken.p2_dev_asst_addr.token,
+            Transaction.ioToken.p2_sys_pay_tx_exp_addr.token,
+            // With Colored Coins range payment outputs (sub-pattern after the pipe ('|') character). NOTE: this is for
+            //  a special case where the non-fungible token being transferred is the first of two non-fungible tokens
+            //  held by a UTXO
+            Transaction.ioToken.p2_dev_asst_addr.token,
+            Transaction.ioToken.multisig_start.token,
+            Transaction.ioToken.p2_sys_msig_sign_addr.token,
+            Transaction.ioToken.p2_unknown_addr.token,
+            Transaction.ioToken.multisig_end.token,
+            Transaction.ioToken.null_data.token,
             Transaction.ioToken.p2_sys_pay_tx_exp_addr.token)
     });
 
@@ -445,20 +456,36 @@ export class TransferNFTokenTransaction {
                 //      result above already guarantees it
                 const sendDevAssetAddr = getAddrAndAddrInfo(ccTransact.getInputAt(0));
 
-                let nextOutPos = ccTransact.includesMultiSigOutput ? 2 : 1;
-                const receiveDevOutput = ccTransact.getOutputAt(nextOutPos++);
-                const receiveDevAssetAddr = getAddrAndAddrInfo(receiveDevOutput.payInfo);
-
-                const nextOutput = ccTransact.getOutputAt(nextOutPos);
+                let receiveDevOutput;
+                let receiveDevAssetAddr;
                 let returnSendDevOutput;
                 let sendDevAssetAddrReturn;
+                const numOutputsBeforeNullData = ccTransact.numPayOutputsBeforeNullData;
 
-                if (nextOutput) {
-                    const outputAddr = getAddrAndAddrInfo(nextOutput.payInfo);
+                if (numOutputsBeforeNullData === 2) {
+                    // Using range outputs. Both receiving token output and return token output
+                    //  are before the nulldata output
+                    receiveDevOutput = ccTransact.getOutputAt(0);
+                    receiveDevAssetAddr = getAddrAndAddrInfo(receiveDevOutput.payInfo);
+                    returnSendDevOutput = ccTransact.getOutputAt(1);
+                    sendDevAssetAddrReturn = getAddrAndAddrInfo(returnSendDevOutput.payInfo)
+                }
+                else {
+                    // All outputs are after the nulldata output. Look for them
+                    let nextOutPos = ccTransact.getNullDataOutputPosition();
 
-                    if (outputAddr.addrInfo.type === KeyStore.extKeyType.dev_asst_addr.name) {
-                        returnSendDevOutput = nextOutput;
-                        sendDevAssetAddrReturn = outputAddr;
+                    receiveDevOutput = ccTransact.getOutputAt(++nextOutPos);
+                    receiveDevAssetAddr = getAddrAndAddrInfo(receiveDevOutput.payInfo);
+
+                    const nextOutput = ccTransact.getOutputAt(++nextOutPos);
+
+                    if (nextOutput) {
+                        const outputAddr = getAddrAndAddrInfo(nextOutput.payInfo);
+
+                        if (outputAddr.addrInfo.type === KeyStore.extKeyType.dev_asst_addr.name) {
+                            returnSendDevOutput = nextOutput;
+                            sendDevAssetAddrReturn = outputAddr;
+                        }
                     }
                 }
 
