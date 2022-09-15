@@ -69,7 +69,7 @@
     "lokijs": "^1.5.12",
     "meteor-node-stubs": "^1.0.3",
     "moment": "^2.29.4",
-    "moment-timezone": "^0.5.33",
+    "moment-timezone": "^0.5.37",
     "openssl-wrapper": "^0.3.4",
     "otplib": "^11.0.1",
     "quill-delta": "^4.2.2",
