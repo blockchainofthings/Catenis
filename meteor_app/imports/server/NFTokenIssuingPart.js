@@ -288,17 +288,9 @@ function isValidIndex(val) {
  * @return {boolean}
  */
 function hasContentsInPreviousBatch(nfTokenIssuingBatch, index) {
-    // Get database doc/rec of previous batch
-    const docPrevBatch = Catenis.db.collection.NonFungibleTokenIssuingBatch.findOne({
-        nonFungibleAssetIssuance_id: nfTokenIssuingBatch.nonFungibleAssetIssuance_id,
-        order: nfTokenIssuingBatch.order - 1
-    }, {
-        fields: {
-            _id: 1
-        }
-    });
+    const prevBatchDocId = nfTokenIssuingBatch.previousBatchDocId;
 
-    if (!docPrevBatch) {
+    if (!prevBatchDocId) {
         Catenis.logger.ERROR('Previous non-fungible token issuing batch not found', {
             nfTokenIssuingBatch
         });
@@ -306,7 +298,7 @@ function hasContentsInPreviousBatch(nfTokenIssuingBatch, index) {
     }
 
     return !!Catenis.db.collection.NonFungibleTokenIssuingPart.findOne({
-        nonFungibleTokenIssuingBatch_id: docPrevBatch._id,
+        nonFungibleTokenIssuingBatch_id: prevBatchDocId,
         index,
         contents: {
             $ne: null

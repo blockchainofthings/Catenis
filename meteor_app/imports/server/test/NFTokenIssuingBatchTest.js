@@ -340,6 +340,40 @@ describe('NFTokenIssuingBatch module', function () {
 
         before(function () {
             // Simulate an existing non-fungible asset issuance with a single batch
+            Catenis.db.collection.NonFungibleTokenIssuingPart.insert({
+                _id: '123461',
+                nonFungibleTokenIssuingBatch_id: '123451',
+                index: 0,
+                metadata: {
+                    name: 'Test NFT #1',
+                    description: 'Non-fungible token #1 used for testing'
+                },
+                contents: new Uint8Array(Buffer.from('NFT #1 contents')),
+                createdDate: new Date()
+            });
+            Catenis.db.collection.NonFungibleTokenIssuingPart.insert({
+                _id: '123462',
+                nonFungibleTokenIssuingBatch_id: '123451',
+                index: 1,
+                metadata: {
+                    name: 'Test NFT #2',
+                    description: 'Non-fungible token #2 used for testing'
+                },
+                contents: new Uint8Array(Buffer.from('NFT #2 contents')),
+                createdDate: new Date()
+            });
+            Catenis.db.collection.NonFungibleTokenIssuingPart.insert({
+                _id: '123463',
+                nonFungibleTokenIssuingBatch_id: '123451',
+                index: 2,
+                metadata: {
+                    name: 'Test NFT #3',
+                    description: 'Non-fungible token #3 used for testing'
+                },
+                contents: new Uint8Array(Buffer.from('NFT #3 contents')),
+                createdDate: new Date()
+            });
+
             Catenis.db.collection.NonFungibleTokenIssuingBatch.insert({
                 _id: '123451',
                 nfTokenIssuingBatchId: 'abcdef1',
