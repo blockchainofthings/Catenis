@@ -608,10 +608,6 @@ export class NFAssetIssuance {
                 error.code = 400;
                 error.message = 'Non-fungible asset issuance is already complete';
             }
-            else if (err.error === 'nf_asset_issue_invalid_cont_token' || err.error === 'nf_asset_issue_wrong_device') {
-                error.code = 400;
-                error.message = 'Invalid or unexpected asset issuance continuation token';
-            }
             else if (err.error === 'nft_issue_batch_wrong_num_tokens') {
                 error.code = 400;
                 error.message = 'Inconsistent number of non-fungible tokens';
