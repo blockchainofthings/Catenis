@@ -347,6 +347,9 @@ export function reissueNonFungibleAsset() {
                         || err.error === 'nf_asset_issue_wrong_asset' || err.error === 'nf_asset_issue_wrong_device') {
                     error = errorResponse.call(this, 400, 'Invalid or unexpected asset issuance continuation token');
                 }
+                else if (err.error === 'nf_asset_issue_timeout') {
+                    error = errorResponse.call(this, 400, 'Asset issuance timed out');
+                }
                 else if (err.error === 'nft_issue_batch_wrong_num_tokens') {
                     error = errorResponse.call(this, 400, 'Inconsistent number of non-fungible tokens');
                 }

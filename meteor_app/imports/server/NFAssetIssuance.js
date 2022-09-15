@@ -37,7 +37,7 @@ import { Util } from './Util';
 const nfAssetIssuanceConfig = config.get('nfAssetIssuance');
 
 // Configuration settings
-const cfgSettings = {
+export const cfgSettings = {
     defaultNFAssetDescription: nfAssetIssuanceConfig.get('defaultNFAssetDescription'),
     timeContinueIssuance: nfAssetIssuanceConfig.get('timeContinueIssuance'),
     timeKeepIncompleteIssuance: nfAssetIssuanceConfig.get('timeKeepIncompleteIssuance'),
@@ -1137,12 +1137,15 @@ export class NFAssetIssuance {
      * @return {NFAssetIssuance}
      */
     static getNFAssetIssuanceByContinuationToken(continuationToken, deviceId, assetId, preloadNFTContents = false) {
+        const refMoment = moment();
+
         // Get corresponding non-fungible token issuing batch doc/rec
         const docNFTokenIssuingBatch = Catenis.db.collection.NonFungibleTokenIssuingBatch.findOne({
             nfTokenIssuingBatchId: continuationToken
         }, {
             fields: {
-                nonFungibleAssetIssuance_id: 1
+                nonFungibleAssetIssuance_id: 1,
+                createdDate: 1
             }
         });
 
@@ -1178,6 +1181,12 @@ export class NFAssetIssuance {
             if (deviceId !== nfAssetIssuance.deviceId) {
                 throw new Meteor.Error('nf_asset_issue_wrong_device', 'Non-fungible asset issuance belongs to a different device');
             }
+        }
+
+        // Make sure that asset issuance may still be continued
+        if (refMoment.diff(docNFTokenIssuingBatch.createdDate, 'seconds', true)
+                > cfgSettings.timeContinueIssuance) {
+            throw new Meteor.Error('nf_asset_issue_timeout', 'Too much time has passed before continuing with non-fungible asset issuance');
         }
 
         return nfAssetIssuance;

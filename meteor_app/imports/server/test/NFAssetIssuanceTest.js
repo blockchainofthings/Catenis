@@ -19,7 +19,10 @@ import _und from 'underscore';
 
 // References code in other (Catenis) modules
 import { Catenis } from '../Catenis';
-import { NFAssetIssuance } from '../NFAssetIssuance';
+import {
+    NFAssetIssuance,
+    cfgSettings as nfAssetIssuanceCfgSettings
+} from '../NFAssetIssuance';
 import { NFTokenContentsUrl } from '../NFTokenContentsUrl';
 import { EccLibraryProxy } from '../EccLibraryProxy';
 import { Bip32 } from '../Bip32';
@@ -633,6 +636,43 @@ describe('NFAssetIssuance module', function () {
                 NFAssetIssuance.getNFAssetIssuanceByContinuationToken(firstContinuationToken, 'd00003', 'a00001');
             })
             .to.throw('Non-fungible asset issuance is not for the expected operation');
+        });
+
+        it('should fail retrieving non-fungible asset issuance by continuation token (issuance timeout)', function () {
+            // Simulate that issuance started a long time ago
+            const docNFTokenIssuingBatch = Catenis.db.collection.NonFungibleTokenIssuingBatch.findOne({
+                nfTokenIssuingBatchId: firstContinuationToken
+            }, {
+                fields: {
+                    _id: 1,
+                    createdDate: 1
+                }
+            });
+
+            const tweakedCreatedDate = new Date(docNFTokenIssuingBatch.createdDate);
+            tweakedCreatedDate.setSeconds(tweakedCreatedDate.getSeconds() - (nfAssetIssuanceCfgSettings.timeContinueIssuance + 1));
+
+            Catenis.db.collection.NonFungibleTokenIssuingBatch.update({
+                _id: docNFTokenIssuingBatch._id
+            }, {
+                $set: {
+                    createdDate: tweakedCreatedDate
+                }
+            });
+
+            expect(() => {
+                NFAssetIssuance.getNFAssetIssuanceByContinuationToken(firstContinuationToken, 'd00001');
+            })
+            .to.throw('Too much time has passed before continuing with non-fungible asset issuance');
+
+            // Reset createdDate for first batch of asset issuance
+            Catenis.db.collection.NonFungibleTokenIssuingBatch.update({
+                _id: docNFTokenIssuingBatch._id
+            }, {
+                $set: {
+                    createdDate: docNFTokenIssuingBatch.createdDate
+                }
+            });
         });
 
         it('should successfully retrieve non-fungible asset issuance by continuation token', function () {
