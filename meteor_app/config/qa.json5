@@ -6,7 +6,10 @@
       pubKey: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDKqZ82mcs8IQ+ZCkEkCKwkgW5hno7Rte2XNOKuwPYXNRDtkvIQiNbmy7wJBn7Fmq+mUsaZAtf++yYsD6vbgEz4/Q2+5qCnQIebUMP4JzoWRt+qJgIcS9HdKAt/j6hlVrLzb7AhV+jLBEZ+vv9Jj7x+MIWK0qTjvWngpWrvne4S1OtuDRXbH5TY+l0UqtqlyPD/P8or1evjx5RnmzMJSde0OghfbnwqfDgQIqIW+n+Ig5Df0MR4rrelCxzPodMvjXxB6+OcK8AAAJJ+AsRGzSS3rVnviDhxPcMOm3b2LWNehKgmTuIgg6VYLhGix/BdsfyXKxnoFDG4KyriKoaE+C+X"
     },
     environment: "development",
-    enableSelfRegistration: true,  // Indicates whether the UI should include a link from where the end user can register for a new Catenis account.
+    selfRegistration: {
+      enabled: true,  // Indicates whether the UI should include a link from where the end user can register for a new Catenis account
+      landingPage: null  // (optional) Absolute URL of an external web page to where the navigation is redirected right after the end user completes a self-registration (before e-mail verification is complete)
+    },
     twoFAForEndUsers: false,  // Indicates whether two-factor authentication should be made available for end users. Note that it is always available for admin users.
     testPrefix: "QA",  // (optional) A prefix used to differentiate non-production environments,
     cryptoNetwork: "regtest",  // Available values: 'bitcoin' (for Bitcoin's production blockchain), 'testnet' (for Bitcoin's test blockchain)

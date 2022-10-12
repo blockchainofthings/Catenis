@@ -35,12 +35,12 @@ Template.login.onCreated(function () {
 
     this.state.set('enableSelfRegistration', undefined);
 
-    Meteor.call('checkEnableSelfRegistration', (err, isSet) => {
+    Meteor.call('getSelfRegistrationSettings', (err, selfRegistration) => {
         if (err) {
-            console.log('Error calling \'checkEnableSelfRegistration\' remote procedure: ' + err);
+            console.log('Error calling \'getSelfRegistrationSettings\' remote procedure: ' + err);
         }
         else {
-            this.state.set('enableSelfRegistration', isSet);
+            this.state.set('enableSelfRegistration', selfRegistration.enabled);
         }
     });
 
@@ -108,7 +108,7 @@ Template.login.helpers({
             return "ACCOUNT REGISTRATION";
         }
         else if (state === 'resendVerificationEmail') {
-            return 'VERIFICATION EMAIL';
+            return 'VERIFY EMAIL';
         }
         else if (state === 'verifyEmail') {
             return 'EMAIL VERIFICATION';

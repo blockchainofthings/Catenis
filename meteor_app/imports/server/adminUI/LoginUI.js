@@ -80,8 +80,8 @@ LoginUI.initialize = function () {
                 throw new Meteor.Error('login.verifyReCaptcha', 'Failure while verifying reCAPTCHA');
             }
         },
-        checkEnableSelfRegistration: function () {
-            return Catenis.application.enableSelfRegistration;
+        getSelfRegistrationSettings: function () {
+            return Catenis.application.selfRegistration;
         }
     });
 

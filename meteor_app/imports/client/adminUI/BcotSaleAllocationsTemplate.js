@@ -150,14 +150,14 @@ Template.bcotSaleAllocations.onCreated(function () {
     this.state.set('selfRegBcotSaleSku', undefined);
     this.state.set('initFinalized', false);
 
-    Meteor.call('checkEnableSelfRegistration', (err, isSet) => {
+    Meteor.call('getSelfRegistrationSettings', (err, selfRegistration) => {
         if (err) {
-            console.log('Error calling \'checkEnableSelfRegistration\' remote procedure: ' + err);
+            console.log('Error calling \'getSelfRegistrationSettings\' remote procedure: ' + err);
         }
         else {
-            this.state.set('selfRegistrationEnabled', isSet);
+            this.state.set('selfRegistrationEnabled', selfRegistration.enabled);
 
-            if (isSet) {
+            if (selfRegistration.enabled) {
                 this.availableSelfRegBcotSaleSubs = this.subscribe('availableSelfRegBcotSale');
 
                 Meteor.call('getSelfRegistrationBcotSaleProduct', (err, sku) => {

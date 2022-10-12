@@ -149,7 +149,7 @@ AccountsTemplates.configure({
             resetPwd: 'Reset Password',
             signIn: 'Sign In',
             signUp: 'Create Account',
-            resendVerificationEmail: 'Resend Email'
+            resendVerificationEmail: 'Resend Verification Email'
         },
         info: {
             signUpVerifyEmail: 'Pending email verification. To complete the registration, please check your email and follow the instructions.',
@@ -190,9 +190,18 @@ AccountsTemplates.configureRoute('verifyEmail', {
 
 // Set up 'signUp' route only if required
 if (Meteor.settings.public.catenis && Meteor.settings.public.catenis.enableSelfRegistration) {
-    // Set up signUp route
+    // Set up a route for Sign-Up
     AccountsTemplates.configureRoute('signUp', {
         path: '/register',
+        template: 'login',
+        redirect: function () {
+            redirectHome();
+        }
+    });
+
+    // And also set up a route for Resend E-mail Verification
+    AccountsTemplates.configureRoute('resendVerificationEmail', {
+        path: '/verifyemail',
         template: 'login',
         redirect: function () {
             redirectHome();
@@ -640,6 +649,16 @@ function onSubmitFunc(error, state) {
 
             // Enable form fields
             checkDisableFields(false);
+
+            // Redirect to an external landing page if defined
+            getSelfRegistrationSettings((err, selfRegistration) => {
+                if (err) {
+                    console.error('Error retrieving self-registration settings:', err);
+                }
+                else if (selfRegistration.landingPage) {
+                    document.location = selfRegistration.landingPage;
+                }
+            });
         }
         else if (state === 'enrollAccount') {
             // Client account successfully enrolled. Activate client
@@ -705,6 +724,27 @@ function checkDisableFields(disable) {
     }
 }
 
+function getSelfRegistrationSettings(callback) {
+    let savedSelfRegistration = AccountsTemplates.state.form.get('selfRegistration');
+
+    if (!savedSelfRegistration) {
+        // Retrieve self-registration settings
+        Meteor.call('getSelfRegistrationSettings', (error, selfRegistration) => {
+            if (error) {
+                callback(new Error('Error calling \'getSelfRegistrationSettings\' remote method: ' + error));
+            }
+            else {
+                // Save self-registration settings
+                AccountsTemplates.state.form.set('selfRegistration', selfRegistration);
+                callback(null, selfRegistration);
+            }
+        });
+    }
+    else {
+        callback(null, savedSelfRegistration);
+    }
+}
+
 function onSignUp(password, options, callback) {
     // Add local time zone to options.
     //  NOTE: we do it right now to avoid doing it in a closure (inner callback) and
@@ -712,14 +752,14 @@ function onSignUp(password, options, callback) {
     options.time_zone = moment.tz.guess();
 
     // Make sure that account registration is enabled
-    Meteor.call('checkEnableSelfRegistration', (err, isSet) => {
+    getSelfRegistrationSettings((err, selfRegistration) => {
         if (err) {
-            console.log('Error calling \'checkEnableSelfRegistration\' remote procedure: ' + err);
+            console.error('Error retrieving self-registration settings:', err);
 
             // Pass error back
-            callback(new Meteor.Error(403, 'Something went wrong. Account registration is not enabled.'));
+            callback(new Meteor.Error(403, 'Something went wrong. Account registration cannot be enabled.'));
         }
-        else if (isSet) {
+        else if (selfRegistration.enabled) {
             // Account registration enabled. Proceed with regular processing...
 
             // Disable form fields

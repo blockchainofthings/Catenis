@@ -9,7 +9,10 @@
       pubKey: ""
     },
     "environment": "production",
-    enableSelfRegistration: false,  // Indicates whether the UI should include a link from where the end user can register for a new Catenis account.
+    selfRegistration: {
+      enabled: false,  // Indicates whether the UI should include a link from where the end user can register for a new Catenis account
+      landingPage: null  // (optional) Absolute URL of an external web page to where the navigation is redirected right after the end user completes a self-registration (before e-mail verification is complete)
+    },
     twoFAForEndUsers: true,  // Indicates whether two-factor authentication should be made available for end users. Note that it is always available for admin users.
     testPrefix: null,  // (optional) A prefix used to differentiate non-production environments
     masterSeed: "????",  // Base64 encoded, ciphered Catenis master seed

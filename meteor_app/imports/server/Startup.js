@@ -256,7 +256,7 @@ Meteor.startup(function () {
             NFTokenRetrieval.initialize();
             NFTokenTransfer.initialize();
 
-            if (Catenis.application.enableSelfRegistration) {
+            if (Catenis.application.selfRegistration.enabled) {
                 SelfRegistrationBcotSale.initialize();
             }
 

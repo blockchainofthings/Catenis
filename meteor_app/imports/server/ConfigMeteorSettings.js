@@ -24,6 +24,6 @@ import { Meteor } from 'meteor/meteor';
 Meteor.settings.public.catenis = {
     ...Meteor.settings.public.catenis,
     ...{
-        enableSelfRegistration: config.get('application.enableSelfRegistration')
+        enableSelfRegistration: config.get('application.selfRegistration.enabled')
     }
 };

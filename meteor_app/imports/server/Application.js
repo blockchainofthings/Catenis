@@ -49,7 +49,10 @@ const cfgSettings = {
         pubKey: appConfig.get('ctnNode.pubKey')
     },
     environment: appConfig.get('environment'),
-    enableSelfRegistration: appConfig.get('enableSelfRegistration'),
+    selfRegistration: {
+        enabled: appConfig.get('selfRegistration.enabled'),
+        landingPage: appConfig.get('selfRegistration.landingPage'),
+    },
     twoFAForEndUsers: appConfig.get('twoFAForEndUsers'),
     masterSeed: appConfig.get('masterSeed'),
     commonSeed: appConfig.get('commonSeed'),
@@ -133,9 +136,9 @@ export function Application(legacyDustFunding = false) {
             },
             enumerable: true
         },
-        enableSelfRegistration: {
+        selfRegistration: {
             get: function () {
-                return cfgSettings.enableSelfRegistration;
+                return cfgSettings.selfRegistration;
             },
             enumerable: true
         },
