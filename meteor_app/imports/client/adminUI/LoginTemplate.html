@@ -3,8 +3,32 @@
     <p style="color:lightgray; margin:1em 1em">Loading...</p>
 {{else}}
     <div class="container">
-        <div class="row paddingTop90px">
-            <div class="col-md-6 col-md-offset-3">
+        <div class="row hidden-sm hidden-xs" style="padding:2em"></div>
+        <div class="row" style="margin-top:2em">
+            {{#if isAccountRegistration}}
+            <div class="col-md-6 hidden-sm hidden-xs">
+                <div class="catenis-newaccount">
+                    <p style="margin-bottom: 1.5em"><b>BLOCKCHAIN ENABLE YOUR APPS</b></p>
+                    <ul>
+                        <li>Easily connect with the Bitcoin blockchain</li>
+                        <li>Drag-n-drop tools &amp; web service APIs</li>
+                        <li>Log content of any size/type to IPFS</li>
+                        <li>Mint NFTs &amp; fungible tokens</li>
+                        <li>Reduce tx costs to cents</li>
+                        <li>Build using any dev language</li>
+                        <li>Send content of any size/type</li>
+                        <li>Encrypt content logged or sent</li>
+                        <li>Encrypt NFT data &amp; meta-data</li>
+                        <li>Robust notification services</li>
+                        <li>Track minted &amp; transferred assets (tokens)</li>
+                        <li>Export assets to other blockchains</li>
+                    </ul>
+                    <p style="margin-top:1em">Discover all the robust functionality Catenis provides with these services and much more.</p>
+                    <p style="margin-bottom: 1.5em"><b>Create an account today!</b></p>
+                </div>
+            </div>
+            {{/if}}
+            <div class="col-md-6 {{#unless isAccountRegistration}}col-md-offset-3{{/unless}}">
                 <div class="panel panel-login">
                 {{#unless clearForm}}
                     <div class="panel-body" style="margin-bottom:1rem">
@@ -50,7 +74,7 @@
                             {{/if}}
 
                             <!--4. Account registration page-->
-                            {{#if (equals atFormTitle "ACCOUNT REGISTRATION")}}
+                            {{#if (equals atFormTitle "CREATE A FREE ACCOUNT")}}
                                 <div class="col-xs-6 tabs">
                                     <div class="bottom-line"><a href="#" id="login-form-link">Sign in</a></div>
                                 </div>

@@ -46,6 +46,23 @@ Accounts.config({
 // Change accounts templates settings
 const emailField = AccountsTemplates.removeField('email');
 const pwdField = AccountsTemplates.removeField('password');
+emailField.placeholder = {
+    signUp: 'Email *'
+};
+pwdField.placeholder = {
+    signUp: 'Password *'
+};
+
+if (Meteor.isClient) {
+    Meteor.startup(function () {
+        Meteor.setTimeout(() => {
+            const pwdAgainField = AccountsTemplates.getField('password_again');
+            pwdAgainField.placeholder = {
+                signUp: 'Password (again) *'
+            };
+        }, 100);
+    });
+}
 
 AccountsTemplates.addFields([
     {
@@ -59,7 +76,9 @@ AccountsTemplates.addFields([
         _id: 'last_name',
         type: 'text',
         displayName: 'Last name',
-        placeholder: 'Last name',
+        placeholder: {
+            signUp: 'Last name *'
+        },
         required: true,
     },
     {
@@ -72,6 +91,9 @@ AccountsTemplates.addFields([
         _id: 'username',
         type: 'text',
         displayName: 'Username',
+        placeholder: {
+            signUp: 'Username *'
+        },
         required: true,
         minLength: 5,
     },
@@ -120,6 +142,7 @@ AccountsTemplates.configure({
     overrideLoginErrors: true,
     enforceEmailVerification: true,
     sendVerificationEmail: true,
+    confirmPassword: true,
 
     hideSignInLink: true,
     hideSignUpLink: true,

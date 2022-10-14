@@ -95,6 +95,9 @@ Template.login.events({
 });
 
 Template.login.helpers({
+    isAccountRegistration() {
+        return AccountsTemplates.getState() === 'signUp';
+    },
     atFormTitle() {
         const state = AccountsTemplates.getState();
 
@@ -105,7 +108,7 @@ Template.login.helpers({
             return "REQUEST PASSWORD RESET";
         }
         else if (state === 'signUp') {
-            return "ACCOUNT REGISTRATION";
+            return "CREATE A FREE ACCOUNT";
         }
         else if (state === 'resendVerificationEmail') {
             return 'VERIFY EMAIL';
@@ -127,10 +130,6 @@ Template.login.helpers({
         let instruction;
 
         switch (AccountsTemplates.getState()) {
-            case 'signUp':
-                instruction = 'Fill in the form to create a new account';
-                break;
-
             case 'enrollAccount':
                 instruction = 'Set the password to active your account';
                 break;

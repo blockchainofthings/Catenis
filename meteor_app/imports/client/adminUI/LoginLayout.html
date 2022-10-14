@@ -5,10 +5,18 @@
     {{#if isNonProdEnvironment appEnvironment}}
         <div class="envHeader">{{capitalize appEnvironment}}</div>
     {{/if}}
-    <div style="position:relative; top:30px; text-align:center">
-        <a id="lnkCtnTitle" href="#" style="text-decoration:none">
-            <h1>Catenis</h1>
-        </a>
+    <div class="container" style="position:relative; top:10px; padding:10px 10px 0 10px">
+        <div class="row">
+            <div class="col-md-6 col-lg-offset-1">
+                <a class="bcot-logo" href="https://blockchainofthings.com"><img class="bcot-logo" alt="BCoT Logo" src="images/BlockchainofthingsLogo.svg"></a>
+            </div>
+        </div>
+    </div>
+    <div style="text-align:center">
+        <h1 class="catenis-heading">
+            <a id="lnkCtnTitle" href="#">Catenis</a>
+        </h1>
+        <p class="catenis-subheading">Bitcoin Blockchain Integration Made Easy</p>
     </div>
     {{#unless Template.subscriptionsReady}}
         <div style="text-align:center">
