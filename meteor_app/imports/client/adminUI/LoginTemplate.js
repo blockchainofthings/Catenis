@@ -74,6 +74,13 @@ Template.login.events({
         );
 
         AccountsTemplates.setState('signUp');
+
+        // Trigger Google Analytics tracking for Account Registration form if enabled
+        if (typeof gtag === 'function') {
+            gtag('event', 'conversion', {
+                'send_to': 'AW-804580870/NzqqCMyhwuADEIbc0_8C'
+            });
+        }
     },
     'click #resend-verify_email-form-link'(event, template) {
         // Clear indication that verification e-mail has been sent

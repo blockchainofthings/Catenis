@@ -21,9 +21,8 @@ import { ReactiveDict } from 'meteor/reactive-dict';
 // Import template UI
 import './LoginLayout.html';
 
-// Import dependent templates
-//import './enrollAccount.js';
-//import './resetPwd.js';
+// References code in other (Catenis) modules on the client
+import { activateGTag } from './GoogleAnalytics';
 
 
 // Definition of module (private) functions
@@ -46,6 +45,46 @@ function redirectHome() {
     return redirected;
 }
 
+const remoteProps = [
+    'appEnv',
+    'selfRegistration'
+];
+
+/**
+ * Checks whether all remote properties have already been loaded
+ * @param {Object} template
+ * @returns {boolean}
+ */
+function allRemotePropsLoaded(template) {
+    return remoteProps.every(prop => template.state.get(prop) !== undefined);
+}
+
+/**
+ * Checks whether Catenis is running on a public environment
+ * @param {Object} template
+ * @returns {boolean}
+ */
+function isPublicEnvironment(template) {
+    let env = template.state.get('appEnv');
+    env = env && env.toLowerCase();
+
+    return env === 'sandbox' || env === 'production';
+}
+
+/**
+ * Conditionally activate Google Analytics
+ * @param {Object} template
+ */
+function checkActivateGA(template) {
+    if (allRemotePropsLoaded(template)) {
+        const selfRegistration = template.state.get('selfRegistration');
+
+        if (selfRegistration && selfRegistration.enabled && isPublicEnvironment(template)) {
+            activateGTag();
+        }
+    }
+}
+
 
 // Module code
 //
@@ -61,6 +100,21 @@ Template.loginLayout.onCreated(function () {
         }
         else {
             this.state.set('appEnv', env);
+
+            checkActivateGA(this);
+        }
+    });
+
+    this.state.set('selfRegistration', undefined);
+
+    Meteor.call('getSelfRegistrationSettings', (err, selfRegistration) => {
+        if (err) {
+            console.log('Error calling \'getSelfRegistrationSettings\' remote procedure: ' + err);
+        }
+        else {
+            this.state.set('selfRegistration', selfRegistration);
+
+            checkActivateGA(this);
         }
     });
 
@@ -87,12 +141,26 @@ Template.loginLayout.helpers({
     appEnvironment() {
         return Template.instance().state.get('appEnv');
     },
+    selfRegistration() {
+        return Template.instance().state.get('selfRegistration');
+    },
     isNonProdEnvironment(env) {
         return env && env.toLowerCase() !== 'production';
     },
     capitalize(str) {
         if (str) {
             return str.substr(0, 1).toUpperCase() + str.substr(1);
+        }
+    },
+    logicalAnd(...ops) {
+        if (ops.length > 0) {
+            // Get rid of the last parameter (keyword arguments dictionary)
+            ops.pop();
+
+            return ops.every(v => !!v);
+        }
+        else {
+            return false;
         }
     }
 });

@@ -1,5 +1,7 @@
 <template name="loginLayout">
-{{#unless appEnvironment}}
+<!-- Load Google Analytics library -->
+<script src="//www.googletagmanager.com/gtag/js?id=UA-78946289-1" data-cfasync="false" data-wpfc-render="false" async></script>
+{{#unless logicalAnd appEnvironment selfRegistration}}
     <p style="color:lightgray; margin:1em 1em">Loading...</p>
 {{else}}
     {{#if isNonProdEnvironment appEnvironment}}
