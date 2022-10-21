@@ -256,9 +256,11 @@ NotificationTemplatesUI.initialize = function () {
             if (Roles.userIsInRole(this.userId, 'sys-admin')) {
                 try {
                     // Compose UI notification message for the Catenis user
-                    return UINotification.getUINotificationByDocId(uiNotification_id).composeMessageForUser(user_id, {
+                    const uiNotification = UINotification.getUINotificationByDocId(uiNotification_id)
+
+                    return uiNotification.composeMessageForUser(user_id, {
                         uiMessage: true,
-                        emailMessage: true
+                        emailMessage: uiNotification.sendViaEmail
                     });
                 }
                 catch (err) {
