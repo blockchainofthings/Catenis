@@ -72,17 +72,37 @@ function isPublicEnvironment(template) {
 }
 
 /**
- * Conditionally activate Google Analytics
+ * Conditionally activate and trigger Google Analytics
  * @param {Object} template
  */
-function checkActivateGA(template) {
+function checkActivateAndTriggerGA(template) {
     if (allRemotePropsLoaded(template)) {
         const selfRegistration = template.state.get('selfRegistration');
 
         if (selfRegistration && selfRegistration.enabled && isPublicEnvironment(template)) {
             activateGTag();
+            triggerGA();
         }
     }
+}
+
+/**
+ * Triggers Google Analytics tracking for Account Registration form if enabled
+ */
+function triggerGA () {
+    if (typeof gtag === 'function') {
+        gtag('event', 'conversion', {
+            'send_to': 'AW-804580870/NzqqCMyhwuADEIbc0_8C'
+        });
+    }
+}
+
+/**
+ * Indicates whether this is the Account Registration page
+ * @returns {boolean}
+ */
+function isAccountRegistrationUrl() {
+    return /\/register\/?$/i.test(document.location.href);
 }
 
 
@@ -101,7 +121,9 @@ Template.loginLayout.onCreated(function () {
         else {
             this.state.set('appEnv', env);
 
-            checkActivateGA(this);
+            if (isAccountRegistrationUrl()) {
+                checkActivateAndTriggerGA(this);
+            }
         }
     });
 
@@ -114,7 +136,9 @@ Template.loginLayout.onCreated(function () {
         else {
             this.state.set('selfRegistration', selfRegistration);
 
-            checkActivateGA(this);
+            if (isAccountRegistrationUrl()) {
+                checkActivateAndTriggerGA(this);
+            }
         }
     });
 
