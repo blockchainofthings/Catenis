@@ -55,7 +55,7 @@ LicenseExpireRemindEmailNotify.prototype.send = function (clientLicense) {
         if (client && (clientEmailAddr = client.userAccountEmail)) {
             if (clientLicense.validity.endDate) {
                 this.emailNotify.send(clientEmailAddr, null, {
-                    username: client.userAccountUsername,
+                    userEmail: clientEmailAddr,
                     clientId: client.clientId,
                     validationEndDate: Util.startOfDayTimeZone(clientLicense.validity.endDate, client.timeZone, true).format('LLLL')
                 });

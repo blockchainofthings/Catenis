@@ -53,7 +53,7 @@ LicenseExpireEmailNotify.prototype.send = function (clientLicense) {
 
         if (client && (clientEmailAddr = client.userAccountEmail)) {
             this.emailNotify.send(clientEmailAddr, null, {
-                username: client.userAccountUsername,
+                userEmail: clientEmailAddr,
                 clientId: client.clientId
             });
         }

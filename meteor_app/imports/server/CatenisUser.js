@@ -51,7 +51,6 @@ export class CatenisUser {
                 _id: user_id
             }, {
                 fields: {
-                    username: 1,
                     emails: 1,
                     profile: 1
                 }
@@ -101,15 +100,7 @@ export class CatenisUser {
             let accountName;
 
             if (this.isClient) {
-                let contactName = this.client.props.firstName;
-
-                if (this.client.props.lastName) {
-                    if (contactName) {
-                        contactName += ' ';
-                    }
-
-                    contactName += this.client.props.lastName;
-                }
+                let contactName = this.client.contactFullName;
 
                 if (contactName) {
                     accountName = contactName;
@@ -121,8 +112,8 @@ export class CatenisUser {
                     accountName = this.client.props.name;
                 }
             }
-            else {
-                accountName = this.docUser.username;
+            else if (this.docUser.profile && this.docUser.profile.name) {
+                accountName = this.docUser.profile.name;
             }
 
             return accountName ? `${accountName} <${this.email}>` : this.email;
@@ -172,12 +163,12 @@ export class CatenisUser {
                 }
                 break;
             }
-            case 'user.username': {
+            case 'user.accName': {
                 if (this.isClient) {
-                    value = this.client.userAccountUsername;
+                    value = this.client.userAccountName;
                 }
                 else {
-                    value = this.docUser.username;
+                    value = this.docUser.profile && this.docUser.profile.name ? this.docUser.profile.name : '';
                 }
                 break;
             }
@@ -267,21 +258,7 @@ export class CatenisUser {
         }
         else {
             if (this.docUser.emails && this.docUser.emails.length > 0) {
-                let emailIdx = 0;
-
-                if (this.docUser.emails.length > 1) {
-                    // Has more than one e-mail address associated with it.
-                    //  Try to get first one that has already been verified
-                    emailIdx = this.docUser.emails.findIndex((email) => {
-                        return email.verified;
-                    });
-
-                    if (emailIdx < 0) {
-                        emailIdx = 0;
-                    }
-                }
-
-                this._email = this.docUser.emails[emailIdx].address;
+                this._email = this.docUser.emails[0].address;
             }
             else {
                 this._email = undefined;

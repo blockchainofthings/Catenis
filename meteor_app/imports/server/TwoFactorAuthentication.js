@@ -70,7 +70,6 @@ export class TwoFactorAuthentication {
         }, {
             fields: {
                 _id: 1,
-                username: 1,
                 emails: 1,
                 'services.twoFactorAuthentication': 1
             }
@@ -83,8 +82,7 @@ export class TwoFactorAuthentication {
 
         // Save user info
         this.user_id = user_id;
-        this.username = docUser.username;
-        this.userEmails = docUser.emails;
+        this.userEmail = Util.getUserEmail(docUser);
 
         if (docUser.services && docUser.services.twoFactorAuthentication) {
             this.secretGenKey = docUser.services.twoFactorAuthentication.secretGenKey;
@@ -105,7 +103,7 @@ export class TwoFactorAuthentication {
         // noinspection JSCheckFunctionSignatures
         return secretGenKey ? this.authenticator.encode(
             crypto.createHmac('sha512', secretGenKey)
-            .update('And here it is: the two-factor authentication secret for user' + this.username)
+            .update('And here it is: the two-factor authentication secret for user' + this.user_id)
             .digest()
             .slice(0, secretLength)
         ) : undefined;
@@ -165,7 +163,7 @@ export class TwoFactorAuthentication {
 
             return {
                 secret: secret,
-                authUri: this.authenticator.keyuri(this.username, getServiceName(), secret)
+                authUri: this.authenticator.keyuri(this.userEmail, getServiceName(), secret)
             };
         }
         else {
@@ -286,12 +284,11 @@ export class TwoFactorAuthentication {
     sendRecoveryCodeUsedNotifyEmail() {
         try {
             const email = new EmailNotify(cfgSettings.recoveryCode.usageNotifyEmail.emailName, cfgSettings.recoveryCode.usageNotifyEmail.fromAddress);
-            const userEmail = Util.getUserEmail({emails: this.userEmails});
 
-            const {token} = Accounts.generateResetToken(this.user_id, userEmail, 'resetPassword');
+            const {token} = Accounts.generateResetToken(this.user_id, this.userEmail, 'resetPassword');
             const url = Accounts.urls.resetPassword(token);
 
-            email.sendAsync(userEmail, null, {url: url}, (err) => {
+            email.sendAsync(this.userEmail, null, {url: url}, (err) => {
                 if (err) {
                     // Error sending notification e-mail. Just log error condition
                     Catenis.logger.ERROR('Error sending two-factor recovery code used notification e-mail.', err);
@@ -321,7 +318,7 @@ function getSecretGenKey() {
 
 function getRecoveryCode(index) {
     return this.recoveryCodeGenKey ? crypto.createHmac('sha512', this.recoveryCodeGenKey)
-        .update(util.format('And here it is: the recovery code #%d for user %s', index + 1, this.username))
+        .update(util.format('And here it is: the recovery code #%d for user %s', index + 1, this.user_id))
         .digest()
         .slice(0, Math.ceil(cfgSettings.recoveryCode.length / 2))
         .toString('hex')

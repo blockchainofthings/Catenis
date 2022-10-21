@@ -307,7 +307,7 @@ function patchQuillSnowTooltip() {
             '</select>',
             '<select class="ql-user-lookup">',
             '<option value=""></option>',
-            '<option value="username">Username</option>',
+            '<option value="accName">Account name</option>',
             '<option value="email">Email</option>',
             '</select>',
             '</span>',

@@ -6,8 +6,6 @@ The following Catenis client account has been activated:
 
   Account number: {!accountNumber}
 
-  Username: {!username}
-
   Contact name: {!contactName}
 
   Company: {!company}

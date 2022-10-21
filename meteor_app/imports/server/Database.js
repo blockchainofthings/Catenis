@@ -4235,7 +4235,7 @@ Database.migrateRoles = function () {
             Roles._forwardMigrate2();
         }
     }
-}
+};
 
 /**
  * Temporary method used to fix PaidServicesHistory collection: add missing 'servicesCost[].servicePrice' field,
@@ -4313,7 +4313,33 @@ Database.fixPaidServicesHistory = function () {
     if (numUpdatedDocs > 0) {
         Catenis.logger.INFO('****** Number of PaidServicesHistory DB collection docs updated to remove deprecated \'servicesCost[].finalServicePrice\' field: %d', numUpdatedDocs);
     }
-}
+};
+
+/**
+ * Temporary method used to fix users collection documents: remove username and clear two-factor authentication
+ */
+Database.fixUserAccounts = function () {
+    const userDocsToFix = Meteor.users.find(
+        {username: {$exists: true}},
+        {fields: {username: 1, emails: 1}}
+    )
+    .fetch();
+
+    if (userDocsToFix.length > 0) {
+        const usernames = userDocsToFix.map(doc => ({username: doc.username, email: doc.emails[0].address}));
+
+        const numUpdatedDocs = Meteor.users.update(
+            {_id: {$in: userDocsToFix.map(doc => doc._id)}},
+            {$unset: {username: 1, 'services.twoFactorAuthentication': 1}},
+            {multi: true}
+        );
+
+        if (numUpdatedDocs > 0) {
+            Catenis.logger.INFO('****** Number of users DB collection docs updated to remove username and clear two-factor authentication: %d', numUpdatedDocs);
+            Catenis.logger.INFO('******   Deleted usernames:', usernames);
+        }
+    }
+};
 
 
 // Module functions used to simulate private Database object methods

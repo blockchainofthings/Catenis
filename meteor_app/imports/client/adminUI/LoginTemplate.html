@@ -5,7 +5,7 @@
     <div class="container">
         <div class="row hidden-sm hidden-xs" style="padding:2em"></div>
         <div class="row" style="margin-top:2em">
-            {{#if isAccountRegistration}}
+        {{#if isAccountRegistration}}
             <div class="col-md-6 hidden-sm hidden-xs">
                 <div class="catenis-newaccount">
                     <p style="margin-bottom: 1.5em"><b>BLOCKCHAIN ENABLE YOUR APPS</b></p>
@@ -27,7 +27,7 @@
                     <p style="margin-bottom: 1.5em"><b>Create an account today!</b></p>
                 </div>
             </div>
-            {{/if}}
+        {{/if}}
             <div class="col-md-6 {{#unless isAccountRegistration}}col-md-offset-3{{/unless}}">
                 <div class="panel panel-login">
                 {{#unless clearForm}}
@@ -36,7 +36,7 @@
                             <div class="col-lg-12">
                                 <!--this is where the page title goes-->
                                 <h2>{{atFormTitle}}</h2>
-                                {{#unless verificationEmailSent}}
+                                {{#unless accRegistrationEmailSent}}
                                     <div class="instruction">{{atFormInstruction}}</div>
                                 {{/unless}}
                                 {{>atForm}}
@@ -78,9 +78,9 @@
                                 <div class="col-xs-6 tabs">
                                     <div class="bottom-line"><a href="#" id="login-form-link">Sign in</a></div>
                                 </div>
-                                {{#if verificationEmailSent}}
+                                {{#if accRegistrationEmailSent}}
                                 <div class="col-xs-6 tabs">
-                                    <div class="bottom-line"><a href="#" id="resend-verify_email-form-link">Resend Verification Email</a></div>
+                                    <div class="bottom-line"><a href="#" id="resend-acc_reg_email-form-link">Resend Email</a></div>
                                 </div>
                                 {{/if}}
                             {{/if}}

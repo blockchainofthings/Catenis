@@ -451,26 +451,18 @@ Template.clientDetails.helpers({
     clientTitle(client) {
         return client.props.name || client.clientId;
     },
-    clientUsername(user_id) {
-        const user = Meteor.users.findOne({_id: user_id});
-
-        return user ? user.username : undefined;
-    },
     clientContactName(client) {
-        let contactName = client.props.firstName;
+        let contactFullName = client.props.firstName || '';
 
         if (client.props.lastName) {
-            if (contactName) {
-                contactName += ' ';
-            }
-            else if (contactName === undefined) {
-                contactName = '';
+            if (contactFullName) {
+                contactFullName += ' ';
             }
 
-            contactName += client.props.lastName;
+            contactFullName += client.props.lastName;
         }
 
-        return contactName;
+        return contactFullName;
     },
     clientUserEmail(user_id) {
         const user = Meteor.users.findOne({_id: user_id});

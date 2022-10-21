@@ -61,9 +61,8 @@ const cfgSettings = {
     shutdownTimeout: appConfig.get('shutdownTimeout'),
     adminRole: appConfig.get('adminRole'),
     defaultAdminUser: {
-        username: appConfig.has('defaultAdminUser.username') ? appConfig.get('defaultAdminUser.username') : undefined,
-        psw: appConfig.has('defaultAdminUser.psw') ? appConfig.get('defaultAdminUser.psw') : undefined,
-        email: appConfig.has('defaultAdminUser.email') ? appConfig.get('defaultAdminUser.email') : undefined
+        email: appConfig.has('defaultAdminUser.email') ? appConfig.get('defaultAdminUser.email') : undefined,
+        psw: appConfig.has('defaultAdminUser.psw') ? appConfig.get('defaultAdminUser.psw') : undefined
     }
 };
 
@@ -305,21 +304,20 @@ Application.prototype.isOmniCoreRescanning = function () {
 
 // Note this method must be called ONLY AFTER the KeyStore module is initialized
 Application.prototype.checkAdminUser = function () {
-    if (Roles.getUsersInRole(cfgSettings.adminRole).count() === 0 && cfgSettings.defaultAdminUser.username && cfgSettings.defaultAdminUser.psw) {
+    if (Roles.getUsersInRole(cfgSettings.adminRole).count() === 0 && cfgSettings.defaultAdminUser.email && cfgSettings.defaultAdminUser.psw) {
         Catenis.logger.INFO('Creating default admin user');
         // No admin user defined. Create default admin user
-        this.createAdminUser(cfgSettings.defaultAdminUser.username, Catenis.decipherData(cfgSettings.defaultAdminUser.psw).toString(), cfgSettings.defaultAdminUser.email, 'Catenis default admin user');
+        this.createAdminUser(cfgSettings.defaultAdminUser.email, Catenis.decipherData(cfgSettings.defaultAdminUser.psw).toString(), 'Catenis default admin user');
     }
 };
 
-Application.prototype.createAdminUser = function (username, password, email, description) {
+Application.prototype.createAdminUser = function (email, password, description) {
     let adminUserId;
 
     try {
         adminUserId = Accounts.createUser({
-            username: username,
-            password: password,
             email: email,
+            password: password,
             profile: {
                 name: description
             }
@@ -331,18 +329,12 @@ Application.prototype.createAdminUser = function (username, password, email, des
         let errorToThrow;
 
         if ((err instanceof Meteor.Error) && err.error === 403) {
-            if (err.reason === 'Username already exists.') {
-                errorToThrow = new Meteor.Error('ctn_duplicate_username', 'Error creating new user: username already exists');
-            }
-            else if (err.reason === 'Email already exists.') {
+            if (err.reason === 'Email already exists.') {
                 errorToThrow = new Meteor.Error('ctn_duplicate_email', 'Error creating new user: email already exists');
             }
             else if (err.reason === 'Something went wrong. Please check your credentials.') {
                 // Generic credentials error. Try to identify what was wrong
-                if (username && Meteor.users.findOne({username: username}, {fields:{_id: 1}})) {
-                    errorToThrow = new Meteor.Error('ctn_duplicate_username', 'Error creating new user: username already exists');
-                }
-                else if (email && Meteor.users.findOne({emails: {$elemMatch: {address: email}}}, {fields:{_id: 1}})) {
+                if (email && Meteor.users.findOne({emails: {$elemMatch: {address: email}}}, {fields:{_id: 1}})) {
                     errorToThrow = new Meteor.Error('ctn_duplicate_email', 'Error creating new user: duplicate email address');
                 }
             }

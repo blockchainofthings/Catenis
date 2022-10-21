@@ -30,6 +30,7 @@ const cfgSettings = {
     fromAddress: accountsEmailConfig.get('fromAddress'),
     resetPasswordContents: accountsEmailConfig.get('resetPasswordContents'),
     enrollAccountContents: accountsEmailConfig.get('enrollAccountContents'),
+    enrollRegisteredAccountContents: accountsEmailConfig.get('enrollRegisteredAccountContents'),
     verifyEmailContents: accountsEmailConfig.get('verifyEmailContents')
 };
 
@@ -69,31 +70,54 @@ AccountsEmail.initialize = function () {
 
     // Account enrollment
     const enrollAccEmailContents = new EmailContents(cfgSettings.enrollAccountContents);
+    const enrollRegAccEmailContents = new EmailContents(cfgSettings.enrollRegisteredAccountContents);
 
     Accounts.emailTemplates.enrollAccount.subject = (user) => {
-        return enrollAccEmailContents.subject();
+        return user.profile && ('last_name' in user.profile) ? enrollRegAccEmailContents.subject() : enrollAccEmailContents.subject();
     };
 
-    Accounts.emailTemplates.enrollAccount.text = (user, url) => {
-        const client = Client.getClientByUserId(user._id);
+    function userContactName(user) {
+        return user.profile.first_name ? user.profile.first_name : user.profile.last_name;
+    }
 
-        return enrollAccEmailContents.textBody({
-            username: user.username,
-            accountNumber: client && client.props.accountNumber ? client.props.accountNumber : undefined,
-            licenseType: client && client.clientLicense && client.clientLicense.hasLicense() ? licenseName(client.clientLicense.license) : undefined,
-            url: url
-        });
+    Accounts.emailTemplates.enrollAccount.text = (user, url) => {
+        if (user.profile && ('last_name' in user.profile)) {
+            // Self-registered account (not yet associated with a Catenis client)
+            return enrollRegAccEmailContents.textBody({
+                contactName: userContactName(user),
+                url: url
+            });
+        }
+        else {
+            // User account already associated with a Catenis client
+            const client = Client.getClientByUserId(user._id);
+
+            return enrollAccEmailContents.textBody({
+                accountNumber: client && client.props.accountNumber ? client.props.accountNumber : undefined,
+                licenseType: client && client.clientLicense && client.clientLicense.hasLicense() ? licenseName(client.clientLicense.license) : undefined,
+                url: url
+            });
+        }
     };
 
     Accounts.emailTemplates.enrollAccount.html = (user, url) => {
-        const client = Client.getClientByUserId(user._id);
+        if (user.profile && ('last_name' in user.profile)) {
+            // Self-registered account (not yet associated with a Catenis client)
+            return enrollRegAccEmailContents.htmlBody({
+                contactName: userContactName(user),
+                url: url
+            });
+        }
+        else {
+            // User account already associated with a Catenis client
+            const client = Client.getClientByUserId(user._id);
 
-        return enrollAccEmailContents.htmlBody({
-            username: user.username,
-            accountNumber: client && client.props.accountNumber ? client.props.accountNumber : undefined,
-            licenseType: client && client.clientLicense && client.clientLicense.hasLicense() ? licenseName(client.clientLicense.license) : undefined,
-            url: url
-        });
+            return enrollAccEmailContents.htmlBody({
+                accountNumber: client && client.props.accountNumber ? client.props.accountNumber : undefined,
+                licenseType: client && client.clientLicense && client.clientLicense.hasLicense() ? licenseName(client.clientLicense.license) : undefined,
+                url: url
+            });
+        }
     };
 
     // Password reset
@@ -105,14 +129,12 @@ AccountsEmail.initialize = function () {
 
     Accounts.emailTemplates.resetPassword.text = (user, url) => {
         return resetPwdEmailContents.textBody({
-            username: user.username,
             url: url
         });
     };
 
     Accounts.emailTemplates.resetPassword.html = (user, url) => {
         return resetPwdEmailContents.htmlBody({
-            username: user.username,
             url: url
         });
     };
@@ -126,14 +148,12 @@ AccountsEmail.initialize = function () {
 
     Accounts.emailTemplates.verifyEmail.text = (user, url) => {
         return verifyEmailContents.textBody({
-            username: user.username,
             url: url
         });
     };
 
     Accounts.emailTemplates.verifyEmail.html = (user, url) => {
         return verifyEmailContents.htmlBody({
-            username: user.username,
             url: url
         });
     };

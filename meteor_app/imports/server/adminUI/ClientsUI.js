@@ -98,7 +98,6 @@ ClientsUI.initialize = function () {
                     //        successfully added to the newly created account
                     clientId = CatenisNode.getCatenisNodeByIndex(ctnNodeIndex).createClient(props, null, {
                         createUser: true,
-                        username: clientInfo.username,
                         email: clientInfo.email,
                         sendEnrollmentEmail: false,
                         timeZone: clientInfo.timeZone
@@ -658,7 +657,6 @@ ClientsUI.initialize = function () {
             }, {
                 fields: {
                     _id: 1,
-                    username: 1,
                     emails: 1
                 }
             });

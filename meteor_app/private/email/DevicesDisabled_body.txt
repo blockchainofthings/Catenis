@@ -2,7 +2,7 @@ Dear customer,
 
 Some of the Catenis virtual devices associated with your Catenis client account have been disabled.
 
-Client account: username '{!username}' (client ID: {!clientId})
+Client account: email '{!userEmail}' (client ID: {!clientId})
 
 This has been done to comply with the restriction in the number of virtual devices in use enforced by your current license.
 

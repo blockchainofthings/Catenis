@@ -48,18 +48,6 @@ function validateFormData(form, template, callback) {
         focusSet = true;
     }
 
-    clientInfo.username = form.username.value ? form.username.value.trim() : '';
-
-    if (clientInfo.username.length === 0) {
-        // Username not supplied. Report error
-        errMsgs.push('Please enter a username');
-
-        if (!focusSet) {
-            form.username.focus();
-            focusSet = true;
-        }
-    }
-
     clientInfo.firstName = form.firstName.value ? form.firstName.value.trim() : undefined;
     clientInfo.lastName = form.lastName.value ? form.lastName.value.trim() : undefined;
     clientInfo.company = form.companyName.value ? form.companyName.value.trim() : undefined;
@@ -304,14 +292,6 @@ Template.newClient.events({
         // Clear info message
         template.state.set('infoMsg', undefined);
         template.state.set('infoMsgType', 'info');
-    },
-    'change #txtClientName'(event, template) {
-        const clientName = event.target.value;
-        const usernameCtrl = template.$('#txtUsername')[0];
-
-        if (!usernameCtrl.value || usernameCtrl.value.length === 0) {
-            usernameCtrl.value = clientName.replace(/(\s|[^\w])+/g,'_');
-        }
     },
     'change #txtEmail'(event, template) {
         // Indicate that form field has changed

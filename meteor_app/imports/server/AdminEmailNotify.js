@@ -52,23 +52,6 @@ export class AdminEmailNotify extends EmailNotify {
             subjectVars: undefined,
             // Should be a function with a variable number of arguments returning a literal object, or undefined if no variables are expected to be merged to the email message's body (a static body)
             bodyVars: function (client) {
-                function clientContactName(client) {
-                    let contactName = client.props.firstName;
-
-                    if (client.props.lastName) {
-                        if (contactName) {
-                            contactName += ' ';
-                        }
-                        else if (contactName === undefined) {
-                            contactName = '';
-                        }
-
-                        contactName += client.props.lastName;
-                    }
-
-                    return contactName;
-                }
-
                 function activationDate(client) {
                     const docClient = Catenis.db.collection.Client.findOne({
                         _id: client.doc_id,
@@ -87,8 +70,7 @@ export class AdminEmailNotify extends EmailNotify {
                     name: client.props.name,
                     clientId: client.clientId,
                     accountNumber: client.props.accountNumber,
-                    username: client.userAccountUsername,
-                    contactName: clientContactName(client),
+                    contactName: client.contactFullName,
                     company: client.props.company,
                     email: client.userAccountEmail,
                     activationDate: activationDate(client)
@@ -236,17 +218,26 @@ function getSysAdminEmails() {
     // noinspection JSCheckFunctionSignatures
     Roles.getUsersInRole(appAdminRole, {}, {
         fields: {
-            username: 1,
-            emails: 1
+            emails: 1,
+            profile: 1
         }
     }).forEach(doc => {
         // Make sure that admin account has an email address
-        if (doc.emails && doc.emails.length >= 0) {
-            adminEmails.push(`${doc.username} <${doc.emails[0].address}>`)
+        if (doc.emails && doc.emails.length > 0) {
+            let accountName;
+
+            if (doc.profile && doc.profile.name) {
+                accountName = doc.profile.name;
+            }
+
+            adminEmails.push(
+                accountName ? `${accountName} <${doc.emails[0].address}>`
+                : doc.emails[0].address
+            );
         }
         else {
-            // Log warning message notifying that admin account has not email address
-            Catenis.logger.WARN('Catenis system administrator account (%s) has no email address defined', doc.username);
+            // Log warning message notifying that admin account has no email address
+            Catenis.logger.WARN('Catenis system administrator account (user_id: %s) has no email address defined', doc._id);
         }
     });
 

@@ -2,7 +2,7 @@ Dear customer,
 
 This is to remind you that the license associated with your Catenis client account will expire soon.
 
-Client account: username '{!username}' (client ID: {!clientId})
+Client account: email '{!userEmail}' (client ID: {!clientId})
 
 The license is set to expire on {!validationEndDate}. Renew it ahead of time to avoid service disruption.
 

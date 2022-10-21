@@ -2,7 +2,7 @@ Dear customer,
 
 The validity period of the license associated with your Catenis client account has terminated.
 
-Client account: username '{!username}' (client ID: {!clientId})
+Client account: email '{!userEmail}' (client ID: {!clientId})
 
 However, as a valued customer, we are granting you a provisional license, so you may continue using Catenis' service while you arrange for the renewal of your license.
 

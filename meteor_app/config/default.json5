@@ -21,9 +21,8 @@
     "shutdownTimeout": 30000,   // (30 sec.) Time, in milliseconds, that the application should wait after it receives a terminate request before it actually terminates
     "adminRole": "sys-admin",  // User role for application administration
     defaultAdminUser: {
-      username: null,  // (optional) Username of application default admin user
-      psw: null,  // (optional) Base64 encoded, ciphered password for application default admin user
-      email: null  // (optional) Email address of application default admin user
+      email: null,  // (optional) Email address of application default admin user
+      psw: null  // (optional) Base64 encoded, ciphered password for application default admin user
     }
   },
   // Parameters pertaining to the SetUpCipherFunctions module
@@ -1060,6 +1059,7 @@
     "fromAddress": "Catenis <noreply@blockchainofthings.com>",  // E-mail address used to send accounts related e-mail messages
     "resetPasswordContents": "PasswordReset",  // Name of e-mail contents used for password reset
     "enrollAccountContents": "AccountEnrollment",  // Name of e-mail contents used for account enrollment
+    enrollRegisteredAccountContents: "AccountRegistrationEnrollment",  // Name of e-mail contents used for account registration enrollment
     verifyEmailContents: "AccountRegVerifyEmail"  // Name of e-mail contents used for e-mail verification to complete account registration
   },
   // Parameters pertaining to ClientLicense module
@@ -1443,7 +1443,7 @@
   },
   // Parameters pertaining to AccountRegistration module
   accountRegistration: {
-    clientName: 'Self-registered ({!username})',  // Name to be assigned to client account for self-registered users
+    clientName: 'Self-registered ({!userEmail})',  // Name to be assigned to client account for self-registered users
     license: {   // Client license to be used for a self-registration account
       level: "Starter",
       type: null,  // Note: may be set to null to specify a license with no type

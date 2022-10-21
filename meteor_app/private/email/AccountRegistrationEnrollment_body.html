@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Catenis password reset</title>
+    <title>Catenis registration - Email verification</title>
     <style>
         body {
             margin-left: 2em;
@@ -14,6 +14,11 @@
             margin: 0;
             padding: 0;
             border: none;
+        }
+        div#div-catenis-email-body span.value {
+            font-family: Courier;
+            font-size: 10.5pt;
+            color: #666666
         }
         div#div-catenis-email-body p {
             line-height: normal;
@@ -27,10 +32,10 @@
 </head>
 <body>
 <div id="div-catenis-email-body">
-<p>Dear customer,<p>
-<p class="session_start">As per your request, please follow the link below to reset the password for your Catenis client account:<p>
-<p><a href="{!url}">{!url}</a></p>
-<p class="session_start">The Blockchain of Things team</p>
+    <p>Hello, {!contactName},<p>
+    <p class="session_start">Please follow the link below to set the password for your new account and complete your Catenis registration.<p>
+    <p><a href="{!url}">{!url}</a></p>
+    <p class="session_start">The Blockchain of Things team</p>
 </div>
 </body>
 </html>

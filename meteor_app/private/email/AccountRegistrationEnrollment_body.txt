@@ -1,0 +1,7 @@
+Hello, {!contactName},
+
+Please follow the link below to set the password for your new account and complete your Catenis registration.
+
+{!url}
+
+The Blockchain of Things team

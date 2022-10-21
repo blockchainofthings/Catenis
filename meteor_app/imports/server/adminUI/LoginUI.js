@@ -19,6 +19,7 @@ import { DDP } from 'meteor/ddp-client'
 
 // References code in other (Catenis) modules
 import { Catenis } from '../Catenis';
+import { Accounts } from 'meteor/accounts-base';
 
 
 // Definition of function classes
@@ -82,6 +83,26 @@ LoginUI.initialize = function () {
         },
         getSelfRegistrationSettings: function () {
             return Catenis.application.selfRegistration;
+        },
+        finalizeAccountRegistration: function (user_email) {
+            try {
+                // Get recently created user by its registered e-mail address
+                const user = Meteor.users.findOne({'emails.address': user_email}, {fields: {_id: 1}});
+
+                if (user) {
+                    // Send enrollment e-mail so end user can set the password for their
+                    //  account and finalize the account registration
+                    Accounts.sendEnrollmentEmail(user._id);
+                }
+                else {
+                    // noinspection ExceptionCaughtLocallyJS
+                    throw new Error(`Unable to find user with the given e-mail address: ${user_email}`);
+                }
+            }
+            catch (err) {
+                Catenis.logger.ERROR('Failure finalizing account registration.', err);
+                throw new Meteor.Error('login.finalizeAccountRegistration', 'Failure finalizing account registration');
+            }
         }
     });
 
@@ -98,7 +119,6 @@ LoginUI.initialize = function () {
             }, {
                 fields: {
                     _id: 1,
-                    username: 1,
                     profile: 1
                 }
             });

@@ -334,20 +334,21 @@ NotificationTemplatesUI.initialize = function () {
     Meteor.publish('catenisUsers', function () {
         if (Roles.userIsInRole(this.userId, 'sys-admin')) {
             function contactName(doc) {
-                let name = doc.props.firstName;
+                let contactFullName = doc.props.firstName || '';
 
                 if (doc.props.lastName) {
-                    if (name) {
-                        name += ' ';
-                    }
-                    else {
-                        name = '';
+                    if (contactFullName) {
+                        contactFullName += ' ';
                     }
 
-                    name += doc.props.lastName;
+                    contactFullName += doc.props.lastName;
                 }
 
-                return name;
+                return contactFullName;
+            }
+
+            function userAccountName(doc) {
+                return doc.profile && doc.profile.name ? doc.profile.name : '';
             }
 
             function propChanged(prop, obj1, obj2) {
@@ -405,20 +406,23 @@ NotificationTemplatesUI.initialize = function () {
             const observeHandle2 = Roles.getUsersInRole(appAdminRole, {}, {
                 fields: {
                     _id: 1,
-                    username: 1
+                    profile: 1
                 }
             })
             .observe({
                 added: (doc) => {
                     this.added('CatenisUser', doc._id, {
                         type: 'admin',
-                        name: doc.username,
+                        name: userAccountName(doc),
                     });
                 },
                 changed: (newDoc, oldDoc) => {
-                    if (newDoc.username !== oldDoc.username) {
+                    const newAccountName = userAccountName(newDoc);
+                    const oldAccountName = userAccountName(oldDoc);
+
+                    if (newAccountName !== oldAccountName) {
                         this.changed('CatenisUser', newDoc._id, {
-                            name: newDoc.username
+                            name: newAccountName
                         });
                     }
                 },

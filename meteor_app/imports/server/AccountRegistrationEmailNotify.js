@@ -60,7 +60,7 @@ export class AccountRegistrationEmailNotify {
 
         if ((clientEmailAddr = client.userAccountEmail)) {
             this.emailNotify.sendAsync(clientEmailAddr, null, {
-                username: client.userAccountUsername,
+                contactName: client.contactName,
                 accountNumber: client.props.accountNumber ? client.props.accountNumber : undefined,
                 licenseType: client.clientLicense && client.clientLicense.hasLicense() ? licenseName(client.clientLicense.license) : undefined,
             }, callback);

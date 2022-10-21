@@ -191,6 +191,7 @@ Meteor.startup(function () {
             Database.addMissingClientTimeZone();
             Database.addMissingBtcServicePriceField();
             Database.fixPaidServicesHistory();
+            Database.fixUserAccounts();
             Application.initialize(cfgSettings.legacyDustFunding);
             EccLibraryProxy.initialize();
             Bip32.initialize();

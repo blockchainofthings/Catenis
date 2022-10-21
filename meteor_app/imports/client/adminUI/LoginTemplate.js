@@ -44,14 +44,14 @@ Template.login.onCreated(function () {
         }
     });
 
-    // Clear indication that verification e-mail has been sent
-    AccountsTemplates.state.form.set("verifyEmailSent", false);
+    // Clear indication that account registration enrollment e-mail has been sent
+    AccountsTemplates.state.form.set("accRegEmailSent", false);
 });
 
 Template.login.events({
     'click #login-form-link'(event, template) {
-        // Clear indication that verification e-mail has been sent
-        AccountsTemplates.state.form.set("verifyEmailSent", false);
+        // Clear indication that account registration enrollment e-mail has been sent
+        AccountsTemplates.state.form.set("accRegEmailSent", false);
 
         // Force form reset (re-rendering of all fields)
         AccountsTemplates.state.form.set('clearForm', !AccountsTemplates.state.form.get('clearForm'));
@@ -63,8 +63,8 @@ Template.login.events({
         AccountsTemplates.setState('signIn');
     },
     'click #register-form-link'(event, template) {
-        // Clear indication that verification e-mail has been sent
-        AccountsTemplates.state.form.set("verifyEmailSent", false);
+        // Clear indication that account registration enrollment e-mail has been sent
+        AccountsTemplates.state.form.set("accRegEmailSent", false);
 
         // Force form reset (re-rendering of all fields)
         AccountsTemplates.state.form.set('clearForm', !AccountsTemplates.state.form.get('clearForm'));
@@ -82,11 +82,20 @@ Template.login.events({
             });
         }
     },
-    'click #resend-verify_email-form-link'(event, template) {
-        // Clear indication that verification e-mail has been sent
-        AccountsTemplates.state.form.set("verifyEmailSent", false);
+    'click #resend-acc_reg_email-form-link'(event, template) {
+        const user_email = AccountsTemplates.state.form.get('new_user_email');
 
-        AccountsTemplates.setState('resendVerificationEmail');
+        AccountsTemplates.state.form.set("result", 'Resending email...');
+
+        Meteor.call('finalizeAccountRegistration', user_email, (error) => {
+            if (error) {
+                console.error('Error calling \'finalizeAccountRegistration\' remote method:', error);
+                AccountsTemplates.state.form.set("result", 'Failure resending email.');
+            }
+            else {
+                AccountsTemplates.state.form.set("result", 'The email has been resent. Please check your inbox.');
+            }
+        });
     },
     'click #cancel-2fa-link'(event, template) {
         if (AccountsTemplates.getState() !== 'singIn') {
@@ -124,7 +133,7 @@ Template.login.helpers({
             return 'EMAIL VERIFICATION';
         }
         else if (state === 'enrollAccount') {
-            return "ACTIVATE NEW ACCOUNT";
+            return "ACCOUNT PASSWORD";
         }
         else if (state === 'resetPwd') {
             return AccountsTemplates.state.form.get("2faVerify") ? "TWO-FACTOR VERIFICATION" : "RESET PASSWORD";
@@ -151,8 +160,8 @@ Template.login.helpers({
     equals(v1, v2) {
         return v1 === v2;
     },
-    verificationEmailSent() {
-        return AccountsTemplates.state.form.get("verifyEmailSent");
+    accRegistrationEmailSent() {
+        return AccountsTemplates.state.form.get("accRegEmailSent");
     },
     enableSelfRegistration() {
         return Template.instance().state.get('enableSelfRegistration');

@@ -49,21 +49,7 @@ export function UtilShared() {
 
 UtilShared.getUserEmail = function (user) {
     if (user && user.emails && user.emails.length > 0) {
-        let emailIdx = 0;
-
-        if (user.emails.length > 1) {
-            // Has more than one e-mail address associated with it.
-            //  Try to get first one that has already been verified
-            emailIdx = user.emails.findIndex((email) => {
-                return email.verified;
-            });
-
-            if (emailIdx < 0) {
-                emailIdx = 0;
-            }
-        }
-
-        return user.emails[emailIdx].address;
+        return user.emails[0].address;
     }
 };
 

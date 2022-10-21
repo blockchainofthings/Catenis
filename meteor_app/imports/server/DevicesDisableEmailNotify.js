@@ -57,7 +57,7 @@ DevicesDisableEmailNotify.prototype.send = function (data) {
         if (data.client.clientLicense && data.client.clientLicense.hasLicense()) {
             if (Array.isArray(data.devices) && data.devices.length > 0) {
                 this.emailNotify.send(clientEmailAddr, null, {
-                    username: data.client.userAccountUsername,
+                    userEmail: clientEmailAddr,
                     clientId: data.client.clientId,
                     licenseLevel: Util.capitalize(data.client.clientLicense.license.level),
                     maximumAllowedDevices: data.client.maximumAllowedDevices,

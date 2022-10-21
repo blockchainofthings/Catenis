@@ -136,17 +136,17 @@ export function Client(docClient, ctnNode, initializeDevices, noClientLicense = 
                 return crypto.createHmac('sha512', this.apiAccessGenKey).update('And here it is: the Catenis API key for client' + this.clientId).digest('hex');
             }
         },
-        userAccountUsername: {
+        userAccountName: {
             get: function () {
                 if (!this._user) {
                     getUser.call(this);
                 }
 
                 if (this._user) {
-                    return this._user.username;
+                    return this._user.profile && this._user.profile.name ? this._user.profile.name : '';
                 }
             },
-            enumerate: true
+            enumerable: true
         },
         userAccountEmail: {
             get: function () {
@@ -155,24 +155,32 @@ export function Client(docClient, ctnNode, initializeDevices, noClientLicense = 
                 }
 
                 if (this._user && this._user.emails && this._user.emails.length > 0) {
-                    let emailIdx = 0;
-
-                    if (this._user.emails.length > 1) {
-                        // Has more than one e-mail address associated with it.
-                        //  Try to get first one that has already been verified
-                        emailIdx = this._user.emails.findIndex((email) => {
-                            return email.verified;
-                        });
-
-                        if (emailIdx < 0) {
-                            emailIdx = 0;
-                        }
-                    }
-
-                    return this._user.emails[emailIdx].address;
+                    return this._user.emails[0].address;
                 }
             },
-            enumerate: true
+            enumerable: true
+        },
+        contactName: {
+            get: function () {
+                return this.props.firstName ? this.props.firstName : (this.props.lastName ? this.props.lastName : '');
+            },
+            enumerable: true
+        },
+        contactFullName: {
+            get: function () {
+                let contactFullName = this.props.firstName || '';
+
+                if (this.props.lastName) {
+                    if (contactFullName) {
+                        contactFullName += ' ';
+                    }
+
+                    contactFullName += this.props.lastName;
+                }
+
+                return contactFullName;
+            },
+            enumerable: true
         },
         maximumAllowedDevices: {
             get: function () {
@@ -180,7 +188,7 @@ export function Client(docClient, ctnNode, initializeDevices, noClientLicense = 
                 return this.clientLicense && this.clientLicense.hasLicense() ? this.clientLicense.license.maximumDevices
                     : (this.clientLicense ? 0 : undefined);
             },
-            enumerate: true
+            enumerable: true
         },
         isNew: {
             get: function () {
@@ -1293,21 +1301,10 @@ Client.prototype.getPublicProps = function () {
         pubProps.company = this.props.company;
     }
 
-    if (this.props.firstName || this.props.lastName) {
-        let contactName = this.props.firstName;
+    const contactFullName = this.contactFullName;
 
-        if (this.props.lastName) {
-            if (contactName) {
-                contactName += ' ';
-            }
-            else if (contactName === undefined) {
-                contactName = '';
-            }
-
-            contactName += this.props.lastName;
-        }
-
-        pubProps[pubProps.company ? 'contact' : 'name'] = contactName;
+    if (contactFullName) {
+        pubProps[pubProps.company ? 'contact' : 'name'] = contactFullName;
     }
 
     const verifiedOwnedDomains = this.ownedDomain.verifiedDomainList;
@@ -1687,8 +1684,8 @@ function getUser() {
             }
         }, {
             fields: {
-                username: 1,
-                emails: 1
+                emails: 1,
+                profile: 1
             }
         });
     }
@@ -1766,12 +1763,8 @@ Client.initialize = function () {
     Catenis.logger.TRACE('Client initialization');
 };
 
-Client.createNewUserForClient = function (username, email, clientName) {
+Client.createNewUserForClient = function (email, clientName) {
     const opts = {};
-
-    if (typeof username === 'string' && username.length > 0) {
-        opts.username = username;
-    }
 
     if (typeof email === 'string' && email.length > 0) {
         opts.email = email;
@@ -1792,18 +1785,12 @@ Client.createNewUserForClient = function (username, email, clientName) {
         let errorToThrow;
 
         if ((err instanceof Meteor.Error) && err.error === 403) {
-            if (err.reason === 'Username already exists.') {
-                errorToThrow = new Meteor.Error('ctn_client_duplicate_username', 'Error creating new user for client: username already exists');
-            }
-            else if (err.reason === 'Email already exists.') {
+            if (err.reason === 'Email already exists.') {
                 errorToThrow = new Meteor.Error('ctn_client_duplicate_email', 'Error creating new user for client: email already exists');
             }
             else if (err.reason === 'Something went wrong. Please check your credentials.') {
                 // Generic credentials error. Try to identify what was wrong
-                if (opts.username && Meteor.users.findOne({username: opts.username}, {fields:{_id: 1}})) {
-                    errorToThrow = new Meteor.Error('ctn_client_duplicate_username', 'Error creating new user for client: username already exists');
-                }
-                else if (opts.email && Meteor.users.findOne({emails: {$elemMatch: {address: opts.email}}}, {fields:{_id: 1}})) {
+                if (opts.email && Meteor.users.findOne({emails: {$elemMatch: {address: opts.email}}}, {fields:{_id: 1}})) {
                     errorToThrow = new Meteor.Error('ctn_client_duplicate_email', 'Error creating new user for client: duplicate email address');
                 }
             }
@@ -1820,8 +1807,8 @@ Client.createNewUserForClient = function (username, email, clientName) {
 /**
  * Fix an existing user doc/rec to prepare it to be assigned to a client.
  * @param {string} user_id User database doc/rec ID
- * @param {string} [clientName] The client name. If that name contains the text '{!username}' in it, it will be replaced
- *                               with the actual user's username
+ * @param {string} [clientName] The client name. If that name contains the text '{!userEmail}' in it, it will be replaced
+ *                               with the actual user's email address
  * @return {{clientName: string, oldProfile: Object}}
  */
 Client.fixUserForClient = function (user_id, clientName) {
@@ -1830,7 +1817,7 @@ Client.fixUserForClient = function (user_id, clientName) {
         _id: user_id
     }, {
         fields: {
-            username: 1,
+            emails: 1,
             profile: 1,
             'catenis.client_id': 1
         }
@@ -1847,7 +1834,10 @@ Client.fixUserForClient = function (user_id, clientName) {
 
     // Fix client name
     if (clientName) {
-        clientName = clientName.replace('{!username}', docUser.username);
+        clientName = clientName.replace(
+            '{!userEmail}',
+            docUser.emails && docUser.emails.length > 0 ? docUser.emails[0].address : ''
+        );
     }
 
     // Update user's profile

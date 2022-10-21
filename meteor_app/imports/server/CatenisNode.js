@@ -640,7 +640,6 @@ CatenisNode.prototype.getIdentityInfo = function () {
 //    user_id: [String] - (optional)
 //    opts: { - (optional)
 //      createUser: [Boolean], - (optional, default: false) Indicates that a new user should be created for this client
-//      username: [String], - (optional) Username for the new user to be created. If not specified, the client name is used
 //      email: [String], - (optional) Email address for the new user to be created
 //      sendEnrollmentEmail: [Boolean], - (optional, default: false) Indicate that enrollment e-mail should be sent after client is successfully created
 //      timeZone: [String], - (optional, default:server time zone) The name of the time zone to be used by the client
@@ -701,19 +700,7 @@ CatenisNode.prototype.createClient = function (props, user_id, opts) {
         }
     }
     else if (opts.createUser) {
-        // A new user should be created. Determine its username
-        const username = opts.username || props.name;
-
-        if (!username) {
-            // No username could be determined for the new user to be create. Log error and throw exception
-            Catenis.logger.ERROR('No username could be determined for creating new user for new client', {
-                props: props,
-                opts: opts
-            });
-            throw new Meteor.Error('ctn_client_no_username', 'No username for creating new user for new client');
-        }
-
-        user_id = Client.createNewUserForClient(username, opts.email, props.name);
+        user_id = Client.createNewUserForClient(opts.email, props.name);
         docUser = Meteor.users.findOne({_id: user_id}, {fields: {_id: 1, 'services.password': 1}});
         newUserCreated = true;
     }

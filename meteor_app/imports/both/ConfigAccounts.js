@@ -46,21 +46,40 @@ Accounts.config({
 // Change accounts templates settings
 const emailField = AccountsTemplates.removeField('email');
 const pwdField = AccountsTemplates.removeField('password');
-emailField.placeholder = {
-    signUp: 'Email *'
-};
-pwdField.placeholder = {
-    signUp: 'Password *'
-};
+
+// Reset placeholder for e-mail field of signup form
+if (typeof emailField.placeholder !== 'object') {
+    emailField.placeholder = typeof emailField.placeholder === 'string' ? {
+        default: emailField.placeholder
+    } : {};
+}
+emailField.placeholder.signUp = 'Email *';
 
 if (Meteor.isClient) {
     Meteor.startup(function () {
-        Meteor.setTimeout(() => {
-            const pwdAgainField = AccountsTemplates.getField('password_again');
-            pwdAgainField.placeholder = {
-                signUp: 'Password (again) *'
-            };
-        }, 100);
+        // Hide password fields in signup form, and reset their placeholder text in enroll account form
+        //  NOTE: we need to do it here (at meteor startup) because the password_again field
+        //      is only added during the initialization of the accounts templates which takes
+        //      place at meteor startup (on the client)
+        const pwdField = AccountsTemplates.getField('password');
+        const pwdAgainField = AccountsTemplates.getField('password_again');
+
+        pwdField.visible = pwdField.visible.filter(v => v !== 'signUp');
+        pwdAgainField.visible = pwdAgainField.visible.filter(v => v !== 'signUp');
+
+        if (typeof pwdField.placeholder !== 'object') {
+            pwdField.placeholder = typeof pwdField.placeholder === 'string' ? {
+                default: pwdField.placeholder
+            } : {};
+        }
+        pwdField.placeholder.enrollAccount = pwdField.placeholder.resetPwd;
+
+        if (typeof pwdAgainField.placeholder !== 'object') {
+            pwdAgainField.placeholder = typeof pwdAgainField.placeholder === 'string' ? {
+                default: pwdAgainField.placeholder
+            } : {};
+        }
+        pwdAgainField.placeholder.enrollAccount = pwdAgainField.placeholder.resetPwd;
     });
 }
 
@@ -86,16 +105,6 @@ AccountsTemplates.addFields([
         type: 'text',
         displayName: 'Company',
         required: false,
-    },
-    {
-        _id: 'username',
-        type: 'text',
-        displayName: 'Username',
-        placeholder: {
-            signUp: 'Username *'
-        },
-        required: true,
-        minLength: 5,
     },
     emailField,
     {
@@ -141,7 +150,7 @@ AccountsTemplates.configure({
     forbidClientAccountCreation: false,
     overrideLoginErrors: true,
     enforceEmailVerification: true,
-    sendVerificationEmail: true,
+    sendVerificationEmail: false,
     confirmPassword: true,
 
     hideSignInLink: true,
@@ -167,7 +176,7 @@ AccountsTemplates.configure({
         },
         button: {
             changePwd: 'Change Password',
-            enrollAccount: 'Activate Account',
+            enrollAccount: 'Set Password',
             forgotPwd: 'Send Email',
             resetPwd: 'Reset Password',
             signIn: 'Sign In',
@@ -232,25 +241,6 @@ if (Meteor.settings.public.catenis && Meteor.settings.public.catenis.enableSelfR
     });
 }
 
-if (Meteor.isClient) {
-    Meteor.startup(function () {
-        // Reset placeholder text for password fields used in enroll account form
-        //  NOTE: we need to do it here (at meteor startup) because the password_again field
-        //      is only added during the initialization of the accounts templates which takes
-        //      place at meteor startup (on the client)
-        const pwdField = AccountsTemplates.getField('password');
-        const pwdAgainField = AccountsTemplates.getField('password_again');
-
-        if (typeof pwdField.placeholder === 'object') {
-            pwdField.placeholder.enrollAccount = pwdField.placeholder.resetPwd;
-        }
-
-        if (typeof pwdAgainField.placeholder === 'object') {
-            pwdAgainField.placeholder.enrollAccount = pwdAgainField.placeholder.resetPwd;
-        }
-    });
-}
-
 let monitoringState = false;
 
 function monitorState() {
@@ -263,11 +253,11 @@ function monitorState() {
 
             if (state === 'signIn') {
                 // Reset form
-                const $usernameField = $('#at-field-username_and_email');
+                const $emailField = $('#at-field-email');
                 const $passwordField = $('#at-field-password');
 
-                //$usernameField.val('');
-                $usernameField.css('display', 'inline');
+                //$emailField.val('');
+                $emailField.css('display', 'inline');
                 //$passwordField.val('');
                 $passwordField.css('display', 'inline');
 
@@ -294,7 +284,7 @@ function monitorDisabled() {
             // Enable/disable form fields as the disabled state changes
             const disabled = !!AccountsTemplates.disabled();
 
-            $('#at-field-username_and_email').prop('disabled', disabled);
+            $('#at-field-email').prop('disabled', disabled);
             $('#at-field-password').prop('disabled', disabled);
 
             monitoringDisabled = true;
@@ -305,8 +295,8 @@ function monitorDisabled() {
 function setUpTwoFactorAuthentication(userId) {
     // Morph form to enter two-factor authentication verification code
 
-    // Hide username and password input fields, and show verification code input field
-    $('#at-field-username_and_email').css('display', 'none');
+    // Hide email and password input fields, and show verification code input field
+    $('#at-field-email').css('display', 'none');
     $('#at-field-password').css('display', 'none');
 
     // Change title and button label
@@ -664,8 +654,26 @@ function onSubmitFunc(error, state) {
     //runs on successful at-pwd-form submit. Use this to allow for client activation and banning disabled users
     if (!error) {
         if (state === 'signUp') {
-            // Indicate that verification e-mail has been sent
-            AccountsTemplates.state.form.set("verifyEmailSent", true);
+            // New user account has just been created. Finalize account registration
+            let user_email = $('#at-field-email').val();
+
+            if (AccountsTemplates.options.lowercaseUsername) {
+                user_email = toLowercaseUsername(user_email);
+            }
+
+            // Save e-mail of newly created user account
+            AccountsTemplates.state.form.set('new_user_email', user_email);
+
+            Meteor.call('finalizeAccountRegistration', user_email, (error) => {
+                if (error) {
+                    console.error('Error calling \'finalizeAccountRegistration\' remote method:', error);
+                }
+            });
+
+            AccountsTemplates.state.form.set("result", 'An email with instructions to complete the account registration has just been sent. Please check your inbox.');
+
+            // Indicate that account registration enrollment e-mail has been sent
+            AccountsTemplates.state.form.set("accRegEmailSent", true);
 
             // Make sure that registration form is disabled
             AccountsTemplates.setDisabled(true);
@@ -684,21 +692,26 @@ function onSubmitFunc(error, state) {
             });
         }
         else if (state === 'enrollAccount') {
-            // Client account successfully enrolled. Activate client
-            Meteor.call('activateClient', Meteor.userId(), (error) => {
-                if (error) {
-                    console.error('Error calling \'activateClient\' remote method:', error);
-                    AccountsTemplates.logout();
-                }
-            });
-        }
-        else if (state === 'verifyEmail') {
-            // Email successfully verified
-            Meteor.call('createNewClientForUser', Meteor.userId(), (error) => {
-                if (error) {
-                    console.error('Error calling \'createNewClientForUser\' remote method:', error);
-                }
-            });
+            // User account successfully enrolled
+            const user = Meteor.user({fields: {_id: 1, 'profile.last_name': 1}});
+
+            if (user.profile && ('last_name' in user.profile)) {
+                // Newly registered account. Create Catenis client account
+                Meteor.call('createNewClientForUser', user._id, (error) => {
+                    if (error) {
+                        console.error('Error calling \'createNewClientForUser\' remote method:', error);
+                    }
+                });
+            }
+            else {
+                // Catenis client account already exists. Just activate it
+                Meteor.call('activateClient', user._id, (error) => {
+                    if (error) {
+                        console.error('Error calling \'activateClient\' remote method:', error);
+                        AccountsTemplates.logout();
+                    }
+                });
+            }
         }
     }
     else {
@@ -825,6 +838,10 @@ function onSignUp(password, options, callback) {
             callback(new Meteor.Error(403, 'Account registration is not enabled.'));
         }
     });
+}
+
+function toLowercaseUsername(value){
+    return value.toLowerCase().replace(/\s+/gm, '');
 }
 
 /**

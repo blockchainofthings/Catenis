@@ -69,8 +69,8 @@ Template.atPwdForm.helpers({
     useReCaptcha() {
         return Template.instance().state.get('useReCaptcha');
     },
-    verificationEmailSent() {
-        return AccountsTemplates.state.form.get("verifyEmailSent");
+    accRegistrationEmailSent() {
+        return AccountsTemplates.state.form.get("accRegEmailSent");
     },
     formDisabled() {
         return AccountsTemplates.disabled();

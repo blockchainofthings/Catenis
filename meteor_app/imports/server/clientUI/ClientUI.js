@@ -171,7 +171,6 @@ ClientUI.initialize = function () {
             }, {
                 fields: {
                     _id: 1,
-                    username: 1,
                     emails: 1
                 }
             });

@@ -30,22 +30,6 @@ function validateFormData(form, errMsgs) {
     const accountInfo = {};
     let hasError = false;
 
-    accountInfo.username = form.username.value ? form.username.value.trim() : '';
-
-    if (accountInfo.username.length === 0) {
-        // Username not supplied. Report error
-        errMsgs.push('Please enter a username');
-        hasError = true;
-    }
-
-    accountInfo.password = form.password.value ? form.password.value.trim() : '';
-
-    if (accountInfo.password.length === 0) {
-        // Password not supplied. Report error
-        errMsgs.push('Please enter a password');
-        hasError = true;
-    }
-
     accountInfo.email = form.email.value ? form.email.value.trim() : '';
 
     if (accountInfo.email.length === 0) {
@@ -56,6 +40,14 @@ function validateFormData(form, errMsgs) {
     else if (!/^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/.test(accountInfo.email)) {
         // An invalid email address was entered. Report error
         errMsgs.push('Please enter a valid email address');
+        hasError = true;
+    }
+
+    accountInfo.password = form.password.value ? form.password.value.trim() : '';
+
+    if (accountInfo.password.length === 0) {
+        // Password not supplied. Report error
+        errMsgs.push('Please enter a password');
         hasError = true;
     }
 
@@ -127,7 +119,7 @@ Template.newAdminAccount.events({
             template.state.set('infoMsg', 'Your request is being processed. Please wait.');
 
             // Call remote method to create new admin account
-            Meteor.call('createAdminAccount', accountInfo.username, accountInfo.password, accountInfo.email, accountInfo.description, (error, adminUserId) => {
+            Meteor.call('createAdminAccount', accountInfo.email, accountInfo.password, accountInfo.description, (error, adminUserId) => {
                 // Reenable buttons
                 btnCancel.disabled = false;
                 btnCreate.disabled = false;
