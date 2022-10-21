@@ -373,7 +373,7 @@
   // Parameters pertaining to AccountRegistration module
   accountRegistration: {
     license: {   // Client license to be used for a self-registration account
-      level: "Starter plan",
+      level: "Development plan",
       type: "2 virtual devices",  // Note: may be set to null to specify a license with no type
       revision: 0
     }
@@ -426,7 +426,7 @@
       mappedClientProp: 'props.company'
     }, {
       name: 'Lead Source',
-      value: 'Starter',
+      value: 'Development',
       mappedClientProp: null
     }]
   },

@@ -58,6 +58,47 @@
   },
   // Parameters pertaining to Database module
   "database": {
+    "defaultLicenses": [{
+      "level": "Development plan",  // Name used to identify the license level
+      "order": 10,  // The order associated with the license level. The lower the order, the less restrictive (e.g. maximum number of devices) the license is
+      "type": "6 virtual devices",  // Used to identify any characteristics that differentiate this specific license
+      "revision": 0,  // The revision number of the license. Revisions are used to change some characteristics of a license (level & type) (e.g. maximum number of devices)
+      "maximumDevices": 6,  //Maximum number of client devices that can be active at any time
+      // Never expires
+      // No provisional renewal
+    }, {
+      "level": "Development plan",  // Name used to identify the license level
+      "order": 20,  // The order associated with the license level. The lower the order, the less restrictive (e.g. maximum number of devices) the license is
+      "type": "5 virtual devices",  // Used to identify any characteristics that differentiate this specific license
+      "revision": 0,  // The revision number of the license. Revisions are used to change some characteristics of a license (level & type) (e.g. maximum number of devices)
+      "maximumDevices": 5,  //Maximum number of client devices that can be active at any time
+      // Never expires
+      // No provisional renewal
+    }, {
+      "level": "Development plan",  // Name used to identify the license level
+      "order": 30,  // The order associated with the license level. The lower the order, the less restrictive (e.g. maximum number of devices) the license is
+      "type": "4 virtual devices",  // Used to identify any characteristics that differentiate this specific license
+      "revision": 0,  // The revision number of the license. Revisions are used to change some characteristics of a license (level & type) (e.g. maximum number of devices)
+      "maximumDevices": 4,  //Maximum number of client devices that can be active at any time
+      // Never expires
+      // No provisional renewal
+    }, {
+      "level": "Development plan",  // Name used to identify the license level
+      "order": 40,  // The order associated with the license level. The lower the order, the less restrictive (e.g. maximum number of devices) the license is
+      "type": "3 virtual devices",  // Used to identify any characteristics that differentiate this specific license
+      "revision": 0,  // The revision number of the license. Revisions are used to change some characteristics of a license (level & type) (e.g. maximum number of devices)
+      "maximumDevices": 3,  //Maximum number of client devices that can be active at any time
+      // Never expires
+      // No provisional renewal
+    }, {
+      "level": "Development plan",  // Name used to identify the license level
+      "order": 50,  // The order associated with the license level. The lower the order, the less restrictive (e.g. maximum number of devices) the license is
+      "type": "2 virtual devices",  // Used to identify any characteristics that differentiate this specific license
+      "revision": 0,  // The revision number of the license. Revisions are used to change some characteristics of a license (level & type) (e.g. maximum number of devices)
+      "maximumDevices": 2,  //Maximum number of client devices that can be active at any time
+      // Never expires
+      // No provisional renewal
+    }],
     "defaultBcotProducts": [{
       "sku": "CTN-0010TBCT",
       "amount": 1000000000
@@ -371,7 +412,7 @@
   // Parameters pertaining to AccountRegistration module
   accountRegistration: {
     license: {   // Client license to be used for a self-registration account
-      level: "Starter plan",
+      level: "Development plan",
       type: "2 virtual devices",  // Note: may be set to null to specify a license with no type
       revision: 0
     }

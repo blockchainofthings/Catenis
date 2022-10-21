@@ -103,7 +103,7 @@
       "validityMonths": 12, // Period of time, in months, through which this license is valid
       "provisionalRenewalDays": 7 // The duration, in days, for the provisional renewal of this license
     }, {
-      "level": "Starter",  // Name used to identify the license level
+      "level": "Development",  // Name used to identify the license level
       "order": 40,  // The order associated with the license level. The lower the order, the less restrictive (e.g. maximum number of devices) the license is
       // No specific type
       "revision": 0,  // The revision number of the license. Revisions are used to change some characteristics of a license (level & type) (e.g. maximum number of devices)
@@ -1445,7 +1445,7 @@
   accountRegistration: {
     clientName: 'Self-registered ({!userEmail})',  // Name to be assigned to client account for self-registered users
     license: {   // Client license to be used for a self-registration account
-      level: "Starter",
+      level: "Development",
       type: null,  // Note: may be set to null to specify a license with no type
       revision: 0
     }
