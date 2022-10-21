@@ -88,8 +88,10 @@ AccountsTemplates.addFields([
         _id: 'first_name',
         type: 'text',
         displayName: 'First name',
-        placeholder: 'First name',
-        required: false,
+        placeholder: {
+            signUp: 'First name *'
+        },
+        required: true,
     },
     {
         _id: 'last_name',
