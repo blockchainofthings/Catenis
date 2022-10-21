@@ -40,52 +40,6 @@
                                 <div class="form-group">
                                     <input type="text" value="{{clientData.company}}" maxlength="80" id="txtCompanyName" name="companyName" placeholder="Company" autocomplete="off" autocapitalize="none" autocorrect="off">
                                 </div>
-                                <div class="row">
-                                    <div class="col-md-8">
-                                        <div class="form-group">
-                                            <input type="email" value="{{clientData.email}}" maxlength="40" id="txtEmail" name="email" placeholder="Email" autocomplete="off" autocapitalize="none" autocorrect="off">
-                                        </div>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <div class="form-group">
-                                            {{#if showConfirmEmailButton}}
-                                                <button type="button" id="btnConfirmEmail" class="form-control btn btn-login btn-warn at-btn submit" data-toggle="modal" data-target="#divConfirmEmail">Please confirm</button>
-                                            {{/if}}
-                                            {{!Modal panel containing form used to confirm e-mail address}}
-                                            <div class="modal" tabindex="-1" role="dialog" id="divConfirmEmail">
-                                                <div class="modal-dialog" role="document">
-                                                    <div class="modal-content">
-                                                        <div class="modal-header">
-                                                            <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-                                                            <h4 class="modal-title">Email Confirmation</h4>
-                                                        </div>
-                                                        <div class="modal-body">
-                                                            {{#if emailsDoNotMatch}}
-                                                                <div class="alert alert-danger" role="alert">
-                                                                    <button type="button" id="btnDismissErrorConfirmEmail" class="close" aria-label="Close">
-                                                                        <span aria-hidden="true">&times;</span>
-                                                                    </button>
-                                                                    Emails do not match. Please check entered email.
-                                                                </div>
-                                                            {{else}}
-                                                                <p id="resultEmailConfirmation">Please reenter email to confirm it.</p>
-                                                            {{/if}}
-                                                            <div class="form-group">
-                                                                <input type="email" maxlength="40" id="txtConfirmEmail" name="confirmEmail" placeholder="Confirm Email" autocomplete="off" autocapitalize="none" autocorrect="off">
-                                                            </div>
-                                                            <div class="text-center">
-                                                                <button type="button" class="btn btn-primary" id="checkEmailValidity">Confirm</button>
-                                                            </div>
-                                                        </div>
-                                                        <div class="modal-footer">
-                                                            <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
                                 <div class="form-group">
                                     <input type="text" value="{{clientData.phone}}" maxlength="24" id="txtPhone" name="phone" placeholder="Phone" autocomplete="off" autocapitalize="none" autocorrect="off">
                                 </div>
@@ -96,9 +50,6 @@
                                             <option value="{{timeZone.value}}" {{timeZone.selected}}>{{timeZone.name}}</option>
                                         {{/each}}
                                     </select>
-                                </div>
-                                <div class="form-group">
-                                    <input type="hidden" id="emailConfirmation" name="emailConfirmation" value="notConfirmed">
                                 </div>
                                 <div class="row">
                                     <div class="col-xs-6 form-group pull-left">

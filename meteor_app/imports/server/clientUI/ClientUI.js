@@ -79,8 +79,10 @@ ClientUI.initialize = function () {
 
                         client.updateProperties(props);
 
-                        // Replace user account e-mail address
-                        client.replaceUserAccountEmail(clientInfo.email);
+                        if (clientInfo.email) {
+                            // Replace user account e-mail address
+                            client.replaceUserAccountEmail(clientInfo.email);
+                        }
 
                         // Update time zone
                         client.updateTimeZone(clientInfo.timeZone);

@@ -43,8 +43,6 @@ function loadClientData(template) {
     template.state.set('clientTimeZone', client.timeZone);
 
     const clientUser = Meteor.users.findOne({_id: client.user_id});
-
-    template.state.set('clientEmail', ClientUtil.getUserEmail(clientUser));
 }
 
 function validateFormData(form, errMsgs, template) {
@@ -60,20 +58,6 @@ function validateFormData(form, errMsgs, template) {
         // Neither first name, last name nor company name supplied. Report error
         errMsgs.push('Please enter at least one of: first name, last name, or company');
         hasError = true;
-    }
-
-    clientInfo.email = form.email.value ? form.email.value.trim() : '';
-
-    if (clientInfo.email.length === 0) {
-        // Email not supplied. Report error
-        errMsgs.push('Please enter an email address');
-        hasError = true;
-    }
-    else {
-        if (template.state.get('needsConfirmEmail') && !template.state.get('emailConfirmed')) {
-            errMsgs.push('Please confirm email address');
-            hasError =true;
-        }
     }
 
     clientInfo.phone = form.phone.value ? form.phone.value.trim() : undefined;
@@ -96,14 +80,9 @@ Template.editClientProfile.onCreated(function () {
     this.state.set('fieldsChanged', false);
     this.state.set('clientUpdated', false);
 
-    this.state.set('needsConfirmEmail', false);
-    this.state.set('emailConfirmed', false);
-    this.state.set('emailMismatch', false);
-
     this.state.set('clientFirstName', undefined);
     this.state.set('clientLastName', undefined);
     this.state.set('clientCompany', undefined);
-    this.state.set('clientEmail', undefined);
     this.state.set('clientPhone', undefined);
     this.state.set('clientTimeZone', undefined);
 
@@ -162,14 +141,6 @@ Template.editClientProfile.events({
         // Indicate that form field has changed
         template.state.set('fieldsChanged', true);
     },
-    'change #txtEmail'(event, template) {
-        // Indicate that form field has changed
-        template.state.set('fieldsChanged', true);
-
-        // Indicate that e-mail needs to be confirmed
-        template.state.set('needsConfirmEmail', true);
-        template.state.set('emailConfirmed', false);
-    },
     'change #txtCompanyName'(event, template) {
         // Indicate that form field has changed
         template.state.set('fieldsChanged', true);
@@ -177,41 +148,6 @@ Template.editClientProfile.events({
     'change #txtPhone'(event, template) {
         // Indicate that form field has changed
         template.state.set('fieldsChanged', true);
-    },
-    'click #btnDismissErrorConfirmEmail'(event, template) {
-        template.state.set('emailMismatch', false);
-    },
-    'click #btnConfirmEmail'(event, template) {
-        // Prepare for e-mail confirmation
-        event.target.form.confirmEmail.value = '';
-
-        template.state.set('emailMismatch', false);
-    },
-    'hidden.bs.modal #divConfirmEmail'(event, template) {
-        // Modal panel has been closed. Clear confirm email form
-        template.find('#frmEditClient').confirmEmail.value = '';
-
-        template.state.set('emailMismatch', false);
-    },
-    'click #checkEmailValidity'(event, template) {
-        const form = event.target.form;
-
-        const email = form.email.value ? form.email.value.trim() : '';
-        const confirmEmail = form.confirmEmail.value ? form.confirmEmail.value.trim() : '';
-
-        if (confirmEmail.length === 0) {
-            form.confirmEmail.focus();
-        }
-        else if (email === confirmEmail) {
-            template.state.set('emailConfirmed', true);
-
-            // Close modal panel
-            $('#divConfirmEmail').modal('hide');
-        }
-        else{
-            template.state.set('emailMismatch', true);
-            form.confirmEmail.focus();
-        }
     },
     'click #btnCancel'(event, template) {
         // Note: we resource to this unconventional solution so we can disable the Cancel button and,
@@ -277,7 +213,6 @@ Template.editClientProfile.helpers({
             firstName: template.state.get('clientFirstName'),
             lastName: template.state.get('clientLastName'),
             company: template.state.get('clientCompany'),
-            email: template.state.get('clientEmail'),
             phone: template.state.get('clientPhone'),
             timeZone: template.state.get('clientTimeZone')
         };
@@ -324,13 +259,5 @@ Template.editClientProfile.helpers({
         const template = Template.instance();
 
         return template.state.get('fieldsChanged') && !template.state.get('clientUpdated');
-    },
-    showConfirmEmailButton() {
-        const template = Template.instance();
-
-        return template.state.get('needsConfirmEmail') && !template.state.get('emailConfirmed');
-    },
-    emailsDoNotMatch() {
-        return Template.instance().state.get('emailMismatch');
     }
 });
