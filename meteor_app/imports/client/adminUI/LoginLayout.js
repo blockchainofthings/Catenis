@@ -92,17 +92,17 @@ function checkActivateAndTriggerGA(template) {
 function triggerGA () {
     if (typeof gtag === 'function') {
         gtag('event', 'conversion', {
-            'send_to': 'AW-804580870/NzqqCMyhwuADEIbc0_8C'
+            'send_to': 'AW-804580870/7lHwCPT_-4AYEIbc0_8C'
         });
     }
 }
 
 /**
- * Indicates whether this is the Account Registration page
+ * Indicates whether this is the Account Registration URL used by Google Ads
  * @returns {boolean}
  */
 function isAccountRegistrationUrl() {
-    return /\/register\/?$/i.test(document.location.href);
+    return /\/register\/?\?gtag$/i.test(document.location.href);
 }
 
 

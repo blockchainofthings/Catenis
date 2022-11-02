@@ -63,6 +63,8 @@ Template.login.events({
         AccountsTemplates.setState('signIn');
     },
     'click #register-form-link'(event, template) {
+        event.preventDefault();
+
         // Clear indication that account registration enrollment e-mail has been sent
         AccountsTemplates.state.form.set("accRegEmailSent", false);
 
@@ -76,6 +78,8 @@ Template.login.events({
         AccountsTemplates.setState('signUp');
     },
     'click #resend-acc_reg_email-form-link'(event, template) {
+        event.preventDefault();
+
         const user_email = AccountsTemplates.state.form.get('new_user_email');
 
         AccountsTemplates.state.form.set("result", 'Resending email...');
@@ -91,6 +95,8 @@ Template.login.events({
         });
     },
     'click #cancel-2fa-link'(event, template) {
+        event.preventDefault();
+
         if (AccountsTemplates.getState() !== 'singIn') {
             // Force state change to reset form
             AccountsTemplates.setState('forgotPwd');
@@ -99,6 +105,8 @@ Template.login.events({
         AccountsTemplates.setState('signIn');
     },
     'click #forgotPwd-form-link'(event, template){
+        event.preventDefault();
+
         AccountsTemplates.setState('forgotPwd');
     }
 });
