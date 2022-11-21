@@ -67,7 +67,7 @@ import {
  */
 
 /**
- * Method used to process POST 'assets/non-fungible/tokens/:tokenId' endpoint of REST API
+ * Method used to process GET 'assets/non-fungible/tokens/:tokenId' endpoint of REST API
  * @this {Object}
  * @property {Object} urlParams
  * @property {string} urlParams.tokenId The external ID of the non-fungible token to retrieve
