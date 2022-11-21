@@ -3045,7 +3045,7 @@ Device.prototype.retrieveNonFungibleToken = function (tokenId, retrieveOptions, 
     const holdingAddressInfo = Catenis.keyStore.getAddressInfo(nftOwnerInfo.address, true);
 
     if (!holdingAddressInfo || holdingAddressInfo.type !== KeyStore.extKeyType.dev_asst_addr.name) {
-        Catenis.logger.ERROR('fungible token is currently held by an unknown or inconsistent blockchain address', {
+        Catenis.logger.ERROR('Non-fungible token is currently held by an unknown or inconsistent blockchain address', {
             tokenId: tokenId,
             ccTokenId: nfToken.ccTokenId,
             holdingAddress: nftOwnerInfo.address
