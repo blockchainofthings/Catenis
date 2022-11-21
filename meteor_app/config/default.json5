@@ -751,6 +751,15 @@
         "device": {
           "allow": "self"
         }
+      },
+      "disclose-nf-token-ownership": {
+        "system": "deny",
+        "client": {
+          "allow": "self"
+        },
+        "device": {
+          "allow": "self"
+        }
       }
     }
   },
@@ -831,7 +840,8 @@
       "0.9",
       "0.10",
       "0.11",
-      "0.12"
+      "0.12",
+      "0.13"
     ]
   },
   // Parameters pertaining to Authentication module
@@ -1584,6 +1594,10 @@
     timeKeepIncompleteTransfer: 3600,  // (1 hour) Minimum time, in seconds, to keep non-fungible token transfers that have not been finalized
     timeKeepProcessedTransfer: 86400, // (24 hours) Minimum time, in seconds, to keep non-fungible token transfers after they have already been processed
     purgeOldTransfersInterval: 43200000  // (12 hours) Time interval, in milliseconds, for executing method to purge old non-fungible token retrievals
+  },
+  // Parameters pertaining to ApiListOwnedNonFungibleTokens module
+  apiListOwnedNonFungibleTokens: {
+    "maxRetListEntries": 500,  // Maximum number of owned non-fungible tokens entries that can be returned when listing owned non-fungible tokens
   },
   // Parameters pertaining to modules of different child processes
   childProcess: {

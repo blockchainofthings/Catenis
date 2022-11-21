@@ -86,6 +86,9 @@ import {
 import { NFTokenRetrieval } from './NFTokenRetrieval';
 import { TransferNFTokenTransaction } from './TransferNFTokenTransaction';
 import { NFTokenTransfer } from './NFTokenTransfer';
+import {
+    cfgSettings as apiListOwnedNFTsCfgSetting
+} from './ApiListOwnedNonFungibleTokens';
 
 
 // Definition of function classes
@@ -4214,6 +4217,10 @@ Device.prototype.shouldAcceptNFTokenFrom = function (device) {
     return Catenis.permission.hasRight(Permission.event.receive_nf_token_from.name, this, device);
 };
 
+Device.prototype.shouldDiscloseNFTokenOwnershipTo = function (device) {
+    return Catenis.permission.hasRight(Permission.event.disclose_nf_token_ownership.name, this, device);
+};
+
 Device.prototype.checkEffectiveRight = function (eventName, device) {
     // Make sure that device is not deleted
     if (this.status === Device.status.deleted.name) {
@@ -5364,6 +5371,291 @@ Device.prototype.listAssetHolders = function (assetId, limit, skip) {
 
     return result;
 };
+
+/**
+ * Owned non-Fungible token entry
+ * @typedef {Object} OwnedNFTokenEntry
+ * @property {string} tokenId ID of the non-fungible token
+ * @property {boolean} isConfirmed Indicates whether the blockchain transaction used to transfer the non-fungible token
+ *                                  has already been confirmed
+ */
+
+/**
+ * List of owned non-fungible tokens
+ * @typedef {Object} ListOwnedNFTokensResult
+ * @property {OwnedNFTokenEntry[]} ownedNFTokens The returned list of owned non-fungible tokens
+ * @property {boolean} hasMore Indicates whether there are more entries that have not been included in the returned list
+ */
+
+/**
+ * List the non-fungible tokens of a given non-fungible asset that are currently owned by this device
+ * @param {string} assetId ID of the non-fungible asset
+ * @param {number} [limit] Maximum number of list items that should be returned
+ * @param {number} [skip=0] Number of list items that should be skipped (from beginning of list) and not returned
+ * @returns {ListOwnedNFTokensResult}
+ */
+Device.prototype.listOwnedNonFungibleTokens = function (assetId, limit, skip) {
+    // Make sure that device is not deleted
+    if (this.status === Device.status.deleted.name) {
+        // Cannot list owned assets for deleted device. Log error and throw exception
+        Catenis.logger.ERROR('Cannot list owned assets for a deleted device', {deviceId: this.deviceId});
+        throw new Meteor.Error('ctn_device_deleted', util.format('Cannot list owned assets for a deleted device (deviceId: %s)', this.deviceId));
+    }
+
+    // Make sure that device is active
+    if (this.status !== Device.status.active.name) {
+        // Cannot list owned assets for a device that is not active. Log error and throw exception
+        Catenis.logger.ERROR('Cannot list owned assets for a device that is not active', {deviceId: this.deviceId});
+        throw new Meteor.Error('ctn_device_not_active', util.format('Cannot list owned assets for a device that is not active (deviceId: %s)', this.deviceId));
+    }
+
+    // Make sure that asset exists. Note: it throws ctn_asset_not_found exception otherwise
+    const asset = Asset.getAssetByAssetId(assetId, true);
+
+    // Make sure that this is a non-fungible asset
+    if (!asset.isNonFungible) {
+        Catenis.logger.ERROR('Inconsistent asset for listing owned non-fungible tokens; expected a non-fungible asset', {
+            assetId: asset.assetId
+        });
+        throw new Meteor.Error('ctn_owned_nfts_asset_fungible', `Inconsistent asset for listing owned non-fungible tokens; expected a non-fungible asset (assetId: ${asset.assetId})`);
+    }
+
+    if (!Number.isInteger(limit) || limit <= 0 || limit > apiListOwnedNFTsCfgSetting.maxRetListEntries) {
+        limit = apiListOwnedNFTsCfgSetting.maxRetListEntries;
+    }
+
+    if (!Number.isInteger(skip) || skip < 0) {
+        skip = 0;
+    }
+
+    const ccAssetIdOwnedInfos = Catenis.c3NodeClient.getOwnedNFTokens(this.assetAddr.listAddressesInUse(), asset.ccAssetId);
+    const result = {
+        ownedNFTokens: [],
+        hasMore: false
+    };
+
+    if (ccAssetIdOwnedInfos !== undefined) {
+        const ownedInfos = ccAssetIdOwnedInfos[asset.ccAssetId];
+
+        if (ownedInfos) {
+            let endIdx = skip + limit;
+
+            if (endIdx > ownedInfos.length) {
+                endIdx = ownedInfos.length;
+            }
+
+            for (let idx = skip; idx < endIdx; idx++) {
+                const ownedInfo = ownedInfos[idx];
+
+                result.ownedNFTokens.push({
+                    tokenId: newTokenId(ownedInfo.tokenId),
+                    isConfirmed: !ownedInfo.unconfirmed
+                });
+            }
+
+            result.hasMore = endIdx < ownedInfos.length;
+        }
+    }
+
+    return result;
+}
+
+/**
+ * Information about the owner of a non-fungible token
+ * @typedef {Object} NFTokenOwnerInfo
+ * @property {SharedDeviceInfo} owner The device that owns the non-fungible token
+ * @property {boolean} isConfirmed Indicates whether the blockchain transaction used to transfer the non-fungible token
+ *                                  has already been confirmed
+ */
+
+/**
+ * Identify the device that currently owns a given non-fungible token
+ * @param {string} tokenId The ID of the non-fungible token
+ * @returns {NFTokenOwnerInfo}
+ */
+Device.prototype.getNonFungibleTokenOwner = function (tokenId) {
+    // Make sure that device is not deleted
+    if (this.status === Device.status.deleted.name) {
+        // Cannot list owned assets for deleted device. Log error and throw exception
+        Catenis.logger.ERROR('Cannot list owned assets for a deleted device', {deviceId: this.deviceId});
+        throw new Meteor.Error('ctn_device_deleted', util.format('Cannot list owned assets for a deleted device (deviceId: %s)', this.deviceId));
+    }
+
+    // Make sure that device is active
+    if (this.status !== Device.status.active.name) {
+        // Cannot list owned assets for a device that is not active. Log error and throw exception
+        Catenis.logger.ERROR('Cannot list owned assets for a device that is not active', {deviceId: this.deviceId});
+        throw new Meteor.Error('ctn_device_not_active', util.format('Cannot list owned assets for a device that is not active (deviceId: %s)', this.deviceId));
+    }
+
+    // Get the non-fungible token object.
+    //  Note: this will throw a 'nf_token_invalid_id' exception if the non-fungible token does not exist
+    const nfToken = NonFungibleToken.getNFTokenByTokenId(tokenId);
+
+    // Make sure that device is allowed to retrieve the identity of the non-fungible token owner
+    if (this.deviceId !== nfToken.issuingDeviceId) {
+        // Device is not the issuer of the non-fungible token
+        throw new Meteor.Error('ctn_nft_owner_no_access', 'Device has no access rights to retrieve the identity of the non-fungible token owner');
+    }
+
+    // Retrieve the non-fungible token owner info
+    const nftOwnerInfo = Catenis.c3NodeClient.getNFTokenOwner(nfToken.ccTokenId);
+
+    if (!nftOwnerInfo) {
+        Catenis.logger.ERROR('No possession info found for the non-fungible token', {
+            tokenId: tokenId,
+            ccTokenId: nfToken.ccTokenId
+        });
+        throw new Meteor.Error('ctn_nft_owner_invalid_cc_id', 'No possession info found for the given non-fungible token ID');
+    }
+
+    if (!nftOwnerInfo.address) {
+        Catenis.logger.ERROR('Non-fungible token is not currently held by any blockchain address', {
+            tokenId: tokenId,
+            ccTokenId: nfToken.ccTokenId
+        });
+        throw new Meteor.Error('ctn_nft_owner_burnt', 'Non-fungible token is not currently held by any blockchain address');
+    }
+
+    const holdingAddressInfo = Catenis.keyStore.getAddressInfo(nftOwnerInfo.address, true);
+
+    if (!holdingAddressInfo || holdingAddressInfo.type !== KeyStore.extKeyType.dev_asst_addr.name) {
+        Catenis.logger.ERROR('Non-fungible token is currently held by an unknown or inconsistent blockchain address', {
+            tokenId: tokenId,
+            ccTokenId: nfToken.ccTokenId,
+            holdingAddress: nftOwnerInfo.address
+        });
+        throw new Meteor.Error('ctn_nft_owner_invalid_addr', 'Non-fungible token is currently held by an unknown or inconsistent blockchain address');
+    }
+
+    // Get holding device
+    const holdingDevice = CatenisNode.getCatenisNodeByIndex(holdingAddressInfo.pathParts.ctnNodeIndex)
+    .getClientByIndex(holdingAddressInfo.pathParts.clientIndex)
+    .getDeviceByIndex(holdingAddressInfo.pathParts.deviceIndex);
+
+    return {
+        owner: {
+            deviceId: holdingDevice.deviceId,
+            ...holdingDevice.discloseMainPropsTo(this)
+        },
+        isConfirmed: !nftOwnerInfo.unconfirmed
+    };
+}
+
+/**
+ * Verify if a device is the current owner of a single or multiple non-fungible tokens
+ * @param {string} checkDeviceId Device ID of the device to check if it has ownership
+ * @param {string} tokenOrAssetId The ID of the non-fungible token to be verified. Note that it may actually be the ID
+ *                          of a non-fungible asset (see 'isAssetId' param below). In that case, all non-fungible tokens
+ *                          of that non-fungible asset shall be verified
+ * @param {boolean} isAssetId Indicates that the 'tokenId' param above should be interpreted as the ID of a non-fungible
+ *                             asset
+ * @returns {number} Number of non-fungible tokens, out of those that have been verified, that are owned by the
+ *                    specified device
+ */
+Device.prototype.checkNonFungibleTokenOwnership = function (checkDeviceId, tokenOrAssetId, isAssetId = false) {
+    // Make sure that device is not deleted
+    if (this.status === Device.status.deleted.name) {
+        // Cannot list owned assets for deleted device. Log error and throw exception
+        Catenis.logger.ERROR('Cannot list owned assets for a deleted device', {deviceId: this.deviceId});
+        throw new Meteor.Error('ctn_device_deleted', util.format('Cannot list owned assets for a deleted device (deviceId: %s)', this.deviceId));
+    }
+
+    // Make sure that device is active
+    if (this.status !== Device.status.active.name) {
+        // Cannot list owned assets for a device that is not active. Log error and throw exception
+        Catenis.logger.ERROR('Cannot list owned assets for a device that is not active', {deviceId: this.deviceId});
+        throw new Meteor.Error('ctn_device_not_active', util.format('Cannot list owned assets for a device that is not active (deviceId: %s)', this.deviceId));
+    }
+
+    let checkDevice;
+
+    if (checkDeviceId !== this.deviceId) {
+        try {
+            checkDevice = Device.getDeviceByDeviceId(checkDeviceId);
+        }
+        catch (err) {
+            if ((err instanceof Meteor.Error) && err.error === 'ctn_device_not_found') {
+                // No device available with the given device ID. Log error and throw exception
+                Catenis.logger.ERROR('Could not find device with the given device ID', {deviceId: checkDeviceId});
+                throw new Meteor.Error('ctn_chk_nft_owner_dev_not_found', `Could not find device with the given device ID (${checkDeviceId})`);
+            }
+            else {
+                // Otherwise, just re-throws exception
+                throw err;
+            }
+        }
+    }
+    else {
+        checkDevice = this;
+    }
+
+    // Processing depends on the type of ID passed
+    let nfTokensOwned;
+
+    if (isAssetId) {
+        // An asset ID was passed. Get the non-fungible asset object.
+        //  Note: it will throw a 'ctn_asset_not_found' exception if the asset does not exist
+        const asset = Asset.getAssetByAssetId(tokenOrAssetId, true);
+
+        // Make sure that this is a non-fungible asset
+        if (!asset.isNonFungible) {
+            Catenis.logger.ERROR('Inconsistent asset for checking non-fungible token ownership; expected a non-fungible asset', {
+                assetId: asset.assetId
+            });
+            throw new Meteor.Error('ctn_chk_nft_owner_asset_fungible', `Inconsistent asset for checking non-fungible token ownership; expected a non-fungible asset (assetId: ${asset.assetId})`);
+        }
+
+        // Make sure that device is allowed to check the device's non-fungible token ownership status.
+        //  NOTE: the issuer of the non-fungible token (issuing device) is always allowed to check the ownership
+        if (this.deviceId !== asset.issuingDevice.deviceId && !checkDevice.shouldDiscloseNFTokenOwnershipTo(this)) {
+            // Device is not the issuer of the non-fungible token
+            throw new Meteor.Error('ctn_chk_nft_owner_no_access', 'Device has no access rights to check non-fungible token ownership');
+        }
+
+        // Retrieve non-fungible tokens owned by the specified device
+        const nftOwnerInfo = Catenis.c3NodeClient.getAllNFTokensOwner(asset.ccAssetId, 0, checkDevice.assetAddr.listAddressesInUse());
+
+        if (!nftOwnerInfo) {
+            Catenis.logger.ERROR('No possession info found for the non-fungible asset', {
+                assetId: tokenOrAssetId,
+                ccAssetId: asset.ccAssetId
+            });
+            throw new Meteor.Error('ctn_chk_nft_owner_invalid_cc_asset_id', 'No possession info found for the non-fungible asset');
+        }
+
+        // Compute number of owned non-fungible tokens
+        nfTokensOwned = Object.keys(nftOwnerInfo).length;
+    }
+    else {
+        // A token ID was passed. Get the non-fungible token object.
+        //  Note: this will throw a 'nf_token_invalid_id' exception if the non-fungible token does not exist
+        const nfToken = NonFungibleToken.getNFTokenByTokenId(tokenOrAssetId);
+
+        // Make sure that device is allowed to check the device's non-fungible token ownership status.
+        //  NOTE: the issuer of the non-fungible token (issuing device) is always allowed to check the ownership
+        if (this.deviceId !== nfToken.issuingDeviceId && !checkDevice.shouldDiscloseNFTokenOwnershipTo(this)) {
+            // Device is not the issuer of the non-fungible token
+            throw new Meteor.Error('ctn_chk_nft_owner_no_access', 'Device has no access rights to check non-fungible token ownership');
+        }
+
+        // Retrieve non-fungible tokens owned by the specified device
+        const nftOwnerInfo = Catenis.c3NodeClient.getNFTokenOwner(nfToken.ccTokenId, 0, checkDevice.assetAddr.listAddressesInUse());
+
+        if (!nftOwnerInfo) {
+            Catenis.logger.ERROR('No possession info found for the non-fungible token', {
+                tokenId: tokenOrAssetId,
+                ccTokenId: nfToken.ccTokenId
+            });
+            throw new Meteor.Error('ctn_chk_nft_owner_invalid_cc_token_id', 'No possession info found for the non-fungible token');
+        }
+
+        // Compute number of owned non-fungible tokens
+        nfTokensOwned = nftOwnerInfo === false ? 0 : 1;
+    }
+
+    return nfTokensOwned;
+}
 /** End of asset related methods **/
 
 

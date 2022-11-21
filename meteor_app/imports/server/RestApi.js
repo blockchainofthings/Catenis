@@ -93,6 +93,9 @@ import { retrieveNonFungibleToken } from './ApiRetrieveNonFungibleToken';
 import { retrieveNFTokenRetrievalProgress } from './ApiNFTokenRetrievalProgress';
 import { transferNonFungibleToken } from './ApiTransferNonFungibleToken';
 import { retrieveNFTokenTransferProgress } from './ApiNFTokenTransferProgress';
+import { listOwnedNonFungibleTokens } from './ApiListOwnedNonFungibleTokens';
+import { getNonFungibleTokenOwner } from './ApiGetNonFungibleTokenOwner';
+import { checkNonFungibleTokenOwnership } from './ApiCheckNonFungibleTokenOwnership';
 
 // Config entries
 const restApiConfig = config.get('restApi');
@@ -375,13 +378,13 @@ export function RestApi(apiVersion) {
     if (this.apiVer.gte('0.11')) {
         // noinspection JSUnresolvedFunction
         this.api.addRoute('assets/:assetId/export/:foreignBlockchain', {authRequired: true}, {
-            // Export an asset to a foreign blockchain (public method)
+            // Export an asset to a foreign blockchain
             //
             //  Refer to the source file where the action function is defined for a detailed description of the endpoint
             post: {
                 action: exportAsset
             },
-            // Retrieve the outcome of an asset export (public method)
+            // Retrieve the outcome of an asset export
             //
             //  Refer to the source file where the action function is defined for a detailed description of the endpoint
             get: {
@@ -391,7 +394,7 @@ export function RestApi(apiVersion) {
 
         // noinspection JSUnresolvedFunction
         this.api.addRoute('assets/exported', {authRequired: true}, {
-            // List exported assets (public method)
+            // List exported assets
             //
             //  Refer to the source file where the action function is defined for a detailed description of the endpoint
             get: {
@@ -401,7 +404,7 @@ export function RestApi(apiVersion) {
 
         // noinspection JSUnresolvedFunction
         this.api.addRoute('assets/:assetId/migrate/:foreignBlockchain', {authRequired: true}, {
-            // Migrate an amount of an exported asset to the foreign blockchain (public method)
+            // Migrate an amount of an exported asset to the foreign blockchain
             //
             //  Refer to the source file where the action function is defined for a detailed description of the endpoint
             post: {
@@ -411,7 +414,7 @@ export function RestApi(apiVersion) {
 
         // noinspection JSUnresolvedFunction
         this.api.addRoute('assets/migrations/:migrationId', {authRequired: true}, {
-            // Retrieve the outcome of an asset migration (public method)
+            // Retrieve the outcome of an asset migration
             //
             //  Refer to the source file where the action function is defined for a detailed description of the endpoint
             get: {
@@ -421,7 +424,7 @@ export function RestApi(apiVersion) {
 
         // noinspection JSUnresolvedFunction
         this.api.addRoute('assets/migrations', {authRequired: true}, {
-            // List asset migrations (public method)
+            // List asset migrations
             //
             //  Refer to the source file where the action function is defined for a detailed description of the endpoint
             get: {
@@ -433,7 +436,7 @@ export function RestApi(apiVersion) {
     if (this.apiVer.gte('0.12')) {
         // noinspection JSUnresolvedFunction
         this.api.addRoute('assets/non-fungible/issue', {authRequired: true}, {
-            // Issue non-fungible asset (public method)
+            // Issue non-fungible asset
             //
             //  Refer to the source file where the action function is defined for a detailed description of the endpoint
             post: {
@@ -443,7 +446,7 @@ export function RestApi(apiVersion) {
 
         // noinspection JSUnresolvedFunction
         this.api.addRoute('assets/non-fungible/:assetId/issue', {authRequired: true}, {
-            // Reissue non-fungible asset (public method)
+            // Reissue non-fungible asset
             //
             //  Refer to the source file where the action function is defined for a detailed description of the endpoint
             post: {
@@ -453,7 +456,7 @@ export function RestApi(apiVersion) {
 
         // noinspection JSUnresolvedFunction
         this.api.addRoute('assets/non-fungible/issuance/:issuanceId', {authRequired: true}, {
-            // Retrieve non-fungible asset issuance progress (public method)
+            // Retrieve non-fungible asset issuance progress
             //
             //  Refer to the source file where the action function is defined for a detailed description of the endpoint
             get: {
@@ -463,7 +466,7 @@ export function RestApi(apiVersion) {
 
         // noinspection JSUnresolvedFunction
         this.api.addRoute('assets/non-fungible/tokens/:tokenId', {authRequired: true}, {
-            // Retrieve non-fungible token (public method)
+            // Retrieve non-fungible token
             //
             //  Refer to the source file where the action function is defined for a detailed description of the endpoint
             get: {
@@ -473,7 +476,7 @@ export function RestApi(apiVersion) {
 
         // noinspection JSUnresolvedFunction
         this.api.addRoute('assets/non-fungible/tokens/:tokenId/retrieval/:retrievalId', {authRequired: true}, {
-            // Retrieve non-fungible token retrieval progress (public method)
+            // Retrieve non-fungible token retrieval progress
             //
             //  Refer to the source file where the action function is defined for a detailed description of the endpoint
             get: {
@@ -483,7 +486,7 @@ export function RestApi(apiVersion) {
 
         // noinspection JSUnresolvedFunction
         this.api.addRoute('assets/non-fungible/tokens/:tokenId/transfer', {authRequired: true}, {
-            // Transfer non-fungible token (public method)
+            // Transfer non-fungible token
             //
             //  Refer to the source file where the action function is defined for a detailed description of the endpoint
             post: {
@@ -493,11 +496,43 @@ export function RestApi(apiVersion) {
 
         // noinspection JSUnresolvedFunction
         this.api.addRoute('assets/non-fungible/tokens/:tokenId/transfer/:transferId', {authRequired: true}, {
-            // Retrieve non-fungible token transfer progress (public method)
+            // Retrieve non-fungible token transfer progress
             //
             //  Refer to the source file where the action function is defined for a detailed description of the endpoint
             get: {
                 action: retrieveNFTokenTransferProgress
+            }
+        });
+    }
+
+    if (this.apiVer.gte('0.13')) {
+        // noinspection JSUnresolvedFunction
+        this.api.addRoute('assets/non-fungible/:assetId/tokens/owned', {authRequired: true}, {
+            // List Owned Non-Fungible Tokens
+            //
+            //  Refer to the source file where the action function is defined for a detailed description of the endpoint
+            get: {
+                action: listOwnedNonFungibleTokens
+            }
+        });
+
+        // noinspection JSUnresolvedFunction
+        this.api.addRoute('assets/non-fungible/tokens/:tokenId/owner', {authRequired: true}, {
+            // Get Non-Fungible Token Owner
+            //
+            //  Refer to the source file where the action function is defined for a detailed description of the endpoint
+            get: {
+                action: getNonFungibleTokenOwner
+            }
+        });
+
+        // noinspection JSUnresolvedFunction
+        this.api.addRoute('assets/non-fungible/tokens/ownership', {authRequired: true}, {
+            // Check Non-Fungible Token Ownership
+            //
+            //  Refer to the source file where the action function is defined for a detailed description of the endpoint
+            post: {
+                action: checkNonFungibleTokenOwnership
             }
         });
     }

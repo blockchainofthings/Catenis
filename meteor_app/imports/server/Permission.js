@@ -611,6 +611,11 @@ Permission.event = Object.freeze({
         name: 'receive-nf-token-from',
         description: 'Receive a non-fungible token from a device',
         minApiVer: '0.12'
+    }),
+    disclose_nf_token_ownership: Object.freeze({
+        name: 'disclose-nf-token-ownership',
+        description: 'Disclose device\'s non-fungible token ownership status to a device',
+        minApiVer: '0.13'
     })
 });
 

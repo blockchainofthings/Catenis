@@ -663,17 +663,25 @@ C3NodeClient.prototype.getNFTokenIssuance = function (tokenId, waitForParsing = 
  * @param {number} [numOfConfirmations=0] The minimum number of confirmations to consider an UTXO as a token holder
  * @param {boolean} [waitForParsing=true] Indicates whether processing of request should wait until parsing of assets
  *                                         is complete
- * @returns {(NFTokenHolding|undefined)} An object containing information about the possession of the non-fungible
- *                                        asset token, or undefined if no possession info is found (i.e. the token ID is
- *                                        unknown or invalid)
+ * @param {string[]} [addresses] A list of bitcoin addresses specifying the addresses that are expected to hold the
+ *                                non-fungible token. If the non-fungible token is not currently held by any of these
+ *                                addresses, a false value is returned instead
+ * @returns {(NFTokenHolding|undefined|boolean)} An object containing information about the possession of the
+ *                                      non-fungible asset token, or undefined if no possession info is found
+ *                                      (i.e. the token ID is unknown or invalid). It could also return a false value
+ *                                      if addresses as passed and the non-fungible token is not held by any of them
  */
-C3NodeClient.prototype.getNFTokenOwner = function (tokenId, numOfConfirmations = 0, waitForParsing = true) {
+C3NodeClient.prototype.getNFTokenOwner = function (tokenId, numOfConfirmations = 0, addresses, waitForParsing = true) {
     const postData = {
         tokenId
     };
 
     if (numOfConfirmations !== undefined) {
         postData.numOfConfirmations = numOfConfirmations;
+    }
+
+    if (addresses !== undefined) {
+        postData.addresses = addresses;
     }
 
     if (waitForParsing) {
@@ -703,19 +711,26 @@ C3NodeClient.prototype.getNFTokenOwner = function (tokenId, numOfConfirmations =
  * Call Catenis Colored Coins node server getAllNFTokensOwner method
  * @param {string} assetId The Colored Coins ID of the non-fungible asset to retrieve the owner of all its tokens
  * @param {number} [numOfConfirmations=0] The minimum number of confirmations to consider an UTXO as a token holder
+ * @param {string[]} [addresses] A list of bitcoin addresses used to restrict the non-fungible tokens to be included
+ *                                in the processing. Only the non-fungible tokens currently held by any of these
+ *                                addresses should be returned
  * @param {boolean} [waitForParsing=true] Indicates whether processing of request should wait until parsing of assets
  *                                         is complete
  * @returns {(AllNFTokenHolding|undefined)} An object containing information about the possession of all tokens of the
  *                                           non-fungible asset, or undefined if no token is found (i.e. the asset ID is
  *                                           either unknown or invalid, or is not for a non-fungible asset)
  */
-C3NodeClient.prototype.getAllNFTokensOwner = function (assetId, numOfConfirmations = 0, waitForParsing = true) {
+C3NodeClient.prototype.getAllNFTokensOwner = function (assetId, numOfConfirmations = 0, addresses, waitForParsing = true) {
     const postData = {
         assetId
     };
 
     if (numOfConfirmations !== undefined) {
         postData.numOfConfirmations = numOfConfirmations;
+    }
+
+    if (addresses !== undefined) {
+        postData.addresses = addresses;
     }
 
     if (waitForParsing) {
