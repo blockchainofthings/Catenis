@@ -104,6 +104,9 @@ export function retrieveNFAssetIssuanceProgress() {
                 else if (err.error === 'nf_asset_issue_not_complete') {
                     error = errorResponse.call(this, 400, 'Non-fungible asset issuance data is not yet complete');
                 }
+                else {
+                    error = errorResponse.call(this, 500, 'Internal server error');
+                }
             }
             else {
                 error = errorResponse.call(this, 500, 'Internal server error');

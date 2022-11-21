@@ -111,6 +111,9 @@ export function retrieveNFTokenRetrievalProgress() {
                 else if (err.error === 'nft_retrieval_wrong_device') {
                     error = errorResponse.call(this, 403, 'No permission to retrieve non-fungible token retrieval progress');
                 }
+                else {
+                    error = errorResponse.call(this, 500, 'Internal server error');
+                }
             }
             else {
                 error = errorResponse.call(this, 500, 'Internal server error');

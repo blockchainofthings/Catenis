@@ -199,6 +199,9 @@ export function transferNonFungibleToken() {
                 else if (err.error === 'ctn_transfer_nft_not_holder' || err.error === 'ctn_transf_nft_utxo_not_found') {
                     error = errorResponse.call(this, 400, 'No possession to transfer non-fungible token');
                 }
+                else {
+                    error = errorResponse.call(this, 500, 'Internal server error');
+                }
             }
             else {
                 error = errorResponse.call(this, 500, 'Internal server error');

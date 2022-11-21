@@ -280,6 +280,9 @@ export function retrieveNonFungibleToken() {
                 else if (err.error === 'nft_retrieval_expired') {
                     error = errorResponse.call(this, 400, 'Retrieved non-fungible token data expired');
                 }
+                else {
+                    error = errorResponse.call(this, 500, 'Internal server error');
+                }
             }
             else {
                 error = errorResponse.call(this, 500, 'Internal server error');

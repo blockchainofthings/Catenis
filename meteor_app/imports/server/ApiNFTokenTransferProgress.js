@@ -111,6 +111,9 @@ export function retrieveNFTokenTransferProgress() {
                 else if (err.error === 'nft_transfer_wrong_device') {
                     error = errorResponse.call(this, 403, 'No permission to retrieve non-fungible token transfer progress');
                 }
+                else {
+                    error = errorResponse.call(this, 500, 'Internal server error');
+                }
             }
             else {
                 error = errorResponse.call(this, 500, 'Internal server error');
