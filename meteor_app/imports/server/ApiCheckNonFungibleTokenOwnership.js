@@ -30,9 +30,7 @@ import { Device } from './Device';
 //
 
 /**
- * @typedef {Object} NFTokenOwnershipCheckResult
- * @property {number} tokensOwned Number of non-fungible tokens, out of those that have been verified, that are owned by
- *                                 the specified Catenis virtual device
+ * @typedef {NFTokenOwnershipTotalization} NFTokenOwnershipCheckResult
  */
 
 /**
@@ -167,10 +165,10 @@ export function checkNonFungibleTokenOwnership() {
         }
 
         // Execute method to check non-fungible token ownership
-        let nfTokensOwned;
+        let result;
 
         try {
-            nfTokensOwned = this.user.device.checkNonFungibleTokenOwnership(deviceId, this.bodyParams.nonFungibleTokens.id, isAssetId);
+            result = this.user.device.checkNonFungibleTokenOwnership(deviceId, this.bodyParams.nonFungibleTokens.id, isAssetId);
         }
         catch (err) {
             let error;
@@ -221,9 +219,7 @@ export function checkNonFungibleTokenOwnership() {
         }
 
         // Return success
-        return successResponse.call(this, {
-            tokensOwned: nfTokensOwned
-        });
+        return successResponse.call(this, result);
     }
     catch (err) {
         Catenis.logger.ERROR('Error processing POST \'assets/non-fungible/tokens/ownership\' API request.', err);

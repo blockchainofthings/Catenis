@@ -5543,6 +5543,13 @@ Device.prototype.getNonFungibleTokenOwner = function (tokenId) {
 }
 
 /**
+ * Non-Fungible Token Ownership Totalization
+ * @typedef {Object} NFTokenOwnershipTotalization
+ * @property {number} tokensOwned Number of owned non-fungible tokens
+ * @property {number} tokensUnconfirmed Number of non-fungible tokens, out of the owned ones, that are not yet confirmed
+ */
+
+/**
  * Verify if a device is the current owner of a single or multiple non-fungible tokens
  * @param {string} checkDeviceId Device ID of the device to check if it has ownership
  * @param {string} tokenOrAssetId The ID of the non-fungible token to be verified. Note that it may actually be the ID
@@ -5550,8 +5557,8 @@ Device.prototype.getNonFungibleTokenOwner = function (tokenId) {
  *                          of that non-fungible asset shall be verified
  * @param {boolean} isAssetId Indicates that the 'tokenId' param above should be interpreted as the ID of a non-fungible
  *                             asset
- * @returns {number} Number of non-fungible tokens, out of those that have been verified, that are owned by the
- *                    specified device
+ * @returns {NFTokenOwnershipTotalization} Totalization of the non-fungible tokens, out of those that have been
+ *                                          verified, that are owned by the specified device
  */
 Device.prototype.checkNonFungibleTokenOwnership = function (checkDeviceId, tokenOrAssetId, isAssetId = false) {
     // Make sure that device is not deleted
@@ -5591,7 +5598,7 @@ Device.prototype.checkNonFungibleTokenOwnership = function (checkDeviceId, token
     }
 
     // Processing depends on the type of ID passed
-    let nfTokensOwned;
+    let ownershipTotalization;
 
     if (isAssetId) {
         // An asset ID was passed. Get the non-fungible asset object.
@@ -5625,7 +5632,10 @@ Device.prototype.checkNonFungibleTokenOwnership = function (checkDeviceId, token
         }
 
         // Compute number of owned non-fungible tokens
-        nfTokensOwned = Object.keys(nftOwnerInfo).length;
+        ownershipTotalization = {
+            tokensOwned: Object.keys(nftOwnerInfo).length,
+            tokensUnconfirmed: Object.values(nftOwnerInfo).filter(o => o.unconfirmed).length
+        };
     }
     else {
         // A token ID was passed. Get the non-fungible token object.
@@ -5642,7 +5652,7 @@ Device.prototype.checkNonFungibleTokenOwnership = function (checkDeviceId, token
         // Retrieve non-fungible tokens owned by the specified device
         const nftOwnerInfo = Catenis.c3NodeClient.getNFTokenOwner(nfToken.ccTokenId, 0, checkDevice.assetAddr.listAddressesInUse());
 
-        if (!nftOwnerInfo) {
+        if (nftOwnerInfo === undefined) {
             Catenis.logger.ERROR('No possession info found for the non-fungible token', {
                 tokenId: tokenOrAssetId,
                 ccTokenId: nfToken.ccTokenId
@@ -5651,10 +5661,13 @@ Device.prototype.checkNonFungibleTokenOwnership = function (checkDeviceId, token
         }
 
         // Compute number of owned non-fungible tokens
-        nfTokensOwned = nftOwnerInfo === false ? 0 : 1;
+        ownershipTotalization = {
+            tokensOwned: nftOwnerInfo === false ? 0 : 1,
+            tokensUnconfirmed: nftOwnerInfo !== false && nftOwnerInfo.unconfirmed ? 1 : 0
+        };
     }
 
-    return nfTokensOwned;
+    return ownershipTotalization;
 }
 /** End of asset related methods **/
 
