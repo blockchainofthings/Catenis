@@ -65,6 +65,6 @@ scp ../build/Catenis-<ver>.tar.gz ctn-sandbox-1:~/Catenis_build/
 
 ## License
 
-This project is for Blockchain of Things' internal use only.
+This software is released under the [MIT License](LICENSE). Feel free to fork, and modify!
 
-Copyright © 2017-2021, Blockchain of Things Inc.
+Copyright © 2017-2023, Blockchain of Things Inc.
