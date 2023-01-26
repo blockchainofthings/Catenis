@@ -92,7 +92,7 @@
     "tiny-secp256k1": "Note: although Catenis does not directly depend on this module, it is added as a dependency here to force the use of version 1.1.6 (or higher) so it can be successfully built on Node.js 14.x",
     "tiny-secp256k1_2": "Note: this is an alias of version 2 of the tiny-secp256k1 library, which is used exclusively by the EccLibrary child process"
   },
-  "repository": "git@bitbucket.org:blockchainofthings/catenis.git",
+  "repository": "git@github.com:blockchainofthings/Catenis.git",
   "devDependencies": {
     "@openzeppelin/contracts": "^4.5.0",
     "chai": "^4.3.4",
